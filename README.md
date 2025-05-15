@@ -29,7 +29,7 @@ A web-based mapping application with advanced routing capabilities built using R
 
 ### Prerequisites
 
-- Node.js 18+ and npm/yarn/bun
+- Node.js 18+ and Bun
 - A Mapbox account and access token
 
 ### Getting Started
@@ -42,7 +42,7 @@ A web-based mapping application with advanced routing capabilities built using R
 
 2. Install dependencies:
    ```
-   npm install
+   bun install
    ```
 
 3. Create a `.env` file in the project root with your Mapbox access token:
@@ -52,7 +52,7 @@ A web-based mapping application with advanced routing capabilities built using R
 
 4. Start the development server:
    ```
-   npm run dev
+   bun dev
    ```
 
 5. Open your browser and navigate to `http://localhost:5173`
