@@ -1,0 +1,903 @@
+import type { Dispatch, SetStateAction } from 'react';
+import type { Coordinate, WaypointHistory } from '@/types/map';
+
+// Store references and state outside of the setup function to persist across renders
+let waypoints: Coordinate[] = [];
+let mapInstance: any = null;
+let clickListenerAdded = false;
+let contextMenuListenerAdded = false; // Track context menu (right-click) handler
+let currentPopup: any = null; // Track active popup for waypoint removal tooltip
+let directFlags: boolean[] = []; // parallel to waypoints, true if waypoint is direct
+
+// --- History (Undo / Redo) ---
+let undoStack: WaypointHistory[] = [];
+let redoStack: WaypointHistory[] = [];
+
+// Export the waypoints and directFlags for external components to use
+export const getWaypoints = () => waypoints;
+export const getDirectFlags = () => directFlags;
+
+// Check if a coordinate is near a road
+export const checkNearRoad = async (
+  coords: Coordinate,
+  accessToken: string
+): Promise<{ isValid: boolean; snappedCoords?: Coordinate }> => {
+  try {
+    // Create a query to the Mapbox API with a single point
+    const url = `https://api.mapbox.com/directions/v5/mapbox/walking/${coords[0]},${coords[1]}?steps=true&geometries=geojson&access_token=${accessToken}&radiuses=150`;
+    
+    const response = await fetch(url);
+    const json = await response.json();
+    
+    // Check if we got a valid response with waypoints
+    if (json && json.code === "NoRoute") {
+      console.log('[checkNearRoad] No route found for this point');
+      return { isValid: false };
+    }
+    
+    if (json && json.code === "NoSegment") {
+      console.log('[checkNearRoad] No road segment found near this point');
+      return { isValid: false };
+    }
+    
+    if (json && json.waypoints && json.waypoints.length > 0) {
+      const snappedCoords = json.waypoints[0].location as Coordinate;
+      // Calculate distance from original to snapped point
+      const dist = haversine(coords, snappedCoords);
+      
+      // If the snapped point is too far (150+ meters), consider it invalid
+      if (dist > 0.15) {
+        console.log(`[checkNearRoad] Point snapped too far (${dist.toFixed(3)}km)`);
+        return { isValid: false };
+      }
+      
+      console.log(`[checkNearRoad] Point is valid, snapped at ${dist.toFixed(3)}km distance`);
+      return { 
+        isValid: true,
+        snappedCoords
+      };
+    }
+    
+    return { isValid: false };
+  } catch (error) {
+    console.error('[checkNearRoad] Error checking if point is near road:', error);
+    return { isValid: false };
+  }
+};
+
+// Function to add a new waypoint from an external component
+export const addWaypoint = async (
+  map: any, 
+  coords: Coordinate, 
+  isDirect: boolean,
+  accessToken: string,
+  setRouteDistance: Dispatch<SetStateAction<string>>,
+  setRouteDuration: Dispatch<SetStateAction<string>>,
+  setHasRoute: Dispatch<SetStateAction<boolean>>,
+  onError?: (message: string) => void
+) => {
+  // For direct waypoints, or if it's the first waypoint, accept it without validation
+  if (isDirect || waypoints.length === 0) {
+    // Snapshot current state for undo
+    snapshot();
+    
+    waypoints.push(coords);
+    directFlags.push(isDirect);
+    
+    // Update the visual representation on the map
+    updatePoints(map, waypoints);
+    
+    // If we have at least 2 waypoints, calculate and show a route
+    if (waypoints.length >= 2) {
+      await getRoute(map, waypoints, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
+    }
+    return true;
+  }
+  
+  // For regular (non-direct) waypoints, check if it's near a road
+  const roadCheck = await checkNearRoad(coords, accessToken);
+  
+  if (!roadCheck.isValid) {
+    // Point is not valid - not near a road
+    if (onError) {
+      onError("This location is too far from a road. Try placing it closer to a road or use direct waypoints.");
+    }
+    console.warn('[addWaypoint] Waypoint rejected - not near a road');
+    return false;
+  }
+  
+  // Point is valid, use snapped coordinates if available
+  snapshot();
+  
+  if (roadCheck.snappedCoords) {
+    waypoints.push(roadCheck.snappedCoords);
+  } else {
+    waypoints.push(coords);
+  }
+  
+  directFlags.push(isDirect);
+  
+  // Update the visual representation on the map
+  updatePoints(map, waypoints);
+  
+  // If we have at least 2 waypoints, calculate and show a route
+  if (waypoints.length >= 2) {
+    await getRoute(map, waypoints, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
+  }
+  
+  return true;
+}
+
+// Function to remove a waypoint from an external component
+export const removeWaypoint = async (
+  map: any,
+  index: number,
+  accessToken: string,
+  setRouteDistance: Dispatch<SetStateAction<string>>,
+  setRouteDuration: Dispatch<SetStateAction<string>>,
+  setHasRoute: Dispatch<SetStateAction<boolean>>
+) => {
+  if (index < 0 || index >= waypoints.length) return;
+  
+  // Snapshot current state for undo
+  snapshot();
+  
+  // Remove the waypoint
+  waypoints.splice(index, 1);
+  directFlags.splice(index, 1);
+  
+  // Update the visual representation on the map
+  updatePoints(map, waypoints);
+  
+  if (waypoints.length >= 2) {
+    // Recalculate route with updated waypoints
+    await getRoute(map, waypoints, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
+  } else {
+    // If fewer than 2 waypoints, clear route
+    clearRoute(map);
+    setRouteDistance('');
+    setRouteDuration('');
+    setHasRoute(false);
+  }
+}
+
+const snapshot = () => {
+  console.log('[snapshot] Creating snapshot, current waypoints:', waypoints.length, 'current undoStack:', undoStack.length);
+  undoStack.push({
+    points: waypoints.map(p => [...p]) as Coordinate[],
+    flags: [...directFlags]
+  });
+  console.log('[snapshot] After pushing, undoStack length:', undoStack.length);
+  if (undoStack.length > 50) undoStack.shift();
+  redoStack = [];
+  console.log('[snapshot] Final undoStack:', undoStack.length, 'redoStack cleared');
+};
+
+export const stepBack = async (
+  map: any,
+  accessToken: string,
+  setRouteDistance: Dispatch<SetStateAction<string>>,
+  setRouteDuration: Dispatch<SetStateAction<string>>,
+  setHasRoute: Dispatch<SetStateAction<boolean>>
+) => {
+  if (undoStack.length === 0) return;
+
+  // Save current state to redo stack
+  redoStack.push({ points: waypoints.map(p => [...p]) as Coordinate[], flags: [...directFlags] });
+
+  // Restore previous state
+  const prev = undoStack.pop() as WaypointHistory;
+  waypoints = prev.points;
+  directFlags = prev.flags;
+
+  // Update visuals
+  updatePoints(map, waypoints);
+
+  if (waypoints.length >= 2) {
+    await getRoute(map, waypoints, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
+  } else {
+    clearRoute(map);
+    setRouteDistance('');
+    setRouteDuration('');
+    setHasRoute(false);
+  }
+};
+
+export const stepForward = async (
+  map: any,
+  accessToken: string,
+  setRouteDistance: Dispatch<SetStateAction<string>>,
+  setRouteDuration: Dispatch<SetStateAction<string>>,
+  setHasRoute: Dispatch<SetStateAction<boolean>>
+) => {
+  if (redoStack.length === 0) return;
+
+  // Save current state to undo stack
+  undoStack.push({ points: waypoints.map(p => [...p]) as Coordinate[], flags: [...directFlags] });
+
+  // Restore next state
+  const next = redoStack.pop() as WaypointHistory;
+  waypoints = next.points;
+  directFlags = next.flags;
+
+  updatePoints(map, waypoints);
+
+  if (waypoints.length >= 2) {
+    await getRoute(map, waypoints, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
+  } else {
+    clearRoute(map);
+    setRouteDistance('');
+    setRouteDuration('');
+    setHasRoute(false);
+  }
+};
+
+// Helper functions to check history availability
+export const hasUndo = () => {
+  const result = undoStack.length > 0;
+  // console.log('[hasUndo] undoStack length:', undoStack.length, 'hasUndo:', result);
+  return result;
+};
+export const hasRedo = () => redoStack.length > 0;
+
+// Setup routing logic for a Mapbox map instance
+export const setupRouting = (
+  map: any, 
+  accessToken: string,
+  setRouteDistance: Dispatch<SetStateAction<string>>,
+  setRouteDuration: Dispatch<SetStateAction<string>>,
+  setHasRoute: Dispatch<SetStateAction<boolean>>
+) => {
+  // Check if map is valid
+  if (!map) {
+    console.error('[setupRouting] Map instance is not available');
+    return;
+  }
+  
+  console.log('[setupRouting] Starting routing setup');
+  
+  // Store the map instance
+  mapInstance = map;
+
+  // Create source and layers only once
+  if (!map.getSource('route')) {
+    console.log('[setupRouting] Adding route and points sources/layers to map');
+    try {
+      // Add a source for the route
+      map.addSource('route', {
+        type: 'geojson',
+        data: {
+          type: 'Feature',
+          properties: {},
+          geometry: {
+            type: 'LineString',
+            coordinates: []
+          }
+        }
+      });
+
+      // Add a layer for the route line
+      map.addLayer({
+        id: 'route',
+        type: 'line',
+        source: 'route',
+        layout: {
+          'line-join': 'round',
+          'line-cap': 'round'
+        },
+        paint: {
+          'line-color': '#3887be',
+          'line-width': 3,
+          'line-opacity': 0.75
+        }
+      });
+
+      // Add a layer for route points
+      map.addSource('points', {
+        type: 'geojson',
+        data: {
+          type: 'FeatureCollection',
+          features: []
+        }
+      });
+
+      map.addLayer({
+        id: 'points',
+        type: 'circle',
+        source: 'points',
+        paint: {
+          'circle-radius': 6,
+          'circle-color': [
+            'match',
+            ['get', 'pointType'],
+            'start', '#2ecc71', // start green
+            'end', '#e74c3c',   // end red
+            'direct', '#f1c40f', // yellow for direct waypoint
+            '#3887be' // other
+          ],
+          'circle-stroke-width': 1.5,
+          'circle-stroke-color': '#fff'
+        }
+      });
+      console.log('[setupRouting] Successfully added sources and layers');
+    } catch (err) {
+      console.error('[setupRouting] Error adding sources or layers:', err);
+    }
+  } else {
+    console.log('[setupRouting] Sources and layers already exist');
+  }
+
+  // If we already have waypoints, re-render them (helps persist state)
+  if (waypoints.length > 0) {
+    updatePoints(map, waypoints);
+    
+    if (waypoints.length >= 2) {
+      getRoute(map, waypoints, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
+    }
+  }
+
+  // Only add click handler once to prevent duplicates
+  if (!clickListenerAdded) {
+    console.log('[setupRouting] Adding click handler to map');
+    // Add click handler
+    map.on('click', async (e: any) => {
+      console.log('[Map Click] Click event received at:', e.lngLat);
+      if (currentPopup && currentPopup.isOpen()) {
+        const popupEl = currentPopup.getElement();
+        if (popupEl.querySelector('#addDirectBtn')) { // Check if it's the "Add direct waypoint" popup
+          // Check if the click originated from the popup's main interactive button
+          const targetElement = e.originalEvent?.target as HTMLElement | null;
+          if (targetElement && (targetElement.id === 'addDirectBtn' || targetElement.closest('#addDirectBtn'))) {
+            // Click was on the "Add direct waypoint" button itself. Let its dedicated handler run.
+            // That handler will close the popup. We should not add a normal waypoint here.
+            console.log('[Map Click] Click was on addDirectBtn, not adding waypoint');
+            return;
+          } else {
+            // Click was not on the "Add direct waypoint" button (e.g., elsewhere on map, or popup background).
+            // Close this specific popup and do not add a normal waypoint.
+            console.log('[Map Click] Click was outside popup, closing popup');
+            currentPopup.remove();
+            currentPopup = null;
+            return;
+          }
+        }
+        // If currentPopup is open but it's not the "Add direct waypoint" popup (e.g., it's "Remove point"),
+        // this map click should proceed to potentially add a normal waypoint.
+        // The "Remove point" popup has closeOnClick:false and its own removal logic via its button.
+      }
+
+      // --- Original logic for adding a normal waypoint starts here ---
+      try {
+        console.log('[Map Click] Started. Current waypoints:', waypoints.length);
+        
+        // Snapshot current state for undo
+        snapshot();
+        
+        const coords = [e.lngLat.lng, e.lngLat.lat] as Coordinate;
+        
+        waypoints.push(coords);
+        directFlags.push(false); // Normal waypoints are not direct by default
+        console.log('[Map Click] Added waypoint. New count:', waypoints.length, 'New waypoint:', coords);
+        
+        console.log('[Map Click] Updating points on map...');
+        updatePoints(map, waypoints);
+        console.log('[Map Click] Points updated on map.');
+        
+        if (waypoints.length >= 2) {
+          console.log('[Map Click] More than 1 waypoint, attempting to get route...');
+          await getRoute(map, waypoints, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
+          console.log('[Map Click] getRoute call completed.');
+        } else {
+          console.log('[Map Click] Less than 2 waypoints, not calling getRoute.');
+        }
+        console.log('[Map Click] Handler finished successfully (all functions enabled).');
+      } catch (error) {
+        console.error('[Map Click] CRITICAL ERROR in click handler:', error);
+      }
+      // --- End of original logic ---
+    });
+    
+    clickListenerAdded = true;
+    console.log('[setupRouting] Click listener added successfully');
+  } else {
+    console.log('[setupRouting] Click listener already added');
+  }
+
+  // Add context-menu (right-click) handler once
+  if (!contextMenuListenerAdded) {
+    console.log('[setupRouting] Adding context menu handler for points layer');
+    
+    // Handle right click on waypoints (remove point)
+    map.on('contextmenu', (e: any) => {
+      e.preventDefault(); // Prevent browser context menu
+      console.log('[ContextMenu] Right-click detected', e.lngLat);
+
+      try {
+        // First check if click was on a waypoint
+        const features = map.queryRenderedFeatures(e.point, { layers: ['points'] });
+        
+        if (features && features.length > 0) {
+          // Clicked on a waypoint - show remove option
+          const feature = features[0];
+          const idxRaw = feature.properties?.waypointIndex;
+          const idx = typeof idxRaw === 'string' ? parseInt(idxRaw, 10) : idxRaw;
+          
+          if (isNaN(idx) || idx < 0 || idx >= waypoints.length) {
+            console.log('[ContextMenu] Invalid waypoint index:', idxRaw);
+            return;
+          }
+
+          // Remove existing popup if any
+          if (currentPopup) {
+            currentPopup.remove();
+            currentPopup = null;
+          }
+
+          console.log('[ContextMenu] Showing remove popup for waypoint', idx);
+          // Show a small tooltip (popup) with "Remove" option
+          const coords = feature.geometry?.coordinates || [e.lngLat.lng, e.lngLat.lat];
+          const popupHTML = `
+            <div id="removeWaypointBtn" 
+              style="
+                display:flex;
+                align-items:center;
+                gap:6px;
+                padding:6px 10px;
+                background:rgba(255,255,255,0.95);
+                border-radius:6px;
+                box-shadow:0 2px 6px rgba(0,0,0,0.15);
+                font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+                font-size:12px;
+                font-weight:600;
+                color:#e74c3c;
+                cursor:pointer;
+                user-select:none;
+              "
+            >
+              <span style="font-size:14px;">🗑️</span>
+              <span>Remove point</span>
+            </div>`;
+
+          try {
+            // Try to create popup using the appropriate method
+            if (typeof window !== 'undefined' && window.mapboxgl) {
+              currentPopup = new window.mapboxgl.Popup({
+                closeButton: false,
+                offset: 30,
+                closeOnClick: false
+              })
+                .setLngLat(coords)
+                .setHTML(popupHTML)
+                .addTo(map);
+            } else if (map.Popup) {
+              // Use the map's constructor to create a popup
+              currentPopup = new map.Popup({
+                closeButton: false,
+                offset: 30,
+                closeOnClick: false
+              })
+                .setLngLat(coords)
+                .setHTML(popupHTML)
+                .addTo(map);
+            } else {
+              console.error('[ContextMenu] No Popup constructor available');
+            }
+          } catch (popupErr) {
+            console.error('[ContextMenu] Error creating popup:', popupErr);
+          }
+
+          // Attach click handler to the popup content once it is mounted
+          setTimeout(() => {
+            if (currentPopup) {
+              const popupEl = currentPopup.getElement();
+              
+              if (popupEl) {
+                const removeBtn = popupEl.querySelector('#removeWaypointBtn');
+                if (removeBtn) {
+                  removeBtn.addEventListener('click', async () => {
+                    try {
+                      console.log('[ContextMenu] Remove button clicked for waypoint', idx);
+                      // Snapshot current state for undo
+                      snapshot();
+
+                      // Remove the waypoint
+                      waypoints.splice(idx, 1);
+                      directFlags.splice(idx,1);
+
+                      // Update points on map
+                      updatePoints(map, waypoints);
+
+                      if (waypoints.length >= 2) {
+                        // Recalculate route with updated waypoints
+                        await getRoute(map, waypoints, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
+                      } else {
+                        // If fewer than 2 waypoints, clear route
+                        clearRoute(map);
+                        setRouteDistance('');
+                        setRouteDuration('');
+                        setHasRoute(false);
+                      }
+                    } catch (err) {
+                      console.error('[Tooltip Remove] Error while removing waypoint:', err);
+                    } finally {
+                      // Close and clear the popup
+                      if (currentPopup) {
+                        currentPopup.remove();
+                        currentPopup = null;
+                      }
+                    }
+                  }, { once: true });
+                }
+              }
+            }
+          }, 50);
+        } else {
+          // Not clicked on a waypoint - show direct waypoint option
+          console.log('[ContextMenu] Show direct waypoint option');
+          
+          // Show popup with option to add direct waypoint
+          if (currentPopup) { 
+            currentPopup.remove(); 
+            currentPopup = null; 
+          }
+
+          const coordsScreen = [e.lngLat.lng, e.lngLat.lat] as Coordinate;
+          const popupHTML = `
+            <div id="addDirectBtn" 
+              style="
+                padding:6px 10px;
+                background:rgba(255,255,255,0.95);
+                border-radius:6px;
+                box-shadow:0 2px 6px rgba(0,0,0,0.15);
+                font-size:12px;
+                font-weight:600;
+                color:#3498db;
+                cursor:pointer; user-select:none;"
+            >Add direct waypoint</div>`;
+
+          try {
+            // Try to create popup using the appropriate method
+            if (typeof window !== 'undefined' && window.mapboxgl) {
+              currentPopup = new window.mapboxgl.Popup({ 
+                closeButton: false, 
+                offset: 30, 
+                closeOnClick: false 
+              })
+                .setLngLat(coordsScreen)
+                .setHTML(popupHTML)
+                .addTo(map);
+            } else if (map.Popup) {
+              currentPopup = new map.Popup({ 
+                closeButton: false, 
+                offset: 30, 
+                closeOnClick: false 
+              })
+                .setLngLat(coordsScreen)
+                .setHTML(popupHTML)
+                .addTo(map);
+            } else {
+              console.error('[Direct ContextMenu] No Popup constructor available');
+            }
+          } catch (popupErr) {
+            console.error('[Direct ContextMenu] Error creating popup:', popupErr);
+            return;
+          }
+
+          // Attach click handler to the popup content
+          setTimeout(() => {
+            if (currentPopup) {
+              const popupEl = currentPopup.getElement();
+              if (popupEl) {
+                const directBtn = popupEl.querySelector('#addDirectBtn');
+                if (directBtn) {
+                  directBtn.addEventListener('click', async () => {
+                    try {
+                      console.log('[Direct ContextMenu] Adding direct waypoint at', coordsScreen);
+                      snapshot();
+                      waypoints.push(coordsScreen);
+                      directFlags.push(true);
+                      updatePoints(map, waypoints);
+
+                      if (waypoints.length >= 2) {
+                        await getRoute(map, waypoints, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
+                      }
+                    } catch (err) {
+                      console.error('[Direct ContextMenu] Error adding direct waypoint:', err);
+                    } finally {
+                      if (currentPopup) { 
+                        currentPopup.remove(); 
+                        currentPopup = null; 
+                      }
+                    }
+                  }, { once: true });
+                }
+              }
+            }
+          }, 50);
+        }
+      } catch (err) {
+        console.error('[ContextMenu] Error handling context menu:', err);
+      }
+    });
+
+    contextMenuListenerAdded = true;
+    console.log('[setupRouting] Context menu listeners added');
+  } else {
+    console.log('[setupRouting] Context menu listeners already exist');
+  }
+
+  return map;
+};
+
+// Update the marker points on the map
+export const updatePoints = (map: any, points: Coordinate[]) => {
+  if (!map || !map.getSource) return;
+  
+  const features = points.map((point, index) => {
+    let pointType = 'intermediate';
+    if (points.length === 1) {
+      pointType = 'start'; // Or handle as a special case if desired
+    } else if (index === 0) {
+      pointType = 'start';
+    } else if (index === points.length - 1) {
+      pointType = 'end';
+    }
+    if (directFlags[index]) {
+      pointType = 'direct';
+    }
+
+    return {
+      type: 'Feature' as const,
+      properties: { pointType, waypointIndex: index },
+      geometry: {
+        type: 'Point' as const,
+        coordinates: point
+      }
+    };
+  });
+
+  const pointsSource = map.getSource('points');
+  if (pointsSource) {
+    pointsSource.setData({
+      type: 'FeatureCollection',
+      features
+    });
+  }
+};
+
+// Clear the displayed route
+export const clearRoute = (map: any) => {
+  if (!map || !map.getSource) return;
+  
+  const routeSource = map.getSource('route');
+  if (routeSource) {
+    routeSource.setData({
+      type: 'Feature',
+      properties: {},
+      geometry: {
+        type: 'LineString',
+        coordinates: []
+      }
+    });
+  }
+};
+
+// Calculate and display a route between waypoints
+export const getRoute = async (
+  map: any, 
+  points: Coordinate[], // Note: 'points' here are the raw clicked points
+  accessToken: string,
+  setRouteDistance: Dispatch<SetStateAction<string>>,
+  setRouteDuration: Dispatch<SetStateAction<string>>,
+  setHasRoute: Dispatch<SetStateAction<boolean>>
+) => {
+  if (!map || !map.getSource) {
+    console.warn('[getRoute] Map or map.getSource is not available. Aborting.');
+    return;
+  }
+  
+  if (directFlags.some(Boolean)) {
+      const { coordsAccum, totalDist } = await buildMixedRoute(map, accessToken);
+      const routeSource = map.getSource('route');
+      if (routeSource) {
+        routeSource.setData({ type:'Feature', properties:{}, geometry:{ type:'LineString', coordinates: coordsAccum } });
+      }
+      // Update marker positions based on snapped coords
+      updatePoints(map, waypoints);
+      const duration = Math.round(totalDist/5*60);
+      setRouteDistance(`${totalDist.toFixed(2)} km`);
+      setRouteDuration(`${duration} min`);
+      setHasRoute(true);
+      return;
+  }
+
+  try {
+    // Use a copy of the points for the API request to avoid modifying the global 'waypoints' array prematurely
+    const currentWaypointsForAPI = [...waypoints];
+    console.log('[getRoute] Started. Calculating route with waypoints:', currentWaypointsForAPI.length, 'Points:', JSON.stringify(currentWaypointsForAPI));
+    
+    const waypointsString = currentWaypointsForAPI.map(point => `${point[0]},${point[1]}`).join(';');
+    
+    // Create a radiuses string with much larger values for better snapping
+    // Use larger values (150m) to help Mapbox find the nearest appropriate road
+    const radiusesString = currentWaypointsForAPI.map(() => '150').join(';');
+    
+    console.log('[getRoute] Waypoints string for API:', waypointsString);
+    console.log('[getRoute] Radiuses string for API:', radiusesString);
+    
+    // Build the URL with additional parameters for better route accuracy
+    // overview=full: Get the most detailed route geometry
+    // steps=true: Include detailed steps for better snapping
+    // geometries=geojson: Get GeoJSON format for direct use
+    // continue_straight=true: Prefer going straight at intersections
+    const queryUrl = `https://api.mapbox.com/directions/v5/mapbox/walking/${waypointsString}?` + 
+                    `steps=true&geometries=geojson&overview=full&continue_straight=true&` +
+                    `access_token=${accessToken}&radiuses=${radiusesString}`;
+
+    console.log('[getRoute] Fetching URL:', queryUrl);
+
+    const query = await fetch(queryUrl, { method: 'GET' });
+    
+    console.log('[getRoute] API fetch status:', query.status);
+    const json = await query.json();
+    console.log('[getRoute] API response JSON:', JSON.stringify(json));
+    // Add this new log to inspect the raw json.waypoints from the API
+    console.log('[getRoute] API response json.waypoints:', JSON.stringify(json.waypoints));
+    
+    if (!json || !json.routes || json.routes.length === 0) {
+      console.error('[getRoute] No routes array found in API response or it is empty. Response:', json);
+      setHasRoute(false);
+      return;
+    }
+    
+    const data = json.routes[0];
+    
+    if (!data || !data.geometry || !data.geometry.coordinates || data.geometry.coordinates.length === 0) {
+      console.error('[getRoute] First route in API response is missing geometry or coordinates. Route data:', data);
+      setHasRoute(false);
+      return;
+    }
+
+    // Extract snapped waypoints from the API response
+    if (json.waypoints && Array.isArray(json.waypoints)) {
+      const snappedWaypoints = json.waypoints.map((wp: any) => wp.location as Coordinate);
+      if (snappedWaypoints.length === currentWaypointsForAPI.length) {
+        console.log('[getRoute] Snapped waypoints received:', JSON.stringify(snappedWaypoints));
+        // Update the global waypoints array with the snapped coordinates
+        waypoints = [...snappedWaypoints]; // Replace global waypoints with snapped ones
+        console.log('[getRoute] Global waypoints updated with snapped locations.');
+        // Update the visual markers on the map to their snapped positions
+        updatePoints(map, waypoints); 
+        console.log('[getRoute] Called updatePoints with snapped waypoints.');
+      } else {
+        console.warn('[getRoute] Mismatch between original and snapped waypoint counts. Not updating global waypoints.');
+      }
+    } else {
+      console.warn('[getRoute] Snapped waypoints not found in API response.');
+    }
+    
+    const route = data.geometry.coordinates;
+    const routeSource = map.getSource('route');
+    
+    if (routeSource) {
+      console.log('[getRoute] Updating route source on map.');
+      routeSource.setData({
+        type: 'Feature',
+        properties: {},
+        geometry: {
+          type: 'LineString',
+          coordinates: route
+        }
+      });
+      console.log('[getRoute] Route source updated.');
+    } else {
+      console.warn('[getRoute] Route source not found on map.');
+    }
+    
+    const distance = (data.distance / 1000).toFixed(2);
+    const duration = Math.floor(data.duration / 60);
+    
+    console.log('[getRoute] Preparing to set React state for route info. Distance:', distance, 'Duration:', duration);
+    setRouteDistance(`${distance} km`);
+    setRouteDuration(`${duration} min`);
+    setHasRoute(true);
+    console.log('[getRoute] React state for route info updated.');
+    
+    console.log('[getRoute] Finished successfully (React state updates bypassed, snap-to-road attempted). Route updated, distance:', distance, 'km, duration:', duration, 'min');
+    
+  } catch (error) {
+    console.error('[getRoute] CRITICAL ERROR in getRoute:', error);
+    setHasRoute(false);
+  }
+};
+
+// Reset all routing data and UI
+export const resetRouting = (
+  map: any,
+  setRouteDistance: Dispatch<SetStateAction<string>>,
+  setRouteDuration: Dispatch<SetStateAction<string>>,
+  setHasRoute: Dispatch<SetStateAction<boolean>>
+) => {
+  console.log('Resetting route');
+  
+  if (map && map.getSource) {
+    clearRoute(map);
+    updatePoints(map, []);
+    waypoints = [];
+    directFlags = [];
+    setRouteDistance('');
+    setRouteDuration('');
+    setHasRoute(false);
+
+    // Clear history stacks
+    undoStack = [];
+    redoStack = [];
+  }
+};
+
+// Helper to calculate distance between coordinates using haversine formula
+const haversine = (c1: Coordinate, c2: Coordinate) => {
+  const toRad = (v: number) => v * Math.PI / 180;
+  const R = 6371; // km
+  const dLat = toRad(c2[1] - c1[1]);
+  const dLon = toRad(c2[0] - c1[0]);
+  const lat1 = toRad(c1[1]);
+  const lat2 = toRad(c2[1]);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+};
+
+// Build a route that includes both direct (as-the-crow-flies) and road segments
+async function buildMixedRoute(map: any, accessToken: string) {
+  let coordsAccum: any[] = [];
+  let totalDist = 0;
+
+  for (let i = 0; i < waypoints.length - 1; i++) {
+    const from = waypoints[i];
+    const to = waypoints[i + 1];
+
+    if (directFlags[i + 1]) {
+      // Direct segment
+      if (coordsAccum.length === 0) coordsAccum.push(from);
+      coordsAccum.push(to);
+      totalDist += haversine(from, to);
+    } else {
+      // Use Mapbox Directions for this pair (could batch, but keeps simple)
+      // Added better parameters for road following
+      const url = `https://api.mapbox.com/directions/v5/mapbox/walking/${from[0]},${from[1]};${to[0]},${to[1]}?` +
+                 `steps=true&geometries=geojson&overview=full&access_token=${accessToken}&radiuses=150;150&continue_straight=true`;
+      try {
+        const res = await fetch(url);
+        const json = await res.json();
+        if (json && json.routes && json.routes[0]) {
+          const geom = json.routes[0].geometry.coordinates;
+          const distKm = json.routes[0].distance / 1000;
+          // Append coordinates, avoid duplicating first
+          if (coordsAccum.length === 0) coordsAccum.push(...geom);
+          else {
+            coordsAccum.push(...geom.slice(1));
+          }
+          totalDist += distKm;
+          if (json && json.waypoints && json.waypoints.length === 2) {
+            // Update snapped waypoint coords globally for NON-direct points only
+            if (!directFlags[i])   waypoints[i]   = json.waypoints[0].location;
+            if (!directFlags[i+1]) waypoints[i+1] = json.waypoints[1].location;
+          }
+        } else {
+          // No route found; convert to direct segment
+          directFlags[i+1] = true;
+          if (coordsAccum.length === 0) coordsAccum.push(from);
+          coordsAccum.push(to);
+          totalDist += haversine(from, to);
+        }
+      } catch(err) {
+        // No route found; convert to direct segment
+        directFlags[i+1] = true;
+        if (coordsAccum.length === 0) coordsAccum.push(from);
+        coordsAccum.push(to);
+        totalDist += haversine(from, to);
+      }
+    }
+  }
+  return { coordsAccum, totalDist };
+} 
