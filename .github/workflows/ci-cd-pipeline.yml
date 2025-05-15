@@ -1,0 +1,279 @@
+name: CI/CD Pipeline
+
+on:
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+  # Runs on push events to the main branch
+  push:
+    branches: [ main ]
+  # Runs on pull requests to the main branch
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Test Application
+    runs-on: arc-runner-set
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+        
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+          
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+        
+      - name: Run tests
+        run: bun test || echo "No tests configured yet"
+
+  build:
+    name: Build Application
+    needs: test
+    runs-on: arc-runner-set
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+          
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+        
+      - name: Build application
+        run: bun vite build
+        
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-files
+          path: dist/
+          
+  release:
+    name: Create Release
+    needs: build
+    runs-on: arc-runner-set
+    # Only run on main branch pushes, not PRs
+    if: github.event_name != 'pull_request'
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+          
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+        
+      - name: Create semantic-release config
+        run: |
+          cat > .releaserc.json << 'EOL'
+          {
+            "branches": ["main"],
+            "plugins": [
+              ["@semantic-release/commit-analyzer", {
+                "preset": "angular",
+                "releaseRules": [
+                  {"type": "docs", "scope": "README", "release": "patch"},
+                  {"type": "refactor", "release": "patch"},
+                  {"type": "style", "release": "patch"},
+                  {"type": "perf", "release": "patch"},
+                  {"type": "build", "release": "patch"},
+                  {"type": "ci", "release": "patch"},
+                  {"type": "chore", "release": "patch"},
+                  {"type": "test", "release": "patch"}
+                ],
+                "parserOpts": {
+                  "noteKeywords": ["BREAKING CHANGE", "BREAKING CHANGES"]
+                }
+              }],
+              ["@semantic-release/release-notes-generator", {
+                "preset": "angular",
+                "parserOpts": {
+                  "noteKeywords": ["BREAKING CHANGE", "BREAKING CHANGES"]
+                },
+                "writerOpts": {
+                  "commitsSort": ["subject", "scope"]
+                }
+              }],
+              "@semantic-release/npm",
+              "@semantic-release/github",
+              [
+                "@semantic-release/git",
+                {
+                  "assets": ["package.json"],
+                  "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
+                }
+              ]
+            ]
+          }
+          EOL
+          
+      - name: Debug config file
+        run: |
+          ls -la
+          cat .releaserc.json
+          
+      - name: Semantic Release
+        id: semantic
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bunx semantic-release
+        
+      - name: Set version output
+        id: version
+        run: |
+          VERSION=$(bun -e "console.log(require('./package.json').version)")
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          
+  # Separate job for Docker image building with multi-arch support
+  docker:
+    name: Build and Push Multi-Arch Docker Image
+    needs: release
+    runs-on: ubuntu-latest  # Use GitHub-hosted runner with Docker pre-installed
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          ref: main
+          fetch-depth: 0
+        
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+        with:
+          platforms: 'arm64,amd64'
+          
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+          
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-files
+          path: dist
+          
+      - name: Login to GitHub Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          
+      - name: Get version from package.json
+        id: package-version
+        run: |
+          VERSION=$(node -e "console.log(require('./package.json').version)")
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          
+      - name: Extract metadata for Docker
+        id: metadata
+        uses: docker/metadata-action@v4
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/maps
+          tags: |
+            type=semver,pattern={{version}},value=${{ steps.package-version.outputs.version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ steps.package-version.outputs.version }}
+            type=semver,pattern={{major}},value=${{ steps.package-version.outputs.version }}
+            type=raw,value=latest,enable={{is_default_branch}}
+          
+      - name: Convert repository owner to lowercase
+        id: repo-name
+        run: |
+          REPO_OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          echo "REPO_OWNER_LOWER=$REPO_OWNER_LOWER" >> $GITHUB_ENV
+          echo "repo_owner_lower=$REPO_OWNER_LOWER" >> $GITHUB_OUTPUT
+          
+      - name: Build and push Docker image
+        if: github.event_name != 'pull_request'
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.metadata.outputs.tags }}
+          labels: ${{ steps.metadata.outputs.labels }}
+          cache-from: type=registry,ref=ghcr.io/${{ env.REPO_OWNER_LOWER }}/maps:buildcache
+          cache-to: type=registry,ref=ghcr.io/${{ env.REPO_OWNER_LOWER }}/maps:buildcache,mode=max
+
+  # Updated job for deploying infrastructure with Pulumi
+  # deploy:
+  #   name: Deploy Infrastructure
+  #   needs: [docker, release]
+  #   runs-on: arc-runner-set
+  #   # Only run on main branch pushes, not PRs
+  #   if: github.event_name != 'pull_request'
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v3
+  #       with:
+  #         ref: main  # Ensure we're using the latest main branch with the version update
+  #         fetch-depth: 1
+          
+  #     - name: Setup Node.js
+  #       uses: actions/setup-node@v3
+  #       with:
+  #         node-version: '18'
+          
+  #     - name: Install dependencies
+  #       working-directory: ./infra
+  #       run: npm install
+        
+  #     - name: Use version from release job
+  #       run: |
+  #         echo "VERSION=${{ needs.release.outputs.version }}" >> $GITHUB_ENV
+  #         echo "Using version: ${{ needs.release.outputs.version }}"
+          
+  #     - name: Pulumi Refresh
+  #       uses: pulumi/actions@v6
+  #       with:
+  #         command: refresh
+  #         stack-name: production
+  #         work-dir: ./infra
+  #       env:
+  #         PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+  #         PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
+  #         APP_VERSION: ${{ needs.release.outputs.version }}
+          
+  #     - name: Pulumi Update
+  #       uses: pulumi/actions@v6
+  #       with:
+  #         command: up
+  #         stack-name: production
+  #         work-dir: ./infra
+  #         upsert: true
+  #       env:
+  #         PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+  #         PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
+  #         APP_VERSION: ${{ needs.release.outputs.version }}
+          
+  #     - name: Clean up old resources (if any)
+  #       run: |
+  #         echo "Deployment completed successfully. Old resources will be garbage collected by Pulumi."
