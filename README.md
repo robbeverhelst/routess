@@ -1,67 +1,85 @@
-# React + TypeScript + Vite
+# Maps Routing Application
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A web-based mapping application with advanced routing capabilities built using React, TypeScript, and Mapbox GL JS. This project allows users to plot routes, add waypoints, and calculate distances and estimated travel times.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Interactive Map**: Full-screen, interactive map with smooth zooming and panning
+- **Location Tracking**: Centers on user's location with pulsing blue indicator
+- **Multiple Routing Options**:
+  - Regular waypoints that snap to the nearest road
+  - Direct waypoints for straight-line travel (as the crow flies)
+- **Route Management**:
+  - Add waypoints by clicking on the map
+  - Remove waypoints with right-click context menu
+  - Undo/Redo functionality for waypoint changes
+  - Reset route with a single click
+- **Detailed Information**:
+  - Distance calculations in kilometers
+  - Estimated travel time in minutes
 
-## Expanding the ESLint configuration
+## Technology Stack
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- **Framework**: React 19 with TypeScript
+- **Mapping**: Mapbox GL JS and React Map GL
+- **Styling**: Tailwind CSS with custom animations
+- **Build Tool**: Vite
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
+## Setup and Installation
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Prerequisites
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- Node.js 18+ and npm/yarn/bun
+- A Mapbox account and access token
 
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
-```
+### Getting Started
 
-## Environment Setup
+1. Clone the repository:
+   ```
+   git clone https://github.com/yourusername/maps.git
+   cd maps
+   ```
 
-This project requires a Mapbox access token to function properly. Follow these steps to set it up:
+2. Install dependencies:
+   ```
+   npm install
+   ```
 
-1. Create a `.env` file in the root of the project
-2. Add your Mapbox access token to the file:
+3. Create a `.env` file in the project root with your Mapbox access token:
    ```
    VITE_MAPBOX_ACCESS_TOKEN=your_mapbox_token_here
    ```
-3. You can get a Mapbox access token by signing up for a free account at [Mapbox](https://account.mapbox.com)
 
-Note: The `.env` file is included in `.gitignore` and should never be committed to version control.
+4. Start the development server:
+   ```
+   npm run dev
+   ```
+
+5. Open your browser and navigate to `http://localhost:5173`
+
+## Usage Instructions
+
+- **Add Waypoints**: Click on the map to add waypoints
+- **Add Direct Waypoints**: Right-click and select "Add direct waypoint" 
+- **Remove Waypoints**: Right-click on a waypoint and select "Remove point"
+- **Undo/Redo**: Use the top-right controls to undo or redo waypoint actions
+- **Reset Route**: Click the reset button in the top-right controls
+- **Find Your Location**: Click the locate button to center the map on your current position
+- **View Route Details**: Route distance and duration are displayed in the bottom-right card
+
+## Security Notes
+
+- Your Mapbox API key should be stored in a `.env` file
+- The `.env` file is included in `.gitignore` and should never be committed to version control
+- If you accidentally commit your API key, follow best practices to reset it:
+  1. Revoke the compromised token in your Mapbox account
+  2. Generate a new token
+  3. Update your `.env` file with the new token
+
+## Contributing
+
+Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
+
+## License
+
+[MIT](https://choosealicense.com/licenses/mit/)
