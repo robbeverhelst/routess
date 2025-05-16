@@ -13,7 +13,7 @@ on:
 jobs:
   test:
     name: Test Application
-    runs-on: ubuntu-latest
+    runs-on: arc-runner-set-maps
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -34,7 +34,7 @@ jobs:
   build:
     name: Build Application
     needs: test
-    runs-on: ubuntu-latest
+    runs-on: arc-runner-set-maps
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -59,7 +59,7 @@ jobs:
   release:
     name: Create Release
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: arc-runner-set-maps
     # Only run on main branch pushes, not PRs
     if: github.event_name != 'pull_request'
     permissions:
@@ -148,7 +148,7 @@ jobs:
   docker:
     name: Build and Push Multi-Arch Docker Image
     needs: release
-    runs-on: ubuntu-latest  # Use GitHub-hosted runner with Docker pre-installed
+    runs-on: arc-runner-set-maps  # Use GitHub-hosted runner with Docker pre-installed
     permissions:
       contents: read
       packages: write
@@ -227,7 +227,7 @@ jobs:
   # deploy:
   #   name: Deploy Infrastructure
   #   needs: [docker, release]
-  #   runs-on: arc-runner-set
+  #   runs-on: arc-runner-set-maps
   #   # Only run on main branch pushes, not PRs
   #   if: github.event_name != 'pull_request'
   #   steps:
