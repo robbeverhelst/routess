@@ -9,6 +9,11 @@ let contextMenuListenerAdded = false; // Track context menu (right-click) handle
 let currentPopup: any = null; // Track active popup for waypoint removal tooltip
 let directFlags: boolean[] = []; // parallel to waypoints, true if waypoint is direct
 
+// --- Drag state ---
+let isDragging = false;
+let draggedWaypointIndex = -1;
+let dragListenersAdded = false;
+
 // --- History (Undo / Redo) ---
 let undoStack: WaypointHistory[] = [];
 let redoStack: WaypointHistory[] = [];
@@ -240,6 +245,33 @@ export const hasUndo = () => {
 };
 export const hasRedo = () => redoStack.length > 0;
 
+// Function to update a waypoint position and recalculate the route
+export const updateWaypointPositionAndRecalculate = async (
+  map: any,
+  index: number,
+  newCoords: Coordinate,
+  accessToken: string,
+  setRouteDistance: Dispatch<SetStateAction<string>>,
+  setRouteDuration: Dispatch<SetStateAction<string>>,
+  setHasRoute: Dispatch<SetStateAction<boolean>>
+) => {
+  if (index < 0 || index >= waypoints.length) return;
+  
+  // Snapshot current state for undo
+  snapshot();
+  
+  // Update the waypoint
+  waypoints[index] = newCoords;
+  
+  // Update the visual representation on the map
+  updatePoints(map, waypoints);
+  
+  if (waypoints.length >= 2) {
+    // Recalculate route with updated waypoints
+    await getRoute(map, waypoints, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
+  }
+};
+
 // Setup routing logic for a Mapbox map instance
 export const setupRouting = (
   map: any, 
@@ -276,6 +308,22 @@ export const setupRouting = (
         }
       });
 
+      // Add an invisible wider layer to improve hit detection
+      map.addLayer({
+        id: 'route-hover-target',
+        type: 'line',
+        source: 'route',
+        layout: {
+          'line-join': 'round',
+          'line-cap': 'round'
+        },
+        paint: {
+          'line-color': '#000',
+          'line-width': 12, // Much wider for hit detection
+          'line-opacity': 0 // Completely transparent
+        }
+      });
+
       // Add a layer for the route line
       map.addLayer({
         id: 'route',
@@ -290,6 +338,19 @@ export const setupRouting = (
           'line-width': 3,
           'line-opacity': 0.75
         }
+      });
+
+      // Add hover interactions for the route
+      map.on('mouseenter', 'route-hover-target', () => {
+        map.getCanvas().style.cursor = 'pointer';
+        map.setPaintProperty('route', 'line-width', 5);
+        map.setPaintProperty('route', 'line-opacity', 0.9);
+      });
+
+      map.on('mouseleave', 'route-hover-target', () => {
+        map.getCanvas().style.cursor = '';
+        map.setPaintProperty('route', 'line-width', 3);
+        map.setPaintProperty('route', 'line-opacity', 0.75);
       });
 
       // Add a layer for route points
@@ -626,6 +687,421 @@ export const setupRouting = (
     console.log('[setupRouting] Context menu listeners already exist');
   }
 
+  // Add drag handlers for waypoints
+  if (!dragListenersAdded) {
+    console.log('[setupRouting] Adding drag handlers for waypoints');
+    
+    // Change cursor when hovering over waypoints
+    map.on('mouseenter', 'points', () => {
+      map.getCanvas().style.cursor = 'grab';
+    });
+    
+    map.on('mouseleave', 'points', () => {
+      if (!isDragging) {
+        map.getCanvas().style.cursor = '';
+      }
+    });
+    
+    // Start dragging
+    map.on('mousedown', 'points', (e: any) => {
+      // Prevent if popup is open
+      if (currentPopup && currentPopup.isOpen()) return;
+      
+      e.preventDefault();
+      
+      // Check if we have a valid feature
+      if (!e.features || e.features.length === 0) return;
+      
+      const feature = e.features[0];
+      const idxRaw = feature.properties?.waypointIndex;
+      const idx = typeof idxRaw === 'string' ? parseInt(idxRaw, 10) : idxRaw;
+      
+      if (isNaN(idx) || idx < 0 || idx >= waypoints.length) {
+        console.log('[Drag] Invalid waypoint index:', idxRaw);
+        return;
+      }
+      
+      // Set dragging state
+      isDragging = true;
+      draggedWaypointIndex = idx;
+      map.getCanvas().style.cursor = 'grabbing';
+      
+      // Disable map dragging during waypoint drag
+      map.dragPan.disable();
+      
+      // Add a temporary source and layer for drag visual lines
+      if (!map.getSource('temp-drag-lines')) {
+        map.addSource('temp-drag-lines', {
+          type: 'geojson',
+          data: {
+            type: 'FeatureCollection',
+            features: []
+          }
+        });
+        
+        map.addLayer({
+          id: 'temp-drag-lines',
+          type: 'line',
+          source: 'temp-drag-lines',
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round'
+          },
+          paint: {
+            'line-color': '#3887be', // Match the route color
+            'line-width': 3,
+            'line-opacity': 0.75
+          }
+        });
+      }
+      
+      // Mouse move handler - update waypoint position
+      const onMouseMove = (e: any) => {
+        if (!isDragging) return;
+        
+        const coords = [e.lngLat.lng, e.lngLat.lat] as Coordinate;
+        
+        // Update the waypoint position (visually only, don't recalculate route yet)
+        waypoints[draggedWaypointIndex] = coords;
+        updatePoints(map, waypoints);
+        
+        // Create temporary straight lines to adjacent waypoints
+        const features = [];
+        
+        // If not the first waypoint, create line to previous waypoint
+        if (draggedWaypointIndex > 0) {
+          features.push({
+            type: 'Feature',
+            properties: {},
+            geometry: {
+              type: 'LineString',
+              coordinates: [waypoints[draggedWaypointIndex - 1], coords]
+            }
+          });
+        }
+        
+        // If not the last waypoint, create line to next waypoint
+        if (draggedWaypointIndex < waypoints.length - 1) {
+          features.push({
+            type: 'Feature',
+            properties: {},
+            geometry: {
+              type: 'LineString',
+              coordinates: [coords, waypoints[draggedWaypointIndex + 1]]
+            }
+          });
+        }
+        
+        // Update temp drag lines
+        const tempSource = map.getSource('temp-drag-lines');
+        if (tempSource) {
+          tempSource.setData({
+            type: 'FeatureCollection',
+            features
+          });
+        }
+        
+        // The route should remain visible for other segments
+        // No need to hide the entire route as we're overlaying
+        // our temp lines only for the segments connected to the dragged point
+      };
+      
+      // Mouse up handler - finalize position and recalculate route
+      const onMouseUp = async () => {
+        if (!isDragging) return;
+        
+        map.getCanvas().style.cursor = '';
+        map.dragPan.enable();
+        
+        // Clear temporary drag lines
+        const tempSource = map.getSource('temp-drag-lines');
+        if (tempSource) {
+          tempSource.setData({
+            type: 'FeatureCollection',
+            features: []
+          });
+        }
+        
+        try {
+          // Remove the drag lines layer and source
+          if (map.getLayer('temp-drag-lines')) {
+            map.removeLayer('temp-drag-lines');
+          }
+          if (map.getSource('temp-drag-lines')) {
+            map.removeSource('temp-drag-lines');
+          }
+        } catch (err) {
+          console.warn('[Drag] Error removing temporary layers:', err);
+        }
+        
+        // Save state and recalculate route
+        if (draggedWaypointIndex !== -1) {
+          await updateWaypointPositionAndRecalculate(
+            map,
+            draggedWaypointIndex,
+            waypoints[draggedWaypointIndex],
+            accessToken,
+            setRouteDistance,
+            setRouteDuration,
+            setHasRoute
+          );
+        }
+        
+        // Reset dragging state
+        isDragging = false;
+        draggedWaypointIndex = -1;
+        
+        // Remove event listeners
+        map.off('mousemove', onMouseMove);
+        map.off('mouseup', onMouseUp);
+      };
+      
+      // Add temporary event listeners
+      map.on('mousemove', onMouseMove);
+      map.on('mouseup', onMouseUp);
+    });
+    
+    dragListenersAdded = true;
+    console.log('[setupRouting] Drag handlers added successfully');
+  } else {
+    console.log('[setupRouting] Drag handlers already added');
+  }
+
+  // Handle clicking and dragging on the route directly
+  map.on('mousedown', 'route-hover-target', (e: any) => {
+    // Don't do anything if a popup is open
+    if (currentPopup && currentPopup.isOpen()) return;
+    
+    // Prevent default browser behavior
+    e.preventDefault();
+    
+    // Check if we have a valid route
+    if (waypoints.length < 2) return;
+    
+    // Get the click point
+    const clickPoint = [e.lngLat.lng, e.lngLat.lat] as Coordinate;
+    
+    // First, check if we're already close to an existing waypoint
+    // Query rendered features to see if we're clicking near an existing waypoint
+    const features = map.queryRenderedFeatures(e.point, { layers: ['points'] });
+    if (features && features.length > 0) {
+      // We're clicking near an existing waypoint, so don't create a new one
+      // The existing waypoint's drag handler will take over
+      return;
+    }
+    
+    // We need to find the closest position on the route to add a new waypoint
+    // Get the route coordinates
+    const routeSource = map.getSource('route');
+    let routeData: any;
+    
+    try {
+      routeData = routeSource._data;
+    } catch (err) {
+      console.error('[Route Click] Failed to get route data:', err);
+      return;
+    }
+    
+    if (!routeData || !routeData.geometry || !routeData.geometry.coordinates || routeData.geometry.coordinates.length === 0) {
+      console.warn('[Route Click] No valid route data found');
+      return;
+    }
+    
+    const routeCoords = routeData.geometry.coordinates;
+    
+    // Find the closest point on the route line and its segment index
+    let minDistance = Infinity;
+    let closestPointOnRoute: Coordinate = [0, 0];
+    let insertIndex = 1; // We'll insert after the first waypoint by default
+    
+    for (let i = 0; i < routeCoords.length - 1; i++) {
+      const start = routeCoords[i];
+      const end = routeCoords[i + 1];
+      
+      // Find closest point on this line segment
+      const point = closestPointOnSegment(clickPoint, start, end);
+      const distance = haversine(clickPoint, point);
+      
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestPointOnRoute = point;
+        
+        // Determine proper insertion index in the waypoints array
+        // For simplicity, we'll look at distance to existing waypoints
+        for (let j = 0; j < waypoints.length - 1; j++) {
+          // Calculate distance from start of each segment
+          const segStart = routeCoords.findIndex(
+            coord => coord[0] === waypoints[j][0] && coord[1] === waypoints[j][1]
+          );
+          
+          const segEnd = routeCoords.findIndex(
+            coord => coord[0] === waypoints[j + 1][0] && coord[1] === waypoints[j + 1][1]
+          );
+          
+          if (segStart !== -1 && segEnd !== -1 && i >= segStart && i < segEnd) {
+            insertIndex = j + 1;
+            break;
+          }
+        }
+      }
+    }
+    
+    // If no reasonably close point was found, abort
+    if (minDistance > 0.1) { // More than 100m away
+      console.warn('[Route Click] Click was too far from route:', minDistance);
+      return;
+    }
+    
+    // Snapshot for undo
+    snapshot();
+    
+    // Add the new waypoint at the proper insert position
+    waypoints.splice(insertIndex, 0, closestPointOnRoute);
+    directFlags.splice(insertIndex, 0, false); // Default to regular waypoint
+    
+    // Update markers visually
+    updatePoints(map, waypoints);
+    
+    // Set up dragging for this new waypoint immediately
+    isDragging = true;
+    draggedWaypointIndex = insertIndex;
+    map.getCanvas().style.cursor = 'grabbing';
+    
+    // Disable map dragging during waypoint drag
+    map.dragPan.disable();
+    
+    // Add a temporary source and layer for drag visual lines
+    if (!map.getSource('temp-drag-lines')) {
+      map.addSource('temp-drag-lines', {
+        type: 'geojson',
+        data: {
+          type: 'FeatureCollection',
+          features: []
+        }
+      });
+      
+      map.addLayer({
+        id: 'temp-drag-lines',
+        type: 'line',
+        source: 'temp-drag-lines',
+        layout: {
+          'line-join': 'round',
+          'line-cap': 'round'
+        },
+        paint: {
+          'line-color': '#3887be', // Match the route color
+          'line-width': 3,
+          'line-opacity': 0.75
+        }
+      });
+    }
+    
+    // Setup the same mouse move and mouse up handlers as regular waypoint dragging
+    const onMouseMove = (e: any) => {
+      if (!isDragging) return;
+      
+      const coords = [e.lngLat.lng, e.lngLat.lat] as Coordinate;
+      
+      // Update the waypoint position (visually only, don't recalculate route yet)
+      waypoints[draggedWaypointIndex] = coords;
+      updatePoints(map, waypoints);
+      
+      // Create temporary straight lines to adjacent waypoints
+      const features = [];
+      
+      // If not the first waypoint, create line to previous waypoint
+      if (draggedWaypointIndex > 0) {
+        features.push({
+          type: 'Feature',
+          properties: {},
+          geometry: {
+            type: 'LineString',
+            coordinates: [waypoints[draggedWaypointIndex - 1], coords]
+          }
+        });
+      }
+      
+      // If not the last waypoint, create line to next waypoint
+      if (draggedWaypointIndex < waypoints.length - 1) {
+        features.push({
+          type: 'Feature',
+          properties: {},
+          geometry: {
+            type: 'LineString',
+            coordinates: [coords, waypoints[draggedWaypointIndex + 1]]
+          }
+        });
+      }
+      
+      // Update temp drag lines
+      const tempSource = map.getSource('temp-drag-lines');
+      if (tempSource) {
+        tempSource.setData({
+          type: 'FeatureCollection',
+          features
+        });
+      }
+      
+      // The route should remain visible for other segments
+      // No need to hide the entire route as we're overlaying
+      // our temp lines only for the segments connected to the dragged point
+    };
+    
+    // Mouse up handler - finalize position and recalculate route
+    const onMouseUp = async () => {
+      if (!isDragging) return;
+      
+      map.getCanvas().style.cursor = '';
+      map.dragPan.enable();
+      
+      // Clear temporary drag lines
+      const tempSource = map.getSource('temp-drag-lines');
+      if (tempSource) {
+        tempSource.setData({
+          type: 'FeatureCollection',
+          features: []
+        });
+      }
+      
+      try {
+        // Remove the drag lines layer and source
+        if (map.getLayer('temp-drag-lines')) {
+          map.removeLayer('temp-drag-lines');
+        }
+        if (map.getSource('temp-drag-lines')) {
+          map.removeSource('temp-drag-lines');
+        }
+      } catch (err) {
+        console.warn('[Drag] Error removing temporary layers:', err);
+      }
+      
+      // Save state and recalculate route
+      if (draggedWaypointIndex !== -1) {
+        await updateWaypointPositionAndRecalculate(
+          map,
+          draggedWaypointIndex,
+          waypoints[draggedWaypointIndex],
+          accessToken,
+          setRouteDistance,
+          setRouteDuration,
+          setHasRoute
+        );
+      }
+      
+      // Reset dragging state
+      isDragging = false;
+      draggedWaypointIndex = -1;
+      
+      // Remove event listeners
+      map.off('mousemove', onMouseMove);
+      map.off('mouseup', onMouseUp);
+    };
+    
+    // Add temporary event listeners
+    map.on('mousemove', onMouseMove);
+    map.on('mouseup', onMouseUp);
+  });
+
   return map;
 };
 
@@ -900,4 +1376,29 @@ async function buildMixedRoute(map: any, accessToken: string) {
     }
   }
   return { coordsAccum, totalDist };
-} 
+}
+
+// Helper function to find the closest point on a line segment
+const closestPointOnSegment = (p: Coordinate, v: Coordinate, w: Coordinate): Coordinate => {
+  // Convert to simple points for easier calculation
+  const point = { x: p[0], y: p[1] };
+  const start = { x: v[0], y: v[1] };
+  const end = { x: w[0], y: w[1] };
+  
+  // Calculate squared length of segment
+  const l2 = Math.pow(end.x - start.x, 2) + Math.pow(end.y - start.y, 2);
+  
+  // If segment is a point, return the point
+  if (l2 === 0) return [start.x, start.y];
+  
+  // Calculate projection scalar
+  const t = Math.max(0, Math.min(1, 
+    ((point.x - start.x) * (end.x - start.x) + (point.y - start.y) * (end.y - start.y)) / l2
+  ));
+  
+  // Calculate projection point
+  return [
+    start.x + t * (end.x - start.x),
+    start.y + t * (end.y - start.y)
+  ];
+}; 
