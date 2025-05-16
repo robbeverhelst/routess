@@ -47,11 +47,22 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
         
+      - name: Check for Mapbox Token availability
+        run: |
+          echo "VITE_MAPBOX_ACCESS_TOKEN secret is present: ${{ secrets.VITE_MAPBOX_ACCESS_TOKEN != '' }}"
+
       - name: Build application
         env:
           VITE_MAPBOX_ACCESS_TOKEN: ${{ secrets.VITE_MAPBOX_ACCESS_TOKEN }}
         run: bun vite build
         
+      - name: Verify token in built files
+        run: |
+          echo "Listing JS files in dist/assets:"
+          ls -l dist/assets/*.js || echo "No JS files found in dist/assets"
+          echo "Grepping for Mapbox token prefix 'pk.eyJ1' in JS files..."
+          grep -r 'pk.eyJ1' dist/assets || echo "Token prefix not found in dist/assets (grep exit code $?)"
+          
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
