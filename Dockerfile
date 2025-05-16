@@ -19,11 +19,13 @@ RUN bun vite build
 # Production stage
 FROM nginx:alpine
 
-# Copy built assets from builder stage
-COPY --from=builder /app/dist /usr/share/nginx/html
+# Copy built assets from the Docker build context.
+# The GitHub Actions 'docker' job downloads the 'build-files' artifact (which is the 'dist' directory)
+# into './dist' in the workspace, making it available in the Docker build context.
+COPY dist/ /usr/share/nginx/html/
 
-# Copy nginx config
-COPY --from=builder /app/nginx.conf /etc/nginx/conf.d/default.conf
+# Copy nginx config (assuming it's at the root of your repository and thus in the Docker build context)
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Expose port
 EXPOSE 80
