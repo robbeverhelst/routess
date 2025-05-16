@@ -1,11 +1,12 @@
 import type { Dispatch, SetStateAction } from 'react';
 import type { Coordinate, WaypointHistory } from '@/types/map';
+import type { Map as MapboxMap, Popup } from 'mapbox-gl';
 
 // Store references and state outside of the setup function to persist across renders
 let waypoints: Coordinate[] = [];
 let clickListenerAdded = false;
 let contextMenuListenerAdded = false; // Track context menu (right-click) handler
-let currentPopup: any = null; // Track active popup for waypoint removal tooltip
+let currentPopup: Popup | null = null; // Track active popup for waypoint removal tooltip
 let directFlags: boolean[] = []; // parallel to waypoints, true if waypoint is direct
 
 // --- Drag state ---
@@ -16,6 +17,9 @@ let dragListenersAdded = false;
 // --- History (Undo / Redo) ---
 let undoStack: WaypointHistory[] = [];
 let redoStack: WaypointHistory[] = [];
+
+// --- Kilometer markers ---
+let kmMarkersAdded = false;  // Track if km markers source/layer was added
 
 // Export the waypoints and directFlags for external components to use
 export const getWaypoints = () => waypoints;
@@ -376,6 +380,40 @@ export const setupRouting = (
           'circle-stroke-color': '#fff'
         }
       });
+
+      // Add source and layer for kilometer markers
+      map.addSource('km-markers', {
+        type: 'geojson',
+        data: {
+          type: 'FeatureCollection',
+          features: []
+        }
+      });
+
+      map.addLayer({
+        id: 'km-markers',
+        type: 'symbol',
+        source: 'km-markers',
+        layout: {
+          'text-field': ['get', 'km'],
+          'text-size': 12,
+          'text-offset': [0, -1.5],
+          'text-anchor': 'bottom',
+          'icon-image': 'circle-11',
+          'icon-size': 0.75,
+          'icon-allow-overlap': true,
+          'text-allow-overlap': true
+        },
+        paint: {
+          'text-color': '#000',
+          'text-halo-color': '#fff',
+          'text-halo-width': 2
+        }
+      });
+      
+      kmMarkersAdded = true;
+      console.log('[setupRouting] Successfully added kilometer markers layer');
+      
       console.log('[setupRouting] Successfully added sources and layers');
     } catch (err) {
       console.error('[setupRouting] Error adding sources or layers:', err);
@@ -730,8 +768,11 @@ export const setupRouting = (
         map.addSource('temp-drag-lines', {
           type: 'geojson',
           data: {
-            type: 'FeatureCollection',
-            features: []
+            type: 'geojson',
+            data: {
+              type: 'FeatureCollection',
+              features: []
+            }
           }
         });
         
@@ -1154,6 +1195,85 @@ export const clearRoute = (map: any) => {
   }
 };
 
+// Calculate and place kilometer markers along the route
+const addKilometerMarkers = (map: MapboxMap, coordinates: Coordinate[]) => {
+  if (!map || !map.getSource || !map.getSource('km-markers') || coordinates.length < 2) {
+    console.warn('[addKilometerMarkers] Map or km-markers source not available. Aborting.');
+    return;
+  }
+  
+  console.log('[addKilometerMarkers] Calculating kilometer markers...');
+  
+  const kmMarkers: Array<{
+    geometry: { type: string; coordinates: Coordinate };
+    properties: { km: string };
+    type: string;
+  }> = [];
+  
+  let distanceCovered = 0;
+  let nextKmMarker = 1; // First marker at 1km
+  
+  // Loop through each segment of the route
+  for (let i = 0; i < coordinates.length - 1; i++) {
+    const start = coordinates[i];
+    const end = coordinates[i + 1];
+    
+    // Calculate distance of this segment
+    const segmentDistance = haversine(start, end);
+    
+    // Check if we cross a kilometer marker in this segment
+    if (distanceCovered + segmentDistance >= nextKmMarker) {
+      // How far into this segment is the km marker
+      const segmentFraction = (nextKmMarker - distanceCovered) / segmentDistance;
+      
+      // Calculate the position of the km marker using linear interpolation
+      const markerLng = start[0] + segmentFraction * (end[0] - start[0]);
+      const markerLat = start[1] + segmentFraction * (end[1] - start[1]);
+      
+      // Add the marker
+      kmMarkers.push({
+        type: 'Feature',
+        geometry: {
+          type: 'Point',
+          coordinates: [markerLng, markerLat]
+        },
+        properties: {
+          km: `${nextKmMarker} km`
+        }
+      });
+      
+      // Move to next kilometer marker
+      nextKmMarker++;
+    }
+    
+    // Add the distance of this segment
+    distanceCovered += segmentDistance;
+  }
+  
+  // Update the GeoJSON source with the kilometer markers
+  const source = map.getSource('km-markers')!;
+  // @ts-ignore - MapboxGL types don't properly expose setData on all source types
+  source.setData({
+    type: 'FeatureCollection',
+    features: kmMarkers
+  });
+  
+  console.log(`[addKilometerMarkers] Added ${kmMarkers.length} kilometer markers`);
+};
+
+// Clear kilometer markers from the map
+const clearKilometerMarkers = (map: MapboxMap) => {
+  if (map && map.getSource && map.getSource('km-markers')) {
+    const source = map.getSource('km-markers')!;
+    // @ts-ignore - MapboxGL types don't properly expose setData on all source types
+    source.setData({
+      type: 'FeatureCollection',
+      features: []
+    });
+    console.log('[clearKilometerMarkers] Cleared kilometer markers');
+  }
+};
+
 // Calculate and display a route between waypoints
 export const getRoute = async (
   map: any, 
@@ -1167,6 +1287,9 @@ export const getRoute = async (
     return;
   }
   
+  // Clear existing kilometer markers
+  clearKilometerMarkers(map);
+  
   if (directFlags.some(Boolean)) {
       const { coordsAccum, totalDist } = await buildMixedRoute(accessToken);
       const routeSource = map.getSource('route');
@@ -1179,6 +1302,10 @@ export const getRoute = async (
       setRouteDistance(`${totalDist.toFixed(2)} km`);
       setRouteDuration(`${duration} min`);
       setHasRoute(true);
+      
+      // Add kilometer markers along the mixed route
+      addKilometerMarkers(map, coordsAccum);
+      
       return;
   }
 
@@ -1261,6 +1388,9 @@ export const getRoute = async (
         }
       });
       console.log('[getRoute] Route source updated.');
+      
+      // Add kilometer markers along the route
+      addKilometerMarkers(map, route);
     } else {
       console.warn('[getRoute] Route source not found on map.');
     }
@@ -1299,6 +1429,9 @@ export const resetRouting = (
     setRouteDistance('');
     setRouteDuration('');
     setHasRoute(false);
+    
+    // Clear kilometer markers
+    clearKilometerMarkers(map);
 
     // Clear history stacks
     undoStack = [];
