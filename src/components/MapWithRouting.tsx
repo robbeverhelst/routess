@@ -20,8 +20,25 @@ import { Button } from '@/components/ui/button';
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
 
 // Fallback for development (remove in production)
-if (!MAPBOX_TOKEN) {
-  console.error('Mapbox token not found in environment variables! Please add VITE_MAPBOX_ACCESS_TOKEN to your .env file');
+// if (!MAPBOX_TOKEN) {
+//   console.error('Mapbox token not found in environment variables! Please add VITE_MAPBOX_ACCESS_TOKEN to your .env file');
+// }
+
+// More detailed check for debugging
+if (!MAPBOX_TOKEN || MAPBOX_TOKEN.length < 10) { // Check if it's falsy or too short to be a real token
+  console.error(
+    `[MapWithRouting] Mapbox token issue: 
+    Raw import.meta.env.VITE_MAPBOX_ACCESS_TOKEN: '${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}', 
+    Assigned MAPBOX_TOKEN value: '${MAPBOX_TOKEN}', 
+    Type of MAPBOX_TOKEN: '${typeof MAPBOX_TOKEN}'. 
+    Please verify VITE_MAPBOX_ACCESS_TOKEN in your .env file or CI secrets.`
+  );
+} else {
+  console.log(
+    `[MapWithRouting] Mapbox token loaded. 
+    Type: ${typeof MAPBOX_TOKEN}, 
+    Value starts with: ${String(MAPBOX_TOKEN).substring(0, 10)}...`
+  );
 }
 
 interface MapboxMapProps {
