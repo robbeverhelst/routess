@@ -255,7 +255,7 @@ jobs:
         uses: pulumi/actions@v6
         with:
           command: refresh
-          stack-name: production
+          stack-name: prod
           work-dir: ./infra
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
@@ -266,7 +266,7 @@ jobs:
         uses: pulumi/actions@v6
         with:
           command: up
-          stack-name: production
+          stack-name: prod
           work-dir: ./infra
           upsert: true
         env:
