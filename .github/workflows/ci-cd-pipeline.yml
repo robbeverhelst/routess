@@ -148,7 +148,7 @@ jobs:
   docker:
     name: Build and Push Multi-Arch Docker Image
     needs: release
-    runs-on: arc-runner-set-maps  # Use GitHub-hosted runner with Docker pre-installed
+    runs-on: ubuntu-latest  
     permissions:
       contents: read
       packages: write
