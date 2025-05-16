@@ -931,11 +931,11 @@ export const setupRouting = (
         for (let j = 0; j < waypoints.length - 1; j++) {
           // Calculate distance from start of each segment
           const segStart = routeCoords.findIndex(
-            coord => coord[0] === waypoints[j][0] && coord[1] === waypoints[j][1]
+            (coord: Coordinate) => coord[0] === waypoints[j][0] && coord[1] === waypoints[j][1]
           );
           
           const segEnd = routeCoords.findIndex(
-            coord => coord[0] === waypoints[j + 1][0] && coord[1] === waypoints[j + 1][1]
+            (coord: Coordinate) => coord[0] === waypoints[j + 1][0] && coord[1] === waypoints[j + 1][1]
           );
           
           if (segStart !== -1 && segEnd !== -1 && i >= segStart && i < segEnd) {

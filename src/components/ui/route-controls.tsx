@@ -1,4 +1,3 @@
-import React from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeftCircle, ArrowRightCircle, Locate, RefreshCw } from "lucide-react";
 
@@ -48,12 +47,16 @@ export function RouteControls({
       <Button
         variant="secondary"
         size="icon"
-        disabled={!hasUserLocation}
         onClick={onLocate}
-        className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 disabled:opacity-50"
-        title="Center on my location"
+        className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60"
+        title={hasUserLocation ? "Center on my location" : "Location not available"}
       >
-        <Locate size={18} className={hasUserLocation ? "text-blue-500" : ""} />
+        <div className="relative">
+          <Locate size={18} className={hasUserLocation ? "text-blue-500" : "text-gray-400"} />
+          {!hasUserLocation && (
+            <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
+          )}
+        </div>
       </Button>
       
       <Button

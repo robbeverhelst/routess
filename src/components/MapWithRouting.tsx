@@ -3,6 +3,8 @@ import Map from 'react-map-gl/mapbox';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { RouteControls } from '@/components/ui/route-controls';
 import { RouteDetails } from '@/components/ui/route-details';
+import { Button } from '@/components/ui/button';
+import { LocationSearch } from '@/components/ui/location-search';
 import { 
   setupRouting, 
   resetRouting, 
@@ -14,7 +16,6 @@ import {
   removeWaypoint,
   getWaypoints
 } from '@/lib/routing';
-import { Button } from '@/components/ui/button';
 
 // Get Mapbox access token from environment variables
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
@@ -61,8 +62,9 @@ interface MapClickEvent {
 interface PopupInfo {
   longitude: number;
   latitude: number;
-  type: 'direct' | 'remove';
+  type: 'direct' | 'remove' | 'info';
   waypointIndex?: number;
+  message?: string;
 }
 
 // Default Europe-centered view if user location unavailable
@@ -130,12 +132,12 @@ export default function MapWithRouting({
             position.coords.latitude
           ];
           setUserLocation(newLocation);
-          setLocationError(null);
+          setLocationError(null); // Still update error state for internal tracking
         },
         (error) => {
           console.error('Error getting user location:', error);
           
-          // Provide user-friendly error messages
+          // Store error message internally, but don't display to user
           let errorMessage = 'Unable to access your location.';
           
           switch(error.code) {
@@ -155,7 +157,7 @@ export default function MapWithRouting({
                     position.coords.latitude
                   ];
                   setUserLocation(newLocation);
-                  setLocationError(null);
+                  setLocationError(null); // Still update error state for internal tracking
                 },
                 (retryError) => {
                   console.error('Error after retry:', retryError);
@@ -171,7 +173,7 @@ export default function MapWithRouting({
           }
           
           if (error.code !== 3) { // Don't set error for timeout since we're retrying
-            setLocationError(errorMessage);
+            setLocationError(errorMessage); // Still update error state for internal tracking
           }
         },
         { 
@@ -388,12 +390,11 @@ export default function MapWithRouting({
   }, []);
 
   const handleLocate = useCallback(() => {
-    if (mapRef.current && userLocation) {
+    if (mapRef.current && userLocation && !locationError) {
       mapRef.current.flyTo({ center: userLocation, zoom: 15 });
-    } else if (locationError && mapRef.current) {
-      // Show toast or alert about location error
-      console.log(locationError);
-      // Could add a UI toast here
+    } else if ((!userLocation || locationError) && mapRef.current) {
+      // If no location is available or there's an error, log it for debugging
+      console.log('Location not available or has error:', locationError);
     }
   }, [userLocation, locationError]);
 
@@ -495,6 +496,33 @@ export default function MapWithRouting({
     setPopup(null);
   }, [popup]);
 
+  // Add a new handler for location search
+  const handleSelectLocation = useCallback((location: { lng: number; lat: number; name: string }) => {
+    if (!mapRef.current) return;
+    
+    console.log('[MapWithRouting] Selected location:', location);
+    
+    // Fly to the selected location
+    mapRef.current.flyTo({
+      center: [location.lng, location.lat],
+      zoom: 14,
+      duration: 1500
+    });
+    
+    // Optional: Show a temporary tooltip with the location name
+    setPopup({
+      longitude: location.lng,
+      latitude: location.lat,
+      type: 'info',
+      message: location.name
+    });
+    
+    // Clear the tooltip after 3 seconds
+    setTimeout(() => {
+      setPopup(null);
+    }, 3000);
+  }, []);
+
   return (
     <div className="relative w-full h-full">
       <Map
@@ -549,12 +577,20 @@ export default function MapWithRouting({
                 </Button>
               </div>
             )}
+            
+            {popup.type === 'info' && (
+              <div className="p-2 bg-white rounded-md shadow-md border border-border">
+                <div className="text-sm text-gray-800">
+                  {popup.message}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </Map>
 
-      {/* Controls positioned at top-right */}
-      <div className="absolute top-8 right-8 z-10">
+      {/* Controls positioned at top center */}
+      <div className="absolute top-8 left-1/2 transform -translate-x-1/2 z-10">
         <RouteControls
           onUndo={handleUndo}
           onRedo={handleRedo}
@@ -562,16 +598,17 @@ export default function MapWithRouting({
           onLocate={handleLocate}
           canUndo={canUndo}
           canRedo={canRedo}
-          hasUserLocation={!!userLocation}
+          hasUserLocation={!!userLocation && !locationError}
         />
       </div>
-
-      {/* Location error notification */}
-      {locationError && (
-        <div className="absolute top-20 right-8 z-10 max-w-xs bg-red-50 p-3 rounded-md border border-red-200 text-sm text-red-800">
-          {locationError}
-        </div>
-      )}
+      
+      {/* Search positioned at top right */}
+      <div className="absolute top-8 right-8 z-10">
+        <LocationSearch
+          mapboxToken={MAPBOX_TOKEN}
+          onSelectLocation={handleSelectLocation}
+        />
+      </div>
 
       {/* Waypoint error notification */}
       {waypointError && (
