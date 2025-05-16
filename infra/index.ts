@@ -28,34 +28,34 @@ const ns = new core.v1.Namespace(namespace, {
 }, { provider });
 
 // Get GitHub credentials from config
-const githubUsername = config.require("githubUsername");
-const githubToken = config.requireSecret("githubToken");
+// const githubUsername = config.require("githubUsername");
+// const githubToken = config.requireSecret("githubToken");
 
-// Create auth string for GitHub Container Registry
-const authString = pulumi.interpolate`${githubUsername}:${githubToken}`.apply(
-    s => Buffer.from(s).toString('base64')
-);
+// // Create auth string for GitHub Container Registry
+// const authString = pulumi.interpolate`${githubUsername}:${githubToken}`.apply(
+//     s => Buffer.from(s).toString('base64')
+// );
 
-// Create Docker config JSON
-const dockerConfigJson = authString.apply(auth => JSON.stringify({
-    auths: {
-        "ghcr.io": {
-            auth: auth
-        }
-    }
-}));
+// // Create Docker config JSON
+// const dockerConfigJson = authString.apply(auth => JSON.stringify({
+//     auths: {
+//         "ghcr.io": {
+//             auth: auth
+//         }
+//     }
+// }));
 
-// Create a Docker registry secret for GitHub Container Registry
-const dockerSecret = new core.v1.Secret(`${appName}-ghcr-secret`, {
-    metadata: {
-        name: "ghcr-pull-secret",
-        namespace: namespace,
-    },
-    type: "kubernetes.io/dockerconfigjson",
-    stringData: {
-        ".dockerconfigjson": dockerConfigJson,
-    },
-}, { provider, dependsOn: ns });
+// // Create a Docker registry secret for GitHub Container Registry
+// const dockerSecret = new core.v1.Secret(`${appName}-ghcr-secret`, {
+//     metadata: {
+//         name: "ghcr-pull-secret",
+//         namespace: namespace,
+//     },
+//     type: "kubernetes.io/dockerconfigjson",
+//     stringData: {
+//         ".dockerconfigjson": dockerConfigJson,
+//     },
+// }, { provider, dependsOn: ns });
 
 // Create a unique name for the deployment to force an update
 const deploymentName = `${appName}-deployment-${appVersion.replace(/\./g, '-')}`;
@@ -103,11 +103,11 @@ const deployment = new apps.v1.Deployment(deploymentName, {
                     },
                     imagePullPolicy: "Always",
                 }],
-                imagePullSecrets: [{ name: dockerSecret.metadata.name }],
+                // imagePullSecrets: [{ name: dockerSecret.metadata.name }],
             },
         },
     },
-}, { provider, dependsOn: [ns, dockerSecret] });
+}, { provider, dependsOn: [ns] });
 
 // Create a Kubernetes service to expose the deployment
 const service = new core.v1.Service(`${appName}-service`, {
