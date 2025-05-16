@@ -48,6 +48,8 @@ jobs:
         run: bun install --frozen-lockfile
         
       - name: Build application
+        env:
+          VITE_MAPBOX_ACCESS_TOKEN: ${{ secrets.VITE_MAPBOX_ACCESS_TOKEN }}
         run: bun vite build
         
       - name: Upload build artifacts
