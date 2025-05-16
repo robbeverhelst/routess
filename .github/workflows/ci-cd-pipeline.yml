@@ -224,56 +224,56 @@ jobs:
           cache-to: type=registry,ref=ghcr.io/${{ env.REPO_OWNER_LOWER }}/maps:buildcache,mode=max
 
   # Updated job for deploying infrastructure with Pulumi
-  # deploy:
-  #   name: Deploy Infrastructure
-  #   needs: [docker, release]
-  #   runs-on: arc-runner-set-maps
-  #   # Only run on main branch pushes, not PRs
-  #   if: github.event_name != 'pull_request'
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v3
-  #       with:
-  #         ref: main  # Ensure we're using the latest main branch with the version update
-  #         fetch-depth: 1
+  deploy:
+    name: Deploy Infrastructure
+    needs: [docker, release]
+    runs-on: arc-runner-set-maps
+    # Only run on main branch pushes, not PRs
+    if: github.event_name != 'pull_request'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          ref: main  # Ensure we're using the latest main branch with the version update
+          fetch-depth: 1
           
-  #     - name: Setup Node.js
-  #       uses: actions/setup-node@v3
-  #       with:
-  #         node-version: '18'
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
           
-  #     - name: Install dependencies
-  #       working-directory: ./infra
-  #       run: npm install
+      - name: Install dependencies
+        working-directory: ./infra
+        run: npm install
         
-  #     - name: Use version from release job
-  #       run: |
-  #         echo "VERSION=${{ needs.release.outputs.version }}" >> $GITHUB_ENV
-  #         echo "Using version: ${{ needs.release.outputs.version }}"
+      - name: Use version from release job
+        run: |
+          echo "VERSION=${{ needs.release.outputs.version }}" >> $GITHUB_ENV
+          echo "Using version: ${{ needs.release.outputs.version }}"
           
-  #     - name: Pulumi Refresh
-  #       uses: pulumi/actions@v6
-  #       with:
-  #         command: refresh
-  #         stack-name: production
-  #         work-dir: ./infra
-  #       env:
-  #         PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
-  #         PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
-  #         APP_VERSION: ${{ needs.release.outputs.version }}
+      - name: Pulumi Refresh
+        uses: pulumi/actions@v6
+        with:
+          command: refresh
+          stack-name: production
+          work-dir: ./infra
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+          PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
+          APP_VERSION: ${{ needs.release.outputs.version }}
           
-  #     - name: Pulumi Update
-  #       uses: pulumi/actions@v6
-  #       with:
-  #         command: up
-  #         stack-name: production
-  #         work-dir: ./infra
-  #         upsert: true
-  #       env:
-  #         PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
-  #         PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
-  #         APP_VERSION: ${{ needs.release.outputs.version }}
+      - name: Pulumi Update
+        uses: pulumi/actions@v6
+        with:
+          command: up
+          stack-name: production
+          work-dir: ./infra
+          upsert: true
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+          PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
+          APP_VERSION: ${{ needs.release.outputs.version }}
           
-  #     - name: Clean up old resources (if any)
-  #       run: |
-  #         echo "Deployment completed successfully. Old resources will be garbage collected by Pulumi."
+      - name: Clean up old resources (if any)
+        run: |
+          echo "Deployment completed successfully. Old resources will be garbage collected by Pulumi."
