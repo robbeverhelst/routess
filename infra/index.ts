@@ -91,6 +91,12 @@ const deployment = new apps.v1.Deployment(deploymentName, {
                     name: appName,
                     image: `ghcr.io/robbeverhelst/maps:${appVersion}`,
                     ports: [{ containerPort: 80 }],
+                    env: [
+                        {
+                            name: "VITE_MAPBOX_ACCESS_TOKEN",
+                            value: process.env.VITE_MAPBOX_ACCESS_TOKEN || "",
+                        }
+                    ],
                     resources: {
                         limits: {
                             cpu: "500m",
