@@ -89,7 +89,7 @@ const deployment = new apps.v1.Deployment(deploymentName, {
             spec: {
                 containers: [{
                     name: appName,
-                    image: `ghcr.io/robbeverhelst/debleserit-website:${appVersion}`,
+                    image: `ghcr.io/robbeverhelst/maps:${appVersion}`,
                     ports: [{ containerPort: 80 }],
                     resources: {
                         limits: {

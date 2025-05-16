@@ -10,7 +10,7 @@ fi
 pulumi config set githubOwner RobbeVerhelst
 
 # Set the hostname for the ingress
-read -p "Enter the hostname for the ingress (e.g., debleserit.example.com): " hostname
+read -p "Enter the hostname for the ingress (e.g., maps.example.com): " hostname
 pulumi config set hostname "$hostname"
 
 # Set the cluster name
