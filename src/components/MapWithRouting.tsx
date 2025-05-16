@@ -5,6 +5,7 @@ import { RouteControls } from '@/components/ui/route-controls';
 import { RouteDetails } from '@/components/ui/route-details';
 import { Button } from '@/components/ui/button';
 import { LocationSearch } from '@/components/ui/location-search';
+import { Sidebar } from '@/components/ui/sidebar';
 import { 
   setupRouting, 
   resetRouting, 
@@ -602,11 +603,21 @@ export default function MapWithRouting({
         />
       </div>
       
-      {/* Search positioned at top right */}
-      <div className="absolute top-8 right-8 z-10">
+      {/* Search and menu positioned at top right */}
+      <div className="absolute top-8 right-8 z-10 flex items-center gap-2">
         <LocationSearch
           mapboxToken={MAPBOX_TOKEN}
           onSelectLocation={handleSelectLocation}
+        />
+        <Sidebar
+          onUndo={handleUndo}
+          onRedo={handleRedo}
+          onReset={handleReset}
+          canUndo={canUndo}
+          canRedo={canRedo}
+          hasRoute={hasRoute}
+          routeDistance={routeDistance}
+          routeDuration={routeDuration}
         />
       </div>
 

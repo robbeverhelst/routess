@@ -3,7 +3,6 @@ import type { Coordinate, WaypointHistory } from '@/types/map';
 
 // Store references and state outside of the setup function to persist across renders
 let waypoints: Coordinate[] = [];
-let mapInstance: any = null;
 let clickListenerAdded = false;
 let contextMenuListenerAdded = false; // Track context menu (right-click) handler
 let currentPopup: any = null; // Track active popup for waypoint removal tooltip
@@ -94,7 +93,7 @@ export const addWaypoint = async (
     
     // If we have at least 2 waypoints, calculate and show a route
     if (waypoints.length >= 2) {
-      await getRoute(map, waypoints, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
+      await getRoute(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
     }
     return true;
   }
@@ -127,7 +126,7 @@ export const addWaypoint = async (
   
   // If we have at least 2 waypoints, calculate and show a route
   if (waypoints.length >= 2) {
-    await getRoute(map, waypoints, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
+    await getRoute(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
   }
   
   return true;
@@ -156,7 +155,7 @@ export const removeWaypoint = async (
   
   if (waypoints.length >= 2) {
     // Recalculate route with updated waypoints
-    await getRoute(map, waypoints, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
+    await getRoute(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
   } else {
     // If fewer than 2 waypoints, clear route
     clearRoute(map);
@@ -199,7 +198,7 @@ export const stepBack = async (
   updatePoints(map, waypoints);
 
   if (waypoints.length >= 2) {
-    await getRoute(map, waypoints, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
+    await getRoute(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
   } else {
     clearRoute(map);
     setRouteDistance('');
@@ -228,7 +227,7 @@ export const stepForward = async (
   updatePoints(map, waypoints);
 
   if (waypoints.length >= 2) {
-    await getRoute(map, waypoints, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
+    await getRoute(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
   } else {
     clearRoute(map);
     setRouteDistance('');
@@ -268,7 +267,7 @@ export const updateWaypointPositionAndRecalculate = async (
   
   if (waypoints.length >= 2) {
     // Recalculate route with updated waypoints
-    await getRoute(map, waypoints, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
+    await getRoute(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
   }
 };
 
@@ -288,9 +287,6 @@ export const setupRouting = (
   
   console.log('[setupRouting] Starting routing setup');
   
-  // Store the map instance
-  mapInstance = map;
-
   // Create source and layers only once
   if (!map.getSource('route')) {
     console.log('[setupRouting] Adding route and points sources/layers to map');
@@ -393,7 +389,7 @@ export const setupRouting = (
     updatePoints(map, waypoints);
     
     if (waypoints.length >= 2) {
-      getRoute(map, waypoints, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
+      getRoute(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
     }
   }
 
@@ -446,7 +442,7 @@ export const setupRouting = (
         
         if (waypoints.length >= 2) {
           console.log('[Map Click] More than 1 waypoint, attempting to get route...');
-          await getRoute(map, waypoints, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
+          await getRoute(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
           console.log('[Map Click] getRoute call completed.');
         } else {
           console.log('[Map Click] Less than 2 waypoints, not calling getRoute.');
@@ -570,7 +566,7 @@ export const setupRouting = (
 
                       if (waypoints.length >= 2) {
                         // Recalculate route with updated waypoints
-                        await getRoute(map, waypoints, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
+                        await getRoute(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
                       } else {
                         // If fewer than 2 waypoints, clear route
                         clearRoute(map);
@@ -660,7 +656,7 @@ export const setupRouting = (
                       updatePoints(map, waypoints);
 
                       if (waypoints.length >= 2) {
-                        await getRoute(map, waypoints, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
+                        await getRoute(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
                       }
                     } catch (err) {
                       console.error('[Direct ContextMenu] Error adding direct waypoint:', err);
@@ -1161,7 +1157,6 @@ export const clearRoute = (map: any) => {
 // Calculate and display a route between waypoints
 export const getRoute = async (
   map: any, 
-  points: Coordinate[], // Note: 'points' here are the raw clicked points
   accessToken: string,
   setRouteDistance: Dispatch<SetStateAction<string>>,
   setRouteDuration: Dispatch<SetStateAction<string>>,
@@ -1173,7 +1168,7 @@ export const getRoute = async (
   }
   
   if (directFlags.some(Boolean)) {
-      const { coordsAccum, totalDist } = await buildMixedRoute(map, accessToken);
+      const { coordsAccum, totalDist } = await buildMixedRoute(accessToken);
       const routeSource = map.getSource('route');
       if (routeSource) {
         routeSource.setData({ type:'Feature', properties:{}, geometry:{ type:'LineString', coordinates: coordsAccum } });
@@ -1324,7 +1319,7 @@ const haversine = (c1: Coordinate, c2: Coordinate) => {
 };
 
 // Build a route that includes both direct (as-the-crow-flies) and road segments
-async function buildMixedRoute(map: any, accessToken: string) {
+async function buildMixedRoute(accessToken: string) {
   let coordsAccum: any[] = [];
   let totalDist = 0;
 
