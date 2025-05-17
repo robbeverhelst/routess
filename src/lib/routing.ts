@@ -1470,6 +1470,12 @@ export const resetRouting = (
     // Clear kilometer markers
     clearKilometerMarkers(map);
 
+    // Clear any active Mapbox GL JS popup instance from routing.ts
+    if (currentPopup) {
+      currentPopup.remove();
+      currentPopup = null;
+    }
+
     // Clear history stacks
     undoStack = [];
     redoStack = [];

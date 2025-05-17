@@ -387,6 +387,7 @@ export default function MapWithRouting({
       setRouteDuration,
       setHasRoute
     );
+    setPopup(null);
   }, []);
 
   const handleLocate = useCallback(() => {
