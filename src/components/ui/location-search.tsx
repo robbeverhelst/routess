@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { Search } from "lucide-react";
+import { Search, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 // Define the result type from Mapbox geocoding API
 interface GeocodingFeature {
@@ -13,14 +14,31 @@ interface GeocodingFeature {
 interface LocationSearchProps {
   mapboxToken: string;
   onSelectLocation: (location: { lng: number; lat: number; name: string }) => void;
+  isMobileContext?: boolean;
+  isMobileSearchOpen?: boolean;
+  onToggleMobileSearch?: () => void;
 }
 
-export function LocationSearch({ mapboxToken, onSelectLocation }: LocationSearchProps) {
+export function LocationSearch({ 
+  mapboxToken, 
+  onSelectLocation,
+  isMobileContext = false,
+  isMobileSearchOpen = false,
+  onToggleMobileSearch 
+}: LocationSearchProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<GeocodingFeature[]>([]);
   const [loading, setLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Focus input when mobile search opens
+  useEffect(() => {
+    if (isMobileContext && isMobileSearchOpen && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [isMobileContext, isMobileSearchOpen]);
   
   // Search for locations when query changes
   useEffect(() => {
@@ -48,17 +66,22 @@ export function LocationSearch({ mapboxToken, onSelectLocation }: LocationSearch
     return () => clearTimeout(searchTimeout);
   }, [query, mapboxToken]);
   
-  // Handle click outside to close results
+  // Handle click outside to close results dropdown (and mobile search if open)
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
         setShowResults(false);
+        if (isMobileContext && isMobileSearchOpen && onToggleMobileSearch) {
+          // Optional: close mobile search on outside click.
+          // Consider if this is desired, or if only X button should close it.
+          // onToggleMobileSearch(); 
+        }
       }
     }
     
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [isMobileContext, isMobileSearchOpen, onToggleMobileSearch]);
   
   const handleSelect = (result: GeocodingFeature) => {
     onSelectLocation({
@@ -66,19 +89,92 @@ export function LocationSearch({ mapboxToken, onSelectLocation }: LocationSearch
       lat: result.center[1],
       name: result.place_name
     });
-    setQuery("");
+    setQuery(""); // Clear query
     setShowResults(false);
+    if (isMobileContext && onToggleMobileSearch) {
+      onToggleMobileSearch(); // Close mobile search after selection
+    }
   };
-  
+
+  const handleInputFocus = () => {
+    setShowResults(true);
+  };
+
+  if (isMobileContext) {
+    return (
+      <div ref={searchRef} className={`relative flex items-center transition-all duration-300 ease-in-out ${isMobileSearchOpen ? 'w-full' : 'w-auto'}`}>
+        {!isMobileSearchOpen ? (
+          <Button
+            variant="secondary"
+            size="icon"
+            onClick={onToggleMobileSearch}
+            className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60"
+            title="Search"
+          >
+            <Search size={18} />
+          </Button>
+        ) : (
+          <div className="relative flex-grow flex items-center">
+            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+            <input
+              ref={inputRef}
+              type="text"
+              placeholder="Search for a location..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onFocus={handleInputFocus}
+              className="w-full pl-10 pr-10 py-2 rounded-md bg-white/90 dark:bg-black/80 border border-gray-300 dark:border-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 h-10"
+            />
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={onToggleMobileSearch} 
+              className="absolute right-1 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 h-8 w-8"
+              title="Close search"
+            >
+              <X size={18} />
+            </Button>
+            {loading && (
+              <div className="absolute right-10 top-1/2 -translate-y-1/2 mr-1"> {/* Adjusted for X button */}
+                <div className="animate-spin h-4 w-4 border-2 border-blue-500 rounded-full border-t-transparent"></div>
+              </div>
+            )}
+          </div>
+        )}
+        {/* Results dropdown for mobile (absolutely positioned relative to the main expanding container) */}
+        {isMobileSearchOpen && showResults && results.length > 0 && (
+          <div 
+            className="absolute mt-1 top-full left-0 w-full bg-white dark:bg-gray-900 rounded-md shadow-lg z-20 max-h-60 overflow-y-auto"
+          >
+            {results.map((result) => (
+              <div
+                key={result.id}
+                className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer text-sm"
+                onClick={() => handleSelect(result)}
+              >
+                <div className="font-medium">{result.text}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                  {result.place_name}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Default Desktop view
   return (
-    <div ref={searchRef} className="relative w-64">
+    <div ref={searchRef} className="relative w-64"> {/* Desktop has fixed width or can be made more flexible */}
       <div className="relative">
         <input
+          ref={inputRef}
           type="text"
           placeholder="Search for a location..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          onFocus={() => setShowResults(true)}
+          onFocus={handleInputFocus}
           className="w-full pl-9 pr-4 py-2 rounded-md bg-white/90 dark:bg-black/80 border border-gray-300 dark:border-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <Search size={18} className="absolute left-3 top-2.5 text-gray-500" />

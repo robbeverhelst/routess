@@ -21,7 +21,7 @@ export function RouteControls({
   hasUserLocation
 }: RouteControlsProps) {
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-col md:flex-row items-start md:items-center gap-2">
       <Button
         variant="secondary"
         size="icon"
@@ -62,11 +62,11 @@ export function RouteControls({
       <Button
         variant="secondary"
         onClick={onReset}
-        className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60"
+        className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 px-3 md:px-4 py-2"
         title="Reset route"
       >
-        <RefreshCw size={18} className="mr-1" />
-        <span>Reset</span>
+        <RefreshCw size={18} className="mr-0 md:mr-1" />
+        <span className="hidden md:inline">Reset</span>
       </Button>
     </div>
   );

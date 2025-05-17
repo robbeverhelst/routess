@@ -111,6 +111,7 @@ export default function MapWithRouting({
   
   // State for popup management
   const [popup, setPopup] = useState<PopupInfo | null>(null);
+  const [isSearchOpen, setIsSearchOpen] = useState(false); // New state for mobile search
 
   // Use user location for initial view state if available
   const effectiveInitialViewState = userLocation 
@@ -299,9 +300,10 @@ export default function MapWithRouting({
         if (map.getLayer('user-location-halo') && map.getSource('user-location-point')) {
           map.setPaintProperty('user-location-halo', 'circle-radius', currentRadius);
         }
-      } catch (error) {
+      } catch (e) {
         // Layer or source might not exist if map is being changed/removed
-        // console.warn('Error setting paint property for halo:', error);
+        // console.warn('Error setting paint property for halo:', e);
+        if (typeof e === 'undefined') console.log('Suppressed error');
       }
       animationFrameIdRef.current = requestAnimationFrame(animateHalo);
     };
@@ -590,21 +592,64 @@ export default function MapWithRouting({
         )}
       </Map>
 
-      {/* Controls positioned at top center */}
-      <div className="absolute top-8 left-1/2 transform -translate-x-1/2 z-10">
+      {/* Mobile Controls Layout */}
+      <div className="absolute top-4 left-0 right-0 z-10 p-4 md:hidden">
+        <div className="flex justify-between items-start w-full">
+          {/* Top-Left: RouteControls (stacked) */}
+          <div className="flex flex-col items-start gap-2">
+            <RouteControls
+              onUndo={handleUndo}
+              onRedo={handleRedo}
+              onReset={handleReset}
+              onLocate={handleLocate}
+              canUndo={canUndo}
+              canRedo={canRedo}
+              hasUserLocation={!!userLocation && !locationError}
+            />
+          </div>
+
+          {/* Top-Right: Search Icon + Sidebar (Hamburger) + Conditional Search Bar */}
+          <div className="flex flex-col items-end gap-2 flex-grow">
+            <div className="flex items-center justify-end gap-2 w-full"> {/* This container ensures LocationSearch can expand */}
+              <LocationSearch
+                mapboxToken={MAPBOX_TOKEN}
+                onSelectLocation={handleSelectLocation}
+                isMobileContext={true}
+                isMobileSearchOpen={isSearchOpen}
+                onToggleMobileSearch={() => setIsSearchOpen(!isSearchOpen)}
+              />
+              {!isSearchOpen && (
+                <Sidebar
+                  onUndo={handleUndo}
+                  onRedo={handleRedo}
+                  onReset={handleReset}
+                  canUndo={canUndo}
+                  canRedo={canRedo}
+                  hasRoute={hasRoute}
+                  routeDistance={routeDistance}
+                  routeDuration={routeDuration}
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop: RouteControls - Top Center */}
+      <div className="absolute top-8 left-1/2 transform -translate-x-1/2 z-10 hidden md:flex">
         <RouteControls
-          onUndo={handleUndo}
-          onRedo={handleRedo}
-          onReset={handleReset}
-          onLocate={handleLocate}
-          canUndo={canUndo}
-          canRedo={canRedo}
-          hasUserLocation={!!userLocation && !locationError}
+            onUndo={handleUndo}
+            onRedo={handleRedo}
+            onReset={handleReset}
+            onLocate={handleLocate}
+            canUndo={canUndo}
+            canRedo={canRedo}
+            hasUserLocation={!!userLocation && !locationError}
         />
       </div>
-      
-      {/* Search and menu positioned at top right */}
-      <div className="absolute top-8 right-8 z-10 flex items-center gap-2">
+
+      {/* Desktop: Search and Sidebar - Top Right */}
+      <div className="absolute top-8 right-8 z-10 hidden md:flex items-center gap-2">
         <LocationSearch
           mapboxToken={MAPBOX_TOKEN}
           onSelectLocation={handleSelectLocation}
