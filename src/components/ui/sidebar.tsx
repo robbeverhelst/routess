@@ -218,7 +218,7 @@ export function Sidebar({
                 </div>
                 <div>
                   <div className="text-sm font-medium">Export Route</div>
-                  <div className="text-xs text-gray-500">Save as GPX, KML or JSON</div>
+                  <div className="text-xs text-gray-500">Save as GPX</div>
                 </div>
               </div>
               
@@ -228,7 +228,7 @@ export function Sidebar({
                 </div>
                 <div>
                   <div className="text-sm font-medium">Import Route</div>
-                  <div className="text-xs text-gray-500">From GPX, KML or JSON</div>
+                  <div className="text-xs text-gray-500">From GPX</div>
                 </div>
               </div>
               
