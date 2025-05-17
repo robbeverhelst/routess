@@ -1,6 +1,6 @@
 import type { Dispatch, SetStateAction } from 'react';
 import type { Coordinate, WaypointHistory } from '@/types/map';
-import type { Map as MapboxMap, Popup } from 'mapbox-gl';
+import type { Map as MapboxMap, Popup, MapMouseEvent, MapLayerMouseEvent, GeoJSONSource } from 'mapbox-gl';
 
 // Store references and state outside of the setup function to persist across renders
 let waypoints: Coordinate[] = [];
@@ -8,6 +8,7 @@ let clickListenerAdded = false;
 let contextMenuListenerAdded = false; // Track context menu (right-click) handler
 let currentPopup: Popup | null = null; // Track active popup for waypoint removal tooltip
 let directFlags: boolean[] = []; // parallel to waypoints, true if waypoint is direct
+let currentRoutePathCoordinates: Coordinate[] = []; // To store the detailed path for GPX export
 
 // --- Local Storage ---
 const WAYPOINTS_STORAGE_KEY = 'mapWaypoints';
@@ -51,9 +52,6 @@ let dragListenersAdded = false;
 let undoStack: WaypointHistory[] = [];
 let redoStack: WaypointHistory[] = [];
 
-// --- Kilometer markers ---
-let kmMarkersAdded = false;  // Track if km markers source/layer was added
-
 // Export the waypoints and directFlags for external components to use
 export const getWaypoints = () => waypoints;
 export const getDirectFlags = () => directFlags;
@@ -64,51 +62,51 @@ export const checkNearRoad = async (
   accessToken: string
 ): Promise<{ isValid: boolean; snappedCoords?: Coordinate }> => {
   try {
-    // Create a query to the Mapbox API with a single point
-    const url = `https://api.mapbox.com/directions/v5/mapbox/walking/${coords[0]},${coords[1]}?steps=true&geometries=geojson&access_token=${accessToken}&radiuses=150`;
+    // Use Mapbox Matching API, treat single point as a zero-length segment for robustness
+    const coordinatesParam = `${coords[0]},${coords[1]};${coords[0]},${coords[1]}`;
+    // Matching API requires radius < 50m. Use 49m for each point of the segment.
+    const radiusesParam = `49;49`; 
+    const url = `https://api.mapbox.com/matching/v5/mapbox/walking/${coordinatesParam}?steps=true&geometries=geojson&access_token=${accessToken}&radiuses=${radiusesParam}`;
     
     const response = await fetch(url);
     const json = await response.json();
-    
-    // Check if we got a valid response with waypoints
-    if (json && json.code === "NoRoute") {
-      console.log('[checkNearRoad] No route found for this point');
-      return { isValid: false };
-    }
-    
-    if (json && json.code === "NoSegment") {
-      console.log('[checkNearRoad] No road segment found near this point');
-      return { isValid: false };
-    }
-    
-    if (json && json.waypoints && json.waypoints.length > 0) {
-      const snappedCoords = json.waypoints[0].location as Coordinate;
-      // Calculate distance from original to snapped point
+
+    console.log(`[checkNearRoad] Matching API call for ${coords[0]},${coords[1]} (radius 49m) responded with:`, JSON.stringify(json));
+
+    if (json && json.code === "Ok" && json.tracepoints && json.tracepoints.length > 0) {
+      const snappedTracepoint = json.tracepoints[0];
+      if (snappedTracepoint === null) {
+        console.log(`[checkNearRoad] Point ${coords[0]},${coords[1]} could not be matched by Matching API (tracepoint null).`);
+        return { isValid: false };
+      }
+
+      const snappedCoords = snappedTracepoint.location as Coordinate;
       const dist = haversine(coords, snappedCoords);
       
-      // If the snapped point is too far (150+ meters), consider it invalid
-      if (dist > 0.15) {
-        console.log(`[checkNearRoad] Point snapped too far (${dist.toFixed(3)}km)`);
+      // Adjust distance check to be within the API's snapping capability (e.g. < 50m)
+      if (dist > 0.05) { // 50 meters, consistent with radius limit
+        console.log(`[checkNearRoad] Point snapped too far (${dist.toFixed(3)}km > 0.05km) by Matching API.`);
         return { isValid: false };
       }
       
-      console.log(`[checkNearRoad] Point is valid, snapped at ${dist.toFixed(3)}km distance`);
+      console.log(`[checkNearRoad] Point is valid (Matching API), snapped at ${dist.toFixed(3)}km distance`);
       return { 
         isValid: true,
         snappedCoords
       };
+    } else {
+      console.log(`[checkNearRoad] Matching API failed for ${coords[0]},${coords[1]}. Code: ${json.code}, Message: ${json.message}`);
+      return { isValid: false };
     }
-    
-    return { isValid: false };
   } catch (error) {
-    console.error('[checkNearRoad] Error checking if point is near road:', error);
+    console.error('[checkNearRoad] Error calling Matching API:', error);
     return { isValid: false };
   }
 };
 
 // Function to add a new waypoint from an external component
 export const addWaypoint = async (
-  map: any, 
+  map: MapboxMap, 
   coords: Coordinate, 
   isDirect: boolean,
   accessToken: string,
@@ -172,7 +170,7 @@ export const addWaypoint = async (
 
 // Function to remove a waypoint from an external component
 export const removeWaypoint = async (
-  map: any,
+  map: MapboxMap,
   index: number,
   accessToken: string,
   setRouteDistance: Dispatch<SetStateAction<string>>,
@@ -205,19 +203,24 @@ export const removeWaypoint = async (
 }
 
 const snapshot = () => {
-  console.log('[snapshot] Creating snapshot, current waypoints:', waypoints.length, 'current undoStack:', undoStack.length);
+  const currentWaypointsSnapshot = waypoints.map(p => [...p]) as Coordinate[];
+  const currentFlagsSnapshot = [...directFlags];
+  console.log('[routing.ts snapshot] Creating snapshot. Current waypoints:', JSON.stringify(currentWaypointsSnapshot));
+  console.log('[routing.ts snapshot] Current flags:', JSON.stringify(currentFlagsSnapshot));
+  console.log('[routing.ts snapshot] Current undoStack length BEFORE push:', undoStack.length);
+  
   undoStack.push({
-    points: waypoints.map(p => [...p]) as Coordinate[],
-    flags: [...directFlags]
+    points: currentWaypointsSnapshot,
+    flags: currentFlagsSnapshot
   });
-  console.log('[snapshot] After pushing, undoStack length:', undoStack.length);
+  console.log('[routing.ts snapshot] After pushing, undoStack length:', undoStack.length);
   if (undoStack.length > 50) undoStack.shift();
-  redoStack = []; // Clear redo stack on new snapshot
-  console.log('[snapshot] Final undoStack:', undoStack.length, 'redoStack cleared');
+  redoStack = []; 
+  console.log('[routing.ts snapshot] Final undoStack length:', undoStack.length, 'redoStack cleared.');
 };
 
 export const stepBack = async (
-  map: any,
+  map: MapboxMap,
   accessToken: string,
   setRouteDistance: Dispatch<SetStateAction<string>>,
   setRouteDuration: Dispatch<SetStateAction<string>>,
@@ -248,7 +251,7 @@ export const stepBack = async (
 };
 
 export const stepForward = async (
-  map: any,
+  map: MapboxMap,
   accessToken: string,
   setRouteDistance: Dispatch<SetStateAction<string>>,
   setRouteDuration: Dispatch<SetStateAction<string>>,
@@ -287,7 +290,7 @@ export const hasRedo = () => redoStack.length > 0;
 
 // Function to update a waypoint position and recalculate the route
 export const updateWaypointPositionAndRecalculate = async (
-  map: any,
+  map: MapboxMap,
   index: number,
   newCoords: Coordinate,
   accessToken: string,
@@ -315,7 +318,7 @@ export const updateWaypointPositionAndRecalculate = async (
 
 // Setup routing logic for a Mapbox map instance
 export const setupRouting = (
-  map: any, 
+  map: MapboxMap, 
   accessToken: string,
   setRouteDistance: Dispatch<SetStateAction<string>>,
   setRouteDuration: Dispatch<SetStateAction<string>>,
@@ -490,7 +493,6 @@ export const setupRouting = (
         }
       });
       
-      kmMarkersAdded = true;
       console.log('[setupRouting] Successfully added kilometer markers layer');
       
       console.log('[setupRouting] Successfully added sources and layers');
@@ -515,11 +517,11 @@ export const setupRouting = (
   if (!clickListenerAdded) {
     console.log('[setupRouting] Adding click handler to map');
     // Add click handler
-    map.on('click', async (e: any) => {
-      console.log('[Map Click] Click event received at:', e.lngLat);
+    map.on('click', async (e: MapMouseEvent) => {
+      console.log('[Map Click] Event received at:', e.lngLat);
       if (currentPopup && currentPopup.isOpen()) {
         const popupEl = currentPopup.getElement();
-        if (popupEl.querySelector('#addDirectBtn')) { // Check if it's the "Add direct waypoint" popup
+        if (popupEl && popupEl.querySelector('#addDirectBtn')) { // Check if it's the "Add direct waypoint" popup
           // Check if the click originated from the popup's main interactive button
           const targetElement = e.originalEvent?.target as HTMLElement | null;
           if (targetElement && (targetElement.id === 'addDirectBtn' || targetElement.closest('#addDirectBtn'))) {
@@ -541,35 +543,29 @@ export const setupRouting = (
         // The "Remove point" popup has closeOnClick:false and its own removal logic via its button.
       }
 
-      // --- Original logic for adding a normal waypoint starts here ---
+      console.log('[Map Click] Pre-action Waypoints:', JSON.stringify(waypoints));
+      console.log('[Map Click] Pre-action DirectFlags:', JSON.stringify(directFlags));
+      console.log('[Map Click] Pre-action UndoStack length:', undoStack.length);
+
       try {
-        console.log('[Map Click] Started. Current waypoints:', waypoints.length);
-        
-        // Snapshot current state for undo
         snapshot();
         
         const coords = [e.lngLat.lng, e.lngLat.lat] as Coordinate;
         
         waypoints.push(coords);
-        directFlags.push(false); // Normal waypoints are not direct by default
-        console.log('[Map Click] Added waypoint. New count:', waypoints.length, 'New waypoint:', coords);
+        directFlags.push(false); 
+        console.log('[Map Click] Post-add Waypoints:', JSON.stringify(waypoints));
+        console.log('[Map Click] Post-add DirectFlags:', JSON.stringify(directFlags));
         
-        console.log('[Map Click] Updating points on map...');
         updatePoints(map, waypoints);
-        console.log('[Map Click] Points updated on map.');
         
         if (waypoints.length >= 2) {
-          console.log('[Map Click] More than 1 waypoint, attempting to get route...');
           await getRoute(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
-          console.log('[Map Click] getRoute call completed.');
-        } else {
-          console.log('[Map Click] Less than 2 waypoints, not calling getRoute.');
         }
-        console.log('[Map Click] Handler finished successfully (all functions enabled).');
+        saveWaypointsToLocalStorage(); // Save after click actions
       } catch (error) {
         console.error('[Map Click] CRITICAL ERROR in click handler:', error);
       }
-      // --- End of original logic ---
     });
     
     clickListenerAdded = true;
@@ -583,7 +579,7 @@ export const setupRouting = (
     console.log('[setupRouting] Adding context menu handler for points layer');
     
     // Handle right click on waypoints (remove point)
-    map.on('contextmenu', (e: any) => {
+    map.on('contextmenu', (e: MapMouseEvent) => {
       e.preventDefault(); // Prevent browser context menu
       console.log('[ContextMenu] Right-click detected', e.lngLat);
 
@@ -610,7 +606,12 @@ export const setupRouting = (
 
           console.log('[ContextMenu] Showing remove popup for waypoint', idx);
           // Show a small tooltip (popup) with "Remove" option
-          const coords = feature.geometry?.coordinates || [e.lngLat.lng, e.lngLat.lat];
+          // Ensure feature.geometry is a Point before accessing coordinates
+          let popupCoords: Coordinate = [e.lngLat.lng, e.lngLat.lat];
+          if (feature.geometry.type === 'Point') {
+            popupCoords = feature.geometry.coordinates as Coordinate;
+          }
+
           const popupHTML = `
             <div id="removeWaypointBtn" 
               style="
@@ -641,21 +642,11 @@ export const setupRouting = (
                 offset: 30,
                 closeOnClick: false
               })
-                .setLngLat(coords)
-                .setHTML(popupHTML)
-                .addTo(map);
-            } else if (map.Popup) {
-              // Use the map's constructor to create a popup
-              currentPopup = new map.Popup({
-                closeButton: false,
-                offset: 30,
-                closeOnClick: false
-              })
-                .setLngLat(coords)
+                .setLngLat(popupCoords)
                 .setHTML(popupHTML)
                 .addTo(map);
             } else {
-              console.error('[ContextMenu] No Popup constructor available');
+              console.error('[ContextMenu] No Popup constructor available. Ensure mapboxgl is loaded.');
             }
           } catch (popupErr) {
             console.error('[ContextMenu] Error creating popup:', popupErr);
@@ -741,17 +732,8 @@ export const setupRouting = (
                 .setLngLat(coordsScreen)
                 .setHTML(popupHTML)
                 .addTo(map);
-            } else if (map.Popup) {
-              currentPopup = new map.Popup({ 
-                closeButton: false, 
-                offset: 30, 
-                closeOnClick: false 
-              })
-                .setLngLat(coordsScreen)
-                .setHTML(popupHTML)
-                .addTo(map);
             } else {
-              console.error('[Direct ContextMenu] No Popup constructor available');
+              console.error('[Direct ContextMenu] No Popup constructor available. Ensure mapboxgl is loaded.');
             }
           } catch (popupErr) {
             console.error('[Direct ContextMenu] Error creating popup:', popupErr);
@@ -817,7 +799,7 @@ export const setupRouting = (
     });
     
     // Start dragging
-    map.on('mousedown', 'points', (e: any) => {
+    map.on('mousedown', 'points', (e: MapLayerMouseEvent) => {
       // Prevent if popup is open
       if (currentPopup && currentPopup.isOpen()) return;
       
@@ -848,11 +830,8 @@ export const setupRouting = (
         map.addSource('temp-drag-lines', {
           type: 'geojson',
           data: {
-            type: 'geojson',
-            data: {
-              type: 'FeatureCollection',
-              features: []
-            }
+            type: 'FeatureCollection' as const,
+            features: []
           }
         });
         
@@ -873,17 +852,17 @@ export const setupRouting = (
       }
       
       // Mouse move handler - update waypoint position
-      const onMouseMove = (e: any) => {
+      const onMouseMove = (eMove: MapMouseEvent) => {
         if (!isDragging) return;
         
-        const coords = [e.lngLat.lng, e.lngLat.lat] as Coordinate;
+        const coords = [eMove.lngLat.lng, eMove.lngLat.lat] as Coordinate;
         
         // Update the waypoint position (visually only, don't recalculate route yet)
         waypoints[draggedWaypointIndex] = coords;
         updatePoints(map, waypoints);
         
         // Create temporary straight lines to adjacent waypoints
-        const features = [];
+        const features: Array<GeoJSON.Feature<GeoJSON.LineString>> = [];
         
         // If not the first waypoint, create line to previous waypoint
         if (draggedWaypointIndex > 0) {
@@ -912,7 +891,7 @@ export const setupRouting = (
         // Update temp drag lines
         const tempSource = map.getSource('temp-drag-lines');
         if (tempSource) {
-          tempSource.setData({
+          (tempSource as GeoJSONSource).setData({
             type: 'FeatureCollection',
             features
           });
@@ -937,7 +916,7 @@ export const setupRouting = (
         // Remove temporary drag lines
         const tempSource = map.getSource('temp-drag-lines');
         if (tempSource) {
-          tempSource.setData({ type: 'FeatureCollection', features: [] });
+          (tempSource as GeoJSONSource).setData({ type: 'FeatureCollection', features: [] });
         }
 
         // Finalize waypoint position and recalculate route
@@ -967,7 +946,7 @@ export const setupRouting = (
   }
 
   // Handle clicking and dragging on the route directly
-  map.on('mousedown', 'route-hover-target', (e: any) => {
+  map.on('mousedown', 'route-hover-target', (e: MapLayerMouseEvent) => {
     // Don't do anything if a popup is open
     if (currentPopup && currentPopup.isOpen()) return;
     
@@ -992,10 +971,11 @@ export const setupRouting = (
     // We need to find the closest position on the route to add a new waypoint
     // Get the route coordinates
     const routeSource = map.getSource('route');
-    let routeData: any;
+    let routeData: { geometry?: { coordinates?: Coordinate[] } } | undefined;
     
     try {
-      routeData = routeSource._data;
+      // @ts-expect-error _data is not in type definition but is used by mapbox internally
+      routeData = routeSource?._data;
     } catch (err) {
       console.error('[Route Click] Failed to get route data:', err);
       return;
@@ -1074,7 +1054,7 @@ export const setupRouting = (
       map.addSource('temp-drag-lines', {
         type: 'geojson',
         data: {
-          type: 'FeatureCollection',
+          type: 'FeatureCollection' as const,
           features: []
         }
       });
@@ -1096,17 +1076,17 @@ export const setupRouting = (
     }
     
     // Setup the same mouse move and mouse up handlers as regular waypoint dragging
-    const onMouseMove = (e: any) => {
+    const onMouseMove = (eMove: MapMouseEvent) => {
       if (!isDragging) return;
       
-      const coords = [e.lngLat.lng, e.lngLat.lat] as Coordinate;
+      const coords = [eMove.lngLat.lng, eMove.lngLat.lat] as Coordinate;
       
       // Update the waypoint position (visually only, don't recalculate route yet)
       waypoints[draggedWaypointIndex] = coords;
       updatePoints(map, waypoints);
       
       // Create temporary straight lines to adjacent waypoints
-      const features = [];
+      const features: Array<GeoJSON.Feature<GeoJSON.LineString>> = [];
       
       // If not the first waypoint, create line to previous waypoint
       if (draggedWaypointIndex > 0) {
@@ -1135,7 +1115,7 @@ export const setupRouting = (
       // Update temp drag lines
       const tempSource = map.getSource('temp-drag-lines');
       if (tempSource) {
-        tempSource.setData({
+        (tempSource as GeoJSONSource).setData({
           type: 'FeatureCollection',
           features
         });
@@ -1160,7 +1140,7 @@ export const setupRouting = (
       // Remove temporary drag lines
       const tempSource = map.getSource('temp-drag-lines');
       if (tempSource) {
-        tempSource.setData({ type: 'FeatureCollection', features: [] });
+        (tempSource as GeoJSONSource).setData({ type: 'FeatureCollection', features: [] });
       }
 
       // Recalculate route with the new waypoint
@@ -1185,13 +1165,13 @@ export const setupRouting = (
 };
 
 // Update the marker points on the map
-export const updatePoints = (map: any, points: Coordinate[]) => {
+export const updatePoints = (map: MapboxMap, points: Coordinate[]) => {
   if (!map || !map.getSource) return;
   
   const features = points.map((point, index) => {
     let pointType = 'intermediate';
     if (points.length === 1) {
-      pointType = 'start'; // Or handle as a special case if desired
+      pointType = 'start'; 
     } else if (index === 0) {
       pointType = 'start';
     } else if (index === points.length - 1) {
@@ -1213,18 +1193,18 @@ export const updatePoints = (map: any, points: Coordinate[]) => {
 
   const pointsSource = map.getSource('points');
   if (pointsSource) {
-    pointsSource.setData({
-      type: 'FeatureCollection',
+    (pointsSource as GeoJSONSource).setData({
+      type: 'FeatureCollection' as const,
       features
     });
   }
 };
 
 // Clear the displayed route
-export const clearRoute = (map: any) => {
+export const clearRoute = (map: MapboxMap) => {
   if (!map || !map.getSource) return;
   
-  const routeSource = map.getSource('route');
+  const routeSource = map.getSource('route') as GeoJSONSource | undefined;
   if (routeSource) {
     routeSource.setData({
       type: 'Feature',
@@ -1235,6 +1215,7 @@ export const clearRoute = (map: any) => {
       }
     });
   }
+  currentRoutePathCoordinates = []; // Clear detailed path
 };
 
 // Calculate and place kilometer markers along the route
@@ -1293,11 +1274,11 @@ const addKilometerMarkers = (map: MapboxMap, coordinates: Coordinate[]) => {
   }
   
   // Update the GeoJSON source with the kilometer markers
-  const source = map.getSource('km-markers')!;
-  if (source && (source as any).setData) { // Type assertion for safety
-    (source as any).setData({
+  const source = map.getSource('km-markers') as GeoJSONSource | undefined;
+  if (source) { 
+    source.setData({
       type: 'FeatureCollection',
-      features: kmMarkers
+      features: kmMarkers as GeoJSON.Feature<GeoJSON.Point, GeoJSON.GeoJsonProperties>[]
     });
   }
   
@@ -1307,19 +1288,20 @@ const addKilometerMarkers = (map: MapboxMap, coordinates: Coordinate[]) => {
 // Clear kilometer markers from the map
 const clearKilometerMarkers = (map: MapboxMap) => {
   if (map && map.getSource && map.getSource('km-markers')) {
-    const source = map.getSource('km-markers')!;
-    // @ts-ignore - MapboxGL types don't properly expose setData on all source types
-    source.setData({
-      type: 'FeatureCollection',
-      features: []
-    });
+    const source = map.getSource('km-markers') as GeoJSONSource | undefined;
+    if (source) {
+      source.setData({
+        type: 'FeatureCollection',
+        features: []
+      });
+    }
     console.log('[clearKilometerMarkers] Cleared kilometer markers');
   }
 };
 
 // Calculate and display a route between waypoints
 export const getRoute = async (
-  map: any, 
+  map: MapboxMap, 
   accessToken: string,
   setRouteDistance: Dispatch<SetStateAction<string>>,
   setRouteDuration: Dispatch<SetStateAction<string>>,
@@ -1332,13 +1314,14 @@ export const getRoute = async (
   
   // Clear existing kilometer markers
   clearKilometerMarkers(map);
+  const routeSource = map.getSource('route') as GeoJSONSource | undefined;
   
   if (directFlags.some(Boolean)) {
       const { coordsAccum, totalDist, waypointsUpdated } = await buildMixedRoute(accessToken);
-      const routeSource = map.getSource('route');
       if (routeSource) {
         routeSource.setData({ type:'Feature', properties:{}, geometry:{ type:'LineString', coordinates: coordsAccum } });
       }
+      currentRoutePathCoordinates = coordsAccum; // Store detailed mixed path
       // Update marker positions based on snapped coords (if they were updated in buildMixedRoute)
       if (waypointsUpdated) {
         updatePoints(map, waypoints);
@@ -1405,7 +1388,7 @@ export const getRoute = async (
 
     // Extract snapped waypoints from the API response
     if (json.waypoints && Array.isArray(json.waypoints)) {
-      const snappedWaypoints = json.waypoints.map((wp: any) => wp.location as Coordinate);
+      const snappedWaypoints = json.waypoints.map((wp: { location: Coordinate }) => wp.location);
       if (snappedWaypoints.length === currentWaypointsForAPI.length) {
         // Check if waypoints actually changed before reassigning and saving
         let changed = false;
@@ -1436,18 +1419,19 @@ export const getRoute = async (
     }
     
     const route = data.geometry.coordinates;
-    const routeSource = map.getSource('route');
+    const routeSourceFromAPI = map.getSource('route') as GeoJSONSource | undefined;
     
-    if (routeSource) {
+    if (routeSourceFromAPI) {
       console.log('[getRoute] Updating route source on map.');
-      routeSource.setData({
-        type: 'Feature',
+      routeSourceFromAPI.setData({
+        type: 'Feature' as const,
         properties: {},
         geometry: {
-          type: 'LineString',
+          type: 'LineString' as const,
           coordinates: route
         }
       });
+      currentRoutePathCoordinates = route; // Store detailed path from API
       console.log('[getRoute] Route source updated.');
       
       // Add kilometer markers along the route
@@ -1475,14 +1459,14 @@ export const getRoute = async (
 
 // Reset all routing data and UI
 export const resetRouting = (
-  map: any,
+  map: MapboxMap,
   setRouteDistance: Dispatch<SetStateAction<string>>,
   setRouteDuration: Dispatch<SetStateAction<string>>,
   setHasRoute: Dispatch<SetStateAction<boolean>>
 ) => {
-  console.log('Resetting route');
+  console.log('[routing.ts resetRouting] Resetting route START');
   
-  if (map && map.getSource) {
+  if (map) { 
     clearRoute(map);
     updatePoints(map, []);
     waypoints = [];
@@ -1491,19 +1475,20 @@ export const resetRouting = (
     setRouteDuration('');
     setHasRoute(false);
     
-    // Clear kilometer markers
     clearKilometerMarkers(map);
 
-    // Clear any active Mapbox GL JS popup instance from routing.ts
     if (currentPopup) {
       currentPopup.remove();
       currentPopup = null;
     }
 
-    // Clear history stacks
     undoStack = [];
     redoStack = [];
-    saveWaypointsToLocalStorage(); // Save after reset
+    saveWaypointsToLocalStorage(); 
+
+    console.log('[routing.ts resetRouting] Reset COMPLETE. Waypoints:', JSON.stringify(waypoints));
+    console.log('[routing.ts resetRouting] DirectFlags:', JSON.stringify(directFlags));
+    console.log('[routing.ts resetRouting] UndoStack length:', undoStack.length);
   }
 };
 
@@ -1521,7 +1506,7 @@ const haversine = (c1: Coordinate, c2: Coordinate) => {
 
 // Build a route that includes both direct (as-the-crow-flies) and road segments
 async function buildMixedRoute(accessToken: string) {
-  let coordsAccum: any[] = [];
+  const coordsAccum = [];
   let totalDist = 0;
   let waypointsUpdated = false; // Flag to indicate if global waypoints were modified
 
@@ -1575,6 +1560,7 @@ async function buildMixedRoute(accessToken: string) {
           totalDist += haversine(from, to);
         }
       } catch(err) {
+        console.error('[buildMixedRoute] Error fetching segment: ', err);
         // No route found; convert to direct segment
         if (!directFlags[i+1]) { // only update if it was not already direct
           directFlags[i+1] = true;
@@ -1605,7 +1591,7 @@ const closestPointOnSegment = (p: Coordinate, v: Coordinate, w: Coordinate): Coo
 };
 
 // Function to update the user location point on the map
-export const updateUserLocationPoint = (map: any, coordinates: Coordinate | null) => {
+export const updateUserLocationPoint = (map: MapboxMap, coordinates: Coordinate | null) => {
   if (!map || !map.getSource) return;
 
   const features = [];
@@ -1620,11 +1606,218 @@ export const updateUserLocationPoint = (map: any, coordinates: Coordinate | null
     });
   }
 
-  const userLocationSource = map.getSource('user-location-point');
+  const userLocationSource = map.getSource('user-location-point') as GeoJSONSource | undefined;
   if (userLocationSource) {
     userLocationSource.setData({
-      type: 'FeatureCollection',
+      type: 'FeatureCollection' as const,
       features
     });
   }
+};
+
+// --- GPX Export ---
+export const exportRouteToGPX = () => {
+  if (waypoints.length === 0 && currentRoutePathCoordinates.length === 0) {
+    console.warn('[GPX Export] No waypoints or route path to export.');
+    alert('No route to export.');
+    return;
+  }
+
+  let gpxString = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="WebApp Route Planner" xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+  <metadata>
+    <name>Exported Route</name>
+    <time>${new Date().toISOString()}</time>
+  </metadata>
+`;
+
+  // Export <rte> (route with waypoints)
+  if (waypoints.length > 0) {
+    gpxString += `  <rte>
+    <name>Planned Route Waypoints</name>
+`;
+    waypoints.forEach((waypoint, index) => {
+      const lat = waypoint[1];
+      const lon = waypoint[0];
+      gpxString += `    <rtept lat="${lat}" lon="${lon}">
+`;
+      gpxString += `      <name>Waypoint ${index + 1}</name>
+`;
+      gpxString += `    </rtept>
+`;
+    });
+    gpxString += `  </rte>
+`;
+  }
+
+  // Export <trk> (track with detailed path)
+  if (currentRoutePathCoordinates.length > 0) {
+    gpxString += `  <trk>
+    <name>Tracked Path</name>
+    <trkseg>
+`;
+    currentRoutePathCoordinates.forEach(coord => {
+      const lat = coord[1];
+      const lon = coord[0];
+      gpxString += `      <trkpt lat="${lat}" lon="${lon}"></trkpt>
+`;
+    });
+    gpxString += `    </trkseg>
+  </trk>
+`;
+  }
+
+  gpxString += `</gpx>`;
+
+  try {
+    const blob = new Blob([gpxString], { type: 'application/gpx+xml' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    link.download = `route_${timestamp}.gpx`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+    console.log('[GPX Export] Route exported successfully.');
+  } catch (error) {
+    console.error('[GPX Export] Error exporting route:', error);
+    alert('Error exporting route. See console for details.');
+  }
+};
+
+
+// --- GPX Import ---
+export const importRouteFromGPX = async (
+  gpxString: string,
+  map: MapboxMap, 
+  accessToken: string,
+  setRouteDistance: Dispatch<SetStateAction<string>>,
+  setRouteDuration: Dispatch<SetStateAction<string>>,
+  setHasRoute: Dispatch<SetStateAction<boolean>>,
+  onError?: (message: string) => void
+) => {
+  try {
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(gpxString, "application/xml");
+
+    const parserError = xmlDoc.getElementsByTagName("parsererror");
+    if (parserError.length > 0) {
+      console.error("[GPX Import] Error parsing GPX XML:", parserError[0].textContent);
+      if (onError) onError("Invalid GPX file: XML parsing error.");
+      return;
+    }
+    
+    const gpxCoords: Coordinate[] = [];
+    const pointsToParse = xmlDoc.getElementsByTagName("rtept").length > 0 
+      ? xmlDoc.getElementsByTagName("rtept") 
+      : xmlDoc.getElementsByTagName("trkpt");
+
+    if (pointsToParse.length > 0) {
+      console.log(`[GPX Import] Found ${pointsToParse.length} <${pointsToParse[0].tagName}> elements.`);
+      for (let i = 0; i < pointsToParse.length; i++) {
+        const lat = pointsToParse[i].getAttribute("lat");
+        const lon = pointsToParse[i].getAttribute("lon");
+        if (lat && lon) {
+          gpxCoords.push([parseFloat(lon), parseFloat(lat)]);
+        }
+      }
+    } else {
+      console.warn("[GPX Import] No <rtept> or <trkpt> elements found in GPX file.");
+      if (onError) onError("No route or track points found in the GPX file.");
+      return;
+    }
+
+    if (gpxCoords.length === 0) {
+      console.warn("[GPX Import] No valid waypoints extracted from GPX.");
+      if (onError) onError("Could not extract any waypoints from the GPX file.");
+      return;
+    }
+
+    // Check road proximity for all points in parallel
+    console.log(`[GPX Import] Checking road proximity for ${gpxCoords.length} points...`);
+    const roadChecks = await Promise.all(
+      gpxCoords.map(coord => checkNearRoad(coord, accessToken))
+    );
+    console.log("[GPX Import] Road proximity checks complete.");
+
+    const finalNewWaypoints: Coordinate[] = [];
+    const newDirectFlags: boolean[] = [];
+
+    gpxCoords.forEach((coord, index) => {
+      finalNewWaypoints.push(coord); // Always use original GPX coordinates for the initial list
+      // If checkNearRoad.isValid is true (it's near a road), then directFlag should be false.
+      // If checkNearRoad.isValid is false (it's NOT near a road), then directFlag should be true.
+      newDirectFlags.push(!roadChecks[index].isValid);
+    });
+
+    // ADD THIS LOGGING:
+    console.log("[GPX Import] Determined directFlags:", JSON.stringify(newDirectFlags));
+    console.log("[GPX Import] Corresponding roadChecks:", JSON.stringify(roadChecks));
+
+    // Reset current route and history
+    resetRouting(map, setRouteDistance, setRouteDuration, setHasRoute);
+    
+    snapshot(); 
+
+    waypoints = finalNewWaypoints; // Populate global waypoints with original coordinates
+    directFlags = newDirectFlags;   // Populate global directFlags based on heuristic
+
+    updatePoints(map, waypoints); // Visually update map with original points initially
+    saveWaypointsToLocalStorage();
+
+    if (waypoints.length >= 2) {
+      console.log("[GPX Import] Recalculating route for imported waypoints using smart flags.");
+      // getRoute will now use the directFlags. 
+      // If a flag is false (heuristic said it's on-road), getRoute will attempt to snap it.
+      // If a flag is true (heuristic said it's off-road), buildMixedRoute will use the original coordinate.
+      await getRoute(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
+    } else if (waypoints.length === 1) {
+      setRouteDistance('');
+      setRouteDuration('');
+      setHasRoute(false);
+      currentRoutePathCoordinates = []; // Clear path if only one waypoint
+    }
+
+    console.log(`[GPX Import] Successfully imported ${waypoints.length} waypoints with smart direct flags.`);
+
+  } catch (error) {
+    console.error("[GPX Import] Error importing route:", error);
+    if (onError) onError(`Error importing GPX: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+};
+
+// --- New function to set route data from external source (e.g., shared link) ---
+export const setRouteData = async (
+  map: MapboxMap,
+  accessToken: string,
+  newWaypoints: Coordinate[],
+  newDirectFlags: boolean[],
+  setRouteDistance: Dispatch<SetStateAction<string>>,
+  setRouteDuration: Dispatch<SetStateAction<string>>,
+  setHasRoute: Dispatch<SetStateAction<boolean>>
+) => {
+  console.log('[setRouteData] Setting route from external data');
+  resetRouting(map, setRouteDistance, setRouteDuration, setHasRoute); // Clear existing
+
+  // Take a snapshot for undo, even though it's a fresh state from a link,
+  // this makes the history consistent if the user immediately modifies it.
+  snapshot(); 
+
+  waypoints = [...newWaypoints];
+  directFlags = [...newDirectFlags];
+
+  updatePoints(map, waypoints);
+  saveWaypointsToLocalStorage();
+
+  if (waypoints.length >= 2) {
+    console.log('[setRouteData] Recalculating route for loaded data.');
+    await getRoute(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
+  } else if (waypoints.length === 1) {
+    setRouteDistance('');
+    setRouteDuration('');
+    setHasRoute(false);
+    currentRoutePathCoordinates = []; 
+  }
+  console.log(`[setRouteData] Successfully set ${waypoints.length} waypoints.`);
 };

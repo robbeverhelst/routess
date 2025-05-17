@@ -1,30 +1,116 @@
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet";
-import { Menu, RotateCcw, Layers, User, Save, BookMarked, LogIn, Upload, Share2, FileDown, X, AlertCircle, MapPin, Clock } from "lucide-react";
+import { Menu, User, Save, BookMarked, LogIn, Upload, Share2, FileDown, X, AlertCircle, MapPin, Clock, Copy, RotateCcw as BackIcon } from "lucide-react";
 import { useState } from "react";
+import type { Map as MapboxMap } from 'mapbox-gl'; // Import MapboxMap type
+import { exportRouteToGPX, importRouteFromGPX } from '../../lib/routing'; // Import GPX functions
+import type { Dispatch, SetStateAction } from 'react';
 
 interface SidebarProps {
   onUndo: () => void;
   onRedo: () => void;
   onReset: () => void;
+  onShare: () => void;
   canUndo: boolean;
   canRedo: boolean;
   hasRoute?: boolean;
   routeDistance?: string;
   routeDuration?: string;
+  // New props for GPX functionality
+  map: MapboxMap | null;
+  accessToken: string | undefined; // Can be undefined if not set
+  setRouteDistance: Dispatch<SetStateAction<string>>;
+  setRouteDuration: Dispatch<SetStateAction<string>>;
+  setHasRoute: Dispatch<SetStateAction<boolean>>;
+  onImportError: (message: string) => void;
+  // Props for inline share display
+  displayedShareUrl: string | null;
+  setDisplayedShareUrl: (url: string | null) => void;
+  onCopySharedUrl: (url: string) => void;
 }
 
 export function Sidebar({
   onUndo,
   onRedo,
   onReset,
+  onShare,
   canUndo,
   canRedo,
   hasRoute = false,
   routeDistance = '',
-  routeDuration = ''
+  routeDuration = '',
+  // Destructure new props
+  map,
+  accessToken,
+  setRouteDistance,
+  setRouteDuration,
+  setHasRoute,
+  onImportError,
+  displayedShareUrl,
+  setDisplayedShareUrl,
+  onCopySharedUrl,
 }: SidebarProps) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  
+  const handleExportGPX = () => {
+    exportRouteToGPX();
+  };
+
+  const handleImportGPX = () => {
+    if (!map || !accessToken) {
+      onImportError("Map or access token is not available for import.");
+      console.error("Map instance or accessToken not available for GPX import.");
+      return;
+    }
+
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.gpx';
+    fileInput.style.display = 'none';
+
+    fileInput.onchange = (event: Event) => {
+      const target = event.target as HTMLInputElement;
+      if (target && target.files && target.files.length > 0) {
+        const file = target.files[0];
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          try {
+            const gpxString = e.target?.result as string;
+            if (!gpxString) {
+              onImportError("Failed to read GPX file.");
+              return;
+            }
+            await importRouteFromGPX(
+              gpxString, 
+              map, 
+              accessToken, 
+              setRouteDistance, 
+              setRouteDuration, 
+              setHasRoute, 
+              onImportError
+            );
+          } catch (error) {
+            console.error("Error processing GPX file:", error);
+            onImportError(error instanceof Error ? error.message : "An unknown error occurred during GPX import.");
+          }
+        };
+        reader.onerror = () => {
+          onImportError("Error reading GPX file.");
+        };
+        reader.readAsText(file);
+      }
+      if (fileInput.parentElement) {
+        document.body.removeChild(fileInput);
+      }
+    };
+    document.body.appendChild(fileInput);
+    fileInput.click();
+    setTimeout(() => {
+        if (fileInput.parentElement) {
+            document.body.removeChild(fileInput);
+        }
+    }, 2000);
+  };
   
   return (
     <Sheet>
@@ -112,9 +198,12 @@ export function Sidebar({
             <Button
               variant="default"
               onClick={onReset}
-              className="w-full h-10 justify-center rounded-md bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/30"
+              disabled={!hasRoute}
+              className={`w-full h-10 justify-center rounded-md bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/30 ${
+                !hasRoute ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
             >
-              <RotateCcw className="w-4 h-4 mr-2" />
+              <X className="w-4 h-4 mr-2" />
               Reset Route
             </Button>
           </div>
@@ -123,7 +212,7 @@ export function Sidebar({
             <div className="text-sm font-medium text-gray-500 mb-2">Files & Sharing</div>
             
             <div className="space-y-1">
-              <div className="flex items-center px-3 py-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-900 cursor-pointer" onClick={() => {}}>
+              <div className="flex items-center px-3 py-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-900 cursor-pointer" onClick={handleExportGPX}>
                 <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 mr-3">
                   <FileDown className="w-3.5 h-3.5" />
                 </div>
@@ -133,7 +222,7 @@ export function Sidebar({
                 </div>
               </div>
               
-              <div className="flex items-center px-3 py-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-900 cursor-pointer" onClick={() => {}}>
+              <div className="flex items-center px-3 py-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-900 cursor-pointer" onClick={handleImportGPX}>
                 <div className="w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 mr-3">
                   <Upload className="w-3.5 h-3.5" />
                 </div>
@@ -143,25 +232,49 @@ export function Sidebar({
                 </div>
               </div>
               
-              <div className="flex items-center px-3 py-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-900 cursor-pointer" onClick={() => {}}>
-                <div className="w-6 h-6 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center text-violet-600 dark:text-violet-400 mr-3">
-                  <Share2 className="w-3.5 h-3.5" />
+              {displayedShareUrl ? (
+                <div className="px-3 py-2 rounded-md bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                  <div className="text-sm font-medium mb-1">Shareable Link:</div>
+                  <input 
+                    type="text" 
+                    readOnly 
+                    value={displayedShareUrl} 
+                    className="w-full p-1.5 border border-gray-300 dark:border-gray-600 rounded-md text-xs bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 focus:ring-0 focus:outline-none mb-2"
+                    onClick={(e) => (e.target as HTMLInputElement).select()}
+                  />
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 text-xs"
+                      onClick={() => onCopySharedUrl(displayedShareUrl)}
+                    >
+                      <Copy size={14} className="mr-1.5" /> Copy
+                    </Button>
+                    <Button 
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setDisplayedShareUrl(null)}
+                      className="p-1.5 rounded-md"
+                    >
+                      <BackIcon size={18} />
+                    </Button>
+                  </div>
                 </div>
-                <div>
-                  <div className="text-sm font-medium">Share Route</div>
-                  <div className="text-xs text-gray-500">Create shareable link</div>
+              ) : (
+                <div 
+                  className="flex items-center px-3 py-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-900 cursor-pointer" 
+                  onClick={onShare} 
+                >
+                  <div className="w-6 h-6 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center text-violet-600 dark:text-violet-400 mr-3">
+                    <Share2 className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium">Share Route</div>
+                    <div className="text-xs text-gray-500">Create shareable link</div>
+                  </div>
                 </div>
-              </div>
-              
-              <div className="flex items-center px-3 py-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-900 cursor-pointer" onClick={() => {}}>
-                <div className="w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 dark:text-amber-400 mr-3">
-                  <Layers className="w-3.5 h-3.5" />
-                </div>
-                <div>
-                  <div className="text-sm font-medium">Map Layers</div>
-                  <div className="text-xs text-gray-500">Coming soon</div>
-                </div>
-              </div>
+              )}
             </div>
           </div>
           
@@ -186,6 +299,7 @@ export function Sidebar({
                     variant="outline" 
                     className="w-full h-9 justify-start text-sm rounded-md"
                     onClick={() => {}}
+                    disabled
                   >
                     <Save className="w-4 h-4 mr-2" />
                     Save Current Route
@@ -195,6 +309,7 @@ export function Sidebar({
                     variant="outline" 
                     className="w-full h-9 justify-start text-sm rounded-md"
                     onClick={() => {}}
+                    disabled
                   >
                     <BookMarked className="w-4 h-4 mr-2" />
                     My Saved Routes
@@ -214,14 +329,15 @@ export function Sidebar({
               <div className="space-y-2">
                 <Button 
                   variant="default"
-                  className="w-full h-9 justify-center text-sm rounded-md bg-blue-600 hover:bg-blue-700"
-                  onClick={() => setIsLoggedIn(true)}
+                  className="w-full h-9 justify-center text-sm rounded-md opacity-50 cursor-not-allowed"
+                  disabled
+                  onClick={undefined}
                 >
                   <LogIn className="w-4 h-4 mr-2" />
                   Sign In
                 </Button>
                 <div className="text-center text-xs text-gray-500">
-                  Sign in to save routes and access account features
+                  Sign in to save routes (Coming soon)
                 </div>
               </div>
             )}

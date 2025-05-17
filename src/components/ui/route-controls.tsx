@@ -9,6 +9,7 @@ interface RouteControlsProps {
   canUndo: boolean;
   canRedo: boolean;
   hasUserLocation: boolean;
+  hasRoute?: boolean;
 }
 
 export function RouteControls({
@@ -18,7 +19,8 @@ export function RouteControls({
   onLocate,
   canUndo,
   canRedo,
-  hasUserLocation
+  hasUserLocation,
+  hasRoute = false
 }: RouteControlsProps) {
   return (
     <div className="flex flex-col md:flex-row items-start md:items-center gap-2">
@@ -62,7 +64,7 @@ export function RouteControls({
       <Button
         variant="secondary"
         onClick={onReset}
-        className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 px-3 md:px-4 py-2"
+        className={`bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 px-3 md:px-4 py-2 ${!hasRoute ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed' : ''}`}
         title="Reset route"
       >
         <RefreshCw size={18} className="mr-0 md:mr-1" />

@@ -16,8 +16,11 @@ import {
   addWaypoint,
   removeWaypoint,
   getWaypoints,
-  updateUserLocationPoint
+  getDirectFlags,
+  updateUserLocationPoint,
+  setRouteData
 } from '@/lib/routing';
+import { serializeAndCompress, decompressAndParse } from '@/lib/shareUtils';
 
 // Get Mapbox access token from environment variables
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
@@ -112,6 +115,10 @@ export default function MapWithRouting({
   // State for popup management
   const [popup, setPopup] = useState<PopupInfo | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false); // New state for mobile search
+  const [showRouteInfoError, setShowRouteInfoError] = useState(false);
+  const [routeInfoErrorMessage, setRouteInfoErrorMessage] = useState('');
+  const [shareNotification, setShareNotification] = useState(''); // For share link copied message
+  const [displayedShareUrl, setDisplayedShareUrl] = useState<string | null>(null); // New state for displayed URL
 
   // Use user location for initial view state if available
   const effectiveInitialViewState = userLocation 
@@ -135,6 +142,37 @@ export default function MapWithRouting({
     );
     setIsMapReady(true);
     console.log('[MapWithRouting] Routing setup complete');
+
+    // Check for shared route data in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const routeDataParam = urlParams.get('route');
+
+    if (routeDataParam) {
+      console.log('[MapWithRouting] Found route data in URL, attempting to load...');
+      const loadedData = decompressAndParse(routeDataParam);
+      if (loadedData && mapRef.current && MAPBOX_TOKEN) {
+        setRouteData(
+          mapRef.current,
+          MAPBOX_TOKEN,
+          loadedData.w, // waypoints
+          loadedData.f, // directFlags
+          setRouteDistance,
+          setRouteDuration,
+          setHasRoute
+        ).then(() => {
+          console.log('[MapWithRouting] Route data loaded from URL successfully.');
+          // Optionally, clean the URL
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }).catch(err => {
+          console.error('[MapWithRouting] Error setting route data from URL:', err);
+          // Show an error to the user if loading fails
+          handleRouteInfoError('Failed to load shared route. The link may be invalid or corrupted.');
+        });
+      } else {
+        console.warn('[MapWithRouting] Failed to decompress or parse route data from URL.');
+        handleRouteInfoError('Could not load shared route. The link appears to be invalid.');
+      }
+    }
   }, []);
 
   // Request user location
@@ -383,13 +421,23 @@ export default function MapWithRouting({
 
   const handleReset = useCallback(() => {
     if (!mapRef.current) return;
+    // Call the main reset logic from routing.ts
     resetRouting(
       mapRef.current,
       setRouteDistance,
       setRouteDuration,
       setHasRoute
     );
-    setPopup(null);
+    // Clear component-specific states in MapWithRouting.tsx
+    setPopup(null); // This was likely already here, confirm and keep
+    setDisplayedShareUrl(null);
+    setShareNotification('');
+    setShowRouteInfoError(false);
+    setRouteInfoErrorMessage('');
+    setWaypointError(null); // Clear any waypoint specific errors
+    setDetailsExpanded(false); // Collapse route details card
+    
+    console.log('[MapWithRouting] handleReset completed, UI states cleared.');
   }, []);
 
   const handleLocate = useCallback(() => {
@@ -449,15 +497,22 @@ export default function MapWithRouting({
   }, []);
 
   // Show waypoint error message
-  const handleWaypointError = useCallback((message: string) => {
+  const handleWaypointError = useCallback((message: string | null) => {
     setWaypointError(message);
-    
-    // Clear any existing timeout
     if (waypointErrorTimeout.current) {
       clearTimeout(waypointErrorTimeout.current);
-      waypointErrorTimeout.current = null;
+    }
+    if (message) {
+      waypointErrorTimeout.current = window.setTimeout(() => {
+        setWaypointError(null);
+      }, 5000); // Clear error after 5 seconds
     }
   }, []);
+
+  const handleImportError = useCallback((message: string) => {
+    // Reuse handleWaypointError or create a more specific one if needed
+    handleWaypointError(`Import Error: ${message}`);
+  }, [handleWaypointError]);
 
   // Handle direct waypoint button click
   const handleAddDirectWaypoint = useCallback(() => {
@@ -525,6 +580,57 @@ export default function MapWithRouting({
       setPopup(null);
     }, 3000);
   }, []);
+
+  const handleShareRoute = () => {
+    const waypoints = getWaypoints();
+    const directFlags = getDirectFlags();
+
+    if (waypoints.length === 0) {
+      handleRouteInfoError("Cannot share an empty route.");
+      return;
+    }
+
+    const encodedData = serializeAndCompress(waypoints, directFlags);
+    if (encodedData) {
+      const shareUrl = `${window.location.origin}${window.location.pathname}?route=${encodedData}`;
+      navigator.clipboard.writeText(shareUrl)
+        .then(() => {
+          setShareNotification('Link copied to clipboard!');
+          setTimeout(() => setShareNotification(''), 2000);
+        })
+        .catch(err => {
+          console.error('[MapWithRouting] Failed to copy share link:', err);
+          handleRouteInfoError('Failed to copy link. Please try again.');
+          setDisplayedShareUrl(null);
+        });
+      setDisplayedShareUrl(shareUrl);
+    } else {
+      handleRouteInfoError('Could not generate shareable link.');
+      setDisplayedShareUrl(null);
+    }
+  };
+
+  // This new function will be called by the Sidebar's own copy button
+  const handleCopySharedUrlInSidebar = (urlToCopy: string) => {
+    navigator.clipboard.writeText(urlToCopy)
+      .then(() => {
+        setShareNotification('Share link copied!');
+        setTimeout(() => setShareNotification(''), 2000); 
+      })
+      .catch(err => {
+        console.error('[MapWithRouting] Failed to copy share link from sidebar button:', err);
+        handleRouteInfoError('Failed to copy. Please try again.');
+      });
+  };
+
+  const handleRouteInfoError = (message: string) => {
+    setShowRouteInfoError(true);
+    setRouteInfoErrorMessage(message);
+    setTimeout(() => {
+      setShowRouteInfoError(false);
+      setRouteInfoErrorMessage('');
+    }, 5000); // Clear error after 5 seconds
+  };
 
   return (
     <div className="relative w-full h-full">
@@ -605,6 +711,7 @@ export default function MapWithRouting({
               canUndo={canUndo}
               canRedo={canRedo}
               hasUserLocation={!!userLocation && !locationError}
+              hasRoute={hasRoute}
             />
           </div>
 
@@ -623,11 +730,22 @@ export default function MapWithRouting({
                   onUndo={handleUndo}
                   onRedo={handleRedo}
                   onReset={handleReset}
+                  onShare={handleShareRoute}
+                  displayedShareUrl={displayedShareUrl}
+                  setDisplayedShareUrl={setDisplayedShareUrl}
+                  onCopySharedUrl={handleCopySharedUrlInSidebar}
                   canUndo={canUndo}
                   canRedo={canRedo}
                   hasRoute={hasRoute}
                   routeDistance={routeDistance}
                   routeDuration={routeDuration}
+                  // Props for GPX import/export
+                  map={mapRef.current}
+                  accessToken={MAPBOX_TOKEN}
+                  setRouteDistance={setRouteDistance}
+                  setRouteDuration={setRouteDuration}
+                  setHasRoute={setHasRoute}
+                  onImportError={handleImportError}
                 />
               )}
             </div>
@@ -645,6 +763,7 @@ export default function MapWithRouting({
             canUndo={canUndo}
             canRedo={canRedo}
             hasUserLocation={!!userLocation && !locationError}
+            hasRoute={hasRoute}
         />
       </div>
 
@@ -658,11 +777,22 @@ export default function MapWithRouting({
           onUndo={handleUndo}
           onRedo={handleRedo}
           onReset={handleReset}
+          onShare={handleShareRoute}
+          displayedShareUrl={displayedShareUrl}
+          setDisplayedShareUrl={setDisplayedShareUrl}
+          onCopySharedUrl={handleCopySharedUrlInSidebar}
           canUndo={canUndo}
           canRedo={canRedo}
           hasRoute={hasRoute}
           routeDistance={routeDistance}
           routeDuration={routeDuration}
+          // Props for GPX import/export
+          map={mapRef.current}
+          accessToken={MAPBOX_TOKEN}
+          setRouteDistance={setRouteDistance}
+          setRouteDuration={setRouteDuration}
+          setHasRoute={setHasRoute}
+          onImportError={handleImportError}
         />
       </div>
 
@@ -685,6 +815,44 @@ export default function MapWithRouting({
             expanded={detailsExpanded}
             onToggleExpand={() => setDetailsExpanded(prev => !prev)}
           />
+        </div>
+      )}
+
+      {showRouteInfoError && (
+        <div 
+          style={{
+            position: 'fixed',
+            bottom: '20px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: '#2c3e50',
+            color: 'white',
+            padding: '10px 20px',
+            borderRadius: '5px',
+            zIndex: 1000,
+            boxShadow: '0 2px 10px rgba(0,0,0,0.2)'
+          }}
+        >
+          {routeInfoErrorMessage}
+        </div>
+      )}
+
+      {shareNotification && (
+        <div 
+          style={{
+            position: 'fixed',
+            bottom: '20px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: '#2c3e50',
+            color: 'white',
+            padding: '10px 20px',
+            borderRadius: '5px',
+            zIndex: 1000,
+            boxShadow: '0 2px 10px rgba(0,0,0,0.2)'
+          }}
+        >
+          {shareNotification}
         </div>
       )}
     </div>
