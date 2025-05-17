@@ -381,6 +381,42 @@ export const setupRouting = (
         }
       });
 
+      // Add source for user location
+      map.addSource('user-location-point', {
+        type: 'geojson',
+        data: {
+          type: 'FeatureCollection',
+          features: []
+        }
+      });
+
+      // Add layer for user location halo (below the main dot)
+      map.addLayer({
+        id: 'user-location-halo',
+        type: 'circle',
+        source: 'user-location-point',
+        paint: {
+          'circle-radius': 16, // Larger than the main dot
+          'circle-color': '#007cbf', // Same blue color
+          'circle-opacity': 0.2, // More transparent
+          'circle-stroke-width': 0, // No stroke for the halo
+        }
+      });
+
+      // Add layer for user location main dot
+      map.addLayer({
+        id: 'user-location-point',
+        type: 'circle',
+        source: 'user-location-point',
+        paint: {
+          'circle-radius': 8,
+          'circle-color': '#007cbf', // A distinct blue color
+          'circle-stroke-width': 2,
+          'circle-stroke-color': '#ffffff',
+          'circle-opacity': 0.8
+        }
+      });
+
       // Add source and layer for kilometer markers
       map.addSource('km-markers', {
         type: 'geojson',
@@ -1252,11 +1288,12 @@ const addKilometerMarkers = (map: MapboxMap, coordinates: Coordinate[]) => {
   
   // Update the GeoJSON source with the kilometer markers
   const source = map.getSource('km-markers')!;
-  // @ts-ignore - MapboxGL types don't properly expose setData on all source types
-  source.setData({
-    type: 'FeatureCollection',
-    features: kmMarkers
-  });
+  if (source && (source as any).setData) { // Type assertion for safety
+    (source as any).setData({
+      type: 'FeatureCollection',
+      features: kmMarkers
+    });
+  }
   
   console.log(`[addKilometerMarkers] Added ${kmMarkers.length} kilometer markers`);
 };
@@ -1508,25 +1545,37 @@ async function buildMixedRoute(accessToken: string) {
 
 // Helper function to find the closest point on a line segment
 const closestPointOnSegment = (p: Coordinate, v: Coordinate, w: Coordinate): Coordinate => {
-  // Convert to simple points for easier calculation
-  const point = { x: p[0], y: p[1] };
-  const start = { x: v[0], y: v[1] };
-  const end = { x: w[0], y: w[1] };
-  
-  // Calculate squared length of segment
-  const l2 = Math.pow(end.x - start.x, 2) + Math.pow(end.y - start.y, 2);
-  
-  // If segment is a point, return the point
-  if (l2 === 0) return [start.x, start.y];
-  
-  // Calculate projection scalar
-  const t = Math.max(0, Math.min(1, 
-    ((point.x - start.x) * (end.x - start.x) + (point.y - start.y) * (end.y - start.y)) / l2
-  ));
-  
-  // Calculate projection point
+  const l2 = (v[0] - w[0])**2 + (v[1] - w[1])**2;
+  if (l2 === 0) return v;
+  let t = ((p[0] - v[0]) * (w[0] - v[0]) + (p[1] - v[1]) * (w[1] - v[1])) / l2;
+  t = Math.max(0, Math.min(1, t));
   return [
-    start.x + t * (end.x - start.x),
-    start.y + t * (end.y - start.y)
+    v[0] + t * (w[0] - v[0]),
+    v[1] + t * (w[1] - v[1])
   ];
-}; 
+};
+
+// Function to update the user location point on the map
+export const updateUserLocationPoint = (map: any, coordinates: Coordinate | null) => {
+  if (!map || !map.getSource) return;
+
+  const features = [];
+  if (coordinates) {
+    features.push({
+      type: 'Feature' as const,
+      properties: {},
+      geometry: {
+        type: 'Point' as const,
+        coordinates: coordinates
+      }
+    });
+  }
+
+  const userLocationSource = map.getSource('user-location-point');
+  if (userLocationSource) {
+    userLocationSource.setData({
+      type: 'FeatureCollection',
+      features
+    });
+  }
+};

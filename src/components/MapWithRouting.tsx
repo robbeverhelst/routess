@@ -15,7 +15,8 @@ import {
   hasRedo,
   addWaypoint,
   removeWaypoint,
-  getWaypoints
+  getWaypoints,
+  updateUserLocationPoint
 } from '@/lib/routing';
 
 // Get Mapbox access token from environment variables
@@ -104,9 +105,9 @@ export default function MapWithRouting({
   const [locationError, setLocationError] = useState<string | null>(null);
   const [waypointError, setWaypointError] = useState<string | null>(null);
   const [isMapReady, setIsMapReady] = useState(false);
-  const userLocationMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const hasInitiallyZoomedToUser = useRef<boolean>(false);
   const waypointErrorTimeout = useRef<number | null>(null);
+  const animationFrameIdRef = useRef<number | null>(null); // For halo animation
   
   // State for popup management
   const [popup, setPopup] = useState<PopupInfo | null>(null);
@@ -148,6 +149,9 @@ export default function MapWithRouting({
           setUserLocation(newLocation);
           localStorage.setItem('lastKnownLocation', JSON.stringify(newLocation));
           setLocationError(null); // Still update error state for internal tracking
+          if (mapRef.current) {
+            updateUserLocationPoint(mapRef.current, newLocation);
+          }
         },
         (error) => {
           console.error('Error getting user location:', error);
@@ -174,6 +178,9 @@ export default function MapWithRouting({
                   setUserLocation(newLocation);
                   localStorage.setItem('lastKnownLocation', JSON.stringify(newLocation));
                   setLocationError(null); // Still update error state for internal tracking
+                  if (mapRef.current) {
+                    updateUserLocationPoint(mapRef.current, newLocation);
+                  }
                 },
                 (retryError) => {
                   console.error('Error after retry:', retryError);
@@ -209,6 +216,9 @@ export default function MapWithRouting({
           setUserLocation(updatedLocation);
           localStorage.setItem('lastKnownLocation', JSON.stringify(updatedLocation));
           setLocationError(null);
+          if (mapRef.current) {
+            updateUserLocationPoint(mapRef.current, updatedLocation);
+          }
         },
         (error) => {
           console.error('Error watching location:', error);
@@ -249,96 +259,69 @@ export default function MapWithRouting({
         zoom: 17,
         essential: true // This ensures the animation runs even for essential UI
       });
+      updateUserLocationPoint(mapRef.current, userLocation);
       hasInitiallyZoomedToUser.current = true;
     }
-  }, [userLocation, isMapReady]);
+  }, [isMapReady, userLocation]);
 
-  // Update user location marker on map
+  // Update user location marker when map is ready and location is available (covers cases where location is available before map)
   useEffect(() => {
     if (isMapReady && userLocation && mapRef.current) {
-      const map = mapRef.current;
-      
-      // Only create marker if it doesn't exist
-      if (!userLocationMarkerRef.current) {
-        try {
-          // Create a container div
-          const el = document.createElement('div');
-          el.className = 'location-marker';
-          
-          // Create the inner dot
-          const dot = document.createElement('div');
-          dot.className = 'location-dot';
-          
-          // Create the pulse animation
-          const pulse = document.createElement('div');
-          pulse.className = 'location-pulse';
-          
-          // Add styles
-          el.style.position = 'relative';
-          el.style.width = '24px';
-          el.style.height = '24px';
-          
-          dot.style.position = 'absolute';
-          dot.style.top = '50%';
-          dot.style.left = '50%';
-          dot.style.transform = 'translate(-50%, -50%)';
-          dot.style.width = '14px';
-          dot.style.height = '14px';
-          dot.style.borderRadius = '50%';
-          dot.style.backgroundColor = '#3b82f6';
-          dot.style.boxShadow = '0 0 0 2px white';
-          dot.style.zIndex = '2';
-          
-          pulse.style.position = 'absolute';
-          pulse.style.top = '50%';
-          pulse.style.left = '50%';
-          pulse.style.transform = 'translate(-50%, -50%)';
-          pulse.style.width = '24px';
-          pulse.style.height = '24px';
-          pulse.style.borderRadius = '50%';
-          pulse.style.backgroundColor = 'rgba(59, 130, 246, 0.4)';
-          pulse.style.zIndex = '1';
-          pulse.style.animation = 'pulse 2s ease-out infinite';
-          
-          // Add keyframes for the pulse animation
-          if (!document.getElementById('location-marker-style')) {
-            const style = document.createElement('style');
-            style.id = 'location-marker-style';
-            style.innerHTML = `
-              @keyframes pulse {
-                0% { transform: translate(-50%, -50%) scale(0.5); opacity: 1; }
-                100% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
-              }
-            `;
-            document.head.appendChild(style);
-          }
-          
-          // Add elements to the DOM
-          el.appendChild(dot);
-          el.appendChild(pulse);
-
-          // Try different approaches to create a marker
-          if (window.mapboxgl) {
-            // Global mapboxgl is available
-            userLocationMarkerRef.current = new window.mapboxgl.Marker(el)
-              .setLngLat(userLocation)
-              .addTo(map);
-          } else if ('Marker' in map) {
-            // @ts-expect-error - Safely ignore since we checked for existence
-            userLocationMarkerRef.current = new map.Marker(el)
-              .setLngLat(userLocation)
-              .addTo(map);
-          } else {
-            console.error('No Marker constructor available');
-          }
-        } catch (err) {
-          console.error('Error creating location marker:', err);
-        }
-      } else if (userLocationMarkerRef.current) {
-        userLocationMarkerRef.current.setLngLat(userLocation);
-      }
+      updateUserLocationPoint(mapRef.current, userLocation);
     }
-  }, [userLocation, isMapReady]);
+  }, [isMapReady, userLocation]);
+
+  // Animate user location halo
+  useEffect(() => {
+    if (!isMapReady || !mapRef.current) {
+      return;
+    }
+
+    const map = mapRef.current;
+    const MIN_HALO_RADIUS = 10;
+    const MAX_HALO_RADIUS = 14;
+    const PULSE_DURATION_MS = 2000; // Duration of one pulse cycle
+
+    let startTime: number | null = null;
+
+    const animateHalo = (timestamp: number) => {
+      if (!startTime) {
+        startTime = timestamp;
+      }
+      const elapsedTime = timestamp - startTime;
+      const pulseProgress = (elapsedTime % PULSE_DURATION_MS) / PULSE_DURATION_MS; // 0 to 1
+      
+      // Use a sine wave for smooth pulsing (in-out easing)
+      const easedProgress = (Math.sin(pulseProgress * Math.PI * 2 - Math.PI / 2) + 1) / 2;
+      const currentRadius = MIN_HALO_RADIUS + easedProgress * (MAX_HALO_RADIUS - MIN_HALO_RADIUS);
+
+      try {
+        if (map.getLayer('user-location-halo') && map.getSource('user-location-point')) {
+          map.setPaintProperty('user-location-halo', 'circle-radius', currentRadius);
+        }
+      } catch (error) {
+        // Layer or source might not exist if map is being changed/removed
+        // console.warn('Error setting paint property for halo:', error);
+      }
+      animationFrameIdRef.current = requestAnimationFrame(animateHalo);
+    };
+
+    animationFrameIdRef.current = requestAnimationFrame(animateHalo);
+
+    return () => {
+      if (animationFrameIdRef.current) {
+        cancelAnimationFrame(animationFrameIdRef.current);
+      }
+      // Optionally, reset to a default radius if needed when component unmounts or effect re-runs
+      // try {
+      //   if (map.getLayer('user-location-halo')) {
+      //     map.setPaintProperty('user-location-halo', 'circle-radius', 16); // Default radius from routing.ts
+      //   }
+      // } catch (error) {
+      //   // console.warn('Error resetting halo radius:', error);
+      // }
+    };
+  }, [isMapReady]);
 
   // Clean up waypoint error message after timeout
   useEffect(() => {
