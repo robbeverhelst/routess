@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet";
-import { Menu, User, Save, BookMarked, LogIn, Upload, Share2, FileDown, X, AlertCircle, MapPin, Clock, Copy, RotateCcw as BackIcon } from "lucide-react";
+import { Menu, User, Save, BookMarked, LogIn, Upload, Share2, FileDown, X, AlertCircle, MapPin, Clock, Copy, RotateCcw as BackIcon, ArrowRightLeft } from "lucide-react";
 import { useState } from "react";
 import type { Map as MapboxMap } from 'mapbox-gl'; // Import MapboxMap type
 import { exportRouteToGPX, importRouteFromGPX } from '../../lib/routing'; // Import GPX functions
@@ -10,6 +10,7 @@ interface SidebarProps {
   onUndo: () => void;
   onRedo: () => void;
   onReset: () => void;
+  onReverseRoute: () => void;
   onShare: () => void;
   canUndo: boolean;
   canRedo: boolean;
@@ -33,6 +34,7 @@ export function Sidebar({
   onUndo,
   onRedo,
   onReset,
+  onReverseRoute,
   onShare,
   canUndo,
   canRedo,
@@ -194,6 +196,18 @@ export function Sidebar({
                 Redo
               </Button>
             </div>
+            
+            <Button
+              variant="outline"
+              onClick={onReverseRoute}
+              disabled={!hasRoute}
+              className={`w-full h-10 justify-center rounded-md mb-2 ${
+                !hasRoute ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+              }`}
+            >
+              <ArrowRightLeft className="w-4 h-4 mr-2" />
+              Reverse Route
+            </Button>
             
             <Button
               variant="default"

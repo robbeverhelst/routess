@@ -53,7 +53,15 @@ let redoStack: WaypointHistory[] = [];
 
 // Export the waypoints and directFlags for external components to use
 export const getWaypoints = () => waypoints;
-export const getDirectFlags = () => directFlags;
+export const getDirectFlags = () => directFlags; // Added export for directFlags
+
+// Helper functions to check history availability
+export const hasUndo = () => {
+  const result = undoStack.length > 0;
+  // console.log('[hasUndo] undoStack length:', undoStack.length, 'hasUndo:', result);
+  return result;
+};
+export const hasRedo = () => redoStack.length > 0;
 
 // Check if a coordinate is near a road
 export const checkNearRoad = async (
@@ -279,13 +287,97 @@ export const stepForward = async (
   saveWaypointsToLocalStorage(); // Save after redo
 };
 
-// Helper functions to check history availability
-export const hasUndo = () => {
-  const result = undoStack.length > 0;
-  // console.log('[hasUndo] undoStack length:', undoStack.length, 'hasUndo:', result);
-  return result;
+export const reverseRoute = async (
+  map: MapboxMap,
+  accessToken: string,
+  setRouteDistance: Dispatch<SetStateAction<string>>,
+  setRouteDuration: Dispatch<SetStateAction<string>>,
+  setHasRoute: Dispatch<SetStateAction<boolean>>
+) => {
+  if (waypoints.length < 2) {
+    console.log('[reverseRoute] Not enough waypoints to reverse.');
+    return; // No route to reverse or not enough points
+  }
+
+  console.log('[reverseRoute] Reversing route. Current waypoints:', JSON.stringify(waypoints));
+  console.log('[reverseRoute] Current directFlags:', JSON.stringify(directFlags));
+
+  // Snapshot current state for undo
+  snapshot();
+
+  // Reverse waypoints and directFlags
+  // Create new arrays to avoid issues with reversing in place if references are tricky
+  const reversedWaypoints = [...waypoints].reverse();
+  const reversedDirectFlags = [...directFlags].reverse();
+
+  // The direct flag for the *start* of a segment determines if that segment is direct.
+  // When reversing, the meaning of directFlags needs careful adjustment.
+  // Example: A -> B (direct) -> C. flags: [false, true, false]
+  // Reversed: C -> B (direct) -> A. flags should be: [false, true, false] (still B to C segment is direct)
+  // The flag at index `i` refers to the segment from waypoint `i-1` to `i`.
+  // So, if directFlags was [f1, f2, f3, f4] for w0-w1, w1-w2, w2-w3, w3-w4
+  // After reversing waypoints to w4, w3, w2, w1, w0
+  // The new flags should correspond to w3-w4, w2-w3, w1-w2, w0-w1 (original segments in reverse order)
+  // However, the directFlags array is associated with the *endpoint* of the segment in current logic (directFlags[i] is for point i).
+  // Point 0 (start) never has a true directFlag influencing an incoming segment.
+  // If waypoints are [A, B, C, D] and flags are [false, true, false, true] meaning:
+  // A->B (road), B->C (direct), C->D (road), D->E (direct)
+  // After reverse: [E, D, C, B, A]
+  // We want: E->D (direct), D->C (road), C->B (direct), B->A (road)
+  // The flags need to be shifted and reversed essentially.
+  // Original flags: [orig_f0, orig_f1, orig_f2, ..., orig_fn-1]
+  // Reversed flags should be: [orig_fn-1, orig_fn-2, ..., orig_f1, orig_f0] then potentially shifted.
+
+  // Let's analyze directFlags: directFlags[i] means waypoint `i` is a direct *target* from `i-1`.
+  // Example: W0, W1, W2. Flags: [F0, F1, F2]. (F0 is usually false or ignored)
+  // Segment W0->W1 uses F1. Segment W1->W2 uses F2.
+  // Reversed waypoints: W2, W1, W0.
+  // New flags: [NewF0, NewF1, NewF2]
+  // We want segment W2->W1 to have directness of original W0->W1 (F1).
+  // We want segment W1->W0 to have directness of original W1->W2 (F2).
+  // So, newFlags[1] should be oldFlags[1], newFlags[2] should be oldFlags[2] etc. but applied to reversed waypoints.
+  // The directFlags are associated with the point itself. directFlags[i] applies to point i.
+  // If waypoints = [A, B, C], directFlags = [false, true, false]
+  // This means A is normal, B is a direct connection *to* B, C is normal.
+  // Route: A --road--> B* --direct--> C
+  // Reversed: C, B*, A
+  // We want: C --direct--> B* --road--> A
+  // So new flags should be [false (for C), true (for B*), false (for A)] - this is just reversedDirectFlags.
+  // BUT, the meaning changes slightly. directFlags[0] is effectively ignored for routing logic as it's the start.
+  // directFlags[i] means point i is a direct *destination* from point i-1.
+
+  // Let's re-evaluate: directFlags[i] determines if the leg TO waypoints[i] FROM waypoints[i-1] is direct.
+  // W = [w0, w1, w2, w3], F = [f0, f1, f2, f3] (f0 is ignored)
+  // w0 --(f1)--> w1 --(f2)--> w2 --(f3)--> w3
+  // Reversed W_rev = [w3, w2, w1, w0]
+  // New flags F_new = [?, new_f1, new_f2, new_f3]
+  // We want w3 --(new_f1)--> w2. This segment was w2 --(f3)--> w3. So new_f1 = f3.
+  // We want w2 --(new_f2)--> w1. This segment was w1 --(f2)--> w2. So new_f2 = f2.
+  // We want w1 --(new_f3)--> w0. This segment was w0 --(f1)--> w1. So new_f3 = f1.
+  // So, F_new should be [f0, f3, f2, f1] (if f0 is kept for consistency)
+  // This means: reverse all flags, then shift right by 1, putting original f0 at the start?
+  // No, simpler: reverse the flags array. The first element (originally f0) becomes the last. The second (f1) becomes second to last.
+  // Example: W = [A,B,C], F = [false, true, false] (A->B road, B->C direct)
+  // Reversed W_rev = [C,B,A]
+  // Reversed F_rev = [false, true, false]
+  // This implies C->B is road, B->A is direct. This is correct.
+  // The direct flag is associated with the *target* waypoint of a segment.
+  // So, simple reversal of both arrays should work.
+
+  waypoints = reversedWaypoints;
+  directFlags = reversedDirectFlags;
+
+  console.log('[reverseRoute] Reversed waypoints:', JSON.stringify(waypoints));
+  console.log('[reverseRoute] Reversed directFlags:', JSON.stringify(directFlags));
+
+  // Update visuals and route
+  updatePoints(map, waypoints);
+  if (waypoints.length >= 2) {
+    await getRoute(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
+  }
+  saveWaypointsToLocalStorage(); // Save after reversing
+  console.log('[reverseRoute] Route reversed and updated.');
 };
-export const hasRedo = () => redoStack.length > 0;
 
 // Function to update a waypoint position and recalculate the route
 export const updateWaypointPositionAndRecalculate = async (

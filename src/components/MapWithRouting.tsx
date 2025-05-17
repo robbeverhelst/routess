@@ -19,7 +19,9 @@ import {
   getDirectFlags,
   updateUserLocationPoint,
   setRouteData,
-  insertWaypointAtLocation
+  insertWaypointAtLocation,
+  // Placeholder for the new reverseRoute function from routing.ts
+  reverseRoute as reverseRouteLogic,
 } from '@/lib/routing';
 import { serializeAndCompress, decompressAndParse } from '@/lib/shareUtils';
 import type { MapTouchEvent, MapMouseEvent } from 'mapbox-gl';
@@ -447,6 +449,23 @@ export default function MapWithRouting({
     
     console.log('[MapWithRouting] handleReset completed, UI states cleared.');
   }, []);
+
+  const handleReverseRoute = useCallback(async () => {
+    if (!mapRef.current || !MAPBOX_TOKEN || !hasRoute) return;
+    console.log('[MapWithRouting] Attempting to reverse route.');
+    // This will call the actual logic in routing.ts once implemented
+    // For now, it's a placeholder. We'll need to import `reverseRouteLogic`
+    await reverseRouteLogic(
+      mapRef.current,
+      MAPBOX_TOKEN,
+      setRouteDistance,
+      setRouteDuration,
+      setHasRoute
+    );
+    // For now, let's log to console until routing.ts is updated
+    // alert('Reverse route functionality to be implemented in routing.ts');
+    console.log('[MapWithRouting] Reverse route call executed.');
+  }, [MAPBOX_TOKEN, hasRoute, setRouteDistance, setRouteDuration, setHasRoute]);
 
   const handleLocate = useCallback(() => {
     if (mapRef.current && userLocation && !locationError) {
@@ -903,6 +922,7 @@ export default function MapWithRouting({
                   onUndo={handleUndo}
                   onRedo={handleRedo}
                   onReset={handleReset}
+                  onReverseRoute={handleReverseRoute}
                   onShare={handleShareRoute}
                   displayedShareUrl={displayedShareUrl}
                   setDisplayedShareUrl={setDisplayedShareUrl}
@@ -950,6 +970,7 @@ export default function MapWithRouting({
           onUndo={handleUndo}
           onRedo={handleRedo}
           onReset={handleReset}
+          onReverseRoute={handleReverseRoute}
           onShare={handleShareRoute}
           displayedShareUrl={displayedShareUrl}
           setDisplayedShareUrl={setDisplayedShareUrl}
