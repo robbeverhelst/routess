@@ -9,6 +9,39 @@ let contextMenuListenerAdded = false; // Track context menu (right-click) handle
 let currentPopup: Popup | null = null; // Track active popup for waypoint removal tooltip
 let directFlags: boolean[] = []; // parallel to waypoints, true if waypoint is direct
 
+// --- Local Storage ---
+const WAYPOINTS_STORAGE_KEY = 'mapWaypoints';
+
+// Function to save waypoints to local storage
+const saveWaypointsToLocalStorage = () => {
+  try {
+    const data = JSON.stringify({ waypoints, directFlags });
+    localStorage.setItem(WAYPOINTS_STORAGE_KEY, data);
+    console.log('[LocalStorage] Saved waypoints to local storage');
+  } catch (error) {
+    console.error('[LocalStorage] Error saving waypoints to local storage:', error);
+  }
+};
+
+// Function to load waypoints from local storage
+const loadWaypointsFromLocalStorage = () => {
+  try {
+    const data = localStorage.getItem(WAYPOINTS_STORAGE_KEY);
+    if (data) {
+      const parsedData = JSON.parse(data);
+      if (parsedData && parsedData.waypoints && parsedData.directFlags) {
+        waypoints = parsedData.waypoints;
+        directFlags = parsedData.directFlags;
+        console.log('[LocalStorage] Loaded waypoints from local storage:', waypoints);
+        return true;
+      }
+    }
+  } catch (error) {
+    console.error('[LocalStorage] Error loading waypoints from local storage:', error);
+  }
+  return false;
+};
+
 // --- Drag state ---
 let isDragging = false;
 let draggedWaypointIndex = -1;
@@ -84,7 +117,6 @@ export const addWaypoint = async (
   setHasRoute: Dispatch<SetStateAction<boolean>>,
   onError?: (message: string) => void
 ) => {
-  // For direct waypoints, or if it's the first waypoint, accept it without validation
   if (isDirect || waypoints.length === 0) {
     // Snapshot current state for undo
     snapshot();
@@ -99,6 +131,7 @@ export const addWaypoint = async (
     if (waypoints.length >= 2) {
       await getRoute(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
     }
+    saveWaypointsToLocalStorage(); // Save after adding
     return true;
   }
   
@@ -133,6 +166,7 @@ export const addWaypoint = async (
     await getRoute(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
   }
   
+  saveWaypointsToLocalStorage(); // Save after adding
   return true;
 }
 
@@ -167,6 +201,7 @@ export const removeWaypoint = async (
     setRouteDuration('');
     setHasRoute(false);
   }
+  saveWaypointsToLocalStorage(); // Save after removing
 }
 
 const snapshot = () => {
@@ -177,7 +212,7 @@ const snapshot = () => {
   });
   console.log('[snapshot] After pushing, undoStack length:', undoStack.length);
   if (undoStack.length > 50) undoStack.shift();
-  redoStack = [];
+  redoStack = []; // Clear redo stack on new snapshot
   console.log('[snapshot] Final undoStack:', undoStack.length, 'redoStack cleared');
 };
 
@@ -209,6 +244,7 @@ export const stepBack = async (
     setRouteDuration('');
     setHasRoute(false);
   }
+  saveWaypointsToLocalStorage(); // Save after undo
 };
 
 export const stepForward = async (
@@ -238,6 +274,7 @@ export const stepForward = async (
     setRouteDuration('');
     setHasRoute(false);
   }
+  saveWaypointsToLocalStorage(); // Save after redo
 };
 
 // Helper functions to check history availability
@@ -273,6 +310,7 @@ export const updateWaypointPositionAndRecalculate = async (
     // Recalculate route with updated waypoints
     await getRoute(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
   }
+  saveWaypointsToLocalStorage(); // Save after updating position
 };
 
 // Setup routing logic for a Mapbox map instance
@@ -283,6 +321,11 @@ export const setupRouting = (
   setRouteDuration: Dispatch<SetStateAction<string>>,
   setHasRoute: Dispatch<SetStateAction<boolean>>
 ) => {
+  console.log('[setupRouting] Initializing routing setup...');
+
+  // Attempt to load waypoints from local storage first
+  loadWaypointsFromLocalStorage();
+
   // Check if map is valid
   if (!map) {
     console.error('[setupRouting] Map instance is not available');
@@ -458,10 +501,11 @@ export const setupRouting = (
     console.log('[setupRouting] Sources and layers already exist');
   }
 
-  // If we already have waypoints, re-render them (helps persist state)
+  // If we have waypoints (either initially present or loaded from storage), 
+  // re-render them and the route.
   if (waypoints.length > 0) {
+    console.log('[setupRouting] Waypoints present (either initial or loaded), updating map.');
     updatePoints(map, waypoints);
-    
     if (waypoints.length >= 2) {
       getRoute(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
     }
@@ -879,52 +923,34 @@ export const setupRouting = (
         // our temp lines only for the segments connected to the dragged point
       };
       
-      // Mouse up handler - finalize position and recalculate route
+      // Mouse up handler - finalize drag and recalculate route
       const onMouseUp = async () => {
         if (!isDragging) return;
-        
+
+        // Snapshot for undo
+        snapshot(); 
+
+        isDragging = false;
         map.getCanvas().style.cursor = '';
         map.dragPan.enable();
-        
-        // Clear temporary drag lines
+
+        // Remove temporary drag lines
         const tempSource = map.getSource('temp-drag-lines');
         if (tempSource) {
-          tempSource.setData({
-            type: 'FeatureCollection',
-            features: []
-          });
+          tempSource.setData({ type: 'FeatureCollection', features: [] });
         }
-        
-        try {
-          // Remove the drag lines layer and source
-          if (map.getLayer('temp-drag-lines')) {
-            map.removeLayer('temp-drag-lines');
-          }
-          if (map.getSource('temp-drag-lines')) {
-            map.removeSource('temp-drag-lines');
-          }
-        } catch (err) {
-          console.warn('[Drag] Error removing temporary layers:', err);
+
+        // Finalize waypoint position and recalculate route
+        // Use the current position from waypoints[draggedWaypointIndex]
+        // No need to pass newCoords if it's already updated in waypoints array by onMouseMove
+        if (waypoints.length >= 2) {
+          console.log('[Drag End] Recalculating route for dragged waypoint', draggedWaypointIndex);
+          await getRoute(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
         }
-        
-        // Save state and recalculate route
-        if (draggedWaypointIndex !== -1) {
-          await updateWaypointPositionAndRecalculate(
-            map,
-            draggedWaypointIndex,
-            waypoints[draggedWaypointIndex],
-            accessToken,
-            setRouteDistance,
-            setRouteDuration,
-            setHasRoute
-          );
-        }
-        
-        // Reset dragging state
-        isDragging = false;
         draggedWaypointIndex = -1;
-        
-        // Remove event listeners
+        saveWaypointsToLocalStorage(); // Save after dragging
+
+        // Remove listeners
         map.off('mousemove', onMouseMove);
         map.off('mouseup', onMouseUp);
       };
@@ -1120,52 +1146,32 @@ export const setupRouting = (
       // our temp lines only for the segments connected to the dragged point
     };
     
-    // Mouse up handler - finalize position and recalculate route
+    // Mouse up handler - finalize drag and recalculate route
     const onMouseUp = async () => {
       if (!isDragging) return;
-      
+
+      // Snapshot for undo
+      snapshot(); 
+
+      isDragging = false;
       map.getCanvas().style.cursor = '';
       map.dragPan.enable();
-      
-      // Clear temporary drag lines
+
+      // Remove temporary drag lines
       const tempSource = map.getSource('temp-drag-lines');
       if (tempSource) {
-        tempSource.setData({
-          type: 'FeatureCollection',
-          features: []
-        });
+        tempSource.setData({ type: 'FeatureCollection', features: [] });
       }
-      
-      try {
-        // Remove the drag lines layer and source
-        if (map.getLayer('temp-drag-lines')) {
-          map.removeLayer('temp-drag-lines');
-        }
-        if (map.getSource('temp-drag-lines')) {
-          map.removeSource('temp-drag-lines');
-        }
-      } catch (err) {
-        console.warn('[Drag] Error removing temporary layers:', err);
+
+      // Recalculate route with the new waypoint
+      if (waypoints.length >= 2) {
+        console.log('[Route Click Drag End] Recalculating route after adding waypoint on route');
+        await getRoute(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
       }
-      
-      // Save state and recalculate route
-      if (draggedWaypointIndex !== -1) {
-        await updateWaypointPositionAndRecalculate(
-          map,
-          draggedWaypointIndex,
-          waypoints[draggedWaypointIndex],
-          accessToken,
-          setRouteDistance,
-          setRouteDuration,
-          setHasRoute
-        );
-      }
-      
-      // Reset dragging state
-      isDragging = false;
       draggedWaypointIndex = -1;
-      
-      // Remove event listeners
+      saveWaypointsToLocalStorage(); // Save after dragging new waypoint from route
+
+      // Remove listeners
       map.off('mousemove', onMouseMove);
       map.off('mouseup', onMouseUp);
     };
@@ -1328,13 +1334,15 @@ export const getRoute = async (
   clearKilometerMarkers(map);
   
   if (directFlags.some(Boolean)) {
-      const { coordsAccum, totalDist } = await buildMixedRoute(accessToken);
+      const { coordsAccum, totalDist, waypointsUpdated } = await buildMixedRoute(accessToken);
       const routeSource = map.getSource('route');
       if (routeSource) {
         routeSource.setData({ type:'Feature', properties:{}, geometry:{ type:'LineString', coordinates: coordsAccum } });
       }
-      // Update marker positions based on snapped coords
-      updatePoints(map, waypoints);
+      // Update marker positions based on snapped coords (if they were updated in buildMixedRoute)
+      if (waypointsUpdated) {
+        updatePoints(map, waypoints);
+      }
       const duration = Math.round(totalDist/5*60);
       setRouteDistance(`${totalDist.toFixed(2)} km`);
       setRouteDuration(`${duration} min`);
@@ -1342,7 +1350,9 @@ export const getRoute = async (
       
       // Add kilometer markers along the mixed route
       addKilometerMarkers(map, coordsAccum);
-      
+      if (waypointsUpdated) { // Save if buildMixedRoute updated global waypoints
+        saveWaypointsToLocalStorage();
+      }
       return;
   }
 
@@ -1397,13 +1407,27 @@ export const getRoute = async (
     if (json.waypoints && Array.isArray(json.waypoints)) {
       const snappedWaypoints = json.waypoints.map((wp: any) => wp.location as Coordinate);
       if (snappedWaypoints.length === currentWaypointsForAPI.length) {
-        console.log('[getRoute] Snapped waypoints received:', JSON.stringify(snappedWaypoints));
-        // Update the global waypoints array with the snapped coordinates
-        waypoints = [...snappedWaypoints]; // Replace global waypoints with snapped ones
-        console.log('[getRoute] Global waypoints updated with snapped locations.');
-        // Update the visual markers on the map to their snapped positions
-        updatePoints(map, waypoints); 
-        console.log('[getRoute] Called updatePoints with snapped waypoints.');
+        // Check if waypoints actually changed before reassigning and saving
+        let changed = false;
+        for (let i = 0; i < waypoints.length; i++) {
+          if (waypoints[i][0] !== snappedWaypoints[i][0] || waypoints[i][1] !== snappedWaypoints[i][1]) {
+            changed = true;
+            break;
+          }
+        }
+
+        if (changed) {
+          console.log('[getRoute] Snapped waypoints received and are different:', JSON.stringify(snappedWaypoints));
+          // Update the global waypoints array with the snapped coordinates
+          waypoints = [...snappedWaypoints]; // Replace global waypoints with snapped ones
+          console.log('[getRoute] Global waypoints updated with snapped locations.');
+          // Update the visual markers on the map to their snapped positions
+          updatePoints(map, waypoints); 
+          console.log('[getRoute] Called updatePoints with snapped waypoints.');
+          saveWaypointsToLocalStorage(); // Save after snapping waypoints in getRoute
+        } else {
+          console.log('[getRoute] Snapped waypoints received but are identical to existing ones. No update needed.');
+        }
       } else {
         console.warn('[getRoute] Mismatch between original and snapped waypoint counts. Not updating global waypoints.');
       }
@@ -1479,6 +1503,7 @@ export const resetRouting = (
     // Clear history stacks
     undoStack = [];
     redoStack = [];
+    saveWaypointsToLocalStorage(); // Save after reset
   }
 };
 
@@ -1498,6 +1523,7 @@ const haversine = (c1: Coordinate, c2: Coordinate) => {
 async function buildMixedRoute(accessToken: string) {
   let coordsAccum: any[] = [];
   let totalDist = 0;
+  let waypointsUpdated = false; // Flag to indicate if global waypoints were modified
 
   for (let i = 0; i < waypoints.length - 1; i++) {
     const from = waypoints[i];
@@ -1527,26 +1553,43 @@ async function buildMixedRoute(accessToken: string) {
           totalDist += distKm;
           if (json && json.waypoints && json.waypoints.length === 2) {
             // Update snapped waypoint coords globally for NON-direct points only
-            if (!directFlags[i])   waypoints[i]   = json.waypoints[0].location;
-            if (!directFlags[i+1]) waypoints[i+1] = json.waypoints[1].location;
+            const newWp0 = json.waypoints[0].location;
+            const newWp1 = json.waypoints[1].location;
+            if (!directFlags[i] && (waypoints[i][0] !== newWp0[0] || waypoints[i][1] !== newWp0[1])) {
+              waypoints[i]   = newWp0;
+              waypointsUpdated = true;
+            }
+            if (!directFlags[i+1] && (waypoints[i+1][0] !== newWp1[0] || waypoints[i+1][1] !== newWp1[1])) {
+              waypoints[i+1] = newWp1;
+              waypointsUpdated = true;
+            }
           }
         } else {
           // No route found; convert to direct segment
-          directFlags[i+1] = true;
+          if (!directFlags[i+1]) { // only update if it was not already direct
+            directFlags[i+1] = true;
+            waypointsUpdated = true; // directFlags is part of the persisted data
+          }
           if (coordsAccum.length === 0) coordsAccum.push(from);
           coordsAccum.push(to);
           totalDist += haversine(from, to);
         }
       } catch(err) {
         // No route found; convert to direct segment
-        directFlags[i+1] = true;
+        if (!directFlags[i+1]) { // only update if it was not already direct
+          directFlags[i+1] = true;
+          waypointsUpdated = true; // directFlags is part of the persisted data
+        }
         if (coordsAccum.length === 0) coordsAccum.push(from);
         coordsAccum.push(to);
         totalDist += haversine(from, to);
       }
     }
   }
-  return { coordsAccum, totalDist };
+  if (waypointsUpdated) {
+    console.log('[buildMixedRoute] Global waypoints or directFlags updated.');
+  }
+  return { coordsAccum, totalDist, waypointsUpdated };
 }
 
 // Helper function to find the closest point on a line segment
