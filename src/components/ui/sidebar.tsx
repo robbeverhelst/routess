@@ -233,7 +233,7 @@ export function Sidebar({
         <div className="absolute bottom-3 inset-x-0 px-4">
           <div className="text-center">
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              Made with ❤️ by RobbeVerhelst
+              Made by <a href="https://github.com/RobbeVerhelst" target="_blank" rel="noopener noreferrer" className="hover:underline">RobbeVerhelst</a>
             </p>
           </div>
         </div>
