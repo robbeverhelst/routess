@@ -1,6 +1,6 @@
 import type { Dispatch, SetStateAction } from 'react';
 import type { Coordinate, WaypointHistory } from '@/types/map';
-import type { Map as MapboxMap, Popup, MapMouseEvent, MapLayerMouseEvent, GeoJSONSource } from 'mapbox-gl';
+import type { Map as MapboxMap, Popup, MapMouseEvent, MapLayerMouseEvent, GeoJSONSource, MapTouchEvent } from 'mapbox-gl';
 
 // Store references and state outside of the setup function to persist across renders
 let waypoints: Coordinate[] = [];
@@ -46,7 +46,6 @@ const loadWaypointsFromLocalStorage = () => {
 // --- Drag state ---
 let isDragging = false;
 let draggedWaypointIndex = -1;
-let dragListenersAdded = false;
 
 // --- History (Undo / Redo) ---
 let undoStack: WaypointHistory[] = [];
@@ -784,173 +783,307 @@ export const setupRouting = (
   }
 
   // Add drag handlers for waypoints
-  if (!dragListenersAdded) {
-    console.log('[setupRouting] Adding drag handlers for waypoints');
+  console.log('[setupRouting] Adding mousedown/touchstart handlers for waypoints');
+  
+  // Change cursor when hovering over waypoints (Desktop only)
+  map.on('mouseenter', 'points', () => {
+    if (!isDragging) map.getCanvas().style.cursor = 'grab';
+  });
+  
+  map.on('mouseleave', 'points', () => {
+    if (!isDragging) {
+      map.getCanvas().style.cursor = '';
+    }
+  });
+  
+  // --- Mouse Drag Handlers ---
+  const onMapMouseMove = (eMove: MapMouseEvent) => {
+    if (!isDragging || draggedWaypointIndex < 0 || draggedWaypointIndex >= waypoints.length) return;
     
-    // Change cursor when hovering over waypoints
-    map.on('mouseenter', 'points', () => {
-      map.getCanvas().style.cursor = 'grab';
-    });
+    const newCoords = [eMove.lngLat.lng, eMove.lngLat.lat] as Coordinate;
+    waypoints[draggedWaypointIndex] = newCoords;
+    updatePoints(map, waypoints);
     
-    map.on('mouseleave', 'points', () => {
-      if (!isDragging) {
-        map.getCanvas().style.cursor = '';
-      }
-    });
-    
-    // Start dragging
-    map.on('mousedown', 'points', (e: MapLayerMouseEvent) => {
-      // Prevent if popup is open
-      if (currentPopup && currentPopup.isOpen()) return;
-      
-      e.preventDefault();
-      
-      // Check if we have a valid feature
-      if (!e.features || e.features.length === 0) return;
-      
-      const feature = e.features[0];
-      const idxRaw = feature.properties?.waypointIndex;
-      const idx = typeof idxRaw === 'string' ? parseInt(idxRaw, 10) : idxRaw;
-      
-      if (isNaN(idx) || idx < 0 || idx >= waypoints.length) {
-        console.log('[Drag] Invalid waypoint index:', idxRaw);
-        return;
-      }
-      
-      // Set dragging state
-      isDragging = true;
-      draggedWaypointIndex = idx;
-      map.getCanvas().style.cursor = 'grabbing';
-      
-      // Disable map dragging during waypoint drag
-      map.dragPan.disable();
-      
-      // Add a temporary source and layer for drag visual lines
-      if (!map.getSource('temp-drag-lines')) {
-        map.addSource('temp-drag-lines', {
-          type: 'geojson',
-          data: {
-            type: 'FeatureCollection' as const,
-            features: []
-          }
-        });
-        
-        map.addLayer({
-          id: 'temp-drag-lines',
-          type: 'line',
-          source: 'temp-drag-lines',
-          layout: {
-            'line-join': 'round',
-            'line-cap': 'round'
-          },
-          paint: {
-            'line-color': '#3887be', // Match the route color
-            'line-width': 3,
-            'line-opacity': 0.75
-          }
+    // Update temporary drag lines if they exist and are relevant
+    if (map.getSource('temp-drag-lines')) {
+      const features = [];
+      // Previous point to new point
+      if (draggedWaypointIndex > 0) {
+        features.push({
+          type: 'Feature' as const, // Re-add 'as const' here
+          properties: {},
+          geometry: { type: 'LineString' as const, coordinates: [waypoints[draggedWaypointIndex - 1], newCoords] }
         });
       }
-      
-      // Mouse move handler - update waypoint position
-      const onMouseMove = (eMove: MapMouseEvent) => {
-        if (!isDragging) return;
-        
-        const coords = [eMove.lngLat.lng, eMove.lngLat.lat] as Coordinate;
-        
-        // Update the waypoint position (visually only, don't recalculate route yet)
-        waypoints[draggedWaypointIndex] = coords;
-        updatePoints(map, waypoints);
-        
-        // Create temporary straight lines to adjacent waypoints
-        const features: Array<GeoJSON.Feature<GeoJSON.LineString>> = [];
-        
-        // If not the first waypoint, create line to previous waypoint
-        if (draggedWaypointIndex > 0) {
-          features.push({
-            type: 'Feature',
-            properties: {},
-            geometry: {
-              type: 'LineString',
-              coordinates: [waypoints[draggedWaypointIndex - 1], coords]
-            }
-          });
-        }
-        
-        // If not the last waypoint, create line to next waypoint
-        if (draggedWaypointIndex < waypoints.length - 1) {
-          features.push({
-            type: 'Feature',
-            properties: {},
-            geometry: {
-              type: 'LineString',
-              coordinates: [coords, waypoints[draggedWaypointIndex + 1]]
-            }
-          });
-        }
-        
-        // Update temp drag lines
-        const tempSource = map.getSource('temp-drag-lines');
-        if (tempSource) {
-          (tempSource as GeoJSONSource).setData({
-            type: 'FeatureCollection',
-            features
-          });
-        }
-        
-        // The route should remain visible for other segments
-        // No need to hide the entire route as we're overlaying
-        // our temp lines only for the segments connected to the dragged point
-      };
-      
-      // Mouse up handler - finalize drag and recalculate route
-      const onMouseUp = async () => {
-        if (!isDragging) return;
+      // New point to next point
+      if (draggedWaypointIndex < waypoints.length - 1) {
+        features.push({
+          type: 'Feature' as const, // Re-add 'as const' here
+          properties: {},
+          geometry: { type: 'LineString' as const, coordinates: [newCoords, waypoints[draggedWaypointIndex + 1]] }
+        });
+      }
+      (map.getSource('temp-drag-lines') as GeoJSONSource).setData({
+        type: 'FeatureCollection' as const,
+        features
+      });
+    }
+  };
 
-        // Snapshot for undo
-        snapshot(); 
+  const onMapMouseUp = async () => {
+    if (!isDragging || draggedWaypointIndex < 0) return;
 
-        isDragging = false;
-        map.getCanvas().style.cursor = '';
-        map.dragPan.enable();
+    console.log('[Drag End - Mouse] Waypoint drag ended for index:', draggedWaypointIndex);
+    const finalCoords = waypoints[draggedWaypointIndex]; // Already updated by onMapMouseMove
 
-        // Remove temporary drag lines
-        const tempSource = map.getSource('temp-drag-lines');
-        if (tempSource) {
-          (tempSource as GeoJSONSource).setData({ type: 'FeatureCollection', features: [] });
-        }
+    // Persist changes and update route
+    try {
+      // Snapshot before road check for potential coordinate change
+      // snapshot(); // snapshot() is now called inside updateWaypointPositionAndRecalculate
 
-        // Finalize waypoint position and recalculate route
-        // Use the current position from waypoints[draggedWaypointIndex]
-        // No need to pass newCoords if it's already updated in waypoints array by onMouseMove
+      // For non-direct waypoints, snap to road after drag.
+      // Direct waypoints remain exactly where dropped.
+      if (!directFlags[draggedWaypointIndex]) {
+        console.log('[Drag End - Mouse] Waypoint is not direct, checking road proximity for:', finalCoords);
+        await updateWaypointPositionAndRecalculate(
+          map, 
+          draggedWaypointIndex, 
+          finalCoords, // Pass the current (possibly unsnapped) coords
+          accessToken, 
+          setRouteDistance, 
+          setRouteDuration, 
+          setHasRoute
+        );
+      } else {
+        // For direct waypoints, just save and update route if necessary
+        console.log('[Drag End - Mouse] Waypoint is direct. Final Coords:', finalCoords);
+        snapshot(); // Snapshot current state as final
+        // updatePoints(map, waypoints); // Already called by onMapMouseMove
         if (waypoints.length >= 2) {
-          console.log('[Drag End] Recalculating route for dragged waypoint', draggedWaypointIndex);
           await getRoute(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
         }
-        draggedWaypointIndex = -1;
-        saveWaypointsToLocalStorage(); // Save after dragging
-
-        // Remove listeners
-        map.off('mousemove', onMouseMove);
-        map.off('mouseup', onMouseUp);
-      };
+        saveWaypointsToLocalStorage();
+      }
+    } catch (error) {
+      console.error('[Drag End - Mouse] Error during mouse up processing:', error);
+    } finally {
+      isDragging = false;
+      draggedWaypointIndex = -1;
+      map.getCanvas().style.cursor = '';
+      map.dragPan.enable();
+      map.off('mousemove', onMapMouseMove);
+      map.off('mouseup', onMapMouseUp);
       
-      // Add temporary event listeners
-      map.on('mousemove', onMouseMove);
-      map.on('mouseup', onMouseUp);
-    });
+      // Clear temporary drag lines
+      if (map.getSource('temp-drag-lines')) {
+        (map.getSource('temp-drag-lines') as GeoJSONSource).setData({
+          type: 'FeatureCollection',
+          features: []
+        });
+      }
+      console.log('[Drag End - Mouse] Mouse listeners removed, pan enabled.');
+    }
+  };
+
+  map.on('mousedown', 'points', (e: MapLayerMouseEvent) => {
+    if (currentPopup && currentPopup.isOpen()) {
+      console.log('[Drag Start - Mouse] Popup open, preventing drag.');
+      return;
+    }
+    // Ensure it's a left-click (button 0)
+    if (e.originalEvent.button !== 0) {
+      console.log('[Drag Start - Mouse] Not a left click, ignoring.');
+      return;
+    }
     
-    dragListenersAdded = true;
-    console.log('[setupRouting] Drag handlers added successfully');
-  } else {
-    console.log('[setupRouting] Drag handlers already added');
-  }
+    e.preventDefault();
+    
+    if (!e.features || e.features.length === 0) return;
+    
+    const feature = e.features[0];
+    const idxRaw = feature.properties?.waypointIndex;
+    const idx = typeof idxRaw === 'string' ? parseInt(idxRaw, 10) : typeof idxRaw === 'number' ? idxRaw : -1;
+    
+    if (idx === -1 || isNaN(idx) || idx < 0 || idx >= waypoints.length) {
+      console.log('[Drag Start - Mouse] Invalid waypoint index:', idxRaw);
+      return;
+    }
+    
+    console.log('[Drag Start - Mouse] Initiating drag for waypoint index:', idx);
+    isDragging = true;
+    draggedWaypointIndex = idx;
+    map.getCanvas().style.cursor = 'grabbing';
+    map.dragPan.disable();
+    
+    map.on('mousemove', onMapMouseMove);
+    map.on('mouseup', onMapMouseUp);
+
+    // Add temporary source and layer for drag visual lines if not already present
+    // This logic could be moved to a more general setup if these layers are always desired
+    if (!map.getSource('temp-drag-lines')) {
+      map.addSource('temp-drag-lines', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] }
+      });
+      map.addLayer({
+        id: 'temp-drag-lines',
+        type: 'line',
+        source: 'temp-drag-lines',
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: { 'line-color': '#3887be', 'line-width': 3, 'line-opacity': 0.75 }
+      });
+    }
+  });
+
+  // --- Touch Drag Handlers ---
+  const onMapTouchMove = (eMove: MapTouchEvent) => {
+    if (!isDragging || draggedWaypointIndex < 0 || draggedWaypointIndex >= waypoints.length) return;
+    
+    // Prevent default touch actions like scrolling
+    eMove.preventDefault();
+
+    const newCoords = [eMove.lngLat.lng, eMove.lngLat.lat] as Coordinate;
+    waypoints[draggedWaypointIndex] = newCoords;
+    updatePoints(map, waypoints);
+
+    // Update temporary drag lines (similar to mouse move)
+    if (map.getSource('temp-drag-lines')) {
+      const features = [];
+      if (draggedWaypointIndex > 0) {
+        features.push({
+          type: 'Feature' as const, // Re-add 'as const' here
+          properties: {},
+          geometry: { type: 'LineString' as const, coordinates: [waypoints[draggedWaypointIndex - 1], newCoords] }
+        });
+      }
+      if (draggedWaypointIndex < waypoints.length - 1) {
+        features.push({
+          type: 'Feature' as const, // Re-add 'as const' here
+          properties: {},
+          geometry: { type: 'LineString' as const, coordinates: [newCoords, waypoints[draggedWaypointIndex + 1]] }
+        });
+      }
+      (map.getSource('temp-drag-lines') as GeoJSONSource).setData({
+        type: 'FeatureCollection' as const,
+        features
+      });
+    }
+  };
+
+  const onMapTouchEnd = async () => {
+    if (!isDragging || draggedWaypointIndex < 0) return;
+
+    console.log('[Drag End - Touch] Waypoint touch drag ended for index:', draggedWaypointIndex);
+    const finalCoords = waypoints[draggedWaypointIndex];
+
+    try {
+      // For non-direct waypoints, snap to road after drag.
+      if (!directFlags[draggedWaypointIndex]) {
+        console.log('[Drag End - Touch] Waypoint is not direct, checking road proximity for:', finalCoords);
+        await updateWaypointPositionAndRecalculate(
+          map, 
+          draggedWaypointIndex, 
+          finalCoords,
+          accessToken, 
+          setRouteDistance, 
+          setRouteDuration, 
+          setHasRoute
+        );
+      } else {
+        console.log('[Drag End - Touch] Waypoint is direct. Final Coords:', finalCoords);
+        snapshot();
+        // updatePoints(map, waypoints); // Already called by onMapTouchMove
+        if (waypoints.length >= 2) {
+          await getRoute(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
+        }
+        saveWaypointsToLocalStorage();
+      }
+    } catch (error) {
+      console.error('[Drag End - Touch] Error during touch end processing:', error);
+    } finally {
+      isDragging = false;
+      draggedWaypointIndex = -1;
+      // No cursor style to reset for touch
+      map.dragPan.enable();
+      map.off('touchmove', onMapTouchMove);
+      map.off('touchend', onMapTouchEnd);
+      
+      // Clear temporary drag lines
+      if (map.getSource('temp-drag-lines')) {
+        (map.getSource('temp-drag-lines') as GeoJSONSource).setData({
+          type: 'FeatureCollection',
+          features: []
+        });
+      }
+      console.log('[Drag End - Touch] Touch listeners removed, pan enabled.');
+    }
+  };
+
+  map.on('touchstart', 'points', (e: MapTouchEvent) => { // Changed MapLayerMouseEvent to MapTouchEvent
+    if (currentPopup && currentPopup.isOpen()) {
+      console.log('[Drag Start - Touch] Popup open, preventing drag.');
+      return;
+    }
+    // For touch, we usually don't check e.originalEvent.button.
+    // Ensure it's a single touch to initiate drag.
+    // The 'points' property in MapTouchEvent (from originalEvent) tells us number of touch points.
+    // However, react-map-gl's MapLayerMouseEvent might not directly expose this if it wraps it.
+    // We rely on the fact that mapbox-gl itself will typically only fire this for the primary touch on the layer.
+    // More robust check could be event.originalEvent.touches.length === 1 if originalEvent is a TouchEvent.
+    // For now, assume single touch initiates.
+
+    e.preventDefault(); // Prevent default touch actions like scrolling or zooming
+    
+    if (!e.features || e.features.length === 0) return;
+    
+    const feature = e.features[0];
+    const idxRaw = feature.properties?.waypointIndex;
+    const idx = typeof idxRaw === 'string' ? parseInt(idxRaw, 10) : typeof idxRaw === 'number' ? idxRaw : -1;
+    
+    if (idx === -1 || isNaN(idx) || idx < 0 || idx >= waypoints.length) {
+      console.log('[Drag Start - Touch] Invalid waypoint index:', idxRaw);
+      return;
+    }
+    
+    console.log('[Drag Start - Touch] Initiating touch drag for waypoint index:', idx);
+    isDragging = true;
+    draggedWaypointIndex = idx;
+    // No cursor style for touch
+    map.dragPan.disable(); // Disable map panning during waypoint drag
+    
+    map.on('touchmove', onMapTouchMove);
+    map.on('touchend', onMapTouchEnd);
+
+    // Add temporary source and layer for drag visual lines (same as mousedown)
+    if (!map.getSource('temp-drag-lines')) {
+      map.addSource('temp-drag-lines', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] }
+      });
+      map.addLayer({
+        id: 'temp-drag-lines',
+        type: 'line',
+        source: 'temp-drag-lines',
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: { 'line-color': '#3887be', 'line-width': 3, 'line-opacity': 0.75 }
+      });
+    }
+  });
+  
+  console.log('[setupRouting] Mousedown/touchstart handlers for points layer added.');
 
   // Handle clicking and dragging on the route directly
   map.on('mousedown', 'route-hover-target', (e: MapLayerMouseEvent) => {
     // Don't do anything if a popup is open
     if (currentPopup && currentPopup.isOpen()) return;
+
+    // Only proceed for left-clicks (button 0).
+    // This prevents this handler from interfering with right-click (context menu) logic.
+    if (e.originalEvent.button !== 0) {
+      return;
+    }
     
-    // Prevent default browser behavior
+    // Prevent default browser behavior (e.g., text selection, drag image)
     e.preventDefault();
     
     // Check if we have a valid route
@@ -1388,34 +1521,58 @@ export const getRoute = async (
 
     // Extract snapped waypoints from the API response
     if (json.waypoints && Array.isArray(json.waypoints)) {
-      const snappedWaypoints = json.waypoints.map((wp: { location: Coordinate }) => wp.location);
-      if (snappedWaypoints.length === currentWaypointsForAPI.length) {
-        // Check if waypoints actually changed before reassigning and saving
-        let changed = false;
-        for (let i = 0; i < waypoints.length; i++) {
-          if (waypoints[i][0] !== snappedWaypoints[i][0] || waypoints[i][1] !== snappedWaypoints[i][1]) {
-            changed = true;
-            break;
+      const apiSnappedWaypoints = json.waypoints.map((wp: { location: Coordinate }) => wp.location);
+
+      // Check if the number of waypoints returned by API matches number of waypoints sent
+      if (apiSnappedWaypoints.length === currentWaypointsForAPI.length) {
+        
+        // **CRITICAL CHECK**: Before applying API's snapped waypoints, ensure the
+        // global `waypoints` haven't fundamentally changed since this `getRoute` was initiated.
+        // This prevents a stale `getRoute` (e.g., one that was in-flight during a reset)
+        // from overwriting the newer state.
+        let isContextStillValid = waypoints.length === currentWaypointsForAPI.length;
+        if (isContextStillValid) {
+          for (let i = 0; i < waypoints.length; i++) {
+            // Compare current global `waypoints` to the `waypoints` that initiated this `getRoute` call
+            if (waypoints[i][0] !== currentWaypointsForAPI[i][0] || 
+                waypoints[i][1] !== currentWaypointsForAPI[i][1]) {
+              isContextStillValid = false;
+              break;
+            }
           }
         }
 
-        if (changed) {
-          console.log('[getRoute] Snapped waypoints received and are different:', JSON.stringify(snappedWaypoints));
-          // Update the global waypoints array with the snapped coordinates
-          waypoints = [...snappedWaypoints]; // Replace global waypoints with snapped ones
-          console.log('[getRoute] Global waypoints updated with snapped locations.');
-          // Update the visual markers on the map to their snapped positions
-          updatePoints(map, waypoints); 
-          console.log('[getRoute] Called updatePoints with snapped waypoints.');
-          saveWaypointsToLocalStorage(); // Save after snapping waypoints in getRoute
+        if (!isContextStillValid) {
+          console.log('[getRoute] Global waypoints have changed since this getRoute call was initiated (e.g. reset or new points). Discarding this API snapping result.');
         } else {
-          console.log('[getRoute] Snapped waypoints received but are identical to existing ones. No update needed.');
+          // Context is valid, now check if snapping actually changed anything compared to current global waypoints
+          let actualChangeMadeBySnapping = false;
+          // Compare the current global waypoints (which match currentWaypointsForAPI) with what the API returned.
+          // This loop ensures we only update if the API provided genuinely different (snapped) coordinates.
+          for (let i = 0; i < waypoints.length; i++) { // waypoints.length is same as apiSnappedWaypoints.length here
+            if (waypoints[i][0] !== apiSnappedWaypoints[i][0] || 
+                waypoints[i][1] !== apiSnappedWaypoints[i][1]) {
+              actualChangeMadeBySnapping = true;
+              break;
+            }
+          }
+
+          if (actualChangeMadeBySnapping) {
+            console.log('[getRoute] Snapped waypoints from API are different from current global waypoints:', JSON.stringify(apiSnappedWaypoints));
+            waypoints = [...apiSnappedWaypoints]; // Update global waypoints with API's snapped version
+            console.log('[getRoute] Global waypoints updated with snapped locations from API.');
+            updatePoints(map, waypoints); 
+            console.log('[getRoute] Called updatePoints with snapped waypoints.');
+            saveWaypointsToLocalStorage(); 
+          } else {
+            console.log('[getRoute] Snapped waypoints from API are identical to current global ones. No update needed.');
+          }
         }
       } else {
-        console.warn('[getRoute] Mismatch between original and snapped waypoint counts. Not updating global waypoints.');
+        console.warn('[getRoute] Mismatch between waypoints sent to API (count: ' + currentWaypointsForAPI.length + ') and waypoints returned by API (count: ' + apiSnappedWaypoints.length + '). Not updating global waypoints from this call.');
       }
     } else {
-      console.warn('[getRoute] Snapped waypoints not found in API response.');
+      console.warn('[getRoute] Snapped waypoints (json.waypoints) not found or not an array in API response.');
     }
     
     const route = data.geometry.coordinates;
@@ -1785,6 +1942,139 @@ export const importRouteFromGPX = async (
     console.error("[GPX Import] Error importing route:", error);
     if (onError) onError(`Error importing GPX: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
+};
+
+// --- New function to insert a waypoint at a specific location on the route ---
+export const insertWaypointAtLocation = async (
+  map: MapboxMap,
+  clickedCoords: Coordinate,
+  accessToken: string,
+  setRouteDistance: Dispatch<SetStateAction<string>>,
+  setRouteDuration: Dispatch<SetStateAction<string>>,
+  setHasRoute: Dispatch<SetStateAction<boolean>>,
+  onError?: (message: string) => void // Optional error handler
+) => {
+  console.log('[insertWaypointAtLocation] Attempting to insert waypoint at:', clickedCoords);
+
+  if (waypoints.length < 1) { // Need at least one waypoint to have a route segment to insert into (practically 2 for a visible route)
+    console.warn('[insertWaypointAtLocation] Not enough waypoints to define a route segment.');
+    if (onError) onError("Cannot add waypoint: No existing route segment.");
+    return;
+  }
+
+  const routeSource = map.getSource('route') as GeoJSONSource | undefined;
+  if (!routeSource) {
+    console.error('[insertWaypointAtLocation] Route source not found.');
+    if (onError) onError("Cannot add waypoint: Route data unavailable.");
+    return;
+  }
+
+  const routeData = routeSource?._data as GeoJSON.Feature<GeoJSON.LineString> | undefined;
+
+  if (!routeData || routeData.type !== 'Feature' || !routeData.geometry || routeData.geometry.type !== 'LineString' || !routeData.geometry.coordinates || routeData.geometry.coordinates.length === 0) {
+    console.warn('[insertWaypointAtLocation] No valid route path coordinates found in route source.');
+     // If currentRoutePathCoordinates has data (e.g. from mixed route), try using that as a fallback.
+    if (!currentRoutePathCoordinates || currentRoutePathCoordinates.length < 2) {
+        if (onError) onError("Cannot add waypoint: Route path is not defined.");
+        return;
+    } 
+    // If routeSource._data is empty but currentRoutePathCoordinates exists, proceed with it.
+    console.log('[insertWaypointAtLocation] Using currentRoutePathCoordinates as fallback for route path.');
+  }
+
+  let routePathTyped: Coordinate[];
+  if (routeData?.geometry?.coordinates && routeData.geometry.coordinates.length > 0) {
+    // Ensure each position is cast to Coordinate if GeoJSON types are loose (e.g. number[] instead of [number, number])
+    routePathTyped = routeData.geometry.coordinates.map(p => [p[0], p[1]] as Coordinate);
+  } else {
+    routePathTyped = currentRoutePathCoordinates;
+  }
+
+  if (!routePathTyped || routePathTyped.length < 2) {
+    console.warn('[insertWaypointAtLocation] Route path is too short or undefined even after fallback.');
+    if (onError) onError("Cannot add waypoint: Route path is too short.");
+    return;
+  }
+
+  let minDistance = Infinity;
+  let closestPointOnRoute: Coordinate = clickedCoords; // Default to clickedCoords if no better found
+  let insertIndex = waypoints.length; // Default to adding at the end if no segment found (should ideally not happen if clicked on route)
+
+  // Find the closest point on the *detailed route path* to the clicked coordinates
+  // And determine the segment of the *waypoints* this point belongs to.
+  for (let i = 0; i < routePathTyped.length - 1; i++) {
+    const start = routePathTyped[i]; // No more casting needed here due to routePathTyped
+    const end = routePathTyped[i + 1]; // No more casting needed here
+    const pointOnSegment = closestPointOnSegment(clickedCoords, start, end);
+    const correctedDistance = haversine(clickedCoords, pointOnSegment);
+
+    if (correctedDistance < minDistance) {
+      minDistance = correctedDistance;
+      closestPointOnRoute = pointOnSegment;
+
+      // Now, determine which pair of *original waypoints* this segment of the routePath corresponds to.
+      // This logic is similar to what's in the 'mousedown' on 'route-hover-target' handler.
+      for (let j = 0; j < waypoints.length -1; j++) {
+        // Find the start and end indices in routePath that correspond to waypoints[j] and waypoints[j+1]
+        // This assumes waypoints are present in routePath, which is true for snapped routes.
+        // For mixed routes (with direct segments), this mapping might be more complex.
+        // However, `buildMixedRoute` ensures `currentRoutePathCoordinates` contains original waypoints for direct segments.
+        let wpStartIndexInPath = -1;
+        let wpEndIndexInPath = -1;
+
+        // Find wpStartIndexInPath
+        for(let k=0; k < routePathTyped.length; k++){
+            if(routePathTyped[k][0] === waypoints[j][0] && routePathTyped[k][1] === waypoints[j][1]){
+                wpStartIndexInPath = k;
+                break;
+            }
+        }
+        // Find wpEndIndexInPath
+        for(let k=0; k < routePathTyped.length; k++){
+            if(routePathTyped[k][0] === waypoints[j+1][0] && routePathTyped[k][1] === waypoints[j+1][1]){
+                wpEndIndexInPath = k;
+                break;
+            }
+        }
+        // If both waypoints are found in the path, and our current segment `i` is between them or at the start of their segment.
+        if (wpStartIndexInPath !== -1 && wpEndIndexInPath !== -1 && i >= wpStartIndexInPath && i < wpEndIndexInPath) {
+          insertIndex = j + 1;
+          break; // Found the correct waypoint segment
+        } else if (wpStartIndexInPath !== -1 && j === waypoints.length - 2 && i >= wpStartIndexInPath) {
+          // If it's the last waypoint segment, and current path segment is beyond the start of it.
+          insertIndex = j + 1;
+          break;
+        }
+      }
+    }
+  }
+  
+  // A small tolerance for clicking near the route, e.g., 50-100 meters.
+  // If minDistance is too large, it means the click was likely not on the route.
+  const MAX_CLICK_DISTANCE_FROM_ROUTE = 0.1; // 100 meters
+  if (minDistance > MAX_CLICK_DISTANCE_FROM_ROUTE && waypoints.length >=2 ) { // only apply distance check if there is a route
+    console.warn('[insertWaypointAtLocation] Click was too far from the route path. Distance:', minDistance.toFixed(3), 'km');
+    // Do not show user error, just don't add point, as context menu might have appeared due to route-hover-target generosity
+    // if (onError) onError("Could not add waypoint: Click too far from route.");
+    return; 
+  }
+
+  console.log('[insertWaypointAtLocation] Determined insert index:', insertIndex, 'New waypoint coords:', closestPointOnRoute);
+
+  // Snapshot current state for undo
+  snapshot();
+
+  // Insert the new waypoint
+  waypoints.splice(insertIndex, 0, closestPointOnRoute);
+  directFlags.splice(insertIndex, 0, false); // New waypoints on route are initially not direct
+
+  // Update map visuals and recalculate route
+  updatePoints(map, waypoints);
+  if (waypoints.length >= 2) {
+    await getRoute(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
+  }
+  saveWaypointsToLocalStorage();
+  console.log('[insertWaypointAtLocation] Waypoint inserted and route updated.');
 };
 
 // --- New function to set route data from external source (e.g., shared link) ---

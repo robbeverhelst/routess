@@ -18,9 +18,11 @@ import {
   getWaypoints,
   getDirectFlags,
   updateUserLocationPoint,
-  setRouteData
+  setRouteData,
+  insertWaypointAtLocation
 } from '@/lib/routing';
 import { serializeAndCompress, decompressAndParse } from '@/lib/shareUtils';
+import type { MapTouchEvent, MapMouseEvent } from 'mapbox-gl';
 
 // Get Mapbox access token from environment variables
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
@@ -57,8 +59,8 @@ interface MapboxMapProps {
   height?: string | number;
 }
 
-// Define event types
-interface MapClickEvent {
+// Define event types - Reinstating MapClickEvent for original handlers
+interface MapClickEvent { 
   lngLat: { lng: number; lat: number };
   point: { x: number; y: number };
   preventDefault: () => void;
@@ -67,7 +69,7 @@ interface MapClickEvent {
 interface PopupInfo {
   longitude: number;
   latitude: number;
-  type: 'direct' | 'remove' | 'info';
+  type: 'direct' | 'remove' | 'info' | 'add_on_route';
   waypointIndex?: number;
   message?: string;
 }
@@ -119,6 +121,12 @@ export default function MapWithRouting({
   const [routeInfoErrorMessage, setRouteInfoErrorMessage] = useState('');
   const [shareNotification, setShareNotification] = useState(''); // For share link copied message
   const [displayedShareUrl, setDisplayedShareUrl] = useState<string | null>(null); // New state for displayed URL
+
+  // Long press detection
+  const longPressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
+  const LONG_PRESS_DURATION = 750; // ms
+  const MAX_MOVE_THRESHOLD = 10; // pixels
 
   // Use user location for initial view state if available
   const effectiveInitialViewState = userLocation 
@@ -463,14 +471,14 @@ export default function MapWithRouting({
 
     if (!mapRef.current) return;
 
-    // For queryRenderedFeatures, use a properly formatted point
-    const features = mapRef.current.queryRenderedFeatures([event.point.x, event.point.y], 
+    // Check for waypoints first
+    const pointFeatures = mapRef.current.queryRenderedFeatures([event.point.x, event.point.y], 
       { layers: ['points'] }
     );
     
-    if (features && features.length > 0) {
+    if (pointFeatures && pointFeatures.length > 0) {
       // Clicked on a waypoint
-      const feature = features[0];
+      const feature = pointFeatures[0];
       const idxRaw = feature.properties?.waypointIndex;
       const idx = typeof idxRaw === 'string' ? parseInt(idxRaw, 10) : idxRaw;
       
@@ -479,7 +487,6 @@ export default function MapWithRouting({
         return;
       }
 
-      // Show remove waypoint popup
       setPopup({
         longitude: event.lngLat.lng,
         latitude: event.lngLat.lat,
@@ -487,12 +494,143 @@ export default function MapWithRouting({
         waypointIndex: idx
       });
     } else {
-      // Show direct waypoint popup
+      // Not on a waypoint, check if on the route
+      const routeFeatures = mapRef.current.queryRenderedFeatures([event.point.x, event.point.y],
+        { layers: ['route-hover-target'] } // Check the interactive route layer
+      );
+
+      if (routeFeatures && routeFeatures.length > 0 && getWaypoints().length >=1) { // Ensure there's a route to click on
+        setPopup({
+          longitude: event.lngLat.lng,
+          latitude: event.lngLat.lat,
+          type: 'add_on_route'
+        });
+      } else {
+        // Clicked on empty space, show direct waypoint popup
+        setPopup({
+          longitude: event.lngLat.lng,
+          latitude: event.lngLat.lat,
+          type: 'direct'
+        });
+      }
+    }
+  }, []);
+
+  // New: Handle long press for mobile
+  const handleLongPress = useCallback((lngLat: { lng: number; lat: number }, point: { x: number; y: number }) => {
+    console.log('[MapWithRouting] Long press at:', lngLat);
+    if (!mapRef.current) return;
+
+    // Check for waypoints first
+    const pointFeatures = mapRef.current.queryRenderedFeatures([point.x, point.y], 
+      { layers: ['points'] }
+    );
+    
+    if (pointFeatures && pointFeatures.length > 0) {
+      // Long pressed on a waypoint
+      const feature = pointFeatures[0];
+      const idxRaw = feature.properties?.waypointIndex;
+      const idx = typeof idxRaw === 'string' ? parseInt(idxRaw, 10) : typeof idxRaw === 'number' ? idxRaw : -1;
+      
+      if (idx === -1 || isNaN(idx) || idx < 0 || idx >= getWaypoints().length) {
+        console.error('[MapWithRouting] Invalid waypoint index on long press:', idxRaw);
+        return;
+      }
+
       setPopup({
-        longitude: event.lngLat.lng,
-        latitude: event.lngLat.lat,
-        type: 'direct'
+        longitude: lngLat.lng,
+        latitude: lngLat.lat,
+        type: 'remove',
+        waypointIndex: idx
       });
+    } else {
+      // Not on a waypoint, check if on the route
+      const routeFeatures = mapRef.current.queryRenderedFeatures([point.x, point.y],
+        { layers: ['route-hover-target'] } // Check the interactive route layer
+      );
+      if (routeFeatures && routeFeatures.length > 0 && getWaypoints().length >=1) { // Ensure there's a route to click on
+        setPopup({
+          longitude: lngLat.lng,
+          latitude: lngLat.lat,
+          type: 'add_on_route'
+        });
+      } else {
+        // Long pressed on empty space, show direct waypoint popup
+        setPopup({
+          longitude: lngLat.lng,
+          latitude: lngLat.lat,
+          type: 'direct'
+        });
+      }
+    }
+  }, []);
+
+  // New: Touch event handlers for long press
+  const handleTouchStart = useCallback((event: MapTouchEvent) => {
+    // Prevent if more than one touch point (e.g. pinch zoom)
+    if (event.points.length > 1) {
+        if (longPressTimeoutRef.current) {
+            clearTimeout(longPressTimeoutRef.current);
+            longPressTimeoutRef.current = null;
+        }
+        touchStartPosRef.current = null;
+        return;
+    }
+    touchStartPosRef.current = { x: event.point.x, y: event.point.y };
+    
+    if (longPressTimeoutRef.current) {
+      clearTimeout(longPressTimeoutRef.current);
+    }
+    longPressTimeoutRef.current = setTimeout(() => {
+      if (touchStartPosRef.current) { // Check if touch is still active
+        handleLongPress(event.lngLat, event.point);
+      }
+      longPressTimeoutRef.current = null;
+      touchStartPosRef.current = null; // Reset to prevent re-triggering
+    }, LONG_PRESS_DURATION);
+  }, [handleLongPress]);
+
+  const handleTouchEnd = useCallback(() => {
+    if (longPressTimeoutRef.current) {
+      clearTimeout(longPressTimeoutRef.current);
+      longPressTimeoutRef.current = null;
+    }
+    touchStartPosRef.current = null;
+  }, []);
+
+  const handlePointerMove = useCallback((event: MapTouchEvent | MapMouseEvent) => {
+    // Determine the correct point property based on event type
+    let currentPoint: { x: number; y: number };
+    let currentPointsLength: number;
+
+    if ('points' in event) { // It's a MapTouchEvent
+      const touchEvent = event as MapTouchEvent;
+      currentPoint = touchEvent.point; // mapbox-gl MapTouchEvent uses singular `point` for the primary touch point
+      currentPointsLength = touchEvent.points.length;
+    } else { // It's a MapMouseEvent
+      const mouseEvent = event as MapMouseEvent;
+      currentPoint = mouseEvent.point;
+      currentPointsLength = 1; // Mouse events are always single point
+    }
+
+    if (!touchStartPosRef.current || currentPointsLength > 1) {
+        if (longPressTimeoutRef.current) {
+            clearTimeout(longPressTimeoutRef.current);
+            longPressTimeoutRef.current = null;
+        }
+        touchStartPosRef.current = null;
+        return;
+    }
+
+    const dx = Math.abs(currentPoint.x - touchStartPosRef.current.x);
+    const dy = Math.abs(currentPoint.y - touchStartPosRef.current.y);
+
+    if (dx > MAX_MOVE_THRESHOLD || dy > MAX_MOVE_THRESHOLD) {
+      if (longPressTimeoutRef.current) {
+        clearTimeout(longPressTimeoutRef.current);
+        longPressTimeoutRef.current = null;
+      }
+      touchStartPosRef.current = null; // Reset if touch moves beyond threshold
     }
   }, []);
 
@@ -533,7 +671,7 @@ export default function MapWithRouting({
     
     // Clear the popup
     setPopup(null);
-  }, [popup, handleWaypointError]);
+  }, [popup, handleWaypointError, MAPBOX_TOKEN]);
 
   // Handle remove waypoint button click
   const handleRemoveWaypoint = useCallback(() => {
@@ -552,7 +690,26 @@ export default function MapWithRouting({
     
     // Clear the popup
     setPopup(null);
-  }, [popup]);
+  }, [popup, MAPBOX_TOKEN]);
+
+  // New: Handle "Add waypoint here" button click from route context menu
+  const handleAddWaypointOnRoute = useCallback(async () => {
+    if (!mapRef.current || !popup || popup.type !== 'add_on_route' || !MAPBOX_TOKEN) return;
+
+    console.log('[MapWithRouting] Adding waypoint on route at:', [popup.longitude, popup.latitude]);
+
+    await insertWaypointAtLocation(
+      mapRef.current,
+      [popup.longitude, popup.latitude],
+      MAPBOX_TOKEN,
+      setRouteDistance,
+      setRouteDuration,
+      setHasRoute,
+      handleWaypointError
+    );
+
+    setPopup(null);
+  }, [popup, MAPBOX_TOKEN, setRouteDistance, setRouteDuration, setHasRoute, handleWaypointError]);
 
   // Add a new handler for location search
   const handleSelectLocation = useCallback((location: { lng: number; lat: number; name: string }) => {
@@ -651,6 +808,10 @@ export default function MapWithRouting({
         onLoad={handleMapLoad}
         onClick={handleMapClick}
         onContextMenu={handleContextMenu}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onTouchMove={handlePointerMove}
+        onMouseMove={handlePointerMove}
       >
         {/* Custom Popup Component instead of Mapbox's Popup */}
         {popup && mapRef.current && (
@@ -683,6 +844,18 @@ export default function MapWithRouting({
                 >
                   <span className="text-lg">🗑️</span>
                   <span>Remove point</span>
+                </Button>
+              </div>
+            )}
+            
+            {popup.type === 'add_on_route' && (
+              <div className="p-2 bg-white rounded-md shadow-md border border-border">
+                <Button
+                  variant="ghost"
+                  className="text-green-600 hover:text-green-800 hover:bg-green-50"
+                  onClick={handleAddWaypointOnRoute}
+                >
+                  Add waypoint here
                 </Button>
               </div>
             )}
