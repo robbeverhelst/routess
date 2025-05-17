@@ -87,7 +87,20 @@ export default function MapWithRouting({
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
   const [detailsExpanded, setDetailsExpanded] = useState(false);
-  const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
+  const [userLocation, setUserLocation] = useState<[number, number] | null>(() => {
+    const lastKnown = localStorage.getItem('lastKnownLocation');
+    if (lastKnown) {
+      try {
+        const parsed = JSON.parse(lastKnown);
+        if (Array.isArray(parsed) && parsed.length === 2 && typeof parsed[0] === 'number' && typeof parsed[1] === 'number') {
+          return parsed as [number, number];
+        }
+      } catch (e) {
+        console.error("Failed to parse lastKnownLocation from localStorage", e);
+      }
+    }
+    return null;
+  });
   const [locationError, setLocationError] = useState<string | null>(null);
   const [waypointError, setWaypointError] = useState<string | null>(null);
   const [isMapReady, setIsMapReady] = useState(false);
@@ -133,6 +146,7 @@ export default function MapWithRouting({
             position.coords.latitude
           ];
           setUserLocation(newLocation);
+          localStorage.setItem('lastKnownLocation', JSON.stringify(newLocation));
           setLocationError(null); // Still update error state for internal tracking
         },
         (error) => {
@@ -158,6 +172,7 @@ export default function MapWithRouting({
                     position.coords.latitude
                   ];
                   setUserLocation(newLocation);
+                  localStorage.setItem('lastKnownLocation', JSON.stringify(newLocation));
                   setLocationError(null); // Still update error state for internal tracking
                 },
                 (retryError) => {
@@ -192,6 +207,7 @@ export default function MapWithRouting({
             position.coords.latitude
           ];
           setUserLocation(updatedLocation);
+          localStorage.setItem('lastKnownLocation', JSON.stringify(updatedLocation));
           setLocationError(null);
         },
         (error) => {
@@ -230,7 +246,7 @@ export default function MapWithRouting({
     if (isMapReady && userLocation && mapRef.current && !hasInitiallyZoomedToUser.current) {
       mapRef.current.flyTo({ 
         center: userLocation, 
-        zoom: 15,
+        zoom: 17,
         essential: true // This ensures the animation runs even for essential UI
       });
       hasInitiallyZoomedToUser.current = true;
@@ -392,7 +408,7 @@ export default function MapWithRouting({
 
   const handleLocate = useCallback(() => {
     if (mapRef.current && userLocation && !locationError) {
-      mapRef.current.flyTo({ center: userLocation, zoom: 15 });
+      mapRef.current.flyTo({ center: userLocation, zoom: 17 });
     } else if ((!userLocation || locationError) && mapRef.current) {
       // If no location is available or there's an error, log it for debugging
       console.log('Location not available or has error:', locationError);

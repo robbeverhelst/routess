@@ -28,7 +28,8 @@ export default function MapboxMap({
       mapboxAccessToken={MAPBOX_TOKEN}
       initialViewState={initialViewState}
       style={{ width, height, position: 'absolute', top: 0, left: 0 }}
-      mapStyle="mapbox://styles/mapbox/streets-v12"
+      mapStyle="mapbox://styles/robbeverhelst/cmarublei01qf01sk8b5o3odf"
+      // mapStyle="mapbox://styles/mapbox/streets-v12"
       reuseMaps
       attributionControl={false}
       projection="globe"
