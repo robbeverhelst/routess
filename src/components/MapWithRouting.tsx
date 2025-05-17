@@ -20,8 +20,8 @@ import {
   updateUserLocationPoint,
   setRouteData,
   insertWaypointAtLocation,
-  // Placeholder for the new reverseRoute function from routing.ts
   reverseRoute as reverseRouteLogic,
+  zoomToRoute,
 } from '@/lib/routing';
 import { serializeAndCompress, decompressAndParse } from '@/lib/shareUtils';
 import type { MapTouchEvent, MapMouseEvent } from 'mapbox-gl';
@@ -83,6 +83,21 @@ const DEFAULT_VIEW_STATE = {
   zoom: 4
 };
 
+// Synchronously check localStorage for waypoints at the time of component initialization
+let detectedRouteInLocalStorageOnInit = false;
+try {
+  const storedData = localStorage.getItem('mapWaypoints'); // Key used in routing.ts
+  if (storedData) {
+    const parsed = JSON.parse(storedData);
+    if (parsed && parsed.waypoints && parsed.waypoints.length > 0) {
+      detectedRouteInLocalStorageOnInit = true;
+      console.log('[MapWithRouting Init] Detected route in localStorage on component initialization.');
+    }
+  }
+} catch (e) {
+  console.error('[MapWithRouting Init] Error reading waypoints from localStorage on init:', e);
+}
+
 export default function MapWithRouting({
   initialViewState = DEFAULT_VIEW_STATE,
   width = '100%',
@@ -115,6 +130,7 @@ export default function MapWithRouting({
   const hasInitiallyZoomedToUser = useRef<boolean>(false);
   const waypointErrorTimeout = useRef<number | null>(null);
   const animationFrameIdRef = useRef<number | null>(null); // For halo animation
+  const initialRouteZoomDoneRef = useRef<boolean>(false); // Added ref
   
   // State for popup management
   const [popup, setPopup] = useState<PopupInfo | null>(null);
@@ -130,14 +146,17 @@ export default function MapWithRouting({
   const LONG_PRESS_DURATION = 750; // ms
   const MAX_MOVE_THRESHOLD = 10; // pixels
 
-  // Use user location for initial view state if available
-  const effectiveInitialViewState = userLocation 
+  // Use user location for initial view state if available, 
+  // UNLESS a route was detected in localStorage at component initialization.
+  const effectiveInitialViewState = detectedRouteInLocalStorageOnInit
+    ? DEFAULT_VIEW_STATE // If route in LS, start with default, zoomToRoute will adjust
+    : userLocation
     ? {
         longitude: userLocation[0],
         latitude: userLocation[1],
         zoom: 15
-      } 
-    : initialViewState;
+      }
+    : initialViewState; // Fallback to prop or default if no userLocation and no LS route
 
   // Handle map load
   const handleMapLoad = useCallback((event: { target: mapboxgl.Map }) => {
@@ -302,7 +321,17 @@ export default function MapWithRouting({
 
   // Automatically zoom to user location when it becomes available
   useEffect(() => {
+    // Goal: Zoom to user location only if no route took precedence for initial view.
     if (isMapReady && userLocation && mapRef.current && !hasInitiallyZoomedToUser.current) {
+      // If a route was detected in LS on init, OR if a route is currently loaded and the initialRouteZoom wasn't done yet
+      // we should wait for the InitialRouteZoomEffect to potentially handle it.
+      // The `hasInitiallyZoomedToUser.current` will be set to true by InitialRouteZoomEffect if it acts.
+      if (detectedRouteInLocalStorageOnInit || (hasRoute && !initialRouteZoomDoneRef.current)) {
+          console.log('[UserLocationZoom] Deferring to InitialRouteZoomEffect or route is present and initial zoom pending. Detected LS route:', detectedRouteInLocalStorageOnInit, 'Has route now:', hasRoute, 'Initial route zoom done:', initialRouteZoomDoneRef.current);
+          return;
+      }
+
+      console.log('[UserLocationZoom] Attempting to fly to user location. No superseding route zoom active or expected.');
       mapRef.current.flyTo({ 
         center: userLocation, 
         zoom: 17,
@@ -310,8 +339,9 @@ export default function MapWithRouting({
       });
       updateUserLocationPoint(mapRef.current, userLocation);
       hasInitiallyZoomedToUser.current = true;
+      console.log('[UserLocationZoom] Flew to user location.');
     }
-  }, [isMapReady, userLocation]);
+  }, [isMapReady, userLocation, detectedRouteInLocalStorageOnInit, hasRoute]); // Dependencies updated
 
   // Update user location marker when map is ready and location is available (covers cases where location is available before map)
   useEffect(() => {
@@ -319,6 +349,22 @@ export default function MapWithRouting({
       updateUserLocationPoint(mapRef.current, userLocation);
     }
   }, [isMapReady, userLocation]);
+
+  // Effect for initial zoom to route if a route is present on load
+  useEffect(() => {
+    if (isMapReady && hasRoute && mapRef.current && !initialRouteZoomDoneRef.current) {
+      console.log('[InitialRouteZoomEffect] Active: Map ready, route present, initial zoom not yet done.');
+      const currentWaypoints = getWaypoints(); // Get current waypoints
+      if (currentWaypoints && currentWaypoints.length > 0) {
+        zoomToRoute(mapRef.current, currentWaypoints);
+        initialRouteZoomDoneRef.current = true;
+        hasInitiallyZoomedToUser.current = true; // Crucial: Mark that an initial zoom action (to route) has occurred
+        console.log('[InitialRouteZoomEffect] Successfully zoomed to initial route and set flags.');
+      } else {
+        console.log('[InitialRouteZoomEffect] Route reported as present, but getWaypoints() is empty or null. Skipping zoom.');
+      }
+    }
+  }, [isMapReady, hasRoute]); // Dependencies: map readiness and route presence
 
   // Animate user location halo
   useEffect(() => {
@@ -757,6 +803,15 @@ export default function MapWithRouting({
     }, 3000);
   }, []);
 
+  const handleZoomToRoute = useCallback(() => {
+    if (mapRef.current && hasRoute) {
+      const currentWaypoints = getWaypoints();
+      if (currentWaypoints && currentWaypoints.length > 0) {
+        zoomToRoute(mapRef.current, currentWaypoints);
+      }
+    }
+  }, [hasRoute]); // Depends on hasRoute to enable/disable, and mapRef for the map instance
+
   const handleShareRoute = () => {
     const waypoints = getWaypoints();
     const directFlags = getDirectFlags();
@@ -923,6 +978,7 @@ export default function MapWithRouting({
                   onRedo={handleRedo}
                   onReset={handleReset}
                   onReverseRoute={handleReverseRoute}
+                  onZoomToRoute={handleZoomToRoute}
                   onShare={handleShareRoute}
                   displayedShareUrl={displayedShareUrl}
                   setDisplayedShareUrl={setDisplayedShareUrl}
@@ -971,6 +1027,7 @@ export default function MapWithRouting({
           onRedo={handleRedo}
           onReset={handleReset}
           onReverseRoute={handleReverseRoute}
+          onZoomToRoute={handleZoomToRoute}
           onShare={handleShareRoute}
           displayedShareUrl={displayedShareUrl}
           setDisplayedShareUrl={setDisplayedShareUrl}

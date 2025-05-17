@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet";
-import { Menu, User, Save, BookMarked, LogIn, Upload, Share2, FileDown, X, AlertCircle, MapPin, Clock, Copy, RotateCcw as BackIcon, ArrowRightLeft } from "lucide-react";
+import { Menu, User, Save, BookMarked, LogIn, Upload, Share2, FileDown, X, AlertCircle, MapPin, Clock, Copy, RotateCcw as BackIcon, ArrowRightLeft, Focus } from "lucide-react";
 import { useState } from "react";
 import type { Map as MapboxMap } from 'mapbox-gl'; // Import MapboxMap type
 import { exportRouteToGPX, importRouteFromGPX } from '../../lib/routing'; // Import GPX functions
@@ -11,6 +11,7 @@ interface SidebarProps {
   onRedo: () => void;
   onReset: () => void;
   onReverseRoute: () => void;
+  onZoomToRoute: () => void;
   onShare: () => void;
   canUndo: boolean;
   canRedo: boolean;
@@ -35,6 +36,7 @@ export function Sidebar({
   onRedo,
   onReset,
   onReverseRoute,
+  onZoomToRoute,
   onShare,
   canUndo,
   canRedo,
@@ -213,12 +215,24 @@ export function Sidebar({
               variant="default"
               onClick={onReset}
               disabled={!hasRoute}
-              className={`w-full h-10 justify-center rounded-md bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/30 ${
+              className={`w-full h-10 justify-center rounded-md bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/30 mb-2 ${
                 !hasRoute ? 'opacity-50 cursor-not-allowed' : ''
               }`}
             >
               <X className="w-4 h-4 mr-2" />
               Reset Route
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={onZoomToRoute}
+              disabled={!hasRoute}
+              className={`w-full h-10 justify-center rounded-md mb-2 ${
+                !hasRoute ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+              }`}
+            >
+              <Focus className="w-4 h-4 mr-2" />
+              Zoom to Route
             </Button>
           </div>
           

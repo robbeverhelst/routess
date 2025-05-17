@@ -1,6 +1,7 @@
 import type { Dispatch, SetStateAction } from 'react';
 import type { Coordinate, WaypointHistory } from '@/types/map';
 import type { Map as MapboxMap, Popup, MapMouseEvent, MapLayerMouseEvent, GeoJSONSource, MapTouchEvent } from 'mapbox-gl';
+import { LngLatBounds } from 'mapbox-gl'; // Added for fitBounds
 
 // Store references and state outside of the setup function to persist across renders
 let waypoints: Coordinate[] = [];
@@ -1558,6 +1559,7 @@ export const getRoute = async (
       
       // Add kilometer markers along the mixed route
       addKilometerMarkers(map, coordsAccum);
+      // zoomToRoute(map, currentRoutePathCoordinates); // <--- REMOVED CALL
       if (waypointsUpdated) { // Save if buildMixedRoute updated global waypoints
         saveWaypointsToLocalStorage();
       }
@@ -1685,6 +1687,7 @@ export const getRoute = async (
       
       // Add kilometer markers along the route
       addKilometerMarkers(map, route);
+      // zoomToRoute(map, currentRoutePathCoordinates); // <--- REMOVED CALL
     } else {
       console.warn('[getRoute] Route source not found on map.');
     }
@@ -2202,4 +2205,36 @@ export const setRouteData = async (
     currentRoutePathCoordinates = []; 
   }
   console.log(`[setRouteData] Successfully set ${waypoints.length} waypoints.`);
+};
+
+// Helper function to fit the map view to the route
+export const zoomToRoute = (map: MapboxMap, coordinates: Coordinate[]) => {
+  if (!map || !map.getBounds || !coordinates || coordinates.length === 0) {
+    console.warn('[zoomToRoute] Map not ready or no coordinates to zoom to.');
+    return;
+  }
+
+  try {
+    const currentPitch = map.getPitch();
+    const currentBearing = map.getBearing();
+
+    const bounds = coordinates.reduce(
+      (currentBounds, coord) => {
+        return currentBounds.extend(coord);
+      },
+      new LngLatBounds(coordinates[0], coordinates[0])
+    );
+
+    map.fitBounds(bounds, {
+      padding: 75, // Uniform padding
+      maxZoom: 16,
+      duration: 1000,
+      essential: true,
+      pitch: currentPitch,      // Preserve current pitch
+      bearing: currentBearing   // Preserve current bearing
+    });
+    console.log('[zoomToRoute] Adjusted map bounds to fit route, preserving pitch and bearing.');
+  } catch (error) {
+    console.error('[zoomToRoute] Error fitting bounds:', error);
+  }
 };
