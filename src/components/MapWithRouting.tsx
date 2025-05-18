@@ -2,7 +2,6 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import Map from 'react-map-gl/mapbox';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { RouteControls } from '@/components/ui/route-controls';
-import { RouteDetails } from '@/components/ui/route-details';
 import { LocationSearch } from '@/components/ui/location-search';
 import { Sidebar } from '@/components/ui/sidebar';
 import { 
@@ -98,7 +97,6 @@ export default function MapWithRouting({
   height = '100%'
 }: MapboxMapProps) {
   const mapRef = useRef<mapboxgl.Map | null>(null);
-  const [detailsExpanded, setDetailsExpanded] = useState(false);
   const [waypointError, setWaypointError] = useState<string | null>(null);
   const [isMapReady, setIsMapReady] = useState(false);
   const waypointErrorTimeout = useRef<number | null>(null);
@@ -420,7 +418,6 @@ export default function MapWithRouting({
     setPopup(null);
     clearShareState();
     setWaypointError(null);
-    setDetailsExpanded(false);
     
     console.log('[MapWithRouting] handleReset completed, UI states cleared.');
   }, [setRouteDistance, setRouteDuration, setHasRoute, clearShareState]);
@@ -690,15 +687,11 @@ export default function MapWithRouting({
         </div>
       )}
 
-      {/* Route information card */}
-      {hasRoute && (
-        <div className="absolute bottom-8 right-8 z-10">
-          <RouteDetails
-            routeDistance={routeDistance}
-            routeDuration={routeDuration}
-            expanded={detailsExpanded}
-            onToggleExpand={() => setDetailsExpanded(prev => !prev)}
-          />
+      {/* Custom Distance Box - Bottom Left */}
+      {hasRoute && routeDistance && (
+        <div className="absolute bottom-16 left-8 z-10 bg-white/20 text-black p-4 rounded-md shadow-md backdrop-blur-sm flex items-baseline gap-0.5">
+          <span className="text-5xl font-bold">{routeDistance.split(' ')[0]}</span>
+          <span className="text-base">{routeDistance.split(' ')[1]}</span>
         </div>
       )}
 
