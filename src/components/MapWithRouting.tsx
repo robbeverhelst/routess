@@ -143,6 +143,19 @@ export default function MapWithRouting({
       }
     : initialViewState; // Fallback to prop or default if no userLocation and no LS route
 
+  // Show waypoint error message
+  const handleWaypointError = useCallback((message: string | null) => {
+    setWaypointError(message);
+    if (waypointErrorTimeout.current) {
+      clearTimeout(waypointErrorTimeout.current);
+    }
+    if (message) {
+      waypointErrorTimeout.current = window.setTimeout(() => {
+        setWaypointError(null);
+      }, 5000); // Clear error after 5 seconds
+    }
+  }, []);
+
   // Handle map load
   const handleMapLoad = useCallback((event: { target: mapboxgl.Map }) => {
     console.log('[MapWithRouting] Map loaded, setting up routing');
@@ -153,7 +166,8 @@ export default function MapWithRouting({
       setRouteDistance,
       setRouteDuration,
       setHasRoute,
-      setPopup
+      setPopup,
+      handleWaypointError
     );
     setIsMapReady(true);
     console.log('[MapWithRouting] Routing setup complete');
@@ -188,7 +202,7 @@ export default function MapWithRouting({
         handleRouteInfoErrorFromHook('Could not load shared route. The link appears to be invalid.');
       }
     }
-  }, [setRouteDistance, setRouteDuration, setHasRoute, setPopup, handleRouteInfoErrorFromHook]);
+  }, [setRouteDistance, setRouteDuration, setHasRoute, setPopup, handleWaypointError, handleRouteInfoErrorFromHook]);
 
   // Effect to update map with user location from hook
   useEffect(() => {
@@ -380,19 +394,6 @@ export default function MapWithRouting({
       console.log('Location not available or has error:', locationError);
     }
   }, [userLocation, locationError]);
-
-  // Show waypoint error message
-  const handleWaypointError = useCallback((message: string | null) => {
-    setWaypointError(message);
-    if (waypointErrorTimeout.current) {
-      clearTimeout(waypointErrorTimeout.current);
-    }
-    if (message) {
-      waypointErrorTimeout.current = window.setTimeout(() => {
-        setWaypointError(null);
-      }, 5000); // Clear error after 5 seconds
-    }
-  }, []);
 
   const handleImportError = useCallback((message: string) => {
     // Reuse handleWaypointError or create a more specific one if needed

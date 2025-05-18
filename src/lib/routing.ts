@@ -1,6 +1,7 @@
 import type { Dispatch, SetStateAction } from 'react';
 import type { Coordinate } from '@/types/map';
 import type { Map as MapboxMap } from 'mapbox-gl';
+import { initializeMapInteractions, type PopupInfo as MIMPopupInfo } from '@/features/routing/managers/MapInteractionManager';
 
 // Import from WaypointManager
 import { 
@@ -22,9 +23,6 @@ import { saveWaypointsToLocalStorage as saveWaypointsToStorage, loadWaypointsFro
 // Import the new GPX service functions
 import { generateGPXString, parseGPXFile, processGPXWaypoints } from '@/features/routing/services/GPXService';
 
-// Import the new MapInteractionManager function
-import { initializeMapInteractions, type PopupInfo as MIMPopupInfo } from '@/features/routing/managers/MapInteractionManager';
-
 // Import the RouteCalculationService and its result type
 import { getRoute as getRouteFromService, getCurrentRoutePath, clearCurrentRoutePath, type RouteResult } from '@/features/routing/services/RouteCalculationService';
 
@@ -38,7 +36,7 @@ import {
 } from '@/features/routing/managers/MapLayerManager';
 
 // Local PopupInfo type for setupRouting signature, aliased from MapInteractionManager
-type PopupInfo = MIMPopupInfo; // Use the imported type
+// type PopupInfo = MIMPopupInfo; // REMOVED - This type alias is unused
 
 // Function to load waypoints from local storage - This function in routing.ts will now use the service
 const loadWaypointsFromLocalStorage = (): boolean => {
@@ -47,12 +45,12 @@ const loadWaypointsFromLocalStorage = (): boolean => {
     if (loadedData) {
       setWaypointsAndFlags(loadedData.waypoints, loadedData.directFlags); // Use the setter from WaypointManager
       console.log('[routing.ts] Loaded waypoints from local storage via service:', getWaypoints());
-      return true;
-    }
+        return true;
+      }
     return false;
   } catch (error) {
     console.error('[routing.ts] Error loading waypoints from local storage via service:', error);
-    return false;
+  return false;
   }
 };
 
@@ -99,7 +97,7 @@ export const exportRouteToGPX = () => {
 // --- GPX Import ---
 export const importRouteFromGPX = async (
   gpxString: string,
-  map: MapboxMap,
+  map: MapboxMap, 
   accessToken: string,
   setRouteDistance: Dispatch<SetStateAction<string>>,
   setRouteDuration: Dispatch<SetStateAction<string>>,
@@ -126,7 +124,7 @@ export const importRouteFromGPX = async (
     const { finalWaypoints: finalNewWaypoints, finalDirectFlags: newDirectFlags } = processedResult;
 
     resetRouting(map, setRouteDistance, setRouteDuration, setHasRoute);
-    snapshot();
+  snapshot();
     setWaypointsAndFlags(finalNewWaypoints, newDirectFlags);
     updateWaypointsLayer(map, getWaypoints());
     saveWaypointsToStorage(getWaypoints(), getDirectFlags());
@@ -141,9 +139,9 @@ export const importRouteFromGPX = async (
         saveWaypointsToStorage(getWaypoints(), getDirectFlags());
       }
     } else if (getWaypoints().length === 1) {
-      setRouteDistance('');
-      setRouteDuration('');
-      setHasRoute(false);
+    setRouteDistance('');
+    setRouteDuration('');
+    setHasRoute(false);
       clearCurrentRoutePath();
       clearRouteLayer(map);
       clearKilometerMarkersLayer(map);
@@ -178,10 +176,10 @@ export const setRouteData = async (
   // Consider clearing waypoints and route more surgically if needed.
   setWaypointsAndFlags([], []); // Clear current waypoints via manager
   updateWaypointsLayer(map, []);
-  clearRoute(map);
-  setRouteDistance('');
-  setRouteDuration('');
-  setHasRoute(false);
+    clearRoute(map);
+    setRouteDistance('');
+    setRouteDuration('');
+    setHasRoute(false);
   // currentPopup?.remove(); // currentPopup is managed locally in routing.ts
 
   snapshot(); // Snapshot before applying new data
@@ -268,24 +266,26 @@ export const updateWaypointPositionAndRecalculate = updateWaypointPositionAndRec
 
 // Setup routing logic for a Mapbox map instance
 export const setupRouting = (
-  map: MapboxMap,
+  map: MapboxMap, 
   accessToken: string,
   setRouteDistance: Dispatch<SetStateAction<string>>,
   setRouteDuration: Dispatch<SetStateAction<string>>,
   setHasRoute: Dispatch<SetStateAction<boolean>>,
-  setPopup: Dispatch<SetStateAction<PopupInfo | null>>
+  setPopup: Dispatch<SetStateAction<MIMPopupInfo | null>>,
+  handleWaypointError: (message: string | null) => void
 ) => {
-  console.log('[routing.ts] Setting up routing module...');
+  console.log('[routing.ts] Initializing routing module...');
   initializeSourcesAndLayers(map);
   
   // Initialize map interactions by calling the function from MapInteractionManager
   initializeMapInteractions(
     map,
-    accessToken,
-    setRouteDistance,
-    setRouteDuration,
+          accessToken, 
+          setRouteDistance, 
+          setRouteDuration, 
     setHasRoute,
-    setPopup
+    setPopup,
+    handleWaypointError
   );
 
   const waypointsLoaded = loadWaypointsFromLocalStorage();
@@ -311,7 +311,7 @@ export const setupRouting = (
         console.error('[routing.ts] Error recalculating initial route:', error);
       });
     }
-  } else {
+      } else {
     console.log('[routing.ts] No waypoints found in local storage.');
   }
   console.log('[routing.ts] Routing module setup complete.');
@@ -344,10 +344,10 @@ export const resetRouting = (
 
   clearRoute(map); // This now uses MapLayerManager and clears RouteCalculationService state
 
-  setRouteDistance('');
-  setRouteDuration('');
-  setHasRoute(false);
-
+    setRouteDistance('');
+    setRouteDuration('');
+    setHasRoute(false);
+    
   clearHistory(); // Clear undo/redo history
 
   // Any other state to reset?

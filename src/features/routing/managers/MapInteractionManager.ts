@@ -10,7 +10,7 @@ import type { Map as MapboxMap, MapMouseEvent, MapTouchEvent, MapLayerMouseEvent
 
 // Functions from routing.ts or other managers will be imported here
 import { updateWaypointPositionAndRecalculate } from '@/lib/routing';
-import { getWaypoints } from '@/features/routing/managers/WaypointManager';
+import { getWaypoints, addWaypoint } from '@/features/routing/managers/WaypointManager';
 import { snapshot } from '@/features/routing/managers/HistoryManager';
 // TODO: Correct import for snapshot if it's separate from getWaypoints
 // For now, let's assume getWaypoints and snapshot come from a combined manager or routing.ts temporarily
@@ -27,6 +27,8 @@ import {
   updateDragLinesLayer, 
   WAYPOINTS_LAYER_ID, 
   ROUTE_HOVER_LAYER_ID,
+  ROUTE_LAYER_ID,
+  TEMP_DRAG_LINES_LAYER_ID
 } from '@/features/routing/managers/MapLayerManager';
 
 // Define PopupInfo structure (mirroring what's in MapPopup.tsx and MapWithRouting.tsx)
@@ -61,20 +63,47 @@ export const initializeMapInteractions = (
   setRouteDistance: Dispatch<SetStateAction<string>>,
   setRouteDuration: Dispatch<SetStateAction<string>>,
   setHasRoute: Dispatch<SetStateAction<boolean>>,
-  setPopup: Dispatch<SetStateAction<PopupInfo | null>> // Added setPopup callback
+  setPopup: Dispatch<SetStateAction<PopupInfo | null>>,
+  handleWaypointError: (message: string | null) => void
 ) => {
   const mapCanvas = map.getCanvas();
 
   // --- ON MAP CLICK LOGIC ---
-  // Replaces previous onMapClick. This version aligns with MapWithRouting.tsx: clears React popup.
   const handleMapClickInternal = (e: MapMouseEvent) => {
-    console.log('[MapInteractionManager] Map click detected. Clearing React popup.', e.lngLat);
+    // Check if the click was on an existing waypoint or other interactive route feature
+    const features = map.queryRenderedFeatures(e.point, { 
+      layers: [WAYPOINTS_LAYER_ID, ROUTE_LAYER_ID, TEMP_DRAG_LINES_LAYER_ID]
+    });
+
+    // If click is on an existing waypoint or route element, do not add a new waypoint.
+    // Dragging waypoints is handled by mousedown/touchstart listeners.
+    // Clearing popup here might be too aggressive if a popup related to these features is desired.
+    // For now, if a feature is hit, we assume other interactions (drag, context menu) handle it.
+    if (features.length > 0) {
+      // Optionally, one could clear a generic 'info' popup if it's not related to the feature.
+      // For now, let's only clear if no feature is hit, to be safe.
+      // Or, always clear if the click is not on the popup itself.
+      // The current behavior is: if you click map, popup clears.
+      // If we want to preserve popup if clicking on a feature, this needs more nuanced logic.
+      // Let's stick to: clear popup, then *maybe* add waypoint.
+      console.log('[MapInteractionManager] Clicked on existing feature. Popup cleared. No new waypoint added.', features.map(f => f.layer?.id).filter(id => id !== undefined));
+      setPopup(null); 
+      return; 
+    }
+
+    console.log('[MapInteractionManager] Map click on empty area. Clearing popup and adding waypoint.', e.lngLat);
     setPopup(null); 
-    // Note: The original onMapClick here also had logic to check if the click was *inside* a Mapbox GL JS popup.
-    // Since we're using a React popup now, that specific check (popupEl.contains(targetElement))
-    // is handled by the React event system (e.g., if the click is on a button within the React popup,
-    // that button's onClick will fire, not necessarily this map click).
-    // If the click is on the map itself (outside the React popup), then clearing the popup is the desired behavior.
+
+    addWaypoint(
+      map,
+      [e.lngLat.lng, e.lngLat.lat],
+      false, // isDirect = false for left click
+      accessToken,
+      setRouteDistance,
+      setRouteDuration,
+      setHasRoute,
+      handleWaypointError
+    );
   };
 
   if (!clickListenerAttached) {
