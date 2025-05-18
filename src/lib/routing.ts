@@ -100,7 +100,7 @@ export const importRouteFromGPX = async (
 
     resetRouting(map, setRouteDistance, setRouteDuration, setHasRoute);
     setWaypointsAndFlags(finalNewWaypoints, newDirectFlags);
-    snapshot();
+  snapshot();
     updateWaypointsLayer(map, getWaypoints());
     saveWaypointsToStorage(getWaypoints(), getDirectFlags());
 
@@ -114,10 +114,10 @@ export const importRouteFromGPX = async (
         } else if (!routeResult.success) {
           console.warn('[importRouteFromGPX] Route calculation after GPX import indicated failure:', routeResult.error);
           if (onError && routeResult.error) onError(routeResult.error);
-          setRouteDistance('');
-          setRouteDuration('');
-          setHasRoute(false);
-        }
+    setRouteDistance('');
+    setRouteDuration('');
+    setHasRoute(false);
+  }
       } catch (error) {
         console.error('[importRouteFromGPX] Route calc failed after GPX import:', error);
         if (onError) {
@@ -127,10 +127,10 @@ export const importRouteFromGPX = async (
         clearRouteLayer(map);
         clearKilometerMarkersLayer(map);
         clearCurrentRoutePath();
-        setRouteDistance('');
-        setRouteDuration('');
-        setHasRoute(false);
-      }
+    setRouteDistance('');
+    setRouteDuration('');
+    setHasRoute(false);
+  }
     } else if (getWaypoints().length === 1) {
     setRouteDistance('');
     setRouteDuration('');
@@ -156,7 +156,7 @@ export const addWaypoint = addWaypointFromManager;
 
 // --- New function to set route data from external source (e.g., shared link) ---
 export const setRouteData = async (
-  map: MapboxMap,
+  map: MapboxMap, 
   accessToken: string,
   newWaypoints: Coordinate[],
   newDirectFlags: boolean[],
@@ -164,13 +164,13 @@ export const setRouteData = async (
   setRouteDuration: Dispatch<SetStateAction<string>>,
   setHasRoute: Dispatch<SetStateAction<boolean>>
 ) => {
-  snapshot();
+        snapshot();
   setWaypointsAndFlags([], []);
   updateWaypointsLayer(map, []);
-    clearRoute(map);
-    setRouteDistance('');
-    setRouteDuration('');
-    setHasRoute(false);
+                        clearRoute(map);
+                        setRouteDistance('');
+                        setRouteDuration('');
+                        setHasRoute(false);
 
   setWaypointsAndFlags(newWaypoints, newDirectFlags);
 
@@ -251,9 +251,9 @@ export const setupRouting = (
   
   const mapInteractionDisposer = initializeMapInteractions(
     map,
-    accessToken, 
-    setRouteDistance, 
-    setRouteDuration, 
+          accessToken, 
+          setRouteDistance, 
+          setRouteDuration, 
     setHasRoute,
     setPopup,
     handleWaypointError
@@ -283,10 +283,10 @@ export const setupRouting = (
           console.error('[routing.ts] Error recalculating initial route:', error);
         });
       }
-    } else {
+      } else {
       console.log('[routing.ts] No waypoints found in local storage.');
-    }
-  } catch (error) {
+      }
+    } catch (error) {
     console.error('[routing.ts] Error loading waypoints from local storage in setupRouting:', error);
   }
 
