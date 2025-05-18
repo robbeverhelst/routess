@@ -66,6 +66,47 @@ const MAX_MOVE_THRESHOLD = 10; // pixels
 let hoveredRouteFeatureId: string | number | undefined = undefined;
 let currentLongPressId: number | null = null; // Added for robust long press handling
 
+// --- Helper function to determine popup info ---
+const getPopupInfo = (
+  map: MapboxMap,
+  lngLat: { lng: number; lat: number },
+  point: { x: number; y: number }
+): PopupInfo | null => {
+  const pointFeatures = map.queryRenderedFeatures([point.x, point.y], { layers: [WAYPOINTS_LAYER_ID] });
+
+  if (pointFeatures && pointFeatures.length > 0) {
+    const feature = pointFeatures[0];
+    const idxRaw = feature.properties?.waypointIndex;
+    const idx = typeof idxRaw === 'string' ? parseInt(idxRaw, 10) : typeof idxRaw === 'number' ? idxRaw : -1;
+
+    if (isNaN(idx) || idx < 0 || idx >= getWaypoints().length || idx === -1) {
+      console.error('[MapInteractionManager] Invalid waypoint index on feature query:', idxRaw);
+      return null;
+    }
+    return {
+      longitude: lngLat.lng,
+      latitude: lngLat.lat,
+      type: 'remove',
+      waypointIndex: idx
+    };
+  } else {
+    const routeFeatures = map.queryRenderedFeatures([point.x, point.y], { layers: [ROUTE_HOVER_LAYER_ID, ROUTE_LAYER_ID] });
+    if (routeFeatures && routeFeatures.length > 0 && getWaypoints().length >= 1) {
+      return {
+        longitude: lngLat.lng,
+        latitude: lngLat.lat,
+        type: 'add_on_route'
+      };
+    } else {
+      return {
+        longitude: lngLat.lng,
+        latitude: lngLat.lat,
+        type: 'direct'
+      };
+    }
+  }
+};
+
 export const initializeMapInteractions = (
   map: MapboxMap,
   accessToken: string,
@@ -79,6 +120,16 @@ export const initializeMapInteractions = (
 
   // --- ON MAP CLICK LOGIC ---
   const handleMapClickInternal = (e: MapMouseEvent) => {
+    // If a click event is processed, it means it was a short press (not a long press or drag).
+    // We should ensure any pending long press timer is cancelled.
+    if (longPressTimeoutRef) {
+      clearTimeout(longPressTimeoutRef);
+      longPressTimeoutRef = null;
+      currentLongPressId = null;
+      touchStartPos = null;
+      console.log('[MapInteractionManager] Click event detected, cancelled pending long press timer.');
+    }
+
     if (e.defaultPrevented) {
       console.log('[MapInteractionManager] Click event default prevented, likely due to drag. Ignoring.');
       return;
@@ -119,7 +170,7 @@ export const initializeMapInteractions = (
     console.log('[MapInteractionManager] Context menu event at:', e.lngLat);
 
     let eventPointXY: { x: number; y: number };
-    if (e.type === 'contextmenu' && 'point' in e) { 
+    if (e.type === 'contextmenu' && 'point' in e) {
       eventPointXY = (e as MapMouseEvent).point;
     } else if (('type' in e && (e.type === 'touchstart' || e.type === 'touchend' || e.type === 'touchcancel')) && 'points' in e ) { 
       eventPointXY = (e as MapTouchEvent).points[0];
@@ -134,40 +185,9 @@ export const initializeMapInteractions = (
       }
     }
 
-    const pointFeatures = map.queryRenderedFeatures([eventPointXY.x, eventPointXY.y], { layers: [WAYPOINTS_LAYER_ID] });
-    
-    if (pointFeatures && pointFeatures.length > 0) {
-      const feature = pointFeatures[0];
-      const idxRaw = feature.properties?.waypointIndex;
-      const idx = typeof idxRaw === 'string' ? parseInt(idxRaw, 10) : typeof idxRaw === 'number' ? idxRaw : -1;
-      
-      if (isNaN(idx) || idx < 0 || idx >= getWaypoints().length || idx === -1) {
-        console.error('[MapInteractionManager] Invalid waypoint index on context click:', idxRaw);
-        setPopup(null); 
-        return;
-      }
-      setPopup({
-        longitude: e.lngLat.lng,
-        latitude: e.lngLat.lat,
-        type: 'remove',
-        waypointIndex: idx
-      });
-    } else {
-      const routeFeatures = map.queryRenderedFeatures([eventPointXY.x, eventPointXY.y], { layers: [ROUTE_HOVER_LAYER_ID, ROUTE_LAYER_ID] });
-      if (routeFeatures && routeFeatures.length > 0 && getWaypoints().length >=1 ) {
-        setPopup({
-          longitude: e.lngLat.lng,
-          latitude: e.lngLat.lat,
-          type: 'add_on_route'
-        });
-      } else {
-        setPopup({
-          longitude: e.lngLat.lng,
-          latitude: e.lngLat.lat,
-          type: 'direct'
-        });
-      }
-    }
+    // Use the helper function
+    const popupInfo = getPopupInfo(map, e.lngLat, eventPointXY);
+    setPopup(popupInfo);
   };
   
   map.on('contextmenu', handleContextMenuInternal);
@@ -247,26 +267,9 @@ export const initializeMapInteractions = (
   // --- LONG PRESS & TOUCH LOGIC ---
   const handleLongPressInternal = (lngLat: { lng: number; lat: number }, point: { x: number; y: number }) => {
     console.log('[MapInteractionManager] Long press at:', lngLat);
-    // This logic is identical to handleContextMenuInternal for determining what popup to show
-    const pointFeatures = map.queryRenderedFeatures([point.x, point.y], { layers: [WAYPOINTS_LAYER_ID] });
-    if (pointFeatures && pointFeatures.length > 0) {
-      const feature = pointFeatures[0];
-      const idxRaw = feature.properties?.waypointIndex;
-      const idx = typeof idxRaw === 'string' ? parseInt(idxRaw, 10) : typeof idxRaw === 'number' ? idxRaw : -1;
-      if (idx === -1 || isNaN(idx) || idx < 0 || idx >= getWaypoints().length) {
-        console.error('[MapInteractionManager] Invalid waypoint index on long press:', idxRaw);
-        setPopup(null);
-        return;
-      }
-      setPopup({ longitude: lngLat.lng, latitude: lngLat.lat, type: 'remove', waypointIndex: idx });
-    } else {
-      const routeFeatures = map.queryRenderedFeatures([point.x, point.y], { layers: [ROUTE_HOVER_LAYER_ID, ROUTE_LAYER_ID] });
-      if (routeFeatures && routeFeatures.length > 0 && getWaypoints().length >=1) {
-        setPopup({ longitude: lngLat.lng, latitude: lngLat.lat, type: 'add_on_route' });
-      } else {
-        setPopup({ longitude: lngLat.lng, latitude: lngLat.lat, type: 'direct' });
-      }
-    }
+    // Use the helper function
+    const popupInfo = getPopupInfo(map, lngLat, point);
+    setPopup(popupInfo);
   };
 
   // --- GENERAL TOUCH START HANDLER (analogous to generalMouseDownHandler) ---
@@ -470,22 +473,26 @@ export const initializeMapInteractions = (
     const prevLongPressId = currentLongPressId; // Capture before clearing
     const wasTimeoutActive = !!longPressTimeoutRef; // Check if timer was active
 
-    if (longPressTimeoutRef) { // If a long press was pending, clear it
+    // Always clear the long press timeout and reset related state when a touch ends
+    if (longPressTimeoutRef) {
       clearTimeout(longPressTimeoutRef);
       longPressTimeoutRef = null;
     }
-    currentLongPressId = null; // Invalidate any pending long press from this touch sequence
-    touchStartPos = null; // Reset long press tracking
+    currentLongPressId = null;
+    touchStartPos = null;
     console.log(`[MapInteractionManager] onMapTouchEndInternal. Was timeout active: ${wasTimeoutActive}. Prev long press ID: ${prevLongPressId}. Cleared long press state.`);
 
     if (!isDragging || draggedWaypointIndex === -1 || !currentLngLat) {
       // Ensure map interactions are re-enabled if drag didn't actually happen or was for a different purpose
+      // This block will now also handle cases where a touch ended without initiating a drag,
+      // ensuring map pan/zoom are re-enabled and cursor is reset.
       map.dragPan.enable();
       map.touchZoomRotate.enable();
       mapCanvas.style.cursor = ''; // Reset cursor if it was changed
       return;
     }
-    
+
+    // If a drag was in progress, proceed with the drag end logic
     map.off('touchmove', onMapTouchMoveForDrag);
     map.off('touchend', onMapTouchEndInternal);
     map.off('touchcancel', onMapTouchEndInternal);
@@ -625,21 +632,3 @@ export const initializeMapInteractions = (
   };
 };
 
-// Functions like mouseDownOnWaypointHandler, touchStartOnWaypointHandler, onMapMouseMoveForDrag, onMapMouseUpInternal etc.
-// are now either part of the general handlers or remain as helper callbacks for those general handlers.
-// The old direct layer-specific mousedown/touchstart listeners are removed.
-
-// Ensure updateDragLinesLayer is correctly imported and used.
-// WAYPOINTS_LAYER_ID and ROUTE_LAYER_ID/ROUTE_HOVER_LAYER_ID are critical.
-
-// Cleanup function if ever needed - REMOVED as initializeMapInteractions now returns a disposer
-// export const removeMapInteractions = (mapInstance: MapboxMap) => {
-//   // Example: mapInstance.off('click', handleMapClickInternal);
-//   // ... remove all listeners added in initializeMapInteractions
-//   // This is a placeholder; a more robust cleanup would remove specific handlers for this mapInstance.
-//   // The current listener flags are module-scoped and don't distinguish by map instance.
-//   console.log('[MapInteractionManager] Listener cleanup placeholder. Map instance container ID:', mapInstance.getContainer().id);
-//   clickListenerAttached = false; // These flags would need to be instance-specific for multi-map scenarios
-//   contextMenuListenerAttached = false;
-//   touchInteractionListenersAttached = false;
-// }; 
