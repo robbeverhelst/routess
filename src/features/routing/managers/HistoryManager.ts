@@ -25,6 +25,24 @@ const emitHistoryChange = (eventName: string, historyState: WaypointHistory) => 
 let undoStack: WaypointHistory[] = [];
 let redoStack: WaypointHistory[] = [];
 
+const reinitializeHistoryState = () => {
+  undoStack = [];
+  redoStack = [];
+  console.log('[HistoryManager.ts] Module state explicitly re-initialized.');
+};
+
+reinitializeHistoryState(); // Initial call
+
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    console.log('[HistoryManager.ts] HMR disposing old instance.');
+  });
+  import.meta.hot.accept(() => {
+    console.log('[HistoryManager.ts] HMR accept: Forcing state re-initialization.');
+    reinitializeHistoryState();
+  });
+}
+
 export const hasUndo = (): boolean => {
   return undoStack.length > 0;
 };

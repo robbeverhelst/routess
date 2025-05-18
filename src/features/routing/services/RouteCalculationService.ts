@@ -14,6 +14,23 @@ import {
 // Module-level state for the detailed path, similar to how it was in routing.ts
 let currentRoutePathCoordinates: Coordinate[] = [];
 
+const reinitializeRouteCalcState = () => {
+  currentRoutePathCoordinates = [];
+  console.log('[RouteCalculationService.ts] Module state explicitly re-initialized.');
+};
+
+reinitializeRouteCalcState(); // Initial call
+
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    console.log('[RouteCalculationService.ts] HMR disposing old instance.');
+  });
+  import.meta.hot.accept(() => {
+    console.log('[RouteCalculationService.ts] HMR accept: Forcing state re-initialization.');
+    reinitializeRouteCalcState();
+  });
+}
+
 // Helper function to calculate distance between coordinates using haversine formula
 // This is duplicated from WaypointManager for now if direct import is problematic,
 // but ideally should be imported if WaypointManager's _haversine is made available,

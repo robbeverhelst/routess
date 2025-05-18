@@ -13,6 +13,25 @@ import { getCurrentRoutePath } from '@/features/routing/services/RouteCalculatio
 let waypoints: Coordinate[] = [];
 let directFlags: boolean[] = []; // parallel to waypoints, true if waypoint is direct
 
+const reinitializeWaypointState = () => {
+  waypoints = [];
+  directFlags = [];
+  console.log('[WaypointManager.ts] Module state explicitly re-initialized.');
+};
+
+reinitializeWaypointState(); // Initial call
+
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    console.log('[WaypointManager.ts] HMR disposing old instance.');
+    // State will be reset by the new instance's reinitializeWaypointState() via accept or top-level call
+  });
+  import.meta.hot.accept(() => {
+    console.log('[WaypointManager.ts] HMR accept: Forcing state re-initialization.');
+    reinitializeWaypointState();
+  });
+}
+
 export const _addWaypointInternal = async (
   coords: Coordinate,
   isDirect: boolean,
@@ -263,11 +282,11 @@ export const insertWaypointAtLocation = async (
   if (routeData?.geometry?.coordinates && routeData.geometry.coordinates.length > 0) {
     routePathToUse = routeData.geometry.coordinates.map(p => [p[0], p[1]] as Coordinate);
   } else {
-    routePathToUse = currentRoutePath;
+    routePathToUse = currentRoutePath; // currentRoutePath is Coordinate[], so routePathToUse is always Coordinate[]
   }
   
-  if (!routePathToUse || routePathToUse.length < 2) {
-    console.warn('[WaypointManager.insertWaypoint] Route path is too short or undefined.');
+  if (routePathToUse.length < 2) {
+    console.warn('[WaypointManager.insertWaypoint] Route path is too short (less than 2 points).');
     if (onError) onError("Cannot add waypoint: Route path is not defined or too short.");
     return;
   }
