@@ -64,6 +64,7 @@ const MAX_MOVE_THRESHOLD = 10; // pixels
 
 // To store the ID of the hovered route feature for highlighting
 let hoveredRouteFeatureId: string | number | undefined = undefined;
+let currentLongPressId: number | null = null; // Added for robust long press handling
 
 export const initializeMapInteractions = (
   map: MapboxMap,
@@ -346,15 +347,27 @@ export const initializeMapInteractions = (
       }
 
     } else {
-      // Handle long press for context menu on empty space
-      // (This part is from existing touch handlers, adapted)
-      if (longPressTimeoutRef) clearTimeout(longPressTimeoutRef);
-      touchStartPos = e.points[0]; // Store touch start position for move threshold check
-      longPressTimeoutRef = window.setTimeout(() => {
+      // Ensure any previous long press setup is fully cleared before starting a new one
+      if (longPressTimeoutRef) {
+        clearTimeout(longPressTimeoutRef);
         longPressTimeoutRef = null;
-        if (touchStartPos) { // Check if touch hasn't ended or moved too much
-          handleLongPressInternal(e.lngLat, e.points[0]);
+      }
+      currentLongPressId = null; // Explicitly nullify before setting a new one for this new touch interaction
+      touchStartPos = { x: e.points[0].x, y: e.points[0].y }; // Store position for movement check
+      const originalEventLngLat = { lng: e.lngLat.lng, lat: e.lngLat.lat }; // Capture LngLat at touchstart
+
+      const uniquePressId = Date.now(); // Generate a new ID for this specific press
+      currentLongPressId = uniquePressId; // Assign it as the currently active one for this touch interaction
+
+      longPressTimeoutRef = window.setTimeout(() => {
+        const timerFiredMessage = `[MapInteractionManager] Long press timer fired. Target ID: ${uniquePressId}, Current Active ID: ${currentLongPressId}, TouchStartPos: ${JSON.stringify(touchStartPos)}`;
+        if (currentLongPressId === uniquePressId && touchStartPos) { 
+          console.log(timerFiredMessage + ' -> Conditions MET. Calling handleLongPressInternal.');
+          handleLongPressInternal(originalEventLngLat, touchStartPos);
+        } else {
+          console.log(timerFiredMessage + ' -> Conditions NOT MET (already cancelled or touch moved/ended).');
         }
+        longPressTimeoutRef = null; // Clear ref after execution or if condition fails
       }, LONG_PRESS_DURATION);
     }
   };
@@ -454,11 +467,16 @@ export const initializeMapInteractions = (
   };
 
   const onMapTouchEndInternal = async () => {
+    const prevLongPressId = currentLongPressId; // Capture before clearing
+    const wasTimeoutActive = !!longPressTimeoutRef; // Check if timer was active
+
     if (longPressTimeoutRef) { // If a long press was pending, clear it
       clearTimeout(longPressTimeoutRef);
       longPressTimeoutRef = null;
     }
+    currentLongPressId = null; // Invalidate any pending long press from this touch sequence
     touchStartPos = null; // Reset long press tracking
+    console.log(`[MapInteractionManager] onMapTouchEndInternal. Was timeout active: ${wasTimeoutActive}. Prev long press ID: ${prevLongPressId}. Cleared long press state.`);
 
     if (!isDragging || draggedWaypointIndex === -1 || !currentLngLat) {
       // Ensure map interactions are re-enabled if drag didn't actually happen or was for a different purpose
@@ -498,7 +516,7 @@ export const initializeMapInteractions = (
 
   // --- POINTER MOVE FOR LONG PRESS DETECTION (adapted from existing) ---
   const handlePointerMoveInternal = (e: MapTouchEvent | MapMouseEvent) => {
-    if (!touchStartPos || !longPressTimeoutRef) return;
+    if (!touchStartPos || !longPressTimeoutRef) return; // No active long press to cancel
 
     let currentPos: { x: number; y: number };
     if ('points' in e) { // MapTouchEvent
@@ -517,9 +535,15 @@ export const initializeMapInteractions = (
     const deltaY = Math.abs(currentPos.y - touchStartPos.y);
 
     if (deltaX > MAX_MOVE_THRESHOLD || deltaY > MAX_MOVE_THRESHOLD) {
-      if (longPressTimeoutRef) clearTimeout(longPressTimeoutRef);
-      longPressTimeoutRef = null;
+      const wasTimeoutActive = !!longPressTimeoutRef; // Check if timer was active
+      const prevLongPressId = currentLongPressId; // Capture before clearing
+      if (longPressTimeoutRef) {
+        clearTimeout(longPressTimeoutRef);
+        longPressTimeoutRef = null;
+      }
+      currentLongPressId = null; // Invalidate this specific long press attempt
       touchStartPos = null;
+      console.log(`[MapInteractionManager] Pointer moved, cancelling long press. Was timeout active: ${wasTimeoutActive}. Prev ID: ${prevLongPressId}`);
     }
   };
 
