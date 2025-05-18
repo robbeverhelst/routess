@@ -159,7 +159,7 @@ jobs:
           GIT_COMMITTER_EMAIL: "actions@github.com"
         run: |
           git config --global --add safe.directory /home/runner/_work/maps/maps
-          git fetch --prune --unshallow || true
+          git fetch --prune || true
           
           # Extract the most recent version from package.json
           CURRENT_VERSION=$(bun -e "console.log(require('./package.json').version)")
@@ -188,13 +188,28 @@ jobs:
           git tag -f "v$NEXT_VERSION"
           git push origin "v$NEXT_VERSION" --force
           
+          # Get the existing release ID
+          RELEASE_ID=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/tags/v$NEXT_VERSION" | \
+            grep -o '"id": [0-9]*' | head -1 | sed 's/"id": //')
+          
+          # Delete existing release if it exists
+          if [ ! -z "$RELEASE_ID" ]; then
+            echo "Deleting existing release with ID: $RELEASE_ID"
+            curl -s -X DELETE \
+              -H "Authorization: token $GITHUB_TOKEN" \
+              "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID"
+          fi
+          
           # Create GitHub release
-          curl -s -X POST \
+          echo "Creating new release for v$NEXT_VERSION"
+          RELEASE_RESPONSE=$(curl -s -X POST \
             -H "Authorization: token $GITHUB_TOKEN" \
             -H "Accept: application/vnd.github.v3+json" \
             "https://api.github.com/repos/$GITHUB_REPOSITORY/releases" \
-            -d "{\"tag_name\":\"v$NEXT_VERSION\",\"name\":\"v$NEXT_VERSION\",\"body\":\"$NOTES\",\"draft\":false,\"prerelease\":false}"
+            -d "{\"tag_name\":\"v$NEXT_VERSION\",\"name\":\"v$NEXT_VERSION\",\"body\":\"$NOTES\",\"draft\":false,\"prerelease\":false}")
           
+          echo "Release creation response: $RELEASE_RESPONSE"
           echo "version=$NEXT_VERSION" >> $GITHUB_OUTPUT
           
   # Separate job for Docker image building with multi-arch support
