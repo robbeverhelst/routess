@@ -200,7 +200,7 @@ export const initializeMapInteractions = (
 
         // Attach move and up listeners
         map.on('mousemove', onMapMouseMoveForDrag);
-        map.on('mouseup', onMapMouseUpInternal);
+        window.addEventListener('mouseup', onMapMouseUpInternal, { once: true });
       }
     } else if (routeFeature) {
       console.log('[MapInteractionManager] Mousedown on route. Attempting to insert and drag new waypoint.');
@@ -523,48 +523,39 @@ export const initializeMapInteractions = (
     }
   };
 
-  map.on('touchmove', handlePointerMoveInternal as (ev: MapTouchEvent | MapMouseEvent) => void); // For long press cancellation
-  map.on('mousemove', handlePointerMoveInternal as (ev: MapTouchEvent | MapMouseEvent) => void); // Also for mouse if we want consistent long press (though unusual)
-  // Note: The 'mousemove' for long press cancellation is a bit unconventional but makes the logic shareable.
-  // Typically long press is touch-only.
+  map.on('touchmove', handlePointerMoveInternal as (ev: MapTouchEvent | MapMouseEvent) => void); 
 
   // --- ROUTE HOVER HIGHLIGHTING ---
   const mouseEnterRouteHandler = (e: MapLayerMouseEvent) => {
-    if (map.dragPan.isActive()) return; // Check if map is being actively panned by drag
+    if (map.dragPan.isActive() || (e.originalEvent && e.originalEvent.buttons !== 0) ) return; // Ignore if map is panning or a mouse button is pressed
+    
     if (e.features && e.features.length > 0) {
-      map.getCanvas().style.cursor = 'pointer';
       const feature = e.features[0];
-      // Use ROUTE_SOURCE_ID for feature state
-      // The feature itself might not have an .id if the source GeoJSON doesn't provide it
-      // or if generateId was not true on the source. For a single LineString feature,
-      // we might need a predefined ID or rely on Mapbox assigning one (if generateId=true).
-      // For now, assuming 'route' source, and MapLayerManager will handle feature IDing for state.
-      if (hoveredRouteFeatureId !== undefined && feature.source && feature.id !== hoveredRouteFeatureId) {
-         map.removeFeatureState({ source: feature.source, id: hoveredRouteFeatureId }, 'hover');
-      }
-      hoveredRouteFeatureId = feature.id ?? 'main_route_line'; // Fallback ID if feature.id is undefined
-      if (feature.source && hoveredRouteFeatureId) {
-        map.setFeatureState({ source: feature.source, id: hoveredRouteFeatureId }, { hover: true });
+      const currentFeatureId = feature.id ?? 'main_route_line'; 
+      const currentFeatureSource = feature.source;
+
+      if (currentFeatureSource === ROUTE_SOURCE_ID && currentFeatureId === 'main_route_line') {
+        map.getCanvas().style.cursor = 'pointer';
+
+        if (hoveredRouteFeatureId !== currentFeatureId) {
+          if (hoveredRouteFeatureId === 'main_route_line' && map.getSource(ROUTE_SOURCE_ID)) {
+            map.removeFeatureState({ source: ROUTE_SOURCE_ID, id: 'main_route_line' }, 'hover');
+          }
+          hoveredRouteFeatureId = currentFeatureId; 
+          map.setFeatureState({ source: ROUTE_SOURCE_ID, id: hoveredRouteFeatureId }, { hover: true });
+        }
       }
     }
   };
 
-  const mouseLeaveRouteHandler = () => { // No event needed if we just clear based on module-scoped ID
+  const mouseLeaveRouteHandler = () => { 
     map.getCanvas().style.cursor = '';
-    if (hoveredRouteFeatureId !== undefined) {
-      // Assuming the source is ROUTE_SOURCE_ID
-      // Check if map is still loaded, source exists etc.
-      if (map.getSource(ROUTE_SOURCE_ID)) {
-        map.removeFeatureState({ source: ROUTE_SOURCE_ID, id: hoveredRouteFeatureId }, 'hover');
-      }
-      hoveredRouteFeatureId = undefined;
+    if (hoveredRouteFeatureId === 'main_route_line' && map.getSource(ROUTE_SOURCE_ID)) {
+      map.removeFeatureState({ source: ROUTE_SOURCE_ID, id: hoveredRouteFeatureId }, 'hover');
     }
+    hoveredRouteFeatureId = undefined; 
   };
 
-  // Attach hover listeners to the visually prominent route layer (e.g., ROUTE_HOVER_LAYER_ID or ROUTE_LAYER_ID)
-  // ROUTE_HOVER_LAYER_ID is often a slightly thicker, transparent layer on top, good for hit detection.
-  // Or, if ROUTE_LAYER_ID is styled to change on hover via feature state, use that.
-  // Let's use ROUTE_LAYER_ID for the hover state change, assuming it's styled appropriately.
   map.on('mouseenter', ROUTE_LAYER_ID, mouseEnterRouteHandler);
   map.on('mouseleave', ROUTE_LAYER_ID, mouseLeaveRouteHandler);
   console.log('[MapInteractionManager] Route hover listeners added to', ROUTE_LAYER_ID);
@@ -602,10 +593,10 @@ export const initializeMapInteractions = (
     map.touchZoomRotate.enable();
     
     // Clear any feature state if set
-    if (hoveredRouteFeatureId !== undefined && map.getSource(ROUTE_SOURCE_ID)) {
-        map.removeFeatureState({ source: ROUTE_SOURCE_ID, id: hoveredRouteFeatureId }, 'hover'); // Assuming 'route' source
-        hoveredRouteFeatureId = undefined;
+    if (hoveredRouteFeatureId === 'main_route_line' && map.getSource(ROUTE_SOURCE_ID)) {
+        map.removeFeatureState({ source: ROUTE_SOURCE_ID, id: 'main_route_line' }, 'hover'); 
     }
+    hoveredRouteFeatureId = undefined;
     console.log('[MapInteractionManager] All interaction listeners and states reset.');
   };
 };

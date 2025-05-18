@@ -266,25 +266,45 @@ export const setupRouting = (
     }
     // Waypoints and flags are already set by HistoryManager's setWaypointsAndFlags,
     // which is called by stepBack/stepForward before emitting the event.
+    // So, historyState.points and historyState.flags are the current state *before* potential snapping by getRouteFromService.
     updateWaypointsLayer(_mapInstance, historyState.points);
+
+    let finalPointsToSave = historyState.points;
+    let finalFlagsToSave = historyState.flags;
 
     if (historyState.points.length >= 2) {
       const routeResult: RouteResult = await getRouteFromService(_mapInstance, _accessToken, setRouteDistance, setRouteDuration, setHasRoute);
       if (routeResult.success && routeResult.waypointsSnapped && routeResult.snappedWaypoints && routeResult.snappedDirectFlags) {
+        // Waypoints were snapped, update the internal state and layers
         setWaypointsAndFlags(routeResult.snappedWaypoints, routeResult.snappedDirectFlags);
         updateWaypointsLayer(_mapInstance, routeResult.snappedWaypoints); // Update with snapped points
+        // Update what will be saved to storage
+        finalPointsToSave = routeResult.snappedWaypoints;
+        finalFlagsToSave = routeResult.snappedDirectFlags;
+        console.log('[routing.ts.handleHistoryApplied] Waypoints snapped during route recalculation after history change.');
+      } else if (!routeResult.success) {
+        // Route calculation failed, might need to clear route display
+        clearRouteLayer(_mapInstance);
+        clearKilometerMarkersLayer(_mapInstance);
+        clearCurrentRoutePath(); 
+        setRouteDistance('');
+        setRouteDuration('');
+        setHasRoute(false);
+        console.warn('[routing.ts.handleHistoryApplied] Route recalculation failed after history change.');
       }
-    } else {
+    } else { // 0 or 1 waypoint
       clearRouteLayer(_mapInstance);
       clearKilometerMarkersLayer(_mapInstance);
-      clearCurrentRoutePath(); // Clear data in RouteCalculationService
+      clearCurrentRoutePath(); 
       setRouteDistance('');
       setRouteDuration('');
       setHasRoute(false);
-      if (historyState.points.length === 0) updateWaypointsLayer(_mapInstance, []); // Ensure layer is cleared if no points
+      if (historyState.points.length === 0) updateWaypointsLayer(_mapInstance, []); 
     }
-    saveWaypointsToStorage(historyState.points, historyState.flags); // Save the state applied from history
-    console.log('[routing.ts.handleHistoryApplied] History change processed.');
+    
+    // Save the final state (either original from history or snapped) to local storage
+    saveWaypointsToStorage(finalPointsToSave, finalFlagsToSave); 
+    console.log('[routing.ts.handleHistoryApplied] History change processed. Points saved to storage:', finalPointsToSave.length);
   };
 
   // Subscribe to history changes only once

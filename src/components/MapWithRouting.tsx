@@ -54,7 +54,7 @@ if (import.meta.env.DEV && (!MAPBOX_TOKEN || MAPBOX_TOKEN.length < 10)) { // Che
   console.log(
     `[MapWithRouting] Mapbox token loaded. 
     Type: ${typeof MAPBOX_TOKEN}, 
-    Value starts with: ${String(MAPBOX_TOKEN).substring(0, 10)}...`
+    Value length: ${MAPBOX_TOKEN?.length ?? 0} (token partially redacted)`
   );
 }
 
@@ -249,7 +249,7 @@ export default function MapWithRouting({
     if (isMapReady && userLocation) { 
       updateUserLocationPoint(mapRef.current!, userLocation); // Use non-null assertion
     }
-  }, [userLocation, isMapReady, mapRef.current]);
+  }, [userLocation, isMapReady]);
 
   // Zoom to user location if available, not loading, no errors, and not initially zoomed yet
   // AND no route was detected in localStorage on init (route zoom takes precedence)

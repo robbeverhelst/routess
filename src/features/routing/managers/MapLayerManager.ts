@@ -135,7 +135,10 @@ export const updateWaypointsLayer = (map: MapboxMap, points: Coordinate[]): void
     if (points.length === 1) pointType = 'start';
     else if (index === 0) pointType = 'start';
     else if (index === points.length - 1) pointType = 'end';
-    if (directFlags[index]) pointType = 'direct';
+    
+    if (index + 1 < directFlags.length && directFlags[index + 1]) {
+      pointType = 'direct';
+    }
 
     return {
       type: 'Feature' as const,
