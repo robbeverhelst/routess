@@ -74,6 +74,8 @@ export const checkNearRoad = async (
     }
   } catch (error) {
     console.error('[checkNearRoad] Error calling Matching API:', error);
+    // If fetch itself fails, console.timeEnd might not be reached for the fetch timer.
+    // No specific timeEnd here, as the overall function duration might be more relevant for catch.
     return { isValid: false }; // Network error or other exception
   }
 };

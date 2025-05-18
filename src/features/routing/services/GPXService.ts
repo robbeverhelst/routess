@@ -57,6 +57,12 @@ export const generateGPXString = (waypoints: Coordinate[], routePath: Coordinate
  * @returns A promise that resolves to an object containing extracted waypoints or an error message.
  */
 export const parseGPXFile = async (gpxString: string): Promise<{ waypoints?: Coordinate[], error?: string }> => {
+  // Check for DOMParser availability (browser environment)
+  if (typeof window === 'undefined' || typeof window.DOMParser === 'undefined') {
+    console.error("[GPXService.parseGPXFile] DOMParser is not available. GPX parsing currently requires a browser environment.");
+    return { error: "GPX parsing is not available in this environment. DOMParser not found." };
+  }
+
   try {
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(gpxString, "application/xml");
@@ -86,10 +92,16 @@ export const parseGPXFile = async (gpxString: string): Promise<{ waypoints?: Coo
     }
 
     for (let i = 0; i < pointsToParse.length; i++) {
-      const lat = pointsToParse[i].getAttribute("lat");
-      const lon = pointsToParse[i].getAttribute("lon");
-      if (lat && lon) {
-        gpxCoords.push([parseFloat(lon), parseFloat(lat)]);
+      const latStr = pointsToParse[i].getAttribute("lat");
+      const lonStr = pointsToParse[i].getAttribute("lon");
+      if (latStr && lonStr) {
+        const latNum = parseFloat(latStr);
+        const lonNum = parseFloat(lonStr);
+        if (!isNaN(lonNum) && !isNaN(latNum)) {
+          gpxCoords.push([lonNum, latNum]);
+        } else {
+          console.warn(`[GPXService.parseGPXFile] Skipped invalid coordinate: lat='${latStr}', lon='${lonStr}'`);
+        }
       }
     }
 

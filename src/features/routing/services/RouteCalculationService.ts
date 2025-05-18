@@ -3,12 +3,6 @@ import type { Coordinate } from '@/types/map';
 import type { Map as MapboxMap } from 'mapbox-gl';
 import { getWaypoints, getDirectFlags } from '@/features/routing/managers/WaypointManager';
 import { haversine } from '@/features/routing/utils/RoutingUtils';
-// Removed import { saveWaypointsToLocalStorage as saveWaypointsToStorage } from '@/features/routing/services/LocalStorageService';
-// Import updatePoints from routing.ts - this creates a temporary circular dependency risk,
-// or indicates updatePoints might need to be moved/become more generic.
-// For now, this will likely cause issues if not handled carefully or if routing.ts also imports this service.
-// A better approach would be a callback or moving updatePoints to a shared util or MapDisplayService.
-// import { updatePoints } from '@/lib/routing'; // Placeholder: This import might need to be re-evaluated
 
 // Import from MapLayerManager
 import {
@@ -173,6 +167,7 @@ export interface RouteResult {
   waypointsSnapped: boolean;
   snappedWaypoints?: Coordinate[];
   snappedDirectFlags?: boolean[];
+  error?: string; // Added optional error field
 }
 
 // Calculate and display a route between waypoints
@@ -206,12 +201,28 @@ export const getRoute = async (
     return { success: true, waypointsSnapped: false }; // Success as in operation completed, no route but no error.
   }
 
-  // Check if any segment requires routing (i.e., not all segments are direct)
-  // A segment is direct if the TO waypoint of that segment is marked direct.
-  // So, if any directFlag from index 1 onwards is false, we need routing.
-  const requiresApiRouting = directFlags.slice(1).some(flag => !flag);
+  // Determine route type
+  const isSegmentDirect = (index: number) => directFlags.length > index && directFlags[index];
+  
+  let allSegmentsDirect = true;
+  for (let i = 1; i < waypoints.length; i++) { // Check segments from first waypoint to the end
+    if (!isSegmentDirect(i)) {
+      allSegmentsDirect = false;
+      break;
+    }
+  }
+  
+  let allSegmentsRouted = true;
+  for (let i = 1; i < waypoints.length; i++) {
+    if (isSegmentDirect(i)) {
+      allSegmentsRouted = false;
+      break;
+    }
+  }
+  
+  const mixedSegments = !allSegmentsDirect && !allSegmentsRouted;
 
-  if (!requiresApiRouting && waypoints.length >=2 ) { // All segments are direct lines
+  if (allSegmentsDirect) {
     console.log('[RCS/getRoute] All segments are direct. Calculating straight lines.');
     currentRoutePathCoordinates = [];
     let cumulativeDistance = 0;
@@ -229,108 +240,113 @@ export const getRoute = async (
     return { success: true, waypointsSnapped: false };
   }
   
-  // If any segment is NOT direct, or if mixed routing is implicitly preferred.
-  // The original code had a directFlags.some(Boolean) check which seems to imply mixed routing if ANY direct flag is true.
-  // Let's refine this: if there's a mix of direct and non-direct segments, or all non-direct.
-  // The `buildMixedRoute` handles segments based on `directFlags[i+1]`.
-  if (directFlags.slice(1).some(flag => flag) || directFlags.slice(1).some(flag => !flag)) { // If there is a mix, or all are non-direct but we want Mapbox directions
+  if (mixedSegments) { 
     console.log('[RCS/getRoute] Calculating mixed route (direct and routed segments).');
-    const { coordsAccum, totalDist, waypointsUpdated, snappedWaypoints, snappedDirectFlags } = await buildMixedRoute(accessToken);
-    updateRouteLayer(map, coordsAccum); // Use MapLayerManager
+    const { coordsAccum, totalDist, waypointsUpdated, snappedWaypoints, snappedDirectFlags: mixedSnappedDirectFlags } = await buildMixedRoute(accessToken);
+    updateRouteLayer(map, coordsAccum); 
     currentRoutePathCoordinates = coordsAccum;
 
-    if (waypointsUpdated && snappedWaypoints && snappedDirectFlags) {
-      // Signal that waypoints were updated by buildMixedRoute
+    if (waypointsUpdated && snappedWaypoints && mixedSnappedDirectFlags) {
       waypointsUpdatedBySnapping = true;
       finalSnappedWaypoints = snappedWaypoints;
-      finalSnappedDirectFlags = snappedDirectFlags;
-      // DO NOT call updatePoints or saveWaypointsToStorage here.
-      // Let routing.ts handle it based on the return value.
+      finalSnappedDirectFlags = mixedSnappedDirectFlags; 
       console.log('[RCS/getRoute] buildMixedRoute indicates waypoints/flags were snapped.');
     }
     const duration = Math.round(totalDist / 5 * 60);
     setRouteDistance(`${totalDist.toFixed(2)} km`);
     setRouteDuration(`${duration} min`);
     setHasRoute(true);
-    addKilometerMarkers(map, coordsAccum); // Uses MapLayerManager
+    addKilometerMarkers(map, coordsAccum);
     return { success: true, waypointsSnapped: waypointsUpdatedBySnapping, snappedWaypoints: finalSnappedWaypoints ?? undefined, snappedDirectFlags: finalSnappedDirectFlags ?? undefined };
   }
 
-  // Fallback or standard Mapbox Directions API call for all segments (if not handled by mixed route logic)
-  try {
-    console.log('[RCS/getRoute] Calculating route using Mapbox Directions API for all segments.');
-    const currentWaypointsForAPI = [...waypoints];
-    const waypointsString = currentWaypointsForAPI.map(point => `${point[0]},${point[1]}`).join(';');
-    const radiusesString = currentWaypointsForAPI.map(() => '150').join(';'); // Keep generous radius for snapping
-    const queryUrl = `https://api.mapbox.com/directions/v5/mapbox/walking/${waypointsString}?` +
-                    `steps=true&geometries=geojson&overview=full&continue_straight=true&` +
-                    `access_token=${accessToken}&radiuses=${radiusesString}`;
+  // Fallback: All segments are to be routed via Mapbox Directions API (allSegmentsRouted should be true here)
+  if (allSegmentsRouted) { // Explicitly check for clarity, though it's the remaining case for >=2 waypoints
+    try {
+      console.log('[RCS/getRoute] Calculating route using Mapbox Directions API for all segments.');
+      const currentWaypointsForAPI = [...waypoints]; // Use a snapshot for the API call
+      const waypointsString = currentWaypointsForAPI.map(point => `${point[0]},${point[1]}`).join(';');
+      const radiusesString = currentWaypointsForAPI.map(() => '150').join(';'); // Keep generous radius for snapping
+      const queryUrl = `https://api.mapbox.com/directions/v5/mapbox/walking/${waypointsString}?` +
+                      `steps=true&geometries=geojson&overview=full&continue_straight=true&` +
+                      `access_token=${accessToken}&radiuses=${radiusesString}`;
 
-    const query = await fetch(queryUrl, { method: 'GET' });
-    const json = await query.json();
+      const query = await fetch(queryUrl, { method: 'GET' });
+      const json = await query.json();
 
-    if (!json || !json.routes || json.routes.length === 0 || !json.routes[0].geometry) {
-      console.error('[RCS/getRoute] Invalid API response or no route geometry. Response:', json);
-      setHasRoute(false);
-      updateRouteLayer(map, []); // Clear route on map
-      return { success: false, waypointsSnapped: false };
-    }
-    const data = json.routes[0];
-    currentRoutePathCoordinates = data.geometry.coordinates;
-    updateRouteLayer(map, currentRoutePathCoordinates); // Use MapLayerManager
+      if (!json || !json.routes || json.routes.length === 0 || !json.routes[0].geometry) {
+        console.error('[RCS/getRoute] Invalid API response or no route geometry. Response:', json);
+        setHasRoute(false);
+        updateRouteLayer(map, []); // Clear route on map
+        currentRoutePathCoordinates = [];
+        return { success: false, waypointsSnapped: false };
+      }
+      const data = json.routes[0];
+      currentRoutePathCoordinates = data.geometry.coordinates;
+      updateRouteLayer(map, currentRoutePathCoordinates); // Use MapLayerManager
 
-    if (json.waypoints && Array.isArray(json.waypoints)) {
-      const apiSnappedWaypoints = json.waypoints.map((wp: { location: Coordinate }) => wp.location);
-      if (apiSnappedWaypoints.length === currentWaypointsForAPI.length) {
-        const currentGlobalWaypoints = getWaypoints(); // Fetch fresh global waypoints
-        const isContextStillValid = currentGlobalWaypoints.length === currentWaypointsForAPI.length &&
-                                currentGlobalWaypoints.every((gwp, idx) => 
-                                    gwp[0] === currentWaypointsForAPI[idx][0] && gwp[1] === currentWaypointsForAPI[idx][1]
-                                );
+      if (json.waypoints && Array.isArray(json.waypoints)) {
+        const apiSnappedWaypoints = json.waypoints.map((wp: { location: Coordinate }) => wp.location);
+        if (apiSnappedWaypoints.length === currentWaypointsForAPI.length) {
+          const currentGlobalWaypoints = getWaypoints(); // Fetch fresh global waypoints
+          const isContextStillValid = currentGlobalWaypoints.length === currentWaypointsForAPI.length &&
+                                  currentGlobalWaypoints.every((gwp, idx) => 
+                                      gwp[0] === currentWaypointsForAPI[idx][0] && gwp[1] === currentWaypointsForAPI[idx][1]
+                                  );
 
-        if (!isContextStillValid) {
-          console.log('[RCS/getRoute] Global waypoints changed during API call. Discarding API snapping.');
-        } else {
-          let actualChangeMadeBySnapping = false;
-          const newSnappedWaypoints = [...currentGlobalWaypoints]; // Start with current global state
+          if (!isContextStillValid) {
+            console.log('[RCS/getRoute] Global waypoints changed during API call. Discarding API snapping.');
+          } else {
+            let actualChangeMadeBySnapping = false;
+            const newSnappedWaypoints = [...currentGlobalWaypoints]; // Start with current global state
 
-          for (let i = 0; i < currentGlobalWaypoints.length; i++) {
-            // Only snap if the waypoint is NOT marked as direct
-            if (!directFlags[i] && 
-                (currentGlobalWaypoints[i][0] !== apiSnappedWaypoints[i][0] || 
-                 currentGlobalWaypoints[i][1] !== apiSnappedWaypoints[i][1])) {
-              console.log(`[RCS/getRoute] API Snapping waypoint ${i} from ${currentGlobalWaypoints[i]} to ${apiSnappedWaypoints[i]}`);
-              newSnappedWaypoints[i] = apiSnappedWaypoints[i];
-              actualChangeMadeBySnapping = true;
+            for (let i = 0; i < currentGlobalWaypoints.length; i++) {
+              // Only snap if the waypoint is NOT marked as direct
+              if (!directFlags[i] && 
+                  (currentGlobalWaypoints[i][0] !== apiSnappedWaypoints[i][0] || 
+                   currentGlobalWaypoints[i][1] !== apiSnappedWaypoints[i][1])) {
+                console.log(`[RCS/getRoute] API Snapping waypoint ${i} from ${currentGlobalWaypoints[i]} to ${apiSnappedWaypoints[i]}`);
+                newSnappedWaypoints[i] = apiSnappedWaypoints[i];
+                actualChangeMadeBySnapping = true;
+              }
             }
-          }
-          if (actualChangeMadeBySnapping) {
-            waypointsUpdatedBySnapping = true;
-            finalSnappedWaypoints = newSnappedWaypoints;
-            finalSnappedDirectFlags = [...directFlags]; // Direct flags don't change from this type of snapping
-            console.log('[RCS/getRoute] Mapbox API snapping indicates waypoints were modified.');
-            // DO NOT call updatePoints or save here. Return info to caller.
+            if (actualChangeMadeBySnapping) {
+              waypointsUpdatedBySnapping = true;
+              finalSnappedWaypoints = newSnappedWaypoints;
+              finalSnappedDirectFlags = [...directFlags]; // Direct flags don't change from this type of snapping
+              console.log('[RCS/getRoute] Mapbox API snapping indicates waypoints were modified.');
+              // DO NOT call updatePoints or save here. Return info to caller.
+            }
           }
         }
       }
+
+      const distance = data.distance / 1000;
+      const duration = Math.round(data.duration / 60);
+      setRouteDistance(`${distance.toFixed(2)} km`);
+      setRouteDuration(`${duration} min`);
+      setHasRoute(true);
+      addKilometerMarkers(map, currentRoutePathCoordinates); // Uses MapLayerManager
+
+      return { success: true, waypointsSnapped: waypointsUpdatedBySnapping, snappedWaypoints: finalSnappedWaypoints ?? undefined, snappedDirectFlags: finalSnappedDirectFlags ?? undefined };
+
+    } catch (error) {
+      console.error('[RCS/getRoute] Error fetching route:', error);
+      setHasRoute(false);
+      updateRouteLayer(map, []); // Clear route on map
+      currentRoutePathCoordinates = [];
+      return { success: false, waypointsSnapped: false };
     }
-
-    const distance = data.distance / 1000;
-    const duration = Math.round(data.duration / 60);
-    setRouteDistance(`${distance.toFixed(2)} km`);
-    setRouteDuration(`${duration} min`);
-    setHasRoute(true);
-    addKilometerMarkers(map, currentRoutePathCoordinates); // Uses MapLayerManager
-
-    return { success: true, waypointsSnapped: waypointsUpdatedBySnapping, snappedWaypoints: finalSnappedWaypoints ?? undefined, snappedDirectFlags: finalSnappedDirectFlags ?? undefined };
-
-  } catch (error) {
-    console.error('[RCS/getRoute] Error fetching route:', error);
-    setHasRoute(false);
-    updateRouteLayer(map, []); // Clear route on map
-    currentRoutePathCoordinates = [];
-    return { success: false, waypointsSnapped: false };
   }
+  
+  // Should not be reached if logic is correct for waypoints.length >= 2
+  console.warn('[RCS/getRoute] Unhandled routing condition. Waypoints:', waypoints.length, 'Flags:', JSON.stringify(directFlags));
+  updateRouteLayer(map, []); 
+  currentRoutePathCoordinates = [];
+  setRouteDistance('');
+  setRouteDuration('');
+  setHasRoute(false);
+  return { success: false, waypointsSnapped: false, error: "Unhandled routing condition" };
 };
 
 // Function to get the current route path (for GPX export, etc.)
@@ -340,6 +356,6 @@ export const getCurrentRoutePath = (): Coordinate[] => {
 
 // Function to clear the current route path (e.g. when route is cleared in routing.ts)
 export const clearCurrentRoutePath = (): void => {
- // Re-instating original log for clarity if desired, or remove all logs for production.
-  // For now, keeping it minimal. The function name is clear.
+  currentRoutePathCoordinates = [];
+  console.log('[RCS] Current route path cleared.');
 }; 

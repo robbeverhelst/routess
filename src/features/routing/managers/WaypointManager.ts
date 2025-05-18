@@ -47,9 +47,13 @@ export const getWaypoints = () => waypoints;
 export const getDirectFlags = () => directFlags; // Added export for directFlags
 
 export const setWaypointsAndFlags = (newWaypoints: Coordinate[], newDirectFlags: boolean[]) => {
+  if (newWaypoints.length === 0 && waypoints.length > 0) { // Log only when clearing existing waypoints
+    console.warn('[WaypointManager.setWaypointsAndFlags] Clearing existing waypoints. Current count:', waypoints.length, 'Call stack:');
+    console.trace();
+  }
   waypoints = newWaypoints;
   directFlags = newDirectFlags;
-  console.log('[WaypointManager] Waypoints and flags set:', waypoints, directFlags);
+  console.log('[WaypointManager] Waypoints and flags set. Count:', waypoints.length);
 };
 
 export const _removeWaypointInternal = (index: number): void => {
@@ -122,10 +126,14 @@ export const removeWaypoint = async (
   accessToken: string,
   setRouteDistance: Dispatch<SetStateAction<string>>,
   setRouteDuration: Dispatch<SetStateAction<string>>,
-  setHasRoute: Dispatch<SetStateAction<boolean>>
+  setHasRoute: Dispatch<SetStateAction<boolean>>,
+  onError?: (message: string) => void
 ): Promise<void> => {
   if (index < 0 || index >= getWaypoints().length) {
     console.warn('[WaypointManager.removeWaypoint] Invalid index:', index);
+    if (onError) {
+      onError("Invalid waypoint index. Waypoint may no longer exist.");
+    }
     return;
   }
 
@@ -240,7 +248,8 @@ export const insertWaypointAtLocation = async (
 ): Promise<void> => {
   console.log('[WaypointManager.insertWaypoint] Attempting to insert waypoint at:', clickedCoords);
 
-  if (getWaypoints().length < 1) { 
+  const currentWaypoints = getWaypoints();
+  if (currentWaypoints.length < 1) { 
     console.warn('[WaypointManager.insertWaypoint] Not enough waypoints to define a route segment.');
     if (onError) onError("Cannot add waypoint: No existing route segment.");
     return;
@@ -316,16 +325,27 @@ export const insertWaypointAtLocation = async (
 
   console.log('[WaypointManager.insertWaypoint] Closest point on route:', closestPointOnRoute, 'Insert index:', insertIndex);
 
-  snapshot(); 
+  snapshot(); // Take snapshot before modifying waypoints and flags
 
-  const newWaypoints = [...getWaypoints()];
-  const newDirectFlags = [...getDirectFlags()];
+  // Create new arrays immutably
+  // currentWaypoints was already fetched at the start of the function if (currentWaypoints.length < 1)
+  const newWaypointsArray = [
+    ...currentWaypoints.slice(0, insertIndex),
+    closestPointOnRoute, // This is the new waypoint to insert
+    ...currentWaypoints.slice(insertIndex)
+  ];
 
-  newWaypoints.splice(insertIndex, 0, closestPointOnRoute);
-  newDirectFlags.splice(insertIndex, 0, false);
+  const currentDirectFlags = getDirectFlags(); // Fetch current direct flags
+  const newDirectFlagsArray = [
+    ...currentDirectFlags.slice(0, insertIndex),
+    false, // This is the direct flag for the new waypoint
+    ...currentDirectFlags.slice(insertIndex)
+  ];
+  
+  setWaypointsAndFlags(newWaypointsArray, newDirectFlagsArray);
 
-  setWaypointsAndFlags(newWaypoints, newDirectFlags);
-  updateWaypointsLayer(map, getWaypoints());
+  // Update map layers, save to local storage, and recalculate route
+  updateWaypointsLayer(map, getWaypoints()); // getWaypoints() will now return the new array
   saveWaypointsToLocalStorage(getWaypoints(), getDirectFlags());
 
   if (getWaypoints().length >= 2) {

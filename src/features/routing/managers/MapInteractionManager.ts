@@ -9,8 +9,7 @@ import type { Map as MapboxMap, MapMouseEvent, MapTouchEvent, MapLayerMouseEvent
 // Removed MapboxPopup import as we're using React-based popups via callback
 
 // Functions from routing.ts or other managers will be imported here
-import { updateWaypointPositionAndRecalculate } from '@/lib/routing';
-import { getWaypoints, addWaypoint } from '@/features/routing/managers/WaypointManager';
+import { getWaypoints, addWaypoint, updateWaypointPositionAndRecalculate } from '@/features/routing/managers/WaypointManager';
 import { snapshot } from '@/features/routing/managers/HistoryManager';
 // TODO: Correct import for snapshot if it's separate from getWaypoints
 // For now, let's assume getWaypoints and snapshot come from a combined manager or routing.ts temporarily
@@ -41,12 +40,12 @@ export interface PopupInfo {
   message?: string;
 }
 
-// Listener flags
-let clickListenerAttached = false;
-let contextMenuListenerAttached = false;
-let touchInteractionListenersAttached = false; // For long press and related touch events
+// Listener flags removed - will be handled by disposer pattern
+// let clickListenerAttached = false;
+// let contextMenuListenerAttached = false;
+// let touchInteractionListenersAttached = false; // For long press and related touch events
 
-// Drag state variables
+// Drag state variables - these are fine as module-scoped as they manage ongoing interaction state
 let isDragging = false;
 let draggedWaypointIndex = -1;
 let currentLngLat: Coordinate | null = null;
@@ -65,7 +64,7 @@ export const initializeMapInteractions = (
   setHasRoute: Dispatch<SetStateAction<boolean>>,
   setPopup: Dispatch<SetStateAction<PopupInfo | null>>,
   handleWaypointError: (message: string | null) => void
-) => {
+): () => void => { // Return a disposer function
   const mapCanvas = map.getCanvas();
 
   // --- ON MAP CLICK LOGIC ---
@@ -106,12 +105,11 @@ export const initializeMapInteractions = (
     );
   };
 
-  if (!clickListenerAttached) {
-    map.off('click', handleMapClickInternal); // Remove existing before adding, good practice
-    map.on('click', handleMapClickInternal);
-    clickListenerAttached = true;
-    console.log('[MapInteractionManager] Unified map click listener (for clearing React popup) added.');
-  }
+  // map.off('click', handleMapClickInternal); // Remove existing before adding - no longer needed with disposer
+  map.on('click', handleMapClickInternal);
+  // clickListenerAttached = true; // Flag removed
+  console.log('[MapInteractionManager] Unified map click listener (for clearing React popup) added.');
+
 
   // --- ON CONTEXT MENU LOGIC (from MapWithRouting.tsx) ---
   const handleContextMenuInternal = (e: MapMouseEvent | MapTouchEvent) => {
@@ -174,12 +172,11 @@ export const initializeMapInteractions = (
     }
   };
   
-  if (!contextMenuListenerAttached) {
-    map.off('contextmenu', handleContextMenuInternal); // Remove if pre-existing
-    map.on('contextmenu', handleContextMenuInternal);
-    contextMenuListenerAttached = true;
-    console.log('[MapInteractionManager] Map context menu listener (for React popup) added.');
-  }
+  // map.off('contextmenu', handleContextMenuInternal); // Remove if pre-existing - no longer needed with disposer
+  map.on('contextmenu', handleContextMenuInternal);
+  // contextMenuListenerAttached = true; // Flag removed
+  console.log('[MapInteractionManager] Map context menu listener (for React popup) added.');
+
 
   // --- LONG PRESS & TOUCH LOGIC (from MapWithRouting.tsx) ---
   const handleLongPressInternal = (lngLat: { lng: number; lat: number }, point: { x: number; y: number }) => {
@@ -259,31 +256,33 @@ export const initializeMapInteractions = (
     }
   };
 
-  if (!touchInteractionListenersAttached) {
-    // Remove existing listeners before attaching new ones
-    map.off('touchstart', handleTouchStartInternal);
-    map.off('touchend', handleTouchEndInternal);
-    map.off('touchmove', handlePointerMoveInternal);
-    map.off('mousemove', handlePointerMoveInternal); // also for mouse to cancel long press if mouse is used to drag after touchstart on a hybrid device
+  // Remove existing listeners before attaching new ones - no longer needed with disposer
+  // map.off('touchstart', handleTouchStartInternal);
+  // map.off('touchend', handleTouchEndInternal);
+  // map.off('touchmove', handlePointerMoveInternal);
+  // map.off('mousemove', handlePointerMoveInternal); 
 
-    map.on('touchstart', handleTouchStartInternal);
-    map.on('touchend', handleTouchEndInternal);
-    map.on('touchmove', handlePointerMoveInternal);
-    map.on('mousemove', handlePointerMoveInternal); // Mouse move should also cancel a pending long press
+  map.on('touchstart', handleTouchStartInternal);
+  map.on('touchend', handleTouchEndInternal);
+  map.on('touchmove', handlePointerMoveInternal);
+  map.on('mousemove', handlePointerMoveInternal); // Mouse move should also cancel a pending long press
 
-    touchInteractionListenersAttached = true;
-    console.log('[MapInteractionManager] Touch interaction listeners (for long press) added.');
-  }
+  // touchInteractionListenersAttached = true; // Flag removed
+  console.log('[MapInteractionManager] Touch interaction listeners (for long press) added.');
+
 
   // --- WAYPOINT DRAGGING LOGIC (existing, ensure it coexists) ---
   // Important: The 'mousemove' listener for dragging is set below (onMapMouseMoveForDrag).
   // The handlePointerMoveInternal is for *cancelling* a long press if movement occurs.
   // They serve different purposes and should coexist. The drag-specific mousemove is only active *during* a drag.
 
-  map.on('mouseenter', WAYPOINTS_LAYER_ID, () => { mapCanvas.style.cursor = 'move'; });
-  map.on('mouseleave', WAYPOINTS_LAYER_ID, () => { mapCanvas.style.cursor = ''; });
+  const mouseEnterWaypointHandler = () => { mapCanvas.style.cursor = 'move'; };
+  const mouseLeaveWaypointHandler = () => { mapCanvas.style.cursor = ''; };
 
-  map.on('mousedown', WAYPOINTS_LAYER_ID, (e: MapLayerMouseEvent) => {
+  map.on('mouseenter', WAYPOINTS_LAYER_ID, mouseEnterWaypointHandler);
+  map.on('mouseleave', WAYPOINTS_LAYER_ID, mouseLeaveWaypointHandler);
+
+  const mouseDownOnWaypointHandler = (e: MapLayerMouseEvent) => {
     if (e.originalEvent.button !== 0) return; 
     // Check if the click was on a waypoint; if so, initiate drag.
     // If not, the general map click (handleMapClickInternal) will handle it (e.g., clear popup).
@@ -295,30 +294,39 @@ export const initializeMapInteractions = (
     mapCanvas.style.cursor = 'grab';
 
     const clickedFeature = features[0];
-    if (clickedFeature.properties && typeof clickedFeature.properties.waypointIndex === 'number') {
-      draggedWaypointIndex = clickedFeature.properties.waypointIndex;
-      isDragging = true;
-      map.dragPan.disable();
-      snapshot(); 
+    if (clickedFeature.properties && (typeof clickedFeature.properties.waypointIndex === 'number' || typeof clickedFeature.properties.waypointIndex === 'string')) {
+      const waypointIndexRaw = clickedFeature.properties.waypointIndex;
+      const parsedIndex = parseInt(String(waypointIndexRaw), 10);
 
-      const waypoints = getWaypoints(); 
-      const lines: GeoJSON.Feature<GeoJSON.LineString>[] = [];
-      const currentDragPos = e.lngLat.toArray() as Coordinate;
-      if (draggedWaypointIndex > 0 && waypoints[draggedWaypointIndex - 1]) {
-        lines.push({
-          type: 'Feature', properties: {},
-          geometry: { type: 'LineString', coordinates: [waypoints[draggedWaypointIndex - 1], currentDragPos] }
-        });
+      if (!isNaN(parsedIndex)) {
+        draggedWaypointIndex = parsedIndex;
+        isDragging = true;
+        map.dragPan.disable();
+        snapshot(); 
+
+        const waypoints = getWaypoints(); 
+        const lines: GeoJSON.Feature<GeoJSON.LineString>[] = [];
+        const currentDragPos = e.lngLat.toArray() as Coordinate;
+        if (draggedWaypointIndex > 0 && waypoints[draggedWaypointIndex - 1]) {
+          lines.push({
+            type: 'Feature', properties: {},
+            geometry: { type: 'LineString', coordinates: [waypoints[draggedWaypointIndex - 1], currentDragPos] }
+          });
+        }
+        if (draggedWaypointIndex < waypoints.length - 1 && waypoints[draggedWaypointIndex + 1]) {
+          lines.push({
+            type: 'Feature', properties: {},
+            geometry: { type: 'LineString', coordinates: [currentDragPos, waypoints[draggedWaypointIndex + 1]] }
+          });
+        }
+        updateDragLinesLayer(map, lines);
+      } else {
+        console.warn('[MapInteractionManager] Could not parse waypointIndex on mousedown:', waypointIndexRaw);
       }
-      if (draggedWaypointIndex < waypoints.length - 1 && waypoints[draggedWaypointIndex + 1]) {
-        lines.push({
-          type: 'Feature', properties: {},
-          geometry: { type: 'LineString', coordinates: [currentDragPos, waypoints[draggedWaypointIndex + 1]] }
-        });
-      }
-      updateDragLinesLayer(map, lines);
     }
-  });
+  };
+  map.on('mousedown', WAYPOINTS_LAYER_ID, mouseDownOnWaypointHandler);
+
 
   const onMapMouseMoveForDrag = (eMove: MapMouseEvent) => {
     if (!isDragging || draggedWaypointIndex === -1) return;
@@ -340,11 +348,8 @@ export const initializeMapInteractions = (
     updateDragLinesLayer(map, lines);
   };
   
-  // Attach specific mousemove for drag, ensure it doesn't conflict with general pointer move for long press cancellation
-  // The general one is already attached. This one is specific to dragging.
-  // We can add and remove this listener dynamically or gate its execution.
   // For simplicity, let onMapMouseMoveForDrag internally check `isDragging`.
-  map.off('mousemove', onMapMouseMoveForDrag); // Remove if existing
+  // map.off('mousemove', onMapMouseMoveForDrag); // Remove if existing - no longer needed
   map.on('mousemove', onMapMouseMoveForDrag);
 
 
@@ -371,12 +376,12 @@ export const initializeMapInteractions = (
       draggedWaypointIndex = -1; 
     }
   };
-  map.off('mouseup', onMapMouseUpInternal); // Remove if existing
+  // map.off('mouseup', onMapMouseUpInternal); // Remove if existing - no longer needed
   map.on('mouseup', onMapMouseUpInternal);
 
 
   // --- Touch equivalents for dragging (existing, ensure coexists) ---
-  map.on('touchstart', WAYPOINTS_LAYER_ID, (e: MapTouchEvent) => { // Corrected type to MapTouchEvent
+  const touchStartOnWaypointHandler = (e: MapTouchEvent) => { // Corrected type to MapTouchEvent
     // Check if this touch is on a waypoint. If so, start drag.
     // The general touchstart (handleTouchStartInternal) handles long press initiation.
     // This one is specific to starting a drag on a waypoint.
@@ -388,24 +393,33 @@ export const initializeMapInteractions = (
     mapCanvas.style.cursor = 'grab'; // Though cursor might not be visible on touch devices
     
     const clickedFeature = features[0];
-    if (clickedFeature.properties && typeof clickedFeature.properties.waypointIndex === 'number') {
-      draggedWaypointIndex = clickedFeature.properties.waypointIndex;
-      isDragging = true;
-      map.dragPan.disable();
-      snapshot(); 
-      currentLngLat = e.lngLat.toArray() as Coordinate; 
+    if (clickedFeature.properties && (typeof clickedFeature.properties.waypointIndex === 'number' || typeof clickedFeature.properties.waypointIndex === 'string')) {
+      const waypointIndexRaw = clickedFeature.properties.waypointIndex;
+      const parsedIndex = parseInt(String(waypointIndexRaw), 10);
 
-      const waypoints = getWaypoints(); 
-      const lines: GeoJSON.Feature<GeoJSON.LineString>[] = [];
-      if (draggedWaypointIndex > 0 && waypoints[draggedWaypointIndex - 1]) {
-        lines.push({ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [waypoints[draggedWaypointIndex - 1], currentLngLat] }});
+      if (!isNaN(parsedIndex)) {
+        draggedWaypointIndex = parsedIndex;
+        isDragging = true;
+        map.dragPan.disable();
+        snapshot(); 
+        currentLngLat = e.lngLat.toArray() as Coordinate; 
+
+        const waypoints = getWaypoints(); 
+        const lines: GeoJSON.Feature<GeoJSON.LineString>[] = [];
+        if (draggedWaypointIndex > 0 && waypoints[draggedWaypointIndex - 1]) {
+          lines.push({ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [waypoints[draggedWaypointIndex - 1], currentLngLat] }});
+        }
+        if (draggedWaypointIndex < waypoints.length - 1 && waypoints[draggedWaypointIndex + 1]) {
+          lines.push({ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [currentLngLat, waypoints[draggedWaypointIndex + 1]] }});
+        }
+        updateDragLinesLayer(map, lines);
+      } else {
+        console.warn('[MapInteractionManager] Could not parse waypointIndex on touchstart:', waypointIndexRaw);
       }
-      if (draggedWaypointIndex < waypoints.length - 1 && waypoints[draggedWaypointIndex + 1]) {
-        lines.push({ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [currentLngLat, waypoints[draggedWaypointIndex + 1]] }});
-      }
-      updateDragLinesLayer(map, lines);
     }
-  });
+  };
+  map.on('touchstart', WAYPOINTS_LAYER_ID, touchStartOnWaypointHandler);
+
 
   const onMapTouchMoveForDrag = (eMove: MapTouchEvent) => {
     if (eMove.originalEvent.touches.length !== 1 || !isDragging || draggedWaypointIndex === -1) return;
@@ -425,7 +439,7 @@ export const initializeMapInteractions = (
     }
     updateDragLinesLayer(map, lines);
   };
-  map.off('touchmove', onMapTouchMoveForDrag); // Remove if existing
+  // map.off('touchmove', onMapTouchMoveForDrag); // Remove if existing - no longer needed
   map.on('touchmove', onMapTouchMoveForDrag);
 
   const onMapTouchEndInternal = async () => {
@@ -452,20 +466,43 @@ export const initializeMapInteractions = (
       draggedWaypointIndex = -1;
     }
   };
-  map.off('touchend', onMapTouchEndInternal); // Remove if existing
+  // map.off('touchend', onMapTouchEndInternal); // Remove if existing - no longer needed
   map.on('touchend', onMapTouchEndInternal);
   
   console.log('[MapInteractionManager] All map interaction listeners initialized/updated.');
+
+  // Return a cleanup function
+  return () => {
+    map.off('click', handleMapClickInternal);
+    map.off('contextmenu', handleContextMenuInternal);
+    
+    map.off('touchstart', handleTouchStartInternal); // General touch start for long press
+    map.off('touchend', handleTouchEndInternal);   // General touch end for long press
+    map.off('touchmove', handlePointerMoveInternal); // General touch move for long press cancellation
+    map.off('mousemove', handlePointerMoveInternal); // General mouse move for long press cancellation
+
+    map.off('mouseenter', WAYPOINTS_LAYER_ID, mouseEnterWaypointHandler);
+    map.off('mouseleave', WAYPOINTS_LAYER_ID, mouseLeaveWaypointHandler);
+    map.off('mousedown', WAYPOINTS_LAYER_ID, mouseDownOnWaypointHandler);
+    map.off('mousemove', onMapMouseMoveForDrag); // Mouse move for drag
+    map.off('mouseup', onMapMouseUpInternal);
+
+    map.off('touchstart', WAYPOINTS_LAYER_ID, touchStartOnWaypointHandler); // Touch start on waypoint for drag
+    map.off('touchmove', onMapTouchMoveForDrag); // Touch move for drag
+    map.off('touchend', onMapTouchEndInternal);   // Touch end for drag
+
+    console.log('[MapInteractionManager] All listeners for this map instance cleaned up.');
+  };
 };
 
-// Cleanup function if ever needed
-export const removeMapInteractions = (mapInstance: MapboxMap) => {
-  // Example: mapInstance.off('click', handleMapClickInternal);
-  // ... remove all listeners added in initializeMapInteractions
-  // This is a placeholder; a more robust cleanup would remove specific handlers for this mapInstance.
-  // The current listener flags are module-scoped and don't distinguish by map instance.
-  console.log('[MapInteractionManager] Listener cleanup placeholder. Map instance container ID:', mapInstance.getContainer().id);
-  clickListenerAttached = false; // These flags would need to be instance-specific for multi-map scenarios
-  contextMenuListenerAttached = false;
-  touchInteractionListenersAttached = false;
-}; 
+// Cleanup function if ever needed - REMOVED as initializeMapInteractions now returns a disposer
+// export const removeMapInteractions = (mapInstance: MapboxMap) => {
+//   // Example: mapInstance.off('click', handleMapClickInternal);
+//   // ... remove all listeners added in initializeMapInteractions
+//   // This is a placeholder; a more robust cleanup would remove specific handlers for this mapInstance.
+//   // The current listener flags are module-scoped and don't distinguish by map instance.
+//   console.log('[MapInteractionManager] Listener cleanup placeholder. Map instance container ID:', mapInstance.getContainer().id);
+//   clickListenerAttached = false; // These flags would need to be instance-specific for multi-map scenarios
+//   contextMenuListenerAttached = false;
+//   touchInteractionListenersAttached = false;
+// }; 

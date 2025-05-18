@@ -57,7 +57,13 @@ export function Sidebar({
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   
   const handleExportGPX = () => {
-    exportRouteToGPX();
+    const result = exportRouteToGPX();
+    if (!result.success && result.message) {
+      onImportError(result.message); // Reusing onImportError for feedback
+    } else if (result.success) {
+      console.log('Route exported successfully.'); // Placeholder for success feedback
+      // onImportError("Route exported successfully."); // Or use the same feedback for success
+    }
   };
 
   const handleImportGPX = () => {

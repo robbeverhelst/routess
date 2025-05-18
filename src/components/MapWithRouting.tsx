@@ -15,7 +15,8 @@ import {
   setRouteData,
   insertWaypointAtLocation,
   addWaypoint,
-  removeWaypoint
+  removeWaypoint,
+  teardownRouting
 } from '@/lib/routing';
 import { zoomToRoute } from '@/features/routing/utils/RoutingUtils';
 import { decompressAndParse } from '@/lib/shareUtils';
@@ -101,6 +102,7 @@ export default function MapWithRouting({
   const waypointErrorTimeout = useRef<number | null>(null);
   const animationFrameIdRef = useRef<number | null>(null); // For halo animation
   const initialRouteZoomDoneRef = useRef<boolean>(false); // Added ref
+  const routingDisposerRef = useRef<(() => void) | null>(null); // Ref to store the disposer
   
   const { 
     location: userLocation, 
@@ -160,7 +162,7 @@ export default function MapWithRouting({
   const handleMapLoad = useCallback((event: { target: mapboxgl.Map }) => {
     console.log('[MapWithRouting] Map loaded, setting up routing');
     mapRef.current = event.target;
-    setupRouting(
+    const disposer = setupRouting(
       event.target,
       MAPBOX_TOKEN,
       setRouteDistance,
@@ -169,6 +171,7 @@ export default function MapWithRouting({
       setPopup,
       handleWaypointError
     );
+    routingDisposerRef.current = disposer;
     setIsMapReady(true);
     console.log('[MapWithRouting] Routing setup complete');
 
@@ -219,6 +222,25 @@ export default function MapWithRouting({
       }
     }
   }, [setRouteDistance, setRouteDuration, setHasRoute, setPopup, handleWaypointError, handleRouteInfoErrorFromHook]);
+
+  // Effect to clean up routing listeners on unmount
+  useEffect(() => {
+    return () => {
+      if (routingDisposerRef.current) {
+        console.log('[MapWithRouting] Cleaning up map interaction listeners.');
+        routingDisposerRef.current();
+        routingDisposerRef.current = null;
+      }
+      // Call the general routing teardown
+      console.log('[MapWithRouting] Tearing down routing module subscriptions and refs.');
+      teardownRouting();
+
+      if (mapRef.current) {
+        console.log('[MapWithRouting] Removing map instance (commented out).');
+        // mapRef.current.remove(); // This can cause issues if map is removed elsewhere or if used in strict mode with double invokes
+      }
+    };
+  }, []); // Empty dependency array means this runs once on mount and cleanup on unmount
 
   // Effect to update map with user location from hook
   useEffect(() => {
@@ -622,9 +644,9 @@ export default function MapWithRouting({
         />
       </div>
 
-      {/* Waypoint error notification */}
+      {/* Waypoint error notification - MOVED TO BOTTOM LEFT */}
       {waypointError && (
-        <div className="absolute bottom-20 right-8 z-10 max-w-xs bg-orange-50 p-3 rounded-md border border-orange-200 text-sm text-orange-800 shadow-md">
+        <div className="absolute bottom-8 left-8 z-10 max-w-xs bg-orange-50 p-3 rounded-md border border-orange-200 text-sm text-orange-800 shadow-md">
           <div className="flex items-center gap-2">
             <span className="text-xl">⚠️</span>
             <span>{waypointError}</span>
