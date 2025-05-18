@@ -125,7 +125,7 @@ export function Sidebar({
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="bg-white/90 dark:bg-black/80 hover:bg-white/70 dark:hover:bg-black/60 shadow-sm">
+        <Button variant="ghost" size="icon" className="bg-white/90 dark:bg-black/80 hover:bg-white/70 dark:hover:bg-black/60 shadow-sm h-10 w-10">
           <Menu size={20} />
         </Button>
       </SheetTrigger>

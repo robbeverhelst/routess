@@ -108,7 +108,7 @@ export function LocationSearch({
             variant="secondary"
             size="icon"
             onClick={onToggleMobileSearch}
-            className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60"
+            className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 h-10 w-10"
             title="Search"
           >
             <Search size={18} />

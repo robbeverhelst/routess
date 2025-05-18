@@ -30,10 +30,9 @@ export function RouteControls({
     <div className="flex flex-col md:flex-row items-start md:items-center gap-2">
       <Button
         variant="secondary"
-        size="icon"
-        disabled={!canUndo || isLocked}
         onClick={onUndo}
-        className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 disabled:opacity-50"
+        disabled={!canUndo || isLocked}
+        className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 disabled:opacity-50 h-10 w-10"
         title="Undo"
       >
         <ArrowLeftCircle size={18} />
@@ -41,10 +40,9 @@ export function RouteControls({
       
       <Button
         variant="secondary"
-        size="icon"
-        disabled={!canRedo || isLocked}
         onClick={onRedo}
-        className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 disabled:opacity-50"
+        disabled={!canRedo || isLocked}
+        className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 disabled:opacity-50 h-10 w-10"
         title="Redo"
       >
         <ArrowRightCircle size={18} />
@@ -52,9 +50,8 @@ export function RouteControls({
       
       <Button
         variant="secondary"
-        size="icon"
         onClick={onLocate}
-        className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60"
+        className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 h-10 w-10"
         title={hasUserLocation ? "Center on my location" : "Location not available"}
       >
         <div className="relative">
@@ -69,18 +66,16 @@ export function RouteControls({
         variant="secondary"
         onClick={onReset}
         disabled={!hasRoute || isLocked}
-        className={`bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 px-3 md:px-4 py-2 ${(!hasRoute || isLocked) ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed' : ''}`}
+        className={`bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 disabled:opacity-50 h-10 w-10`}
         title="Reset route"
       >
-        <RefreshCw size={18} className="mr-0 md:mr-1" />
-        <span className="hidden md:inline">Reset</span>
+        <RefreshCw size={18} />
       </Button>
       
       <Button
         variant="secondary"
-        size="icon"
         onClick={onToggleLock}
-        className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60"
+        className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 h-10 w-10"
         title={isLocked ? "Unlock map interaction" : "Lock map interaction"}
       >
         {isLocked ? <Lock size={18} /> : <Unlock size={18} />}
