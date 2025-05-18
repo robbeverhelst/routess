@@ -158,7 +158,8 @@ export const initializeMapInteractions = (
       setRouteDistance,
       setRouteDuration,
       setHasRoute,
-      handleWaypointError
+      handleWaypointError,
+      isMapLockedRef.current // Pass isMapLocked status
     );
   };
 
@@ -238,7 +239,8 @@ export const initializeMapInteractions = (
         setRouteDistance,
         setRouteDuration,
         setHasRoute,
-        handleWaypointError
+        handleWaypointError,
+        isMapLockedRef.current // Pass isMapLocked status
       );
 
       if (result.success && typeof result.newIndex === 'number') {
@@ -333,7 +335,8 @@ export const initializeMapInteractions = (
         setRouteDistance,
         setRouteDuration,
         setHasRoute,
-        handleWaypointError
+        handleWaypointError,
+        isMapLockedRef.current // Pass isMapLocked status
       );
 
       if (result.success && typeof result.newIndex === 'number') {
@@ -468,7 +471,8 @@ export const initializeMapInteractions = (
       setRouteDistance,
       setRouteDuration,
       setHasRoute,
-      handleWaypointError
+      handleWaypointError,
+      isMapLockedRef.current // Pass isMapLocked status
     );
     
     isDragging = false;
@@ -520,7 +524,8 @@ export const initializeMapInteractions = (
       setRouteDistance,
       setRouteDuration,
       setHasRoute,
-      handleWaypointError
+      handleWaypointError,
+      isMapLockedRef.current // Pass isMapLocked status
     );
 
     isDragging = false;

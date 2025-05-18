@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import Map from 'react-map-gl/mapbox';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { RouteControls } from '@/components/ui/route-controls';
+import { RouteControls, type TimeOfDay } from '@/components/ui/route-controls';
 import { LocationSearch } from '@/components/ui/location-search';
 import { Sidebar } from '@/components/ui/sidebar';
 import { 
@@ -23,7 +23,7 @@ import { decompressAndParse } from '@/lib/shareUtils';
 import {
   getWaypoints, 
 } from '@/features/routing/managers/WaypointManager';
-import { updateWaypointsLayer } from '@/features/routing/managers/MapLayerManager';
+import { updateWaypointsLayer, ROUTE_LAYER_ID, ROUTE_CASING_LAYER_ID } from '@/features/routing/managers/MapLayerManager';
 import {
   hasUndo as historyHasUndo,
   hasRedo as historyHasRedo,
@@ -106,6 +106,20 @@ try {
   console.error('[MapWithRouting Init] Error reading lastKnownLocation from localStorage on init:', e);
 }
 
+// Define route colors for day and night modes
+const DAY_ROUTE_COLOR = '#3887be';
+const DAY_ROUTE_HOVER_COLOR = '#FF8C00';
+const DAY_ROUTE_CASING_COLOR = '#003366';
+const DAY_ROUTE_CASING_OPACITY = 0.2;
+
+const NIGHT_ROUTE_COLOR = '#7FDBFF';
+const NIGHT_ROUTE_HOVER_COLOR = '#FFDC00';
+const NIGHT_ROUTE_CASING_COLOR = '#A4D8F0';
+const NIGHT_ROUTE_CASING_OPACITY = 0.3;
+
+// Order of presets for cycling
+const lightPresetsOrder: TimeOfDay[] = ['dawn', 'day', 'dusk', 'night'];
+
 export default function MapWithRouting({
   initialViewState = DEFAULT_VIEW_STATE,
   width = '100%',
@@ -122,6 +136,7 @@ export default function MapWithRouting({
   const routeInitTimeoutRef = useRef<number | null>(null); // Reference to store timeout ID
   const [isMapLocked, setIsMapLocked] = useState(false);
   const isMapLockedRef = useRef(isMapLocked); // Create a ref for isMapLocked
+  const [currentLightPreset, setCurrentLightPreset] = useState<TimeOfDay>('day'); // Initial preset
   
   const { 
     location: userLocation, 
@@ -502,13 +517,14 @@ export default function MapWithRouting({
     console.log('[MapWithRouting] Attempting to reverse route.');
     await reverseRoute(
       mapRef.current, 
-      MAPBOX_TOKEN, 
+      MAPBOX_TOKEN!, 
       setRouteDistance, 
       setRouteDuration, 
-      setHasRoute
+      setHasRoute,
+      isMapLockedRef.current 
     );
     console.log('[MapWithRouting] Reverse route call executed.');
-  }, [MAPBOX_TOKEN, hasRoute, setRouteDistance, setRouteDuration, setHasRoute]);
+  }, [MAPBOX_TOKEN, hasRoute, setRouteDistance, setRouteDuration, setHasRoute, isMapLockedRef]);
 
   const handleLocate = useCallback(() => {
     if (mapRef.current && userLocation && !locationError) {
@@ -534,16 +550,16 @@ export default function MapWithRouting({
       mapRef.current,
       [popup.longitude, popup.latitude],
       true, // isDirect = true
-      MAPBOX_TOKEN,
+      MAPBOX_TOKEN!,
       setRouteDistance,
       setRouteDuration,
       setHasRoute,
-      handleWaypointError
+      handleWaypointError,
+      isMapLockedRef.current
     );
     
-    // Clear the popup
     setPopup(null);
-  }, [popup, handleWaypointError, MAPBOX_TOKEN, setRouteDistance, setRouteDuration, setHasRoute]);
+  }, [popup, handleWaypointError, MAPBOX_TOKEN, setRouteDistance, setRouteDuration, setHasRoute, isMapLockedRef]);
 
   // Handle remove waypoint button click
   const handleRemoveWaypoint = useCallback(() => {
@@ -554,15 +570,16 @@ export default function MapWithRouting({
     removeWaypoint(
       mapRef.current,
       popup.waypointIndex,
-      MAPBOX_TOKEN,
+      MAPBOX_TOKEN!,
       setRouteDistance,
       setRouteDuration,
-      setHasRoute
+      setHasRoute,
+      handleWaypointError,
+      isMapLockedRef.current
     );
     
-    // Clear the popup
     setPopup(null);
-  }, [popup, MAPBOX_TOKEN, setRouteDistance, setRouteDuration, setHasRoute]);
+  }, [popup, MAPBOX_TOKEN, setRouteDistance, setRouteDuration, setHasRoute, handleWaypointError, isMapLockedRef]);
 
   // New: Handle "Add waypoint here" button click from route context menu
   const handleAddWaypointOnRoute = useCallback(async () => {
@@ -573,15 +590,16 @@ export default function MapWithRouting({
     await insertWaypointAtLocation(
       mapRef.current,
       [popup.longitude, popup.latitude],
-      MAPBOX_TOKEN,
+      MAPBOX_TOKEN!,
       setRouteDistance,
       setRouteDuration,
       setHasRoute,
-      handleWaypointError
+      handleWaypointError,
+      isMapLockedRef.current
     );
 
     setPopup(null);
-  }, [popup, MAPBOX_TOKEN, setRouteDistance, setRouteDuration, setHasRoute, handleWaypointError]);
+  }, [popup, MAPBOX_TOKEN, setRouteDistance, setRouteDuration, setHasRoute, handleWaypointError, isMapLockedRef]);
 
   // Add a new handler for location search
   const handleSelectLocation = useCallback((location: { lng: number; lat: number; name: string }) => {
@@ -631,6 +649,57 @@ export default function MapWithRouting({
     });
   }, [hasRoute]);
 
+  const handleCycleTimeOfDay = useCallback(() => {
+    if (mapRef.current) {
+      const map = mapRef.current;
+      const currentIndex = lightPresetsOrder.indexOf(currentLightPreset);
+      const nextIndex = (currentIndex + 1) % lightPresetsOrder.length;
+      const nextLightPreset = lightPresetsOrder[nextIndex];
+      
+      setCurrentLightPreset(nextLightPreset);
+      map.setConfigProperty('basemap', 'lightPreset', nextLightPreset);
+
+      const isDarkMode = nextLightPreset === 'dusk' || nextLightPreset === 'night';
+
+      if (map.getLayer(ROUTE_LAYER_ID)) {
+        map.setPaintProperty(ROUTE_LAYER_ID, 'line-color', [
+          'case',
+          ['boolean', ['feature-state', 'hover'], false],
+          isDarkMode ? NIGHT_ROUTE_HOVER_COLOR : DAY_ROUTE_HOVER_COLOR,
+          isDarkMode ? NIGHT_ROUTE_COLOR : DAY_ROUTE_COLOR
+        ]);
+      }
+
+      if (map.getLayer(ROUTE_CASING_LAYER_ID)) {
+        map.setPaintProperty(ROUTE_CASING_LAYER_ID, 'line-color', isDarkMode ? NIGHT_ROUTE_CASING_COLOR : DAY_ROUTE_CASING_COLOR);
+        map.setPaintProperty(ROUTE_CASING_LAYER_ID, 'line-opacity', isDarkMode ? NIGHT_ROUTE_CASING_OPACITY : DAY_ROUTE_CASING_OPACITY);
+      }
+    }
+  }, [currentLightPreset, mapRef]);
+  
+  // Effect to set initial light preset on map load, if map is ready before this effect runs.
+  // Or, if you prefer, set it once handleMapLoad has confirmed map readiness.
+  useEffect(() => {
+    if (mapRef.current && isMapReady) { // Ensure map is ready
+        const map = mapRef.current;
+        map.setConfigProperty('basemap', 'lightPreset', currentLightPreset);
+        // Also apply initial route colors based on the initial light preset
+        const isDarkMode = currentLightPreset === 'dusk' || currentLightPreset === 'night';
+        if (map.getLayer(ROUTE_LAYER_ID)) {
+            map.setPaintProperty(ROUTE_LAYER_ID, 'line-color', [
+                'case',
+                ['boolean', ['feature-state', 'hover'], false],
+                isDarkMode ? NIGHT_ROUTE_HOVER_COLOR : DAY_ROUTE_HOVER_COLOR,
+                isDarkMode ? NIGHT_ROUTE_COLOR : DAY_ROUTE_COLOR
+            ]);
+        }
+        if (map.getLayer(ROUTE_CASING_LAYER_ID)) {
+            map.setPaintProperty(ROUTE_CASING_LAYER_ID, 'line-color', isDarkMode ? NIGHT_ROUTE_CASING_COLOR : DAY_ROUTE_CASING_COLOR);
+            map.setPaintProperty(ROUTE_CASING_LAYER_ID, 'line-opacity', isDarkMode ? NIGHT_ROUTE_CASING_OPACITY : DAY_ROUTE_CASING_OPACITY);
+        }
+    }
+  }, [isMapReady, currentLightPreset]); // Rerun if currentLightPreset changes (e.g. initial load) or map becomes ready
+
   return (
     <div className="relative w-full h-full">
       <Map
@@ -663,11 +732,11 @@ export default function MapWithRouting({
         )}
       </Map>
 
-      {/* Mobile Controls Layout */}
+      {/* Mobile Controls Layout - REMOVING mt-12 from RouteControls wrapper */}
       <div className="absolute top-4 left-0 right-0 z-10 p-4 md:hidden">
         <div className="flex justify-between items-start w-full">
           {/* Top-Left: RouteControls (stacked) */}
-          <div className="flex flex-col items-start gap-2">
+          <div className="flex flex-col items-start gap-2 md:mt-0"> {/* Removed mt-12 */}
             <RouteControls
               onUndo={handleUndo}
               onRedo={handleRedo}
@@ -679,10 +748,12 @@ export default function MapWithRouting({
               hasRoute={hasRoute}
               isLocked={isMapLocked}
               onToggleLock={handleToggleLock}
+              onCycleTimeOfDay={handleCycleTimeOfDay}
+              currentTimeOfDay={currentLightPreset}
             />
           </div>
 
-          {/* Top-Right: Search Icon + Sidebar (Hamburger) + Conditional Search Bar */}
+          {/* Top-Right: Search Icon + Sidebar (Hamburger) + Conditional Search Bar - REMAINS ALIGNED WITH TOP-4 PADDING */}
           <div className="flex flex-col items-end gap-2 flex-grow">
             <div className="flex items-center justify-end gap-2 w-full"> {/* This container ensures LocationSearch can expand */}
               <LocationSearch
@@ -735,6 +806,8 @@ export default function MapWithRouting({
             hasRoute={hasRoute}
             isLocked={isMapLocked}
             onToggleLock={handleToggleLock}
+            onCycleTimeOfDay={handleCycleTimeOfDay}
+            currentTimeOfDay={currentLightPreset}
         />
       </div>
 

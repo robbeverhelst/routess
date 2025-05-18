@@ -102,19 +102,20 @@ export const addWaypoint = async (
   setRouteDistance: Dispatch<SetStateAction<string>>,
   setRouteDuration: Dispatch<SetStateAction<string>>,
   setHasRoute: Dispatch<SetStateAction<boolean>>,
-  onError?: (message: string) => void
+  handleWaypointError: (message: string | null) => void,
+  isMapLocked: boolean
 ): Promise<boolean> => {
   snapshot(); // Snapshot for undo/redo
 
   const addResult = await _addWaypointInternal(coords, isDirect, accessToken);
 
   if (!addResult.success) {
-    if (onError && addResult.error) onError(addResult.error);
+    if (handleWaypointError && addResult.error) handleWaypointError(addResult.error);
     return false;
   }
 
   // Successfully added waypoint
-  updateWaypointsLayer(map, getWaypoints());
+  updateWaypointsLayer(map, getWaypoints(), isMapLocked);
   saveWaypointsToLocalStorage(getWaypoints(), getDirectFlags());
 
   if (getWaypoints().length >= 2) {
@@ -124,8 +125,9 @@ export const addWaypoint = async (
     if (routeResult.success && routeResult.waypointsSnapped && routeResult.snappedWaypoints && routeResult.snappedDirectFlags) {
         console.log("[WaypointManager.addWaypoint] Route service snapped waypoints. Updating WaypointManager state.");
         setWaypointsAndFlags(routeResult.snappedWaypoints, routeResult.snappedDirectFlags);
-        updateWaypointsLayer(map, getWaypoints()); // Re-update layer with snapped waypoints
-        saveWaypointsToLocalStorage(getWaypoints(), getDirectFlags()); // Save snapped waypoints
+        updateWaypointsLayer(map, getWaypoints(), isMapLocked);
+        saveWaypointsToLocalStorage(getWaypoints(), getDirectFlags());
+        snapshot(); // Snapshot after successful snap
     }
   } else if (getWaypoints().length === 1) {
     // Only one waypoint, clear any existing route visualization
@@ -146,19 +148,20 @@ export const removeWaypoint = async (
   setRouteDistance: Dispatch<SetStateAction<string>>,
   setRouteDuration: Dispatch<SetStateAction<string>>,
   setHasRoute: Dispatch<SetStateAction<boolean>>,
-  onError?: (message: string) => void
+  handleWaypointError: (message: string | null) => void,
+  isMapLocked: boolean
 ): Promise<void> => {
   if (index < 0 || index >= getWaypoints().length) {
     console.warn('[WaypointManager.removeWaypoint] Invalid index:', index);
-    if (onError) {
-      onError("Invalid waypoint index. Waypoint may no longer exist.");
+    if (handleWaypointError) {
+      handleWaypointError("Invalid waypoint index. Waypoint may no longer exist.");
     }
     return;
   }
 
   snapshot(); // Snapshot for undo/redo
   _removeWaypointInternal(index); // Use the internal function
-  updateWaypointsLayer(map, getWaypoints());
+  updateWaypointsLayer(map, getWaypoints(), isMapLocked);
   saveWaypointsToLocalStorage(getWaypoints(), getDirectFlags());
 
   if (getWaypoints().length >= 2) {
@@ -167,8 +170,9 @@ export const removeWaypoint = async (
     if (routeResult.success && routeResult.waypointsSnapped && routeResult.snappedWaypoints && routeResult.snappedDirectFlags) {
         console.log("[WaypointManager.removeWaypoint] Route service snapped waypoints. Updating WaypointManager state.");
         setWaypointsAndFlags(routeResult.snappedWaypoints, routeResult.snappedDirectFlags);
-        updateWaypointsLayer(map, getWaypoints());
+        updateWaypointsLayer(map, getWaypoints(), isMapLocked);
         saveWaypointsToLocalStorage(getWaypoints(), getDirectFlags());
+        snapshot(); // Snapshot after successful snap
     }
   } else {
     setRouteDistance('');
@@ -192,12 +196,13 @@ export const updateWaypointPositionAndRecalculate = async (
   setRouteDistance: Dispatch<SetStateAction<string>>,
   setRouteDuration: Dispatch<SetStateAction<string>>,
   setHasRoute: Dispatch<SetStateAction<boolean>>,
-  onError?: (message: string) => void
+  handleWaypointError: (message: string | null) => void,
+  isMapLocked: boolean
 ): Promise<void> => {
   console.log(`[WaypointManager.updateWaypointPositionAndRecalculate] Called for index: ${index}, newCoords:`, newCoords);
   if (index < 0 || index >= getWaypoints().length) {
     console.warn('[WaypointManager.updateWaypointPosition] Invalid index:', index);
-    if (onError) onError("Invalid waypoint index for update.");
+    if (handleWaypointError) handleWaypointError("Invalid waypoint index for update.");
     return;
   }
 
@@ -206,7 +211,7 @@ export const updateWaypointPositionAndRecalculate = async (
   const oldCoords = getWaypoints()[index];
   _updateWaypointPositionInternal(index, newCoords);
 
-  updateWaypointsLayer(map, getWaypoints());
+  updateWaypointsLayer(map, getWaypoints(), isMapLocked);
   saveWaypointsToLocalStorage(getWaypoints(), getDirectFlags());
 
   console.log(`[WaypointManager.updateWaypointPosition] Waypoint ${index} moved from ${JSON.stringify(oldCoords)} to ${JSON.stringify(newCoords)}. Recalculating route.`);
@@ -215,11 +220,12 @@ export const updateWaypointPositionAndRecalculate = async (
   if (routeResult.success && routeResult.waypointsSnapped && routeResult.snappedWaypoints && routeResult.snappedDirectFlags) {
     console.log("[WaypointManager.updateWaypointPosition] Route service snapped waypoints. Updating WaypointManager state.");
     setWaypointsAndFlags(routeResult.snappedWaypoints, routeResult.snappedDirectFlags);
-    updateWaypointsLayer(map, getWaypoints());
+    updateWaypointsLayer(map, getWaypoints(), isMapLocked);
     saveWaypointsToLocalStorage(getWaypoints(), getDirectFlags());
+    snapshot(); // Snapshot after successful snap
   } else if (!routeResult.success && getWaypoints().length >= 2) {
     console.warn(`[WaypointManager.updateWaypointPosition] Route recalculation failed after moving waypoint ${index}.`);
-    if (onError) onError("Route recalculation failed after moving waypoint.");
+    if (handleWaypointError) handleWaypointError("Route recalculation failed after moving waypoint.");
   }
 };
 
@@ -228,7 +234,8 @@ export const reverseRoute = async (
   accessToken: string,
   setRouteDistance: Dispatch<SetStateAction<string>>,
   setRouteDuration: Dispatch<SetStateAction<string>>,
-  setHasRoute: Dispatch<SetStateAction<boolean>>
+  setHasRoute: Dispatch<SetStateAction<boolean>>,
+  isMapLocked: boolean
 ): Promise<void> => {
   const currentWaypoints = getWaypoints();
   if (currentWaypoints.length < 2) {
@@ -245,7 +252,7 @@ export const reverseRoute = async (
 ];
 
   setWaypointsAndFlags(reversedWaypoints, reversedDirectFlags);
-  updateWaypointsLayer(map, getWaypoints()); // getWaypoints() will now return the reversed ones
+  updateWaypointsLayer(map, getWaypoints(), isMapLocked);
   saveWaypointsToLocalStorage(getWaypoints(), getDirectFlags());
 
   console.log('[WaypointManager.reverseRoute] Route reversed. Recalculating route.');
@@ -254,8 +261,9 @@ export const reverseRoute = async (
   if (routeResult.success && routeResult.waypointsSnapped && routeResult.snappedWaypoints && routeResult.snappedDirectFlags) {
     console.log("[WaypointManager.reverseRoute] Route service snapped waypoints after reverse. Updating WaypointManager state.");
     setWaypointsAndFlags(routeResult.snappedWaypoints, routeResult.snappedDirectFlags);
-    updateWaypointsLayer(map, getWaypoints());
+    updateWaypointsLayer(map, getWaypoints(), isMapLocked);
     saveWaypointsToLocalStorage(getWaypoints(), getDirectFlags());
+    snapshot(); // Snapshot after successful snap
   }
   console.log('[WaypointManager.reverseRoute] Reverse complete, route updated.');
 };
@@ -267,7 +275,8 @@ export const insertWaypointAtLocation = async (
   setRouteDistance: Dispatch<SetStateAction<string>>,
   setRouteDuration: Dispatch<SetStateAction<string>>,
   setHasRoute: Dispatch<SetStateAction<boolean>>,
-  onError?: (message: string) => void
+  handleWaypointError: (message: string | null) => void,
+  isMapLocked: boolean
 ): Promise<{ success: boolean; newIndex?: number; error?: string }> => {
   console.log('[WaypointManager.insertWaypoint] Attempting to insert waypoint at:', clickedCoords);
 
@@ -275,7 +284,7 @@ export const insertWaypointAtLocation = async (
   if (currentWaypoints.length < 1) { 
     console.warn('[WaypointManager.insertWaypoint] Not enough waypoints to define a route segment.');
     const errorMsg = "Cannot add waypoint: No existing route segment.";
-    if (onError) onError(errorMsg);
+    if (handleWaypointError) handleWaypointError(errorMsg);
     return { success: false, error: errorMsg };
   }
 
@@ -293,7 +302,7 @@ export const insertWaypointAtLocation = async (
   if (routePathToUse.length < 2) {
     console.warn('[WaypointManager.insertWaypoint] Route path is too short (less than 2 points).');
     const errorMsg = "Cannot add waypoint: Route path is not defined or too short.";
-    if (onError) onError(errorMsg);
+    if (handleWaypointError) handleWaypointError(errorMsg);
     return { success: false, error: errorMsg };
   }
 
@@ -345,7 +354,7 @@ export const insertWaypointAtLocation = async (
   if (minDistance > MAX_CLICK_DISTANCE_FROM_ROUTE_KM && getWaypoints().length >= 2) {
     console.warn(`[WaypointManager.insertWaypoint] Click was too far from the route path. Distance: ${minDistance.toFixed(3)}km`);
     const errorMsg = "Cannot add waypoint: Click too far from route.";
-    if (onError) onError(errorMsg);
+    if (handleWaypointError) handleWaypointError(errorMsg);
     return { success: false, error: errorMsg };
   }
 
@@ -371,15 +380,16 @@ export const insertWaypointAtLocation = async (
   setWaypointsAndFlags(newWaypointsArray, newDirectFlagsArray);
 
   // Update map layers, save to local storage, and recalculate route
-  updateWaypointsLayer(map, getWaypoints()); // getWaypoints() will now return the new array
+  updateWaypointsLayer(map, getWaypoints(), isMapLocked); // getWaypoints() will now return the new array
   saveWaypointsToLocalStorage(getWaypoints(), getDirectFlags());
 
   if (getWaypoints().length >= 2) {
     const routeResult: RouteResult = await getRouteFromService(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
     if (routeResult.success && routeResult.waypointsSnapped && routeResult.snappedWaypoints && routeResult.snappedDirectFlags) {
         setWaypointsAndFlags(routeResult.snappedWaypoints, routeResult.snappedDirectFlags);
-        updateWaypointsLayer(map, getWaypoints());
+        updateWaypointsLayer(map, getWaypoints(), isMapLocked);
         saveWaypointsToLocalStorage(getWaypoints(), getDirectFlags());
+        snapshot(); // Snapshot after successful snap
     }
   } else {
     setRouteDistance('');
