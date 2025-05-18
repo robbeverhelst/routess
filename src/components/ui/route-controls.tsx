@@ -50,20 +50,6 @@ export function RouteControls({
       
       <Button
         variant="secondary"
-        onClick={onLocate}
-        className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 h-10 w-10"
-        title={hasUserLocation ? "Center on my location" : "Location not available"}
-      >
-        <div className="relative">
-          <Locate size={18} className={hasUserLocation ? "text-blue-500" : "text-gray-400"} />
-          {!hasUserLocation && (
-            <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
-          )}
-        </div>
-      </Button>
-      
-      <Button
-        variant="secondary"
         onClick={onReset}
         disabled={!hasRoute || isLocked}
         className={`bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 disabled:opacity-50 h-10 w-10`}
@@ -79,6 +65,20 @@ export function RouteControls({
         title={isLocked ? "Unlock map interaction" : "Lock map interaction"}
       >
         {isLocked ? <Lock size={18} /> : <Unlock size={18} />}
+      </Button>
+      
+      <Button
+        variant="secondary"
+        onClick={onLocate}
+        className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 h-10 w-10"
+        title={hasUserLocation ? "Center on my location" : "Location not available"}
+      >
+        <div className="relative">
+          <Locate size={18} className={hasUserLocation ? "text-blue-500" : "text-gray-400"} />
+          {!hasUserLocation && (
+            <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
+          )}
+        </div>
       </Button>
     </div>
   );

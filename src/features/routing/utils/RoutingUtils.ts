@@ -1,5 +1,6 @@
 import type { Coordinate } from '@/types/map';
 import { LngLatBounds, type Map as MapboxMap } from 'mapbox-gl';
+import { LngLat } from 'mapbox-gl';
 
 /**
  * Calculates the distance between two coordinates using the Haversine formula.
@@ -123,6 +124,12 @@ export const zoomToRoute = (map: MapboxMap, coordinates: Coordinate[]): void => 
     return;
   }
 
+  // Add a check to see if the map is currently animating
+  if (map.isEasing()) {
+    console.log('[RoutingUtils.zoomToRoute] Map is currently easing, skipping zoom.');
+    return;
+  }
+
   try {
     const currentPitch = map.getPitch();
     const currentBearing = map.getBearing();
@@ -133,6 +140,33 @@ export const zoomToRoute = (map: MapboxMap, coordinates: Coordinate[]): void => 
       },
       new LngLatBounds(coordinates[0], coordinates[0]) // Initialize with the first coordinate
     );
+
+    // Calculate the camera options that would result from fitBounds
+    const camera = map.cameraForBounds(bounds, {
+      padding: { top:70, bottom: 70, left: 70, right: 70 },
+      maxZoom: 16
+    });
+
+    // Get the map's current camera position
+    const currentCenter = map.getCenter();
+    const currentZoom = map.getZoom();
+
+    // Define a tolerance for comparison (adjust as needed)
+    const centerTolerance = 0.001; // degrees
+    const zoomTolerance = 0.1; // zoom levels
+
+    // Check if the calculated camera position is very close to the current one
+    if (camera && camera.center && typeof camera.zoom === 'number') {
+      // Convert camera.center to LngLat object for reliable access to lng/lat
+      const cameraCenterLngLat = LngLat.convert(camera.center);
+      const centerDiff = Math.abs(cameraCenterLngLat.lng - currentCenter.lng) + Math.abs(cameraCenterLngLat.lat - currentCenter.lat);
+      const zoomDiff = Math.abs(camera.zoom - currentZoom);
+
+      if (centerDiff < centerTolerance && zoomDiff < zoomTolerance) {
+        console.log('[RoutingUtils.zoomToRoute] Map view is already close to optimal for the route, skipping zoom animation.');
+        return; // Skip the fitBounds call
+      }
+    }
 
     map.fitBounds(bounds, {
       padding: { top:70, bottom: 70, left: 70, right: 70 },       // Adjusted padding (pixels)

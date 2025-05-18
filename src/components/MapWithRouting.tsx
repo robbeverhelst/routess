@@ -99,6 +99,7 @@ export default function MapWithRouting({
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const [waypointError, setWaypointError] = useState<string | null>(null);
   const [isMapReady, setIsMapReady] = useState(false);
+  const [isRouteCoordsReady, setIsRouteCoordsReady] = useState(false);
   const waypointErrorTimeout = useRef<number | null>(null);
   const animationFrameIdRef = useRef<number | null>(null); // For halo animation
   const initialRouteZoomDoneRef = useRef<boolean>(false); // Added ref
@@ -201,7 +202,8 @@ export default function MapWithRouting({
           loadedData.f, // directFlags
           setRouteDistance,
           setRouteDuration,
-          setHasRoute
+          setHasRoute,
+          setIsRouteCoordsReady
         ).then(() => {
           console.log('[MapWithRouting] Route data loaded from URL successfully.');
           // Optionally, clean the URL
@@ -246,14 +248,6 @@ export default function MapWithRouting({
       }
     }
   }, [hasRoute]);
-
-  // Effect to zoom to route when map is locked and a route exists
-  useEffect(() => {
-    if (isMapLocked && hasRoute && mapRef.current) {
-      console.log('[MapWithRouting] Map locked and route exists, zooming to route.');
-      handleZoomToRoute();
-    }
-  }, [isMapLocked, hasRoute, mapRef, handleZoomToRoute]); // Dependencies: isMapLocked, hasRoute, mapRef, and handleZoomToRoute
 
   // Effect to clean up routing listeners on unmount
   useEffect(() => {
@@ -302,7 +296,7 @@ export default function MapWithRouting({
 
   // Effect for initial zoom to route if a route is present on load
   useEffect(() => {
-    if (isMapReady && hasRoute && mapRef.current && !initialRouteZoomDoneRef.current) {
+    if (isMapReady && hasRoute && mapRef.current && !initialRouteZoomDoneRef.current && isRouteCoordsReady) {
       console.log('[InitialRouteZoomEffect] Active: Map ready, route present, initial zoom not yet done.');
       const currentRouteCoords = getCurrentRoutePath();
       if (currentRouteCoords && currentRouteCoords.length > 0) {
@@ -314,7 +308,7 @@ export default function MapWithRouting({
         console.log('[InitialRouteZoomEffect] Route reported as present, but getCurrentRoutePath() is empty or null. Skipping zoom.');
       }
     }
-  }, [isMapReady, hasRoute]); // Dependencies: isMapReady, hasRoute
+  }, [isMapReady, hasRoute, isRouteCoordsReady]); // Dependencies: isMapReady, hasRoute, isRouteCoordsReady
 
   // Animate user location halo
   useEffect(() => {
@@ -536,8 +530,25 @@ export default function MapWithRouting({
   }, []);
 
   const handleToggleLock = useCallback(() => { // Add handleToggleLock function
-    setIsMapLocked(prev => !prev);
-  }, []);
+    setIsMapLocked(prev => {
+      const newLockedState = !prev;
+      // If we're locking the map, trigger zoom to route
+      if (newLockedState && mapRef.current && hasRoute) {
+        try {
+          console.log('[MapWithRouting] Map locked, zooming to full route view');
+          const currentRouteCoords = getCurrentRoutePath();
+          if (currentRouteCoords && currentRouteCoords.length > 0) {
+            zoomToRoute(mapRef.current, currentRouteCoords);
+          } else {
+            console.warn('[MapWithRouting] No route coordinates available for auto-zoom on lock');
+          }
+        } catch (err) {
+          console.error('[MapWithRouting] Error zooming to route on lock:', err);
+        }
+      }
+      return newLockedState;
+    });
+  }, [hasRoute]);
 
   return (
     <div className="relative w-full h-full">

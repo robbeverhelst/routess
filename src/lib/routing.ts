@@ -163,15 +163,17 @@ export const setRouteData = async (
   newDirectFlags: boolean[],
   setRouteDistance: Dispatch<SetStateAction<string>>,
   setRouteDuration: Dispatch<SetStateAction<string>>,
-  setHasRoute: Dispatch<SetStateAction<boolean>>
+  setHasRoute: Dispatch<SetStateAction<boolean>>,
+  setIsRouteCoordsReady: Dispatch<SetStateAction<boolean>>
 ) => {
-        snapshot();
+  setIsRouteCoordsReady(false); // Set to false at the start of loading new data
+  snapshot();
   setWaypointsAndFlags([], []);
   updateWaypointsLayer(map, [], _isMapLockedRef?.current ?? false); // Use ref value
-                        clearRoute(map);
-                        setRouteDistance('');
-                        setRouteDuration('');
-                        setHasRoute(false);
+  clearRoute(map);
+  setRouteDistance('');
+  setRouteDuration('');
+  setHasRoute(false);
 
   setWaypointsAndFlags(newWaypoints, newDirectFlags);
 
@@ -181,12 +183,28 @@ export const setRouteData = async (
   if (getWaypoints().length >= 2) {
     try {
       const routeResult: RouteResult = await getRouteFromService(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
-      if (routeResult.success && routeResult.waypointsSnapped && routeResult.snappedWaypoints && routeResult.snappedDirectFlags) {
-        setWaypointsAndFlags(routeResult.snappedWaypoints, routeResult.snappedDirectFlags);
-        updateWaypointsLayer(map, getWaypoints(), _isMapLockedRef?.current ?? false); // Use ref value
-        saveWaypointsToStorage(getWaypoints(), getDirectFlags());
-      } else if (!routeResult.success) {
-        console.warn('[setRouteData] Route calculation indicated failure:', routeResult.error);
+      if (routeResult.success) { // Check for overall success
+        // RouteCalculationService is expected to update its internal state (currentRoutePathCoordinates)
+        // when routeResult.success is true.
+        // We can now safely set isRouteCoordsReady to true.
+        setIsRouteCoordsReady(true); // Set to true after successful calculation
+        
+        if (routeResult.waypointsSnapped && routeResult.snappedWaypoints && routeResult.snappedDirectFlags) {
+          setWaypointsAndFlags(routeResult.snappedWaypoints, routeResult.snappedDirectFlags);
+          updateWaypointsLayer(map, getWaypoints(), _isMapLockedRef?.current ?? false); // Use ref value
+          saveWaypointsToStorage(getWaypoints(), getDirectFlags());
+        } else if (!routeResult.success) {
+          console.warn('[setRouteData] Route calculation indicated failure:', routeResult.error);
+        }
+      } else {
+        console.error('[setRouteData] Route calc failed:', routeResult.error);
+        clearRouteLayer(map);
+        clearKilometerMarkersLayer(map);
+        clearCurrentRoutePath();
+        setRouteDistance('');
+        setRouteDuration('');
+        setHasRoute(false);
+        setIsRouteCoordsReady(false); // Set to false on error
       }
     } catch (error) {
       console.error('[setRouteData] Route calc failed:', error);
@@ -196,6 +214,7 @@ export const setRouteData = async (
       setRouteDistance('');
       setRouteDuration('');
       setHasRoute(false);
+      setIsRouteCoordsReady(false); // Set to false on error
     }
   } else if (getWaypoints().length === 1) {
     setRouteDistance('');
@@ -204,15 +223,18 @@ export const setRouteData = async (
     clearCurrentRoutePath();
     clearRouteLayer(map);
     clearKilometerMarkersLayer(map);
+    setIsRouteCoordsReady(false); // Set to false if not enough waypoints for a route
   } else { // 0 waypoints
     clearCurrentRoutePath();
     clearRouteLayer(map);
     clearKilometerMarkersLayer(map);
+    setRouteDistance('');
+    setRouteDuration('');
+    setHasRoute(false);
+    setIsRouteCoordsReady(false); // Set to false if not enough waypoints for a route
   }
   console.log(`[setRouteData] Successfully set ${getWaypoints().length} waypoints.`);
 };
-
-
 
 // removeWaypoint function body is removed.
 // Ensure the imported removeWaypointFromManager is exported as removeWaypoint.
