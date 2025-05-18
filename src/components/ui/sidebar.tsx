@@ -27,8 +27,8 @@ interface SidebarProps {
   onImportError: (message: string) => void;
   // Props for inline share display
   displayedShareUrl: string | null;
-  setDisplayedShareUrl: (url: string | null) => void;
   onCopySharedUrl: (url: string) => void;
+  onClearShareDisplay?: () => void;
 }
 
 export function Sidebar({
@@ -51,13 +51,19 @@ export function Sidebar({
   setHasRoute,
   onImportError,
   displayedShareUrl,
-  setDisplayedShareUrl,
   onCopySharedUrl,
+  onClearShareDisplay,
 }: SidebarProps) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   
   const handleExportGPX = () => {
-    exportRouteToGPX();
+    const result = exportRouteToGPX();
+    if (!result.success && result.message) {
+      onImportError(result.message); // Reusing onImportError for feedback
+    } else if (result.success) {
+      console.log('Route exported successfully.'); // Placeholder for success feedback
+      // onImportError("Route exported successfully."); // Or use the same feedback for success
+    }
   };
 
   const handleImportGPX = () => {
@@ -282,7 +288,7 @@ export function Sidebar({
                     <Button 
                       variant="ghost"
                       size="icon"
-                      onClick={() => setDisplayedShareUrl(null)}
+                      onClick={onClearShareDisplay}
                       className="p-1.5 rounded-md"
                     >
                       <BackIcon size={18} />
