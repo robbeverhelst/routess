@@ -39,6 +39,7 @@ import {
 // Module-level variables to store map instance and access token for the history event handler
 let _mapInstance: MapboxMap | null = null;
 let _accessToken: string | null = null;
+let _isMapLockedRef: { current: boolean } | null = null; // Add module-level ref for isMapLocked
 
 // --- GPX Export ---
 export const exportRouteToGPX = (): { success: boolean; message?: string } => {
@@ -101,7 +102,7 @@ export const importRouteFromGPX = async (
     resetRouting(map, setRouteDistance, setRouteDuration, setHasRoute);
     setWaypointsAndFlags(finalNewWaypoints, newDirectFlags);
   snapshot();
-    updateWaypointsLayer(map, getWaypoints());
+    updateWaypointsLayer(map, getWaypoints(), _isMapLockedRef?.current ?? false); // Use ref value
     saveWaypointsToStorage(getWaypoints(), getDirectFlags());
 
     if (getWaypoints().length >= 2) {
@@ -109,7 +110,7 @@ export const importRouteFromGPX = async (
         const routeResult: RouteResult = await getRouteFromService(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
         if (routeResult.success && routeResult.waypointsSnapped && routeResult.snappedWaypoints && routeResult.snappedDirectFlags) {
           setWaypointsAndFlags(routeResult.snappedWaypoints, routeResult.snappedDirectFlags);
-          updateWaypointsLayer(map, getWaypoints());
+          updateWaypointsLayer(map, getWaypoints(), _isMapLockedRef?.current ?? false); // Use ref value
           saveWaypointsToStorage(getWaypoints(), getDirectFlags());
         } else if (!routeResult.success) {
           console.warn('[importRouteFromGPX] Route calculation after GPX import indicated failure:', routeResult.error);
@@ -166,7 +167,7 @@ export const setRouteData = async (
 ) => {
         snapshot();
   setWaypointsAndFlags([], []);
-  updateWaypointsLayer(map, []);
+  updateWaypointsLayer(map, [], _isMapLockedRef?.current ?? false); // Use ref value
                         clearRoute(map);
                         setRouteDistance('');
                         setRouteDuration('');
@@ -174,7 +175,7 @@ export const setRouteData = async (
 
   setWaypointsAndFlags(newWaypoints, newDirectFlags);
 
-  updateWaypointsLayer(map, getWaypoints());
+  updateWaypointsLayer(map, getWaypoints(), _isMapLockedRef?.current ?? false); // Use ref value
   saveWaypointsToStorage(getWaypoints(), getDirectFlags());
 
   if (getWaypoints().length >= 2) {
@@ -182,7 +183,7 @@ export const setRouteData = async (
       const routeResult: RouteResult = await getRouteFromService(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
       if (routeResult.success && routeResult.waypointsSnapped && routeResult.snappedWaypoints && routeResult.snappedDirectFlags) {
         setWaypointsAndFlags(routeResult.snappedWaypoints, routeResult.snappedDirectFlags);
-        updateWaypointsLayer(map, getWaypoints());
+        updateWaypointsLayer(map, getWaypoints(), _isMapLockedRef?.current ?? false); // Use ref value
         saveWaypointsToStorage(getWaypoints(), getDirectFlags());
       } else if (!routeResult.success) {
         console.warn('[setRouteData] Route calculation indicated failure:', routeResult.error);
@@ -242,10 +243,12 @@ export const setupRouting = (
   setRouteDuration: Dispatch<SetStateAction<string>>,
   setHasRoute: Dispatch<SetStateAction<boolean>>,
   setPopup: Dispatch<SetStateAction<MIMPopupInfo | null>>,
-  handleWaypointError: (message: string | null) => void
+  handleWaypointError: (message: string | null) => void,
+  isMapLockedRef: { current: boolean } // Accept the ref
 ): (() => void) => {
   _mapInstance = map; // Store for history event handler
   _accessToken = accessToken; // Store for history event handler
+  _isMapLockedRef = isMapLockedRef; // Store the ref
 
   initializeSourcesAndLayers(map);
   
@@ -256,7 +259,8 @@ export const setupRouting = (
           setRouteDuration, 
     setHasRoute,
     setPopup,
-    handleWaypointError
+    handleWaypointError,
+    isMapLockedRef // Pass the ref
   );
 
   try {
@@ -264,13 +268,13 @@ export const setupRouting = (
     if (loadedData) {
       setWaypointsAndFlags(loadedData.waypoints, loadedData.directFlags);
       console.log('[routing.ts] Waypoints loaded from local storage.');
-      updateWaypointsLayer(map, getWaypoints());
+      updateWaypointsLayer(map, getWaypoints(), isMapLockedRef.current); // Use ref value
       if (getWaypoints().length >= 1) {
         getRouteFromService(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute).then(result => {
           if (result.success && result.waypointsSnapped && result.snappedWaypoints && result.snappedDirectFlags) {
             console.log("[routing.ts] Initial route calculated and waypoints snapped.");
             setWaypointsAndFlags(result.snappedWaypoints, result.snappedDirectFlags);
-            updateWaypointsLayer(map, getWaypoints());
+            updateWaypointsLayer(map, getWaypoints(), isMapLockedRef.current); // Use ref value
             saveWaypointsToStorage(getWaypoints(), getDirectFlags());
           } else if (!result.success && getWaypoints().length === 1) {
             console.log('[routing.ts] Single waypoint loaded, no route to calculate yet or snapping failed.');
@@ -299,7 +303,7 @@ export const setupRouting = (
     // Waypoints and flags are already set by HistoryManager's setWaypointsAndFlags,
     // which is called by stepBack/stepForward before emitting the event.
     // So, historyState.points and historyState.flags are the current state *before* potential snapping by getRouteFromService.
-    updateWaypointsLayer(_mapInstance, historyState.points);
+    updateWaypointsLayer(_mapInstance, historyState.points, _isMapLockedRef?.current ?? false); // Use ref value
 
     let finalPointsToSave = historyState.points;
     let finalFlagsToSave = historyState.flags;
@@ -309,7 +313,7 @@ export const setupRouting = (
       if (routeResult.success && routeResult.waypointsSnapped && routeResult.snappedWaypoints && routeResult.snappedDirectFlags) {
         // Waypoints were snapped, update the internal state and layers
         setWaypointsAndFlags(routeResult.snappedWaypoints, routeResult.snappedDirectFlags);
-        updateWaypointsLayer(_mapInstance, routeResult.snappedWaypoints); // Update with snapped points
+        updateWaypointsLayer(_mapInstance, routeResult.snappedWaypoints, _isMapLockedRef?.current ?? false); // Use ref value
         // Update what will be saved to storage
         finalPointsToSave = routeResult.snappedWaypoints;
         finalFlagsToSave = routeResult.snappedDirectFlags;
@@ -331,7 +335,7 @@ export const setupRouting = (
       setRouteDistance('');
       setRouteDuration('');
       setHasRoute(false);
-      if (historyState.points.length === 0) updateWaypointsLayer(_mapInstance, []); 
+      if (historyState.points.length === 0) updateWaypointsLayer(_mapInstance, [], _isMapLockedRef?.current ?? false); // Use ref value
     }
     
     // Save the final state (either original from history or snapped) to local storage
@@ -382,7 +386,7 @@ export const resetRouting = (
 ) => {
   clearHistory();
   setWaypointsAndFlags([], []);
-  updateWaypointsLayer(map, []);
+  updateWaypointsLayer(map, [], _isMapLockedRef?.current ?? false); // Use ref value
   saveWaypointsToStorage([], []);
   
     clearRoute(map);

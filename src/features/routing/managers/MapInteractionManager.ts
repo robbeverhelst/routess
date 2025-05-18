@@ -114,12 +114,14 @@ export const initializeMapInteractions = (
   setRouteDuration: Dispatch<SetStateAction<string>>,
   setHasRoute: Dispatch<SetStateAction<boolean>>,
   setPopup: Dispatch<SetStateAction<PopupInfo | null>>,
-  handleWaypointError: (message: string | null) => void
+  handleWaypointError: (message: string | null) => void,
+  isMapLockedRef: { current: boolean } // Accept a ref for isMapLocked
 ): () => void => { // Return a disposer function
   const mapCanvas = map.getCanvas();
 
   // --- ON MAP CLICK LOGIC ---
   const handleMapClickInternal = (e: MapMouseEvent) => {
+    if (isMapLockedRef.current) return; // Exit if map is locked
     // If a click event is processed, it means it was a short press (not a long press or drag).
     // We should ensure any pending long press timer is cancelled.
     if (longPressTimeoutRef) {
@@ -166,6 +168,7 @@ export const initializeMapInteractions = (
 
   // --- ON CONTEXT MENU LOGIC ---
   const handleContextMenuInternal = (e: MapMouseEvent | MapTouchEvent) => {
+    if (isMapLockedRef.current) return; // Exit if map is locked
     e.preventDefault();
     console.log('[MapInteractionManager] Context menu event at:', e.lngLat);
 
@@ -195,6 +198,7 @@ export const initializeMapInteractions = (
 
   // --- GENERAL MOUSE DOWN HANDLER (for dragging existing waypoints or creating new ones on route) ---
   const generalMouseDownHandler = async (e: MapMouseEvent) => {
+    if (isMapLockedRef.current) return; // Exit if map is locked
     // Only respond to left mouse button for drag initiation
     if (e.originalEvent.button !== 0) {
       return;
@@ -274,6 +278,7 @@ export const initializeMapInteractions = (
 
   // --- GENERAL TOUCH START HANDLER (analogous to generalMouseDownHandler) ---
   const generalTouchStartHandler = async (e: MapTouchEvent) => {
+    if (isMapLockedRef.current) return; // Exit if map is locked
     if (e.points.length !== 1) return; // Only handle single touch
     
     const features = map.queryRenderedFeatures(e.points[0], { layers: [WAYPOINTS_LAYER_ID, ROUTE_LAYER_ID, ROUTE_HOVER_LAYER_ID] });
@@ -381,6 +386,7 @@ export const initializeMapInteractions = (
 
   // --- DRAG MOVE HANDLERS (largely unchanged, ensure they use module-scoped drag state) ---
   const onMapMouseMoveForDrag = (eMove: MapMouseEvent) => {
+    if (isMapLockedRef.current) return; // Exit if map is locked
     if (!isDragging || draggedWaypointIndex === -1) return;
     eMove.preventDefault(); // Prevent text selection, etc.
 
@@ -407,6 +413,7 @@ export const initializeMapInteractions = (
   };
 
   const onMapTouchMoveForDrag = (eMove: MapTouchEvent) => {
+    if (isMapLockedRef.current) return; // Exit if map is locked
     if (!isDragging || draggedWaypointIndex === -1 || eMove.points.length !== 1) return;
     eMove.preventDefault();
 
@@ -431,6 +438,7 @@ export const initializeMapInteractions = (
 
   // --- DRAG END HANDLERS (largely unchanged, ensure they use module-scoped drag state and call service) ---
   const onMapMouseUpInternal = async () => {
+    if (isMapLockedRef.current) return; // Exit if map is locked
     if (!isDragging || draggedWaypointIndex === -1 || !currentLngLat) {
       // If not dragging but mouseup happened after mousedown, ensure pan is enabled
       if (!isDragging) map.dragPan.enable();
@@ -470,6 +478,7 @@ export const initializeMapInteractions = (
   };
 
   const onMapTouchEndInternal = async () => {
+    if (isMapLockedRef.current) return; // Exit if map is locked
     const prevLongPressId = currentLongPressId; // Capture before clearing
     const wasTimeoutActive = !!longPressTimeoutRef; // Check if timer was active
 
@@ -523,6 +532,7 @@ export const initializeMapInteractions = (
 
   // --- POINTER MOVE FOR LONG PRESS DETECTION (adapted from existing) ---
   const handlePointerMoveInternal = (e: MapTouchEvent | MapMouseEvent) => {
+    if (isMapLockedRef.current) return; // Exit if map is locked
     if (!touchStartPos || !longPressTimeoutRef) return; // No active long press to cancel
 
     let currentPos: { x: number; y: number };
@@ -558,6 +568,7 @@ export const initializeMapInteractions = (
 
   // --- ROUTE HOVER HIGHLIGHTING ---
   const mouseEnterRouteHandler = (e: MapLayerMouseEvent) => {
+    if (isMapLockedRef.current) return; // Exit if map is locked
     if (map.dragPan.isActive() || (e.originalEvent && e.originalEvent.buttons !== 0) ) return; // Ignore if map is panning or a mouse button is pressed
     
     if (e.features && e.features.length > 0) {
@@ -580,6 +591,7 @@ export const initializeMapInteractions = (
   };
 
   const mouseLeaveRouteHandler = () => { 
+    if (isMapLockedRef.current) return; // Exit if map is locked
     map.getCanvas().style.cursor = '';
     if (hoveredRouteFeatureId === 'main_route_line' && map.getSource(ROUTE_SOURCE_ID)) {
       map.removeFeatureState({ source: ROUTE_SOURCE_ID, id: hoveredRouteFeatureId }, 'hover');

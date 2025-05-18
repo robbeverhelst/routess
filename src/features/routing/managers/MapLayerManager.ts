@@ -1,7 +1,5 @@
 import type { Map as MapboxMap, GeoJSONSource } from 'mapbox-gl';
 import type { Coordinate } from '@/types/map';
-// We might need getDirectFlags if point styling depends on it directly here
-import { getDirectFlags } from '@/features/routing/managers/WaypointManager';
 
 export const ROUTE_SOURCE_ID = 'route';
 export const ROUTE_LAYER_ID = 'route';
@@ -126,23 +124,24 @@ export const initializeSourcesAndLayers = (map: MapboxMap): void => {
   console.log('[MapLayerManager] All sources and layers initialized (if not already present).');
 };
 
-export const updateWaypointsLayer = (map: MapboxMap, points: Coordinate[]): void => {
+export const updateWaypointsLayer = (map: MapboxMap, points: Coordinate[], isMapLocked: boolean): void => {
   if (!map || !map.getSource(WAYPOINTS_SOURCE_ID)) return;
 
-  const directFlags = getDirectFlags(); // Get current direct flags
-  const features = points.map((point, index) => {
-    let pointType = 'intermediate';
-    if (points.length === 1) pointType = 'start';
-    else if (index === 0) pointType = 'start';
-    else if (index === points.length - 1) pointType = 'end';
-    
-    if (index + 1 < directFlags.length && directFlags[index + 1]) {
-      pointType = 'direct';
-    }
+  let pointsToRender = points;
+  if (isMapLocked && points.length > 2) {
+    // When locked, only show the first and last waypoints
+    pointsToRender = [points[0], points[points.length - 1]];
+  }
 
+  const features = pointsToRender.map((point, index, arr) => {
+    let pointType = 'intermediate';
+    if (arr.length === 1) pointType = 'start';
+    else if (index === 0) pointType = 'start';
+    else if (index === arr.length - 1) pointType = 'end';
+    
     return {
       type: 'Feature' as const,
-      properties: { pointType, waypointIndex: index },
+      properties: { pointType, waypointIndex: points.indexOf(point) }, // Use original index for potential future needs, though not strictly required by current spec
       geometry: { type: 'Point' as const, coordinates: point }
     };
   });

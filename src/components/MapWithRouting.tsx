@@ -24,6 +24,7 @@ import { decompressAndParse } from '@/lib/shareUtils';
 import {
   getWaypoints, 
 } from '@/features/routing/managers/WaypointManager';
+import { updateWaypointsLayer } from '@/features/routing/managers/MapLayerManager';
 import {
   hasUndo as historyHasUndo,
   hasRedo as historyHasRedo,
@@ -103,6 +104,8 @@ export default function MapWithRouting({
   const animationFrameIdRef = useRef<number | null>(null); // For halo animation
   const initialRouteZoomDoneRef = useRef<boolean>(false); // Added ref
   const routingDisposerRef = useRef<(() => void) | null>(null); // Ref to store the disposer
+  const [isMapLocked, setIsMapLocked] = useState(false);
+  const isMapLockedRef = useRef(isMapLocked); // Create a ref for isMapLocked
   
   const { 
     location: userLocation, 
@@ -169,7 +172,8 @@ export default function MapWithRouting({
       setRouteDuration,
       setHasRoute,
       setPopup,
-      handleWaypointError
+      handleWaypointError,
+      isMapLockedRef
     );
     routingDisposerRef.current = disposer;
     setIsMapReady(true);
@@ -221,7 +225,34 @@ export default function MapWithRouting({
         }
       }
     }
-  }, [setRouteDistance, setRouteDuration, setHasRoute, setPopup, handleWaypointError, handleRouteInfoErrorFromHook]);
+  }, [setRouteDistance, setRouteDuration, setHasRoute, setPopup, handleWaypointError, handleRouteInfoErrorFromHook, isMapLocked]);
+
+  // Effect to keep the ref's current value in sync with the state
+  useEffect(() => {
+    isMapLockedRef.current = isMapLocked;
+    // Additionally, when the lock state changes, update the waypoint layer
+    if (mapRef.current) {
+      const currentWaypoints = getWaypoints();
+      updateWaypointsLayer(mapRef.current, currentWaypoints, isMapLocked);
+    }
+  }, [isMapLocked, mapRef]); // Depend on isMapLocked and mapRef
+
+  const handleZoomToRoute = useCallback(() => {
+    if (mapRef.current && hasRoute) {
+      const currentWaypoints = getWaypoints();
+      if (currentWaypoints && currentWaypoints.length > 0) {
+        zoomToRoute(mapRef.current, currentWaypoints);
+      }
+    }
+  }, [hasRoute]); // Depends on hasRoute to enable/disable, and mapRef for the map instance
+
+  // Effect to zoom to route when map is locked and a route exists
+  useEffect(() => {
+    if (isMapLocked && hasRoute && mapRef.current) {
+      console.log('[MapWithRouting] Map locked and route exists, zooming to route.');
+      handleZoomToRoute();
+    }
+  }, [isMapLocked, hasRoute, mapRef, handleZoomToRoute]); // Dependencies: isMapLocked, hasRoute, mapRef, and handleZoomToRoute
 
   // Effect to clean up routing listeners on unmount
   useEffect(() => {
@@ -504,14 +535,9 @@ export default function MapWithRouting({
     }, 3000);
   }, []);
 
-  const handleZoomToRoute = useCallback(() => {
-    if (mapRef.current && hasRoute) {
-      const currentWaypoints = getWaypoints();
-      if (currentWaypoints && currentWaypoints.length > 0) {
-        zoomToRoute(mapRef.current, currentWaypoints);
-      }
-    }
-  }, [hasRoute]); // Depends on hasRoute to enable/disable, and mapRef for the map instance
+  const handleToggleLock = useCallback(() => { // Add handleToggleLock function
+    setIsMapLocked(prev => !prev);
+  }, []);
 
   return (
     <div className="relative w-full h-full">
@@ -559,6 +585,8 @@ export default function MapWithRouting({
               canRedo={canRedo}
               hasUserLocation={!!userLocation && !locationError}
               hasRoute={hasRoute}
+              isLocked={isMapLocked}
+              onToggleLock={handleToggleLock}
             />
           </div>
 
@@ -613,6 +641,8 @@ export default function MapWithRouting({
             canRedo={canRedo}
             hasUserLocation={!!userLocation && !locationError}
             hasRoute={hasRoute}
+            isLocked={isMapLocked}
+            onToggleLock={handleToggleLock}
         />
       </div>
 

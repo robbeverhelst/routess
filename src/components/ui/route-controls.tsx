@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ArrowLeftCircle, ArrowRightCircle, Locate, RefreshCw } from "lucide-react";
+import { ArrowLeftCircle, ArrowRightCircle, Locate, RefreshCw, Lock, Unlock } from "lucide-react";
 
 interface RouteControlsProps {
   onUndo: () => void;
@@ -10,6 +10,8 @@ interface RouteControlsProps {
   canRedo: boolean;
   hasUserLocation: boolean;
   hasRoute?: boolean;
+  isLocked: boolean;
+  onToggleLock: () => void;
 }
 
 export function RouteControls({
@@ -20,14 +22,16 @@ export function RouteControls({
   canUndo,
   canRedo,
   hasUserLocation,
-  hasRoute = false
+  hasRoute = false,
+  isLocked,
+  onToggleLock
 }: RouteControlsProps) {
   return (
     <div className="flex flex-col md:flex-row items-start md:items-center gap-2">
       <Button
         variant="secondary"
         size="icon"
-        disabled={!canUndo}
+        disabled={!canUndo || isLocked}
         onClick={onUndo}
         className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 disabled:opacity-50"
         title="Undo"
@@ -38,7 +42,7 @@ export function RouteControls({
       <Button
         variant="secondary"
         size="icon"
-        disabled={!canRedo}
+        disabled={!canRedo || isLocked}
         onClick={onRedo}
         className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 disabled:opacity-50"
         title="Redo"
@@ -64,11 +68,22 @@ export function RouteControls({
       <Button
         variant="secondary"
         onClick={onReset}
-        className={`bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 px-3 md:px-4 py-2 ${!hasRoute ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed' : ''}`}
+        disabled={!hasRoute || isLocked}
+        className={`bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 px-3 md:px-4 py-2 ${(!hasRoute || isLocked) ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed' : ''}`}
         title="Reset route"
       >
         <RefreshCw size={18} className="mr-0 md:mr-1" />
         <span className="hidden md:inline">Reset</span>
+      </Button>
+      
+      <Button
+        variant="secondary"
+        size="icon"
+        onClick={onToggleLock}
+        className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60"
+        title={isLocked ? "Unlock map interaction" : "Lock map interaction"}
+      >
+        {isLocked ? <Lock size={18} /> : <Unlock size={18} />}
       </Button>
     </div>
   );
