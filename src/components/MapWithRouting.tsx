@@ -33,6 +33,7 @@ import { useUserLocation } from '@/hooks/useUserLocation';
 import { MapPopup, type PopupInfo as MapPopupInfo } from '@/components/ui/MapPopup';
 import { useRouteData } from '@/hooks/useRouteData';
 import { useUndoRedoState } from '@/hooks/useUndoRedoState';
+import { getCurrentRoutePath } from '@/features/routing/services/RouteCalculationService';
 
 // Get Mapbox access token from environment variables
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
@@ -239,12 +240,14 @@ export default function MapWithRouting({
 
   const handleZoomToRoute = useCallback(() => {
     if (mapRef.current && hasRoute) {
-      const currentWaypoints = getWaypoints();
-      if (currentWaypoints && currentWaypoints.length > 0) {
-        zoomToRoute(mapRef.current, currentWaypoints);
+      const currentRouteCoords = getCurrentRoutePath();
+      if (currentRouteCoords && currentRouteCoords.length > 0) {
+        zoomToRoute(mapRef.current, currentRouteCoords);
+      } else {
+        console.warn('[MapWithRouting] No route path coordinates available to zoom to.');
       }
     }
-  }, [hasRoute]); // Depends on hasRoute to enable/disable, and mapRef for the map instance
+  }, [hasRoute]);
 
   // Effect to zoom to route when map is locked and a route exists
   useEffect(() => {
@@ -303,17 +306,17 @@ export default function MapWithRouting({
   useEffect(() => {
     if (isMapReady && hasRoute && mapRef.current && !initialRouteZoomDoneRef.current) {
       console.log('[InitialRouteZoomEffect] Active: Map ready, route present, initial zoom not yet done.');
-      const currentWaypoints = getWaypoints(); // Get current waypoints
-      if (currentWaypoints && currentWaypoints.length > 0) {
-        zoomToRoute(mapRef.current!, currentWaypoints);
+      const currentRouteCoords = getCurrentRoutePath();
+      if (currentRouteCoords && currentRouteCoords.length > 0) {
+        zoomToRoute(mapRef.current!, currentRouteCoords);
         initialRouteZoomDoneRef.current = true;
         hasInitiallyZoomedToUser.current = true; // Crucial: Mark that an initial zoom action (to route) has occurred
         console.log('[InitialRouteZoomEffect] Successfully zoomed to initial route and set flags.');
       } else {
-        console.log('[InitialRouteZoomEffect] Route reported as present, but getWaypoints() is empty or null. Skipping zoom.');
+        console.log('[InitialRouteZoomEffect] Route reported as present, but getCurrentRoutePath() is empty or null. Skipping zoom.');
       }
     }
-  }, [isMapReady, hasRoute]); // Dependencies: map readiness and route presence
+  }, [isMapReady, hasRoute]); // Dependencies: isMapReady, hasRoute
 
   // Animate user location halo
   useEffect(() => {
