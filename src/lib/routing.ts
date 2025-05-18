@@ -43,7 +43,7 @@ let _accessToken: string | null = null;
 // --- GPX Export ---
 export const exportRouteToGPX = (): { success: boolean; message?: string } => {
   const currentWaypoints = getWaypoints();
-  const routePath = getCurrentRoutePath(); // Get from RouteCalculationService
+  const routePath = getCurrentRoutePath() ?? []; // Get from RouteCalculationService
 
   if (currentWaypoints.length === 0 && routePath.length === 0) {
     return { success: false, message: 'No route to export.' };
@@ -105,11 +105,31 @@ export const importRouteFromGPX = async (
     saveWaypointsToStorage(getWaypoints(), getDirectFlags());
 
     if (getWaypoints().length >= 2) {
-      const routeResult: RouteResult = await getRouteFromService(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
-      if (routeResult.success && routeResult.waypointsSnapped && routeResult.snappedWaypoints && routeResult.snappedDirectFlags) {
-        setWaypointsAndFlags(routeResult.snappedWaypoints, routeResult.snappedDirectFlags);
-        updateWaypointsLayer(map, getWaypoints());
-        saveWaypointsToStorage(getWaypoints(), getDirectFlags());
+      try {
+        const routeResult: RouteResult = await getRouteFromService(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
+        if (routeResult.success && routeResult.waypointsSnapped && routeResult.snappedWaypoints && routeResult.snappedDirectFlags) {
+          setWaypointsAndFlags(routeResult.snappedWaypoints, routeResult.snappedDirectFlags);
+          updateWaypointsLayer(map, getWaypoints());
+          saveWaypointsToStorage(getWaypoints(), getDirectFlags());
+        } else if (!routeResult.success) {
+          console.warn('[importRouteFromGPX] Route calculation after GPX import indicated failure:', routeResult.error);
+          if (onError && routeResult.error) onError(routeResult.error);
+          setRouteDistance('');
+          setRouteDuration('');
+          setHasRoute(false);
+        }
+      } catch (error) {
+        console.error('[importRouteFromGPX] Route calc failed after GPX import:', error);
+        if (onError) {
+          const errorMessage = error instanceof Error ? error.message : 'Failed to calculate route after GPX import.';
+          onError(errorMessage);
+        }
+        clearRouteLayer(map);
+        clearKilometerMarkersLayer(map);
+        clearCurrentRoutePath();
+        setRouteDistance('');
+        setRouteDuration('');
+        setHasRoute(false);
       }
     } else if (getWaypoints().length === 1) {
     setRouteDistance('');
@@ -158,11 +178,23 @@ export const setRouteData = async (
   saveWaypointsToStorage(getWaypoints(), getDirectFlags());
 
   if (getWaypoints().length >= 2) {
-    const routeResult: RouteResult = await getRouteFromService(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
-    if (routeResult.success && routeResult.waypointsSnapped && routeResult.snappedWaypoints && routeResult.snappedDirectFlags) {
-      setWaypointsAndFlags(routeResult.snappedWaypoints, routeResult.snappedDirectFlags);
-      updateWaypointsLayer(map, getWaypoints());
-      saveWaypointsToStorage(getWaypoints(), getDirectFlags());
+    try {
+      const routeResult: RouteResult = await getRouteFromService(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
+      if (routeResult.success && routeResult.waypointsSnapped && routeResult.snappedWaypoints && routeResult.snappedDirectFlags) {
+        setWaypointsAndFlags(routeResult.snappedWaypoints, routeResult.snappedDirectFlags);
+        updateWaypointsLayer(map, getWaypoints());
+        saveWaypointsToStorage(getWaypoints(), getDirectFlags());
+      } else if (!routeResult.success) {
+        console.warn('[setRouteData] Route calculation indicated failure:', routeResult.error);
+      }
+    } catch (error) {
+      console.error('[setRouteData] Route calc failed:', error);
+      clearRouteLayer(map);
+      clearKilometerMarkersLayer(map);
+      clearCurrentRoutePath();
+      setRouteDistance('');
+      setRouteDuration('');
+      setHasRoute(false);
     }
   } else if (getWaypoints().length === 1) {
     setRouteDistance('');

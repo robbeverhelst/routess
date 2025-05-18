@@ -288,8 +288,12 @@ export const getRoute = async (
                       `steps=true&geometries=geojson&overview=full&continue_straight=true&` +
                       `access_token=${accessToken}&radiuses=${radiusesString}`;
 
-      const query = await fetch(queryUrl, { method: 'GET' });
-      const json = await query.json();
+const response = await fetch(queryUrl, { method: 'GET' });
+if (!response.ok) {
+  console.error(`[RCS/getRoute] API request failed with status ${response.status}`);
+  throw new Error(`API request failed: ${response.statusText}`);
+}
+const json = await response.json();
 
       if (!json || !json.routes || json.routes.length === 0 || !json.routes[0].geometry) {
         console.error('[RCS/getRoute] Invalid API response or no route geometry. Response:', json);

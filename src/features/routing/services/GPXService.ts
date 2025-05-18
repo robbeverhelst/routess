@@ -147,7 +147,7 @@ export const processGPXWaypoints = async (
     gpxWaypoints.forEach((coord, index) => {
       finalNewWaypoints.push(coord);
       // If roadCheck is valid, it's NOT a direct point. If invalid/off-road, it IS a direct point.
-      newDirectFlags.push(!roadChecks[index].isValid);
+      newDirectFlags.push(!(roadChecks[index]?.isValid));
     });
 
     console.log("[GPXService.processGPXWaypoints] Determined directFlags:", JSON.stringify(newDirectFlags));
