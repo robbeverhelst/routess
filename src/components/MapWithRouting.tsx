@@ -91,6 +91,21 @@ try {
   console.error('[MapWithRouting Init] Error reading waypoints from localStorage on init:', e);
 }
 
+// Check for last known location in localStorage
+let lastKnownLocationFromStorage: [number, number] | null = null;
+try {
+  const lastKnownStr = localStorage.getItem('lastKnownLocation');
+  if (lastKnownStr) {
+    const parsed = JSON.parse(lastKnownStr);
+    if (Array.isArray(parsed) && parsed.length === 2 && typeof parsed[0] === 'number' && typeof parsed[1] === 'number') {
+      lastKnownLocationFromStorage = parsed as [number, number];
+      console.log('[MapWithRouting Init] Detected last known location in localStorage.');
+    }
+  }
+} catch (e) {
+  console.error('[MapWithRouting Init] Error reading lastKnownLocation from localStorage on init:', e);
+}
+
 export default function MapWithRouting({
   initialViewState = DEFAULT_VIEW_STATE,
   width = '100%',
@@ -104,6 +119,7 @@ export default function MapWithRouting({
   const animationFrameIdRef = useRef<number | null>(null); // For halo animation
   const initialRouteZoomDoneRef = useRef<boolean>(false); // Added ref
   const routingDisposerRef = useRef<(() => void) | null>(null); // Ref to store the disposer
+  const routeInitTimeoutRef = useRef<number | null>(null); // Reference to store timeout ID
   const [isMapLocked, setIsMapLocked] = useState(false);
   const isMapLockedRef = useRef(isMapLocked); // Create a ref for isMapLocked
   
@@ -146,6 +162,12 @@ export default function MapWithRouting({
         latitude: userLocation[1],
         zoom: 15
       }
+    : lastKnownLocationFromStorage 
+    ? {
+        longitude: lastKnownLocationFromStorage[0],
+        latitude: lastKnownLocationFromStorage[1],
+        zoom: 14
+      }
     : initialViewState; // Fallback to prop or default if no userLocation and no LS route
 
   // Show waypoint error message
@@ -177,6 +199,18 @@ export default function MapWithRouting({
     );
     routingDisposerRef.current = disposer;
     setIsMapReady(true);
+    
+    // If we detected a route in localStorage, make sure isRouteCoordsReady gets set
+    if (detectedRouteInLocalStorageOnInit) {
+      // Create a timeout to ensure setIsRouteCoordsReady is called even if something goes wrong
+      routeInitTimeoutRef.current = window.setTimeout(() => {
+        if (!isRouteCoordsReady) {
+          console.log('[MapWithRouting] Forcing isRouteCoordsReady after timeout');
+          setIsRouteCoordsReady(true);
+        }
+      }, 1500); // Give it 1.5 seconds to initialize properly
+    }
+    
     console.log('[MapWithRouting] Routing setup complete');
 
     // Check for shared route data in URL
@@ -226,7 +260,7 @@ export default function MapWithRouting({
         }
       }
     }
-  }, [setRouteDistance, setRouteDuration, setHasRoute, setPopup, handleWaypointError, handleRouteInfoErrorFromHook, isMapLocked]);
+  }, [setRouteDistance, setRouteDuration, setHasRoute, setPopup, handleWaypointError, handleRouteInfoErrorFromHook, isMapLocked, isRouteCoordsReady]);
 
   // Effect to keep the ref's current value in sync with the state
   useEffect(() => {
@@ -249,9 +283,14 @@ export default function MapWithRouting({
     }
   }, [hasRoute]);
 
-  // Effect to clean up routing listeners on unmount
+  // Clean up the timeout when component unmounts
   useEffect(() => {
     return () => {
+      if (routeInitTimeoutRef.current) {
+        clearTimeout(routeInitTimeoutRef.current);
+        routeInitTimeoutRef.current = null;
+      }
+      
       if (routingDisposerRef.current) {
         console.log('[MapWithRouting] Cleaning up map interaction listeners.');
         routingDisposerRef.current();
@@ -268,20 +307,49 @@ export default function MapWithRouting({
     };
   }, []); // Empty dependency array means this runs once on mount and cleanup on unmount
 
-  // Effect to update map with user location from hook
+  // Effect to handle prioritized initial map position
   useEffect(() => {
-    if (!mapRef.current) return; // Exit if mapRef is not yet set
+    if (!mapRef.current || !isMapReady) return;
+    
+    // Only execute this if no initial zoom has happened yet
+    if (hasInitiallyZoomedToUser.current || initialRouteZoomDoneRef.current) return;
+    
+    console.log('[MapWithRouting] Determining initial map position with priority order...');
 
-    if (isMapReady && userLocation) { 
-      updateUserLocationPoint(mapRef.current!, userLocation); // Use non-null assertion
+    // Priority 1: Zoom to route if available
+    if (hasRoute && isRouteCoordsReady) {
+      console.log('[MapWithRouting] Priority 1: Zooming to available route');
+      const currentRouteCoords = getCurrentRoutePath();
+      if (currentRouteCoords && currentRouteCoords.length > 0) {
+        zoomToRoute(mapRef.current, currentRouteCoords);
+        initialRouteZoomDoneRef.current = true;
+        hasInitiallyZoomedToUser.current = true;
+        console.log('[MapWithRouting] Successfully zoomed to initial route.');
+        return;
+      } else {
+        console.warn('[MapWithRouting] hasRoute is true but no route coordinates available');
+      }
+    } else if (detectedRouteInLocalStorageOnInit && mapRef.current) {
+      // For routes from localStorage, first check if the route path is already available
+      const currentRouteCoords = getCurrentRoutePath();
+      if (currentRouteCoords && currentRouteCoords.length > 0) {
+        console.log('[MapWithRouting] Route coordinates available from localStorage, zooming to route');
+        zoomToRoute(mapRef.current, currentRouteCoords);
+        initialRouteZoomDoneRef.current = true;
+        hasInitiallyZoomedToUser.current = true;
+        console.log('[MapWithRouting] Successfully zoomed to route from localStorage.');
+        return;
+      }
+      
+      // If a route is detected in localStorage but hasRoute is not yet true and no coordinates available,
+      // wait for the route to be properly loaded before proceeding to other options
+      console.log('[MapWithRouting] Route detected in localStorage, waiting for route data to be ready');
+      return;
     }
-  }, [userLocation, isMapReady]);
 
-  // Zoom to user location if available, not loading, no errors, and not initially zoomed yet
-  // AND no route was detected in localStorage on init (route zoom takes precedence)
-  useEffect(() => {
-    if (mapRef.current && isMapReady && userLocation && !isUserLocationLoading && !locationError && !hasInitiallyZoomedToUser.current && !detectedRouteInLocalStorageOnInit) {
-      console.log('[MapWithRouting] Initial zoom to user location done.');
+    // Priority 2: Zoom to current user location if available
+    if (userLocation && !isUserLocationLoading && !locationError) {
+      console.log('[MapWithRouting] Priority 2: Zooming to current user location');
       mapRef.current.flyTo({ 
         center: userLocation, 
         zoom: 15,
@@ -290,25 +358,38 @@ export default function MapWithRouting({
         padding: { top: 0, bottom: 0, left: 0, right: 0 }
       });
       hasInitiallyZoomedToUser.current = true;
-      console.log('[MapWithRouting] Initial zoom to user location done.');
+      console.log('[MapWithRouting] Successfully zoomed to current user location.');
+      return;
     }
-  }, [userLocation, isUserLocationLoading, locationError, isMapReady, detectedRouteInLocalStorageOnInit]); // Added detectedRouteInLocalStorageOnInit
 
-  // Effect for initial zoom to route if a route is present on load
-  useEffect(() => {
-    if (isMapReady && hasRoute && mapRef.current && !initialRouteZoomDoneRef.current && isRouteCoordsReady) {
-      console.log('[InitialRouteZoomEffect] Active: Map ready, route present, initial zoom not yet done.');
-      const currentRouteCoords = getCurrentRoutePath();
-      if (currentRouteCoords && currentRouteCoords.length > 0) {
-        zoomToRoute(mapRef.current!, currentRouteCoords);
-        initialRouteZoomDoneRef.current = true;
-        hasInitiallyZoomedToUser.current = true; // Crucial: Mark that an initial zoom action (to route) has occurred
-        console.log('[InitialRouteZoomEffect] Successfully zoomed to initial route and set flags.');
-      } else {
-        console.log('[InitialRouteZoomEffect] Route reported as present, but getCurrentRoutePath() is empty or null. Skipping zoom.');
-      }
+    // Priority 3: Zoom to last known location from localStorage
+    if (lastKnownLocationFromStorage) {
+      console.log('[MapWithRouting] Priority 3: Zooming to last known location from localStorage');
+      mapRef.current.flyTo({ 
+        center: lastKnownLocationFromStorage, 
+        zoom: 14,
+        bearing: 0,
+        pitch: 30,
+        padding: { top: 0, bottom: 0, left: 0, right: 0 }
+      });
+      hasInitiallyZoomedToUser.current = true;
+      console.log('[MapWithRouting] Successfully zoomed to last known location from localStorage.');
+      return;
     }
-  }, [isMapReady, hasRoute, isRouteCoordsReady]); // Dependencies: isMapReady, hasRoute, isRouteCoordsReady
+
+    // Priority 4: Use default location (already set in initialViewState)
+    console.log('[MapWithRouting] Priority 4: Using default location (already set in initialViewState)');
+    
+  }, [isMapReady, hasRoute, isRouteCoordsReady, userLocation, isUserLocationLoading, locationError, lastKnownLocationFromStorage, detectedRouteInLocalStorageOnInit]);
+
+  // Effect to update map with user location from hook
+  useEffect(() => {
+    if (!mapRef.current) return; // Exit if mapRef is not yet set
+
+    if (isMapReady && userLocation) { 
+      updateUserLocationPoint(mapRef.current!, userLocation); // Use non-null assertion
+    }
+  }, [userLocation, isMapReady]);
 
   // Animate user location halo
   useEffect(() => {
