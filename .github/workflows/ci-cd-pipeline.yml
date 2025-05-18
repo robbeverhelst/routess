@@ -126,8 +126,13 @@ jobs:
                   "commitsSort": ["subject", "scope"]
                 }
               }],
-              "@semantic-release/npm",
-              "@semantic-release/github",
+              ["@semantic-release/npm", {
+                "npmPublish": false
+              }],
+              ["@semantic-release/github", {
+                "successComment": false,
+                "failComment": false
+              }],
               [
                 "@semantic-release/git",
                 {
@@ -148,7 +153,16 @@ jobs:
         id: semantic
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: bunx semantic-release
+          GIT_AUTHOR_NAME: "GitHub Actions"
+          GIT_AUTHOR_EMAIL: "actions@github.com"
+          GIT_COMMITTER_NAME: "GitHub Actions"
+          GIT_COMMITTER_EMAIL: "actions@github.com"
+        run: |
+          git config --global --add safe.directory /home/runner/_work/maps/maps
+          git fetch --tags
+          git tag -l | xargs git tag -d || true
+          git fetch --tags --force
+          bunx semantic-release --no-ci
         
       - name: Set version output
         id: version
