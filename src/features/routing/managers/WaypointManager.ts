@@ -239,7 +239,10 @@ export const reverseRoute = async (
   snapshot(); // Snapshot for undo/redo
 
   const reversedWaypoints = [...currentWaypoints].reverse();
-  const reversedDirectFlags = [...getDirectFlags()].reverse();
+  const reversedDirectFlags = [
+  ...[...getDirectFlags()].reverse().slice(1),
+  getDirectFlags()[0] // last segment becomes first after reverse
+];
 
   setWaypointsAndFlags(reversedWaypoints, reversedDirectFlags);
   updateWaypointsLayer(map, getWaypoints()); // getWaypoints() will now return the reversed ones

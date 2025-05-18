@@ -521,7 +521,10 @@ export default function MapWithRouting({
           ...effectiveInitialViewState,
           pitch: 45,
           bearing: 0,
-          zoom: effectiveInitialViewState.zoom + 3
+          zoom:
+  typeof effectiveInitialViewState.zoom === 'number'
+    ? effectiveInitialViewState.zoom + 3
+    : 7      // sensible default
         }}
         style={{ width, height }}
         mapStyle="mapbox://styles/mapbox/standard"

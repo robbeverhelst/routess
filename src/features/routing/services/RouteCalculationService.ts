@@ -134,12 +134,12 @@ async function buildMixedRoute(
           if (json.waypoints && json.waypoints.length === 2) {
             const newWp0 = json.waypoints[0].location as Coordinate;
             const newWp1 = json.waypoints[1].location as Coordinate;
-            if (!directFlags[i] && (workingWaypoints[i][0] !== newWp0[0] || workingWaypoints[i][1] !== newWp0[1])) {
+            if (!workingDirectFlags[i] && (workingWaypoints[i][0] !== newWp0[0] || workingWaypoints[i][1] !== newWp0[1])) {
               console.log(`[RCS/buildMixedRoute] Snapping waypoint ${i} from ${workingWaypoints[i]} to ${newWp0}`);
               workingWaypoints[i] = newWp0;
               waypointsWereInternallyModified = true;
             }
-            if (!directFlags[i+1] && (workingWaypoints[i+1][0] !== newWp1[0] || workingWaypoints[i+1][1] !== newWp1[1])) {
+            if (!workingDirectFlags[i+1] && (workingWaypoints[i+1][0] !== newWp1[0] || workingWaypoints[i+1][1] !== newWp1[1])) {
               console.log(`[RCS/buildMixedRoute] Snapping waypoint ${i+1} from ${workingWaypoints[i+1]} to ${newWp1}`);
               workingWaypoints[i+1] = newWp1;
               waypointsWereInternallyModified = true;

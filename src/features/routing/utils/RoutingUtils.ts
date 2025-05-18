@@ -57,7 +57,11 @@ export const checkNearRoad = async (
         console.log('[checkNearRoad] Point is off-road (tracepoint is null).');
         return { isValid: false };
       }
-      const snappedCoords = snappedTracepoint.location as Coordinate;
+      if (!snappedTracepoint.location) {
+  console.log('[checkNearRoad] Tracepoint has no location – treating as off-road.');
+  return { isValid: false };
+}
+const snappedCoords = snappedTracepoint.location as Coordinate;
       // Even if snapped, check Haversine distance as an additional guard or if radius logic is complex.
       // Original code had a 0.05 km (50m) check here too.
       const dist = haversine(coords, snappedCoords); // Calls local haversine
