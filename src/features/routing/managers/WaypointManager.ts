@@ -194,6 +194,7 @@ export const updateWaypointPositionAndRecalculate = async (
   setHasRoute: Dispatch<SetStateAction<boolean>>,
   onError?: (message: string) => void
 ): Promise<void> => {
+  console.log(`[WaypointManager.updateWaypointPositionAndRecalculate] Called for index: ${index}, newCoords:`, newCoords);
   if (index < 0 || index >= getWaypoints().length) {
     console.warn('[WaypointManager.updateWaypointPosition] Invalid index:', index);
     if (onError) onError("Invalid waypoint index for update.");
@@ -264,14 +265,15 @@ export const insertWaypointAtLocation = async (
   setRouteDuration: Dispatch<SetStateAction<string>>,
   setHasRoute: Dispatch<SetStateAction<boolean>>,
   onError?: (message: string) => void
-): Promise<void> => {
+): Promise<{ success: boolean; newIndex?: number; error?: string }> => {
   console.log('[WaypointManager.insertWaypoint] Attempting to insert waypoint at:', clickedCoords);
 
   const currentWaypoints = getWaypoints();
   if (currentWaypoints.length < 1) { 
     console.warn('[WaypointManager.insertWaypoint] Not enough waypoints to define a route segment.');
-    if (onError) onError("Cannot add waypoint: No existing route segment.");
-    return;
+    const errorMsg = "Cannot add waypoint: No existing route segment.";
+    if (onError) onError(errorMsg);
+    return { success: false, error: errorMsg };
   }
 
   const currentRoutePath = getCurrentRoutePath();
@@ -287,8 +289,9 @@ export const insertWaypointAtLocation = async (
   
   if (routePathToUse.length < 2) {
     console.warn('[WaypointManager.insertWaypoint] Route path is too short (less than 2 points).');
-    if (onError) onError("Cannot add waypoint: Route path is not defined or too short.");
-    return;
+    const errorMsg = "Cannot add waypoint: Route path is not defined or too short.";
+    if (onError) onError(errorMsg);
+    return { success: false, error: errorMsg };
   }
 
   let minDistance = Infinity;
@@ -338,8 +341,9 @@ export const insertWaypointAtLocation = async (
   const MAX_CLICK_DISTANCE_FROM_ROUTE_KM = 0.1;
   if (minDistance > MAX_CLICK_DISTANCE_FROM_ROUTE_KM && getWaypoints().length >= 2) {
     console.warn(`[WaypointManager.insertWaypoint] Click was too far from the route path. Distance: ${minDistance.toFixed(3)}km`);
-    if (onError) onError("Cannot add waypoint: Click too far from route.");
-    return;
+    const errorMsg = "Cannot add waypoint: Click too far from route.";
+    if (onError) onError(errorMsg);
+    return { success: false, error: errorMsg };
   }
 
   console.log('[WaypointManager.insertWaypoint] Closest point on route:', closestPointOnRoute, 'Insert index:', insertIndex);
@@ -383,6 +387,7 @@ export const insertWaypointAtLocation = async (
     clearKilometerMarkersLayer(map);
   }
   console.log('[WaypointManager.insertWaypoint] Waypoint inserted and route recalculated.');
+  return { success: true, newIndex: insertIndex };
 };
 
 // TODO: Consider how to handle dependencies like map, accessToken, state setters, and other services. 

@@ -20,7 +20,7 @@ export const initializeSourcesAndLayers = (map: MapboxMap): void => {
   if (!map.getSource(ROUTE_SOURCE_ID)) {
     map.addSource(ROUTE_SOURCE_ID, {
       type: 'geojson',
-      data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [] } }
+      data: { type: 'Feature', id: 'main_route_line', properties: {}, geometry: { type: 'LineString', coordinates: [] } }
     });
     map.addLayer({
       id: ROUTE_HOVER_LAYER_ID,
@@ -34,7 +34,21 @@ export const initializeSourcesAndLayers = (map: MapboxMap): void => {
       type: 'line',
       source: ROUTE_SOURCE_ID,
       layout: { 'line-join': 'round', 'line-cap': 'round' },
-      paint: { 'line-color': '#3887be', 'line-width': 3, 'line-opacity': 0.75 }
+      paint: {
+        'line-opacity': 0.75,
+        'line-color': [
+          'case',
+          ['boolean', ['feature-state', 'hover'], false],
+          '#FF8C00', // DarkOrange for hover
+          '#3887be'  // Default color
+        ],
+        'line-width': [
+          'case',
+          ['boolean', ['feature-state', 'hover'], false],
+          6, // Wider line on hover
+          3  // Default width
+        ]
+      }
     });
   }
 
@@ -153,6 +167,7 @@ export const updateRouteLayer = (map: MapboxMap, routeCoordinates: Coordinate[])
   const source = map.getSource(ROUTE_SOURCE_ID) as GeoJSONSource;
   source.setData({
     type: 'Feature' as const,
+    id: 'main_route_line',
     properties: {},
     geometry: { type: 'LineString' as const, coordinates: routeCoordinates }
   });
@@ -174,7 +189,10 @@ export const clearRouteLayer = (map: MapboxMap): void => {
   if (!map || !map.getSource(ROUTE_SOURCE_ID)) return;
   const source = map.getSource(ROUTE_SOURCE_ID) as GeoJSONSource;
   source.setData({
-    type: 'Feature' as const, properties: {}, geometry: { type: 'LineString', coordinates: [] }
+    type: 'Feature' as const, 
+    id: 'main_route_line',
+    properties: {}, 
+    geometry: { type: 'LineString', coordinates: [] }
   });
 };
 
