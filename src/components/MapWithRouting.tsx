@@ -3,7 +3,6 @@ import Map from 'react-map-gl/mapbox';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { RouteControls } from '@/components/ui/route-controls';
 import { RouteDetails } from '@/components/ui/route-details';
-import { Button } from '@/components/ui/button';
 import { LocationSearch } from '@/components/ui/location-search';
 import { Sidebar } from '@/components/ui/sidebar';
 import { 
@@ -19,16 +18,19 @@ import {
   removeWaypoint
 } from '@/lib/routing';
 import { zoomToRoute } from '@/features/routing/utils/RoutingUtils';
-import { serializeAndCompress, decompressAndParse } from '@/lib/shareUtils';
-import type { MapTouchEvent, MapMouseEvent } from 'mapbox-gl';
+import { decompressAndParse } from '@/lib/shareUtils';
+// import type { MapTouchEvent, MapMouseEvent } from 'mapbox-gl'; // REMOVED - No longer used
 import {
   getWaypoints, 
-  getDirectFlags 
 } from '@/features/routing/managers/WaypointManager';
 import {
   hasUndo as historyHasUndo,
   hasRedo as historyHasRedo,
 } from '@/features/routing/managers/HistoryManager';
+import { useUserLocation } from '@/hooks/useUserLocation';
+import { MapPopup, type PopupInfo as MapPopupInfo } from '@/components/ui/MapPopup';
+import { useRouteData } from '@/hooks/useRouteData';
+import { useUndoRedoState } from '@/hooks/useUndoRedoState';
 
 // Get Mapbox access token from environment variables
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
@@ -65,21 +67,6 @@ interface MapboxMapProps {
   height?: string | number;
 }
 
-// Define event types - Reinstating MapClickEvent for original handlers
-interface MapClickEvent { 
-  lngLat: { lng: number; lat: number };
-  point: { x: number; y: number };
-  preventDefault: () => void;
-}
-
-interface PopupInfo {
-  longitude: number;
-  latitude: number;
-  type: 'direct' | 'remove' | 'info' | 'add_on_route';
-  waypointIndex?: number;
-  message?: string;
-}
-
 // Default Europe-centered view if user location unavailable
 const DEFAULT_VIEW_STATE = {
   longitude: 10.5,
@@ -108,47 +95,41 @@ export default function MapWithRouting({
   height = '100%'
 }: MapboxMapProps) {
   const mapRef = useRef<mapboxgl.Map | null>(null);
-  const [routeDistance, setRouteDistance] = useState<string>('');
-  const [routeDuration, setRouteDuration] = useState<string>('');
-  const [hasRoute, setHasRoute] = useState<boolean>(false);
-  const [canUndo, setCanUndo] = useState(false);
-  const [canRedo, setCanRedo] = useState(false);
   const [detailsExpanded, setDetailsExpanded] = useState(false);
-  const [userLocation, setUserLocation] = useState<[number, number] | null>(() => {
-    const lastKnown = localStorage.getItem('lastKnownLocation');
-    if (lastKnown) {
-      try {
-        const parsed = JSON.parse(lastKnown);
-        if (Array.isArray(parsed) && parsed.length === 2 && typeof parsed[0] === 'number' && typeof parsed[1] === 'number') {
-          return parsed as [number, number];
-        }
-      } catch (e) {
-        console.error("Failed to parse lastKnownLocation from localStorage", e);
-      }
-    }
-    return null;
-  });
-  const [locationError, setLocationError] = useState<string | null>(null);
   const [waypointError, setWaypointError] = useState<string | null>(null);
   const [isMapReady, setIsMapReady] = useState(false);
-  const hasInitiallyZoomedToUser = useRef<boolean>(false);
   const waypointErrorTimeout = useRef<number | null>(null);
   const animationFrameIdRef = useRef<number | null>(null); // For halo animation
   const initialRouteZoomDoneRef = useRef<boolean>(false); // Added ref
   
-  // State for popup management
-  const [popup, setPopup] = useState<PopupInfo | null>(null);
-  const [isSearchOpen, setIsSearchOpen] = useState(false); // New state for mobile search
-  const [showRouteInfoError, setShowRouteInfoError] = useState(false);
-  const [routeInfoErrorMessage, setRouteInfoErrorMessage] = useState('');
-  const [shareNotification, setShareNotification] = useState(''); // For share link copied message
-  const [displayedShareUrl, setDisplayedShareUrl] = useState<string | null>(null); // New state for displayed URL
+  const { 
+    location: userLocation, 
+    error: locationError, 
+    isLoading: isUserLocationLoading, 
+    hasInitiallyZoomedRef: hasInitiallyZoomedToUser 
+  } = useUserLocation();
 
-  // Long press detection
-  const longPressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
-  const LONG_PRESS_DURATION = 750; // ms
-  const MAX_MOVE_THRESHOLD = 10; // pixels
+  const {
+    routeDistance,
+    routeDuration,
+    hasRoute,
+    shareNotification,
+    displayedShareUrl,
+    showRouteInfoError,
+    routeInfoErrorMessage,
+    setRouteDistance,
+    setRouteDuration,
+    setHasRoute,
+    handleShareRoute,
+    handleCopySharedUrl: handleCopySharedUrlFromHook,
+    handleRouteInfoError: handleRouteInfoErrorFromHook,
+    clearShareState
+  } = useRouteData();
+
+  const { canUndo, canRedo } = useUndoRedoState();
+
+  const [popup, setPopup] = useState<MapPopupInfo | null>(null);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   // Use user location for initial view state if available, 
   // UNLESS a route was detected in localStorage at component initialization.
@@ -171,7 +152,8 @@ export default function MapWithRouting({
       MAPBOX_TOKEN,
       setRouteDistance,
       setRouteDuration,
-      setHasRoute
+      setHasRoute,
+      setPopup
     );
     setIsMapReady(true);
     console.log('[MapWithRouting] Routing setup complete');
@@ -199,160 +181,40 @@ export default function MapWithRouting({
         }).catch(err => {
           console.error('[MapWithRouting] Error setting route data from URL:', err);
           // Show an error to the user if loading fails
-          handleRouteInfoError('Failed to load shared route. The link may be invalid or corrupted.');
+          handleRouteInfoErrorFromHook('Failed to load shared route. The link may be invalid or corrupted.');
         });
       } else {
         console.warn('[MapWithRouting] Failed to decompress or parse route data from URL.');
-        handleRouteInfoError('Could not load shared route. The link appears to be invalid.');
+        handleRouteInfoErrorFromHook('Could not load shared route. The link appears to be invalid.');
       }
     }
-  }, []);
+  }, [setRouteDistance, setRouteDuration, setHasRoute, setPopup, handleRouteInfoErrorFromHook]);
 
-  // Request user location
+  // Effect to update map with user location from hook
   useEffect(() => {
-    if ('geolocation' in navigator) {
-      // Get location once with more permissive settings
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const newLocation: [number, number] = [
-            position.coords.longitude,
-            position.coords.latitude
-          ];
-          setUserLocation(newLocation);
-          localStorage.setItem('lastKnownLocation', JSON.stringify(newLocation));
-          setLocationError(null); // Still update error state for internal tracking
-          if (mapRef.current) {
-            updateUserLocationPoint(mapRef.current, newLocation);
-          }
-        },
-        (error) => {
-          console.error('Error getting user location:', error);
-          
-          // Store error message internally, but don't display to user
-          let errorMessage = 'Unable to access your location.';
-          
-          switch(error.code) {
-            case 1: // PERMISSION_DENIED
-              errorMessage = 'Location access denied. Please enable location services in your browser.';
-              break;
-            case 2: // POSITION_UNAVAILABLE
-              errorMessage = 'Your location could not be determined. Try again later.';
-              break;
-            case 3: // TIMEOUT
-              errorMessage = 'Location request timed out. Trying again with lower accuracy.';
-              // Try again with lower accuracy
-              navigator.geolocation.getCurrentPosition(
-                (position) => {
-                  const newLocation: [number, number] = [
-                    position.coords.longitude,
-                    position.coords.latitude
-                  ];
-                  setUserLocation(newLocation);
-                  localStorage.setItem('lastKnownLocation', JSON.stringify(newLocation));
-                  setLocationError(null); // Still update error state for internal tracking
-                  if (mapRef.current) {
-                    updateUserLocationPoint(mapRef.current, newLocation);
-                  }
-                },
-                (retryError) => {
-                  console.error('Error after retry:', retryError);
-                  setLocationError('Could not determine your location after multiple attempts.');
-                },
-                { 
-                  enableHighAccuracy: false, 
-                  timeout: 20000,
-                  maximumAge: 60000 // Allow cached position up to 1 minute old
-                }
-              );
-              break;
-          }
-          
-          if (error.code !== 3) { // Don't set error for timeout since we're retrying
-            setLocationError(errorMessage); // Still update error state for internal tracking
-          }
-        },
-        { 
-          enableHighAccuracy: true,
-          timeout: 15000, // Extended from 10s to 15s
-          maximumAge: 30000 // Allow cached position up to 30 seconds old
-        }
-      );
+    if (!mapRef.current) return; // Exit if mapRef is not yet set
 
-      // Setup watch with more relaxed settings
-      const watchId = navigator.geolocation.watchPosition(
-        (position) => {
-          const updatedLocation: [number, number] = [
-            position.coords.longitude,
-            position.coords.latitude
-          ];
-          setUserLocation(updatedLocation);
-          localStorage.setItem('lastKnownLocation', JSON.stringify(updatedLocation));
-          setLocationError(null);
-          if (mapRef.current) {
-            updateUserLocationPoint(mapRef.current, updatedLocation);
-          }
-        },
-        (error) => {
-          console.error('Error watching location:', error);
-          // Only update error message for non-timeout errors
-          if (error.code !== 3) {
-            let watchErrorMessage = '';
-            switch(error.code) {
-              case 1: // PERMISSION_DENIED
-                watchErrorMessage = 'Location access denied. Please enable location services.';
-                break;
-              case 2: // POSITION_UNAVAILABLE
-                watchErrorMessage = 'Your location is temporarily unavailable.';
-                break;
-            }
-            if (watchErrorMessage) {
-              setLocationError(watchErrorMessage);
-            }
-          }
-        },
-        { 
-          enableHighAccuracy: false, // Use less accurate but faster location
-          timeout: 27000,           // Longer timeout
-          maximumAge: 60000         // Allow positions up to 1 minute old
-        }
-      );
-
-      return () => navigator.geolocation.clearWatch(watchId);
-    } else {
-      setLocationError('Geolocation is not supported by your browser.');
+    if (isMapReady && userLocation) { 
+      updateUserLocationPoint(mapRef.current!, userLocation); // Use non-null assertion
     }
-  }, []);
+  }, [userLocation, isMapReady, mapRef.current]);
 
-  // Automatically zoom to user location when it becomes available
+  // Zoom to user location if available, not loading, no errors, and not initially zoomed yet
+  // AND no route was detected in localStorage on init (route zoom takes precedence)
   useEffect(() => {
-    // Goal: Zoom to user location only if no route took precedence for initial view.
-    if (isMapReady && userLocation && mapRef.current && !hasInitiallyZoomedToUser.current) {
-      // If a route was detected in LS on init, OR if a route is currently loaded and the initialRouteZoom wasn't done yet
-      // we should wait for the InitialRouteZoomEffect to potentially handle it.
-      // The `hasInitiallyZoomedToUser.current` will be set to true by InitialRouteZoomEffect if it acts.
-      if (detectedRouteInLocalStorageOnInit || (hasRoute && !initialRouteZoomDoneRef.current)) {
-          console.log('[UserLocationZoom] Deferring to InitialRouteZoomEffect or route is present and initial zoom pending. Detected LS route:', detectedRouteInLocalStorageOnInit, 'Has route now:', hasRoute, 'Initial route zoom done:', initialRouteZoomDoneRef.current);
-          return;
-      }
-
-      console.log('[UserLocationZoom] Attempting to fly to user location. No superseding route zoom active or expected.');
+    if (mapRef.current && isMapReady && userLocation && !isUserLocationLoading && !locationError && !hasInitiallyZoomedToUser.current && !detectedRouteInLocalStorageOnInit) {
+      console.log('[MapWithRouting] Initial zoom to user location done.');
       mapRef.current.flyTo({ 
         center: userLocation, 
-        zoom: 17,
-        essential: true // This ensures the animation runs even for essential UI
+        zoom: 15,
+        bearing: 0,
+        pitch: 0,
+        padding: { top: 0, bottom: 0, left: 0, right: 0 }
       });
-      updateUserLocationPoint(mapRef.current, userLocation);
       hasInitiallyZoomedToUser.current = true;
-      console.log('[UserLocationZoom] Flew to user location.');
+      console.log('[MapWithRouting] Initial zoom to user location done.');
     }
-  }, [isMapReady, userLocation, detectedRouteInLocalStorageOnInit, hasRoute]); // Dependencies updated
-
-  // Update user location marker when map is ready and location is available (covers cases where location is available before map)
-  useEffect(() => {
-    if (isMapReady && userLocation && mapRef.current) {
-      updateUserLocationPoint(mapRef.current, userLocation);
-    }
-  }, [isMapReady, userLocation]);
+  }, [userLocation, isUserLocationLoading, locationError, isMapReady, detectedRouteInLocalStorageOnInit]); // Added detectedRouteInLocalStorageOnInit
 
   // Effect for initial zoom to route if a route is present on load
   useEffect(() => {
@@ -360,7 +222,7 @@ export default function MapWithRouting({
       console.log('[InitialRouteZoomEffect] Active: Map ready, route present, initial zoom not yet done.');
       const currentWaypoints = getWaypoints(); // Get current waypoints
       if (currentWaypoints && currentWaypoints.length > 0) {
-        zoomToRoute(mapRef.current, currentWaypoints);
+        zoomToRoute(mapRef.current!, currentWaypoints);
         initialRouteZoomDoneRef.current = true;
         hasInitiallyZoomedToUser.current = true; // Crucial: Mark that an initial zoom action (to route) has occurred
         console.log('[InitialRouteZoomEffect] Successfully zoomed to initial route and set flags.');
@@ -440,44 +302,44 @@ export default function MapWithRouting({
     };
   }, [waypointError]);
 
-  // Poll for undo/redo state
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const canUndoValue = historyHasUndo();
-      const canRedoValue = historyHasRedo();
-      setCanUndo(canUndoValue);
-      setCanRedo(canRedoValue);
-    }, 200);
-    return () => clearInterval(interval);
-  }, []);
-
   // Handler functions for controls
   const handleUndo = useCallback(() => {
     if (!mapRef.current) {
-      console.error('[handleUndo] mapRef.current is null');
+      console.error('[MapWithRouting] handleUndo: mapRef.current is null');
       return;
     }
-    console.log('[handleUndo] Called, undoStack availability:', historyHasUndo());
-    stepBack(
-      mapRef.current,
-      MAPBOX_TOKEN,
-      setRouteDistance,
-      setRouteDuration,
-      setHasRoute
-    );
-    console.log('[handleUndo] After stepBack, undoStack availability:', historyHasUndo());
-  }, []);
+    if (historyHasUndo()) {
+      console.log('[MapWithRouting] Calling stepBack');
+      stepBack(
+        mapRef.current,
+        MAPBOX_TOKEN,
+        setRouteDistance,
+        setRouteDuration,
+        setHasRoute
+      );
+    } else {
+      console.warn('[MapWithRouting] Undo called but no history to undo.');
+    }
+  }, [MAPBOX_TOKEN, setRouteDistance, setRouteDuration, setHasRoute]);
 
   const handleRedo = useCallback(() => {
-    if (!mapRef.current) return;
-    stepForward(
-      mapRef.current,
-      MAPBOX_TOKEN,
-      setRouteDistance,
-      setRouteDuration,
-      setHasRoute
-    );
-  }, []);
+    if (!mapRef.current) {
+      console.error('[MapWithRouting] handleRedo: mapRef.current is null');
+      return;
+    }
+    if (historyHasRedo()) {
+      console.log('[MapWithRouting] Calling stepForward');
+      stepForward(
+        mapRef.current,
+        MAPBOX_TOKEN,
+        setRouteDistance,
+        setRouteDuration,
+        setHasRoute
+      );
+    } else {
+      console.warn('[MapWithRouting] Redo called but no history to redo.');
+    }
+  }, [MAPBOX_TOKEN, setRouteDistance, setRouteDuration, setHasRoute]);
 
   const handleReset = useCallback(() => {
     if (!mapRef.current) return;
@@ -489,16 +351,13 @@ export default function MapWithRouting({
       setHasRoute
     );
     // Clear component-specific states in MapWithRouting.tsx
-    setPopup(null); // This was likely already here, confirm and keep
-    setDisplayedShareUrl(null);
-    setShareNotification('');
-    setShowRouteInfoError(false);
-    setRouteInfoErrorMessage('');
-    setWaypointError(null); // Clear any waypoint specific errors
-    setDetailsExpanded(false); // Collapse route details card
+    setPopup(null);
+    clearShareState();
+    setWaypointError(null);
+    setDetailsExpanded(false);
     
     console.log('[MapWithRouting] handleReset completed, UI states cleared.');
-  }, []);
+  }, [setRouteDistance, setRouteDuration, setHasRoute, clearShareState]);
 
   const handleReverseRoute = useCallback(async () => {
     if (!mapRef.current || !MAPBOX_TOKEN || !hasRoute) return;
@@ -521,183 +380,6 @@ export default function MapWithRouting({
       console.log('Location not available or has error:', locationError);
     }
   }, [userLocation, locationError]);
-
-  // Handle map click
-  const handleMapClick = useCallback((event: MapClickEvent) => {
-    console.log('[MapWithRouting] Click event at:', event.lngLat);
-    // Clear any popups
-    setPopup(null);
-  }, []);
-
-  // Handle map right-click (context menu)
-  const handleContextMenu = useCallback((event: MapClickEvent) => {
-    event.preventDefault();
-    console.log('[MapWithRouting] Right-click at:', event.lngLat);
-
-    if (!mapRef.current) return;
-
-    // Check for waypoints first
-    const pointFeatures = mapRef.current.queryRenderedFeatures([event.point.x, event.point.y], 
-      { layers: ['points'] }
-    );
-    
-    if (pointFeatures && pointFeatures.length > 0) {
-      // Clicked on a waypoint
-      const feature = pointFeatures[0];
-      const idxRaw = feature.properties?.waypointIndex;
-      const idx = typeof idxRaw === 'string' ? parseInt(idxRaw, 10) : idxRaw;
-      
-      if (isNaN(idx) || idx < 0 || idx >= getWaypoints().length) {
-        console.error('[MapWithRouting] Invalid waypoint index:', idxRaw);
-        return;
-      }
-
-      setPopup({
-        longitude: event.lngLat.lng,
-        latitude: event.lngLat.lat,
-        type: 'remove',
-        waypointIndex: idx
-      });
-    } else {
-      // Not on a waypoint, check if on the route
-      const routeFeatures = mapRef.current.queryRenderedFeatures([event.point.x, event.point.y],
-        { layers: ['route-hover-target'] } // Check the interactive route layer
-      );
-
-      if (routeFeatures && routeFeatures.length > 0 && getWaypoints().length >=1) { // Ensure there's a route to click on
-        setPopup({
-          longitude: event.lngLat.lng,
-          latitude: event.lngLat.lat,
-          type: 'add_on_route'
-        });
-      } else {
-        // Clicked on empty space, show direct waypoint popup
-        setPopup({
-          longitude: event.lngLat.lng,
-          latitude: event.lngLat.lat,
-          type: 'direct'
-        });
-      }
-    }
-  }, []);
-
-  // New: Handle long press for mobile
-  const handleLongPress = useCallback((lngLat: { lng: number; lat: number }, point: { x: number; y: number }) => {
-    console.log('[MapWithRouting] Long press at:', lngLat);
-    if (!mapRef.current) return;
-
-    // Check for waypoints first
-    const pointFeatures = mapRef.current.queryRenderedFeatures([point.x, point.y], 
-      { layers: ['points'] }
-    );
-    
-    if (pointFeatures && pointFeatures.length > 0) {
-      // Long pressed on a waypoint
-      const feature = pointFeatures[0];
-      const idxRaw = feature.properties?.waypointIndex;
-      const idx = typeof idxRaw === 'string' ? parseInt(idxRaw, 10) : typeof idxRaw === 'number' ? idxRaw : -1;
-      
-      if (idx === -1 || isNaN(idx) || idx < 0 || idx >= getWaypoints().length) {
-        console.error('[MapWithRouting] Invalid waypoint index on long press:', idxRaw);
-        return;
-      }
-
-      setPopup({
-        longitude: lngLat.lng,
-        latitude: lngLat.lat,
-        type: 'remove',
-        waypointIndex: idx
-      });
-    } else {
-      // Not on a waypoint, check if on the route
-      const routeFeatures = mapRef.current.queryRenderedFeatures([point.x, point.y],
-        { layers: ['route-hover-target'] } // Check the interactive route layer
-      );
-      if (routeFeatures && routeFeatures.length > 0 && getWaypoints().length >=1) { // Ensure there's a route to click on
-        setPopup({
-          longitude: lngLat.lng,
-          latitude: lngLat.lat,
-          type: 'add_on_route'
-        });
-      } else {
-        // Long pressed on empty space, show direct waypoint popup
-        setPopup({
-          longitude: lngLat.lng,
-          latitude: lngLat.lat,
-          type: 'direct'
-        });
-      }
-    }
-  }, []);
-
-  // New: Touch event handlers for long press
-  const handleTouchStart = useCallback((event: MapTouchEvent) => {
-    // Prevent if more than one touch point (e.g. pinch zoom)
-    if (event.points.length > 1) {
-        if (longPressTimeoutRef.current) {
-            clearTimeout(longPressTimeoutRef.current);
-            longPressTimeoutRef.current = null;
-        }
-        touchStartPosRef.current = null;
-        return;
-    }
-    touchStartPosRef.current = { x: event.point.x, y: event.point.y };
-    
-    if (longPressTimeoutRef.current) {
-      clearTimeout(longPressTimeoutRef.current);
-    }
-    longPressTimeoutRef.current = setTimeout(() => {
-      if (touchStartPosRef.current) { // Check if touch is still active
-        handleLongPress(event.lngLat, event.point);
-      }
-      longPressTimeoutRef.current = null;
-      touchStartPosRef.current = null; // Reset to prevent re-triggering
-    }, LONG_PRESS_DURATION);
-  }, [handleLongPress]);
-
-  const handleTouchEnd = useCallback(() => {
-    if (longPressTimeoutRef.current) {
-      clearTimeout(longPressTimeoutRef.current);
-      longPressTimeoutRef.current = null;
-    }
-    touchStartPosRef.current = null;
-  }, []);
-
-  const handlePointerMove = useCallback((event: MapTouchEvent | MapMouseEvent) => {
-    // Determine the correct point property based on event type
-    let currentPoint: { x: number; y: number };
-    let currentPointsLength: number;
-
-    if ('points' in event) { // It's a MapTouchEvent
-      const touchEvent = event as MapTouchEvent;
-      currentPoint = touchEvent.point; // mapbox-gl MapTouchEvent uses singular `point` for the primary touch point
-      currentPointsLength = touchEvent.points.length;
-    } else { // It's a MapMouseEvent
-      const mouseEvent = event as MapMouseEvent;
-      currentPoint = mouseEvent.point;
-      currentPointsLength = 1; // Mouse events are always single point
-    }
-
-    if (!touchStartPosRef.current || currentPointsLength > 1) {
-        if (longPressTimeoutRef.current) {
-            clearTimeout(longPressTimeoutRef.current);
-            longPressTimeoutRef.current = null;
-        }
-        touchStartPosRef.current = null;
-        return;
-    }
-
-    const dx = Math.abs(currentPoint.x - touchStartPosRef.current.x);
-    const dy = Math.abs(currentPoint.y - touchStartPosRef.current.y);
-
-    if (dx > MAX_MOVE_THRESHOLD || dy > MAX_MOVE_THRESHOLD) {
-      if (longPressTimeoutRef.current) {
-        clearTimeout(longPressTimeoutRef.current);
-        longPressTimeoutRef.current = null;
-      }
-      touchStartPosRef.current = null; // Reset if touch moves beyond threshold
-    }
-  }, []);
 
   // Show waypoint error message
   const handleWaypointError = useCallback((message: string | null) => {
@@ -812,57 +494,6 @@ export default function MapWithRouting({
     }
   }, [hasRoute]); // Depends on hasRoute to enable/disable, and mapRef for the map instance
 
-  const handleShareRoute = () => {
-    const waypoints = getWaypoints();
-    const directFlags = getDirectFlags();
-
-    if (waypoints.length === 0) {
-      handleRouteInfoError("Cannot share an empty route.");
-      return;
-    }
-
-    const encodedData = serializeAndCompress(waypoints, directFlags);
-    if (encodedData) {
-      const shareUrl = `${window.location.origin}${window.location.pathname}?route=${encodedData}`;
-      navigator.clipboard.writeText(shareUrl)
-        .then(() => {
-          setShareNotification('Link copied to clipboard!');
-          setTimeout(() => setShareNotification(''), 2000);
-        })
-        .catch(err => {
-          console.error('[MapWithRouting] Failed to copy share link:', err);
-          handleRouteInfoError('Failed to copy link. Please try again.');
-          setDisplayedShareUrl(null);
-        });
-      setDisplayedShareUrl(shareUrl);
-    } else {
-      handleRouteInfoError('Could not generate shareable link.');
-      setDisplayedShareUrl(null);
-    }
-  };
-
-  // This new function will be called by the Sidebar's own copy button
-  const handleCopySharedUrlInSidebar = (urlToCopy: string) => {
-    navigator.clipboard.writeText(urlToCopy)
-      .then(() => {
-        setShareNotification('Share link copied!');
-        setTimeout(() => setShareNotification(''), 2000); 
-      })
-      .catch(err => {
-        console.error('[MapWithRouting] Failed to copy share link from sidebar button:', err);
-        handleRouteInfoError('Failed to copy. Please try again.');
-      });
-  };
-
-  const handleRouteInfoError = (message: string) => {
-    setShowRouteInfoError(true);
-    setRouteInfoErrorMessage(message);
-    setTimeout(() => {
-      setShowRouteInfoError(false);
-      setRouteInfoErrorMessage('');
-    }, 5000); // Clear error after 5 seconds
-  };
-
   return (
     <div className="relative w-full h-full">
       <Map
@@ -880,68 +511,15 @@ export default function MapWithRouting({
         projection="mercator"
         antialias={true}
         onLoad={handleMapLoad}
-        onClick={handleMapClick}
-        onContextMenu={handleContextMenu}
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
-        onTouchMove={handlePointerMove}
-        onMouseMove={handlePointerMove}
       >
-        {/* Custom Popup Component instead of Mapbox's Popup */}
         {popup && mapRef.current && (
-          <div
-            className="absolute z-10 animate-in fade-in"
-            style={{
-              left: mapRef.current.project([popup.longitude, popup.latitude]).x,
-              top: mapRef.current.project([popup.longitude, popup.latitude]).y - 30,
-              transform: 'translate(-50%, -100%)'
-            }}
-          >
-            {popup.type === 'direct' && (
-              <div className="p-2 bg-white rounded-md shadow-md border border-border">
-                <Button
-                  variant="ghost"
-                  className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
-                  onClick={handleAddDirectWaypoint}
-                >
-                  Add direct waypoint
-                </Button>
-              </div>
-            )}
-            
-            {popup.type === 'remove' && (
-              <div className="p-2 bg-white rounded-md shadow-md border border-border">
-                <Button
-                  variant="ghost"
-                  className="text-red-600 hover:text-red-800 hover:bg-red-50 flex items-center gap-2"
-                  onClick={handleRemoveWaypoint}
-                >
-                  <span className="text-lg">🗑️</span>
-                  <span>Remove point</span>
-                </Button>
-              </div>
-            )}
-            
-            {popup.type === 'add_on_route' && (
-              <div className="p-2 bg-white rounded-md shadow-md border border-border">
-                <Button
-                  variant="ghost"
-                  className="text-green-600 hover:text-green-800 hover:bg-green-50"
-                  onClick={handleAddWaypointOnRoute}
-                >
-                  Add waypoint here
-                </Button>
-              </div>
-            )}
-            
-            {popup.type === 'info' && (
-              <div className="p-2 bg-white rounded-md shadow-md border border-border">
-                <div className="text-sm text-gray-800">
-                  {popup.message}
-                </div>
-              </div>
-            )}
-          </div>
+          <MapPopup 
+            popupInfo={popup}
+            mapInstance={mapRef.current!}
+            onAddDirectWaypoint={handleAddDirectWaypoint}
+            onRemoveWaypoint={handleRemoveWaypoint}
+            onAddWaypointOnRoute={handleAddWaypointOnRoute}
+          />
         )}
       </Map>
 
@@ -981,8 +559,8 @@ export default function MapWithRouting({
                   onZoomToRoute={handleZoomToRoute}
                   onShare={handleShareRoute}
                   displayedShareUrl={displayedShareUrl}
-                  setDisplayedShareUrl={setDisplayedShareUrl}
-                  onCopySharedUrl={handleCopySharedUrlInSidebar}
+                  onCopySharedUrl={handleCopySharedUrlFromHook}
+                  onClearShareDisplay={clearShareState}
                   canUndo={canUndo}
                   canRedo={canRedo}
                   hasRoute={hasRoute}
@@ -1030,8 +608,8 @@ export default function MapWithRouting({
           onZoomToRoute={handleZoomToRoute}
           onShare={handleShareRoute}
           displayedShareUrl={displayedShareUrl}
-          setDisplayedShareUrl={setDisplayedShareUrl}
-          onCopySharedUrl={handleCopySharedUrlInSidebar}
+          onCopySharedUrl={handleCopySharedUrlFromHook}
+          onClearShareDisplay={clearShareState}
           canUndo={canUndo}
           canRedo={canRedo}
           hasRoute={hasRoute}

@@ -27,8 +27,8 @@ interface SidebarProps {
   onImportError: (message: string) => void;
   // Props for inline share display
   displayedShareUrl: string | null;
-  setDisplayedShareUrl: (url: string | null) => void;
   onCopySharedUrl: (url: string) => void;
+  onClearShareDisplay?: () => void;
 }
 
 export function Sidebar({
@@ -51,8 +51,8 @@ export function Sidebar({
   setHasRoute,
   onImportError,
   displayedShareUrl,
-  setDisplayedShareUrl,
   onCopySharedUrl,
+  onClearShareDisplay,
 }: SidebarProps) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   
@@ -282,7 +282,7 @@ export function Sidebar({
                     <Button 
                       variant="ghost"
                       size="icon"
-                      onClick={() => setDisplayedShareUrl(null)}
+                      onClick={onClearShareDisplay}
                       className="p-1.5 rounded-md"
                     >
                       <BackIcon size={18} />
