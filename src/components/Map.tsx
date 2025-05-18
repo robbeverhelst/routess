@@ -2,7 +2,7 @@ import Map from 'react-map-gl/mapbox';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 // Correct Mapbox access token provided
-const MAPBOX_TOKEN = 'pk.eyJ1Ijoicm9iYmV2ZXJoZWxzdCIsImEiOiJjbThzeThicDMwNjZ5MmxzNmpjenF6M3Y1In0.lgYzgzpN14eo7vlbUl-1Bw';
+const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
 
 interface MapboxMapProps {
   initialViewState?: {
