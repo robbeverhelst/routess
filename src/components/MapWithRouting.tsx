@@ -41,7 +41,7 @@ const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
 // }
 
 // More detailed check for debugging
-if (!MAPBOX_TOKEN || MAPBOX_TOKEN.length < 10) { // Check if it's falsy or too short to be a real token
+if (import.meta.env.DEV && (!MAPBOX_TOKEN || MAPBOX_TOKEN.length < 10)) { // Check if it's falsy or too short to be a real token
   console.error(
     `[MapWithRouting] Mapbox token issue: 
     Raw import.meta.env.VITE_MAPBOX_ACCESS_TOKEN: '${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}', 
@@ -49,7 +49,7 @@ if (!MAPBOX_TOKEN || MAPBOX_TOKEN.length < 10) { // Check if it's falsy or too s
     Type of MAPBOX_TOKEN: '${typeof MAPBOX_TOKEN}'. 
     Please verify VITE_MAPBOX_ACCESS_TOKEN in your .env file or CI secrets.`
   );
-} else {
+} else if (import.meta.env.DEV) {
   console.log(
     `[MapWithRouting] Mapbox token loaded. 
     Type: ${typeof MAPBOX_TOKEN}, 
@@ -178,7 +178,15 @@ export default function MapWithRouting({
 
     if (routeDataParam) {
       console.log('[MapWithRouting] Found route data in URL, attempting to load...');
-      const loadedData = decompressAndParse(routeDataParam);
+      let loadedData: ReturnType<typeof decompressAndParse> | null = null;
+      try {
+        loadedData = decompressAndParse(routeDataParam);
+      } catch (err) {
+        console.error('[MapWithRouting] Could not decompress or parse route param:', err);
+        handleRouteInfoErrorFromHook('Failed to read shared route data. The link may be corrupted or invalid.');
+        // No return here, allow map to load normally without shared route
+      }
+
       if (loadedData && mapRef.current && MAPBOX_TOKEN) {
         setRouteData(
           mapRef.current,
@@ -197,9 +205,17 @@ export default function MapWithRouting({
           // Show an error to the user if loading fails
           handleRouteInfoErrorFromHook('Failed to load shared route. The link may be invalid or corrupted.');
         });
+      } else if (loadedData === null && routeDataParam) {
+        // This case is hit if decompressAndParse failed and error was already handled by the catch block.
+        // No further action needed here as error is already displayed.
       } else {
-        console.warn('[MapWithRouting] Failed to decompress or parse route data from URL.');
-        handleRouteInfoErrorFromHook('Could not load shared route. The link appears to be invalid.');
+        // This case implies routeDataParam was present but loadedData is null for other reasons
+        // (e.g. decompressAndParse returned null without throwing, or one of the other conditions failed)
+        console.warn('[MapWithRouting] Failed to process route data from URL (e.g. map not ready, token missing, or data invalid but not throwing). RouteDataParam was present.');
+        // Avoid showing a generic error if a specific one was already shown by the catch block for decompressAndParse
+        if(loadedData !== null) { // Only show this if decompressAndParse didn't fail and show its own error
+            handleRouteInfoErrorFromHook('Could not load shared route. The link appears to be invalid or data is missing.');
+        }
       }
     }
   }, [setRouteDistance, setRouteDuration, setHasRoute, setPopup, handleWaypointError, handleRouteInfoErrorFromHook]);
@@ -318,42 +334,22 @@ export default function MapWithRouting({
 
   // Handler functions for controls
   const handleUndo = useCallback(() => {
-    if (!mapRef.current) {
-      console.error('[MapWithRouting] handleUndo: mapRef.current is null');
-      return;
-    }
     if (historyHasUndo()) {
       console.log('[MapWithRouting] Calling stepBack');
-      stepBack(
-        mapRef.current,
-        MAPBOX_TOKEN,
-        setRouteDistance,
-        setRouteDuration,
-        setHasRoute
-      );
+      stepBack();
     } else {
       console.warn('[MapWithRouting] Undo called but no history to undo.');
     }
-  }, [MAPBOX_TOKEN, setRouteDistance, setRouteDuration, setHasRoute]);
+  }, []);
 
   const handleRedo = useCallback(() => {
-    if (!mapRef.current) {
-      console.error('[MapWithRouting] handleRedo: mapRef.current is null');
-      return;
-    }
     if (historyHasRedo()) {
       console.log('[MapWithRouting] Calling stepForward');
-      stepForward(
-        mapRef.current,
-        MAPBOX_TOKEN,
-        setRouteDistance,
-        setRouteDuration,
-        setHasRoute
-      );
+      stepForward();
     } else {
       console.warn('[MapWithRouting] Redo called but no history to redo.');
     }
-  }, [MAPBOX_TOKEN, setRouteDistance, setRouteDuration, setHasRoute]);
+  }, []);
 
   const handleReset = useCallback(() => {
     if (!mapRef.current) return;
@@ -419,7 +415,7 @@ export default function MapWithRouting({
     
     // Clear the popup
     setPopup(null);
-  }, [popup, handleWaypointError, MAPBOX_TOKEN]);
+  }, [popup, handleWaypointError, MAPBOX_TOKEN, setRouteDistance, setRouteDuration, setHasRoute]);
 
   // Handle remove waypoint button click
   const handleRemoveWaypoint = useCallback(() => {
@@ -438,7 +434,7 @@ export default function MapWithRouting({
     
     // Clear the popup
     setPopup(null);
-  }, [popup, MAPBOX_TOKEN]);
+  }, [popup, MAPBOX_TOKEN, setRouteDistance, setRouteDuration, setHasRoute]);
 
   // New: Handle "Add waypoint here" button click from route context menu
   const handleAddWaypointOnRoute = useCallback(async () => {

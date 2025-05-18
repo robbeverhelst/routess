@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   hasUndo as historyHasUndo,
   hasRedo as historyHasRedo,
-} from '@/features/routing/managers/HistoryManager';
+} from '@/features/routing/managers/HistoryManager'; // Reverted import
 
 export interface UndoRedoState {
   canUndo: boolean;
@@ -10,13 +10,13 @@ export interface UndoRedoState {
 }
 
 export function useUndoRedoState(): UndoRedoState {
-  const [canUndo, setCanUndo] = useState<boolean>(historyHasUndo()); // Initialize with current state
-  const [canRedo, setCanRedo] = useState<boolean>(historyHasRedo()); // Initialize with current state
+  const [canUndo, setCanUndo] = useState<boolean>(historyHasUndo()); // Call imported function
+  const [canRedo, setCanRedo] = useState<boolean>(historyHasRedo()); // Call imported function
 
   useEffect(() => {
     const interval = setInterval(() => {
-      const currentCanUndo = historyHasUndo();
-      const currentCanRedo = historyHasRedo();
+      const currentCanUndo = historyHasUndo(); // Call imported function
+      const currentCanRedo = historyHasRedo(); // Call imported function
       
       // Only update state if the value has actually changed to prevent unnecessary re-renders
       setCanUndo(prev => prev !== currentCanUndo ? currentCanUndo : prev);

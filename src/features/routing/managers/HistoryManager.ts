@@ -1,10 +1,25 @@
 import type { WaypointHistory, Coordinate } from '@/types/map';
 import { getWaypoints, getDirectFlags, setWaypointsAndFlags } from './WaypointManager';
-import { saveWaypointsToLocalStorage as saveWaypointsToStorage } from '@/features/routing/services/LocalStorageService'; // Still needed for stepBack/Forward initially
-import type { Map as MapboxMap } from 'mapbox-gl';
-import type { Dispatch, SetStateAction } from 'react';
-import { getRoute as getRouteFromService, clearCurrentRoutePath, type RouteResult } from '@/features/routing/services/RouteCalculationService';
-import { updateWaypointsLayer, clearRouteLayer, clearKilometerMarkersLayer } from '@/features/routing/managers/MapLayerManager';
+
+// --- Event Emitter ---
+type HistoryEventListener = (historyState: WaypointHistory) => void;
+const eventListeners: Record<string, HistoryEventListener[]> = {};
+
+export const subscribeToHistoryChanges = (eventName: string, listener: HistoryEventListener) => {
+  if (!eventListeners[eventName]) {
+    eventListeners[eventName] = [];
+  }
+  eventListeners[eventName].push(listener);
+  return () => {
+    eventListeners[eventName] = eventListeners[eventName].filter(l => l !== listener);
+  };
+};
+
+const emitHistoryChange = (eventName: string, historyState: WaypointHistory) => {
+  if (eventListeners[eventName]) {
+    eventListeners[eventName].forEach(listener => listener(historyState));
+  }
+};
 
 // --- History (Undo / Redo) ---
 let undoStack: WaypointHistory[] = [];
@@ -22,20 +37,25 @@ export const snapshot = () => {
   const currentWaypointsSnapshot = getWaypoints().map(p => [...p]) as Coordinate[];
   const currentFlagsSnapshot = [...getDirectFlags()];
   
-  console.log('[HistoryManager snapshot] Creating snapshot. Current waypoints:', JSON.stringify(currentWaypointsSnapshot));
-  console.log('[HistoryManager snapshot] Current flags:', JSON.stringify(currentFlagsSnapshot));
-  console.log('[HistoryManager snapshot] Current undoStack length BEFORE push:', undoStack.length);
+  if (import.meta.env.DEV) {
+    console.log('[HistoryManager snapshot] Creating snapshot. Current waypoints:', JSON.stringify(currentWaypointsSnapshot));
+    console.log('[HistoryManager snapshot] Current flags:', JSON.stringify(currentFlagsSnapshot));
+    console.log('[HistoryManager snapshot] Current undoStack length BEFORE push:', undoStack.length);
+  }
 
   undoStack.push({
     points: currentWaypointsSnapshot,
     flags: currentFlagsSnapshot
   });
 
-  console.log('[HistoryManager snapshot] After pushing, undoStack length:', undoStack.length);
+  if (import.meta.env.DEV) {
+    console.log('[HistoryManager snapshot] After pushing, undoStack length:', undoStack.length);
+  }
   if (undoStack.length > 50) undoStack.shift(); // Limit undo stack size
   redoStack = []; // Clear redo stack on new action
-  console.log('[HistoryManager snapshot] Final undoStack length:', undoStack.length, 'redoStack cleared.');
-  // Note: saveWaypointsToStorage is called by the functions in routing.ts that use these history functions.
+  if (import.meta.env.DEV) {
+    console.log('[HistoryManager snapshot] Final undoStack length:', undoStack.length, 'redoStack cleared.');
+  }
 };
 
 export const internalDoUndo = (): WaypointHistory | null => {
@@ -62,79 +82,24 @@ export const clearHistory = () => {
   console.log('[HistoryManager] History cleared.');
 }
 
-export const stepBack = async (
-  map: MapboxMap,
-  accessToken: string,
-  setRouteDistance: Dispatch<SetStateAction<string>>,
-  setRouteDuration: Dispatch<SetStateAction<string>>,
-  setHasRoute: Dispatch<SetStateAction<boolean>>
-): Promise<void> => {
+export const stepBack = async (): Promise<void> => {
   const prevHistoryState = internalDoUndo();
   if (!prevHistoryState) {
     console.log('[HistoryManager.stepBack] No undo state available.');
     return;
   }
-
   setWaypointsAndFlags(prevHistoryState.points, prevHistoryState.flags);
-  updateWaypointsLayer(map, getWaypoints());
-
-  if (getWaypoints().length >= 2) {
-    const routeResult: RouteResult = await getRouteFromService(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
-    if (routeResult.success && routeResult.waypointsSnapped && routeResult.snappedWaypoints && routeResult.snappedDirectFlags) {
-      setWaypointsAndFlags(routeResult.snappedWaypoints, routeResult.snappedDirectFlags);
-      updateWaypointsLayer(map, getWaypoints());
-    }
-  } else {
-    clearRouteLayer(map);
-    clearKilometerMarkersLayer(map);
-    clearCurrentRoutePath();
-    setRouteDistance('');
-    setRouteDuration('');
-    setHasRoute(false);
-    if (getWaypoints().length === 0) updateWaypointsLayer(map, []);
-  }
-  saveWaypointsToStorage(getWaypoints(), getDirectFlags());
-  console.log('[HistoryManager.stepBack] Undo complete, route updated.');
+  emitHistoryChange('historyApplied', prevHistoryState);
+  console.log('[HistoryManager.stepBack] Undo applied, event emitted.');
 };
 
-export const stepForward = async (
-  map: MapboxMap,
-  accessToken: string,
-  setRouteDistance: Dispatch<SetStateAction<string>>,
-  setRouteDuration: Dispatch<SetStateAction<string>>,
-  setHasRoute: Dispatch<SetStateAction<boolean>>
-): Promise<void> => {
+export const stepForward = async (): Promise<void> => {
   const nextHistoryState = internalDoRedo();
   if (!nextHistoryState) {
     console.log('[HistoryManager.stepForward] No redo state available.');
     return;
   }
-
   setWaypointsAndFlags(nextHistoryState.points, nextHistoryState.flags);
-  updateWaypointsLayer(map, getWaypoints());
-
-  if (getWaypoints().length >= 2) {
-    const routeResult: RouteResult = await getRouteFromService(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
-    if (routeResult.success && routeResult.waypointsSnapped && routeResult.snappedWaypoints && routeResult.snappedDirectFlags) {
-      setWaypointsAndFlags(routeResult.snappedWaypoints, routeResult.snappedDirectFlags);
-      updateWaypointsLayer(map, getWaypoints());
-    }
-  } else {
-    clearRouteLayer(map);
-    clearKilometerMarkersLayer(map);
-    clearCurrentRoutePath();
-    setRouteDistance('');
-    setRouteDuration('');
-    setHasRoute(false);
-    if (getWaypoints().length === 0) updateWaypointsLayer(map, []);
-  }
-  saveWaypointsToStorage(getWaypoints(), getDirectFlags());
-  console.log('[HistoryManager.stepForward] Redo complete, route updated.');
-};
-
-// stepBack and stepForward still need to be moved and refactored.
-// They will need access to map, accessToken, setters for route distance/duration, etc.
-// This indicates they might not fully belong in HistoryManager if they have too many external dependencies,
-// or HistoryManager needs to emit events/callbacks.
-// For now, we keep them in routing.ts and they will call snapshot() from here.
-// When stepBack/stepForward are called from routing.ts, they will then call setWaypointsAndFlags from WaypointManager. 
+  emitHistoryChange('historyApplied', nextHistoryState);
+  console.log('[HistoryManager.stepForward] Redo applied, event emitted.');
+}; 

@@ -267,6 +267,13 @@ export const insertWaypointAtLocation = async (
   let closestPointOnRoute: Coordinate = clickedCoords;
   let insertIndex = getWaypoints().length;
 
+  // Create a map for O(1) lookup of route path coordinates to their indices
+  const routeCoordToIndexMap = new Map<string, number>();
+  for (let idx = 0; idx < routePathToUse.length; idx++) {
+    const coord = routePathToUse[idx];
+    routeCoordToIndexMap.set(`${coord[0]},${coord[1]}`, idx);
+  }
+
   for (let i = 0; i < routePathToUse.length - 1; i++) {
     const start = routePathToUse[i];
     const end = routePathToUse[i + 1];
@@ -282,18 +289,12 @@ export const insertWaypointAtLocation = async (
         let wpStartIndexInPath = -1;
         let wpEndIndexInPath = -1;
 
-        for(let k=0; k < routePathToUse.length; k++){
-            if(routePathToUse[k][0] === currentWps[j][0] && routePathToUse[k][1] === currentWps[j][1]){
-                wpStartIndexInPath = k;
-                break;
-            }
-        }
-        for(let k=0; k < routePathToUse.length; k++){
-            if(routePathToUse[k][0] === currentWps[j+1][0] && routePathToUse[k][1] === currentWps[j+1][1]){
-                wpEndIndexInPath = k;
-                break;
-            }
-        }
+        // Use the map for O(1) lookup
+        const wpStartKey = `${currentWps[j][0]},${currentWps[j][1]}`;
+        wpStartIndexInPath = routeCoordToIndexMap.get(wpStartKey) ?? -1;
+
+        const wpEndKey = `${currentWps[j+1][0]},${currentWps[j+1][1]}`;
+        wpEndIndexInPath = routeCoordToIndexMap.get(wpEndKey) ?? -1;
         
         if (wpStartIndexInPath !== -1 && wpEndIndexInPath !== -1 && i >= wpStartIndexInPath && i < wpEndIndexInPath) {
           insertIndex = j + 1;

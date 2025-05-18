@@ -335,10 +335,11 @@ export const getRoute = async (
 
 // Function to get the current route path (for GPX export, etc.)
 export const getCurrentRoutePath = (): Coordinate[] => {
-    return currentRoutePathCoordinates;
+  return currentRoutePathCoordinates;
 };
 
 // Function to clear the current route path (e.g. when route is cleared in routing.ts)
 export const clearCurrentRoutePath = (): void => {
-    currentRoutePathCoordinates = [];
+ // Re-instating original log for clarity if desired, or remove all logs for production.
+  // For now, keeping it minimal. The function name is clear.
 }; 

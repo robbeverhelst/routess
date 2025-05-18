@@ -15,7 +15,8 @@ import {
     insertWaypointAtLocation as insertWaypointAtLocationFromManager
 } from '@/features/routing/managers/WaypointManager';
 // Import from HistoryManager
-import { snapshot, clearHistory, stepBack as stepBackFromHistoryManager, stepForward as stepForwardFromHistoryManager } from '@/features/routing/managers/HistoryManager';
+import { snapshot, clearHistory, stepBack as stepBackFromHistoryManager, stepForward as stepForwardFromHistoryManager, subscribeToHistoryChanges } from '@/features/routing/managers/HistoryManager';
+import type { WaypointHistory } from '@/types/map';
 
 // Import the new service
 import { saveWaypointsToLocalStorage as saveWaypointsToStorage, loadWaypointsFromLocalStorage as loadWaypointsFromStorageService } from '@/features/routing/services/LocalStorageService';
@@ -35,33 +36,9 @@ import {
   clearKilometerMarkersLayer
 } from '@/features/routing/managers/MapLayerManager';
 
-// Local PopupInfo type for setupRouting signature, aliased from MapInteractionManager
-// type PopupInfo = MIMPopupInfo; // REMOVED - This type alias is unused
-
-// Function to load waypoints from local storage - This function in routing.ts will now use the service
-const loadWaypointsFromLocalStorage = (): boolean => {
-  try {
-    const loadedData = loadWaypointsFromStorageService(); // Call the aliased service function from LocalStorageService
-    if (loadedData) {
-      setWaypointsAndFlags(loadedData.waypoints, loadedData.directFlags); // Use the setter from WaypointManager
-      console.log('[routing.ts] Loaded waypoints from local storage via service:', getWaypoints());
-        return true;
-      }
-    return false;
-  } catch (error) {
-    console.error('[routing.ts] Error loading waypoints from local storage via service:', error);
-  return false;
-  }
-};
-
-// --- Local Storage ---
-// REMOVE: const WAYPOINTS_STORAGE_KEY = 'mapWaypoints';
-// REMOVE: saveWaypointsToLocalStorage and loadWaypointsFromLocalStorage functions entirely from here.
-
-// --- Drag state ---
-// isDragging is GONE (moved to MapInteractionManager)
-// draggedWaypointIndex is GONE (moved to MapInteractionManager)
-// currentLngLat is GONE (moved to MapInteractionManager)
+// Module-level variables to store map instance and access token for the history event handler
+let _mapInstance: MapboxMap | null = null;
+let _accessToken: string | null = null;
 
 // --- GPX Export ---
 export const exportRouteToGPX = () => {
@@ -69,7 +46,6 @@ export const exportRouteToGPX = () => {
   const routePath = getCurrentRoutePath(); // Get from RouteCalculationService
 
   if (currentWaypoints.length === 0 && routePath.length === 0) {
-    console.warn('[GPX Export] No waypoints or route path to export.');
     alert('No route to export.');
     return;
   }
@@ -87,7 +63,6 @@ export const exportRouteToGPX = () => {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(link.href);
-    console.log('[GPX Export] Route exported successfully via GPXService.');
   } catch (error) {
     console.error('[GPX Export] Error exporting route:', error);
     alert('Error exporting route. See console for details.');
@@ -123,17 +98,15 @@ export const importRouteFromGPX = async (
 
     const { finalWaypoints: finalNewWaypoints, finalDirectFlags: newDirectFlags } = processedResult;
 
-    resetRouting(map, setRouteDistance, setRouteDuration, setHasRoute);
   snapshot();
+    resetRouting(map, setRouteDistance, setRouteDuration, setHasRoute);
     setWaypointsAndFlags(finalNewWaypoints, newDirectFlags);
     updateWaypointsLayer(map, getWaypoints());
     saveWaypointsToStorage(getWaypoints(), getDirectFlags());
 
     if (getWaypoints().length >= 2) {
-      console.log("[routing.ts.importRouteFromGPX] Recalculating route for imported waypoints.");
       const routeResult: RouteResult = await getRouteFromService(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
       if (routeResult.success && routeResult.waypointsSnapped && routeResult.snappedWaypoints && routeResult.snappedDirectFlags) {
-        console.log("[routing.ts.importRouteFromGPX] Route service snapped waypoints. Updating WaypointManager.");
         setWaypointsAndFlags(routeResult.snappedWaypoints, routeResult.snappedDirectFlags);
         updateWaypointsLayer(map, getWaypoints());
         saveWaypointsToStorage(getWaypoints(), getDirectFlags());
@@ -154,7 +127,7 @@ export const importRouteFromGPX = async (
   }
 };
 
-// --- New function to insert a waypoint at a specific location on the route ---
+// --- GPX Import ---
 export const insertWaypointAtLocation = insertWaypointAtLocationFromManager;
 
 // addWaypoint function body is already removed by previous step.
@@ -171,29 +144,22 @@ export const setRouteData = async (
   setRouteDuration: Dispatch<SetStateAction<string>>,
   setHasRoute: Dispatch<SetStateAction<boolean>>
 ) => {
-  console.log('[setRouteData] Setting route from external data');
-  // resetRouting call might be too aggressive if we want to keep history for this action.
-  // Consider clearing waypoints and route more surgically if needed.
-  setWaypointsAndFlags([], []); // Clear current waypoints via manager
+  snapshot();
+  setWaypointsAndFlags([], []);
   updateWaypointsLayer(map, []);
     clearRoute(map);
     setRouteDistance('');
     setRouteDuration('');
     setHasRoute(false);
-  // currentPopup?.remove(); // currentPopup is managed locally in routing.ts
 
-  snapshot(); // Snapshot before applying new data
-  
-  setWaypointsAndFlags(newWaypoints, newDirectFlags); // Use WaypointManager setter
+  setWaypointsAndFlags(newWaypoints, newDirectFlags);
 
   updateWaypointsLayer(map, getWaypoints());
   saveWaypointsToStorage(getWaypoints(), getDirectFlags());
 
   if (getWaypoints().length >= 2) {
-    console.log('[setRouteData] Recalculating route for loaded data.');
     const routeResult: RouteResult = await getRouteFromService(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
     if (routeResult.success && routeResult.waypointsSnapped && routeResult.snappedWaypoints && routeResult.snappedDirectFlags) {
-      console.log("[setRouteData] Route service snapped waypoints. Updating WaypointManager.");
       setWaypointsAndFlags(routeResult.snappedWaypoints, routeResult.snappedDirectFlags);
       updateWaypointsLayer(map, getWaypoints());
       saveWaypointsToStorage(getWaypoints(), getDirectFlags());
@@ -211,40 +177,9 @@ export const setRouteData = async (
     clearKilometerMarkersLayer(map);
   }
   console.log(`[setRouteData] Successfully set ${getWaypoints().length} waypoints.`);
-  console.log('[setRouteData] Route data set and recalculated successfully.');
 };
 
-// Helper function to fit the map view to the route -- THIS ENTIRE FUNCTION BLOCK SHOULD BE REMOVED
-// export const zoomToRoute = (map: MapboxMap, coordinates: Coordinate[]) => {
-//   if (!map || !map.getBounds || !coordinates || coordinates.length === 0) {
-//     console.warn('[zoomToRoute] Map not ready or no coordinates to zoom to.');
-//     return;
-//   }
 
-//   try {
-//     const currentPitch = map.getPitch();
-//     const currentBearing = map.getBearing();
-
-//     const bounds = coordinates.reduce(
-//       (currentBounds, coord) => {
-//         return currentBounds.extend(coord);
-//       },
-//       new LngLatBounds(coordinates[0], coordinates[0])
-//     );
-
-//     map.fitBounds(bounds, {
-//       padding: 75, // Uniform padding
-//       maxZoom: 16,
-//       duration: 1000,
-//       essential: true,
-//       pitch: currentPitch,      // Preserve current pitch
-//       bearing: currentBearing   // Preserve current bearing
-//     });
-//     console.log('[zoomToRoute] Adjusted map bounds to fit route, preserving pitch and bearing.');
-//   } catch (error) {
-//     console.error('[zoomToRoute] Error fitting bounds:', error);
-//   }
-// };
 
 // removeWaypoint function body is removed.
 // Ensure the imported removeWaypointFromManager is exported as removeWaypoint.
@@ -264,6 +199,9 @@ export const reverseRoute = reverseRouteFromManager;
 // Ensure the imported updateWaypointPositionAndRecalculateFromManager is exported as updateWaypointPositionAndRecalculate.
 export const updateWaypointPositionAndRecalculate = updateWaypointPositionAndRecalculateFromManager;
 
+// Keep track of subscription to avoid multiple subscriptions if setupRouting is called again (though it shouldn't be)
+let unsubscribeFromHistory: (() => void) | null = null;
+
 // Setup routing logic for a Mapbox map instance
 export const setupRouting = (
   map: MapboxMap, 
@@ -274,7 +212,9 @@ export const setupRouting = (
   setPopup: Dispatch<SetStateAction<MIMPopupInfo | null>>,
   handleWaypointError: (message: string | null) => void
 ) => {
-  console.log('[routing.ts] Initializing routing module...');
+  _mapInstance = map; // Store for history event handler
+  _accessToken = accessToken; // Store for history event handler
+
   initializeSourcesAndLayers(map);
   
   // Initialize map interactions by calling the function from MapInteractionManager
@@ -288,38 +228,78 @@ export const setupRouting = (
     handleWaypointError
   );
 
-  const waypointsLoaded = loadWaypointsFromLocalStorage();
-  if (waypointsLoaded) {
-    console.log('[routing.ts] Waypoints loaded from local storage, updating layer.');
-    updateWaypointsLayer(map, getWaypoints());
-    if (getWaypoints().length >= 1) {
-      console.log('[routing.ts] Recalculating route for initially loaded waypoints.');
-      getRouteFromService(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute).then(result => {
-        if (result.success && result.waypointsSnapped && result.snappedWaypoints && result.snappedDirectFlags) {
-          console.log("[routing.ts] Initial route successfully calculated and waypoints snapped.");
-          setWaypointsAndFlags(result.snappedWaypoints, result.snappedDirectFlags);
-          updateWaypointsLayer(map, getWaypoints());
-          saveWaypointsToStorage(getWaypoints(), getDirectFlags());
-        } else if (!result.success && getWaypoints().length === 1) {
-          console.log('[routing.ts] Single waypoint loaded, no route to calculate yet or snapping failed.');
-          setRouteDistance('');
-          setRouteDuration('');
-        } else if (!result.success) {
-           console.warn('[routing.ts] Failed to calculate initial route. Service indicated failure.');
-        }
-      }).catch(error => {
-        console.error('[routing.ts] Error recalculating initial route:', error);
-      });
+  try {
+    const loadedData = loadWaypointsFromStorageService(); // NEW DIRECT CALL
+    if (loadedData) {
+      setWaypointsAndFlags(loadedData.waypoints, loadedData.directFlags);
+      console.log('[routing.ts] Waypoints loaded from local storage.');
+      updateWaypointsLayer(map, getWaypoints());
+      if (getWaypoints().length >= 1) {
+        getRouteFromService(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute).then(result => {
+          if (result.success && result.waypointsSnapped && result.snappedWaypoints && result.snappedDirectFlags) {
+            console.log("[routing.ts] Initial route calculated and waypoints snapped.");
+            setWaypointsAndFlags(result.snappedWaypoints, result.snappedDirectFlags);
+            updateWaypointsLayer(map, getWaypoints());
+            saveWaypointsToStorage(getWaypoints(), getDirectFlags());
+          } else if (!result.success && getWaypoints().length === 1) {
+            console.log('[routing.ts] Single waypoint loaded, no route to calculate yet or snapping failed.');
+            setRouteDistance('');
+            setRouteDuration('');
+          } else if (!result.success) {
+             console.warn('[routing.ts] Failed to calculate initial route. Service indicated failure.');
+          }
+        }).catch(error => {
+          console.error('[routing.ts] Error recalculating initial route:', error);
+        });
     }
-      } else {
-    console.log('[routing.ts] No waypoints found in local storage.');
+  } else {
+      console.log('[routing.ts] No waypoints found in local storage.');
+    }
+      } catch (error) {
+    console.error('[routing.ts] Error loading waypoints from local storage in setupRouting:', error);
+    // Optionally, inform the user via a callback if this error is critical
   }
-  console.log('[routing.ts] Routing module setup complete.');
+
+  // Define the event handler for history changes here, so it has access to setters
+  const handleHistoryApplied = async (historyState: WaypointHistory) => {
+    if (!_mapInstance || !_accessToken) {
+      console.error('[routing.ts.handleHistoryApplied] Map instance or access token not available.');
+            return;
+          }
+    // Waypoints and flags are already set by HistoryManager via setWaypointsAndFlags
+    updateWaypointsLayer(_mapInstance, historyState.points); // Update layers with the points from history
+
+    if (historyState.points.length >= 2) {
+      const routeResult: RouteResult = await getRouteFromService(_mapInstance, _accessToken, setRouteDistance, setRouteDuration, setHasRoute);
+      if (routeResult.success && routeResult.waypointsSnapped && routeResult.snappedWaypoints && routeResult.snappedDirectFlags) {
+        // If snapping occurred, update waypoints and layers again
+        setWaypointsAndFlags(routeResult.snappedWaypoints, routeResult.snappedDirectFlags); // WaypointManager handles global state
+        updateWaypointsLayer(_mapInstance, routeResult.snappedWaypoints);
+      }
+            } else {
+      clearRouteLayer(_mapInstance);
+      clearKilometerMarkersLayer(_mapInstance);
+      clearCurrentRoutePath();
+                        setRouteDistance('');
+                        setRouteDuration('');
+                        setHasRoute(false);
+      if (historyState.points.length === 0) updateWaypointsLayer(_mapInstance, []);
+    }
+    saveWaypointsToStorage(historyState.points, historyState.flags); // Save the final state from history
+    console.log('[routing.ts.handleHistoryApplied] History change processed.');
+  };
+
+  // Subscribe to history changes only once
+  if (unsubscribeFromHistory) {
+    unsubscribeFromHistory(); // Unsubscribe previous if any
+  }
+  unsubscribeFromHistory = subscribeToHistoryChanges('historyApplied', handleHistoryApplied);
+
+  console.log('[routing.ts] Routing module setup complete. History event listener subscribed.');
 };
 
 // Clear the displayed route
 export const clearRoute = (map: MapboxMap) => {
-  console.log('[routing.ts] clearRoute called');
   clearRouteLayer(map); // Use MapLayerManager
   clearKilometerMarkersLayer(map); // Use MapLayerManager
   clearCurrentRoutePath(); // Clear data in RouteCalculationService
@@ -335,24 +315,18 @@ export const resetRouting = (
   setRouteDuration: Dispatch<SetStateAction<string>>,
   setHasRoute: Dispatch<SetStateAction<boolean>>
 ) => {
-  console.log('[routing.ts] resetRouting called');
-  snapshot(); // Snapshot before reset
-
-  setWaypointsAndFlags([], []); // Clear waypoints in WaypointManager
-  updateWaypointsLayer(map, []); // Clear waypoint markers on map
-  saveWaypointsToStorage([], []); // Clear from local storage
-
-  clearRoute(map); // This now uses MapLayerManager and clears RouteCalculationService state
+  clearHistory();
+  setWaypointsAndFlags([], []);
+  updateWaypointsLayer(map, []);
+  saveWaypointsToStorage([], []);
+  
+    clearRoute(map);
 
     setRouteDistance('');
     setRouteDuration('');
     setHasRoute(false);
     
-  clearHistory(); // Clear undo/redo history
-
-  // Any other state to reset?
-  // isDragging, draggedWaypointIndex are reset by mouseup/touchend.
-  // contextMenuListenerAdded should persist.
+  clearCurrentRoutePath();
 
   console.log('[routing.ts] Routing reset complete.');
 };
