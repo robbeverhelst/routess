@@ -13,12 +13,21 @@ export const KM_MARKERS_SOURCE_ID = 'km-markers';
 export const KM_MARKERS_LAYER_ID = 'km-markers';
 export const TEMP_DRAG_LINES_SOURCE_ID = 'temp-drag-lines';
 export const TEMP_DRAG_LINES_LAYER_ID = 'temp-drag-lines';
+export const ROUTE_CASING_LAYER_ID = 'route-casing';
+export const WAYPOINTS_SHADOW_LAYER_ID = 'waypoints-shadow';
 
 export const initializeSourcesAndLayers = (map: MapboxMap): void => {
   if (!map.getSource(ROUTE_SOURCE_ID)) {
     map.addSource(ROUTE_SOURCE_ID, {
       type: 'geojson',
       data: { type: 'Feature', id: 'main_route_line', properties: {}, geometry: { type: 'LineString', coordinates: [] } }
+    });
+    map.addLayer({
+      id: ROUTE_CASING_LAYER_ID,
+      type: 'line',
+      source: ROUTE_SOURCE_ID,
+      layout: { 'line-join': 'round', 'line-cap': 'round' },
+      paint: { 'line-color': '#003366', 'line-width': 6, 'line-opacity': 0.2 }
     });
     map.addLayer({
       id: ROUTE_HOVER_LAYER_ID,
@@ -54,6 +63,17 @@ export const initializeSourcesAndLayers = (map: MapboxMap): void => {
     map.addSource(WAYPOINTS_SOURCE_ID, {
       type: 'geojson',
       data: { type: 'FeatureCollection', features: [] }
+    });
+    map.addLayer({
+      id: WAYPOINTS_SHADOW_LAYER_ID,
+      type: 'circle',
+      source: WAYPOINTS_SOURCE_ID,
+      paint: {
+        'circle-radius': 8,
+        'circle-color': '#000',
+        'circle-opacity': 0.4,
+        'circle-translate': [1, 1]
+      }
     });
     map.addLayer({
       id: WAYPOINTS_LAYER_ID,
