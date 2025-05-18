@@ -9,22 +9,26 @@ import { Sidebar } from '@/components/ui/sidebar';
 import { 
   setupRouting, 
   resetRouting, 
-  stepBack, 
-  stepForward, 
-  hasUndo, 
-  hasRedo,
-  addWaypoint,
-  removeWaypoint,
-  getWaypoints,
-  getDirectFlags,
+  stepBack,
+  stepForward,
+  reverseRoute,
   updateUserLocationPoint,
   setRouteData,
   insertWaypointAtLocation,
-  reverseRoute as reverseRouteLogic,
-  zoomToRoute,
+  addWaypoint,
+  removeWaypoint
 } from '@/lib/routing';
+import { zoomToRoute } from '@/features/routing/utils/RoutingUtils';
 import { serializeAndCompress, decompressAndParse } from '@/lib/shareUtils';
 import type { MapTouchEvent, MapMouseEvent } from 'mapbox-gl';
+import {
+  getWaypoints, 
+  getDirectFlags 
+} from '@/features/routing/managers/WaypointManager';
+import {
+  hasUndo as historyHasUndo,
+  hasRedo as historyHasRedo,
+} from '@/features/routing/managers/HistoryManager';
 
 // Get Mapbox access token from environment variables
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
@@ -439,8 +443,8 @@ export default function MapWithRouting({
   // Poll for undo/redo state
   useEffect(() => {
     const interval = setInterval(() => {
-      const canUndoValue = hasUndo();
-      const canRedoValue = hasRedo();
+      const canUndoValue = historyHasUndo();
+      const canRedoValue = historyHasRedo();
       setCanUndo(canUndoValue);
       setCanRedo(canRedoValue);
     }, 200);
@@ -453,7 +457,7 @@ export default function MapWithRouting({
       console.error('[handleUndo] mapRef.current is null');
       return;
     }
-    console.log('[handleUndo] Called, undoStack availability:', hasUndo());
+    console.log('[handleUndo] Called, undoStack availability:', historyHasUndo());
     stepBack(
       mapRef.current,
       MAPBOX_TOKEN,
@@ -461,7 +465,7 @@ export default function MapWithRouting({
       setRouteDuration,
       setHasRoute
     );
-    console.log('[handleUndo] After stepBack, undoStack availability:', hasUndo());
+    console.log('[handleUndo] After stepBack, undoStack availability:', historyHasUndo());
   }, []);
 
   const handleRedo = useCallback(() => {
@@ -499,17 +503,13 @@ export default function MapWithRouting({
   const handleReverseRoute = useCallback(async () => {
     if (!mapRef.current || !MAPBOX_TOKEN || !hasRoute) return;
     console.log('[MapWithRouting] Attempting to reverse route.');
-    // This will call the actual logic in routing.ts once implemented
-    // For now, it's a placeholder. We'll need to import `reverseRouteLogic`
-    await reverseRouteLogic(
-      mapRef.current,
-      MAPBOX_TOKEN,
-      setRouteDistance,
-      setRouteDuration,
+    await reverseRoute(
+      mapRef.current, 
+      MAPBOX_TOKEN, 
+      setRouteDistance, 
+      setRouteDuration, 
       setHasRoute
     );
-    // For now, let's log to console until routing.ts is updated
-    // alert('Reverse route functionality to be implemented in routing.ts');
     console.log('[MapWithRouting] Reverse route call executed.');
   }, [MAPBOX_TOKEN, hasRoute, setRouteDistance, setRouteDuration, setHasRoute]);
 
