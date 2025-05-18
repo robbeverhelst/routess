@@ -135,7 +135,7 @@ export const zoomToRoute = (map: MapboxMap, coordinates: Coordinate[]): void => 
     );
 
     map.fitBounds(bounds, {
-      padding: { top: 100, bottom: 100, left: 100, right: 100 },       // Adjusted padding (pixels)
+      padding: { top: 70, bottom: 70, left: 70, right: 70 },       // Adjusted padding (pixels)
       maxZoom: 16,
       duration: 1000,    // Animation duration in milliseconds
       essential: true,   // Ensures the animation completes
