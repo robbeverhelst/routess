@@ -136,6 +136,13 @@ export function RouteGeneratorModal({
           </div>
         </div>
         
+        {/* Test Version Notice */}
+        <div className="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-800/30 px-4 py-2 text-center">
+          <p className="text-xs text-amber-800 dark:text-amber-400">
+            <span className="font-medium">Test Version:</span> Route results and quality may vary during this beta phase.
+          </p>
+        </div>
+        
         {isGenerating ? (
           <div className="flex flex-col items-center justify-center py-10 space-y-5 px-6">
             <div className="w-16 h-16 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
