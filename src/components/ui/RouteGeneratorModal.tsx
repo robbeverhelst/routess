@@ -52,10 +52,10 @@ export function RouteGeneratorModal({
   isUserLocationLoading, 
   userLocationError 
 }: RouteGeneratorModalProps) {
-  const [routeType, setRouteType] = useState<'a-to-b' | 'loop'>('a-to-b');
+  const [routeType, setRouteType] = useState<'a-to-b' | 'loop'>('loop');
   const [startPoint, setStartPoint] = useState<{ lat: number; lng: number; name: string } | undefined>(undefined);
   const [endPoint, setEndPoint] = useState<{ lat: number; lng: number; name: string } | undefined>(undefined);
-  const [surfaceType, setSurfaceType] = useState<'paved' | 'mixed' | 'unpaved'>('paved');
+  const [surfaceType, setSurfaceType] = useState<'paved' | 'mixed' | 'unpaved'>('unpaved');
   const [loopLengthKm, setLoopLengthKm] = useState<number | undefined>(undefined);
   const [loopDirection, setLoopDirection] = useState<LoopDirection>('ANY');
 
@@ -179,15 +179,15 @@ export function RouteGeneratorModal({
                   }}
                   className="grid grid-cols-2 gap-2"
                 >
-                  <Label htmlFor="r1" className={`flex flex-col items-center justify-center p-3 rounded-md border ${routeType === 'a-to-b' ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800' : 'border-gray-200 dark:border-gray-800'} cursor-pointer w-full h-full`}>
-                    <RadioGroupItem value="a-to-b" id="r1" className="sr-only" />
-                    <MapPin className={`w-5 h-5 mb-1 ${routeType === 'a-to-b' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`} />
-                    <span className={`text-sm font-medium ${routeType === 'a-to-b' ? 'text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-300'}`}>A to B</span>
-                  </Label>
                   <Label htmlFor="r2" className={`flex flex-col items-center justify-center p-3 rounded-md border ${routeType === 'loop' ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800' : 'border-gray-200 dark:border-gray-800'} cursor-pointer w-full h-full`}>
                     <RadioGroupItem value="loop" id="r2" className="sr-only" /> 
                     <Route className={`w-5 h-5 mb-1 ${routeType === 'loop' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`} />
                     <span className={`text-sm font-medium ${routeType === 'loop' ? 'text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-300'}`}>Loop</span>
+                  </Label>
+                  <Label htmlFor="r1" className={`flex flex-col items-center justify-center p-3 rounded-md border ${routeType === 'a-to-b' ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800' : 'border-gray-200 dark:border-gray-800'} cursor-pointer w-full h-full`}>
+                    <RadioGroupItem value="a-to-b" id="r1" className="sr-only" />
+                    <MapPin className={`w-5 h-5 mb-1 ${routeType === 'a-to-b' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`} />
+                    <span className={`text-sm font-medium ${routeType === 'a-to-b' ? 'text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-300'}`}>A to B</span>
                   </Label>
                 </RadioGroup>
               </div>
@@ -320,9 +320,9 @@ export function RouteGeneratorModal({
                       <SelectValue placeholder="Select surface type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="paved">Prefer Paved Roads</SelectItem>
-                      <SelectItem value="mixed">Mixed Surfaces</SelectItem>
-                      <SelectItem value="unpaved">Prefer Unpaved & Trails</SelectItem> 
+                      <SelectItem value="unpaved">Prefer Trails & Nature</SelectItem>
+                      <SelectItem value="mixed" disabled className="text-gray-400 dark:text-gray-500">Balanced Mix (Coming Soon)</SelectItem>
+                      <SelectItem value="paved" disabled className="text-gray-400 dark:text-gray-500">Prefer Paved Paths (Coming Soon)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

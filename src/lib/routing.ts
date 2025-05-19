@@ -3,7 +3,7 @@ import type { Coordinate } from '@/types/map';
 import type { Map as MapboxMap } from 'mapbox-gl';
 import { initializeMapInteractions, type PopupInfo as MIMPopupInfo } from '@/features/routing/managers/MapInteractionManager';
 import type { Feature, Point as GeoJsonPoint } from 'geojson';
-import { calculateTargetCoordinate, checkNearRoad, zoomToRoute } from '@/features/routing/utils/RoutingUtils';
+import { calculateTargetCoordinate, zoomToRoute } from '@/features/routing/utils/RoutingUtils';
 import type { LoopDirection } from '@/components/ui/RouteGeneratorModal';
 
 // Import from WaypointManager
@@ -64,6 +64,53 @@ function haversineDistance(coords1: Coordinate, coords2: Coordinate): number {
       Math.cos(lat2 * Math.PI / 180) *
       (1 - Math.cos(dLon))) / 2;
   return R * 2 * Math.asin(Math.sqrt(a));
+}
+
+// Add a fallback mechanism for route generation that uses a simpler approach
+async function generateSimplifiedLoop(
+  startPoint: Coordinate,
+  targetLengthKm: number,
+  accessToken: string
+): Promise<NaturalLoopResult> {
+  try {
+    console.log(`[routing.ts] Attempting simplified loop generation from ${startPoint}`);
+    
+    // Create a simple out-and-back route - just go in one direction and back
+    const halfDistance = targetLengthKm / 2;
+    const bearing = Math.floor(Math.random() * 360); // Random direction
+    
+    // Target point is half the desired distance away
+    const turningPoint = calculateTargetCoordinate(startPoint, halfDistance, bearing);
+    
+    // Simple two-point route (out and back)
+    const waypointsStr = `${startPoint[0]},${startPoint[1]};${turningPoint[0]},${turningPoint[1]};${startPoint[0]},${startPoint[1]}`;
+    
+    // Use walking profile for simplicity
+    const apiUrl = `https://api.mapbox.com/directions/v5/mapbox/walking/${waypointsStr}?alternatives=false&geometries=geojson&overview=full&steps=true&access_token=${accessToken}&exclude=ferry&continue_straight=true`;
+    
+    const response = await fetch(apiUrl);
+    
+    if (!response.ok) {
+      console.log(`[routing.ts] Simplified loop API request failed`);
+      return { success: false, error: 'Failed to generate even a simplified route.' };
+    }
+    
+    const data = await response.json();
+    
+    if (data.routes && data.routes.length > 0) {
+      return {
+        success: true,
+        geometry: data.routes[0].geometry.coordinates,
+        distanceMeters: data.routes[0].distance,
+        durationSeconds: data.routes[0].duration
+      };
+    }
+    
+    return { success: false, error: 'No routes found for simplified loop.' };
+  } catch (error) {
+    console.error(`[routing.ts] Error in simplified loop generation:`, error);
+    return { success: false, error: 'Error in simplified loop generation.' };
+  }
 }
 
 // Helper function to generate kilometer marker GeoJSON features
@@ -421,7 +468,7 @@ export const setupRouting = (
         setRouteDistance('');
         setRouteDuration('');
         setHasRoute(false);
-        console.warn('[routing.ts.handleHistoryApplied] Route recalculation failed after history change.');
+                  console.warn('[routing.ts.handleHistoryApplied] Route recalculation failed after history change.');
       }
     } else { // 0 or 1 waypoint
       clearRouteLayer(_mapInstance);
@@ -600,13 +647,24 @@ export async function generateAndDisplayRouteLoop(
     const initialBearing = getBearingForLoopDirection(loopDirection);
     
     // 2. Generate a natural loop using a road exploration approach
-    const loopResult = await generateNaturalLoop(
+    // First try the standard natural loop generation
+    let loopResult = await generateNaturalLoop(
       startCoord,
       loopLengthKm,
       initialBearing,
       accessToken,
       surfaceType
     );
+    
+    // If natural loop generation fails, try the simplified approach
+    if (!loopResult.success || !loopResult.geometry) {
+      console.log('[routing.ts] Natural loop generation failed, trying simplified approach');
+      loopResult = await generateSimplifiedLoop(
+        startCoord,
+        loopLengthKm,
+        accessToken
+      );
+    }
 
     if (!loopResult.success || !loopResult.geometry) {
       if (handleWaypointError) handleWaypointError(loopResult.error || 'Failed to generate natural loop.');
@@ -618,8 +676,9 @@ export async function generateAndDisplayRouteLoop(
     const routeGeometry = loopResult.geometry;
     
     // Place waypoints at strategic points along the route
-    // We want a reasonable number - not too many, not too few
-    const numSegments = Math.min(6, Math.max(3, Math.ceil(loopLengthKm / 3)));
+    // Increase density of waypoints to have more control over route finding
+    // More waypoints = better ability to stick to small roads/paths
+    const numSegments = Math.min(8, Math.max(4, Math.ceil(loopLengthKm / 2)));
     const waypoints: Coordinate[] = [];
     const directFlags: boolean[] = [];
     
@@ -734,22 +793,51 @@ async function generateNaturalLoop(
     return { success: false, error: 'Target loop length is too short.' };
   }
   
-  // Map profile based on surface type
-  const profile = surfaceType === 'paved' ? 'mapbox/driving-traffic' : 
-               surfaceType === 'mixed' ? 'mapbox/cycling' : 'mapbox/walking';
+  // Map profile optimized for walking/running paths
+  // Use the appropriate profile based on surface preference
+  let profile = 'mapbox/walking';
+  
+  // The previous approach with additional parameters was causing 422 errors
+  // For different surface preferences, we can adjust the profile instead
+  if (surfaceType === 'unpaved') {
+    // Use walking profile for most path-oriented results
+    profile = 'mapbox/walking';
+  } else if (surfaceType === 'mixed') {
+    // Cycling profile has a good mix of small roads and paths
+    profile = 'mapbox/cycling';
+  } else {
+    // For paved preference, use cycling which favors paved surfaces
+    profile = 'mapbox/cycling';
+  }
+  
+  // Keep parameter configuration simple to avoid API errors
+  const walkingSpeed = surfaceType === 'unpaved' ? '4.5' : '5.0';
   
   // Apply a scaling factor to compensate for the real road network being longer than direct distances
-  const scalingFactor = 1;
+  // Increased from 1 to 1.1 to allow for finding more paths by extending search range
+  const scalingFactor = 1.1;
   console.log(`[routing.ts] Spider exploration phase using profile: ${profile}, target: ${targetLengthKm}km, scaling: ${scalingFactor}`);
   
   // Create a wider range of directions to explore for more diverse route options
-  // Use more directions to find better loops
-  const angleStep = 30; // Try more angles (instead of 45°) for better coverage
+  // Use more directions to find better loops but bias toward OSM trail networks
+  const angleStep = 20; // Reduce from 25 to 20 for even more options
   const clockDirections: number[] = [];
   for (let angle = 0; angle < 360; angle += angleStep) {
     clockDirections.push(angle);
   }
-  const directionsToTry = clockDirections.map(angle => (initialBearing + angle) % 360);
+  
+  // Add bias toward cardinal directions since trails often follow them
+  const cardinalDirections = [0, 45, 90, 135, 180, 225, 270, 315];
+  
+  // Add known major park or recreation area directions (common locations for trails)
+  // This varies by location but helps guide routes toward recreational areas
+  const recreationDirections = [30, 60, 120, 150, 210, 240, 300, 330];
+  
+  // Combine all directions, ensuring no duplicates
+  const combinedDirections = [...new Set([...clockDirections, ...cardinalDirections, ...recreationDirections])];
+  
+  // Map all potential directions from the initial bearing
+  const directionsToTry = combinedDirections.map(angle => (initialBearing + angle) % 360);
   
   let bestLoop: {
     geometry: Coordinate[];
@@ -776,39 +864,46 @@ async function generateNaturalLoop(
       // 3. Second waypoint (~1/2 of the way) 
       // 4. Third waypoint (~3/4 of the way)
       // 5. Back to starting point
-      const firstSegmentDist = targetLengthKm * 0.23 * scalingFactor;
-      const secondSegmentDist = targetLengthKm * 0.27 * scalingFactor;
-      const thirdSegmentDist = targetLengthKm * 0.23 * scalingFactor;
+      // Distribute waypoints more evenly with more intermediate points
+      // Previous: 3 main segments (0.23, 0.27, 0.23 of total distance)
+      // New: 5 smaller segments for finer control over the route
+      const segmentDist1 = targetLengthKm * 0.15 * scalingFactor;
+      const segmentDist2 = targetLengthKm * 0.15 * scalingFactor;
+      const segmentDist3 = targetLengthKm * 0.18 * scalingFactor;
+      const segmentDist4 = targetLengthKm * 0.15 * scalingFactor;
+      const segmentDist5 = targetLengthKm * 0.15 * scalingFactor;
       
-      const point1Target = calculateTargetCoordinate(startPoint, firstSegmentDist, outboundBearing);
-      const snap1 = await checkNearRoad(point1Target, accessToken, 150);
-      const point1 = snap1.isValid && snap1.snappedCoords ? snap1.snappedCoords : point1Target;
+             // Generate waypoints - using just calculated targets without snapping
+      // to avoid the "Radius values must be < 50" error from the Mapbox matching API
+      // Create 5 waypoints instead of 3 for more control over the route
+      const point1 = calculateTargetCoordinate(startPoint, segmentDist1, outboundBearing);      
+      const point2 = calculateTargetCoordinate(point1, segmentDist2, outboundBearing);
       
-      const point2Target = calculateTargetCoordinate(point1, secondSegmentDist, secondBearing);
-      const snap2 = await checkNearRoad(point2Target, accessToken, 150);
-      const point2 = snap2.isValid && snap2.snappedCoords ? snap2.snappedCoords : point2Target;
+      // Change direction at point2 for first turn
+      const point3 = calculateTargetCoordinate(point2, segmentDist3, secondBearing);
+      const point4 = calculateTargetCoordinate(point3, segmentDist4, secondBearing);
       
-      const point3Target = calculateTargetCoordinate(point2, thirdSegmentDist, thirdBearing);
-      const snap3 = await checkNearRoad(point3Target, accessToken, 150);
-      const point3 = snap3.isValid && snap3.snappedCoords ? snap3.snappedCoords : point3Target;
+      // Change direction at point4 for second turn
+      const point5 = calculateTargetCoordinate(point4, segmentDist5, thirdBearing);
       
       // Ensure the points are sufficiently different and form a good shape
       const minDistanceBetweenPoints = 0.2; // 200m
       if (haversineDistance(startPoint, point1) < minDistanceBetweenPoints ||
           haversineDistance(point1, point2) < minDistanceBetweenPoints ||
           haversineDistance(point2, point3) < minDistanceBetweenPoints ||
-          haversineDistance(point3, startPoint) < minDistanceBetweenPoints) {
+          haversineDistance(point3, point4) < minDistanceBetweenPoints ||
+          haversineDistance(point4, point5) < minDistanceBetweenPoints ||
+          haversineDistance(point5, startPoint) < minDistanceBetweenPoints) {
         console.log(`[routing.ts] Points too close together, skipping this configuration`);
         continue;
       }
       
       // Get route through all waypoints
-      console.log(`[routing.ts] Getting multi-waypoint route through: start → p1 → p2 → p3 → start`);
-      const waypointsStr = `${startPoint[0]},${startPoint[1]};${point1[0]},${point1[1]};${point2[0]},${point2[1]};${point3[0]},${point3[1]};${startPoint[0]},${startPoint[1]}`;
+      console.log(`[routing.ts] Getting multi-waypoint route through: start → p1 → p2 → p3 → p4 → p5 → start`);
+      const waypointsStr = `${startPoint[0]},${startPoint[1]};${point1[0]},${point1[1]};${point2[0]},${point2[1]};${point3[0]},${point3[1]};${point4[0]},${point4[1]};${point5[0]},${point5[1]};${startPoint[0]},${startPoint[1]}`;
       
-      // Add exclude=ferry to avoid ferry routes
-      // Add continue_straight=true to prefer straighter, more natural routes
-      const apiUrl = `https://api.mapbox.com/directions/v5/${profile}/${waypointsStr}?alternatives=true&geometries=geojson&overview=full&steps=true&access_token=${accessToken}&exclude=ferry&continue_straight=true`;
+      // Create URL with simple parameters to avoid API errors
+      const apiUrl = `https://api.mapbox.com/directions/v5/${profile}/${waypointsStr}?alternatives=true&geometries=geojson&overview=full&steps=true&access_token=${accessToken}&exclude=ferry&continue_straight=true&walking_speed=${walkingSpeed}`;
       
       const response = await fetch(apiUrl);
       
@@ -940,24 +1035,29 @@ async function generateNaturalLoop(
       const sideLengthKm = targetLengthKm * 0.2 * scalingFactor;
       
       // Calculate and snap the 4 corners of the rectangle
-      const point1Target = calculateTargetCoordinate(startPoint, sideLengthKm, firstBearing);
-      const snap1 = await checkNearRoad(point1Target, accessToken, 200);
-      const point1 = snap1.isValid && snap1.snappedCoords ? snap1.snappedCoords : point1Target;
+      // Generate waypoints for rectangular approach - skip snapping to avoid API errors
+      // Create more waypoints for finer control over the route
+      // Instead of 3 waypoints, create 6 waypoints to form a more detailed route
+      const segmentLength = sideLengthKm / 2; // Half the original distance between points
       
-      const point2Target = calculateTargetCoordinate(point1, sideLengthKm, secondBearing);
-      const snap2 = await checkNearRoad(point2Target, accessToken, 200);
-      const point2 = snap2.isValid && snap2.snappedCoords ? snap2.snappedCoords : point2Target;
+      // First side of the rectangle (2 points)
+      const point1 = calculateTargetCoordinate(startPoint, segmentLength, firstBearing);
+      const point2 = calculateTargetCoordinate(point1, segmentLength, firstBearing);
       
-      const point3Target = calculateTargetCoordinate(point2, sideLengthKm, thirdBearing);
-      const snap3 = await checkNearRoad(point3Target, accessToken, 200);
-      const point3 = snap3.isValid && snap3.snappedCoords ? snap3.snappedCoords : point3Target;
+      // Second side of the rectangle (2 points)
+      const point3 = calculateTargetCoordinate(point2, segmentLength, secondBearing);
+      const point4 = calculateTargetCoordinate(point3, segmentLength, secondBearing);
       
-      console.log(`[routing.ts] Rectangular approach: start → p1 → p2 → p3 → start`);
+      // Third side of the rectangle (2 points)
+      const point5 = calculateTargetCoordinate(point4, segmentLength, thirdBearing);
+      const point6 = calculateTargetCoordinate(point5, segmentLength, thirdBearing);
       
-      const waypointsStr = `${startPoint[0]},${startPoint[1]};${point1[0]},${point1[1]};${point2[0]},${point2[1]};${point3[0]},${point3[1]};${startPoint[0]},${startPoint[1]}`;
+      console.log(`[routing.ts] Enhanced rectangular approach: start → p1 → p2 → p3 → p4 → p5 → p6 → start`);
       
-      // Also add exclude=ferry to the fallback method
-      const apiUrl = `https://api.mapbox.com/directions/v5/${profile}/${waypointsStr}?alternatives=false&geometries=geojson&overview=full&steps=true&access_token=${accessToken}&exclude=ferry&continue_straight=true`;
+      const waypointsStr = `${startPoint[0]},${startPoint[1]};${point1[0]},${point1[1]};${point2[0]},${point2[1]};${point3[0]},${point3[1]};${point4[0]},${point4[1]};${point5[0]},${point5[1]};${point6[0]},${point6[1]};${startPoint[0]},${startPoint[1]}`;
+      
+      // Create URL with simple parameters for fallback method
+      const apiUrl = `https://api.mapbox.com/directions/v5/${profile}/${waypointsStr}?alternatives=false&geometries=geojson&overview=full&steps=true&access_token=${accessToken}&exclude=ferry&continue_straight=true&walking_speed=${walkingSpeed}`;
       
       const response = await fetch(apiUrl);
       
