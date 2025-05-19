@@ -16,7 +16,8 @@ import {
   addWaypoint,
   removeWaypoint,
   teardownRouting,
-  generateAndDisplayRouteAtoB
+  generateAndDisplayRouteAtoB,
+  generateAndDisplayRouteLoop
 } from '@/lib/routing';
 import { zoomToRoute } from '@/features/routing/utils/RoutingUtils';
 import { decompressAndParse } from '@/lib/shareUtils';
@@ -141,6 +142,9 @@ export default function MapWithRouting({
   const [isMapLocked, setIsMapLocked] = useState(false);
   const isMapLockedRef = useRef(isMapLocked); // Create a ref for isMapLocked
   const [currentLightPreset, setCurrentLightPreset] = useState<TimeOfDay>('day'); // Initial preset
+  
+  // New loading state for route generation
+  const [isGeneratingRoute, setIsGeneratingRoute] = useState(false);
   
   const { 
     location: userLocation, 
@@ -489,15 +493,22 @@ export default function MapWithRouting({
   }, []);
 
   const handleCloseRouteGeneratorModal = useCallback(() => {
-    setIsRouteGeneratorModalOpen(false);
-  }, []);
+    // Only allow closing if not generating
+    if (!isGeneratingRoute) {
+      setIsRouteGeneratorModalOpen(false);
+    }
+  }, [isGeneratingRoute]);
 
   const handleGenerateCustomRoute = useCallback(async (params: RouteGenerationParams) => {
     console.log('[MapWithRouting] Generate Custom Route called with params:', params);
-    setIsRouteGeneratorModalOpen(false); // Close modal immediately
+    // Set generating state to true
+    setIsGeneratingRoute(true);
+    
+    // Don't close modal yet - we'll show loading animation
+    // setIsRouteGeneratorModalOpen(false);
 
     if (params.routeType === 'a-to-b' && params.startPoint && params.endPoint && mapRef.current && MAPBOX_TOKEN) {
-      console.log('[MapWithRouting] Resetting existing route before generation...');
+      console.log('[MapWithRouting] Resetting existing route before generation for A-to-B...');
       resetRouting(mapRef.current, setRouteDistance, setRouteDuration, setHasRoute);
       clearShareState(); 
       setWaypointError(null);
@@ -509,7 +520,6 @@ export default function MapWithRouting({
         const startCoord: [number, number] = [params.startPoint.lng, params.startPoint.lat];
         const endCoord: [number, number] = [params.endPoint.lng, params.endPoint.lat];
 
-        // Call the new orchestrator function
         await generateAndDisplayRouteAtoB(
           mapRef.current,
           MAPBOX_TOKEN,
@@ -520,19 +530,64 @@ export default function MapWithRouting({
           setRouteDuration,
           setHasRoute,
           setIsRouteCoordsReady,
-          handleWaypointError // Pass this down for error feedback from generation
+          handleWaypointError
         );
         console.log('[MapWithRouting] generateAndDisplayRouteAtoB call completed.');
 
       } catch (error) {
-        console.error('[MapWithRouting] Error during custom route generation attempt:', error);
-        handleRouteInfoErrorFromHook(typeof error === 'string' ? error : 'Failed to generate custom route. Please try again.');
+        console.error('[MapWithRouting] Error during A-to-B custom route generation attempt:', error);
+        handleRouteInfoErrorFromHook(typeof error === 'string' ? error : 'Failed to generate A-to-B route. Please try again.');
         setIsRouteCoordsReady(false);
+      } finally {
+        // Set generating state to false and close modal
+        setIsGeneratingRoute(false);
+        setIsRouteGeneratorModalOpen(false);
+      }
+
+    } else if (params.routeType === 'loop' && params.startPoint && params.loopLengthKm && mapRef.current && MAPBOX_TOKEN) {
+      console.log('[MapWithRouting] Resetting existing route before attempting loop generation...');
+      resetRouting(mapRef.current, setRouteDistance, setRouteDuration, setHasRoute);
+      clearShareState();
+      setWaypointError(null);
+      setIsRouteCoordsReady(false);
+      
+      console.log(`[MapWithRouting] Loop route generation requested:`);
+      console.log(`  Start: ${params.startPoint.name} (${params.startPoint.lat.toFixed(5)}, ${params.startPoint.lng.toFixed(5)})`);
+      console.log(`  Length: ${params.loopLengthKm} km`);
+      console.log(`  Direction: ${params.loopDirection || 'ANY'}`);
+      console.log(`  Surface: ${params.surfaceType}`);
+      
+      try {
+        await generateAndDisplayRouteLoop(
+          mapRef.current,
+          MAPBOX_TOKEN,
+          params.startPoint,
+          params.loopLengthKm,
+          params.loopDirection || 'ANY', // Ensure 'ANY' if undefined
+          params.surfaceType,
+          setRouteDistance,
+          setRouteDuration,
+          setHasRoute,
+          setIsRouteCoordsReady,
+          handleWaypointError
+        );
+        console.log('[MapWithRouting] generateAndDisplayRouteLoop call completed.');
+      } catch (error) {
+        console.error('[MapWithRouting] Error during loop custom route generation attempt:', error);
+        handleRouteInfoErrorFromHook(typeof error === 'string' ? error : 'Failed to generate loop route. Please try again.');
+        setIsRouteCoordsReady(false);
+      } finally {
+        // Set generating state to false and close modal
+        setIsGeneratingRoute(false);
+        setIsRouteGeneratorModalOpen(false);
       }
 
     } else if (params.routeType === 'loop') {
-      console.log('[MapWithRouting] Loop generation to be implemented.');
-      handleRouteInfoErrorFromHook('Loop route generation is coming soon!');
+      // This case handles if loop params are somehow missing despite the modal's validation
+      console.warn('[MapWithRouting] Loop generation requested but essential parameters are missing.', params);
+      handleRouteInfoErrorFromHook('Loop generation failed: missing start point or length.');
+      setIsGeneratingRoute(false);
+      setIsRouteGeneratorModalOpen(false);
     }
   }, [setRouteDistance, setRouteDuration, setHasRoute, setIsRouteCoordsReady, clearShareState, handleRouteInfoErrorFromHook, handleWaypointError]);
 
@@ -761,7 +816,7 @@ export default function MapWithRouting({
   }, [isMapReady, currentLightPreset]); // Rerun if currentLightPreset changes (e.g. initial load) or map becomes ready
 
   return (
-    <div className="relative w-full h-full">
+    <div className={`w-full h-full relative ${isMapLocked ? 'cursor-not-allowed' : ''}`}>
       <Map
         mapboxAccessToken={MAPBOX_TOKEN}
         initialViewState={{
@@ -792,15 +847,17 @@ export default function MapWithRouting({
         )}
       </Map>
 
-      {/* Render the Route Generator Modal */}
-      {MAPBOX_TOKEN && ( // Ensure token is available before rendering modal that needs it
-        <RouteGeneratorModal
-          isOpen={isRouteGeneratorModalOpen}
-          onClose={handleCloseRouteGeneratorModal}
-          onGenerate={handleGenerateCustomRoute}
-          mapboxToken={MAPBOX_TOKEN}
-        />
-      )}
+      {/* Route Generation Modal */}
+      <RouteGeneratorModal
+        isOpen={isRouteGeneratorModalOpen}
+        onClose={handleCloseRouteGeneratorModal}
+        onGenerate={handleGenerateCustomRoute}
+        mapboxToken={MAPBOX_TOKEN}
+        isGenerating={isGeneratingRoute}
+        userLocation={userLocation}
+        isUserLocationLoading={isUserLocationLoading}
+        userLocationError={locationError}
+      />
 
       {/* Mobile Controls Layout - REMOVING mt-12 from RouteControls wrapper */}
       <div className="absolute top-4 left-0 right-0 z-10 p-4 md:hidden">
@@ -857,6 +914,7 @@ export default function MapWithRouting({
                   setRouteDuration={setRouteDuration}
                   setHasRoute={setHasRoute}
                   onImportError={handleImportError}
+                  onOpenRouteGenerator={handleOpenRouteGeneratorModal}
                 />
               )}
             </div>
@@ -911,6 +969,7 @@ export default function MapWithRouting({
           setRouteDuration={setRouteDuration}
           setHasRoute={setHasRoute}
           onImportError={handleImportError}
+          onOpenRouteGenerator={handleOpenRouteGeneratorModal}
         />
       </div>
 

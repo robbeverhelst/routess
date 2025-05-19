@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet";
-import { Menu, User, Save, BookMarked, LogIn, Upload, Share2, FileDown, X, AlertCircle, MapPin, Clock, Copy, RotateCcw as BackIcon, ArrowRightLeft, Focus } from "lucide-react";
-import { useState } from "react";
+import { Menu, User, Save, BookMarked, LogIn, Upload, Share2, FileDown, X, AlertCircle, MapPin, Clock, Copy, RotateCcw as BackIcon, ArrowRightLeft, Focus, Wand2 } from "lucide-react";
+import { useState, useRef } from "react";
 import type { Map as MapboxMap } from 'mapbox-gl'; // Import MapboxMap type
 import { exportRouteToGPX, importRouteFromGPX } from '../../lib/routing'; // Import GPX functions
 import type { Dispatch, SetStateAction } from 'react';
@@ -29,6 +29,7 @@ interface SidebarProps {
   displayedShareUrl: string | null;
   onCopySharedUrl: (url: string) => void;
   onClearShareDisplay?: () => void;
+  onOpenRouteGenerator: () => void;
 }
 
 export function Sidebar({
@@ -53,8 +54,10 @@ export function Sidebar({
   displayedShareUrl,
   onCopySharedUrl,
   onClearShareDisplay,
+  onOpenRouteGenerator,
 }: SidebarProps) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
   
   const handleExportGPX = () => {
     const result = exportRouteToGPX();
@@ -134,7 +137,7 @@ export function Sidebar({
         <div className="border-b border-gray-100 dark:border-gray-800 relative">
           {/* Single Close Button */}
           <div className="absolute top-3 right-3 z-10">
-            <SheetClose className="text-gray-400 hover:text-gray-500 transition-colors duration-150">
+            <SheetClose className="text-gray-400 hover:text-gray-500 transition-colors duration-150" ref={closeButtonRef}>
               <X size={18} />
             </SheetClose>
           </div>
@@ -231,6 +234,25 @@ export function Sidebar({
 
             <Button
               variant="outline"
+              onClick={() => {
+                // First close the sidebar using the ref
+                if (closeButtonRef.current) {
+                  closeButtonRef.current.click();
+                }
+                
+                // Then open the modal after a small delay to ensure sidebar is closed
+                setTimeout(() => {
+                  onOpenRouteGenerator();
+                }, 50);
+              }}
+              className="w-full h-10 justify-center rounded-md mb-2 hover:bg-gray-100 dark:hover:bg-gray-800"
+            >
+              <Wand2 className="w-4 h-4 mr-2" />
+              Generate Route
+            </Button>
+
+            <Button
+              variant="outline"
               onClick={onZoomToRoute}
               disabled={!hasRoute}
               className={`w-full h-10 justify-center rounded-md mb-2 ${
@@ -242,6 +264,8 @@ export function Sidebar({
             </Button>
           </div>
           
+
+
           <div className="mt-6">
             <div className="text-sm font-medium text-gray-500 mb-2">Files & Sharing</div>
             

@@ -392,17 +392,14 @@ export async function calculateAtoBRoute(
   let profile = 'mapbox/cycling'; // Default profile
 
   if (surfaceType === 'paved') {
-    profile = 'mapbox/driving-traffic'; // Or 'mapbox/driving' or stick to 'mapbox/cycling' if preferred for all non-unpaved
+    profile = 'mapbox/driving-traffic'; 
     console.log(`[RCS/calculateAtoBRoute] Using '${profile}' for 'paved' surface type.`);
   } else if (surfaceType === 'mixed') {
     profile = 'mapbox/cycling';
     console.log(`[RCS/calculateAtoBRoute] Using '${profile}' for 'mixed' surface type.`);
   } else if (surfaceType === 'unpaved') {
-    // Mapbox doesn't have a great direct profile for unpaved cycling routes primarily.
-    // 'mapbox/walking' might include more trails but isn't ideal for cycling speeds.
-    // For now, defaulting to cycling and logging it.
-    profile = 'mapbox/cycling'; 
-    console.warn(`[RCS/calculateAtoBRoute] 'unpaved' surface type selected. Mapbox has limited support for primarily unpaved cycling routes. Defaulting to '${profile}'. Results may vary.`);
+    profile = 'mapbox/walking'; 
+    console.warn(`[RCS/calculateAtoBRoute] 'unpaved' surface type selected. Using '${profile}' profile. This may result in slower estimated times and routes more suited for walking/hiking.`);
   }
 
   const coordinates = `${startCoord[0]},${startCoord[1]};${endCoord[0]},${endCoord[1]}`;

@@ -1,6 +1,11 @@
 import type { Coordinate } from '@/types/map';
 import { LngLatBounds, type Map as MapboxMap } from 'mapbox-gl';
 import { LngLat } from 'mapbox-gl';
+import type { LoopDirection } from '@/components/ui/RouteGeneratorModal'; // Assuming this type is exported
+
+export type LoopDirectionOrBearing = LoopDirection | number;
+
+const EARTH_RADIUS_KM = 6371;
 
 /**
  * Calculates the distance between two coordinates using the Haversine formula.
@@ -27,21 +32,19 @@ export const haversine = (c1: Coordinate, c2: Coordinate): number => {
  * Checks if a coordinate is near a road by querying the Mapbox Matching API.
  * @param coords - The coordinate to check [lon, lat].
  * @param accessToken - The Mapbox API access token.
+ * @param searchRadiusMeters - The search radius in meters (default is 49m).
  * @returns A promise that resolves to an object indicating if the point is valid (near a road)
  *          and the snapped coordinates if valid.
  */
 export const checkNearRoad = async (
   coords: Coordinate,
-  accessToken: string
+  accessToken: string,
+  searchRadiusMeters: number = 49 // Default to 49m as before
 ): Promise<{ isValid: boolean; snappedCoords?: Coordinate }> => {
   try {
-    // The Matching API requires at least two coordinates. For a single point check,
-    // we can pass the same coordinate twice.
+    const effectiveRadius = Math.max(1, Math.min(searchRadiusMeters, 1000)); // Clamp between 1m and 1000m
     const coordinatesParam = `${coords[0]},${coords[1]};${coords[0]},${coords[1]}`;
-    // Radiuses: The API allows specifying search radiuses for each coordinate.
-    // A smaller radius means the point must be closer to a road.
-    // Using 49m as it was in the original code (though 50m is a common threshold for snapping).
-    const radiusesParam = `49;49`; 
+    const radiusesParam = `${effectiveRadius};${effectiveRadius}`;
     const url = `https://api.mapbox.com/matching/v5/mapbox/walking/${coordinatesParam}?steps=true&geometries=geojson&access_token=${accessToken}&radiuses=${radiusesParam}`;
     
     const response = await fetch(url);
@@ -63,15 +66,14 @@ export const checkNearRoad = async (
   return { isValid: false };
 }
 const snappedCoords = snappedTracepoint.location as Coordinate;
-      // Even if snapped, check Haversine distance as an additional guard or if radius logic is complex.
-      // Original code had a 0.05 km (50m) check here too.
-      const dist = haversine(coords, snappedCoords); // Calls local haversine
+      const dist = haversine(coords, snappedCoords);
       
-      if (dist > 0.05) { // 50 meters threshold
-        console.log(`[checkNearRoad] Snapped point is too far (Distance: ${dist.toFixed(3)}km). Deeming off-road.`);
+      // Use the effectiveRadius (converted to km) for the distance check
+      if (dist > (effectiveRadius / 1000) + 0.001) { // Add 1m tolerance to haversine check vs radius
+        console.log(`[checkNearRoad] Snapped point is too far (Dist: ${dist.toFixed(3)}km, Radius: ${effectiveRadius}m). Deeming off-road.`);
         return { isValid: false };
       }
-      console.log(`[checkNearRoad] Point is on-road. Snapped from [${coords.join(',')}] to [${snappedCoords.join(',')}] Dist: ${dist.toFixed(3)}km`);
+      console.log(`[checkNearRoad] Point is on-road (Radius: ${effectiveRadius}m). Snapped from [${coords.join(',')}] to [${snappedCoords.join(',')}] Dist: ${dist.toFixed(3)}km`);
       return { isValid: true, snappedCoords };
     } else {
       console.warn('[checkNearRoad] Matching API did not return a successful result or tracepoints:', json.code, json.message);
@@ -112,6 +114,74 @@ export const closestPointOnSegment = (p: Coordinate, v: Coordinate, w: Coordinat
     v[1] + t * (w[1] - v[1])
   ];
 };
+
+/**
+ * Calculates a destination coordinate given a starting point, distance, and bearing.
+ * @param startPointLngLat Start coordinate as [longitude, latitude].
+ * @param distanceKm Distance to travel in kilometers.
+ * @param bearingInDegrees Bearing in degrees (0 is North, 90 is East, etc.).
+ * @returns Destination coordinate as [longitude, latitude].
+ */
+function destinationPoint(startPointLngLat: Coordinate, distanceKm: number, bearingInDegrees: number): Coordinate {
+  const R = EARTH_RADIUS_KM;
+  const d = distanceKm;
+
+  const lat1 = startPointLngLat[1] * Math.PI / 180; // φ1
+  const lon1 = startPointLngLat[0] * Math.PI / 180; // λ1
+  const bearingRad = bearingInDegrees * Math.PI / 180; // θ
+
+  const lat2 = Math.asin(Math.sin(lat1) * Math.cos(d / R) +
+                       Math.cos(lat1) * Math.sin(d / R) * Math.cos(bearingRad));
+  
+  let lon2 = lon1 + Math.atan2(Math.sin(bearingRad) * Math.sin(d / R) * Math.cos(lat1),
+                              Math.cos(d / R) - Math.sin(lat1) * Math.sin(lat2));
+  
+  // Normalize lon2 to -180 to +180 degrees
+  lon2 = (lon2 + 3 * Math.PI) % (2 * Math.PI) - Math.PI;
+
+  return [lon2 * 180 / Math.PI, lat2 * 180 / Math.PI];
+}
+
+/**
+ * Calculates a target coordinate for loop generation.
+ * @param startPoint Start coordinate as [longitude, latitude].
+ * @param distanceKm The distance to the target coordinate (e.g., half of the total loop length).
+ * @param directionOrBearing The general direction or bearing for the loop.
+ * @returns The calculated target coordinate as [longitude, latitude].
+ */
+export function calculateTargetCoordinate(
+  startPoint: Coordinate, 
+  distanceKm: number, 
+  directionOrBearing: LoopDirectionOrBearing
+): Coordinate {
+  let bearingInDegrees: number;
+
+  if (typeof directionOrBearing === 'number') {
+    bearingInDegrees = directionOrBearing % 360;
+    if (bearingInDegrees < 0) {
+      bearingInDegrees += 360;
+    }
+    console.log(`[RoutingUtils] Calculating target coordinate using direct bearing: start=${startPoint}, dist=${distanceKm}km, bearing=${bearingInDegrees}°`);
+  } else {
+    switch (directionOrBearing) {
+      case 'N': bearingInDegrees = 0; break;
+      case 'NE': bearingInDegrees = 45; break;
+      case 'E': bearingInDegrees = 90; break;
+      case 'SE': bearingInDegrees = 135; break;
+      case 'S': bearingInDegrees = 180; break;
+      case 'SW': bearingInDegrees = 225; break;
+      case 'W': bearingInDegrees = 270; break;
+      case 'NW': bearingInDegrees = 315; break;
+      case 'ANY': 
+      default: bearingInDegrees = 0; break;
+    }
+    console.log(`[RoutingUtils] Calculating target coordinate using LoopDirection: start=${startPoint}, dist=${distanceKm}km, bearing=${bearingInDegrees}° (direction: ${directionOrBearing})`);
+  }
+  
+  const geometricTarget = destinationPoint(startPoint, distanceKm, bearingInDegrees);
+  console.log(`[RoutingUtils] Calculated geometric target: ${geometricTarget}`);
+  return geometricTarget;
+}
 
 /**
  * Fits the map view to a given set of coordinates.
@@ -180,4 +250,55 @@ export const zoomToRoute = (map: MapboxMap, coordinates: Coordinate[]): void => 
   } catch (error) {
     console.error('[RoutingUtils.zoomToRoute] Error fitting bounds:', error);
   }
-}; 
+};
+
+/**
+ * Calculates the bounding box of a list of coordinates.
+ * @param coordinates An array of coordinates [longitude, latitude].
+ * @returns An object with minLng, minLat, maxLng, maxLat, or null if input is empty.
+ */
+export interface BoundingBox {
+  minLng: number;
+  minLat: number;
+  maxLng: number;
+  maxLat: number;
+}
+
+export function calculateBoundingBox(coordinates: Coordinate[]): BoundingBox | null {
+  if (!coordinates || coordinates.length === 0) {
+    return null;
+  }
+
+  let minLng = coordinates[0][0];
+  let minLat = coordinates[0][1];
+  let maxLng = coordinates[0][0];
+  let maxLat = coordinates[0][1];
+
+  for (let i = 1; i < coordinates.length; i++) {
+    const [lng, lat] = coordinates[i];
+    if (lng < minLng) minLng = lng;
+    if (lat < minLat) minLat = lat;
+    if (lng > maxLng) maxLng = lng;
+    if (lat > maxLat) maxLat = lat;
+  }
+  return { minLng, minLat, maxLng, maxLat };
+}
+
+/**
+ * Calculates the aspect ratio of a bounding box.
+ * The aspect ratio is defined as min_dimension / max_dimension, so it's always <= 1.
+ * A value of 1 indicates a square.
+ * @param bbox The bounding box object.
+ * @returns The aspect ratio (between 0 and 1), or 0 if width/height is zero.
+ */
+export function calculateAspectRatio(bbox: BoundingBox): number {
+  const width = bbox.maxLng - bbox.minLng;
+  const height = bbox.maxLat - bbox.minLat;
+
+  if (width === 0 || height === 0) {
+    return 0; // Avoid division by zero, and a line has zero aspect ratio in this context
+  }
+  // Note: This doesn't account for spherical distortion (degrees of longitude 
+  // cover less distance at higher latitudes). For a simple heuristic, it's often sufficient.
+  return Math.min(width, height) / Math.max(width, height);
+} 

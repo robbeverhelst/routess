@@ -3,6 +3,8 @@ import type { Coordinate } from '@/types/map';
 import type { Map as MapboxMap } from 'mapbox-gl';
 import { initializeMapInteractions, type PopupInfo as MIMPopupInfo } from '@/features/routing/managers/MapInteractionManager';
 import type { Feature, Point as GeoJsonPoint } from 'geojson';
+import { calculateTargetCoordinate, checkNearRoad, zoomToRoute } from '@/features/routing/utils/RoutingUtils';
+import type { LoopDirection } from '@/components/ui/RouteGeneratorModal';
 
 // Import from WaypointManager
 import { 
@@ -95,6 +97,22 @@ function generateKmMarkerFeatures(coordinates: Coordinate[]): Feature<GeoJsonPoi
 let _mapInstance: MapboxMap | null = null;
 let _accessToken: string | null = null;
 let _isMapLockedRef: { current: boolean } | null = null; // Add module-level ref for isMapLocked
+
+// Helper to convert LoopDirection to a numerical bearing
+// If 'ANY', picks a random initial bearing for variability.
+function getBearingForLoopDirection(direction: LoopDirection): number {
+  switch (direction) {
+    case 'N': return 0;
+    case 'NE': return 45;
+    case 'E': return 90;
+    case 'SE': return 135;
+    case 'S': return 180;
+    case 'SW': return 225;
+    case 'W': return 270;
+    case 'NW': return 315;
+    case 'ANY': default: return Math.floor(Math.random() * 360);
+  }
+}
 
 // --- GPX Export ---
 export const exportRouteToGPX = (): { success: boolean; message?: string } => {
@@ -483,7 +501,6 @@ export const updateUserLocationPoint = (map: MapboxMap, coordinates: Coordinate 
 };
 
 // --- New Route Generation Function (A-to-B) ---
-// This is an orchestrator function that will be called from MapWithRouting.tsx
 export async function generateAndDisplayRouteAtoB(
   map: MapboxMap,
   accessToken: string,
@@ -520,6 +537,7 @@ export async function generateAndDisplayRouteAtoB(
       setRouteDuration(`${durationMinutes} min`);
       setHasRoute(true);
       setIsRouteCoordsReady(true);
+      zoomToRoute(map, result.geometry); // Use imported zoomToRoute
 
     } else {
       console.error('[routing.ts] Failed to generate A-to-B route:', result.error);
@@ -545,4 +563,451 @@ export async function generateAndDisplayRouteAtoB(
     clearCurrentRoutePath(); 
     clearRoute(map); 
   }
+}
+
+// --- Improved Natural Loop Route Generation ---
+export async function generateAndDisplayRouteLoop(
+  map: MapboxMap,
+  accessToken: string,
+  startPoint: { lat: number; lng: number; name: string }, 
+  loopLengthKm: number,
+  loopDirection: LoopDirection,
+  surfaceType: 'paved' | 'mixed' | 'unpaved',
+  setRouteDistance: Dispatch<SetStateAction<string>>,
+  setRouteDuration: Dispatch<SetStateAction<string>>,
+  setHasRoute: Dispatch<SetStateAction<boolean>>,
+  setIsRouteCoordsReady: Dispatch<SetStateAction<boolean>>,
+  handleWaypointError: (message: string | null) => void 
+): Promise<void> {
+  console.log('[routing.ts] Natural loop generation started.');
+  const startCoord: Coordinate = [startPoint.lng, startPoint.lat];
+
+  // Clear previous route and set up waypoints for display (only start point)
+  clearRoute(map);
+  setWaypointsAndFlags([startCoord], [false]); 
+  snapshot(); // Take snapshot for history
+  updateWaypointsLayer(map, getWaypoints(), _isMapLockedRef?.current ?? false);
+  saveWaypointsToStorage(getWaypoints(), getDirectFlags());
+
+  if (loopLengthKm <= 0.2) { // Minimum sensible loop length
+    if (handleWaypointError) handleWaypointError('Loop length is too short for generation.');
+    setIsRouteCoordsReady(false); setHasRoute(false); setRouteDistance(''); setRouteDuration('');
+    return;
+  }
+
+  try {
+    // 1. Get initial bearing based on loopDirection
+    const initialBearing = getBearingForLoopDirection(loopDirection);
+    
+    // 2. Generate a natural loop using a road exploration approach
+    const loopResult = await generateNaturalLoop(
+      startCoord,
+      loopLengthKm,
+      initialBearing,
+      accessToken,
+      surfaceType
+    );
+
+    if (!loopResult.success || !loopResult.geometry) {
+      if (handleWaypointError) handleWaypointError(loopResult.error || 'Failed to generate natural loop.');
+      setIsRouteCoordsReady(false); setHasRoute(false); setRouteDistance(''); setRouteDuration('');
+      return;
+    }
+    
+    // 3. Instead of just displaying the route, create waypoints along the path
+    const routeGeometry = loopResult.geometry;
+    
+    // Place waypoints at strategic points along the route
+    // We want a reasonable number - not too many, not too few
+    const numSegments = Math.min(6, Math.max(3, Math.ceil(loopLengthKm / 3)));
+    const waypoints: Coordinate[] = [];
+    const directFlags: boolean[] = [];
+    
+    // Always start with the original starting point
+    waypoints.push(startCoord);
+    directFlags.push(false); // First waypoint direct flag doesn't matter
+    
+    // Place waypoints roughly evenly along the route
+    if (routeGeometry.length > 2) {
+      // For a loop, we need to distribute waypoints around the circuit
+      const pointsPerSegment = Math.floor(routeGeometry.length / numSegments);
+      
+      // Skip the first point (which is the start) and add intermediate waypoints
+      for (let i = 1; i < numSegments; i++) {
+        const index = Math.min(i * pointsPerSegment, routeGeometry.length - 1);
+        waypoints.push(routeGeometry[index]);
+        directFlags.push(false); // Use routing to optimize each segment
+      }
+      
+      // Add the starting point again explicitly as the last waypoint to ensure we close the loop
+      waypoints.push(startCoord);
+      directFlags.push(false);
+    }
+    
+    // 4. Update the map with waypoints instead of just the raw path
+    setWaypointsAndFlags(waypoints, directFlags);
+    snapshot(); // Take a history snapshot
+    updateWaypointsLayer(map, waypoints, _isMapLockedRef?.current ?? false);
+    saveWaypointsToStorage(waypoints, directFlags);
+    
+    // 5. Calculate the actual route via the waypoints
+    try {
+      const routeResult: RouteResult = await getRouteFromService(
+        map, 
+        accessToken, 
+        setRouteDistance, 
+        setRouteDuration, 
+        setHasRoute
+      );
+      
+      if (routeResult.success) {
+        setIsRouteCoordsReady(true);
+        
+        // If waypoints were snapped during routing, update our display
+        if (routeResult.waypointsSnapped && routeResult.snappedWaypoints && routeResult.snappedDirectFlags) {
+          setWaypointsAndFlags(routeResult.snappedWaypoints, routeResult.snappedDirectFlags);
+          updateWaypointsLayer(map, getWaypoints(), _isMapLockedRef?.current ?? false);
+          saveWaypointsToStorage(getWaypoints(), getDirectFlags());
+        }
+        
+        // Zoom to the calculated route geometry if available
+        const currentRouteGeom = getCurrentRoutePath();
+        if (currentRouteGeom && currentRouteGeom.length > 0) {
+          zoomToRoute(map, currentRouteGeom); // Use imported zoomToRoute
+        } else if (loopResult.geometry && loopResult.geometry.length > 0) {
+          // Fallback to initially generated loop geometry if final route path isn't available
+          // (though it should be if routeResult.success is true)
+          zoomToRoute(map, loopResult.geometry); // Use imported zoomToRoute
+        }
+        
+        console.log(`[routing.ts] Natural loop generation successful. Created ${waypoints.length} waypoints.`);
+      } else {
+        console.error('[routing.ts] Route calculation failed:', routeResult.error);
+        if (handleWaypointError) handleWaypointError(routeResult.error || 'Failed to calculate final route through waypoints.');
+        setIsRouteCoordsReady(false); setHasRoute(false); setRouteDistance(''); setRouteDuration('');
+      }
+    } catch (error: unknown) {
+      console.error('[routing.ts] Error calculating route through waypoints:', error);
+      if (handleWaypointError) handleWaypointError(error instanceof Error ? error.message : 'A critical error occurred calculating the final route.');
+      setIsRouteCoordsReady(false); setHasRoute(false); setRouteDistance(''); setRouteDuration('');
+    }
+
+  } catch (error: unknown) {
+    console.error('[routing.ts] Critical error in natural loop generation:', error);
+    if (handleWaypointError) handleWaypointError(error instanceof Error ? error.message : 'A critical error occurred during loop generation.');
+    setIsRouteCoordsReady(false); setHasRoute(false); setRouteDistance(''); setRouteDuration('');
+    clearRoute(map);
+  }
+}
+
+interface RouteLoopCandidate {
+  geometry: Coordinate[];
+  distanceMeters: number;
+  durationSeconds: number;
+  lengthRatio: number;
+  overlapRatio: number;
+  score: number;
+}
+
+interface NaturalLoopResult {
+  success: boolean;
+  geometry?: Coordinate[];
+  distanceMeters?: number;
+  durationSeconds?: number;
+  error?: string;
+}
+
+/**
+ * Generates a natural loop route by exploring real road networks
+ * rather than using geometric patterns.
+ */
+async function generateNaturalLoop(
+  startPoint: Coordinate,
+  targetLengthKm: number,
+  initialBearing: number,
+  accessToken: string,
+  surfaceType: 'paved' | 'mixed' | 'unpaved'
+): Promise<NaturalLoopResult> {
+  console.log(`[routing.ts] Generating natural loop from ${startPoint}, target=${targetLengthKm}km, bearing=${initialBearing}°`);
+
+  if (targetLengthKm < 0.5) {
+    return { success: false, error: 'Target loop length is too short.' };
+  }
+  
+  // Map profile based on surface type
+  const profile = surfaceType === 'paved' ? 'mapbox/driving-traffic' : 
+               surfaceType === 'mixed' ? 'mapbox/cycling' : 'mapbox/walking';
+  
+  // Apply a scaling factor to compensate for the real road network being longer than direct distances
+  const scalingFactor = 1;
+  console.log(`[routing.ts] Spider exploration phase using profile: ${profile}, target: ${targetLengthKm}km, scaling: ${scalingFactor}`);
+  
+  // Create a wider range of directions to explore for more diverse route options
+  // Use more directions to find better loops
+  const angleStep = 30; // Try more angles (instead of 45°) for better coverage
+  const clockDirections: number[] = [];
+  for (let angle = 0; angle < 360; angle += angleStep) {
+    clockDirections.push(angle);
+  }
+  const directionsToTry = clockDirections.map(angle => (initialBearing + angle) % 360);
+  
+  let bestLoop: {
+    geometry: Coordinate[];
+    distanceMeters: number;
+    durationSeconds: number;
+    score: number;
+  } | null = null;
+  
+  // Try creating multiple different loop configurations
+  for (let i = 0; i < directionsToTry.length; i++) {
+    const outboundBearing = directionsToTry[i];
+    // Create more circular paths by using angles closer to 90 degrees away
+    // This helps avoid out-and-back on the same road
+    const turnAngle = 70 + Math.floor(Math.random() * 40); // between 70-110 degrees
+    const secondBearing = (outboundBearing + turnAngle) % 360;
+    const thirdBearing = (secondBearing + turnAngle) % 360;
+    
+    console.log(`[routing.ts] Trying circular loop with bearings: ${outboundBearing}° → ${secondBearing}° → ${thirdBearing}°`);
+    
+    try {
+      // Create a multi-waypoint route using 4 points to form a more circular shape:
+      // 1. Starting point
+      // 2. First waypoint (~1/4 of the way)
+      // 3. Second waypoint (~1/2 of the way) 
+      // 4. Third waypoint (~3/4 of the way)
+      // 5. Back to starting point
+      const firstSegmentDist = targetLengthKm * 0.23 * scalingFactor;
+      const secondSegmentDist = targetLengthKm * 0.27 * scalingFactor;
+      const thirdSegmentDist = targetLengthKm * 0.23 * scalingFactor;
+      
+      const point1Target = calculateTargetCoordinate(startPoint, firstSegmentDist, outboundBearing);
+      const snap1 = await checkNearRoad(point1Target, accessToken, 150);
+      const point1 = snap1.isValid && snap1.snappedCoords ? snap1.snappedCoords : point1Target;
+      
+      const point2Target = calculateTargetCoordinate(point1, secondSegmentDist, secondBearing);
+      const snap2 = await checkNearRoad(point2Target, accessToken, 150);
+      const point2 = snap2.isValid && snap2.snappedCoords ? snap2.snappedCoords : point2Target;
+      
+      const point3Target = calculateTargetCoordinate(point2, thirdSegmentDist, thirdBearing);
+      const snap3 = await checkNearRoad(point3Target, accessToken, 150);
+      const point3 = snap3.isValid && snap3.snappedCoords ? snap3.snappedCoords : point3Target;
+      
+      // Ensure the points are sufficiently different and form a good shape
+      const minDistanceBetweenPoints = 0.2; // 200m
+      if (haversineDistance(startPoint, point1) < minDistanceBetweenPoints ||
+          haversineDistance(point1, point2) < minDistanceBetweenPoints ||
+          haversineDistance(point2, point3) < minDistanceBetweenPoints ||
+          haversineDistance(point3, startPoint) < minDistanceBetweenPoints) {
+        console.log(`[routing.ts] Points too close together, skipping this configuration`);
+        continue;
+      }
+      
+      // Get route through all waypoints
+      console.log(`[routing.ts] Getting multi-waypoint route through: start → p1 → p2 → p3 → start`);
+      const waypointsStr = `${startPoint[0]},${startPoint[1]};${point1[0]},${point1[1]};${point2[0]},${point2[1]};${point3[0]},${point3[1]};${startPoint[0]},${startPoint[1]}`;
+      
+      // Add exclude=ferry to avoid ferry routes
+      // Add continue_straight=true to prefer straighter, more natural routes
+      const apiUrl = `https://api.mapbox.com/directions/v5/${profile}/${waypointsStr}?alternatives=true&geometries=geojson&overview=full&steps=true&access_token=${accessToken}&exclude=ferry&continue_straight=true`;
+      
+      const response = await fetch(apiUrl);
+      
+      if (!response.ok) {
+        console.log(`[routing.ts] Multi-waypoint route API request failed`);
+        continue;
+      }
+      
+      const data = await response.json();
+      
+      if (data.routes && data.routes.length > 0) {
+        // Sort routes by best match to target distance
+        const routes = data.routes.map((route: { 
+          geometry: { coordinates: Coordinate[] }; 
+          distance: number; 
+          duration: number; 
+        }) => {
+          const lengthRatio = Math.abs(route.distance/1000 - targetLengthKm) / targetLengthKm;
+          
+          // Check for route uniqueness using a more thorough method
+          // Break the route into segments for comparison
+          const coords = route.geometry.coordinates as Coordinate[];
+          let overlapScore = 0;
+          
+          // More sophisticated overlap detection
+          // Create a grid-based representation of the route
+          const gridSize = 0.001; // Roughly 100m grid cells
+          const visitedCells = new Set<string>();
+          const totalCells = new Set<string>();
+          
+          // Track each segment of the route
+          coords.forEach(coord => {
+            const cellKey = `${Math.floor(coord[0] / gridSize)},${Math.floor(coord[1] / gridSize)}`;
+            if (visitedCells.has(cellKey)) {
+              overlapScore++;
+            } else {
+              visitedCells.add(cellKey);
+            }
+            totalCells.add(cellKey);
+          });
+          
+          // Normalize overlap score (0 to 1)
+          const overlapRatio = totalCells.size > 0 ? overlapScore / totalCells.size : 0;
+          
+          // Scoring logic: 
+          // 1. Penalize routes that are shorter than requested more heavily
+          // 2. Heavily penalize routes with high overlap (reusing same roads)
+          let adjustedLengthRatio = lengthRatio;
+          if (route.distance/1000 < targetLengthKm) {
+            adjustedLengthRatio = lengthRatio * 1.3;
+          }
+          
+          // Heavier penalty for overlap (increased from 0.15 to 0.3)
+          const score = 0.7 * adjustedLengthRatio + 0.3 * overlapRatio;
+          
+          return {
+            geometry: coords,
+            distanceMeters: route.distance,
+            durationSeconds: route.duration,
+            lengthRatio,
+            overlapRatio,
+            score
+          };
+        });
+        
+        routes.sort((a: RouteLoopCandidate, b: RouteLoopCandidate) => a.score - b.score);
+        
+        if (routes.length > 0) {
+          const bestRoute = routes[0];
+          
+          // Allow routes to be up to 60% longer than requested
+          // But be more strict about routes that are too short - only allow 25% shorter
+          const tooLong = bestRoute.distanceMeters/1000 > targetLengthKm * 1.6;
+          const tooShort = bestRoute.distanceMeters/1000 < targetLengthKm * 0.75;
+          
+          // Reject routes with too much overlap
+          const tooMuchOverlap = bestRoute.overlapRatio > 0.4; // Reject if more than 40% overlap
+          
+          if (tooLong || tooShort) {
+            console.log(`[routing.ts] Rejecting route: ${(bestRoute.distanceMeters/1000).toFixed(1)}km - ${tooLong ? 'too long' : 'too short'} vs target ${targetLengthKm}km`);
+            continue;
+          }
+          
+          if (tooMuchOverlap) {
+            console.log(`[routing.ts] Rejecting route: Too much road overlap (${(bestRoute.overlapRatio * 100).toFixed(0)}%)`);
+            continue;
+          }
+          
+          // Verify the route actually returns to the start
+          const startDistance = haversineDistance(startPoint, bestRoute.geometry[bestRoute.geometry.length - 1]);
+          if (startDistance > 0.2) { // More than 200m from the start point
+            console.log(`[routing.ts] Rejecting route: Doesn't return to start (${startDistance.toFixed(3)}km away)`);
+            continue;
+          }
+          
+          console.log(`[routing.ts] Found route: ${(bestRoute.distanceMeters/1000).toFixed(1)}km, score=${bestRoute.score.toFixed(2)} (length_ratio=${bestRoute.lengthRatio.toFixed(2)}, overlap=${(bestRoute.overlapRatio * 100).toFixed(0)}%)`);
+          
+          // If it's our first result or better than what we have, keep it
+          if (!bestLoop || bestRoute.score < bestLoop.score) {
+            bestLoop = bestRoute;
+            console.log(`[routing.ts] New best loop found`);
+            
+            // If we found an excellent match with very low overlap, break early
+            if (bestRoute.score < 0.15 && bestRoute.overlapRatio < 0.2) {
+              console.log(`[routing.ts] Found excellent loop match with low overlap, using it immediately`);
+              break;
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.warn(`[routing.ts] Error during loop creation:`, error);
+    }
+  }
+  
+  if (!bestLoop) {
+    // Try an alternative strategy if no loop was found
+    console.log(`[routing.ts] No loops found with circular approach, trying rectangular strategy`);
+    
+    try {
+      // Create a rectangular shape with 4 waypoints
+      // This typically creates more balanced loops
+      const cornerAngle = 90; // Right angles for a rectangle
+      const firstBearing = initialBearing;
+      const secondBearing = (firstBearing + cornerAngle) % 360;
+      const thirdBearing = (secondBearing + cornerAngle) % 360;
+      
+      // Calculate each side length to be roughly 1/4 of the target perimeter
+      const sideLengthKm = targetLengthKm * 0.2 * scalingFactor;
+      
+      // Calculate and snap the 4 corners of the rectangle
+      const point1Target = calculateTargetCoordinate(startPoint, sideLengthKm, firstBearing);
+      const snap1 = await checkNearRoad(point1Target, accessToken, 200);
+      const point1 = snap1.isValid && snap1.snappedCoords ? snap1.snappedCoords : point1Target;
+      
+      const point2Target = calculateTargetCoordinate(point1, sideLengthKm, secondBearing);
+      const snap2 = await checkNearRoad(point2Target, accessToken, 200);
+      const point2 = snap2.isValid && snap2.snappedCoords ? snap2.snappedCoords : point2Target;
+      
+      const point3Target = calculateTargetCoordinate(point2, sideLengthKm, thirdBearing);
+      const snap3 = await checkNearRoad(point3Target, accessToken, 200);
+      const point3 = snap3.isValid && snap3.snappedCoords ? snap3.snappedCoords : point3Target;
+      
+      console.log(`[routing.ts] Rectangular approach: start → p1 → p2 → p3 → start`);
+      
+      const waypointsStr = `${startPoint[0]},${startPoint[1]};${point1[0]},${point1[1]};${point2[0]},${point2[1]};${point3[0]},${point3[1]};${startPoint[0]},${startPoint[1]}`;
+      
+      // Also add exclude=ferry to the fallback method
+      const apiUrl = `https://api.mapbox.com/directions/v5/${profile}/${waypointsStr}?alternatives=false&geometries=geojson&overview=full&steps=true&access_token=${accessToken}&exclude=ferry&continue_straight=true`;
+      
+      const response = await fetch(apiUrl);
+      
+      if (!response.ok) {
+        return { success: false, error: 'Failed to get alternative route.' };
+      }
+      
+      const data = await response.json();
+      
+      if (data.routes && data.routes.length > 0) {
+        const route = data.routes[0];
+        
+        // Use more lenient validation for fallback approach
+        // Allow routes to be up to 60% longer than requested but minimum 75% of target
+        const actualDistance = route.distance / 1000; // km
+        const tooLong = actualDistance > targetLengthKm * 2.0;
+        const tooShort = actualDistance < targetLengthKm * 0.50;
+        
+        if (tooLong || tooShort) {
+          console.log(`[routing.ts] Rectangular route ${tooLong ? 'too long' : 'too short'}: ${actualDistance.toFixed(1)}km vs ${targetLengthKm}km, rejecting`);
+          return { success: false, error: 'Generated route too far from target length.' };
+        }
+        
+        // Verify the route actually returns to the start
+        const lastPoint = route.geometry.coordinates[route.geometry.coordinates.length - 1];
+        const startDistance = haversineDistance(startPoint, lastPoint);
+        if (startDistance > 0.2) { // More than 200m from the start point
+          console.log(`[routing.ts] Rectangular route doesn't return to start (${startDistance.toFixed(3)}km away), rejecting`);
+          return { success: false, error: 'Generated route doesn\'t return to the starting point.' };
+        }
+        
+        return {
+          success: true,
+          geometry: route.geometry.coordinates,
+          distanceMeters: route.distance,
+          durationSeconds: route.duration
+        };
+      }
+    } catch (error) {
+      console.error(`[routing.ts] Error in rectangular loop strategy:`, error);
+    }
+    
+    return { success: false, error: 'Could not generate any viable loop routes.' };
+  }
+  
+  // We found a good loop!
+  return {
+    success: true,
+    geometry: bestLoop.geometry,
+    distanceMeters: bestLoop.distanceMeters,
+    durationSeconds: bestLoop.durationSeconds
+  };
 }
