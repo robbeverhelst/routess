@@ -79,6 +79,7 @@ jobs:
       contents: write
       issues: write
       pull-requests: write
+      packages: write
     outputs:
       version: ${{ steps.semantic.outputs.version }}
     steps:
@@ -153,64 +154,29 @@ jobs:
         id: semantic
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GIT_AUTHOR_NAME: "GitHub Actions"
-          GIT_AUTHOR_EMAIL: "actions@github.com"
-          GIT_COMMITTER_NAME: "GitHub Actions"
-          GIT_COMMITTER_EMAIL: "actions@github.com"
+          # Configure git user for commits made by semantic-release
+          GIT_AUTHOR_NAME: "github-actions[bot]"
+          GIT_AUTHOR_EMAIL: "github-actions[bot]@users.noreply.github.com"
+          GIT_COMMITTER_NAME: "github-actions[bot]"
+          GIT_COMMITTER_EMAIL: "github-actions[bot]@users.noreply.github.com"
         run: |
+          # Required for semantic-release to operate in the GHA environment
           git config --global --add safe.directory /home/runner/_work/maps/maps
-          git fetch --prune || true
+          # Required for @semantic-release/git to push changes using the GITHUB_TOKEN
+          git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
           
-          # Extract the most recent version from package.json
-          CURRENT_VERSION=$(bun -e "console.log(require('./package.json').version)")
-          echo "Current version from package.json: $CURRENT_VERSION"
+          echo "Running semantic-release..."
+          # semantic-release will analyze commits, bump version in package.json,
+          # commit, tag, push, and create a GitHub release if a new version is warranted.
+          # If no release is needed, it exits successfully without making changes.
+          bunx semantic-release
           
-          # Analyze commits to determine next version
-          NEXT_VERSION=$(bunx semantic-release --dry-run | grep -oP 'The next release version is \K[0-9]+\.[0-9]+\.[0-9]+' || echo "")
-          
-          if [ -z "$NEXT_VERSION" ]; then
-            echo "No release needed. Using current version: $CURRENT_VERSION"
-            echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-          
-          echo "Next version will be: $NEXT_VERSION"
-          
-          # Update package.json
-          bun -e "const pkg = require('./package.json'); pkg.version = '$NEXT_VERSION'; require('fs').writeFileSync('./package.json', JSON.stringify(pkg, null, 2) + '\n')"
-          
-          # Create release notes
-          NOTES=$(bunx semantic-release --dry-run | awk '/Release notes for version/{flag=1;next} /for version/{if(flag){exit}} flag' || echo "")
-          
-          # Create and force push git tag
-          git add package.json
-          git commit -m "chore(release): $NEXT_VERSION [skip ci]" || true
-          git tag -f "v$NEXT_VERSION"
-          git push origin "v$NEXT_VERSION" --force
-          
-          # Get the existing release ID
-          RELEASE_ID=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-            "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/tags/v$NEXT_VERSION" | \
-            grep -o '"id": [0-9]*' | head -1 | sed 's/"id": //')
-          
-          # Delete existing release if it exists
-          if [ ! -z "$RELEASE_ID" ]; then
-            echo "Deleting existing release with ID: $RELEASE_ID"
-            curl -s -X DELETE \
-              -H "Authorization: token $GITHUB_TOKEN" \
-              "https://api.github.com/repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID"
-          fi
-          
-          # Create GitHub release
-          echo "Creating new release for v$NEXT_VERSION"
-          RELEASE_RESPONSE=$(curl -s -X POST \
-            -H "Authorization: token $GITHUB_TOKEN" \
-            -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/repos/$GITHUB_REPOSITORY/releases" \
-            -d "{\"tag_name\":\"v$NEXT_VERSION\",\"name\":\"v$NEXT_VERSION\",\"body\":\"$NOTES\",\"draft\":false,\"prerelease\":false}")
-          
-          echo "Release creation response: $RELEASE_RESPONSE"
-          echo "version=$NEXT_VERSION" >> $GITHUB_OUTPUT
+          # Read the version from package.json.
+          # This will be the new version if a release was made, or the current one if not.
+          # This is then output for subsequent jobs.
+          VERSION=$(bun -e "console.log(require('./package.json').version)")
+          echo "Version from package.json after semantic-release: $VERSION"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
           
   # Separate job for Docker image building with multi-arch support
   docker:
