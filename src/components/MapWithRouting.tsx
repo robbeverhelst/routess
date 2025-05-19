@@ -717,7 +717,7 @@ export default function MapWithRouting({
         mapStyle="mapbox://styles/mapbox/standard"
         reuseMaps
         attributionControl={false}
-        projection="mercator"
+        projection="globe"
         antialias={true}
         onLoad={handleMapLoad}
       >
