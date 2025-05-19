@@ -254,22 +254,15 @@ jobs:
         with:
           node-version: '18'
           
-      - name: Get version from package.json
-        id: package-version
-        run: |
-          VERSION=$(node -e "console.log(require('./package.json').version)")
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          
       - name: Extract metadata for Docker
         id: metadata
         uses: docker/metadata-action@v4
         with:
           images: ghcr.io/${{ github.repository_owner }}/maps
           tags: |
-            type=semver,pattern={{version}},value=${{ steps.package-version.outputs.version }}
-            type=semver,pattern={{major}}.{{minor}},value=${{ steps.package-version.outputs.version }}
-            type=semver,pattern={{major}},value=${{ steps.package-version.outputs.version }}
+            type=semver,pattern={{version}},value=${{ needs.release.outputs.version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ needs.release.outputs.version }}
+            type=semver,pattern={{major}},value=${{ needs.release.outputs.version }}
             type=raw,value=latest,enable={{is_default_branch}}
           
       - name: Convert repository owner to lowercase
