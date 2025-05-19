@@ -1,5 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { 
   ArrowLeftCircle, ArrowRightCircle, Locate, RefreshCw, Lock, Unlock, 
   SunIcon, MoonIcon, SunriseIcon, SunsetIcon, SparklesIcon as Sparkles,
   ArrowUp, ArrowDown, ArrowLeft, ArrowRight // Added cardinal direction arrows
@@ -74,87 +80,136 @@ export function RouteControls({
   const { Icon: OrientationIcon, title: orientationTitle } = getOrientationIconAndLabel(currentBearing);
 
   return (
-    <div className="flex flex-col lg:flex-row items-start lg:items-center gap-2">
-      <Button
-        variant="secondary"
-        onClick={onUndo}
-        disabled={!canUndo || isLocked}
-        className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 disabled:opacity-50 h-10 w-10"
-        title="Undo"
-      >
-        <ArrowLeftCircle size={18} />
-      </Button>
-      
-      <Button
-        variant="secondary"
-        onClick={onRedo}
-        disabled={!canRedo || isLocked}
-        className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 disabled:opacity-50 h-10 w-10"
-        title="Redo"
-      >
-        <ArrowRightCircle size={18} />
-      </Button>
-      
-      <Button
-        variant="secondary"
-        onClick={onReset}
-        disabled={!hasRoute || isLocked}
-        className={`bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 disabled:opacity-50 h-10 w-10`}
-        title="Reset route"
-      >
-        <RefreshCw size={18} />
-      </Button>
-      
-      <Button
-        variant="secondary"
-        onClick={onToggleLock}
-        className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 h-10 w-10"
-        title={isLocked ? "Unlock map interaction" : "Lock map interaction"}
-      >
-        {isLocked ? <Lock size={18} /> : <Unlock size={18} />}
-      </Button>
-      
-      <Button
-        variant="secondary"
-        onClick={onOpenRouteGenerator}
-        className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 h-10 w-10"
-        title="Generate custom route"
-      >
-        <Sparkles size={18} />
-      </Button>
+    <TooltipProvider>
+      <div className="flex flex-col lg:flex-row items-start lg:items-center gap-2">
+        <Tooltip delayDuration={500}>
+          <TooltipTrigger asChild>
+            <Button
+              variant="secondary"
+              onClick={onUndo}
+              disabled={!canUndo || isLocked}
+              className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 disabled:opacity-50 h-10 w-10"
+            >
+              <ArrowLeftCircle size={18} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Undo</p>
+          </TooltipContent>
+        </Tooltip>
+        
+        <Tooltip delayDuration={500}>
+          <TooltipTrigger asChild>
+            <Button
+              variant="secondary"
+              onClick={onRedo}
+              disabled={!canRedo || isLocked}
+              className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 disabled:opacity-50 h-10 w-10"
+            >
+              <ArrowRightCircle size={18} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Redo</p>
+          </TooltipContent>
+        </Tooltip>
+        
+        <Tooltip delayDuration={500}>
+          <TooltipTrigger asChild>
+            <Button
+              variant="secondary"
+              onClick={onReset}
+              disabled={!hasRoute || isLocked}
+              className={`bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 disabled:opacity-50 h-10 w-10`}
+            >
+              <RefreshCw size={18} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Reset route</p>
+          </TooltipContent>
+        </Tooltip>
+        
+        <Tooltip delayDuration={500}>
+          <TooltipTrigger asChild>
+            <Button
+              variant="secondary"
+              onClick={onToggleLock}
+              className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 h-10 w-10"
+            >
+              {isLocked ? <Lock size={18} /> : <Unlock size={18} />}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{isLocked ? "Unlock map interaction" : "Lock map interaction"}</p>
+          </TooltipContent>
+        </Tooltip>
 
-      <Button
-        variant="secondary"
-        onClick={onCycleTimeOfDay} 
-        className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 h-10 w-10"
-        title={`Cycle time of day (Current: ${currentTimeOfDay})`}
-      >
-        <TimeOfDayIcon size={18} />
-      </Button>
+        <Tooltip delayDuration={500}>
+          <TooltipTrigger asChild>
+            <Button
+              variant="secondary"
+              onClick={onOpenRouteGenerator}
+              className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 h-10 w-10"
+            >
+              <Sparkles size={18} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Generate custom route</p>
+          </TooltipContent>
+        </Tooltip>
+        
+        <Tooltip delayDuration={500}>
+          <TooltipTrigger asChild>
+            <Button
+              variant="secondary"
+              onClick={onCycleTimeOfDay}
+              className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 h-10 w-10"
+            >
+              <TimeOfDayIcon size={18} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Cycle time of day (Current: {currentTimeOfDay})</p>
+          </TooltipContent>
+        </Tooltip>
+        
+        <Tooltip delayDuration={500}>
+          <TooltipTrigger asChild>
+            <Button
+              variant="secondary"
+              onClick={onCycleBearing}
+              className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 h-10 w-10 flex items-center justify-center"
+            >
+              <OrientationIcon size={22} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Set map orientation: {orientationTitle}</p>
+          </TooltipContent>
+        </Tooltip>
 
-      {/* Map Orientation Button */}
-      <Button
-        variant="secondary"
-        onClick={onCycleBearing} 
-        className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 h-10 w-10 flex items-center justify-center"
-        title={`Set map orientation: ${orientationTitle}`}
-      >
-        <OrientationIcon size={22} />
-      </Button>
-
-      <Button
-        variant="secondary"
-        onClick={onLocate}
-        className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 h-10 w-10"
-        title={hasUserLocation ? "Center on my location" : "Location not available"}
-      >
-        <div className="relative">
-          <Locate size={18} className={hasUserLocation ? "text-blue-500" : "text-gray-400"} />
-          {!hasUserLocation && (
-            <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
-          )}
-        </div>
-      </Button>
-    </div>
+        <Tooltip delayDuration={500}>
+          <TooltipTrigger asChild>
+            <Button
+              variant="secondary"
+              onClick={onLocate}
+              className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 h-10 w-10"
+            >
+              <div className="relative">
+                <Locate size={18} className={hasUserLocation ? "text-blue-500" : "text-gray-400"} />
+                {!hasUserLocation && (
+                  <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
+                )}
+              </div>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{hasUserLocation ? "Center on my location" : "Location not available"}</p>
+          </TooltipContent>
+        </Tooltip>
+      </div>
+    </TooltipProvider>
   );
 } 
