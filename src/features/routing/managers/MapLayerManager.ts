@@ -15,6 +15,7 @@ export const TEMP_DRAG_LINES_SOURCE_ID = 'temp-drag-lines';
 export const TEMP_DRAG_LINES_LAYER_ID = 'temp-drag-lines';
 export const ROUTE_CASING_LAYER_ID = 'route-casing';
 export const WAYPOINTS_SHADOW_LAYER_ID = 'waypoints-shadow';
+export const ROUTE_ARROWS_LAYER_ID = 'route-arrows';
 
 export const initializeSourcesAndLayers = (map: MapboxMap): void => {
   if (!map.getSource(ROUTE_SOURCE_ID)) {
@@ -55,6 +56,44 @@ export const initializeSourcesAndLayers = (map: MapboxMap): void => {
           6, // Wider line on hover
           3  // Default width
         ]
+      }
+    });
+
+    map.addLayer({
+      id: ROUTE_ARROWS_LAYER_ID,
+      type: 'symbol',
+      source: ROUTE_SOURCE_ID,
+      layout: {
+        'symbol-placement': 'line',
+        'symbol-spacing': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          10, 600, // Sparse when zoomed out
+          14, 250, // Adjusted medium spacing
+          18, 350  // More sparse when zoomed in deeply
+        ],
+        'text-field': '▶', 
+        'text-size': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          10, 12, // Larger base size at low zoom
+          14, 18, // Scaled size at mid zoom
+          18, 24  // Larger size at high zoom
+        ],
+        'text-allow-overlap': true,
+        'text-ignore-placement': true,
+        'text-rotation-alignment': 'map',
+        'text-pitch-alignment': 'map', 
+        'text-keep-upright': false, // Allow text to rotate with the line
+        'visibility': 'visible'
+      },
+      paint: {
+        'text-color': '#FFFFFF',
+        'text-halo-color': '#3887be', 
+        'text-halo-width': 0.75, // Slightly increased halo for better definition
+        'text-opacity': 0.9
       }
     });
   }

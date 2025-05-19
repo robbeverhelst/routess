@@ -69,6 +69,7 @@ interface MapboxMapProps {
     longitude: number;
     latitude: number;
     zoom: number;
+    bearing?: number;
   };
   width?: string | number;
   height?: string | number;
@@ -78,7 +79,8 @@ interface MapboxMapProps {
 const DEFAULT_VIEW_STATE = {
   longitude: 10.5,
   latitude: 51.2,
-  zoom: 4
+  zoom: 4,
+  bearing: 0
 };
 
 // Synchronously check localStorage for waypoints at the time of component initialization
@@ -125,6 +127,9 @@ const NIGHT_ROUTE_CASING_OPACITY = 0.3;
 // Order of presets for cycling
 const lightPresetsOrder: TimeOfDay[] = ['dawn', 'day', 'dusk', 'night'];
 
+// Define bearing presets for cycling - simplified to 4 cardinal directions
+const BEARING_PRESETS = [0, 90, 180, 270]; // N, E, S, W
+
 export default function MapWithRouting({
   initialViewState = DEFAULT_VIEW_STATE,
   width = '100%',
@@ -142,6 +147,7 @@ export default function MapWithRouting({
   const [isMapLocked, setIsMapLocked] = useState(false);
   const isMapLockedRef = useRef(isMapLocked); // Create a ref for isMapLocked
   const [currentLightPreset, setCurrentLightPreset] = useState<TimeOfDay>('day'); // Initial preset
+  const [currentBearing, setCurrentBearing] = useState<number>(initialViewState.bearing ?? 0); // Initialize from initialViewState prop or default
   
   // New loading state for route generation
   const [isGeneratingRoute, setIsGeneratingRoute] = useState(false);
@@ -178,23 +184,35 @@ export default function MapWithRouting({
   // State for the new Route Generator Modal
   const [isRouteGeneratorModalOpen, setIsRouteGeneratorModalOpen] = useState(false);
 
+  // Effect to set initial bearing from map instance if not set by prop, after map is ready.
+  // This updates the state if the map initializes with a different bearing than initialViewState.bearing (e.g. from map's own internal defaults if prop isn't passed)
+  useEffect(() => {
+    if (mapRef.current && isMapReady && typeof initialViewState.bearing === 'undefined') {
+      // Only update if initialViewState didn't provide a bearing.
+      // If it did, currentBearing state is already set from it.
+      setCurrentBearing(mapRef.current.getBearing());
+    }
+  }, [isMapReady, initialViewState.bearing]);
+
   // Use user location for initial view state if available, 
   // UNLESS a route was detected in localStorage at component initialization.
   const effectiveInitialViewState = detectedRouteInLocalStorageOnInit
-    ? DEFAULT_VIEW_STATE // If route in LS, start with default, zoomToRoute will adjust
+    ? DEFAULT_VIEW_STATE 
     : userLocation
     ? {
         longitude: userLocation[0],
         latitude: userLocation[1],
-        zoom: 15
+        zoom: 15,
+        bearing: initialViewState.bearing ?? 0
       }
     : lastKnownLocationFromStorage 
     ? {
         longitude: lastKnownLocationFromStorage[0],
         latitude: lastKnownLocationFromStorage[1],
-        zoom: 14
+        zoom: 14,
+        bearing: initialViewState.bearing ?? 0
       }
-    : initialViewState; // Fallback to prop or default if no userLocation and no LS route
+    : initialViewState; // Fallback to prop or default (which includes bearing)
 
   // Show waypoint error message
   const handleWaypointError = useCallback((message: string | null) => {
@@ -815,6 +833,22 @@ export default function MapWithRouting({
     }
   }, [isMapReady, currentLightPreset]); // Rerun if currentLightPreset changes (e.g. initial load) or map becomes ready
 
+  // Handler for cycling bearing
+  const handleCycleBearing = useCallback(() => {
+    if (mapRef.current) {
+      const map = mapRef.current;
+      // Get current bearing directly from state, as it should be one of the presets
+      const currentIndex = BEARING_PRESETS.indexOf(currentBearing);
+      // If currentBearing is somehow not in presets (e.g. map was panned manually), find closest or default to N
+      const safeCurrentIndex = currentIndex === -1 ? BEARING_PRESETS.indexOf(0) : currentIndex;
+      const nextIndex = (safeCurrentIndex + 1) % BEARING_PRESETS.length;
+      const nextBearing = BEARING_PRESETS[nextIndex];
+      map.flyTo({ bearing: nextBearing, duration: 500 }); // Smoothly fly to new bearing
+      setCurrentBearing(nextBearing);
+      console.log(`[MapWithRouting] Bearing set to: ${nextBearing}`);
+    }
+  }, [mapRef, currentBearing]); // Added currentBearing to dependencies
+
   return (
     <div className={`w-full h-full relative ${isMapLocked ? 'cursor-not-allowed' : ''}`}>
       <Map
@@ -822,7 +856,7 @@ export default function MapWithRouting({
         initialViewState={{
           ...effectiveInitialViewState,
           pitch: 45,
-          bearing: 0,
+          bearing: currentBearing,
           zoom:
   typeof effectiveInitialViewState.zoom === 'number'
     ? effectiveInitialViewState.zoom + 3
@@ -860,10 +894,10 @@ export default function MapWithRouting({
       />
 
       {/* Mobile Controls Layout - REMOVING mt-12 from RouteControls wrapper */}
-      <div className="absolute top-4 left-0 right-0 z-10 p-4 md:hidden">
+      <div className="absolute top-4 left-0 right-0 z-10 p-4 lg:hidden">
         <div className="flex justify-between items-start w-full">
           {/* Top-Left: RouteControls (stacked) */}
-          <div className="flex flex-col items-start gap-2 md:mt-0"> {/* Removed mt-12 */}
+          <div className="flex flex-col items-start gap-2">
             <RouteControls
               onUndo={handleUndo}
               onRedo={handleRedo}
@@ -878,6 +912,8 @@ export default function MapWithRouting({
               onCycleTimeOfDay={handleCycleTimeOfDay}
               currentTimeOfDay={currentLightPreset}
               onOpenRouteGenerator={handleOpenRouteGeneratorModal}
+              currentBearing={currentBearing}
+              onCycleBearing={handleCycleBearing}
             />
           </div>
 
@@ -923,7 +959,7 @@ export default function MapWithRouting({
       </div>
 
       {/* Desktop: RouteControls - Top Center */}
-      <div className="absolute top-8 left-1/2 transform -translate-x-1/2 z-10 hidden md:flex">
+      <div className="absolute top-8 left-1/2 transform -translate-x-1/2 z-10 hidden lg:flex">
         <RouteControls
             onUndo={handleUndo}
             onRedo={handleRedo}
@@ -938,11 +974,13 @@ export default function MapWithRouting({
             onCycleTimeOfDay={handleCycleTimeOfDay}
             currentTimeOfDay={currentLightPreset}
             onOpenRouteGenerator={handleOpenRouteGeneratorModal}
+            currentBearing={currentBearing}
+            onCycleBearing={handleCycleBearing}
         />
       </div>
 
       {/* Desktop: Search and Sidebar - Top Right */}
-      <div className="absolute top-8 right-8 z-10 hidden md:flex items-center gap-2">
+      <div className="absolute top-8 right-8 z-10 hidden lg:flex items-center gap-2">
         <LocationSearch
           mapboxToken={MAPBOX_TOKEN}
           onSelectLocation={handleSelectLocation}
