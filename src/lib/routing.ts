@@ -2,6 +2,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import type { Coordinate } from '@/types/map';
 import type { Map as MapboxMap } from 'mapbox-gl';
 import { initializeMapInteractions, type PopupInfo as MIMPopupInfo } from '@/features/routing/managers/MapInteractionManager';
+import type { Feature, Point as GeoJsonPoint } from 'geojson';
 
 // Import from WaypointManager
 import { 
@@ -25,7 +26,13 @@ import { saveWaypointsToLocalStorage as saveWaypointsToStorage, loadWaypointsFro
 import { generateGPXString, parseGPXFile, processGPXWaypoints } from '@/features/routing/services/GPXService';
 
 // Import the RouteCalculationService and its result type
-import { getRoute as getRouteFromService, getCurrentRoutePath, clearCurrentRoutePath, type RouteResult } from '@/features/routing/services/RouteCalculationService';
+import { 
+  getRoute as getRouteFromService,
+  getCurrentRoutePath,
+  clearCurrentRoutePath,
+  calculateAtoBRoute 
+} from '@/features/routing/services/RouteCalculationService';
+import type { RouteResult } from '@/features/routing/services/RouteCalculationService';
 
 // Import from MapLayerManager
 import {
@@ -33,8 +40,56 @@ import {
   updateWaypointsLayer,
   updateUserLocationLayer,
   clearRouteLayer,
-  clearKilometerMarkersLayer
+  clearKilometerMarkersLayer,
+  updateRouteLayer as updateRouteLayerFromMapLayerManager,
+  updateKilometerMarkersLayer as updateKilometerMarkersLayerFromMapLayerManager
 } from '@/features/routing/managers/MapLayerManager';
+
+// Helper for haversine distance (duplicated from RCS for now or move to shared utils)
+function haversineDistance(coords1: Coordinate, coords2: Coordinate): number {
+  const R = 6371; // Radius of the Earth in kilometers
+  const lat1 = coords1[1];
+  const lon1 = coords1[0];
+  const lat2 = coords2[1];
+  const lon2 = coords2[0];
+
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    0.5 -
+    Math.cos(dLat) / 2 +
+    (Math.cos(lat1 * Math.PI / 180) *
+      Math.cos(lat2 * Math.PI / 180) *
+      (1 - Math.cos(dLon))) / 2;
+  return R * 2 * Math.asin(Math.sqrt(a));
+}
+
+// Helper function to generate kilometer marker GeoJSON features
+function generateKmMarkerFeatures(coordinates: Coordinate[]): Feature<GeoJsonPoint>[] {
+  if (coordinates.length < 2) return [];
+  const kmMarkerFeatures: Feature<GeoJsonPoint>[] = [];
+  let distanceCovered = 0;
+  let nextKmMarker = 1;
+
+  for (let i = 0; i < coordinates.length - 1; i++) {
+    const start = coordinates[i];
+    const end = coordinates[i + 1];
+    const segmentDistance = haversineDistance(start, end);
+    while (distanceCovered + segmentDistance >= nextKmMarker && segmentDistance > 0) {
+      const segmentFraction = (nextKmMarker - distanceCovered) / segmentDistance;
+      const markerLng = start[0] + segmentFraction * (end[0] - start[0]);
+      const markerLat = start[1] + segmentFraction * (end[1] - start[1]);
+      kmMarkerFeatures.push({
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [markerLng, markerLat] },
+        properties: { km: `${nextKmMarker} km` }
+      });
+      nextKmMarker++;
+    }
+    distanceCovered += segmentDistance;
+  }
+  return kmMarkerFeatures;
+}
 
 // Module-level variables to store map instance and access token for the history event handler
 let _mapInstance: MapboxMap | null = null;
@@ -64,7 +119,7 @@ export const exportRouteToGPX = (): { success: boolean; message?: string } => {
     document.body.removeChild(link);
     URL.revokeObjectURL(link.href);
     return { success: true };
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[GPX Export] Error exporting route:', error);
     return { success: false, message: 'Error exporting route. See console for details.' };
   }
@@ -101,7 +156,7 @@ export const importRouteFromGPX = async (
 
     resetRouting(map, setRouteDistance, setRouteDuration, setHasRoute);
     setWaypointsAndFlags(finalNewWaypoints, newDirectFlags);
-  snapshot();
+    snapshot();
     updateWaypointsLayer(map, getWaypoints(), _isMapLockedRef?.current ?? false); // Use ref value
     saveWaypointsToStorage(getWaypoints(), getDirectFlags());
 
@@ -115,11 +170,11 @@ export const importRouteFromGPX = async (
         } else if (!routeResult.success) {
           console.warn('[importRouteFromGPX] Route calculation after GPX import indicated failure:', routeResult.error);
           if (onError && routeResult.error) onError(routeResult.error);
-    setRouteDistance('');
-    setRouteDuration('');
-    setHasRoute(false);
-  }
-      } catch (error) {
+          setRouteDistance('');
+          setRouteDuration('');
+          setHasRoute(false);
+        }
+      } catch (error: unknown) {
         console.error('[importRouteFromGPX] Route calc failed after GPX import:', error);
         if (onError) {
           const errorMessage = error instanceof Error ? error.message : 'Failed to calculate route after GPX import.';
@@ -128,20 +183,20 @@ export const importRouteFromGPX = async (
         clearRouteLayer(map);
         clearKilometerMarkersLayer(map);
         clearCurrentRoutePath();
-    setRouteDistance('');
-    setRouteDuration('');
-    setHasRoute(false);
-  }
+        setRouteDistance('');
+        setRouteDuration('');
+        setHasRoute(false);
+      }
     } else if (getWaypoints().length === 1) {
-    setRouteDistance('');
-    setRouteDuration('');
-    setHasRoute(false);
+      setRouteDistance('');
+      setRouteDuration('');
+      setHasRoute(false);
       clearCurrentRoutePath();
       clearRouteLayer(map);
       clearKilometerMarkersLayer(map);
     }
     console.log(`[routing.ts.importRouteFromGPX] Successfully imported ${getWaypoints().length} waypoints via GPXService.`);
-  } catch (error) {
+  } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error during GPX import process';
     console.error("[routing.ts.importRouteFromGPX] Error importing route:", error);
     if (onError) onError(`Error importing GPX: ${errorMessage}`);
@@ -206,7 +261,7 @@ export const setRouteData = async (
         setHasRoute(false);
         setIsRouteCoordsReady(false); // Set to false on error
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[setRouteData] Route calc failed:', error);
       clearRouteLayer(map);
       clearKilometerMarkersLayer(map);
@@ -292,7 +347,7 @@ export const setupRouting = (
       console.log('[routing.ts] Waypoints loaded from local storage.');
       updateWaypointsLayer(map, getWaypoints(), isMapLockedRef.current); // Use ref value
       if (getWaypoints().length >= 1) {
-        getRouteFromService(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute).then(result => {
+        getRouteFromService(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute).then((result: RouteResult) => {
           if (result.success && result.waypointsSnapped && result.snappedWaypoints && result.snappedDirectFlags) {
             console.log("[routing.ts] Initial route calculated and waypoints snapped.");
             setWaypointsAndFlags(result.snappedWaypoints, result.snappedDirectFlags);
@@ -305,14 +360,14 @@ export const setupRouting = (
           } else if (!result.success) {
              console.warn('[routing.ts] Failed to calculate initial route. Service indicated failure.');
           }
-        }).catch(error => {
+        }).catch((error: unknown) => { // Typed error
           console.error('[routing.ts] Error recalculating initial route:', error);
         });
       }
       } else {
       console.log('[routing.ts] No waypoints found in local storage.');
       }
-    } catch (error) {
+    } catch (error: unknown) { // Typed error
     console.error('[routing.ts] Error loading waypoints from local storage in setupRouting:', error);
   }
 
@@ -426,3 +481,68 @@ export const resetRouting = (
 export const updateUserLocationPoint = (map: MapboxMap, coordinates: Coordinate | null) => {
   updateUserLocationLayer(map, coordinates); // Call the manager's function
 };
+
+// --- New Route Generation Function (A-to-B) ---
+// This is an orchestrator function that will be called from MapWithRouting.tsx
+export async function generateAndDisplayRouteAtoB(
+  map: MapboxMap,
+  accessToken: string,
+  startCoord: Coordinate, 
+  endCoord: Coordinate,   
+  surfaceType: 'paved' | 'mixed' | 'unpaved',
+  setRouteDistance: Dispatch<SetStateAction<string>>,
+  setRouteDuration: Dispatch<SetStateAction<string>>,
+  setHasRoute: Dispatch<SetStateAction<boolean>>,
+  setIsRouteCoordsReady: Dispatch<SetStateAction<boolean>>,
+  handleWaypointError: (message: string | null) => void 
+): Promise<void> {
+  console.log('[routing.ts] generateAndDisplayRouteAtoB called.');
+
+  clearRoute(map); 
+  setWaypointsAndFlags([startCoord, endCoord], [false, false]);
+  snapshot();
+  updateWaypointsLayer(map, getWaypoints(), _isMapLockedRef?.current ?? false);
+  saveWaypointsToStorage(getWaypoints(), getDirectFlags());
+
+  try {
+    const result = await calculateAtoBRoute(startCoord, endCoord, accessToken, surfaceType);
+
+    if (result.success && result.geometry && typeof result.distance === 'number' && typeof result.duration === 'number') {
+      console.log('[routing.ts] Successfully generated A-to-B route.');
+      
+      updateRouteLayerFromMapLayerManager(map, result.geometry); 
+      const kmFeatures = generateKmMarkerFeatures(result.geometry);
+      updateKilometerMarkersLayerFromMapLayerManager(map, kmFeatures); 
+
+      const distanceKm = (result.distance / 1000).toFixed(1);
+      const durationMinutes = Math.round(result.duration / 60);
+      setRouteDistance(`${distanceKm} km`);
+      setRouteDuration(`${durationMinutes} min`);
+      setHasRoute(true);
+      setIsRouteCoordsReady(true);
+
+    } else {
+      console.error('[routing.ts] Failed to generate A-to-B route:', result.error);
+      if (handleWaypointError) handleWaypointError(result.error || 'Failed to generate route.');
+      setRouteDistance('');
+      setRouteDuration('');
+      setHasRoute(false);
+      setIsRouteCoordsReady(false);
+      setWaypointsAndFlags([], []); 
+      updateWaypointsLayer(map, [], _isMapLockedRef?.current ?? false); 
+      saveWaypointsToStorage([], []); 
+    }
+  } catch (error: unknown) {
+    console.error('[routing.ts] Critical error in generateAndDisplayRouteAtoB:', error);
+    if (handleWaypointError) handleWaypointError(error instanceof Error ? error.message : 'A critical error occurred.');
+    setRouteDistance('');
+    setRouteDuration('');
+    setHasRoute(false);
+    setIsRouteCoordsReady(false);
+    setWaypointsAndFlags([], []);
+    updateWaypointsLayer(map, [], _isMapLockedRef?.current ?? false);
+    saveWaypointsToStorage([], []);
+    clearCurrentRoutePath(); 
+    clearRoute(map); 
+  }
+}

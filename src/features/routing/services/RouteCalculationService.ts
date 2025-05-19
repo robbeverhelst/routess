@@ -372,11 +372,77 @@ const json = await response.json();
 
 // Function to get the current route path (for GPX export, etc.)
 export const getCurrentRoutePath = (): Coordinate[] => {
-  return currentRoutePathCoordinates;
+  return [...currentRoutePathCoordinates]; // Return a copy to prevent external modification
 };
 
 // Function to clear the current route path (e.g. when route is cleared in routing.ts)
 export const clearCurrentRoutePath = (): void => {
   currentRoutePathCoordinates = [];
-  console.log('[RCS] Current route path cleared.');
-}; 
+  console.log('[RouteCalculationService] Cleared currentRoutePathCoordinates.');
+};
+
+
+// --- New A-to-B Route Calculation Function ---
+export async function calculateAtoBRoute(
+  startCoord: Coordinate,
+  endCoord: Coordinate,
+  accessToken: string,
+  surfaceType: 'paved' | 'mixed' | 'unpaved'
+): Promise<Partial<RouteResult & { geometry?: Coordinate[], distance?: number, duration?: number }>> {
+  let profile = 'mapbox/cycling'; // Default profile
+
+  if (surfaceType === 'paved') {
+    profile = 'mapbox/driving-traffic'; // Or 'mapbox/driving' or stick to 'mapbox/cycling' if preferred for all non-unpaved
+    console.log(`[RCS/calculateAtoBRoute] Using '${profile}' for 'paved' surface type.`);
+  } else if (surfaceType === 'mixed') {
+    profile = 'mapbox/cycling';
+    console.log(`[RCS/calculateAtoBRoute] Using '${profile}' for 'mixed' surface type.`);
+  } else if (surfaceType === 'unpaved') {
+    // Mapbox doesn't have a great direct profile for unpaved cycling routes primarily.
+    // 'mapbox/walking' might include more trails but isn't ideal for cycling speeds.
+    // For now, defaulting to cycling and logging it.
+    profile = 'mapbox/cycling'; 
+    console.warn(`[RCS/calculateAtoBRoute] 'unpaved' surface type selected. Mapbox has limited support for primarily unpaved cycling routes. Defaulting to '${profile}'. Results may vary.`);
+  }
+
+  const coordinates = `${startCoord[0]},${startCoord[1]};${endCoord[0]},${endCoord[1]}`;
+  const apiUrl = `https://api.mapbox.com/directions/v5/${profile}/${coordinates}?overview=full&geometries=geojson&steps=true&access_token=${accessToken}`;
+
+  console.log(`[RCS/calculateAtoBRoute] Fetching A-to-B route from: ${apiUrl.replace(accessToken, "<REDACTED_TOKEN>")}`);
+
+  try {
+    const response = await fetch(apiUrl);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: response.statusText }));
+      const errorMessage = errorData.message || `API request failed with status ${response.status}`;
+      console.error(`[RCS/calculateAtoBRoute] API error: ${errorMessage}`, errorData);
+      return { success: false, error: errorMessage };
+    }
+
+    const data = await response.json();
+
+    if (data.routes && data.routes.length > 0) {
+      const route = data.routes[0];
+      const geometry = route.geometry.coordinates as Coordinate[];
+      const distance = route.distance; // in meters
+      const duration = route.duration; // in seconds
+
+      console.log(`[RCS/calculateAtoBRoute] Route found: Distance=${(distance/1000).toFixed(2)}km, Duration=${(duration/60).toFixed(1)}min`);
+      currentRoutePathCoordinates = [...geometry]; // Update module-level path
+
+      return {
+        success: true,
+        geometry,
+        distance,
+        duration,
+      };
+    } else {
+      const noRouteMessage = data.message || 'No route found between the specified points.';
+      console.warn(`[RCS/calculateAtoBRoute] No route found: ${noRouteMessage}`);
+      return { success: false, error: noRouteMessage };
+    }
+  } catch (error) {
+    console.error('[RCS/calculateAtoBRoute] Network or parsing error:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Network error or failed to parse response.' };
+  }
+} 

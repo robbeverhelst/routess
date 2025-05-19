@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ArrowLeftCircle, ArrowRightCircle, Locate, RefreshCw, Lock, Unlock, SunIcon, MoonIcon, SunriseIcon, SunsetIcon } from "lucide-react";
+import { ArrowLeftCircle, ArrowRightCircle, Locate, RefreshCw, Lock, Unlock, SunIcon, MoonIcon, SunriseIcon, SunsetIcon, SparklesIcon as Sparkles } from "lucide-react";
 
 // Define TimeOfDay type locally
 export type TimeOfDay = 'dawn' | 'day' | 'dusk' | 'night';
@@ -17,6 +17,7 @@ interface RouteControlsProps {
   onToggleLock: () => void;
   currentTimeOfDay: TimeOfDay; // New prop
   onCycleTimeOfDay: () => void; // New prop
+  onOpenRouteGenerator: () => void; // New prop for opening the modal
 }
 
 // Helper to get the icon component based on TimeOfDay
@@ -42,7 +43,8 @@ export function RouteControls({
   isLocked,
   onToggleLock,
   currentTimeOfDay,
-  onCycleTimeOfDay
+  onCycleTimeOfDay,
+  onOpenRouteGenerator
 }: RouteControlsProps) {
   const TimeOfDayIcon = getIconForTimeOfDay(currentTimeOfDay);
 
@@ -108,6 +110,15 @@ export function RouteControls({
         title={`Cycle time of day (Current: ${currentTimeOfDay})`}
       >
         <TimeOfDayIcon size={18} />
+      </Button>
+
+      <Button
+        variant="secondary"
+        onClick={onOpenRouteGenerator}
+        className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 h-10 w-10"
+        title="Generate custom route"
+      >
+        <Sparkles size={18} />
       </Button>
     </div>
   );

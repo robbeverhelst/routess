@@ -14,6 +14,7 @@ interface GeocodingFeature {
 interface LocationSearchProps {
   mapboxToken: string;
   onSelectLocation: (location: { lng: number; lat: number; name: string }) => void;
+  currentValue?: string;
   isMobileContext?: boolean;
   isMobileSearchOpen?: boolean;
   onToggleMobileSearch?: () => void;
@@ -22,6 +23,7 @@ interface LocationSearchProps {
 export function LocationSearch({ 
   mapboxToken, 
   onSelectLocation,
+  currentValue,
   isMobileContext = false,
   isMobileSearchOpen = false,
   onToggleMobileSearch 
@@ -39,6 +41,16 @@ export function LocationSearch({
       inputRef.current.focus();
     }
   }, [isMobileContext, isMobileSearchOpen]);
+  
+  // Effect to update query when currentValue prop changes
+  useEffect(() => {
+    if (currentValue && currentValue !== query) {
+      setQuery(currentValue);
+    }
+    // If currentValue is cleared by the parent, and the user is not actively typing,
+    // we might want to clear the query. However, the parent should control clearing.
+    // For now, this primarily sets the initial/selected value.
+  }, [currentValue]);
   
   // Search for locations when query changes
   useEffect(() => {
@@ -84,16 +96,22 @@ export function LocationSearch({
   }, [isMobileContext, isMobileSearchOpen, onToggleMobileSearch]);
   
   const handleSelect = (result: GeocodingFeature) => {
-    onSelectLocation({
+    const selectedLocation = {
       lng: result.center[0], 
       lat: result.center[1],
       name: result.place_name
-    });
-    setQuery(""); // Clear query
+    };
+    onSelectLocation(selectedLocation);
     setShowResults(false);
     if (isMobileContext && onToggleMobileSearch) {
       onToggleMobileSearch(); // Close mobile search after selection
     }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setQuery(e.target.value);
+    // If user starts typing, we are no longer strictly reflecting `currentValue`
+    // The search useEffect will take over.
   };
 
   const handleInputFocus = () => {
@@ -121,7 +139,7 @@ export function LocationSearch({
               type="text"
               placeholder="Search for a location..."
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={handleInputChange}
               onFocus={handleInputFocus}
               className="w-full pl-10 pr-10 py-2 rounded-md bg-white/90 dark:bg-black/80 border border-gray-300 dark:border-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 h-10"
             />
@@ -173,7 +191,7 @@ export function LocationSearch({
           type="text"
           placeholder="Search for a location..."
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={handleInputChange}
           onFocus={handleInputFocus}
           className="w-full pl-9 pr-4 py-2 rounded-md bg-white/90 dark:bg-black/80 border border-gray-300 dark:border-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
