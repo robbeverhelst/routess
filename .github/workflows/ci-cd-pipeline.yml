@@ -80,7 +80,7 @@ jobs:
       issues: write
       pull-requests: write
     outputs:
-      version: ${{ steps.version.outputs.version }}
+      version: ${{ steps.semantic.outputs.version }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
