@@ -149,21 +149,6 @@ export function RouteControls({
           <TooltipTrigger asChild>
             <Button
               variant="secondary"
-              onClick={onOpenRouteGenerator}
-              className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 h-10 w-10"
-            >
-              <Sparkles size={18} />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Generate custom route</p>
-          </TooltipContent>
-        </Tooltip>
-        
-        <Tooltip delayDuration={500}>
-          <TooltipTrigger asChild>
-            <Button
-              variant="secondary"
               onClick={onCycleTimeOfDay}
               className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 h-10 w-10"
             >
@@ -172,6 +157,21 @@ export function RouteControls({
           </TooltipTrigger>
           <TooltipContent>
             <p>Cycle time of day (Current: {currentTimeOfDay})</p>
+          </TooltipContent>
+        </Tooltip>
+        
+        <Tooltip delayDuration={500}>
+          <TooltipTrigger asChild>
+            <Button
+              variant="secondary"
+              onClick={onOpenRouteGenerator}
+              className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 h-10 w-10"
+            >
+              <Sparkles size={18} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Generate custom route</p>
           </TooltipContent>
         </Tooltip>
         
