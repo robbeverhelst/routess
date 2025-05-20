@@ -18,7 +18,12 @@ import {
     insertWaypointAtLocation as insertWaypointAtLocationFromManager
 } from '@/features/routing/managers/WaypointManager';
 // Import from HistoryManager
-import { snapshot, clearHistory, stepBack as stepBackFromHistoryManager, stepForward as stepForwardFromHistoryManager, subscribeToHistoryChanges } from '@/features/routing/managers/HistoryManager';
+import { 
+  snapshot as historySnapshot, 
+  stepBack as stepBackFromHistoryManager,
+  stepForward as stepForwardFromHistoryManager,
+  subscribeToHistoryChanges
+} from '@/features/routing/managers/HistoryManager';
 import type { WaypointHistory } from '@/types/map';
 
 // Import the new service
@@ -221,7 +226,7 @@ export const importRouteFromGPX = async (
 
     resetRouting(map, setRouteDistance, setRouteDuration, setHasRoute);
     setWaypointsAndFlags(finalNewWaypoints, newDirectFlags);
-    snapshot();
+    historySnapshot();
     updateWaypointsLayer(map, getWaypoints(), _isMapLockedRef?.current ?? false); // Use ref value
     saveWaypointsToStorage(getWaypoints(), getDirectFlags());
 
@@ -287,7 +292,7 @@ export const setRouteData = async (
   setIsRouteCoordsReady: Dispatch<SetStateAction<boolean>>
 ) => {
   setIsRouteCoordsReady(false); // Set to false at the start of loading new data
-  snapshot();
+  historySnapshot();
   setWaypointsAndFlags([], []);
   updateWaypointsLayer(map, [], _isMapLockedRef?.current ?? false); // Use ref value
   clearRoute(map);
@@ -526,7 +531,8 @@ export const resetRouting = (
   setRouteDuration: Dispatch<SetStateAction<string>>,
   setHasRoute: Dispatch<SetStateAction<boolean>>
 ) => {
-  clearHistory();
+  historySnapshot(); // Take a snapshot before clearing waypoints
+  // clearHistory(); // DO NOT call this if reset should be undoable
   setWaypointsAndFlags([], []);
   updateWaypointsLayer(map, [], _isMapLockedRef?.current ?? false); // Use ref value
   saveWaypointsToStorage([], []);
@@ -564,7 +570,7 @@ export async function generateAndDisplayRouteAtoB(
 
   clearRoute(map); 
   setWaypointsAndFlags([startCoord, endCoord], [false, false]);
-  snapshot();
+  historySnapshot();
   updateWaypointsLayer(map, getWaypoints(), _isMapLockedRef?.current ?? false);
   saveWaypointsToStorage(getWaypoints(), getDirectFlags());
 
@@ -629,16 +635,24 @@ export async function generateAndDisplayRouteLoop(
   console.log('[routing.ts] Natural loop generation started.');
   const startCoord: Coordinate = [startPoint.lng, startPoint.lat];
 
-  // Clear previous route and set up waypoints for display (only start point)
+  // Take a snapshot of the current state BEFORE this function makes any changes.
+  // This snapshot will be what 'undo' reverts to.
+  historySnapshot(); 
+
+  // Clear previous route and set up initial waypoints internally for the generation logic
   clearRoute(map);
   setWaypointsAndFlags([startCoord], [false]); 
-  snapshot(); // Take snapshot for history
+  // No snapshot here for this intermediate state
   updateWaypointsLayer(map, getWaypoints(), _isMapLockedRef?.current ?? false);
-  saveWaypointsToStorage(getWaypoints(), getDirectFlags());
+  // Defer saving to storage until the final waypoints are set
 
   if (loopLengthKm <= 0.2) { // Minimum sensible loop length
     if (handleWaypointError) handleWaypointError('Loop length is too short for generation.');
     setIsRouteCoordsReady(false); setHasRoute(false); setRouteDistance(''); setRouteDuration('');
+    // Attempt to revert to the pre-function state if we bail early due to invalid input.
+    // This requires stepBack to not cause a new snapshot or route recalc itself, which it currently does.
+    // For now, this early exit will leave the history with the snapshot of the state *before* this function was called,
+    // and the current state as just the startCoord. Undoing would go back to the pre-call state.
     return;
   }
 
@@ -646,8 +660,6 @@ export async function generateAndDisplayRouteLoop(
     // 1. Get initial bearing based on loopDirection
     const initialBearing = getBearingForLoopDirection(loopDirection);
     
-    // 2. Generate a natural loop using a road exploration approach
-    // First try the standard natural loop generation
     let loopResult = await generateNaturalLoop(
       startCoord,
       loopLengthKm,
@@ -656,7 +668,6 @@ export async function generateAndDisplayRouteLoop(
       surfaceType
     );
     
-    // If natural loop generation fails, try the simplified approach
     if (!loopResult.success || !loopResult.geometry) {
       console.log('[routing.ts] Natural loop generation failed, trying simplified approach');
       loopResult = await generateSimplifiedLoop(
@@ -669,47 +680,35 @@ export async function generateAndDisplayRouteLoop(
     if (!loopResult.success || !loopResult.geometry) {
       if (handleWaypointError) handleWaypointError(loopResult.error || 'Failed to generate natural loop.');
       setIsRouteCoordsReady(false); setHasRoute(false); setRouteDistance(''); setRouteDuration('');
+      // Similar to above, undo will revert to pre-call state.
       return;
     }
     
-    // 3. Instead of just displaying the route, create waypoints along the path
     const routeGeometry = loopResult.geometry;
-    
-    // Place waypoints at strategic points along the route
-    // Increase density of waypoints to have more control over route finding
-    // More waypoints = better ability to stick to small roads/paths
-    const numSegments = Math.min(8, Math.max(4, Math.ceil(loopLengthKm / 2)));
     const waypoints: Coordinate[] = [];
     const directFlags: boolean[] = [];
     
-    // Always start with the original starting point
     waypoints.push(startCoord);
-    directFlags.push(false); // First waypoint direct flag doesn't matter
+    directFlags.push(false); 
     
-    // Place waypoints roughly evenly along the route
     if (routeGeometry.length > 2) {
-      // For a loop, we need to distribute waypoints around the circuit
+      const numSegments = Math.min(8, Math.max(4, Math.ceil(loopLengthKm / 2)));
       const pointsPerSegment = Math.floor(routeGeometry.length / numSegments);
-      
-      // Skip the first point (which is the start) and add intermediate waypoints
       for (let i = 1; i < numSegments; i++) {
         const index = Math.min(i * pointsPerSegment, routeGeometry.length - 1);
         waypoints.push(routeGeometry[index]);
-        directFlags.push(false); // Use routing to optimize each segment
+        directFlags.push(false); 
       }
-      
-      // Add the starting point again explicitly as the last waypoint to ensure we close the loop
-      waypoints.push(startCoord);
-      directFlags.push(false);
     }
+    waypoints.push(startCoord);
+    directFlags.push(false);
     
-    // 4. Update the map with waypoints instead of just the raw path
+    // Update the map with the final waypoints from the generation
     setWaypointsAndFlags(waypoints, directFlags);
-    snapshot(); // Take a history snapshot
+    // No history snapshot here; the one at the function start is the correct one for undo.
     updateWaypointsLayer(map, waypoints, _isMapLockedRef?.current ?? false);
-    saveWaypointsToStorage(waypoints, directFlags);
+    saveWaypointsToStorage(waypoints, directFlags); // Save the final generated waypoints
     
-    // 5. Calculate the actual route via the waypoints
     try {
       const routeResult: RouteResult = await getRouteFromService(
         map, 
@@ -721,22 +720,19 @@ export async function generateAndDisplayRouteLoop(
       
       if (routeResult.success) {
         setIsRouteCoordsReady(true);
-        
-        // If waypoints were snapped during routing, update our display
         if (routeResult.waypointsSnapped && routeResult.snappedWaypoints && routeResult.snappedDirectFlags) {
+          // If waypoints were snapped, update the state. This is part of the successful generation.
+          // The single undo should still go back to the state *before* loop generation was initiated.
           setWaypointsAndFlags(routeResult.snappedWaypoints, routeResult.snappedDirectFlags);
           updateWaypointsLayer(map, getWaypoints(), _isMapLockedRef?.current ?? false);
           saveWaypointsToStorage(getWaypoints(), getDirectFlags());
         }
         
-        // Zoom to the calculated route geometry if available
         const currentRouteGeom = getCurrentRoutePath();
         if (currentRouteGeom && currentRouteGeom.length > 0) {
-          zoomToRoute(map, currentRouteGeom); // Use imported zoomToRoute
+          zoomToRoute(map, currentRouteGeom); 
         } else if (loopResult.geometry && loopResult.geometry.length > 0) {
-          // Fallback to initially generated loop geometry if final route path isn't available
-          // (though it should be if routeResult.success is true)
-          zoomToRoute(map, loopResult.geometry); // Use imported zoomToRoute
+          zoomToRoute(map, loopResult.geometry); 
         }
         
         console.log(`[routing.ts] Natural loop generation successful. Created ${waypoints.length} waypoints.`);

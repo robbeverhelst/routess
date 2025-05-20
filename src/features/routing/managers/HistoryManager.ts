@@ -97,7 +97,7 @@ export const internalDoRedo = (): WaypointHistory | null => {
 export const clearHistory = () => {
   undoStack = [];
   redoStack = [];
-  console.log('[HistoryManager] History cleared.');
+  console.log('[HistoryManager] History completely cleared.');
 }
 
 export const stepBack = async (): Promise<void> => {
