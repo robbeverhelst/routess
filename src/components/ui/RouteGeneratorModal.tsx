@@ -131,15 +131,18 @@ export function RouteGeneratorModal({
               <Route size={16} />
             </div>
             <DialogTitle className="text-base font-medium m-0 p-0">
-              {isGenerating ? 'Generating Route...' : 'Create Custom Route'}
+              {isGenerating ? 'Generating Route...' : 'Route Generator'}
             </DialogTitle>
           </div>
         </div>
         
         {/* Test Version Notice */}
-        <div className="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-800/30 px-4 py-2 text-center">
+        <div className="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-800/30 px-4 py-3 text-center">
           <p className="text-xs text-amber-800 dark:text-amber-400">
-            <span className="font-medium">Test Version:</span> Route results and quality may vary during this beta phase.
+            <span className="font-semibold">Beta Feature:</span> We're still refining route generation.
+          </p>
+          <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
+            Feel free to adjust the path on the map or create a new one if needed.
           </p>
         </div>
         
