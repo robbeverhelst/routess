@@ -849,6 +849,14 @@ export default function MapWithRouting({
     }
   }, [mapRef, currentBearing]); // Added currentBearing to dependencies
 
+  const handleZoomIn = useCallback(() => {
+    mapRef.current?.zoomIn();
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    mapRef.current?.zoomOut();
+  }, []);
+
   return (
     <div className={`w-full h-full relative ${isMapLocked ? 'cursor-not-allowed' : ''}`}>
       <Map
@@ -914,6 +922,8 @@ export default function MapWithRouting({
               onOpenRouteGenerator={handleOpenRouteGeneratorModal}
               currentBearing={currentBearing}
               onCycleBearing={handleCycleBearing}
+              onZoomIn={handleZoomIn}
+              onZoomOut={handleZoomOut}
             />
           </div>
 
@@ -976,6 +986,8 @@ export default function MapWithRouting({
             onOpenRouteGenerator={handleOpenRouteGeneratorModal}
             currentBearing={currentBearing}
             onCycleBearing={handleCycleBearing}
+            onZoomIn={handleZoomIn}
+            onZoomOut={handleZoomOut}
         />
       </div>
 

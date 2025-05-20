@@ -8,7 +8,8 @@ import {
 import { 
   ArrowLeftCircle, ArrowRightCircle, Locate, RefreshCw, Lock, Unlock, 
   SunIcon, MoonIcon, SunriseIcon, SunsetIcon, SparklesIcon as Sparkles,
-  ArrowUp, ArrowDown, ArrowLeft, ArrowRight // Added cardinal direction arrows
+  ArrowUp, ArrowDown, ArrowLeft, ArrowRight, // Added cardinal direction arrows
+  Plus, Minus // Added Plus and Minus icons for zoom
 } from "lucide-react";
 
 // Define TimeOfDay type locally
@@ -30,6 +31,8 @@ interface RouteControlsProps {
   onOpenRouteGenerator: () => void; // New prop for opening the modal
   currentBearing: number; // New prop
   onCycleBearing: () => void; // New prop
+  onZoomIn: () => void; // New prop for zoom in
+  onZoomOut: () => void; // New prop for zoom out
 }
 
 // Helper to get the icon component based on TimeOfDay
@@ -74,7 +77,9 @@ export function RouteControls({
   onCycleTimeOfDay,
   onOpenRouteGenerator,
   currentBearing,
-  onCycleBearing
+  onCycleBearing,
+  onZoomIn,
+  onZoomOut
 }: RouteControlsProps) {
   const TimeOfDayIcon = getIconForTimeOfDay(currentTimeOfDay);
   const { Icon: OrientationIcon, title: orientationTitle } = getOrientationIconAndLabel(currentBearing);
@@ -187,6 +192,38 @@ export function RouteControls({
           </TooltipTrigger>
           <TooltipContent>
             <p>Set map orientation: {orientationTitle}</p>
+          </TooltipContent>
+        </Tooltip>
+
+        <Tooltip delayDuration={500}>
+          <TooltipTrigger asChild>
+            <Button
+              variant="secondary"
+              onClick={onZoomIn}
+              disabled={isLocked}
+              className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 h-10 w-10"
+            >
+              <Plus size={18} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Zoom In</p>
+          </TooltipContent>
+        </Tooltip>
+
+        <Tooltip delayDuration={500}>
+          <TooltipTrigger asChild>
+            <Button
+              variant="secondary"
+              onClick={onZoomOut}
+              disabled={isLocked}
+              className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 h-10 w-10"
+            >
+              <Minus size={18} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Zoom Out</p>
           </TooltipContent>
         </Tooltip>
 
