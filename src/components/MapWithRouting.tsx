@@ -136,9 +136,10 @@ const LINE_TO_ROUTE_SOURCE_ID = 'line-to-route-source';
 const LINE_TO_ROUTE_LAYER_ID = 'line-to-route-layer';
 
 // Helper function to find the nearest point on a polyline (array of coordinates)
-function findNearestPointOnPolyline(point: [number, number], polyline: [number, number][]): [number, number] | null {
+// and the distance to that point.
+function findNearestPointOnPolyline(point: [number, number], polyline: [number, number][]): { point: [number, number] | null; distance: number | null } {
   if (!polyline || polyline.length < 2) {
-    return null;
+    return { point: null, distance: null };
   }
 
   let overallClosestPoint: [number, number] | null = null;
@@ -148,14 +149,14 @@ function findNearestPointOnPolyline(point: [number, number], polyline: [number, 
     const segmentStart = polyline[i];
     const segmentEnd = polyline[i + 1];
     const pointOnSegment = closestPointOnSegment(point, segmentStart, segmentEnd);
-    const distanceToPoint = haversine(point, pointOnSegment);
+    const distanceToPoint = haversine(point, pointOnSegment); // distance is in km
 
     if (distanceToPoint < minDistanceFound) {
       minDistanceFound = distanceToPoint;
       overallClosestPoint = pointOnSegment;
     }
   }
-  return overallClosestPoint;
+  return { point: overallClosestPoint, distance: minDistanceFound === Infinity ? null : minDistanceFound };
 }
 
 export default function MapWithRouting({
@@ -904,9 +905,10 @@ export default function MapWithRouting({
     if (isMapLocked && userLocation && hasRoute && isRouteCoordsReady) {
       const routePath = getCurrentRoutePath();
       if (routePath && routePath.length >= 2) {
-        const nearestPoint = findNearestPointOnPolyline(userLocation, routePath);
+        const { point: nearestPoint, distance: distanceToRouteKm } = findNearestPointOnPolyline(userLocation, routePath);
 
-        if (nearestPoint) {
+        // Only show line if nearest point is found AND user is > 50m (0.050 km) away
+        if (nearestPoint && distanceToRouteKm !== null && distanceToRouteKm > 0.050) {
           const lineGeoJSON: GeoJSON.Feature<GeoJSON.LineString> = {
             type: 'Feature',
             geometry: {
@@ -943,7 +945,7 @@ export default function MapWithRouting({
             });
           }
         } else {
-          cleanupLineToRoute(); // No nearest point found, cleanup
+          cleanupLineToRoute(); // No nearest point found or too close, cleanup
         }
       } else {
         cleanupLineToRoute(); // Route path not valid, cleanup
