@@ -1,6 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet";
-import { Menu, User, Save, BookMarked, LogIn, Upload, Share2, FileDown, X, AlertCircle, MapPin, Clock, Copy, RotateCcw as BackIcon, ArrowRightLeft, Focus, Wand2 } from "lucide-react";
+import { Menu, User, Save, BookMarked, LogIn, Upload, Share2, FileDown, X, AlertCircle, MapPin, Clock, Copy, RotateCcw as BackIcon, ArrowRightLeft, Focus, Wand2, Lock, Unlock } from "lucide-react";
+import { 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useState, useRef } from "react";
 import type { Map as MapboxMap } from 'mapbox-gl'; // Import MapboxMap type
 import { exportRouteToGPX, importRouteFromGPX } from '../../lib/routing'; // Import GPX functions
@@ -18,6 +24,8 @@ interface SidebarProps {
   hasRoute?: boolean;
   routeDistance?: string;
   routeDuration?: string;
+  isLocked: boolean;
+  onToggleLock: () => void;
   // New props for GPX functionality
   map: MapboxMap | null;
   accessToken: string | undefined; // Can be undefined if not set
@@ -44,6 +52,8 @@ export function Sidebar({
   hasRoute = false,
   routeDistance = '',
   routeDuration = '',
+  isLocked,
+  onToggleLock,
   // Destructure new props
   map,
   accessToken,
@@ -145,9 +155,12 @@ export function Sidebar({
           {hasRoute ? (
             <div className="px-4 py-4 pr-10">
               <div className="flex items-center justify-between mb-1">
-                <h3 className="text-base font-medium">Current Route</h3>
-                <div className="bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs px-2 py-0.5 rounded-full">
-                  Active
+                <h3 className="text-base font-medium flex items-center">
+                  Current Route
+                  {isLocked && <Lock size={14} className="ml-2 text-yellow-600 dark:text-yellow-500" />}
+                </h3>
+                <div className={`text-xs px-2 py-0.5 rounded-full ${isLocked ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-500' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'}`}>
+                  {isLocked ? "Locked" : "Active"}
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2 mt-2">
@@ -178,12 +191,12 @@ export function Sidebar({
           {/* Route History Controls */}
           <div className="mt-4">
             <div className="text-sm font-medium text-gray-500 mb-2">Route History</div>
-            <div className="grid grid-cols-2 gap-2 mb-2">
+            <div className="flex items-center gap-2 mb-2">
               <Button
                 variant="outline"
                 onClick={onUndo}
-                disabled={!canUndo}
-                className="h-10 justify-center rounded-md"
+                disabled={!canUndo || isLocked}
+                className="flex-1 h-10 justify-center rounded-md"
               >
                 <svg className="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="10" />
@@ -193,11 +206,28 @@ export function Sidebar({
                 Undo
               </Button>
               
+              <TooltipProvider>
+                <Tooltip delayDuration={300}>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      onClick={onToggleLock}
+                      className="h-10 w-10 justify-center rounded-md p-0"
+                    >
+                      {isLocked ? <Lock size={18} /> : <Unlock size={18} />}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{isLocked ? "Unlock route editing" : "Lock route editing"}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              
               <Button
                 variant="outline"
                 onClick={onRedo}
-                disabled={!canRedo}
-                className="h-10 justify-center rounded-md"
+                disabled={!canRedo || isLocked}
+                className="flex-1 h-10 justify-center rounded-md"
               >
                 <svg className="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="10" />
@@ -211,9 +241,9 @@ export function Sidebar({
             <Button
               variant="outline"
               onClick={onReverseRoute}
-              disabled={!hasRoute}
+              disabled={!hasRoute || isLocked}
               className={`w-full h-10 justify-center rounded-md mb-2 ${
-                !hasRoute ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+                (!hasRoute || isLocked) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100 dark:hover:bg-gray-800'
               }`}
             >
               <ArrowRightLeft className="w-4 h-4 mr-2" />
@@ -223,9 +253,9 @@ export function Sidebar({
             <Button
               variant="default"
               onClick={onReset}
-              disabled={!hasRoute}
+              disabled={!hasRoute || isLocked}
               className={`w-full h-10 justify-center rounded-md bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/30 mb-2 ${
-                !hasRoute ? 'opacity-50 cursor-not-allowed' : ''
+                (!hasRoute || isLocked) ? 'opacity-50 cursor-not-allowed' : ''
               }`}
             >
               <X className="w-4 h-4 mr-2" />
@@ -245,7 +275,8 @@ export function Sidebar({
                   onOpenRouteGenerator();
                 }, 50);
               }}
-              className="w-full h-10 justify-center rounded-md mb-2 hover:bg-gray-100 dark:hover:bg-gray-800"
+              disabled={isLocked}
+              className={`w-full h-10 justify-center rounded-md mb-2 hover:bg-gray-100 dark:hover:bg-gray-800 ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <Wand2 className="w-4 h-4 mr-2" />
               Generate Route
@@ -253,7 +284,12 @@ export function Sidebar({
 
             <Button
               variant="outline"
-              onClick={onZoomToRoute}
+              onClick={() => {
+                onZoomToRoute();
+                if (closeButtonRef.current) {
+                  closeButtonRef.current.click();
+                }
+              }}
               disabled={!hasRoute}
               className={`w-full h-10 justify-center rounded-md mb-2 ${
                 !hasRoute ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100 dark:hover:bg-gray-800'
@@ -264,13 +300,14 @@ export function Sidebar({
             </Button>
           </div>
           
-
-
           <div className="mt-6">
             <div className="text-sm font-medium text-gray-500 mb-2">Files & Sharing</div>
             
             <div className="space-y-1">
-              <div className="flex items-center px-3 py-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-900 cursor-pointer" onClick={handleExportGPX}>
+              <div 
+                className={`flex items-center px-3 py-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-900 cursor-pointer`}
+                onClick={handleExportGPX}
+              >
                 <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 mr-3">
                   <FileDown className="w-3.5 h-3.5" />
                 </div>
@@ -280,7 +317,10 @@ export function Sidebar({
                 </div>
               </div>
               
-              <div className="flex items-center px-3 py-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-900 cursor-pointer" onClick={handleImportGPX}>
+              <div 
+                className={`flex items-center px-3 py-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-900 cursor-pointer ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}`} 
+                onClick={isLocked ? undefined : handleImportGPX}
+              >
                 <div className="w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 mr-3">
                   <Upload className="w-3.5 h-3.5" />
                 </div>
@@ -321,8 +361,8 @@ export function Sidebar({
                 </div>
               ) : (
                 <div 
-                  className="flex items-center px-3 py-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-900 cursor-pointer" 
-                  onClick={onShare} 
+                  className="flex items-center px-3 py-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-900 cursor-pointer"
+                  onClick={onShare}
                 >
                   <div className="w-6 h-6 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center text-violet-600 dark:text-violet-400 mr-3">
                     <Share2 className="w-3.5 h-3.5" />

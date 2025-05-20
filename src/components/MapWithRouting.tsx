@@ -20,10 +20,10 @@ import {
   generateAndDisplayRouteLoop
 } from '@/lib/routing';
 import { zoomToRoute } from '@/features/routing/utils/RoutingUtils';
-import { decompressAndParse } from '@/lib/shareUtils';
+import { decompressAndParse, serializeAndCompress } from '@/lib/shareUtils';
 // import type { MapTouchEvent, MapMouseEvent } from 'mapbox-gl'; // REMOVED - No longer used
 import {
-  getWaypoints, 
+  getWaypoints, getDirectFlags
 } from '@/features/routing/managers/WaypointManager';
 import { updateWaypointsLayer, ROUTE_LAYER_ID, ROUTE_CASING_LAYER_ID } from '@/features/routing/managers/MapLayerManager';
 import {
@@ -204,7 +204,8 @@ export default function MapWithRouting({
     handleShareRoute,
     handleCopySharedUrl: handleCopySharedUrlFromHook,
     handleRouteInfoError: handleRouteInfoErrorFromHook,
-    clearShareState
+    clearShareState,
+    setShareNotification
   } = useRouteData();
 
   const { canUndo, canRedo } = useUndoRedoState();
@@ -214,6 +215,36 @@ export default function MapWithRouting({
 
   // State for the new Route Generator Modal
   const [isRouteGeneratorModalOpen, setIsRouteGeneratorModalOpen] = useState(false);
+
+  // Handler for the new onCopyShareLink in RouteControls
+  const handleCopyShareLinkToClipboard = useCallback(() => {
+    const waypoints = getWaypoints();
+    const directFlags = getDirectFlags();
+
+    if (waypoints.length === 0) {
+      handleRouteInfoErrorFromHook("Cannot share an empty route.");
+      return;
+    }
+
+    // Always pass true for isLocked to match sidebar share behavior
+    const encodedData = serializeAndCompress(waypoints, directFlags, true);
+
+    if (encodedData) {
+      const shareUrl = `${window.location.origin}${window.location.pathname}?route=${encodedData}`;
+      navigator.clipboard.writeText(shareUrl)
+        .then(() => {
+          clearShareState(); // Clear previous share states like displayed URL in sidebar
+          setShareNotification('Link copied to clipboard!');
+          setTimeout(() => setShareNotification(''), 2000);
+        })
+        .catch(err => {
+          console.error('[MapWithRouting] Failed to copy share link for RouteControls:', err);
+          handleRouteInfoErrorFromHook('Failed to copy link. Please try again.');
+        });
+    } else {
+      handleRouteInfoErrorFromHook('Could not generate shareable link.');
+    }
+  }, [handleRouteInfoErrorFromHook, setShareNotification, clearShareState]);
 
   // Effect to set initial bearing from map instance if not set by prop, after map is ready.
   // This updates the state if the map initializes with a different bearing than initialViewState.bearing (e.g. from map's own internal defaults if prop isn't passed)
@@ -1068,6 +1099,7 @@ export default function MapWithRouting({
               onCycleBearing={handleCycleBearing}
               onZoomIn={handleZoomIn}
               onZoomOut={handleZoomOut}
+              onCopyShareLink={handleCopyShareLinkToClipboard}
             />
           </div>
 
@@ -1097,6 +1129,8 @@ export default function MapWithRouting({
                   hasRoute={hasRoute}
                   routeDistance={routeDistance}
                   routeDuration={routeDuration}
+                  isLocked={isMapLocked}
+                  onToggleLock={handleToggleLock}
                   // Props for GPX import/export
                   map={mapRef.current}
                   accessToken={MAPBOX_TOKEN}
@@ -1132,6 +1166,7 @@ export default function MapWithRouting({
             onCycleBearing={handleCycleBearing}
             onZoomIn={handleZoomIn}
             onZoomOut={handleZoomOut}
+            onCopyShareLink={handleCopyShareLinkToClipboard}
         />
       </div>
 
@@ -1156,6 +1191,8 @@ export default function MapWithRouting({
           hasRoute={hasRoute}
           routeDistance={routeDistance}
           routeDuration={routeDuration}
+          isLocked={isMapLocked}
+          onToggleLock={handleToggleLock}
           // Props for GPX import/export
           map={mapRef.current}
           accessToken={MAPBOX_TOKEN}

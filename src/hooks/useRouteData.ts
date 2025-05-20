@@ -20,6 +20,7 @@ export interface RouteDataHandlers {
   handleCopySharedUrl: (urlToCopy: string) => void;
   handleRouteInfoError: (message: string) => void;
   clearShareState: () => void; // For resetting share UI on route reset etc.
+  setShareNotification: React.Dispatch<React.SetStateAction<string>>;
 }
 
 export function useRouteData(): RouteDataState & RouteDataHandlers {
@@ -103,5 +104,6 @@ export function useRouteData(): RouteDataState & RouteDataHandlers {
     handleCopySharedUrl,
     handleRouteInfoError,
     clearShareState,
+    setShareNotification,
   };
 } 
