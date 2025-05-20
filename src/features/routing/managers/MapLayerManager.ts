@@ -71,8 +71,8 @@ export const initializeSourcesAndLayers = (map: MapboxMap): void => {
           ['zoom'],
           5, 30,   // Very dense at zoom 5
           12, 100,  // Still very dense up to zoom 12
-          14, 200, // Maintained from previous 'good' setting (zoom 14)
-          18, 200  // Maintained for deeper zoom (zoom 18)
+          14, 300, // Maintained from previous 'good' setting (zoom 14)
+          18, 400  // Maintained for deeper zoom (zoom 18)
         ],
         'text-field': '▶', 
         'text-size': [
