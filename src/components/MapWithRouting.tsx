@@ -1024,10 +1024,10 @@ export default function MapWithRouting({
       />
 
       {/* Mobile Controls Layout - REMOVING mt-12 from RouteControls wrapper */}
-      <div className="absolute top-4 left-0 right-0 z-10 p-4 lg:hidden">
+      <div className="absolute top-4 left-0 right-0 z-10 p-4 lg:hidden pointer-events-none">
         <div className="flex justify-between items-start w-full">
           {/* Top-Left: RouteControls (stacked) */}
-          <div className="flex flex-col items-start gap-2">
+          <div className="flex flex-col items-start gap-2 pointer-events-auto">
             <RouteControls
               onUndo={handleUndo}
               onRedo={handleRedo}
@@ -1050,7 +1050,7 @@ export default function MapWithRouting({
           </div>
 
           {/* Top-Right: Search Icon + Sidebar (Hamburger) + Conditional Search Bar - REMAINS ALIGNED WITH TOP-4 PADDING */}
-          <div className="flex flex-col items-end gap-2 flex-grow">
+          <div className="flex flex-col items-end gap-2 flex-grow pointer-events-auto">
             <div className="flex items-center justify-end gap-2 w-full"> {/* This container ensures LocationSearch can expand */}
               <LocationSearch
                 mapboxToken={MAPBOX_TOKEN}
