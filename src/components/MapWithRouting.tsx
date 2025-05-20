@@ -315,6 +315,11 @@ export default function MapWithRouting({
           setIsRouteCoordsReady
         ).then(() => {
           console.log('[MapWithRouting] Route data loaded from URL successfully.');
+          // If lock state is present in shared data and is true, lock the map
+          if (typeof loadedData.l === 'boolean' && loadedData.l === true) {
+            console.log('[MapWithRouting] Shared route indicates locked state, applying lock.');
+            setIsMapLocked(true); // This will also trigger saving to localStorage via useEffect
+          }
           // Optionally, clean the URL
           window.history.replaceState({}, document.title, window.location.pathname);
         }).catch(err => {

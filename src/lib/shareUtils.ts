@@ -4,6 +4,7 @@ import type { Coordinate } from '@/types/map';
 interface RouteShareData {
   w: Coordinate[];
   f: boolean[];
+  l?: boolean;
 }
 
 // Helper to convert Uint8Array to URL-safe Base64 string
@@ -39,10 +40,11 @@ function urlSafeBase64ToUint8Array(base64String: string): Uint8Array {
 
 export function serializeAndCompress(
   waypoints: Coordinate[],
-  directFlags: boolean[]
+  directFlags: boolean[],
+  isLocked: boolean
 ): string | null {
   try {
-    const data: RouteShareData = { w: waypoints, f: directFlags };
+    const data: RouteShareData = { w: waypoints, f: directFlags, l: isLocked };
     const jsonString = JSON.stringify(data);
     const compressedData = pako.deflate(jsonString);
     return uint8ArrayToUrlSafeBase64(compressedData);

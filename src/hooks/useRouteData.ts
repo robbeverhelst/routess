@@ -49,7 +49,7 @@ export function useRouteData(): RouteDataState & RouteDataHandlers {
       return;
     }
 
-    const encodedData = serializeAndCompress(waypoints, directFlags);
+    const encodedData = serializeAndCompress(waypoints, directFlags, true);
     if (encodedData) {
       const shareUrl = `${window.location.origin}${window.location.pathname}?route=${encodedData}`;
       navigator.clipboard.writeText(shareUrl)
