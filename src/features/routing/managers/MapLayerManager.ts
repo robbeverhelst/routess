@@ -69,9 +69,10 @@ export const initializeSourcesAndLayers = (map: MapboxMap): void => {
           'interpolate',
           ['linear'],
           ['zoom'],
-          10, 600, // Sparse when zoomed out
-          14, 250, // Adjusted medium spacing
-          18, 350  // More sparse when zoomed in deeply
+          5, 30,   // Very dense at zoom 5
+          12, 100,  // Still very dense up to zoom 12
+          14, 200, // Maintained from previous 'good' setting (zoom 14)
+          18, 200  // Maintained for deeper zoom (zoom 18)
         ],
         'text-field': '▶', 
         'text-size': [
