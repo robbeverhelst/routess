@@ -35,6 +35,7 @@ import { MapPopup, type PopupInfo as MapPopupInfo } from '@/components/ui/MapPop
 import { useRouteData } from '@/hooks/useRouteData';
 import { useUndoRedoState } from '@/hooks/useUndoRedoState';
 import { getCurrentRoutePath } from '@/features/routing/services/RouteCalculationService';
+import { closestPointOnSegment, haversine } from '@/features/routing/utils/RoutingUtils'; // Import helpers
 
 // Import the new modal and its types
 import { RouteGeneratorModal, type RouteGenerationParams } from '@/components/ui/RouteGeneratorModal';
@@ -129,6 +130,33 @@ const lightPresetsOrder: TimeOfDay[] = ['dawn', 'day', 'dusk', 'night'];
 
 // Define bearing presets for cycling - simplified to 4 cardinal directions
 const BEARING_PRESETS = [0, 90, 180, 270]; // N, E, S, W
+
+// Define IDs for the new source and layer for the line-to-route
+const LINE_TO_ROUTE_SOURCE_ID = 'line-to-route-source';
+const LINE_TO_ROUTE_LAYER_ID = 'line-to-route-layer';
+
+// Helper function to find the nearest point on a polyline (array of coordinates)
+function findNearestPointOnPolyline(point: [number, number], polyline: [number, number][]): [number, number] | null {
+  if (!polyline || polyline.length < 2) {
+    return null;
+  }
+
+  let overallClosestPoint: [number, number] | null = null;
+  let minDistanceFound = Infinity;
+
+  for (let i = 0; i < polyline.length - 1; i++) {
+    const segmentStart = polyline[i];
+    const segmentEnd = polyline[i + 1];
+    const pointOnSegment = closestPointOnSegment(point, segmentStart, segmentEnd);
+    const distanceToPoint = haversine(point, pointOnSegment);
+
+    if (distanceToPoint < minDistanceFound) {
+      minDistanceFound = distanceToPoint;
+      overallClosestPoint = pointOnSegment;
+    }
+  }
+  return overallClosestPoint;
+}
 
 export default function MapWithRouting({
   initialViewState = DEFAULT_VIEW_STATE,
@@ -856,6 +884,98 @@ export default function MapWithRouting({
   const handleZoomOut = useCallback(() => {
     mapRef.current?.zoomOut();
   }, []);
+
+  // Effect to manage the line-to-route display
+  useEffect(() => {
+    if (!isMapReady || !mapRef.current) {
+      return;
+    }
+    const map = mapRef.current;
+
+    const cleanupLineToRoute = () => {
+      if (map.getLayer(LINE_TO_ROUTE_LAYER_ID)) {
+        map.removeLayer(LINE_TO_ROUTE_LAYER_ID);
+      }
+      if (map.getSource(LINE_TO_ROUTE_SOURCE_ID)) {
+        map.removeSource(LINE_TO_ROUTE_SOURCE_ID);
+      }
+    };
+
+    if (isMapLocked && userLocation && hasRoute && isRouteCoordsReady) {
+      const routePath = getCurrentRoutePath();
+      if (routePath && routePath.length >= 2) {
+        const nearestPoint = findNearestPointOnPolyline(userLocation, routePath);
+
+        if (nearestPoint) {
+          const lineGeoJSON: GeoJSON.Feature<GeoJSON.LineString> = {
+            type: 'Feature',
+            geometry: {
+              type: 'LineString',
+              coordinates: [userLocation, nearestPoint],
+            },
+            properties: {},
+          };
+
+          const source = map.getSource(LINE_TO_ROUTE_SOURCE_ID) as mapboxgl.GeoJSONSource;
+          if (source) {
+            source.setData(lineGeoJSON);
+          } else {
+            map.addSource(LINE_TO_ROUTE_SOURCE_ID, {
+              type: 'geojson',
+              data: lineGeoJSON,
+            });
+          }
+
+          if (!map.getLayer(LINE_TO_ROUTE_LAYER_ID)) {
+            map.addLayer({
+              id: LINE_TO_ROUTE_LAYER_ID,
+              type: 'line',
+              source: LINE_TO_ROUTE_SOURCE_ID,
+              layout: {
+                'line-join': 'round',
+                'line-cap': 'round',
+              },
+              paint: {
+                'line-color': 'rgba(128, 128, 128, 0.75)', // Semi-transparent grey
+                'line-width': 2,
+                'line-dasharray': [1, 2], // Shorter dashes, longer gaps
+              },
+            });
+          }
+        } else {
+          cleanupLineToRoute(); // No nearest point found, cleanup
+        }
+      } else {
+        cleanupLineToRoute(); // Route path not valid, cleanup
+      }
+    } else {
+      cleanupLineToRoute(); // Conditions not met, cleanup
+    }
+
+    // Return a cleanup function for when the component unmounts or dependencies change
+    // This ensures that if the effect re-runs and conditions are no longer met, the old line is cleaned up.
+    // However, the logic above already handles cleanup, so this might be redundant unless the component unmounts
+    // while the line is visible. For safety, keeping a minimal cleanup.
+    return () => {
+      // Basic cleanup, mostly handled by the logic above on dependency change.
+      // This ensures removal if component unmounts mid-display.
+      // Check map validity as it might be null during unmount sequence.
+      if (map && map.getStyle()) { // map.getStyle() is a way to check if map is still valid
+        try {
+            if (map.getLayer(LINE_TO_ROUTE_LAYER_ID)) {
+                map.removeLayer(LINE_TO_ROUTE_LAYER_ID);
+            }
+            if (map.getSource(LINE_TO_ROUTE_SOURCE_ID)) {
+                map.removeSource(LINE_TO_ROUTE_SOURCE_ID);
+            }
+        } catch (e) {
+            // console.warn("Error during line-to-route cleanup on unmount/re-effect:", e);
+            // Errors can happen here if map is already being destroyed.
+             if (typeof e === 'undefined') console.log('Suppressed error during cleanup');
+        }
+      }
+    };
+  }, [isMapLocked, userLocation, hasRoute, isRouteCoordsReady, isMapReady, mapRef]);
 
   return (
     <div className={`w-full h-full relative ${isMapLocked ? 'cursor-not-allowed' : ''}`}>

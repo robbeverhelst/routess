@@ -139,6 +139,22 @@ export function RouteControls({
           <TooltipTrigger asChild>
             <Button
               variant="secondary"
+              onClick={onOpenRouteGenerator}
+              disabled={isLocked}
+              className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 h-10 w-10"
+            >
+              <Sparkles size={18} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Generate custom route</p>
+          </TooltipContent>
+        </Tooltip>
+
+        <Tooltip delayDuration={500}>
+          <TooltipTrigger asChild>
+            <Button
+              variant="secondary"
               onClick={onToggleLock}
               className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 h-10 w-10"
             >
@@ -147,21 +163,6 @@ export function RouteControls({
           </TooltipTrigger>
           <TooltipContent>
             <p>{isLocked ? "Unlock map interaction" : "Lock map interaction"}</p>
-          </TooltipContent>
-        </Tooltip>
-
-        <Tooltip delayDuration={500}>
-          <TooltipTrigger asChild>
-            <Button
-              variant="secondary"
-              onClick={onOpenRouteGenerator}
-              className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 h-10 w-10"
-            >
-              <Sparkles size={18} />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Generate custom route</p>
           </TooltipContent>
         </Tooltip>
         
@@ -200,7 +201,6 @@ export function RouteControls({
             <Button
               variant="secondary"
               onClick={onZoomIn}
-              disabled={isLocked}
               className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 h-10 w-10"
             >
               <Plus size={18} />
@@ -216,7 +216,6 @@ export function RouteControls({
             <Button
               variant="secondary"
               onClick={onZoomOut}
-              disabled={isLocked}
               className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 h-10 w-10"
             >
               <Minus size={18} />
