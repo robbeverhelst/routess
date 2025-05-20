@@ -54,4 +54,36 @@ export const loadWaypointsFromLocalStorage = (): StoredRouteData | null => {
     console.error('[LocalStorageService] Error loading waypoints from local storage:', error);
   }
   return null;
+};
+
+const MAP_LOCK_STATE_KEY = 'routingAppMapLockState';
+
+export const saveMapLockStateToLocalStorage = (isLocked: boolean): void => {
+  try {
+    localStorage.setItem(MAP_LOCK_STATE_KEY, JSON.stringify(isLocked));
+    if (import.meta.env.DEV) {
+      console.log(`[LocalStorageService] Saved map lock state: ${isLocked}`);
+    }
+  } catch (error) {
+    console.error('[LocalStorageService] Error saving map lock state:', error);
+  }
+};
+
+export const loadMapLockStateFromLocalStorage = (): boolean => {
+  try {
+    const storedState = localStorage.getItem(MAP_LOCK_STATE_KEY);
+    if (storedState === null) {
+      // If not set, default to not locked (or your preferred default)
+      console.log('[LocalStorageService] No map lock state found, defaulting to false (unlocked).');
+      return false; 
+    }
+    const isLocked = JSON.parse(storedState);
+    if (import.meta.env.DEV) {
+      console.log(`[LocalStorageService] Loaded map lock state: ${isLocked}`);
+    }
+    return typeof isLocked === 'boolean' ? isLocked : false; // Ensure it's a boolean
+  } catch (error) {
+    console.error('[LocalStorageService] Error loading map lock state:', error);
+    return false; // Default to false (unlocked) on error
+  }
 }; 

@@ -414,31 +414,36 @@ export const setupRouting = (
     const loadedData = loadWaypointsFromStorageService();
     if (loadedData) {
       setWaypointsAndFlags(loadedData.waypoints, loadedData.directFlags);
-      console.log('[routing.ts] Waypoints loaded from local storage.');
-      updateWaypointsLayer(map, getWaypoints(), isMapLockedRef.current); // Use ref value
-      if (getWaypoints().length >= 1) {
+      console.log('[routing.ts] Waypoints loaded from local storage by routing.ts.');
+      updateWaypointsLayer(map, getWaypoints(), isMapLockedRef.current);
+      historySnapshot(); // <--- ADDED: Snapshot the state loaded from WaypointManager's localStorage
+      console.log('[routing.ts] Initial snapshot taken after loading waypoints from storage.');
+
+      if (getWaypoints().length >= 1) { 
         getRouteFromService(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute).then((result: RouteResult) => {
           if (result.success && result.waypointsSnapped && result.snappedWaypoints && result.snappedDirectFlags) {
-            console.log("[routing.ts] Initial route calculated and waypoints snapped.");
+            console.log("[routing.ts] Initial route calculated and waypoints snapped by routing.ts.");
             setWaypointsAndFlags(result.snappedWaypoints, result.snappedDirectFlags);
-            updateWaypointsLayer(map, getWaypoints(), isMapLockedRef.current); // Use ref value
-            saveWaypointsToStorage(getWaypoints(), getDirectFlags());
+            updateWaypointsLayer(map, getWaypoints(), isMapLockedRef.current);
+            saveWaypointsToStorage(getWaypoints(), getDirectFlags()); // Saves to WaypointManager's storage
+            historySnapshot(); // <--- ADDED: Snapshot again if snapping occurs and alters state
+            console.log('[routing.ts] Snapshot taken after initial route snapping by routing.ts.');
           } else if (!result.success && getWaypoints().length === 1) {
             console.log('[routing.ts] Single waypoint loaded, no route to calculate yet or snapping failed.');
-            // setRouteDistance(''); // Already handled by getRouteFromService if not enough points
-            // setRouteDuration('');
           } else if (!result.success) {
-             console.warn('[routing.ts] Failed to calculate initial route. Service indicated failure.');
+             console.warn('[routing.ts] Failed to calculate initial route by routing.ts. Service indicated failure.');
           }
-        }).catch((error: unknown) => { // Typed error
-          console.error('[routing.ts] Error recalculating initial route:', error);
+        }).catch((error: unknown) => { 
+          console.error('[routing.ts] Error recalculating initial route by routing.ts:', error);
         });
       }
-      } else {
-      console.log('[routing.ts] No waypoints found in local storage.');
-      }
-    } catch (error: unknown) { // Typed error
-    console.error('[routing.ts] Error loading waypoints from local storage in setupRouting:', error);
+    } else {
+      console.log('[routing.ts] No waypoints found in local storage by routing.ts.');
+      historySnapshot(); // <--- ADDED: Snapshot the initial empty state if nothing loaded
+      console.log('[routing.ts] Initial snapshot taken for empty state by routing.ts.');
+    }
+  } catch (error: unknown) { 
+    console.error('[routing.ts] Error loading waypoints from local storage in setupRouting by routing.ts:', error);
   }
 
   // Define the event handler for history changes here, so it has access to setters

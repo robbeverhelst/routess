@@ -65,6 +65,8 @@ if (import.meta.env.DEV && (!MAPBOX_TOKEN || MAPBOX_TOKEN.length < 10)) { // Che
   );
 }
 
+import { loadMapLockStateFromLocalStorage, saveMapLockStateToLocalStorage } from '@/features/routing/services/LocalStorageService'; // Added import
+
 interface MapboxMapProps {
   initialViewState?: {
     longitude: number;
@@ -173,8 +175,8 @@ export default function MapWithRouting({
   const initialRouteZoomDoneRef = useRef<boolean>(false); // Added ref
   const routingDisposerRef = useRef<(() => void) | null>(null); // Ref to store the disposer
   const routeInitTimeoutRef = useRef<number | null>(null); // Reference to store timeout ID
-  const [isMapLocked, setIsMapLocked] = useState(false);
-  const isMapLockedRef = useRef(isMapLocked); // Create a ref for isMapLocked
+  const [isMapLocked, setIsMapLocked] = useState(loadMapLockStateFromLocalStorage); // Initialize directly
+  const isMapLockedRef = useRef(isMapLocked);
   const [currentLightPreset, setCurrentLightPreset] = useState<TimeOfDay>('day'); // Initial preset
   const [currentBearing, setCurrentBearing] = useState<number>(initialViewState.bearing ?? 0); // Initialize from initialViewState prop or default
   
@@ -790,10 +792,25 @@ export default function MapWithRouting({
     }, 3000);
   }, []);
 
-  const handleToggleLock = useCallback(() => { // Add handleToggleLock function
+  // Effect to load initial map lock state from localStorage
+  // useEffect(() => {
+  //   const savedLockState = loadMapLockStateFromLocalStorage();
+  //   if (savedLockState !== null) {
+  //     setIsMapLocked(savedLockState);
+  //   }
+  // }, []); // Empty dependency array, runs once on mount // REMOVED - Handled by useState initializer
+
+  // Effect to update the ref whenever isMapLocked changes
+  useEffect(() => {
+    isMapLockedRef.current = isMapLocked;
+    // Save to localStorage whenever the state changes
+    saveMapLockStateToLocalStorage(isMapLocked);
+  }, [isMapLocked]);
+
+  const handleToggleLock = useCallback(() => {
     setIsMapLocked(prev => {
       const newLockedState = !prev;
-      // If we're locking the map, trigger zoom to route
+      // The saving to localStorage is now handled by the useEffect listening to isMapLocked
       if (newLockedState && mapRef.current && hasRoute) {
         try {
           console.log('[MapWithRouting] Map locked, zooming to full route view');
@@ -809,7 +826,7 @@ export default function MapWithRouting({
       }
       return newLockedState;
     });
-  }, [hasRoute]);
+  }, [hasRoute]); // Removed setIsMapLocked from here if it was, save is handled by useEffect
 
   const handleCycleTimeOfDay = useCallback(() => {
     if (mapRef.current) {
