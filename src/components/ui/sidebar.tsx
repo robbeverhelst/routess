@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Menu, User, Save, BookMarked, LogIn, Upload, Share2, FileDown, X, AlertCircle, MapPin, Clock, Copy, RotateCcw as BackIcon, ArrowRightLeft, Focus, Wand2, Lock, Unlock } from "lucide-react";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { 
   Tooltip,
   TooltipContent,
@@ -143,6 +144,14 @@ export function Sidebar({
         </Button>
       </SheetTrigger>
       <SheetContent className="p-0 w-[330px] border-l" hideCloseButton>
+        <VisuallyHidden asChild>
+          <SheetTitle>Main Menu and Route Controls</SheetTitle>
+        </VisuallyHidden>
+        <VisuallyHidden asChild>
+          <SheetDescription>
+            Access route history, file operations, sharing, and account settings.
+          </SheetDescription>
+        </VisuallyHidden>
         {/* Route Info Header */}
         <div className="border-b border-gray-100 dark:border-gray-800 relative">
           {/* Single Close Button */}

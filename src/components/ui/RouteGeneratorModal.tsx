@@ -5,6 +5,7 @@ import {
   Dialog,
   DialogContent,
   DialogTitle,
+  DialogDescription,
   DialogClose,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -18,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Loader2, MapPin, ChevronRight, X, Route, BarChart2, Compass, Map, LocateFixed } from "lucide-react";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface RouteGeneratorModalProps {
   isOpen: boolean;
@@ -117,9 +119,7 @@ export function RouteGeneratorModal({
   return (
     <Dialog open={isOpen} onOpenChange={(open: boolean) => !open && !isGenerating && onClose()}>
       <DialogContent className="p-0 w-[330px] sm:max-w-[525px] sm:w-[525px] border-r" hideCloseButton>
-        {/* Header */}
         <div className="border-b border-gray-100 dark:border-gray-800 relative px-4 py-4 pb-3">
-          {/* Close Button */}
           <div className="absolute top-3 right-3 z-10">
             <DialogClose className="text-gray-400 hover:text-gray-500 transition-colors duration-150" disabled={isGenerating}>
               <X size={18} />
@@ -133,6 +133,11 @@ export function RouteGeneratorModal({
             <DialogTitle className="text-base font-medium m-0 p-0">
               {isGenerating ? 'Generating Route...' : 'Route Generator'}
             </DialogTitle>
+            <VisuallyHidden asChild>
+              <DialogDescription>
+                Configure parameters to generate a new A-to-B or loop route.
+              </DialogDescription>
+            </VisuallyHidden>
           </div>
         </div>
         
