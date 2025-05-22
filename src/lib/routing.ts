@@ -216,69 +216,81 @@ export const importRouteFromGPX = async (
   onError?: (message: string) => void
 ) => {
   try {
+    // 1. Parse and process GPX data
     const parsedResult = await parseGPXFile(gpxString);
-
     if (parsedResult.error || !parsedResult.waypoints) {
-      console.error("[routing.ts.importRouteFromGPX] Error parsing GPX from service:", parsedResult.error);
+      console.error("[routing.ts.importRouteFromGPX] Error parsing GPX:", parsedResult.error);
       if (onError) onError(parsedResult.error || "Unknown parsing error.");
       return;
     }
 
     const processedResult = await processGPXWaypoints(parsedResult.waypoints, accessToken);
-
     if (processedResult.error || !processedResult.finalWaypoints || !processedResult.finalDirectFlags) {
-      console.error("[routing.ts.importRouteFromGPX] Error processing GPX waypoints from service:", processedResult.error);
+      console.error("[routing.ts.importRouteFromGPX] Error processing GPX waypoints:", processedResult.error);
       if (onError) onError(processedResult.error || "Unknown waypoint processing error.");
       return;
     }
-
     const { finalWaypoints: finalNewWaypoints, finalDirectFlags: newDirectFlags } = processedResult;
 
-    resetRouting(map, setRouteDistance, setRouteDuration, setHasRoute);
-    setWaypointsAndFlags(finalNewWaypoints, newDirectFlags);
-    historySnapshot();
-    updateWaypointsLayer(map, getWaypoints(), _isMapLockedRef?.current ?? false); // Use ref value
-    saveWaypointsToStorage(getWaypoints(), getDirectFlags());
+    // 2. Clear current route state (manual reset, no snapshot from resetRouting)
+    setWaypointsAndFlags([], []); 
+    updateWaypointsLayer(map, [], _isMapLockedRef?.current ?? false); 
+    clearRoute(map); // Clears layers and currentRoutePath in RouteCalculationService
+    setRouteDistance(''); 
+    setRouteDuration(''); 
+    setHasRoute(false);
+    // localStorage is not cleared here, it will be overwritten by the new route
 
+    // 3. Set new waypoints from processed GPX data
+    setWaypointsAndFlags(finalNewWaypoints, newDirectFlags);
+    updateWaypointsLayer(map, getWaypoints(), _isMapLockedRef?.current ?? false);
+
+    // 4. Calculate route (with potential snapping)
     if (getWaypoints().length >= 2) {
       try {
         const routeResult: RouteResult = await getRouteFromService(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
         if (routeResult.success && routeResult.waypointsSnapped && routeResult.snappedWaypoints && routeResult.snappedDirectFlags) {
+          // Update WaypointManager's state again if snapping occurred
           setWaypointsAndFlags(routeResult.snappedWaypoints, routeResult.snappedDirectFlags);
-          updateWaypointsLayer(map, getWaypoints(), _isMapLockedRef?.current ?? false); // Use ref value
-          saveWaypointsToStorage(getWaypoints(), getDirectFlags());
+          updateWaypointsLayer(map, getWaypoints(), _isMapLockedRef?.current ?? false);
         } else if (!routeResult.success) {
           console.warn('[importRouteFromGPX] Route calculation after GPX import indicated failure:', routeResult.error);
-          if (onError && routeResult.error) onError(routeResult.error);
-          setRouteDistance('');
-          setRouteDuration('');
-          setHasRoute(false);
+          if (onError && routeResult.error) onError(routeResult.error); 
+          // UI state (distance, duration, hasRoute) already handled by getRouteFromService on failure
         }
       } catch (error: unknown) {
-        console.error('[importRouteFromGPX] Route calc failed after GPX import:', error);
+        console.error('[importRouteFromGPX] Route calculation failed after GPX import:', error);
         if (onError) {
           const errorMessage = error instanceof Error ? error.message : 'Failed to calculate route after GPX import.';
           onError(errorMessage);
         }
+        // Clear visual route elements if calc fails catastrophically
         clearRouteLayer(map);
         clearKilometerMarkersLayer(map);
-        clearCurrentRoutePath();
+        // currentRoutePath is cleared by getRouteFromService on failure or clearRoute
         setRouteDistance('');
         setRouteDuration('');
         setHasRoute(false);
       }
     } else if (getWaypoints().length === 1) {
+      // Only one waypoint, ensure no route displayed
       setRouteDistance('');
       setRouteDuration('');
       setHasRoute(false);
-      clearCurrentRoutePath();
       clearRouteLayer(map);
       clearKilometerMarkersLayer(map);
+      // currentRoutePath already cleared or not applicable
     }
-    console.log(`[routing.ts.importRouteFromGPX] Successfully imported ${getWaypoints().length} waypoints via GPXService.`);
+    // If 0 waypoints, state is already clear.
+
+    // 5. Finalize: Save to storage and take ONE snapshot
+    saveWaypointsToStorage(getWaypoints(), getDirectFlags());
+    historySnapshot(); 
+    console.log(`[routing.ts.importRouteFromGPX] Successfully imported ${getWaypoints().length} waypoints. Final snapshot taken.`);
+
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error during GPX import process';
-    console.error("[routing.ts.importRouteFromGPX] Error importing route:", error);
+    console.error("[routing.ts.importRouteFromGPX] Critical error during import:", error);
     if (onError) onError(`Error importing GPX: ${errorMessage}`);
   }
 };
@@ -301,74 +313,68 @@ export const setRouteData = async (
   setHasRoute: Dispatch<SetStateAction<boolean>>,
   setIsRouteCoordsReady: Dispatch<SetStateAction<boolean>>
 ) => {
-  setIsRouteCoordsReady(false); // Set to false at the start of loading new data
-  historySnapshot();
-  setWaypointsAndFlags([], []);
-  updateWaypointsLayer(map, [], _isMapLockedRef?.current ?? false); // Use ref value
-  clearRoute(map);
-  setRouteDistance('');
-  setRouteDuration('');
+  setIsRouteCoordsReady(false); 
+  // historySnapshot(); // REMOVED: Snapshot will be at the end.
+
+  // 1. Clear existing state (visuals and some UI state)
+  setWaypointsAndFlags([], []); // Clear internal WaypointManager state first
+  updateWaypointsLayer(map, [], _isMapLockedRef?.current ?? false); 
+  clearRoute(map); // Clears layers and currentRoutePath in RouteCalculationService
+  setRouteDistance(''); 
+  setRouteDuration(''); 
   setHasRoute(false);
 
+  // 2. Set new base waypoints internally
   setWaypointsAndFlags(newWaypoints, newDirectFlags);
+  updateWaypointsLayer(map, getWaypoints(), _isMapLockedRef?.current ?? false);
 
-  updateWaypointsLayer(map, getWaypoints(), _isMapLockedRef?.current ?? false); // Use ref value
-  saveWaypointsToStorage(getWaypoints(), getDirectFlags());
-
+  // 3. Calculate route and finalize waypoints if snapping occurs
   if (getWaypoints().length >= 2) {
     try {
       const routeResult: RouteResult = await getRouteFromService(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
-      if (routeResult.success) { // Check for overall success
-        // RouteCalculationService is expected to update its internal state (currentRoutePathCoordinates)
-        // when routeResult.success is true.
-        // We can now safely set isRouteCoordsReady to true.
-        setIsRouteCoordsReady(true); // Set to true after successful calculation
-        
+      if (routeResult.success) {
+        setIsRouteCoordsReady(true); 
         if (routeResult.waypointsSnapped && routeResult.snappedWaypoints && routeResult.snappedDirectFlags) {
+          // Update WaypointManager's state again if snapping occurred
           setWaypointsAndFlags(routeResult.snappedWaypoints, routeResult.snappedDirectFlags);
-          updateWaypointsLayer(map, getWaypoints(), _isMapLockedRef?.current ?? false); // Use ref value
-          saveWaypointsToStorage(getWaypoints(), getDirectFlags());
-        } else if (!routeResult.success) {
-          console.warn('[setRouteData] Route calculation indicated failure:', routeResult.error);
+          updateWaypointsLayer(map, getWaypoints(), _isMapLockedRef?.current ?? false);
         }
       } else {
-        console.error('[setRouteData] Route calc failed:', routeResult.error);
-        clearRouteLayer(map);
+        console.error('[setRouteData] Route calculation failed:', routeResult.error);
+        clearRouteLayer(map); // Ensure layers are clear on failure
         clearKilometerMarkersLayer(map);
-        clearCurrentRoutePath();
+        // currentRoutePath is already cleared by clearRoute or getRouteFromService on failure
         setRouteDistance('');
         setRouteDuration('');
         setHasRoute(false);
-        setIsRouteCoordsReady(false); // Set to false on error
+        setIsRouteCoordsReady(false); 
       }
     } catch (error: unknown) {
-      console.error('[setRouteData] Route calc failed:', error);
+      console.error('[setRouteData] Critical error during route calculation:', error);
       clearRouteLayer(map);
       clearKilometerMarkersLayer(map);
-      clearCurrentRoutePath();
       setRouteDistance('');
       setRouteDuration('');
       setHasRoute(false);
-      setIsRouteCoordsReady(false); // Set to false on error
+      setIsRouteCoordsReady(false); 
     }
   } else if (getWaypoints().length === 1) {
     setRouteDistance('');
     setRouteDuration('');
     setHasRoute(false);
-    clearCurrentRoutePath();
-    clearRouteLayer(map);
+    // clearCurrentRoutePath(); // Already handled by clearRoute earlier or not applicable
+    clearRouteLayer(map); // Ensure layers are clear
     clearKilometerMarkersLayer(map);
-    setIsRouteCoordsReady(false); // Set to false if not enough waypoints for a route
+    setIsRouteCoordsReady(false); 
   } else { // 0 waypoints
-    clearCurrentRoutePath();
-    clearRouteLayer(map);
-    clearKilometerMarkersLayer(map);
-    setRouteDistance('');
-    setRouteDuration('');
-    setHasRoute(false);
-    setIsRouteCoordsReady(false); // Set to false if not enough waypoints for a route
+    // All necessary clearing already done
+    setIsRouteCoordsReady(false); 
   }
-  console.log(`[setRouteData] Successfully set ${getWaypoints().length} waypoints.`);
+
+  // 4. Save final state to localStorage and take ONE snapshot for the entire operation
+  saveWaypointsToStorage(getWaypoints(), getDirectFlags());
+  historySnapshot(); 
+  console.log(`[setRouteData] Successfully set ${getWaypoints().length} waypoints. Final snapshot taken.`);
 };
 
 // removeWaypoint function body is removed.
@@ -393,7 +399,7 @@ export const updateWaypointPositionAndRecalculate = updateWaypointPositionAndRec
 let unsubscribeFromHistory: (() => void) | null = null;
 
 // Setup routing logic for a Mapbox map instance
-export const setupRouting = (
+export const setupRouting = async (
   map: MapboxMap, 
   accessToken: string,
   setRouteDistance: Dispatch<SetStateAction<string>>,
@@ -402,7 +408,7 @@ export const setupRouting = (
   setPopup: Dispatch<SetStateAction<MIMPopupInfo | null>>,
   handleWaypointError: (message: string | null) => void,
   isMapLockedRef: { current: boolean } // Accept the ref
-): (() => void) => {
+): Promise<(() => void)> => { // Return Promise because it's async
   _mapInstance = map; // Store for history event handler
   _accessToken = accessToken; // Store for history event handler
   _isMapLockedRef = isMapLockedRef; // Store the ref
@@ -426,35 +432,29 @@ export const setupRouting = (
       setWaypointsAndFlags(loadedData.waypoints, loadedData.directFlags);
       console.log('[routing.ts] Waypoints loaded from local storage by routing.ts.');
       updateWaypointsLayer(map, getWaypoints(), isMapLockedRef.current);
-      historySnapshot(); // <--- ADDED: Snapshot the state loaded from WaypointManager's localStorage
-      console.log('[routing.ts] Initial snapshot taken after loading waypoints from storage.');
 
       if (getWaypoints().length >= 1) { 
-        getRouteFromService(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute).then((result: RouteResult) => {
-          if (result.success && result.waypointsSnapped && result.snappedWaypoints && result.snappedDirectFlags) {
-            console.log("[routing.ts] Initial route calculated and waypoints snapped by routing.ts.");
-            setWaypointsAndFlags(result.snappedWaypoints, result.snappedDirectFlags);
-            updateWaypointsLayer(map, getWaypoints(), isMapLockedRef.current);
-            saveWaypointsToStorage(getWaypoints(), getDirectFlags()); // Saves to WaypointManager's storage
-            historySnapshot(); // <--- ADDED: Snapshot again if snapping occurs and alters state
-            console.log('[routing.ts] Snapshot taken after initial route snapping by routing.ts.');
-          } else if (!result.success && getWaypoints().length === 1) {
-            console.log('[routing.ts] Single waypoint loaded, no route to calculate yet or snapping failed.');
-          } else if (!result.success) {
-             console.warn('[routing.ts] Failed to calculate initial route by routing.ts. Service indicated failure.');
-          }
-        }).catch((error: unknown) => { 
-          console.error('[routing.ts] Error recalculating initial route by routing.ts:', error);
-        });
+        const result: RouteResult = await getRouteFromService(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
+        if (result.success && result.waypointsSnapped && result.snappedWaypoints && result.snappedDirectFlags) {
+          console.log("[routing.ts] Initial route calculated and waypoints snapped by routing.ts.");
+          setWaypointsAndFlags(result.snappedWaypoints, result.snappedDirectFlags);
+          updateWaypointsLayer(map, getWaypoints(), isMapLockedRef.current);
+          saveWaypointsToStorage(getWaypoints(), getDirectFlags());
+        } else if (!result.success && getWaypoints().length === 1) {
+          console.log('[routing.ts] Single waypoint loaded, no route to calculate yet or snapping failed.');
+        } else if (!result.success) {
+            console.warn('[routing.ts] Failed to calculate initial route by routing.ts. Service indicated failure.');
+        }
       }
     } else {
       console.log('[routing.ts] No waypoints found in local storage by routing.ts.');
-      historySnapshot(); // <--- ADDED: Snapshot the initial empty state if nothing loaded
-      console.log('[routing.ts] Initial snapshot taken for empty state by routing.ts.');
     }
   } catch (error: unknown) { 
     console.error('[routing.ts] Error loading waypoints from local storage in setupRouting by routing.ts:', error);
   }
+  // Single snapshot after all initial loading and processing is complete.
+  historySnapshot();
+  console.log('[routing.ts] Final initial snapshot taken after setupRouting completion.');
 
   // Define the event handler for history changes here, so it has access to setters
   const handleHistoryApplied = async (historyState: WaypointHistory) => {
@@ -585,9 +585,8 @@ export async function generateAndDisplayRouteAtoB(
 
   clearRoute(map); 
   setWaypointsAndFlags([startCoord, endCoord], [false, false]);
-  historySnapshot();
   updateWaypointsLayer(map, getWaypoints(), _isMapLockedRef?.current ?? false);
-  saveWaypointsToStorage(getWaypoints(), getDirectFlags());
+  // Defer saving to storage until the final waypoints/route are set and snapshot is taken.
 
   try {
     const result = await calculateAtoBRoute(startCoord, endCoord, accessToken, surfaceType);
@@ -605,6 +604,9 @@ export async function generateAndDisplayRouteAtoB(
       setRouteDuration(`${durationMinutes} min`);
       setHasRoute(true);
       setIsRouteCoordsReady(true);
+      // Waypoints are already set from the start of the function
+      saveWaypointsToStorage(getWaypoints(), getDirectFlags()); // Save final waypoints
+      historySnapshot(); // Snapshot after all operations are successful
       zoomToRoute(map, result.geometry); // Use imported zoomToRoute
 
     } else {
@@ -614,6 +616,7 @@ export async function generateAndDisplayRouteAtoB(
       setRouteDuration('');
       setHasRoute(false);
       setIsRouteCoordsReady(false);
+      // Clear the temporary waypoints if generation failed
       setWaypointsAndFlags([], []); 
       updateWaypointsLayer(map, [], _isMapLockedRef?.current ?? false); 
       saveWaypointsToStorage([], []); 
@@ -625,6 +628,7 @@ export async function generateAndDisplayRouteAtoB(
     setRouteDuration('');
     setHasRoute(false);
     setIsRouteCoordsReady(false);
+    // Clear the temporary waypoints if generation failed
     setWaypointsAndFlags([], []);
     updateWaypointsLayer(map, [], _isMapLockedRef?.current ?? false);
     saveWaypointsToStorage([], []);
@@ -652,12 +656,11 @@ export async function generateAndDisplayRouteLoop(
 
   // Take a snapshot of the current state BEFORE this function makes any changes.
   // This snapshot will be what 'undo' reverts to.
-  historySnapshot(); 
+  // historySnapshot(); // MOVED: Snapshot is now at the end of successful generation/update
 
   // Clear previous route and set up initial waypoints internally for the generation logic
   clearRoute(map);
   setWaypointsAndFlags([startCoord], [false]); 
-  // No snapshot here for this intermediate state
   updateWaypointsLayer(map, getWaypoints(), _isMapLockedRef?.current ?? false);
   // Defer saving to storage until the final waypoints are set
 
@@ -750,7 +753,9 @@ export async function generateAndDisplayRouteLoop(
           zoomToRoute(map, loopResult.geometry); 
         }
         
-        console.log(`[routing.ts] Natural loop generation successful. Created ${waypoints.length} waypoints.`);
+        // Final snapshot for successful loop generation
+        historySnapshot(); 
+        console.log(`[routing.ts] Natural loop generation successful. Created ${getWaypoints().length} waypoints.`);
       } else {
         console.error('[routing.ts] Route calculation failed:', routeResult.error);
         if (handleWaypointError) handleWaypointError(routeResult.error || 'Failed to calculate final route through waypoints.');

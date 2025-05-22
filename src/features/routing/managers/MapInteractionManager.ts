@@ -15,10 +15,6 @@ import {
   updateWaypointPositionAndRecalculate,
   insertWaypointAtLocation // Added import
 } from '@/features/routing/managers/WaypointManager';
-import { snapshot } from '@/features/routing/managers/HistoryManager';
-// TODO: Correct import for snapshot if it's separate from getWaypoints
-// For now, let's assume getWaypoints and snapshot come from a combined manager or routing.ts temporarily
-// For snapshot: import { snapshot } from '@/features/routing/managers/HistoryManager';
 // For getWaypoints: import { getWaypoints } from '@/features/routing/managers/WaypointManager';
 
 // Assuming updateDragLinesLayer will be moved to MapLayerManager or similar
@@ -240,7 +236,8 @@ export const initializeMapInteractions = (
         setRouteDuration,
         setHasRoute,
         handleWaypointError,
-        isMapLockedRef.current // Pass isMapLocked status
+        isMapLockedRef.current, // Pass isMapLocked status
+        { skipRouteCalcAndSnapshot: true } // Pass option to skip snapshot
       );
 
       if (result.success && typeof result.newIndex === 'number') {
@@ -336,7 +333,8 @@ export const initializeMapInteractions = (
         setRouteDuration,
         setHasRoute,
         handleWaypointError,
-        isMapLockedRef.current // Pass isMapLocked status
+        isMapLockedRef.current, // Pass isMapLocked status
+        { skipRouteCalcAndSnapshot: true } // Pass option to skip snapshot
       );
 
       if (result.success && typeof result.newIndex === 'number') {
@@ -462,7 +460,7 @@ export const initializeMapInteractions = (
     // For newly inserted points, updateWaypointPositionAndRecalculate will still run.
     
     // Snapshot before updating the waypoint position permanently
-    snapshot(); 
+    // snapshot(); // REMOVED: WaypointManager now handles its own snapshots correctly
     await updateWaypointPositionAndRecalculate(
       map,
       draggedWaypointIndex,
@@ -515,7 +513,7 @@ export const initializeMapInteractions = (
 
     console.log(`[MapInteractionManager] Touchend: Drag ended for waypoint ${draggedWaypointIndex} at`, currentLngLat);
 
-    snapshot();
+    // snapshot(); // REMOVED: WaypointManager now handles its own snapshots correctly
     await updateWaypointPositionAndRecalculate(
       map,
       draggedWaypointIndex,

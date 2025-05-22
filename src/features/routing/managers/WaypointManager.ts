@@ -105,7 +105,7 @@ export const addWaypoint = async (
   handleWaypointError: (message: string | null) => void,
   isMapLocked: boolean
 ): Promise<boolean> => {
-  snapshot(); // Snapshot for undo/redo
+  // snapshot(); // REMOVED: Initial snapshot
 
   const addResult = await _addWaypointInternal(coords, isDirect, accessToken);
 
@@ -114,21 +114,24 @@ export const addWaypoint = async (
     return false;
   }
 
-  // Successfully added waypoint
+  // Successfully added waypoint internally
   updateWaypointsLayer(map, getWaypoints(), isMapLocked);
   saveWaypointsToLocalStorage(getWaypoints(), getDirectFlags());
 
   if (getWaypoints().length >= 2) {
     console.log('[WaypointManager.addWaypoint] Recalculating route...');
     const routeResult: RouteResult = await getRouteFromService(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
-    // If route calculation snapped waypoints further, update them in WaypointManager
+    
     if (routeResult.success && routeResult.waypointsSnapped && routeResult.snappedWaypoints && routeResult.snappedDirectFlags) {
         console.log("[WaypointManager.addWaypoint] Route service snapped waypoints. Updating WaypointManager state.");
         setWaypointsAndFlags(routeResult.snappedWaypoints, routeResult.snappedDirectFlags);
         updateWaypointsLayer(map, getWaypoints(), isMapLocked);
         saveWaypointsToLocalStorage(getWaypoints(), getDirectFlags());
-        snapshot(); // Snapshot after successful snap
+        // The snapshot below will cover this state change.
     }
+    // Snapshot after route calculation and potential snapping is complete.
+    // This captures the final state of this addWaypoint operation for >= 2 waypoints.
+    snapshot(); 
   } else if (getWaypoints().length === 1) {
     // Only one waypoint, clear any existing route visualization
     setRouteDistance('');
@@ -137,6 +140,8 @@ export const addWaypoint = async (
     clearCurrentRoutePath(); // From RouteCalculationService
     clearRouteLayer(map); // From MapLayerManager
     clearKilometerMarkersLayer(map); // From MapLayerManager
+    // Snapshot because adding the first waypoint is a completed, undoable action.
+    snapshot();
   }
   return true;
 };
@@ -159,12 +164,13 @@ export const removeWaypoint = async (
     return;
   }
 
-  snapshot(); // Snapshot for undo/redo
+  // snapshot(); // REMOVED: Initial snapshot
   _removeWaypointInternal(index); // Use the internal function
   updateWaypointsLayer(map, getWaypoints(), isMapLocked);
   saveWaypointsToLocalStorage(getWaypoints(), getDirectFlags());
 
-  if (getWaypoints().length >= 2) {
+  const currentWaypointsCount = getWaypoints().length;
+  if (currentWaypointsCount >= 2) {
     console.log('[WaypointManager.removeWaypoint] Recalculating route...');
     const routeResult: RouteResult = await getRouteFromService(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
     if (routeResult.success && routeResult.waypointsSnapped && routeResult.snappedWaypoints && routeResult.snappedDirectFlags) {
@@ -172,18 +178,20 @@ export const removeWaypoint = async (
         setWaypointsAndFlags(routeResult.snappedWaypoints, routeResult.snappedDirectFlags);
         updateWaypointsLayer(map, getWaypoints(), isMapLocked);
         saveWaypointsToLocalStorage(getWaypoints(), getDirectFlags());
-        snapshot(); // Snapshot after successful snap
+        // The snapshot below covers this state change.
     }
+    // Snapshot after route calculation and potential snapping is complete.
+    snapshot();
   } else {
+    // 0 or 1 waypoint remaining
     setRouteDistance('');
     setRouteDuration('');
     setHasRoute(false);
     clearCurrentRoutePath();
     clearRouteLayer(map);
     clearKilometerMarkersLayer(map);
-    // if (getWaypoints().length === 0) { // Also clear history if all waypoints removed
-    //     // clearHistory(); // Assuming clearHistory is available from HistoryManager
-    // }
+    // Snapshot because the removal leading to 0 or 1 waypoint is a completed, undoable action.
+    snapshot(); 
   }
   console.log('[WaypointManager.removeWaypoint] Waypoint removed and route updated.');
 };
@@ -206,7 +214,7 @@ export const updateWaypointPositionAndRecalculate = async (
     return;
   }
 
-  snapshot(); // Snapshot for undo/redo
+  // snapshot(); // REMOVED: Initial snapshot
 
   const oldCoords = getWaypoints()[index];
   _updateWaypointPositionInternal(index, newCoords);
@@ -222,11 +230,15 @@ export const updateWaypointPositionAndRecalculate = async (
     setWaypointsAndFlags(routeResult.snappedWaypoints, routeResult.snappedDirectFlags);
     updateWaypointsLayer(map, getWaypoints(), isMapLocked);
     saveWaypointsToLocalStorage(getWaypoints(), getDirectFlags());
-    snapshot(); // Snapshot after successful snap
+    // The snapshot below covers this state change.
   } else if (!routeResult.success && getWaypoints().length >= 2) {
     console.warn(`[WaypointManager.updateWaypointPosition] Route recalculation failed after moving waypoint ${index}.`);
     if (handleWaypointError) handleWaypointError("Route recalculation failed after moving waypoint.");
+    // Even if recalculation fails but we had >=2 waypoints, the user moved a point, so that state should be saved.
   }
+  // Snapshot after route calculation and potential snapping (or just the move if <2 waypoints or failed calc).
+  // This captures the final state of this updateWaypointPosition operation.
+  snapshot();
 };
 
 export const reverseRoute = async (
@@ -243,7 +255,7 @@ export const reverseRoute = async (
     return;
   }
 
-  snapshot(); // Snapshot for undo/redo
+  // snapshot(); // REMOVED: Initial snapshot
 
   const reversedWaypoints = [...currentWaypoints].reverse();
   const reversedDirectFlags = [
@@ -263,8 +275,10 @@ export const reverseRoute = async (
     setWaypointsAndFlags(routeResult.snappedWaypoints, routeResult.snappedDirectFlags);
     updateWaypointsLayer(map, getWaypoints(), isMapLocked);
     saveWaypointsToLocalStorage(getWaypoints(), getDirectFlags());
-    snapshot(); // Snapshot after successful snap
+    // The snapshot below covers this state change.
   }
+  // Snapshot after route calculation and potential snapping is complete.
+  snapshot();
   console.log('[WaypointManager.reverseRoute] Reverse complete, route updated.');
 };
 
@@ -276,9 +290,10 @@ export const insertWaypointAtLocation = async (
   setRouteDuration: Dispatch<SetStateAction<string>>,
   setHasRoute: Dispatch<SetStateAction<boolean>>,
   handleWaypointError: (message: string | null) => void,
-  isMapLocked: boolean
+  isMapLocked: boolean,
+  options?: { skipRouteCalcAndSnapshot?: boolean }
 ): Promise<{ success: boolean; newIndex?: number; error?: string }> => {
-  console.log('[WaypointManager.insertWaypoint] Attempting to insert waypoint at:', clickedCoords);
+  console.log('[WaypointManager.insertWaypoint] Attempting to insert waypoint at:', clickedCoords, 'Options:', options);
 
   const currentWaypoints = getWaypoints();
   if (currentWaypoints.length < 1) { 
@@ -360,7 +375,7 @@ export const insertWaypointAtLocation = async (
 
   console.log('[WaypointManager.insertWaypoint] Closest point on route:', closestPointOnRoute, 'Insert index:', insertIndex);
 
-  snapshot(); // Take snapshot before modifying waypoints and flags
+  // snapshot(); // REMOVED: Initial snapshot. Snapshot will be taken after async operations and potential snapping.
 
   // Create new arrays immutably
   // currentWaypoints was already fetched at the start of the function if (currentWaypoints.length < 1)
@@ -383,23 +398,35 @@ export const insertWaypointAtLocation = async (
   updateWaypointsLayer(map, getWaypoints(), isMapLocked); // getWaypoints() will now return the new array
   saveWaypointsToLocalStorage(getWaypoints(), getDirectFlags());
 
+  // Conditionally skip route calculation and snapshot
+  if (options?.skipRouteCalcAndSnapshot) {
+    console.log('[WaypointManager.insertWaypoint] Skipping route calculation and snapshot as per options.');
+    // Still need to return success and index for the MapInteractionManager to start dragging
+    return { success: true, newIndex: insertIndex };
+  }
+
   if (getWaypoints().length >= 2) {
     const routeResult: RouteResult = await getRouteFromService(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
     if (routeResult.success && routeResult.waypointsSnapped && routeResult.snappedWaypoints && routeResult.snappedDirectFlags) {
         setWaypointsAndFlags(routeResult.snappedWaypoints, routeResult.snappedDirectFlags);
         updateWaypointsLayer(map, getWaypoints(), isMapLocked);
         saveWaypointsToLocalStorage(getWaypoints(), getDirectFlags());
-        snapshot(); // Snapshot after successful snap
+        // The snapshot below covers this state change.
     }
+    // Snapshot after route calculation and potential snapping is complete.
+    snapshot(); 
   } else {
+    // This case (0 or 1 waypoint after insert) should ideally not happen if we start with >= 1 waypoint.
+    // However, if it does, or if the logic changes, ensure a snapshot is taken for the completed action.
     setRouteDistance('');
     setRouteDuration('');
     setHasRoute(false);
     clearCurrentRoutePath();
     clearRouteLayer(map);
     clearKilometerMarkersLayer(map);
+    snapshot(); // Snapshot for completed action even if no route calculation
   }
-  console.log('[WaypointManager.insertWaypoint] Waypoint inserted and route recalculated.');
+  console.log('[WaypointManager.insertWaypoint] Waypoint inserted and route recalculated (or skipped).');
   return { success: true, newIndex: insertIndex };
 };
 
