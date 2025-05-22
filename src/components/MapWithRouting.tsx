@@ -727,13 +727,17 @@ export default function MapWithRouting({
   }, [MAPBOX_TOKEN, hasRoute, setRouteDistance, setRouteDuration, setHasRoute, isMapLockedRef]);
 
   const handleLocate = useCallback(() => {
-    if (mapRef.current && userLocation && !locationError) {
-      mapRef.current.flyTo({ center: userLocation, zoom: 17 });
-    } else if ((!userLocation || locationError) && mapRef.current) {
-      // If no location is available or there's an error, log it for debugging
-      console.log('Location not available or has error:', locationError);
+    if (mapRef.current) {
+      if (userLocation && !locationError) {
+        mapRef.current.flyTo({ center: userLocation, zoom: 17 });
+      } else if (lastKnownLocationFromStorage) {
+        mapRef.current.flyTo({ center: lastKnownLocationFromStorage, zoom: 15 });
+        console.log('[MapWithRouting] Centered on last known location.');
+      } else {
+        console.log('[MapWithRouting] Locate called, but no current or last known location available.');
+      }
     }
-  }, [userLocation, locationError]);
+  }, [userLocation, locationError, lastKnownLocationFromStorage]);
 
   const handleImportError = useCallback((message: string) => {
     // Reuse handleWaypointError or create a more specific one if needed
@@ -1088,7 +1092,8 @@ export default function MapWithRouting({
               onLocate={handleLocate}
               canUndo={canUndo}
               canRedo={canRedo}
-              hasUserLocation={!!userLocation && !locationError}
+              canLocateCurrent={!!userLocation && !locationError}
+              canLocateLastKnown={!!lastKnownLocationFromStorage}
               hasRoute={hasRoute}
               isLocked={isMapLocked}
               onToggleLock={handleToggleLock}
@@ -1156,7 +1161,8 @@ export default function MapWithRouting({
             onLocate={handleLocate}
             canUndo={canUndo}
             canRedo={canRedo}
-            hasUserLocation={!!userLocation && !locationError}
+            canLocateCurrent={!!userLocation && !locationError}
+            canLocateLastKnown={!!lastKnownLocationFromStorage}
             hasRoute={hasRoute}
             isLocked={isMapLocked}
             onToggleLock={handleToggleLock}

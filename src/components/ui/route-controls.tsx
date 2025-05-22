@@ -22,7 +22,8 @@ interface RouteControlsProps {
   onLocate: () => void;
   canUndo: boolean;
   canRedo: boolean;
-  hasUserLocation: boolean;
+  canLocateCurrent: boolean;
+  canLocateLastKnown: boolean;
   hasRoute?: boolean;
   isLocked: boolean;
   onToggleLock: () => void;
@@ -71,7 +72,8 @@ export function RouteControls({
   onLocate,
   canUndo,
   canRedo,
-  hasUserLocation,
+  canLocateCurrent,
+  canLocateLastKnown,
   hasRoute = false,
   isLocked,
   onToggleLock,
@@ -87,6 +89,19 @@ export function RouteControls({
 }: RouteControlsProps) {
   const TimeOfDayIcon = getIconForTimeOfDay(currentTimeOfDay);
   const { Icon: OrientationIcon, title: orientationTitle } = getOrientationIconAndLabel(currentBearing);
+
+  const isLocateButtonDisabled = !canLocateCurrent && !canLocateLastKnown;
+  
+  let locateTooltipText = "Location not available";
+  let locateDotColorClass = "bg-red-500"; // Default to red dot if disabled
+
+  if (canLocateCurrent) {
+    locateTooltipText = "Center on my current location";
+    // No dot needed when current location is active, icon itself will be blue
+  } else if (canLocateLastKnown) {
+    locateTooltipText = "Center on last known location";
+    locateDotColorClass = "bg-orange-500"; // Orange dot for last known
+  }
 
   return (
     <TooltipProvider>
@@ -267,18 +282,19 @@ export function RouteControls({
             <Button
               variant="secondary"
               onClick={onLocate}
-              className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 h-10 w-10"
+              disabled={isLocateButtonDisabled}
+              className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 disabled:opacity-50 h-10 w-10"
             >
               <div className="relative">
-                <Locate size={18} className={hasUserLocation ? "text-blue-500" : "text-gray-400"} />
-                {!hasUserLocation && (
-                  <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
+                <Locate size={18} className={canLocateCurrent ? "text-blue-500" : "text-gray-400"} />
+                {!canLocateCurrent && ( // Show dot only if not using current location
+                  <div className={`absolute -top-1 -right-1 w-2 h-2 ${locateDotColorClass} rounded-full`} />
                 )}
               </div>
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>{hasUserLocation ? "Center on my location" : "Location not available"}</p>
+            <p>{locateTooltipText}</p>
           </TooltipContent>
         </Tooltip>
       </div>
