@@ -200,7 +200,7 @@ export function Sidebar({
         <div className="px-4 overflow-y-auto max-h-[calc(100vh-100px)]">
           {/* Route History Controls */}
           <div className="mt-4">
-            <div className="text-sm font-medium text-gray-500 mb-2">Route History</div>
+            <div className="text-sm font-medium text-gray-500 mb-2">Route Actions</div>
             <div className="flex items-center gap-2 mb-2">
               <Button
                 variant="outline"
