@@ -222,7 +222,11 @@ export function Sidebar({
                     <Button
                       variant="outline"
                       onClick={onToggleLock}
-                      className="h-10 w-10 justify-center rounded-md p-0"
+                      className={`h-10 w-10 justify-center rounded-md p-0 ${
+                        isLocked
+                          ? 'border-amber-400 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-800/40'
+                          : 'border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800'
+                      }`}
                     >
                       {isLocked ? <Lock size={18} /> : <Unlock size={18} />}
                     </Button>

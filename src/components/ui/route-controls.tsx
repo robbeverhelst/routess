@@ -175,7 +175,11 @@ export function RouteControls({
             <Button
               variant="secondary"
               onClick={onToggleLock}
-              className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 h-10 w-10"
+              className={`h-10 w-10 ${
+                isLocked
+                  ? 'bg-amber-100 dark:bg-amber-800/30 text-amber-700 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-800/50 border border-amber-300 dark:border-amber-600'
+                  : 'bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60'
+              }`}
             >
               {isLocked ? <Lock size={18} /> : <Unlock size={18} />}
             </Button>
