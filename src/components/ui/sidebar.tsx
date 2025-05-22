@@ -263,7 +263,6 @@ export function Sidebar({
             </Button>
 
             <Button
-              variant="outline"
               onClick={() => {
                 // First close the sidebar using the ref
                 if (closeButtonRef.current) {
@@ -276,8 +275,12 @@ export function Sidebar({
                 }, 50);
               }}
               disabled={isLocked}
-              className={`w-full h-10 justify-center rounded-md mb-2 hover:bg-gray-100 dark:hover:bg-gray-800 ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
+              className={`w-full h-10 justify-center rounded-md mb-2 text-white 
+                         bg-gradient-to-r from-indigo-500 to-teal-400 
+                         hover:from-indigo-600 hover:to-teal-500 
+                         dark:from-indigo-600 dark:to-teal-500 
+                         dark:hover:from-indigo-700 dark:hover:to-teal-600 
+                         ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}`}>
               <Wand2 className="w-4 h-4 mr-2" />
               Generate Route
             </Button>
