@@ -39,12 +39,13 @@ export const haversine = (c1: Coordinate, c2: Coordinate): number => {
 export const checkNearRoad = async (
   coords: Coordinate,
   accessToken: string,
-  searchRadiusMeters: number = 49 // Default to 49m as before
+  searchRadiusMeters: number = 49 // Reverted to 49m default
 ): Promise<{ isValid: boolean; snappedCoords?: Coordinate }> => {
   try {
-    const effectiveRadius = Math.max(1, Math.min(searchRadiusMeters, 1000)); // Clamp between 1m and 1000m
+    const MAX_MATCHING_API_RADIUS = 49; // Max radius for Mapbox Matching API based on error
+    const effectiveRadius = Math.max(1, Math.min(searchRadiusMeters, MAX_MATCHING_API_RADIUS)); 
     const coordinatesParam = `${coords[0]},${coords[1]};${coords[0]},${coords[1]}`;
-    const radiusesParam = `${effectiveRadius};${effectiveRadius}`;
+    const radiusesParam = `${effectiveRadius};${effectiveRadius}`; // This will now be <= 49
     const url = `https://api.mapbox.com/matching/v5/mapbox/walking/${coordinatesParam}?steps=true&geometries=geojson&access_token=${accessToken}&radiuses=${radiusesParam}`;
     
     const response = await fetch(url);
