@@ -253,18 +253,6 @@ export function Sidebar({
             </div>
             
             <Button
-              variant="outline"
-              onClick={onReverseRoute}
-              disabled={!hasRoute || isLocked}
-              className={`w-full h-10 justify-center rounded-md mb-2 ${
-                (!hasRoute || isLocked) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100 dark:hover:bg-gray-800'
-              }`}
-            >
-              <ArrowRightLeft className="w-4 h-4 mr-2" />
-              Reverse Route
-            </Button>
-            
-            <Button
               variant="default"
               onClick={onReset}
               disabled={!hasRoute || isLocked}
@@ -274,6 +262,18 @@ export function Sidebar({
             >
               <X className="w-4 h-4 mr-2" />
               Reset Route
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={onReverseRoute}
+              disabled={!hasRoute || isLocked}
+              className={`w-full h-10 justify-center rounded-md mb-2 ${ 
+                (!hasRoute || isLocked) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+              }`}
+            >
+              <ArrowRightLeft className="w-4 h-4 mr-2" />
+              Reverse Route
             </Button>
 
             <Button
@@ -301,12 +301,7 @@ export function Sidebar({
 
             <Button
               variant="outline"
-              onClick={() => {
-                onZoomToRoute();
-                if (closeButtonRef.current) {
-                  closeButtonRef.current.click();
-                }
-              }}
+              onClick={onZoomToRoute}
               disabled={!hasRoute}
               className={`w-full h-10 justify-center rounded-md mb-2 ${
                 !hasRoute ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100 dark:hover:bg-gray-800'

@@ -1191,6 +1191,7 @@ export default function MapWithRouting({
             <RouteControls
               onUndo={handleUndo}
               onRedo={handleRedo}
+              onReverseRoute={handleReverseRoute}
               onReset={handleReset}
               onLocate={handleLocate}
               canUndo={canUndo}
@@ -1225,8 +1226,8 @@ export default function MapWithRouting({
               <Sidebar
                 onUndo={handleUndo}
                 onRedo={handleRedo}
-                onReset={handleReset}
                 onReverseRoute={handleReverseRoute}
+                onReset={handleReset}
                 onZoomToRoute={handleZoomToRoute}
                 onShare={handleShareRoute}
                 displayedShareUrl={displayedShareUrl}
@@ -1258,6 +1259,7 @@ export default function MapWithRouting({
         <RouteControls
             onUndo={handleUndo}
             onRedo={handleRedo}
+            onReverseRoute={handleReverseRoute}
             onReset={handleReset}
             onLocate={handleLocate}
             canUndo={canUndo}
@@ -1288,8 +1290,8 @@ export default function MapWithRouting({
         <Sidebar
           onUndo={handleUndo}
           onRedo={handleRedo}
-          onReset={handleReset}
           onReverseRoute={handleReverseRoute}
+          onReset={handleReset}
           onZoomToRoute={handleZoomToRoute}
           onShare={handleShareRoute}
           displayedShareUrl={displayedShareUrl}

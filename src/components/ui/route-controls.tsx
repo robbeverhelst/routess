@@ -8,7 +8,7 @@ import {
 import { 
   ArrowLeftCircle, ArrowRightCircle, Locate, RefreshCw, Lock, Unlock, 
   SunIcon, MoonIcon, SunriseIcon, SunsetIcon, SparklesIcon as Sparkles,
-  ArrowUp, ArrowDown, ArrowLeft, ArrowRight, // Added cardinal direction arrows
+  ArrowUp, ArrowDown, ArrowLeft, ArrowRight, ArrowRightLeft, // Added ArrowRightLeft
   Plus, Minus, Share2, Maximize // Added Plus and Minus icons for zoom, Added Share2, Added Maximize for Zoom to Route
 } from "lucide-react";
 
@@ -18,6 +18,7 @@ export type TimeOfDay = 'dawn' | 'day' | 'dusk' | 'night';
 interface RouteControlsProps {
   onUndo: () => void;
   onRedo: () => void;
+  onReverseRoute: () => void; // New prop
   onReset: () => void;
   onLocate: () => void;
   canUndo: boolean;
@@ -68,6 +69,7 @@ const getOrientationIconAndLabel = (bearing: number): { Icon: React.ElementType;
 export function RouteControls({
   onUndo,
   onRedo,
+  onReverseRoute, // Destructure new prop
   onReset,
   onLocate,
   canUndo,
@@ -135,6 +137,22 @@ export function RouteControls({
           </TooltipTrigger>
           <TooltipContent>
             <p>Redo</p>
+          </TooltipContent>
+        </Tooltip>
+        
+        <Tooltip delayDuration={500}>
+          <TooltipTrigger asChild>
+            <Button
+              variant="secondary"
+              onClick={onReverseRoute} // Use the new prop
+              disabled={!hasRoute || isLocked} // Same disabled logic as in sidebar
+              className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 disabled:opacity-50 h-10 w-10"
+            >
+              <ArrowRightLeft size={18} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Reverse route</p>
           </TooltipContent>
         </Tooltip>
         
