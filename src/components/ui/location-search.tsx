@@ -32,15 +32,18 @@ export function LocationSearch({
   const [results, setResults] = useState<GeocodingFeature[]>([]);
   const [loading, setLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
+  const [isDesktopSearchExpanded, setIsDesktopSearchExpanded] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Focus input when mobile search opens
+  // Focus input when mobile search opens or desktop search expands
   useEffect(() => {
     if (isMobileContext && isMobileSearchOpen && inputRef.current) {
       inputRef.current.focus();
+    } else if (!isMobileContext && isDesktopSearchExpanded && inputRef.current) {
+      inputRef.current.focus();
     }
-  }, [isMobileContext, isMobileSearchOpen]);
+  }, [isMobileContext, isMobileSearchOpen, isDesktopSearchExpanded]);
   
   // Effect to update query when currentValue prop changes
   useEffect(() => {
@@ -87,13 +90,17 @@ export function LocationSearch({
           // Optional: close mobile search on outside click.
           // Consider if this is desired, or if only X button should close it.
           // onToggleMobileSearch(); 
+        } else if (!isMobileContext && isDesktopSearchExpanded) {
+          setIsDesktopSearchExpanded(false);
+          // setQuery(""); // Optionally clear query on outside click when closing
+          // setResults([]);
         }
       }
     }
     
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isMobileContext, isMobileSearchOpen, onToggleMobileSearch]);
+  }, [isMobileContext, isMobileSearchOpen, onToggleMobileSearch, isDesktopSearchExpanded]);
   
   const handleSelect = (result: GeocodingFeature) => {
     const selectedLocation = {
@@ -106,6 +113,8 @@ export function LocationSearch({
     if (isMobileContext && onToggleMobileSearch) {
       onToggleMobileSearch(); // Close mobile search after selection
     }
+    // For desktop, keep it open for further interaction or let clickOutside handle it.
+    // If we want to close desktop on select: setIsDesktopSearchExpanded(false);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -183,42 +192,75 @@ export function LocationSearch({
   }
 
   // Default Desktop view
-  return (
-    <div ref={searchRef} className="relative w-64"> {/* Desktop has fixed width or can be made more flexible */}
-      <div className="relative">
-        <input
-          ref={inputRef}
-          type="text"
-          placeholder="Search for a location..."
-          value={query}
-          onChange={handleInputChange}
-          onFocus={handleInputFocus}
-          className="w-full pl-9 pr-4 py-2 rounded-md bg-white/90 dark:bg-black/80 border border-gray-300 dark:border-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        <Search size={18} className="absolute left-3 top-2.5 text-gray-500" />
-        {loading && (
-          <div className="absolute right-3 top-2.5">
-            <div className="animate-spin h-4 w-4 border-2 border-blue-500 rounded-full border-t-transparent"></div>
+  if (!isMobileContext) {
+    if (!isDesktopSearchExpanded) {
+      return (
+        <div ref={searchRef} className="relative">
+          <Button
+            variant="secondary"
+            size="icon"
+            onClick={() => setIsDesktopSearchExpanded(true)}
+            className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 h-10 w-10 shadow-sm"
+            title="Search for a location"
+          >
+            <Search size={18} />
+          </Button>
+        </div>
+      );
+    }
+
+    // Expanded Desktop View
+    return (
+      <div ref={searchRef} className="relative w-56"> {/* Reduced width from w-64 to w-56 */}
+        <div className="relative flex items-center">
+          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+          <input
+            ref={inputRef}
+            type="text"
+            placeholder="Search for a location..."
+            value={query}
+            onChange={handleInputChange}
+            onFocus={handleInputFocus}
+            className="w-full pl-10 pr-10 py-2 rounded-md bg-white/90 dark:bg-black/80 border border-gray-300 dark:border-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 h-10"
+          />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => {
+              setIsDesktopSearchExpanded(false);
+              setQuery("");
+              setResults([]);
+              setShowResults(false);
+            }}
+            className="absolute right-1 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 h-8 w-8"
+            title="Close search"
+          >
+            <X size={18} />
+          </Button>
+          {loading && (
+            <div className="absolute right-10 top-1/2 -translate-y-1/2 mr-1"> {/* Adjusted for X button */}
+              <div className="animate-spin h-4 w-4 border-2 border-blue-500 rounded-full border-t-transparent"></div>
+            </div>
+          )}
+        </div>
+        
+        {showResults && results.length > 0 && (
+          <div className="absolute mt-1 w-full bg-white dark:bg-gray-900 rounded-md shadow-lg z-20 max-h-60 overflow-y-auto">
+            {results.map((result) => (
+              <div
+                key={result.id}
+                className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer text-sm"
+                onClick={() => handleSelect(result)}
+              >
+                <div className="font-medium">{result.text}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                  {result.place_name}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
-      
-      {showResults && results.length > 0 && (
-        <div className="absolute mt-1 w-full bg-white dark:bg-gray-900 rounded-md shadow-lg z-20 max-h-60 overflow-y-auto">
-          {results.map((result) => (
-            <div
-              key={result.id}
-              className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer text-sm"
-              onClick={() => handleSelect(result)}
-            >
-              <div className="font-medium">{result.text}</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                {result.place_name}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+    );
+  }
 } 
