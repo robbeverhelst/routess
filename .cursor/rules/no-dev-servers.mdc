@@ -1,0 +1,36 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# No Development Servers
+
+## Rule
+**NEVER run development servers or long-running processes in the composer/agent.**
+
+This includes but is not limited to:
+- `bun dev`
+- `bun start` 
+- `npm run dev`
+- `npm start`
+- `yarn dev`
+- `pnpm dev`
+- `turbo dev`
+- `next dev`
+- `vite`
+- Any command that starts a development server
+- Any command that runs indefinitely until interrupted
+
+## Reasoning
+Development servers should be run by the user in their own terminal, not by the AI agent in the composer. Running servers in the composer:
+- Blocks other operations
+- Can cause confusion about what's running
+- Is not the intended workflow
+- Can lead to resource issues
+
+## Alternative Actions
+Instead of running dev servers:
+- Make code changes and let the user test them
+- Suggest the user run the dev server themselves
+- Focus on code modifications and file operations
+- Provide clear instructions for what the user should run

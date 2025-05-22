@@ -580,5 +580,107 @@
     "nl": "Een ogenblik geduld terwijl we uw route aanmaken",
     "fr": "Veuillez patienter pendant la création de votre itinéraire",
     "de": "Bitte warten Sie, während wir Ihre Route erstellen"
+  },
+  "auth.welcomeBack": {
+    "en": "Welcome Back",
+    "nl": "Welkom Terug",
+    "fr": "Bon Retour",
+    "de": "Willkommen zurück"
+  },
+  "auth.signInToSaveRoutes": {
+    "en": "Sign in to save your routes and access them anywhere",
+    "nl": "Log in om je routes op te slaan en overal toegang tot te hebben",
+    "fr": "Connectez-vous pour sauvegarder vos itinéraires et y accéder partout",
+    "de": "Melden Sie sich an, um Ihre Routen zu speichern und überall darauf zuzugreifen"
+  },
+  "auth.continueWithGoogle": {
+    "en": "Continue with Google",
+    "nl": "Doorgaan met Google",
+    "fr": "Continuer avec Google",
+    "de": "Mit Google fortfahren"
+  },
+  "auth.benefits": {
+    "en": "Benefits",
+    "nl": "Voordelen",
+    "fr": "Avantages",
+    "de": "Vorteile"
+  },
+  "auth.benefit.saveRoutes": {
+    "en": "Save and organize your favorite routes",
+    "nl": "Bewaar en organiseer je favoriete routes",
+    "fr": "Sauvegardez et organisez vos itinéraires favoris",
+    "de": "Speichern und organisieren Sie Ihre Lieblingsrouten"
+  },
+  "auth.benefit.accessAnywhere": {
+    "en": "Access your routes from any device",
+    "nl": "Toegang tot je routes vanaf elk apparaat",
+    "fr": "Accédez à vos itinéraires depuis n'importe quel appareil",
+    "de": "Greifen Sie von jedem Gerät auf Ihre Routen zu"
+  },
+  "auth.benefit.shareEasily": {
+    "en": "Share routes easily with friends",
+    "nl": "Deel routes gemakkelijk met vrienden",
+    "fr": "Partagez facilement vos itinéraires avec des amis",
+    "de": "Teilen Sie Routen einfach mit Freunden"
+  },
+  "auth.privacyNotice": {
+    "en": "We only use your Google account for authentication. Your route data stays private.",
+    "nl": "We gebruiken je Google-account alleen voor authenticatie. Je routegegevens blijven privé.",
+    "fr": "Nous utilisons votre compte Google uniquement pour l'authentification. Vos données d'itinéraire restent privées.",
+    "de": "Wir verwenden Ihr Google-Konto nur zur Authentifizierung. Ihre Routendaten bleiben privat."
+  },
+  "auth.feature.saveCurrentRoute": {
+    "en": "Save Current Route",
+    "nl": "Huidige Route Opslaan",
+    "fr": "Enregistrer l'Itinéraire Actuel",
+    "de": "Aktuelle Route speichern"
+  },
+  "auth.feature.saveRoute": {
+    "en": "Save Route",
+    "nl": "Route Opslaan",
+    "fr": "Enregistrer l'Itinéraire",
+    "de": "Route speichern"
+  },
+  "auth.feature.saveCurrentRouteDesc": {
+    "en": "Save your current route to access later",
+    "nl": "Bewaar je huidige route om later te openen",
+    "fr": "Sauvegardez votre itinéraire actuel pour y accéder plus tard",
+    "de": "Speichern Sie Ihre aktuelle Route für späteren Zugriff"
+  },
+  "auth.feature.myRoutes": {
+    "en": "My Routes",
+    "nl": "Mijn Routes",
+    "fr": "Mes Itinéraires",
+    "de": "Meine Routen"
+  },
+  "auth.feature.myRoutesDesc": {
+    "en": "View and manage all your saved routes",
+    "nl": "Bekijk en beheer al je opgeslagen routes",
+    "fr": "Visualisez et gérez tous vos itinéraires sauvegardés",
+    "de": "Zeigen Sie alle Ihre gespeicherten Routen an und verwalten Sie sie"
+  },
+  "auth.feature.settings": {
+    "en": "Settings",
+    "nl": "Instellingen",
+    "fr": "Paramètres",
+    "de": "Einstellungen"
+  },
+  "auth.feature.settingsDesc": {
+    "en": "Customize your account and preferences",
+    "nl": "Pas je account en voorkeuren aan",
+    "fr": "Personnalisez votre compte et vos préférences",
+    "de": "Passen Sie Ihr Konto und Ihre Einstellungen an"
+  },
+  "auth.tooltip.loginRequired": {
+    "en": "Login required",
+    "nl": "Inloggen vereist",
+    "fr": "Connexion requise",
+    "de": "Anmeldung erforderlich"
+  },
+  "auth.tooltip.createRouteFirst": {
+    "en": "Create a route first",
+    "nl": "Maak eerst een route",
+    "fr": "Créez d'abord un itinéraire",
+    "de": "Erstellen Sie zuerst eine Route"
   }
 } 
