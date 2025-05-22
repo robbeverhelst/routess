@@ -80,12 +80,32 @@ export function Sidebar({
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [isLangPopoverOpen, setIsLangPopoverOpen] = useState(false);
 
-  const languages = [
-    { code: 'en' as SupportedLanguage, name: 'English', label: 'EN', icon: GB },
-    { code: 'nl' as SupportedLanguage, name: 'Nederlands', label: 'NL', icon: NL },
-    { code: 'fr' as SupportedLanguage, name: 'Français', label: 'FR', icon: FR },
-    { code: 'de' as SupportedLanguage, name: 'Deutsch', label: 'DE', icon: DE },
+  const baseLanguages: Array<{ code: SupportedLanguage; name: string; label: string; icon: React.ElementType }> = [
+    { code: 'en', name: 'English', label: 'EN', icon: GB },
+    { code: 'nl', name: 'Nederlands', label: 'NL', icon: NL },
+    { code: 'fr', name: 'Français', label: 'FR', icon: FR },
+    { code: 'de', name: 'Deutsch', label: 'DE', icon: DE },
   ];
+
+  const getPrioritizedLanguages = () => {
+    let browserLangCode: SupportedLanguage | undefined;
+    if (typeof navigator !== 'undefined' && navigator.language) {
+      const primaryBrowserLang = navigator.language.split('-')[0].toLowerCase() as SupportedLanguage;
+      if (baseLanguages.some(lang => lang.code === primaryBrowserLang)) {
+        browserLangCode = primaryBrowserLang;
+      }
+    }
+
+    if (browserLangCode) {
+      const browserLangObj = baseLanguages.find(lang => lang.code === browserLangCode);
+      if (browserLangObj) {
+        return [browserLangObj, ...baseLanguages.filter(lang => lang.code !== browserLangCode)];
+      }
+    }
+    return baseLanguages;
+  };
+
+  const languages = getPrioritizedLanguages();
 
   const selectedLanguageDetails = languages.find(lang => lang.code === currentLanguage) || languages[0];
 
@@ -93,7 +113,7 @@ export function Sidebar({
     onLanguageChange(langCode);
     setIsLangPopoverOpen(false);
   };
-
+  
   const handleExportGPX = () => {
     const result = exportRouteToGPX();
     if (!result.success && result.message) {
@@ -540,4 +560,4 @@ export function Sidebar({
       </SheetContent>
     </Sheet>
   );
-}
+} 

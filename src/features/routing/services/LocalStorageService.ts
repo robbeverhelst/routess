@@ -170,22 +170,46 @@ export function saveLastMapViewToLocalStorage(viewState: MapViewState): void {
 const LANGUAGE_STORAGE_KEY = 'routingAppLanguage';
 
 export function loadLanguageFromLocalStorage(): SupportedLanguage {
+  // 1. Try to load from localStorage
   try {
     const storedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY);
     if (storedLanguage) {
       const knownLanguages: SupportedLanguage[] = ['en', 'nl', 'fr', 'de'];
       if (knownLanguages.includes(storedLanguage as SupportedLanguage)) {
-        Logger.info(`[LocalStorageService] Loaded language: ${storedLanguage}`);
+        Logger.info(`[LocalStorageService] Loaded language from localStorage: ${storedLanguage}`);
         return storedLanguage as SupportedLanguage;
       }
-      Logger.warn('[LocalStorageService] Invalid language found in localStorage:', storedLanguage);
-      localStorage.removeItem(LANGUAGE_STORAGE_KEY); // Clear invalid entry
+      Logger.warn(`[LocalStorageService] Invalid language '${storedLanguage}' found in localStorage. Will try browser language or default.`);
     }
   } catch (error) {
     Logger.error('[LocalStorageService] Error loading language from localStorage:', error);
   }
-  Logger.info('[LocalStorageService] No language found or error, defaulting to en.');
-  return 'en'; // Default to English
+
+  // 2. Try to use browser language
+  let languageToSet: SupportedLanguage = 'en'; // Default to 'en'
+
+  if (typeof navigator !== 'undefined' && navigator.language) {
+    const browserLangPrimary = navigator.language.split('-')[0].toLowerCase(); // e.g., 'en-US' -> 'en'
+    const knownLanguages: SupportedLanguage[] = ['en', 'nl', 'fr', 'de'];
+    if (knownLanguages.includes(browserLangPrimary as SupportedLanguage)) {
+      languageToSet = browserLangPrimary as SupportedLanguage;
+      Logger.info(`[LocalStorageService] Using browser language: ${languageToSet}.`);
+    } else {
+      Logger.info(`[LocalStorageService] Browser language '${browserLangPrimary}' (from '${navigator.language}') is not directly supported. Defaulting to '${languageToSet}'.`);
+    }
+  } else {
+    Logger.info(`[LocalStorageService] Browser language not available. Defaulting to '${languageToSet}'.`);
+  }
+
+  // 3. Save the determined language (from browser or default 'en') to localStorage for next time
+  try {
+    localStorage.setItem(LANGUAGE_STORAGE_KEY, languageToSet);
+    Logger.info(`[LocalStorageService] Saved language '${languageToSet}' to localStorage.`);
+  } catch (error) {
+    Logger.error(`[LocalStorageService] Error saving determined language '${languageToSet}' to localStorage:`, error);
+  }
+
+  return languageToSet;
 }
 
 export function saveLanguageToLocalStorage(language: SupportedLanguage): void {
