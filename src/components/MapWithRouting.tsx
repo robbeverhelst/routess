@@ -1121,34 +1121,32 @@ export default function MapWithRouting({
                 isMobileSearchOpen={isSearchOpen}
                 onToggleMobileSearch={() => setIsSearchOpen(!isSearchOpen)}
               />
-              {!isSearchOpen && (
-                <Sidebar
-                  onUndo={handleUndo}
-                  onRedo={handleRedo}
-                  onReset={handleReset}
-                  onReverseRoute={handleReverseRoute}
-                  onZoomToRoute={handleZoomToRoute}
-                  onShare={handleShareRoute}
-                  displayedShareUrl={displayedShareUrl}
-                  onCopySharedUrl={handleCopySharedUrlFromHook}
-                  onClearShareDisplay={clearShareState}
-                  canUndo={canUndo}
-                  canRedo={canRedo}
-                  hasRoute={hasRoute}
-                  routeDistance={routeDistance}
-                  routeDuration={routeDuration}
-                  isLocked={isMapLocked}
-                  onToggleLock={handleToggleLock}
-                  // Props for GPX import/export
-                  map={mapRef.current}
-                  accessToken={MAPBOX_TOKEN}
-                  setRouteDistance={setRouteDistance}
-                  setRouteDuration={setRouteDuration}
-                  setHasRoute={setHasRoute}
-                  onImportError={handleImportError}
-                  onOpenRouteGenerator={handleOpenRouteGeneratorModal}
-                />
-              )}
+              <Sidebar
+                onUndo={handleUndo}
+                onRedo={handleRedo}
+                onReset={handleReset}
+                onReverseRoute={handleReverseRoute}
+                onZoomToRoute={handleZoomToRoute}
+                onShare={handleShareRoute}
+                displayedShareUrl={displayedShareUrl}
+                onCopySharedUrl={handleCopySharedUrlFromHook}
+                onClearShareDisplay={clearShareState}
+                canUndo={canUndo}
+                canRedo={canRedo}
+                hasRoute={hasRoute}
+                routeDistance={routeDistance}
+                routeDuration={routeDuration}
+                isLocked={isMapLocked}
+                onToggleLock={handleToggleLock}
+                // Props for GPX import/export
+                map={mapRef.current}
+                accessToken={MAPBOX_TOKEN}
+                setRouteDistance={setRouteDistance}
+                setRouteDuration={setRouteDuration}
+                setHasRoute={setHasRoute}
+                onImportError={handleImportError}
+                onOpenRouteGenerator={handleOpenRouteGeneratorModal}
+              />
             </div>
           </div>
         </div>

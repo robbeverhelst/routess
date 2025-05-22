@@ -129,7 +129,7 @@ export function LocationSearch({
 
   if (isMobileContext) {
     return (
-      <div ref={searchRef} className={`relative flex items-center transition-all duration-300 ease-in-out ${isMobileSearchOpen ? 'w-full' : 'w-auto'}`}>
+      <div ref={searchRef} className={`relative flex items-center justify-end transition-all duration-300 ease-in-out`}>
         {!isMobileSearchOpen ? (
           <Button
             variant="secondary"
@@ -141,7 +141,7 @@ export function LocationSearch({
             <Search size={18} />
           </Button>
         ) : (
-          <div className="relative flex-grow flex items-center">
+          <div className="relative flex items-center w-60 sm:w-72">
             <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
             <input
               ref={inputRef}
