@@ -12,6 +12,11 @@ Code Style and Structure
   - Use descriptive variable names with auxiliary verbs (e.g., isLoading, hasError).
   - Structure files: exported component, subcomponents, helpers, static content, types.
   
+Localization
+  - All user-facing text must be managed through the `src/lib/translations.json` file and accessed using the `t()` function from `src/lib/i18n.ts`.
+  - When adding new text, ensure translations are provided for all supported languages (English, Dutch, French, German).
+  - Use clear and concise keys in `translations.json`, following a `componentName.elementName.description` or similar hierarchical pattern (e.g., `sidebar.button.saveRoute`).
+  
 Naming Conventions
   - Use lowercase with dashes for directories (e.g., components/auth-wizard).
   - Favor named exports for components.
