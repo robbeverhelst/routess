@@ -1,4 +1,5 @@
 import pako from 'pako';
+import { Logger } from '@/lib/logger';
 import type { Coordinate } from '@/types/map';
 
 interface RouteShareData {

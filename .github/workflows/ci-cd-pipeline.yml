@@ -28,6 +28,12 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
         
+      - name: Run linting
+        run: turbo run lint
+        
+      - name: Run type checking
+        run: turbo run check-types
+        
       - name: Run tests
         run: bun test || echo "No tests configured yet"
 
@@ -51,23 +57,25 @@ jobs:
         run: |
           echo "VITE_MAPBOX_ACCESS_TOKEN secret is present: ${{ secrets.VITE_MAPBOX_ACCESS_TOKEN != '' }}"
 
-      - name: Build application
-        env:
-          VITE_MAPBOX_ACCESS_TOKEN: ${{ secrets.VITE_MAPBOX_ACCESS_TOKEN }}
-        run: bun vite build
+      - name: Create .env file
+        run: |
+          echo "VITE_MAPBOX_ACCESS_TOKEN=${{ secrets.VITE_MAPBOX_ACCESS_TOKEN }}" > .env
+
+      - name: Build application with Turbo
+        run: turbo run build
         
       - name: Verify token in built files
         run: |
-          echo "Listing JS files in dist/assets:"
-          ls -l dist/assets/*.js || echo "No JS files found in dist/assets"
+          echo "Listing JS files in apps/web/dist/assets:"
+          ls -l apps/web/dist/assets/*.js || echo "No JS files found in apps/web/dist/assets"
           echo "Grepping for Mapbox token prefix 'pk.eyJ1' in JS files..."
-          grep -r 'pk.eyJ1' dist/assets || echo "Token prefix not found in dist/assets (grep exit code $?)"
+          grep -r 'pk.eyJ1' apps/web/dist/assets || echo "Token prefix not found in apps/web/dist/assets (grep exit code $?)"
           
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: build-files
-          path: dist/
+          path: apps/web/dist/
           
   release:
     name: Create Release
@@ -205,7 +213,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: build-files
-          path: dist
+          path: apps/web/dist
           
       - name: Login to GitHub Container Registry
         if: github.event_name != 'pull_request'
@@ -219,6 +227,10 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '18'
+
+      - name: Create .env file for Docker build
+        run: |
+          echo "VITE_MAPBOX_ACCESS_TOKEN=${{ secrets.VITE_MAPBOX_ACCESS_TOKEN }}" > .env
           
       - name: Extract metadata for Docker
         id: metadata
@@ -243,6 +255,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: .
+          file: apps/web/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.metadata.outputs.tags }}

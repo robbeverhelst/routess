@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { Logger } from '@/lib/logger';
 // import type { Map } from 'mapbox-gl'; // Removed unused import
 
 // Assuming updateUserLocationPoint is now a standalone utility or part of a map service
