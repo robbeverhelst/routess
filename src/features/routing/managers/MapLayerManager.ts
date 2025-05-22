@@ -194,44 +194,51 @@ export const initializeSourcesAndLayers = (map: MapboxMap): void => {
     });
   }
 
+  // Kilometre Markers
+  // Ensure the source exists
   if (!map.getSource(KM_MARKERS_SOURCE_ID)) {
     map.addSource(KM_MARKERS_SOURCE_ID, {
       type: 'geojson',
       data: { type: 'FeatureCollection', features: [] }
     });
-    map.addLayer({
-      id: KM_MARKERS_LAYER_ID,
-      type: 'symbol',
-      source: KM_MARKERS_SOURCE_ID,
-      layout: {
-        'text-field': ['get', 'km'], // Assumes 'km' property on feature provides the label text
-        'text-size': 12,
-        'text-offset': [0, -1.5],
-        'text-anchor': 'bottom',
-        'icon-image': 'circle-11', // Standard Mapbox icon
-        'icon-size': 0.75,
-        'icon-allow-overlap': true, // Kept true; filtering logic primarily controls density
-        'text-allow-overlap': true  // Kept true for the same reason
-      },
-      paint: {
-        'text-color': '#000',
-        'text-halo-color': '#fff',
-        'text-halo-width': 2
-      },
-      // Filter to control marker visibility based on zoom level and markerType.
-      // Features must have a 'markerType' property ('major', 'medium', 'minor').
-      filter: [
-        'all',
-        ['>=', ['zoom'], KM_MARKER_VISIBILITY_CONFIG.minZoomToShowAny],
-        [
-          'any',
-          ['all', ['==', ['get', 'markerType'], 'major'], ['>=', ['zoom'], KM_MARKER_VISIBILITY_CONFIG.majorMarkerMinZoom]],
-          ['all', ['==', ['get', 'markerType'], 'medium'], ['>=', ['zoom'], KM_MARKER_VISIBILITY_CONFIG.mediumMarkerMinZoom]],
-          ['all', ['==', ['get', 'markerType'], 'minor'], ['>=', ['zoom'], KM_MARKER_VISIBILITY_CONFIG.minorMarkerMinZoom]]
-        ]
-      ]
-    });
   }
+
+  // Remove the layer if it already exists to ensure style updates
+  if (map.getLayer(KM_MARKERS_LAYER_ID)) {
+    map.removeLayer(KM_MARKERS_LAYER_ID);
+  }
+  // Add the kilometer markers layer with the updated styling
+  map.addLayer({
+    id: KM_MARKERS_LAYER_ID,
+    type: 'symbol',
+    source: KM_MARKERS_SOURCE_ID,
+    layout: {
+      'text-field': ['get', 'km'],
+      'text-font': ['Open Sans Semibold', 'Arial Unicode MS Bold'], // Use a clear, slightly bold font
+      'text-size': 11, // Balanced text size
+      'text-anchor': 'bottom', // Anchor text at its bottom
+      'text-offset': [0, -0.75], // Offset text 0.75em upwards from the point
+      'text-allow-overlap': true, // Allow text to overlap if necessary (density controlled by filters)
+      'text-ignore-placement': false, // Default, let Mapbox attempt to avoid collisions first
+      'symbol-placement': 'point', // Markers are points
+    },
+    paint: {
+      'text-color': '#FFFFFF', // White text for good contrast
+      'text-halo-color': 'rgba(0, 0, 0, 0.8)', // Strong dark halo (black, 80% opacity)
+      'text-halo-width': 1.2, // Crisp halo width
+      'text-halo-blur': 0, // No blur for sharp edges
+    },
+    filter: [
+      'all',
+      ['>=', ['zoom'], KM_MARKER_VISIBILITY_CONFIG.minZoomToShowAny],
+      [
+        'any',
+        ['all', ['==', ['get', 'markerType'], 'major'], ['>=', ['zoom'], KM_MARKER_VISIBILITY_CONFIG.majorMarkerMinZoom]],
+        ['all', ['==', ['get', 'markerType'], 'medium'], ['>=', ['zoom'], KM_MARKER_VISIBILITY_CONFIG.mediumMarkerMinZoom]],
+        ['all', ['==', ['get', 'markerType'], 'minor'], ['>=', ['zoom'], KM_MARKER_VISIBILITY_CONFIG.minorMarkerMinZoom]]
+      ]
+    ]
+  });
 
   if (!map.getSource(TEMP_DRAG_LINES_SOURCE_ID)) {
     map.addSource(TEMP_DRAG_LINES_SOURCE_ID, {
