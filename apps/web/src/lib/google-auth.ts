@@ -167,6 +167,24 @@ class GoogleAuthService {
 // Export singleton instance
 export const googleAuth = new GoogleAuthService();
 
+// Google Identity Services button configuration interface
+interface GoogleButtonConfig {
+  theme?: 'outline' | 'filled_blue' | 'filled_black';
+  size?: 'large' | 'medium' | 'small';
+  type?: 'standard' | 'icon';
+  shape?: 'rectangular' | 'pill' | 'circle' | 'square';
+  text?: 'signin_with' | 'signup_with' | 'continue_with' | 'signin';
+  logo_alignment?: 'left' | 'center';
+  width?: string;
+  locale?: string;
+}
+
+// Google OAuth token client interface
+interface GoogleTokenClient {
+  callback: (response: { access_token: string }) => void;
+  requestAccessToken: () => void;
+}
+
 // Declare global Google Identity Services types for TypeScript
 declare global {
   interface Window {
@@ -180,7 +198,7 @@ declare global {
             cancel_on_tap_outside?: boolean;
           }) => void;
           prompt: () => void;
-          renderButton: (element: HTMLElement, config: any) => void;
+          renderButton: (element: HTMLElement, config: GoogleButtonConfig) => void;
           disableAutoSelect: () => void;
         };
         oauth2: {
@@ -188,7 +206,7 @@ declare global {
             client_id: string;
             scope: string;
             callback: (response: { access_token: string }) => void;
-          }) => any;
+          }) => GoogleTokenClient;
           revoke: (token: string, callback?: () => void) => void;
         };
       };
