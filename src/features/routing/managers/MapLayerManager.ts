@@ -52,14 +52,14 @@ export const initializeSourcesAndLayers = (map: MapboxMap): void => {
       type: 'line',
       source: ROUTE_SOURCE_ID,
       layout: { 'line-join': 'round', 'line-cap': 'round' },
-      paint: { 'line-color': '#003366', 'line-width': 6, 'line-opacity': 0.2 }
+      paint: { 'line-color': '#003366', 'line-width': 6, 'line-opacity': 0.2, 'line-emissive-strength': 1 }
     });
     map.addLayer({
       id: ROUTE_HOVER_LAYER_ID,
       type: 'line',
       source: ROUTE_SOURCE_ID,
       layout: { 'line-join': 'round', 'line-cap': 'round' },
-      paint: { 'line-color': '#000', 'line-width': 12, 'line-opacity': 0 }
+      paint: { 'line-color': '#000', 'line-width': 12, 'line-opacity': 0, 'line-emissive-strength': 1 }
     });
     map.addLayer({
       id: ROUTE_LAYER_ID,
@@ -79,7 +79,8 @@ export const initializeSourcesAndLayers = (map: MapboxMap): void => {
           ['boolean', ['feature-state', 'hover'], false],
           6, // Wider line on hover
           3  // Default width
-        ]
+        ],
+        'line-emissive-strength': 1 // Make line color ignore map lighting
       }
     });
 

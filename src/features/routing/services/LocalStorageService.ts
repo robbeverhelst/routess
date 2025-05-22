@@ -1,5 +1,6 @@
 import type { Coordinate } from '@/types/map';
 import { Logger } from '@/lib/logger';
+import type { TimeOfDay } from '@/components/ui/route-controls';
 
 // Data structure stored in local storage
 interface StoredRouteData {
@@ -87,4 +88,34 @@ export const loadMapLockStateFromLocalStorage = (): boolean => {
     Logger.error('[LocalStorageService] Error loading map lock state:', error);
     return false; // Default to false (unlocked) on error
   }
-}; 
+};
+
+// --- Light Preset (Time of Day) --- //
+const LIGHT_PRESET_KEY = 'mapLightPreset';
+
+export function loadLightPresetFromLocalStorage(): TimeOfDay | null {
+  try {
+    const storedPreset = localStorage.getItem(LIGHT_PRESET_KEY);
+    if (storedPreset) {
+      // Basic validation if it's one of the known TimeOfDay values
+      const knownPresets: TimeOfDay[] = ['dawn', 'day', 'dusk', 'night'];
+      if (knownPresets.includes(storedPreset as TimeOfDay)) {
+        return storedPreset as TimeOfDay;
+      }
+      Logger.warn('[LocalStorageService] Invalid light preset found in localStorage:', storedPreset);
+      localStorage.removeItem(LIGHT_PRESET_KEY); // Clear invalid entry
+    }
+    return null;
+  } catch (error) {
+    Logger.error('[LocalStorageService] Error loading light preset from localStorage:', error);
+    return null;
+  }
+}
+
+export function saveLightPresetToLocalStorage(preset: TimeOfDay): void {
+  try {
+    localStorage.setItem(LIGHT_PRESET_KEY, preset);
+  } catch (error) {
+    Logger.error('[LocalStorageService] Error saving light preset to localStorage:', error);
+  }
+} 
