@@ -1325,11 +1325,11 @@ export default function MapWithRouting({
         </div>
       )}
 
-      {/* Custom Distance Box - Bottom Left */}
+      {/* Custom Distance Box - Consistently Bottom Right */}
       {hasRoute && routeDistance && (
-        <div className="absolute bottom-16 left-8 z-10 bg-white/20 text-black p-4 rounded-md shadow-md backdrop-blur-sm flex items-baseline gap-0.5">
-          <span className="text-5xl font-bold">{routeDistance.split(' ')[0]}</span>
-          <span className="text-base">{routeDistance.split(' ')[1]}</span>
+        <div className="absolute bottom-8 right-8 z-10 bg-white/25 dark:bg-neutral-800/30 text-neutral-700 dark:text-neutral-200 p-3 rounded-lg shadow-lg backdrop-blur-md flex items-baseline gap-0.5 w-auto">
+          <span className="text-4xl font-bold">{routeDistance.split(' ')[0]}</span>
+          <span className="text-sm">{routeDistance.split(' ')[1]}</span>
         </div>
       )}
 
