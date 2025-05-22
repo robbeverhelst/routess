@@ -55,10 +55,20 @@ const addKilometerMarkers = (map: MapboxMap, coordinates: Coordinate[]) => {
       const segmentFraction = (nextKmMarker - distanceCovered) / segmentDistance;
       const markerLng = start[0] + segmentFraction * (end[0] - start[0]);
       const markerLat = start[1] + segmentFraction * (end[1] - start[1]);
+      
+      let markerType: 'major' | 'medium' | 'minor';
+      if (nextKmMarker % 10 === 0) {
+        markerType = 'major';
+      } else if (nextKmMarker % 5 === 0) {
+        markerType = 'medium';
+      } else {
+        markerType = 'minor';
+      }
+
       kmMarkerFeatures.push({
         type: 'Feature' as const,
         geometry: { type: 'Point' as const, coordinates: [markerLng, markerLat] },
-        properties: { km: `${nextKmMarker} km` }
+        properties: { km: `${nextKmMarker} km`, markerType: markerType }
       });
       nextKmMarker++;
     }

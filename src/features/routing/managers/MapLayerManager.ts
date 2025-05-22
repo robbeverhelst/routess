@@ -17,6 +17,16 @@ export const ROUTE_CASING_LAYER_ID = 'route-casing';
 export const WAYPOINTS_SHADOW_LAYER_ID = 'waypoints-shadow';
 export const ROUTE_ARROWS_LAYER_ID = 'route-arrows';
 
+// Configuration for kilometer marker visibility based on zoom levels.
+// Assumes GeoJSON features for markers will have a 'markerType' property
+// ('major', 'medium', 'minor').
+const KM_MARKER_VISIBILITY_CONFIG = {
+  minZoomToShowAny: 8,    // Zoom level below which no km markers are shown.
+  majorMarkerMinZoom: 8,  // Zoom level from which 'major' (e.g., multiples of 10km) markers are shown.
+  mediumMarkerMinZoom: 10, // Zoom level from which 'medium' (e.g., multiples of 5km) markers are shown.
+  minorMarkerMinZoom: 12   // Zoom level from which 'minor' (e.g., 1km, 2km) markers are shown.
+};
+
 export const initializeSourcesAndLayers = (map: MapboxMap): void => {
   if (!map.getSource(ROUTE_SOURCE_ID)) {
     map.addSource(ROUTE_SOURCE_ID, {
@@ -163,8 +173,33 @@ export const initializeSourcesAndLayers = (map: MapboxMap): void => {
       id: KM_MARKERS_LAYER_ID,
       type: 'symbol',
       source: KM_MARKERS_SOURCE_ID,
-      layout: { 'text-field': ['get', 'km'], 'text-size': 12, 'text-offset': [0, -1.5], 'text-anchor': 'bottom', 'icon-image': 'circle-11', 'icon-size': 0.75, 'icon-allow-overlap': true, 'text-allow-overlap': true },
-      paint: { 'text-color': '#000', 'text-halo-color': '#fff', 'text-halo-width': 2 }
+      layout: {
+        'text-field': ['get', 'km'], // Assumes 'km' property on feature provides the label text
+        'text-size': 12,
+        'text-offset': [0, -1.5],
+        'text-anchor': 'bottom',
+        'icon-image': 'circle-11', // Standard Mapbox icon
+        'icon-size': 0.75,
+        'icon-allow-overlap': true, // Kept true; filtering logic primarily controls density
+        'text-allow-overlap': true  // Kept true for the same reason
+      },
+      paint: {
+        'text-color': '#000',
+        'text-halo-color': '#fff',
+        'text-halo-width': 2
+      },
+      // Filter to control marker visibility based on zoom level and markerType.
+      // Features must have a 'markerType' property ('major', 'medium', 'minor').
+      filter: [
+        'all',
+        ['>=', ['zoom'], KM_MARKER_VISIBILITY_CONFIG.minZoomToShowAny],
+        [
+          'any',
+          ['all', ['==', ['get', 'markerType'], 'major'], ['>=', ['zoom'], KM_MARKER_VISIBILITY_CONFIG.majorMarkerMinZoom]],
+          ['all', ['==', ['get', 'markerType'], 'medium'], ['>=', ['zoom'], KM_MARKER_VISIBILITY_CONFIG.mediumMarkerMinZoom]],
+          ['all', ['==', ['get', 'markerType'], 'minor'], ['>=', ['zoom'], KM_MARKER_VISIBILITY_CONFIG.minorMarkerMinZoom]]
+        ]
+      ]
     });
   }
 
