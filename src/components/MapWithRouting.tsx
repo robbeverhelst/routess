@@ -69,7 +69,9 @@ import {
   loadMapLockStateFromLocalStorage, 
   saveMapLockStateToLocalStorage,
   loadLightPresetFromLocalStorage,
-  saveLightPresetToLocalStorage
+  saveLightPresetToLocalStorage,
+  loadLastMapViewFromLocalStorage,
+  saveLastMapViewToLocalStorage
 } from '@/features/routing/services/LocalStorageService';
 
 interface MapboxMapProps {
@@ -78,6 +80,7 @@ interface MapboxMapProps {
     latitude: number;
     zoom: number;
     bearing?: number;
+    pitch?: number;
   };
   width?: string | number;
   height?: string | number;
@@ -88,7 +91,8 @@ const DEFAULT_VIEW_STATE = {
   longitude: 10.5,
   latitude: 51.2,
   zoom: 4,
-  bearing: 0
+  bearing: 0,
+  pitch: 0
 };
 
 // Synchronously check localStorage for waypoints at the time of component initialization
@@ -120,6 +124,9 @@ try {
 } catch (e) {
   Logger.error('[MapWithRouting Init] Error reading lastKnownLocation from localStorage on init:', e);
 }
+
+// Try to load the last map view from localStorage first
+const lastSavedMapView = loadLastMapViewFromLocalStorage();
 
 // Define route colors for day and night modes
 const DAY_ROUTE_COLOR = '#3887be';
@@ -285,23 +292,27 @@ export default function MapWithRouting({
 
   // Use user location for initial view state if available, 
   // UNLESS a route was detected in localStorage at component initialization.
-  const effectiveInitialViewState = detectedRouteInLocalStorageOnInit
+  const effectiveInitialViewState = 
+    lastSavedMapView ? { ...lastSavedMapView } :
+    detectedRouteInLocalStorageOnInit
     ? DEFAULT_VIEW_STATE 
     : userLocation
     ? {
         longitude: userLocation[0],
         latitude: userLocation[1],
         zoom: 15,
-        bearing: initialViewState.bearing ?? 0
+        bearing: initialViewState.bearing ?? 0,
+        pitch: 45
       }
     : lastKnownLocationFromStorage 
     ? {
         longitude: lastKnownLocationFromStorage[0],
         latitude: lastKnownLocationFromStorage[1],
         zoom: 14,
-        bearing: initialViewState.bearing ?? 0
+        bearing: initialViewState.bearing ?? 0,
+        pitch: 30
       }
-    : initialViewState; // Fallback to prop or default (which includes bearing)
+    : initialViewState; // Fallback to prop or default (which includes bearing and pitch)
 
   // Show waypoint error message
   const handleWaypointError = useCallback((message: string | null) => {
@@ -331,6 +342,39 @@ export default function MapWithRouting({
       isMapLockedRef
     );
     routingDisposerRef.current = disposer;
+
+    // Apply light preset immediately
+    mapRef.current.setConfigProperty('basemap', 'lightPreset', currentLightPreset);
+    // Apply initial colors based on the preset immediately
+    const isDarkMode = currentLightPreset === 'dusk' || currentLightPreset === 'night';
+    if (mapRef.current.getLayer(ROUTE_LAYER_ID)) {
+        mapRef.current.setPaintProperty(ROUTE_LAYER_ID, 'line-color', [
+            'case',
+            ['boolean', ['feature-state', 'hover'], false],
+            isDarkMode ? NIGHT_ROUTE_HOVER_COLOR : DAY_ROUTE_HOVER_COLOR,
+            isDarkMode ? NIGHT_ROUTE_COLOR : DAY_ROUTE_COLOR
+        ]);
+    }
+    if (mapRef.current.getLayer(ROUTE_CASING_LAYER_ID)) {
+        mapRef.current.setPaintProperty(ROUTE_CASING_LAYER_ID, 'line-color', isDarkMode ? NIGHT_ROUTE_CASING_COLOR : DAY_ROUTE_CASING_COLOR);
+        mapRef.current.setPaintProperty(ROUTE_CASING_LAYER_ID, 'line-opacity', isDarkMode ? NIGHT_ROUTE_CASING_OPACITY : DAY_ROUTE_CASING_OPACITY);
+    }
+    if (mapRef.current.getLayer(WAYPOINTS_LAYER_ID)) {
+      mapRef.current.setPaintProperty(WAYPOINTS_LAYER_ID, 'circle-color', [
+        'match',
+        ['get', 'pointType'],
+        'start', isDarkMode ? NIGHT_WAYPOINT_START_COLOR : DAY_WAYPOINT_START_COLOR,
+        'end', isDarkMode ? NIGHT_WAYPOINT_END_COLOR : DAY_WAYPOINT_END_COLOR,
+        'direct', isDarkMode ? NIGHT_WAYPOINT_DIRECT_COLOR : DAY_WAYPOINT_DIRECT_COLOR,
+        isDarkMode ? NIGHT_WAYPOINT_DEFAULT_COLOR : DAY_WAYPOINT_DEFAULT_COLOR
+      ]);
+      mapRef.current.setPaintProperty(WAYPOINTS_LAYER_ID, 'circle-stroke-color', isDarkMode ? NIGHT_WAYPOINT_STROKE_COLOR : DAY_WAYPOINT_STROKE_COLOR);
+    }
+    if (mapRef.current.getLayer(ROUTE_ARROWS_LAYER_ID)) {
+      mapRef.current.setPaintProperty(ROUTE_ARROWS_LAYER_ID, 'text-color', isDarkMode ? NIGHT_ROUTE_ARROW_TEXT_COLOR : DAY_ROUTE_ARROW_TEXT_COLOR);
+      mapRef.current.setPaintProperty(ROUTE_ARROWS_LAYER_ID, 'text-halo-color', isDarkMode ? NIGHT_ROUTE_ARROW_HALO_COLOR : DAY_ROUTE_ARROW_HALO_COLOR);
+    }
+
     setIsMapReady(true);
     
     // If we detected a route in localStorage, make sure isRouteCoordsReady gets set
@@ -871,6 +915,32 @@ export default function MapWithRouting({
     saveLightPresetToLocalStorage(currentLightPreset);
   }, [currentLightPreset]);
 
+  // Effect to save map view state on moveend
+  useEffect(() => {
+    if (!mapRef.current) return;
+
+    const handleMoveEnd = () => {
+      if (mapRef.current) {
+        const currentView = {
+          longitude: mapRef.current.getCenter().lng,
+          latitude: mapRef.current.getCenter().lat,
+          zoom: mapRef.current.getZoom(),
+          bearing: mapRef.current.getBearing(),
+          pitch: mapRef.current.getPitch(),
+        };
+        saveLastMapViewToLocalStorage(currentView);
+      }
+    };
+
+    mapRef.current.on('moveend', handleMoveEnd);
+
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.off('moveend', handleMoveEnd);
+      }
+    };
+  }, [isMapReady]); // Re-bind if map becomes ready again, though typically only once.
+
   const handleToggleLock = useCallback(() => {
     setIsMapLocked(prev => {
       const newLockedState = !prev;
@@ -943,40 +1013,14 @@ export default function MapWithRouting({
   // Or, if you prefer, set it once handleMapLoad has confirmed map readiness.
   useEffect(() => {
     if (mapRef.current && isMapReady) { // Ensure map is ready
-        const map = mapRef.current;
-        map.setConfigProperty('basemap', 'lightPreset', currentLightPreset);
-        // Also apply initial route colors based on the initial light preset
-        const isDarkMode = currentLightPreset === 'dusk' || currentLightPreset === 'night';
-        if (map.getLayer(ROUTE_LAYER_ID)) {
-            map.setPaintProperty(ROUTE_LAYER_ID, 'line-color', [
-                'case',
-                ['boolean', ['feature-state', 'hover'], false],
-                isDarkMode ? NIGHT_ROUTE_HOVER_COLOR : DAY_ROUTE_HOVER_COLOR,
-                isDarkMode ? NIGHT_ROUTE_COLOR : DAY_ROUTE_COLOR
-            ]);
-        }
-        if (map.getLayer(ROUTE_CASING_LAYER_ID)) {
-            map.setPaintProperty(ROUTE_CASING_LAYER_ID, 'line-color', isDarkMode ? NIGHT_ROUTE_CASING_COLOR : DAY_ROUTE_CASING_COLOR);
-            map.setPaintProperty(ROUTE_CASING_LAYER_ID, 'line-opacity', isDarkMode ? NIGHT_ROUTE_CASING_OPACITY : DAY_ROUTE_CASING_OPACITY);
-        }
-        // Update waypoint colors
-        if (map.getLayer(WAYPOINTS_LAYER_ID)) {
-          map.setPaintProperty(WAYPOINTS_LAYER_ID, 'circle-color', [
-            'match',
-            ['get', 'pointType'],
-            'start', isDarkMode ? NIGHT_WAYPOINT_START_COLOR : DAY_WAYPOINT_START_COLOR,
-            'end', isDarkMode ? NIGHT_WAYPOINT_END_COLOR : DAY_WAYPOINT_END_COLOR,
-            'direct', isDarkMode ? NIGHT_WAYPOINT_DIRECT_COLOR : DAY_WAYPOINT_DIRECT_COLOR,
-            isDarkMode ? NIGHT_WAYPOINT_DEFAULT_COLOR : DAY_WAYPOINT_DEFAULT_COLOR // intermediate/other
-          ]);
-          map.setPaintProperty(WAYPOINTS_LAYER_ID, 'circle-stroke-color', isDarkMode ? NIGHT_WAYPOINT_STROKE_COLOR : DAY_WAYPOINT_STROKE_COLOR);
-        }
-
-        // Update route arrow colors
-        if (map.getLayer(ROUTE_ARROWS_LAYER_ID)) {
-          map.setPaintProperty(ROUTE_ARROWS_LAYER_ID, 'text-color', isDarkMode ? NIGHT_ROUTE_ARROW_TEXT_COLOR : DAY_ROUTE_ARROW_TEXT_COLOR);
-          map.setPaintProperty(ROUTE_ARROWS_LAYER_ID, 'text-halo-color', isDarkMode ? NIGHT_ROUTE_ARROW_HALO_COLOR : DAY_ROUTE_ARROW_HALO_COLOR);
-        }
+        // const map = mapRef.current; // map is already mapRef.current
+        // map.setConfigProperty('basemap', 'lightPreset', currentLightPreset); // Moved to handleMapLoad
+        // Also apply initial route colors based on the initial light preset // Moved to handleMapLoad
+        // const isDarkMode = currentLightPreset === 'dusk' || currentLightPreset === 'night';
+        // if (map.getLayer(ROUTE_LAYER_ID)) { ... } // Moved
+        // if (map.getLayer(ROUTE_CASING_LAYER_ID)) { ... } // Moved
+        // if (map.getLayer(WAYPOINTS_LAYER_ID)) { ... } // Moved
+        // if (map.getLayer(ROUTE_ARROWS_LAYER_ID)) { ... } // Moved
     }
   }, [isMapReady, currentLightPreset]); // Rerun if currentLightPreset changes (e.g. initial load) or map becomes ready
 
@@ -1103,12 +1147,8 @@ export default function MapWithRouting({
         mapboxAccessToken={MAPBOX_TOKEN}
         initialViewState={{
           ...effectiveInitialViewState,
-          pitch: 45,
-          bearing: currentBearing,
-          zoom:
-  typeof effectiveInitialViewState.zoom === 'number'
-    ? effectiveInitialViewState.zoom + 3
-    : 7      // sensible default
+          pitch: effectiveInitialViewState.pitch ?? 45,
+          bearing: effectiveInitialViewState.bearing ?? currentBearing,
         }}
         style={{ width, height }}
         mapStyle="mapbox://styles/mapbox/standard"

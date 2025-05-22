@@ -118,4 +118,49 @@ export function saveLightPresetToLocalStorage(preset: TimeOfDay): void {
   } catch (error) {
     Logger.error('[LocalStorageService] Error saving light preset to localStorage:', error);
   }
+}
+
+// --- Map View State --- //
+const LAST_MAP_VIEW_KEY = 'mapLastView';
+
+export interface MapViewState {
+  longitude: number;
+  latitude: number;
+  zoom: number;
+  bearing: number;
+  pitch: number;
+}
+
+export function loadLastMapViewFromLocalStorage(): MapViewState | null {
+  try {
+    const storedView = localStorage.getItem(LAST_MAP_VIEW_KEY);
+    if (storedView) {
+      const parsedView = JSON.parse(storedView) as MapViewState;
+      // Basic validation
+      if (
+        parsedView &&
+        typeof parsedView.longitude === 'number' &&
+        typeof parsedView.latitude === 'number' &&
+        typeof parsedView.zoom === 'number' &&
+        typeof parsedView.bearing === 'number' &&
+        typeof parsedView.pitch === 'number'
+      ) {
+        return parsedView;
+      }
+      Logger.warn('[LocalStorageService] Invalid map view state found in localStorage:', parsedView);
+      localStorage.removeItem(LAST_MAP_VIEW_KEY); // Clear invalid entry
+    }
+    return null;
+  } catch (error) {
+    Logger.error('[LocalStorageService] Error loading map view state from localStorage:', error);
+    return null;
+  }
+}
+
+export function saveLastMapViewToLocalStorage(viewState: MapViewState): void {
+  try {
+    localStorage.setItem(LAST_MAP_VIEW_KEY, JSON.stringify(viewState));
+  } catch (error) {
+    Logger.error('[LocalStorageService] Error saving map view state to localStorage:', error);
+  }
 } 
