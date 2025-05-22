@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Map } from 'mapbox-gl';
 import { Button } from '@/components/ui/button';
+import { t, type SupportedLanguage } from "@/lib/i18n";
 
 export interface PopupInfo {
   longitude: number;
@@ -16,6 +17,7 @@ interface MapPopupProps {
   onAddDirectWaypoint: () => void;
   onRemoveWaypoint: () => void;
   onAddWaypointOnRoute: () => void;
+  currentLanguage: SupportedLanguage;
   // onShowInfo: (message: string) => void; // If we want to handle info popups more actively
 }
 
@@ -25,6 +27,7 @@ export const MapPopup: React.FC<MapPopupProps> = ({
   onAddDirectWaypoint,
   onRemoveWaypoint,
   onAddWaypointOnRoute,
+  currentLanguage,
 }) => {
   if (!popupInfo) return null;
 
@@ -46,7 +49,7 @@ export const MapPopup: React.FC<MapPopupProps> = ({
             className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
             onClick={onAddDirectWaypoint}
           >
-            Add direct waypoint
+            {t('mapPopup.button.addDirectWaypoint', currentLanguage)}
           </Button>
         </div>
       )}
@@ -59,7 +62,7 @@ export const MapPopup: React.FC<MapPopupProps> = ({
             onClick={onRemoveWaypoint}
           >
             <span className="text-lg">🗑️</span>
-            <span>Remove point</span>
+            <span>{t('mapPopup.button.removePoint', currentLanguage)}</span>
           </Button>
         </div>
       )}
@@ -71,7 +74,7 @@ export const MapPopup: React.FC<MapPopupProps> = ({
             className="text-green-600 hover:text-green-800 hover:bg-green-50"
             onClick={onAddWaypointOnRoute}
           >
-            Add waypoint here
+            {t('mapPopup.button.addWaypointHere', currentLanguage)}
           </Button>
         </div>
       )}

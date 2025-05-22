@@ -11,6 +11,7 @@ import {
   ArrowUp, ArrowDown, ArrowLeft, ArrowRight, ArrowRightLeft, // Added ArrowRightLeft
   Plus, Minus, Share2, Maximize // Added Plus and Minus icons for zoom, Added Share2, Added Maximize for Zoom to Route
 } from "lucide-react";
+import { t, type SupportedLanguage } from '@/lib/i18n'; // Added
 
 // Define TimeOfDay type locally
 export type TimeOfDay = 'dawn' | 'day' | 'dusk' | 'night';
@@ -37,6 +38,7 @@ interface RouteControlsProps {
   onZoomOut: () => void; // New prop for zoom out
   onCopyShareLink: () => void; // New prop for copying share link
   onZoomToRoute: () => void; // New prop for zooming to route
+  currentLanguage: SupportedLanguage; // Added
 }
 
 // Helper to get the icon component based on TimeOfDay
@@ -51,19 +53,19 @@ const getIconForTimeOfDay = (time: TimeOfDay): React.ElementType => {
 };
 
 // Helper to get icon and label for current map orientation
-const getOrientationIconAndLabel = (bearing: number): { Icon: React.ElementType; label: string; title: string } => {
+const getOrientationIconAndLabel = (bearing: number, lang: SupportedLanguage): { Icon: React.ElementType; label: string; title: string } => {
   const normalizedBearing = ((bearing % 360) + 360) % 360;
   if (normalizedBearing >= 315 || normalizedBearing < 45) { // North (0 or 360)
-    return { Icon: ArrowUp, label: "N", title: "North Up" };
+    return { Icon: ArrowUp, label: "N", title: t('routeControls.orientation.north', lang) };
   }
   if (normalizedBearing >= 45 && normalizedBearing < 135) { // East (90)
-    return { Icon: ArrowRight, label: "E", title: "East Up" };
+    return { Icon: ArrowRight, label: "E", title: t('routeControls.orientation.east', lang) };
   }
   if (normalizedBearing >= 135 && normalizedBearing < 225) { // South (180)
-    return { Icon: ArrowDown, label: "S", title: "South Up" };
+    return { Icon: ArrowDown, label: "S", title: t('routeControls.orientation.south', lang) };
   }
   // West (270)
-  return { Icon: ArrowLeft, label: "W", title: "West Up" };
+  return { Icon: ArrowLeft, label: "W", title: t('routeControls.orientation.west', lang) };
 };
 
 export function RouteControls({
@@ -87,21 +89,22 @@ export function RouteControls({
   onZoomIn,
   onZoomOut,
   onCopyShareLink,
-  onZoomToRoute
+  onZoomToRoute,
+  currentLanguage // Destructure new prop
 }: RouteControlsProps) {
   const TimeOfDayIcon = getIconForTimeOfDay(currentTimeOfDay);
-  const { Icon: OrientationIcon, title: orientationTitle } = getOrientationIconAndLabel(currentBearing);
+  const { Icon: OrientationIcon, title: orientationTitle } = getOrientationIconAndLabel(currentBearing, currentLanguage);
 
   const isLocateButtonDisabled = !canLocateCurrent && !canLocateLastKnown;
   
-  let locateTooltipText = "Location not available";
+  let locateTooltipText = t('routeControls.locate.notAvailable', currentLanguage);
   let locateDotColorClass = "bg-red-500"; // Default to red dot if disabled
 
   if (canLocateCurrent) {
-    locateTooltipText = "Center on my current location";
+    locateTooltipText = t('routeControls.locate.current', currentLanguage);
     // No dot needed when current location is active, icon itself will be blue
   } else if (canLocateLastKnown) {
-    locateTooltipText = "Center on last known location";
+    locateTooltipText = t('routeControls.locate.lastKnown', currentLanguage);
     locateDotColorClass = "bg-orange-500"; // Orange dot for last known
   }
 
@@ -120,7 +123,7 @@ export function RouteControls({
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Undo</p>
+            <p>{t('routeControls.tooltip.undo', currentLanguage)}</p>
           </TooltipContent>
         </Tooltip>
         
@@ -136,7 +139,7 @@ export function RouteControls({
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Redo</p>
+            <p>{t('routeControls.tooltip.redo', currentLanguage)}</p>
           </TooltipContent>
         </Tooltip>
         
@@ -152,7 +155,7 @@ export function RouteControls({
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Reverse route</p>
+            <p>{t('routeControls.tooltip.reverseRoute', currentLanguage)}</p>
           </TooltipContent>
         </Tooltip>
         
@@ -168,7 +171,7 @@ export function RouteControls({
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Reset route</p>
+            <p>{t('routeControls.tooltip.resetRoute', currentLanguage)}</p>
           </TooltipContent>
         </Tooltip>
         
@@ -184,7 +187,7 @@ export function RouteControls({
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Generate custom route</p>
+            <p>{t('routeControls.tooltip.generateRoute', currentLanguage)}</p>
           </TooltipContent>
         </Tooltip>
 
@@ -203,7 +206,7 @@ export function RouteControls({
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>{isLocked ? "Unlock map interaction" : "Lock map interaction"}</p>
+            <p>{isLocked ? t('routeControls.tooltip.unlockMap', currentLanguage) : t('routeControls.tooltip.lockMap', currentLanguage)}</p>
           </TooltipContent>
         </Tooltip>
         
@@ -219,7 +222,7 @@ export function RouteControls({
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Copy share link</p>
+            <p>{t('routeControls.tooltip.copyShareLink', currentLanguage)}</p>
           </TooltipContent>
         </Tooltip>
         
@@ -235,7 +238,7 @@ export function RouteControls({
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Zoom to route</p>
+            <p>{t('routeControls.tooltip.zoomToRoute', currentLanguage)}</p>
           </TooltipContent>
         </Tooltip>
         
@@ -250,7 +253,7 @@ export function RouteControls({
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Cycle time of day (Current: {currentTimeOfDay})</p>
+            <p>{t('routeControls.tooltip.cycleTimeOfDay', currentLanguage, { time: currentTimeOfDay })}</p>
           </TooltipContent>
         </Tooltip>
         
@@ -265,7 +268,7 @@ export function RouteControls({
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Set map orientation: {orientationTitle}</p>
+            <p>{t('routeControls.tooltip.setMapOrientation', currentLanguage, { orientation: orientationTitle })}</p>
           </TooltipContent>
         </Tooltip>
 
@@ -280,7 +283,7 @@ export function RouteControls({
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Zoom In</p>
+            <p>{t('routeControls.tooltip.zoomIn', currentLanguage)}</p>
           </TooltipContent>
         </Tooltip>
 
@@ -295,7 +298,7 @@ export function RouteControls({
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Zoom Out</p>
+            <p>{t('routeControls.tooltip.zoomOut', currentLanguage)}</p>
           </TooltipContent>
         </Tooltip>
 

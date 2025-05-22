@@ -1,0 +1,584 @@
+{
+  "sidebar.currentRoute": {
+    "en": "Current Route",
+    "nl": "Huidige Route",
+    "fr": "Itinéraire Actuel",
+    "de": "Aktuelle Route"
+  },
+  "sidebar.noRouteSet": {
+    "en": "No Route Set",
+    "nl": "Geen Route Ingesteld",
+    "fr": "Aucun Itinéraire Défini",
+    "de": "Keine Route Festgelegt"
+  },
+  "sidebar.routeActions": {
+    "en": "Route Actions",
+    "nl": "Route Acties",
+    "fr": "Actions d'Itinéraire",
+    "de": "Routenaktionen"
+  },
+  "sidebar.undo": {
+    "en": "Undo",
+    "nl": "Terug",
+    "fr": "Annuler",
+    "de": "Rückgängig"
+  },
+  "sidebar.redo": {
+    "en": "Redo",
+    "nl": "Vooruit",
+    "fr": "Rétablir",
+    "de": "Wiederholen"
+  },
+  "sidebar.resetRoute": {
+    "en": "Reset Route",
+    "nl": "Route Resetten",
+    "fr": "Réinitialiser l'Itinéraire",
+    "de": "Route zurücksetzen"
+  },
+  "sidebar.reverseRoute": {
+    "en": "Reverse Route",
+    "nl": "Route Omkeren",
+    "fr": "Inverser l'Itinéraire",
+    "de": "Route umkehren"
+  },
+  "sidebar.generateRoute": {
+    "en": "Generate Route",
+    "nl": "Route Genereren",
+    "fr": "Générer l'Itinéraire",
+    "de": "Route generieren"
+  },
+  "sidebar.zoomToRoute": {
+    "en": "Zoom to Route",
+    "nl": "Zoom naar Route",
+    "fr": "Zoomer sur l'Itinéraire",
+    "de": "Zur Route zoomen"
+  },
+  "sidebar.locked": {
+    "en": "Locked",
+    "nl": "Vergrendeld",
+    "fr": "Verrouillé",
+    "de": "Gesperrt"
+  },
+  "sidebar.active": {
+    "en": "Active",
+    "nl": "Actief",
+    "fr": "Actif",
+    "de": "Aktiv"
+  },
+  "sidebar.addWaypointsHelp": {
+    "en": "Right-click on the map to add waypoints",
+    "nl": "Rechtermuisklik op de kaart om waypoints toe te voegen",
+    "fr": "Clic droit sur la carte pour ajouter des points de passage",
+    "de": "Rechtsklick auf die Karte, um Wegpunkte hinzuzufügen"
+  },
+  "sidebar.menuTitle": {
+    "en": "Main Menu and Route Controls",
+    "nl": "Hoofdmenu en Routebediening",
+    "fr": "Menu Principal et Contrôles d'Itinéraire",
+    "de": "Hauptmenü und Routensteuerung"
+  },
+  "sidebar.menuDescription": {
+    "en": "Access route history, file operations, sharing, and account settings.",
+    "nl": "Toegang tot routegeschiedenis, bestandsbewerkingen, delen en accountinstellingen.",
+    "fr": "Accédez à l'historique des itinéraires, aux opérations sur les fichiers, au partage et aux paramètres du compte.",
+    "de": "Zugriff auf Routenverlauf, Dateioperationen, Freigabe und Kontoeinstellungen."
+  },
+  "sidebar.tooltip.unlockRoute": {
+    "en": "Unlock route editing",
+    "nl": "Routebewerking ontgrendelen",
+    "fr": "Déverrouiller l'édition d'itinéraire",
+    "de": "Routenbearbeitung entsperren"
+  },
+  "sidebar.tooltip.lockRoute": {
+    "en": "Lock route editing",
+    "nl": "Routebewerking vergrendelen",
+    "fr": "Verrouiller l'édition d'itinéraire",
+    "de": "Routenbearbeitung sperren"
+  },
+  "sidebar.filesAndSharing": {
+    "en": "Files & Sharing",
+    "nl": "Bestanden & Delen",
+    "fr": "Fichiers & Partage",
+    "de": "Dateien & Teilen"
+  },
+  "sidebar.exportRoute": {
+    "en": "Export Route",
+    "nl": "Route Exporteren",
+    "fr": "Exporter l'Itinéraire",
+    "de": "Route exportieren"
+  },
+  "sidebar.saveAsGpx": {
+    "en": "Save as GPX",
+    "nl": "Opslaan als GPX",
+    "fr": "Enregistrer en GPX",
+    "de": "Als GPX speichern"
+  },
+  "sidebar.importRoute": {
+    "en": "Import Route",
+    "nl": "Route Importeren",
+    "fr": "Importer l'Itinéraire",
+    "de": "Route importieren"
+  },
+  "sidebar.fromGpx": {
+    "en": "From GPX",
+    "nl": "Van GPX",
+    "fr": "Depuis GPX",
+    "de": "Von GPX"
+  },
+  "sidebar.shareableLink": {
+    "en": "Shareable Link:",
+    "nl": "Deelbare Link:",
+    "fr": "Lien Partageable :",
+    "de": "Teilbarer Link:"
+  },
+  "sidebar.copy": {
+    "en": "Copy",
+    "nl": "Kopiëren",
+    "fr": "Copier",
+    "de": "Kopieren"
+  },
+  "sidebar.shareRoute": {
+    "en": "Share Route",
+    "nl": "Route Delen",
+    "fr": "Partager l'Itinéraire",
+    "de": "Route teilen"
+  },
+  "sidebar.createShareableLink": {
+    "en": "Create shareable link",
+    "nl": "Maak deelbare link",
+    "fr": "Créer un lien partageable",
+    "de": "Teilbaren Link erstellen"
+  },
+  "sidebar.account": {
+    "en": "Account",
+    "nl": "Account",
+    "fr": "Compte",
+    "de": "Konto"
+  },
+  "sidebar.saveCurrentRoute": {
+    "en": "Save Current Route",
+    "nl": "Huidige Route Opslaan",
+    "fr": "Enregistrer l'Itinéraire Actuel",
+    "de": "Aktuelle Route speichern"
+  },
+  "sidebar.mySavedRoutes": {
+    "en": "My Saved Routes",
+    "nl": "Mijn Opgeslagen Routes",
+    "fr": "Mes Itinéraires Enregistrés",
+    "de": "Meine gespeicherten Routen"
+  },
+  "sidebar.signOut": {
+    "en": "Sign Out",
+    "nl": "Uitloggen",
+    "fr": "Déconnexion",
+    "de": "Abmelden"
+  },
+  "sidebar.signIn": {
+    "en": "Sign In",
+    "nl": "Inloggen",
+    "fr": "Connexion",
+    "de": "Anmelden"
+  },
+  "sidebar.signInToSave": {
+    "en": "Sign in to save routes (Coming soon)",
+    "nl": "Log in om routes op te slaan (Binnenkort beschikbaar)",
+    "fr": "Connectez-vous pour enregistrer les itinéraires (Bientôt disponible)",
+    "de": "Melden Sie sich an, um Routen zu speichern (Demnächst verfügbar)"
+  },
+  "footer.madeBy": {
+    "en": "Made by",
+    "nl": "Gemaakt door",
+    "fr": "Fait par",
+    "de": "Erstellt von"
+  },
+  "routeControls.orientation.north": {
+    "en": "North Up",
+    "nl": "Noord Boven",
+    "fr": "Nord en Haut",
+    "de": "Norden oben"
+  },
+  "routeControls.orientation.east": {
+    "en": "East Up",
+    "nl": "Oost Boven",
+    "fr": "Est en Haut",
+    "de": "Osten oben"
+  },
+  "routeControls.orientation.south": {
+    "en": "South Up",
+    "nl": "Zuid Boven",
+    "fr": "Sud en Haut",
+    "de": "Süden oben"
+  },
+  "routeControls.orientation.west": {
+    "en": "West Up",
+    "nl": "West Boven",
+    "fr": "Ouest en Haut",
+    "de": "Westen oben"
+  },
+  "routeControls.locate.notAvailable": {
+    "en": "Location not available",
+    "nl": "Locatie niet beschikbaar",
+    "fr": "Localisation non disponible",
+    "de": "Standort nicht verfügbar"
+  },
+  "routeControls.locate.current": {
+    "en": "Center on my current location",
+    "nl": "Centreer op mijn huidige locatie",
+    "fr": "Centrer sur ma position actuelle",
+    "de": "Auf meinen aktuellen Standort zentrieren"
+  },
+  "routeControls.locate.lastKnown": {
+    "en": "Center on last known location",
+    "nl": "Centreer op laatst bekende locatie",
+    "fr": "Centrer sur la dernière position connue",
+    "de": "Auf den letzten bekannten Standort zentrieren"
+  },
+  "routeControls.tooltip.undo": {
+    "en": "Undo",
+    "nl": "Ongedaan maken",
+    "fr": "Annuler",
+    "de": "Rückgängig"
+  },
+  "routeControls.tooltip.redo": {
+    "en": "Redo",
+    "nl": "Opnieuw uitvoeren",
+    "fr": "Rétablir",
+    "de": "Wiederholen"
+  },
+  "routeControls.tooltip.reverseRoute": {
+    "en": "Reverse route",
+    "nl": "Route omkeren",
+    "fr": "Inverser l'itinéraire",
+    "de": "Route umkehren"
+  },
+  "routeControls.tooltip.resetRoute": {
+    "en": "Reset route",
+    "nl": "Route resetten",
+    "fr": "Réinitialiser l'itinéraire",
+    "de": "Route zurücksetzen"
+  },
+  "routeControls.tooltip.generateRoute": {
+    "en": "Generate custom route",
+    "nl": "Aangepaste route genereren",
+    "fr": "Générer un itinéraire personnalisé",
+    "de": "Benutzerdefinierte Route generieren"
+  },
+  "routeControls.tooltip.unlockMap": {
+    "en": "Unlock map interaction",
+    "nl": "Kaartinteractie ontgrendelen",
+    "fr": "Déverrouiller l'interaction avec la carte",
+    "de": "Karteninteraktion entsperren"
+  },
+  "routeControls.tooltip.lockMap": {
+    "en": "Lock map interaction",
+    "nl": "Kaartinteractie vergrendelen",
+    "fr": "Verrouiller l'interaction avec la carte",
+    "de": "Karteninteraktion sperren"
+  },
+  "routeControls.tooltip.copyShareLink": {
+    "en": "Copy share link",
+    "nl": "Deelbare link kopiëren",
+    "fr": "Copier le lien de partage",
+    "de": "Freigabelink kopieren"
+  },
+  "routeControls.tooltip.zoomToRoute": {
+    "en": "Zoom to route",
+    "nl": "Zoom naar route",
+    "fr": "Zoomer sur l'itinéraire",
+    "de": "Zur Route zoomen"
+  },
+  "routeControls.tooltip.cycleTimeOfDay": {
+    "en": "Cycle time of day (Current: {time})",
+    "nl": "Wissel tijdstip (Huidig: {time})",
+    "fr": "Changer l'heure du jour (Actuel: {time})",
+    "de": "Tageszeit wechseln (Aktuell: {time})"
+  },
+  "routeControls.tooltip.setMapOrientation": {
+    "en": "Set map orientation: {orientation}",
+    "nl": "Kaartoriëntatie instellen: {orientation}",
+    "fr": "Définir l'orientation de la carte : {orientation}",
+    "de": "Kartenausrichtung festlegen: {orientation}"
+  },
+  "routeControls.tooltip.zoomIn": {
+    "en": "Zoom In",
+    "nl": "Inzoomen",
+    "fr": "Zoom Avant",
+    "de": "Vergrößern"
+  },
+  "routeControls.tooltip.zoomOut": {
+    "en": "Zoom Out",
+    "nl": "Uitzoomen",
+    "fr": "Zoom Arrière",
+    "de": "Verkleinern"
+  },
+  "locationSearch.button.searchTitle": {
+    "en": "Search",
+    "nl": "Zoeken",
+    "fr": "Rechercher",
+    "de": "Suchen"
+  },
+  "locationSearch.placeholder.searchLocation": {
+    "en": "Search for a location...",
+    "nl": "Zoek naar een locatie...",
+    "fr": "Rechercher un lieu...",
+    "de": "Suche nach einem Ort..."
+  },
+  "locationSearch.button.closeSearchTitle": {
+    "en": "Close search",
+    "nl": "Zoeken sluiten",
+    "fr": "Fermer la recherche",
+    "de": "Suche schließen"
+  },
+  "locationSearch.button.searchLocationTitle": {
+    "en": "Search for a location",
+    "nl": "Zoek naar een locatie",
+    "fr": "Rechercher un lieu",
+    "de": "Suche nach einem Ort"
+  },
+  "mapPopup.button.addDirectWaypoint": {
+    "en": "Add direct waypoint",
+    "nl": "Direct waypoint toevoegen",
+    "fr": "Ajouter un point de passage direct",
+    "de": "Direkten Wegpunkt hinzufügen"
+  },
+  "mapPopup.button.removePoint": {
+    "en": "Remove point",
+    "nl": "Punt verwijderen",
+    "fr": "Supprimer le point",
+    "de": "Punkt entfernen"
+  },
+  "mapPopup.button.addWaypointHere": {
+    "en": "Add waypoint here",
+    "nl": "Waypoint hier toevoegen",
+    "fr": "Ajouter un point de passage ici",
+    "de": "Wegpunkt hier hinzufügen"
+  },
+  "routeGenerator.title.generating": {
+    "en": "Generating Route...",
+    "nl": "Route genereren...",
+    "fr": "Génération d'itinéraire...",
+    "de": "Route wird generiert..."
+  },
+  "routeGenerator.title.default": {
+    "en": "Route Generator",
+    "nl": "Route Generator",
+    "fr": "Générateur d'itinéraire",
+    "de": "Routengenerator"
+  },
+  "routeGenerator.description": {
+    "en": "Configure parameters to generate a new A-to-B or loop route.",
+    "nl": "Configureer parameters om een nieuwe A-naar-B of lusroute te genereren.",
+    "fr": "Configurez les paramètres pour générer un nouvel itinéraire A vers B ou une boucle.",
+    "de": "Konfigurieren Sie Parameter, um eine neue A-nach-B- oder Rundstrecke zu generieren."
+  },
+  "routeGenerator.betaNotice.title": {
+    "en": "Beta Feature:",
+    "nl": "Beta Functie:",
+    "fr": "Fonctionnalité Bêta :",
+    "de": "Beta-Funktion:"
+  },
+  "routeGenerator.betaNotice.message1": {
+    "en": "We're still refining route generation.",
+    "nl": "We zijn de routegeneratie nog aan het verfijnen.",
+    "fr": "Nous affinons encore la génération d'itinéraires.",
+    "de": "Wir überarbeiten die Routengenerierung noch."
+  },
+  "routeGenerator.betaNotice.message2": {
+    "en": "Feel free to adjust the path on the map or create a new one if needed.",
+    "nl": "Voel je vrij om het pad op de kaart aan te passen of maak indien nodig een nieuw pad.",
+    "fr": "N'hésitez pas à ajuster le tracé sur la carte ou à en créer un nouveau si nécessaire.",
+    "de": "Sie können den Pfad auf der Karte anpassen oder bei Bedarf einen neuen erstellen."
+  },
+  "routeGenerator.generatingState.aToB": {
+    "en": "Creating your A-to-B route...",
+    "nl": "Uw A-naar-B route wordt aangemaakt...",
+    "fr": "Création de votre itinéraire A vers B...",
+    "de": "Ihre A-nach-B-Route wird erstellt..."
+  },
+  "routeGenerator.generatingState.loop": {
+    "en": "Generating a {loopLengthKm}km loop route...",
+    "nl": "Een lusroute van {loopLengthKm}km wordt gegenereerd...",
+    "fr": "Génération d'une boucle de {loopLengthKm}km...",
+    "de": "Eine {loopLengthKm}km lange Rundstrecke wird generiert..."
+  },
+  "routeGenerator.generatingState.message": {
+    "en": "This may take a few moments as we explore the best options.",
+    "nl": "Dit kan even duren terwijl we de beste opties verkennen.",
+    "fr": "Cela peut prendre quelques instants pendant que nous explorons les meilleures options.",
+    "de": "Dies kann einen Moment dauern, während wir die besten Optionen prüfen."
+  },
+  "routeGenerator.routeType.label": {
+    "en": "Route Type",
+    "nl": "Route Type",
+    "fr": "Type d'itinéraire",
+    "de": "Routentyp"
+  },
+  "routeGenerator.routeType.loop": {
+    "en": "Loop",
+    "nl": "Lus",
+    "fr": "Boucle",
+    "de": "Rundstrecke"
+  },
+  "routeGenerator.routeType.aToB": {
+    "en": "A to B",
+    "nl": "A naar B",
+    "fr": "A vers B",
+    "de": "A nach B"
+  },
+  "routeGenerator.location.label.singular": {
+    "en": "Location",
+    "nl": "Locatie",
+    "fr": "Lieu",
+    "de": "Standort"
+  },
+  "routeGenerator.location.label.plural": {
+    "en": "Locations",
+    "nl": "Locaties",
+    "fr": "Lieux",
+    "de": "Standorte"
+  },
+  "routeGenerator.location.startPoint": {
+    "en": "Start Point",
+    "nl": "Startpunt",
+    "fr": "Point de départ",
+    "de": "Startpunkt"
+  },
+  "routeGenerator.location.startEndPointLoop": {
+    "en": "Start/End Point",
+    "nl": "Start-/Eindpunt",
+    "fr": "Point de départ/arrivée",
+    "de": "Start-/Endpunkt"
+  },
+  "routeGenerator.location.useCurrent.fetching": {
+    "en": "Fetching location...",
+    "nl": "Locatie ophalen...",
+    "fr": "Récupération de la position...",
+    "de": "Standort wird abgerufen..."
+  },
+  "routeGenerator.location.useCurrent.error": {
+    "en": "Location error: {userLocationError}",
+    "nl": "Locatiefout: {userLocationError}",
+    "fr": "Erreur de localisation : {userLocationError}",
+    "de": "Standortfehler: {userLocationError}"
+  },
+  "routeGenerator.location.useCurrent.notAvailable": {
+    "en": "Location not available",
+    "nl": "Locatie niet beschikbaar",
+    "fr": "Localisation non disponible",
+    "de": "Standort nicht verfügbar"
+  },
+  "routeGenerator.location.useCurrent.use": {
+    "en": "Use my current location",
+    "nl": "Gebruik mijn huidige locatie",
+    "fr": "Utiliser ma position actuelle",
+    "de": "Meinen aktuellen Standort verwenden"
+  },
+  "routeGenerator.location.currentLocationName": {
+    "en": "My Current Location",
+    "nl": "Mijn Huidige Locatie",
+    "fr": "Ma Position Actuelle",
+    "de": "Mein aktueller Standort"
+  },
+  "routeGenerator.alert.aToBPointsMissing": {
+    "en": "Please select a start and end point for A-to-B route.",
+    "nl": "Selecteer een start- en eindpunt voor de A-naar-B route.",
+    "fr": "Veuillez sélectionner un point de départ et d'arrivée pour l'itinéraire A vers B.",
+    "de": "Bitte wählen Sie einen Start- und Endpunkt für die A-nach-B-Route."
+  },
+  "routeGenerator.alert.loopPointAndLengthMissing": {
+    "en": "Please select a start point and a valid approximate length (must be > 0 km) for a loop route.",
+    "nl": "Selecteer een startpunt en een geldige geschatte lengte (moet > 0 km zijn) voor een lusroute.",
+    "fr": "Veuillez sélectionner un point de départ et une longueur approximative valide (doit être > 0 km) pour une boucle.",
+    "de": "Bitte wählen Sie einen Startpunkt und eine gültige ungefähre Länge (muss > 0 km sein) für eine Rundstrecke."
+  },
+  "routeGenerator.location.endPoint": {
+    "en": "End Point",
+    "nl": "Eindpunt",
+    "fr": "Point d'arrivée",
+    "de": "Endpunkt"
+  },
+  "routeGenerator.loop.lengthLabel": {
+    "en": "Length (km)",
+    "nl": "Lengte (km)",
+    "fr": "Longueur (km)",
+    "de": "Länge (km)"
+  },
+  "routeGenerator.loop.lengthPlaceholder": {
+    "en": "e.g., 25",
+    "nl": "bijv., 25",
+    "fr": "ex., 25",
+    "de": "z.B. 25"
+  },
+  "routeGenerator.loop.directionLabel": {
+    "en": "Direction",
+    "nl": "Richting",
+    "fr": "Direction",
+    "de": "Richtung"
+  },
+  "routeGenerator.loop.directionPlaceholder": {
+    "en": "Select direction",
+    "nl": "Selecteer richting",
+    "fr": "Sélectionner la direction",
+    "de": "Richtung auswählen"
+  },
+  "routeGenerator.loop.directionAny": {
+    "en": "Any Direction",
+    "nl": "Elke Richting",
+    "fr": "N'importe quelle direction",
+    "de": "Beliebige Richtung"
+  },
+  "routeGenerator.surface.label": {
+    "en": "Surface Preference",
+    "nl": "Ondergrondvoorkeur",
+    "fr": "Préférence de surface",
+    "de": "Oberflächenpräferenz"
+  },
+  "routeGenerator.surface.terrainTypeLabel": {
+    "en": "Terrain Type",
+    "nl": "Terrein Type",
+    "fr": "Type de terrain",
+    "de": "Geländetyp"
+  },
+  "routeGenerator.surface.terrainTypePlaceholder": {
+    "en": "Select surface type",
+    "nl": "Selecteer ondergrondtype",
+    "fr": "Sélectionner le type de surface",
+    "de": "Oberflächentyp auswählen"
+  },
+  "routeGenerator.surface.option.unpaved": {
+    "en": "Prefer Trails & Nature",
+    "nl": "Voorkeur voor Paden & Natuur",
+    "fr": "Préférer les Sentiers & la Nature",
+    "de": "Pfade & Natur bevorzugen"
+  },
+  "routeGenerator.surface.option.mixed": {
+    "en": "Balanced Mix (Coming Soon)",
+    "nl": "Gebalanceerde Mix (Binnenkort beschikbaar)",
+    "fr": "Mélange Équilibré (Bientôt disponible)",
+    "de": "Ausgewogene Mischung (Demnächst verfügbar)"
+  },
+  "routeGenerator.surface.option.paved": {
+    "en": "Prefer Paved Paths (Coming Soon)",
+    "nl": "Voorkeur voor Verharde Paden (Binnenkort beschikbaar)",
+    "fr": "Préférer les Chemins Pavés (Bientôt disponible)",
+    "de": "Befestigte Wege bevorzugen (Demnächst verfügbar)"
+  },
+  "routeGenerator.actions.cancel": {
+    "en": "Cancel",
+    "nl": "Annuleren",
+    "fr": "Annuler",
+    "de": "Abbrechen"
+  },
+  "routeGenerator.actions.generate": {
+    "en": "Generate",
+    "nl": "Genereren",
+    "fr": "Générer",
+    "de": "Generieren"
+  },
+  "routeGenerator.generatingState.footerMessage": {
+    "en": "Please wait while we create your route",
+    "nl": "Een ogenblik geduld terwijl we uw route aanmaken",
+    "fr": "Veuillez patienter pendant la création de votre itinéraire",
+    "de": "Bitte warten Sie, während wir Ihre Route erstellen"
+  }
+} 

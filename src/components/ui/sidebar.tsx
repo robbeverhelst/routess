@@ -8,11 +8,15 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { useState, useRef } from "react";
 import type { Map as MapboxMap } from 'mapbox-gl'; // Import MapboxMap type
+import { GB, NL, FR, DE } from 'country-flag-icons/react/3x2'; // Changed US to GB
 import { exportRouteToGPX, importRouteFromGPX } from '../../lib/routing'; // Import GPX functions
+import { t } from '../../lib/i18n'; // Corrected i18n import
+import type { SupportedLanguage } from '../../lib/i18n'; // Type-only import for SupportedLanguage
 import type { Dispatch, SetStateAction } from 'react';
-import { Logger } from '@/lib/logger';
+import { Logger } from '../../lib/logger'; // Corrected Logger import path
 
 interface SidebarProps {
   onUndo: () => void;
@@ -40,6 +44,8 @@ interface SidebarProps {
   onCopySharedUrl: (url: string) => void;
   onClearShareDisplay?: () => void;
   onOpenRouteGenerator: () => void;
+  currentLanguage: SupportedLanguage;
+  onLanguageChange: (lang: SupportedLanguage) => void;
 }
 
 export function Sidebar({
@@ -67,10 +73,27 @@ export function Sidebar({
   onCopySharedUrl,
   onClearShareDisplay,
   onOpenRouteGenerator,
+  currentLanguage,
+  onLanguageChange
 }: SidebarProps) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
-  
+  const [isLangPopoverOpen, setIsLangPopoverOpen] = useState(false);
+
+  const languages = [
+    { code: 'en' as SupportedLanguage, name: 'English', label: 'EN', icon: GB },
+    { code: 'nl' as SupportedLanguage, name: 'Nederlands', label: 'NL', icon: NL },
+    { code: 'fr' as SupportedLanguage, name: 'Français', label: 'FR', icon: FR },
+    { code: 'de' as SupportedLanguage, name: 'Deutsch', label: 'DE', icon: DE },
+  ];
+
+  const selectedLanguageDetails = languages.find(lang => lang.code === currentLanguage) || languages[0];
+
+  const handleLanguageChange = (langCode: SupportedLanguage) => {
+    onLanguageChange(langCode);
+    setIsLangPopoverOpen(false);
+  };
+
   const handleExportGPX = () => {
     const result = exportRouteToGPX();
     if (!result.success && result.message) {
@@ -146,11 +169,11 @@ export function Sidebar({
       </SheetTrigger>
       <SheetContent className="p-0 w-[330px] border-l" hideCloseButton>
         <VisuallyHidden asChild>
-          <SheetTitle>Main Menu and Route Controls</SheetTitle>
+          <SheetTitle>{t('sidebar.menuTitle', currentLanguage)}</SheetTitle>
         </VisuallyHidden>
         <VisuallyHidden asChild>
           <SheetDescription>
-            Access route history, file operations, sharing, and account settings.
+            {t('sidebar.menuDescription', currentLanguage)}
           </SheetDescription>
         </VisuallyHidden>
         {/* Route Info Header */}
@@ -166,11 +189,11 @@ export function Sidebar({
             <div className="px-4 py-4 pr-10">
               <div className="flex items-center justify-between mb-1">
                 <h3 className="text-base font-medium flex items-center">
-                  Current Route
+                  {t('sidebar.currentRoute', currentLanguage)}
                   {isLocked && <Lock size={14} className="ml-2 text-yellow-600 dark:text-yellow-500" />}
                 </h3>
                 <div className={`text-xs px-2 py-0.5 rounded-full ${isLocked ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-500' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'}`}>
-                  {isLocked ? "Locked" : "Active"}
+                  {isLocked ? t('sidebar.locked', currentLanguage) : t('sidebar.active', currentLanguage)}
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2 mt-2">
@@ -188,10 +211,10 @@ export function Sidebar({
             <div className="px-4 py-4 pr-10">
               <div className="flex items-center">
                 <AlertCircle className="w-4 h-4 mr-2 text-amber-500 flex-shrink-0" />
-                <h3 className="text-base font-medium">No Route Set</h3>
+                <h3 className="text-base font-medium">{t('sidebar.noRouteSet', currentLanguage)}</h3>
               </div>
               <p className="text-xs text-gray-500 mt-1 ml-6">
-                Right-click on the map to add waypoints
+                {t('sidebar.addWaypointsHelp', currentLanguage)}
               </p>
             </div>
           )}
@@ -200,7 +223,7 @@ export function Sidebar({
         <div className="px-4 overflow-y-auto max-h-[calc(100vh-100px)]">
           {/* Route History Controls */}
           <div className="mt-4">
-            <div className="text-sm font-medium text-gray-500 mb-2">Route Actions</div>
+            <div className="text-sm font-medium text-gray-500 mb-2">{t('sidebar.routeActions', currentLanguage)}</div>
             <div className="flex items-center gap-2 mb-2">
               <Button
                 variant="outline"
@@ -213,7 +236,7 @@ export function Sidebar({
                   <path d="m12 8-4 4 4 4" />
                   <path d="M16 12H8" />
                 </svg>
-                Undo
+                {t('sidebar.undo', currentLanguage)}
               </Button>
               
               <TooltipProvider>
@@ -232,7 +255,7 @@ export function Sidebar({
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>{isLocked ? "Unlock route editing" : "Lock route editing"}</p>
+                    <p>{isLocked ? t('sidebar.tooltip.unlockRoute', currentLanguage) : t('sidebar.tooltip.lockRoute', currentLanguage)}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -248,7 +271,7 @@ export function Sidebar({
                   <path d="m12 16 4-4-4-4" />
                   <path d="M8 12h8" />
                 </svg>
-                Redo
+                {t('sidebar.redo', currentLanguage)}
               </Button>
             </div>
             
@@ -261,7 +284,7 @@ export function Sidebar({
               }`}
             >
               <X className="w-4 h-4 mr-2" />
-              Reset Route
+              {t('sidebar.resetRoute', currentLanguage)}
             </Button>
 
             <Button
@@ -273,7 +296,7 @@ export function Sidebar({
               }`}
             >
               <ArrowRightLeft className="w-4 h-4 mr-2" />
-              Reverse Route
+              {t('sidebar.reverseRoute', currentLanguage)}
             </Button>
 
             <Button
@@ -296,7 +319,7 @@ export function Sidebar({
                          dark:hover:from-indigo-700 dark:hover:to-teal-600 
                          ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}`}>
               <Wand2 className="w-4 h-4 mr-2" />
-              Generate Route
+              {t('sidebar.generateRoute', currentLanguage)}
             </Button>
 
             <Button
@@ -308,12 +331,12 @@ export function Sidebar({
               }`}
             >
               <Focus className="w-4 h-4 mr-2" />
-              Zoom to Route
+              {t('sidebar.zoomToRoute', currentLanguage)}
             </Button>
           </div>
           
           <div className="mt-6">
-            <div className="text-sm font-medium text-gray-500 mb-2">Files & Sharing</div>
+            <div className="text-sm font-medium text-gray-500 mb-2">{t('sidebar.filesAndSharing', currentLanguage)}</div>
             
             <div className="space-y-1">
               <div 
@@ -324,8 +347,8 @@ export function Sidebar({
                   <FileDown className="w-3.5 h-3.5" />
                 </div>
                 <div>
-                  <div className="text-sm font-medium">Export Route</div>
-                  <div className="text-xs text-gray-500">Save as GPX</div>
+                  <div className="text-sm font-medium">{t('sidebar.exportRoute', currentLanguage)}</div>
+                  <div className="text-xs text-gray-500">{t('sidebar.saveAsGpx', currentLanguage)}</div>
                 </div>
               </div>
               
@@ -337,14 +360,14 @@ export function Sidebar({
                   <Upload className="w-3.5 h-3.5" />
                 </div>
                 <div>
-                  <div className="text-sm font-medium">Import Route</div>
-                  <div className="text-xs text-gray-500">From GPX</div>
+                  <div className="text-sm font-medium">{t('sidebar.importRoute', currentLanguage)}</div>
+                  <div className="text-xs text-gray-500">{t('sidebar.fromGpx', currentLanguage)}</div>
                 </div>
               </div>
               
               {displayedShareUrl ? (
                 <div className="px-3 py-2 rounded-md bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-                  <div className="text-sm font-medium mb-1">Shareable Link:</div>
+                  <div className="text-sm font-medium mb-1">{t('sidebar.shareableLink', currentLanguage)}</div>
                   <input 
                     type="text" 
                     readOnly 
@@ -359,7 +382,7 @@ export function Sidebar({
                       className="flex-1 text-xs"
                       onClick={() => onCopySharedUrl(displayedShareUrl)}
                     >
-                      <Copy size={14} className="mr-1.5" /> Copy
+                      <Copy size={14} className="mr-1.5" /> {t('sidebar.copy', currentLanguage)}
                     </Button>
                     <Button 
                       variant="ghost"
@@ -380,8 +403,8 @@ export function Sidebar({
                     <Share2 className="w-3.5 h-3.5" />
                   </div>
                   <div>
-                    <div className="text-sm font-medium">Share Route</div>
-                    <div className="text-xs text-gray-500">Create shareable link</div>
+                    <div className="text-sm font-medium">{t('sidebar.shareRoute', currentLanguage)}</div>
+                    <div className="text-xs text-gray-500">{t('sidebar.createShareableLink', currentLanguage)}</div>
                   </div>
                 </div>
               )}
@@ -390,7 +413,7 @@ export function Sidebar({
           
           {/* Account Section at the bottom */}
           <div className="mt-6 pt-3 border-t border-gray-100 dark:border-gray-800">
-            <div className="text-sm font-medium text-gray-500 mb-2">Account</div>
+            <div className="text-sm font-medium text-gray-500 mb-2">{t('sidebar.account', currentLanguage)}</div>
             
             {isLoggedIn ? (
               <>
@@ -412,7 +435,7 @@ export function Sidebar({
                     disabled
                   >
                     <Save className="w-4 h-4 mr-2" />
-                    Save Current Route
+                    {t('sidebar.saveCurrentRoute', currentLanguage)}
                   </Button>
                   
                   <Button
@@ -422,7 +445,7 @@ export function Sidebar({
                     disabled
                   >
                     <BookMarked className="w-4 h-4 mr-2" />
-                    My Saved Routes
+                    {t('sidebar.mySavedRoutes', currentLanguage)}
                   </Button>
                   
                   <Button
@@ -431,7 +454,7 @@ export function Sidebar({
                     onClick={() => setIsLoggedIn(false)}
                   >
                     <LogIn className="w-4 h-4 mr-2 rotate-180" />
-                    Sign Out
+                    {t('sidebar.signOut', currentLanguage)}
                   </Button>
                 </div>
               </>
@@ -444,10 +467,10 @@ export function Sidebar({
                   onClick={undefined}
                 >
                   <LogIn className="w-4 h-4 mr-2" />
-                  Sign In
+                  {t('sidebar.signIn', currentLanguage)}
                 </Button>
                 <div className="text-center text-xs text-gray-500">
-                  Sign in to save routes (Coming soon)
+                  {t('sidebar.signInToSave', currentLanguage)}
                 </div>
               </div>
             )}
@@ -456,14 +479,65 @@ export function Sidebar({
           <div className="h-16"></div> {/* Spacer for footer */}
         </div>
         
-        <div className="absolute bottom-3 inset-x-0 px-4">
-          <div className="text-center">
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Made by <a href="https://github.com/RobbeVerhelst" target="_blank" rel="noopener noreferrer" className="hover:underline">RobbeVerhelst</a>
+        {/* MODIFIED Footer with language button and background */}
+        <div className="absolute bottom-0 inset-x-0 px-4 py-3 border-t border-gray-100 dark:border-gray-800 bg-white/80 dark:bg-black/70 backdrop-blur-sm">
+          <div className="flex items-center text-xs text-gray-500 dark:text-gray-400">
+            {/* Left spacer to help center the text */}
+            <div className="flex-1"></div>
+            
+            {/* Centered "Made by" text */}
+            <p className="text-center flex-shrink-0">
+              {t('footer.madeBy', currentLanguage)} <a href="https://github.com/RobbeVerhelst" target="_blank" rel="noopener noreferrer" className="hover:underline">RobbeVerhelst</a>
             </p>
+            
+            {/* Right-aligned language popover */}
+            <div className="flex-1 flex justify-end">
+              <Popover open={isLangPopoverOpen} onOpenChange={setIsLangPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-8 w-auto px-2 flex items-center rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 active:scale-95 transition-all"
+                  >
+                    <selectedLanguageDetails.icon title={selectedLanguageDetails.name} className="h-4 w-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent 
+                  className="w-auto p-1 mb-1 z-50 pointer-events-auto"
+                  side="top" 
+                  align="end"
+                >
+                  <div className="flex flex-col space-y-1">
+                    {languages.map((lang) => {
+                      const FlagIcon = lang.icon;
+                      return (
+                        <Button
+                          key={lang.code}
+                          variant={currentLanguage === lang.code ? 'default' : 'ghost'}
+                          size="sm"
+                          className={`w-full justify-start h-8 px-2 flex items-center space-x-2 rounded-md transition-colors 
+                            ${
+                              currentLanguage === lang.code
+                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-700 dark:text-blue-200 font-medium hover:bg-blue-200 dark:hover:bg-blue-600'
+                                : 'text-gray-900 dark:text-white'
+                            }
+                          `}
+                          onClick={() => {
+                            handleLanguageChange(lang.code);
+                          }}
+                        >
+                          <FlagIcon title={lang.name} className="h-4 w-4 flex-shrink-0" />
+                          <span>{lang.name}</span>
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
         </div>
       </SheetContent>
     </Sheet>
   );
-} 
+}

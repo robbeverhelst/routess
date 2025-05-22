@@ -39,6 +39,7 @@ import { closestPointOnSegment, haversine } from '@/features/routing/utils/Routi
 import { Logger } from '@/lib/logger';
 // Import the new modal and its types
 import { RouteGeneratorModal, type RouteGenerationParams } from '@/components/ui/RouteGeneratorModal';
+import { type SupportedLanguage } from '@/lib/i18n'; // Added
 
 // Get Mapbox access token from environment variables
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
@@ -71,7 +72,9 @@ import {
   loadLightPresetFromLocalStorage,
   saveLightPresetToLocalStorage,
   loadLastMapViewFromLocalStorage,
-  saveLastMapViewToLocalStorage
+  saveLastMapViewToLocalStorage,
+  loadLanguageFromLocalStorage,
+  saveLanguageToLocalStorage
 } from '@/features/routing/services/LocalStorageService';
 
 interface MapboxMapProps {
@@ -249,6 +252,13 @@ export default function MapWithRouting({
 
   // State for the new Route Generator Modal
   const [isRouteGeneratorModalOpen, setIsRouteGeneratorModalOpen] = useState(false);
+
+  const [currentLanguage, setCurrentLanguage] = useState<SupportedLanguage>(loadLanguageFromLocalStorage());
+
+  // Effect to save language to localStorage when it changes
+  useEffect(() => {
+    saveLanguageToLocalStorage(currentLanguage);
+  }, [currentLanguage]);
 
   // Handler for the new onCopyShareLink in RouteControls
   const handleCopyShareLinkToClipboard = useCallback(() => {
@@ -1167,6 +1177,7 @@ export default function MapWithRouting({
             onAddDirectWaypoint={handleAddDirectWaypoint}
             onRemoveWaypoint={handleRemoveWaypoint}
             onAddWaypointOnRoute={handleAddWaypointOnRoute}
+            currentLanguage={currentLanguage}
           />
         )}
       </Map>
@@ -1181,6 +1192,7 @@ export default function MapWithRouting({
         userLocation={userLocation}
         isUserLocationLoading={isUserLocationLoading}
         userLocationError={locationError}
+        currentLanguage={currentLanguage}
       />
 
       {/* Mobile Controls Layout - REMOVING mt-12 from RouteControls wrapper */}
@@ -1210,6 +1222,7 @@ export default function MapWithRouting({
               onZoomOut={handleZoomOut}
               onCopyShareLink={handleCopyShareLinkToClipboard}
               onZoomToRoute={handleZoomToRoute}
+              currentLanguage={currentLanguage}
             />
           </div>
 
@@ -1222,6 +1235,7 @@ export default function MapWithRouting({
                 isMobileContext={true}
                 isMobileSearchOpen={isSearchOpen}
                 onToggleMobileSearch={() => setIsSearchOpen(!isSearchOpen)}
+                currentLanguage={currentLanguage}
               />
               <Sidebar
                 onUndo={handleUndo}
@@ -1240,7 +1254,6 @@ export default function MapWithRouting({
                 routeDuration={routeDuration}
                 isLocked={isMapLocked}
                 onToggleLock={handleToggleLock}
-                // Props for GPX import/export
                 map={mapRef.current}
                 accessToken={MAPBOX_TOKEN}
                 setRouteDistance={setRouteDistance}
@@ -1248,6 +1261,8 @@ export default function MapWithRouting({
                 setHasRoute={setHasRoute}
                 onImportError={handleImportError}
                 onOpenRouteGenerator={handleOpenRouteGeneratorModal}
+                currentLanguage={currentLanguage}
+                onLanguageChange={setCurrentLanguage}
               />
             </div>
           </div>
@@ -1278,6 +1293,7 @@ export default function MapWithRouting({
             onZoomOut={handleZoomOut}
             onCopyShareLink={handleCopyShareLinkToClipboard}
             onZoomToRoute={handleZoomToRoute}
+            currentLanguage={currentLanguage}
         />
       </div>
 
@@ -1286,6 +1302,7 @@ export default function MapWithRouting({
         <LocationSearch
           mapboxToken={MAPBOX_TOKEN}
           onSelectLocation={handleSelectLocation}
+          currentLanguage={currentLanguage}
         />
         <Sidebar
           onUndo={handleUndo}
@@ -1304,7 +1321,6 @@ export default function MapWithRouting({
           routeDuration={routeDuration}
           isLocked={isMapLocked}
           onToggleLock={handleToggleLock}
-          // Props for GPX import/export
           map={mapRef.current}
           accessToken={MAPBOX_TOKEN}
           setRouteDistance={setRouteDistance}
@@ -1312,6 +1328,8 @@ export default function MapWithRouting({
           setHasRoute={setHasRoute}
           onImportError={handleImportError}
           onOpenRouteGenerator={handleOpenRouteGeneratorModal}
+          currentLanguage={currentLanguage}
+          onLanguageChange={setCurrentLanguage}
         />
       </div>
 

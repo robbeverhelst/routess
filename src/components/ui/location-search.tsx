@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { t, type SupportedLanguage } from "@/lib/i18n";
 
 // Define the result type from Mapbox geocoding API
 interface GeocodingFeature {
@@ -20,6 +21,7 @@ interface LocationSearchProps {
   onToggleMobileSearch?: () => void;
   startDesktopExpanded?: boolean;
   desktopInputWidthClass?: string;
+  currentLanguage: SupportedLanguage;
 }
 
 export function LocationSearch({ 
@@ -30,7 +32,8 @@ export function LocationSearch({
   isMobileSearchOpen = false,
   onToggleMobileSearch,
   startDesktopExpanded = false,
-  desktopInputWidthClass = "w-56"
+  desktopInputWidthClass = "w-56",
+  currentLanguage
 }: LocationSearchProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<GeocodingFeature[]>([]);
@@ -147,7 +150,7 @@ export function LocationSearch({
             size="icon"
             onClick={onToggleMobileSearch}
             className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 h-10 w-10"
-            title="Search"
+            title={t('locationSearch.button.searchTitle', currentLanguage)}
           >
             <Search size={18} />
           </Button>
@@ -157,7 +160,7 @@ export function LocationSearch({
             <input
               ref={inputRef}
               type="text"
-              placeholder="Search for a location..."
+              placeholder={t('locationSearch.placeholder.searchLocation', currentLanguage)}
               value={query}
               onChange={handleInputChange}
               onFocus={handleInputFocus}
@@ -168,7 +171,7 @@ export function LocationSearch({
               size="icon" 
               onClick={onToggleMobileSearch} 
               className="absolute right-1 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 h-8 w-8"
-              title="Close search"
+              title={t('locationSearch.button.closeSearchTitle', currentLanguage)}
             >
               <X size={18} />
             </Button>
@@ -212,7 +215,7 @@ export function LocationSearch({
             size="icon"
             onClick={() => setIsDesktopSearchExpanded(true)}
             className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 h-10 w-10 shadow-sm"
-            title="Search for a location"
+            title={t('locationSearch.button.searchLocationTitle', currentLanguage)}
           >
             <Search size={18} />
           </Button>
@@ -228,7 +231,7 @@ export function LocationSearch({
           <input
             ref={inputRef}
             type="text"
-            placeholder="Search for a location..."
+            placeholder={t('locationSearch.placeholder.searchLocation', currentLanguage)}
             value={query}
             onChange={handleInputChange}
             onFocus={handleInputFocus}
@@ -244,7 +247,7 @@ export function LocationSearch({
               setShowResults(false);
             }}
             className="absolute right-1 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 h-8 w-8"
-            title="Close search"
+            title={t('locationSearch.button.closeSearchTitle', currentLanguage)}
           >
             <X size={18} />
           </Button>

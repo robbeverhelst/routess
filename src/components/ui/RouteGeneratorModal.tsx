@@ -20,16 +20,18 @@ import {
 import { Input } from "@/components/ui/input";
 import { Loader2, MapPin, ChevronRight, X, Route, BarChart2, Compass, Map, LocateFixed } from "lucide-react";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { t, type SupportedLanguage } from "@/lib/i18n";
 
 interface RouteGeneratorModalProps {
   isOpen: boolean;
   onClose: () => void;
   onGenerate: (params: RouteGenerationParams) => void;
   mapboxToken: string;
-  isGenerating?: boolean; // New prop to indicate loading state
+  isGenerating?: boolean;
   userLocation: [number, number] | null;
   isUserLocationLoading: boolean;
   userLocationError: string | null;
+  currentLanguage: SupportedLanguage;
 }
 
 export type LoopDirection = 'N' | 'NE' | 'E' | 'SE' | 'S' | 'SW' | 'W' | 'NW' | 'ANY';
@@ -52,7 +54,8 @@ export function RouteGeneratorModal({
   isGenerating = false, 
   userLocation, 
   isUserLocationLoading, 
-  userLocationError 
+  userLocationError,
+  currentLanguage
 }: RouteGeneratorModalProps) {
   const [routeType, setRouteType] = useState<'a-to-b' | 'loop'>('loop');
   const [startPoint, setStartPoint] = useState<{ lat: number; lng: number; name: string } | undefined>(undefined);
@@ -63,11 +66,11 @@ export function RouteGeneratorModal({
 
   const handleGenerate = () => {
     if (routeType === 'a-to-b' && (!startPoint || !endPoint)) {
-      alert('Please select a start and end point for A-to-B route.');
+      alert(t('routeGenerator.alert.aToBPointsMissing', currentLanguage));
       return;
     }
     if (routeType === 'loop' && (!startPoint || !loopLengthKm || loopLengthKm <= 0)) {
-      alert('Please select a start point and a valid approximate length (must be > 0 km) for a loop route.');
+      alert(t('routeGenerator.alert.loopPointAndLengthMissing', currentLanguage));
       return;
     }
 
@@ -131,11 +134,11 @@ export function RouteGeneratorModal({
               <Route size={16} />
             </div>
             <DialogTitle className="text-base font-medium m-0 p-0">
-              {isGenerating ? 'Generating Route...' : 'Route Generator'}
+              {isGenerating ? t('routeGenerator.title.generating', currentLanguage) : t('routeGenerator.title.default', currentLanguage)}
             </DialogTitle>
             <VisuallyHidden asChild>
               <DialogDescription>
-                Configure parameters to generate a new A-to-B or loop route.
+                {t('routeGenerator.description', currentLanguage)}
               </DialogDescription>
             </VisuallyHidden>
           </div>
@@ -144,10 +147,10 @@ export function RouteGeneratorModal({
         {/* Test Version Notice */}
         <div className="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-800/30 px-4 py-3 text-center">
           <p className="text-xs text-amber-800 dark:text-amber-400">
-            <span className="font-semibold">Beta Feature:</span> We're still refining route generation.
+            <span className="font-semibold">{t('routeGenerator.betaNotice.title', currentLanguage)}</span> {t('routeGenerator.betaNotice.message1', currentLanguage)}
           </p>
           <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
-            Feel free to adjust the path on the map or create a new one if needed.
+            {t('routeGenerator.betaNotice.message2', currentLanguage)}
           </p>
         </div>
         
@@ -159,11 +162,11 @@ export function RouteGeneratorModal({
             <div className="text-center">
               <p className="text-base font-medium mb-1">
                 {routeType === 'a-to-b' 
-                  ? 'Creating your A-to-B route...' 
-                  : `Generating a ${loopLengthKm}km loop route...`}
+                  ? t('routeGenerator.generatingState.aToB', currentLanguage) 
+                  : t('routeGenerator.generatingState.loop', currentLanguage, { loopLengthKm: loopLengthKm?.toString() || '' })}
               </p>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                This may take a few moments as we explore the best options.
+                {t('routeGenerator.generatingState.message', currentLanguage)}
               </p>
             </div>
           </div>
@@ -172,7 +175,7 @@ export function RouteGeneratorModal({
             <div className="px-4 overflow-y-auto max-h-[calc(100vh-120px)]">
               {/* Route Type Selection */}
               <div className="mt-4">
-                <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Route Type</div>
+                <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">{t('routeGenerator.routeType.label', currentLanguage)}</div>
                 <RadioGroup
                   value={routeType}
                   onValueChange={(value: string) => {
@@ -190,26 +193,26 @@ export function RouteGeneratorModal({
                   <Label htmlFor="r2" className={`flex flex-col items-center justify-center p-3 rounded-md border ${routeType === 'loop' ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800' : 'border-gray-200 dark:border-gray-800'} cursor-pointer w-full h-full`}>
                     <RadioGroupItem value="loop" id="r2" className="sr-only" /> 
                     <Route className={`w-5 h-5 mb-1 ${routeType === 'loop' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`} />
-                    <span className={`text-sm font-medium ${routeType === 'loop' ? 'text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-300'}`}>Loop</span>
+                    <span className={`text-sm font-medium ${routeType === 'loop' ? 'text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-300'}`}>{t('routeGenerator.routeType.loop', currentLanguage)}</span>
                   </Label>
                   <Label htmlFor="r1" className={`flex flex-col items-center justify-center p-3 rounded-md border ${routeType === 'a-to-b' ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800' : 'border-gray-200 dark:border-gray-800'} cursor-pointer w-full h-full`}>
                     <RadioGroupItem value="a-to-b" id="r1" className="sr-only" />
                     <MapPin className={`w-5 h-5 mb-1 ${routeType === 'a-to-b' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`} />
-                    <span className={`text-sm font-medium ${routeType === 'a-to-b' ? 'text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-300'}`}>A to B</span>
+                    <span className={`text-sm font-medium ${routeType === 'a-to-b' ? 'text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-300'}`}>{t('routeGenerator.routeType.aToB', currentLanguage)}</span>
                   </Label>
                 </RadioGroup>
               </div>
 
               {/* Location Inputs */}
               <div className="mt-5">
-                <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Location{routeType === 'a-to-b' ? 's' : ''}</div>
+                <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">{routeType === 'a-to-b' ? t('routeGenerator.location.label.plural', currentLanguage) : t('routeGenerator.location.label.singular', currentLanguage)}</div>
                 <div className="space-y-3">
                   <div className="grid gap-1.5">
                     <div className="flex items-center">
                       <div className="w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 mr-2">
                         <MapPin className="w-3.5 h-3.5" />
                       </div>
-                      <Label htmlFor="startPointSearch" className="text-sm">{routeType === 'a-to-b' ? 'Start Point' : 'Start/End Point'}</Label>
+                      <Label htmlFor="startPointSearch" className="text-sm">{routeType === 'a-to-b' ? t('routeGenerator.location.startPoint', currentLanguage) : t('routeGenerator.location.startEndPointLoop', currentLanguage)}</Label>
                     </div>
                     <div className="flex items-center gap-2">
                       <div>
@@ -219,6 +222,7 @@ export function RouteGeneratorModal({
                           currentValue={startPoint?.name}
                           startDesktopExpanded={true}
                           desktopInputWidthClass="w-64"
+                          currentLanguage={currentLanguage}
                         />
                       </div>
                       <Button 
@@ -227,11 +231,11 @@ export function RouteGeneratorModal({
                         className="h-9 w-9 flex-shrink-0 border-gray-300 dark:border-gray-600"
                         onClick={() => {
                           if (userLocation) {
-                            setStartPoint({ lat: userLocation[1], lng: userLocation[0], name: 'My Current Location' });
+                            setStartPoint({ lat: userLocation[1], lng: userLocation[0], name: t('routeGenerator.location.currentLocationName', currentLanguage) });
                           }
                         }}
                         disabled={isUserLocationLoading || !userLocation || !!userLocationError}
-                        title={isUserLocationLoading ? "Fetching location..." : userLocationError ? `Location error: ${userLocationError}` : !userLocation ? "Location not available" : "Use my current location"}
+                        title={isUserLocationLoading ? t('routeGenerator.location.useCurrent.fetching', currentLanguage) : userLocationError ? t('routeGenerator.location.useCurrent.error', currentLanguage, { userLocationError }) : !userLocation ? t('routeGenerator.location.useCurrent.notAvailable', currentLanguage) : t('routeGenerator.location.useCurrent.use', currentLanguage)}
                       >
                         <LocateFixed size={16} />
                       </Button>
@@ -246,7 +250,7 @@ export function RouteGeneratorModal({
                           <div className="w-6 h-6 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400 mr-2">
                             <MapPin className="w-3.5 h-3.5" />
                           </div>
-                          <Label htmlFor="endPointSearch" className="text-sm">End Point</Label>
+                          <Label htmlFor="endPointSearch" className="text-sm">{t('routeGenerator.location.endPoint', currentLanguage)}</Label>
                         </div>
                         <div className="flex items-center gap-2">
                           <div>
@@ -256,6 +260,7 @@ export function RouteGeneratorModal({
                               currentValue={endPoint?.name}
                               startDesktopExpanded={true}
                               desktopInputWidthClass="w-64"
+                              currentLanguage={currentLanguage}
                             />
                           </div>
                           <Button 
@@ -264,11 +269,11 @@ export function RouteGeneratorModal({
                             className="h-9 w-9 flex-shrink-0 border-gray-300 dark:border-gray-600"
                             onClick={() => {
                               if (userLocation) {
-                                setEndPoint({ lat: userLocation[1], lng: userLocation[0], name: 'My Current Location' });
+                                setEndPoint({ lat: userLocation[1], lng: userLocation[0], name: t('routeGenerator.location.currentLocationName', currentLanguage) });
                               }
                             }}
                             disabled={isUserLocationLoading || !userLocation || !!userLocationError}
-                            title={isUserLocationLoading ? "Fetching location..." : userLocationError ? `Location error: ${userLocationError}` : !userLocation ? "Location not available" : "Use my current location"}
+                            title={isUserLocationLoading ? t('routeGenerator.location.useCurrent.fetching', currentLanguage) : userLocationError ? t('routeGenerator.location.useCurrent.error', currentLanguage, { userLocationError }) : !userLocation ? t('routeGenerator.location.useCurrent.notAvailable', currentLanguage) : t('routeGenerator.location.useCurrent.use', currentLanguage)}
                           >
                             <LocateFixed size={16} />
                           </Button>
@@ -282,12 +287,12 @@ export function RouteGeneratorModal({
                             <div className="w-6 h-6 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center text-violet-600 dark:text-violet-400 mr-2">
                               <BarChart2 className="w-3.5 h-3.5" />
                             </div>
-                            <Label htmlFor="loopLengthKm" className="text-sm">Length (km)</Label>
+                            <Label htmlFor="loopLengthKm" className="text-sm">{t('routeGenerator.loop.lengthLabel', currentLanguage)}</Label>
                           </div>
                           <Input 
                             id="loopLengthKm" 
                             type="number" 
-                            placeholder="e.g., 25" 
+                            placeholder={t('routeGenerator.loop.lengthPlaceholder', currentLanguage)} 
                             value={loopLengthKm === undefined ? '' : String(loopLengthKm)}
                             onChange={handleLoopLengthChange}
                             className="border-gray-300 dark:border-gray-600"
@@ -298,15 +303,15 @@ export function RouteGeneratorModal({
                             <div className="w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 dark:text-amber-400 mr-2">
                               <Compass className="w-3.5 h-3.5" />
                             </div>
-                            <Label htmlFor="loopDirection" className="text-sm">Direction</Label>
+                            <Label htmlFor="loopDirection" className="text-sm">{t('routeGenerator.loop.directionLabel', currentLanguage)}</Label>
                           </div>
                           <Select value={loopDirection} onValueChange={(value: string) => setLoopDirection(value as LoopDirection)}>
                             <SelectTrigger id="loopDirection" className="border-gray-300 dark:border-gray-600">
-                              <SelectValue placeholder="Select direction" />
+                              <SelectValue placeholder={t('routeGenerator.loop.directionPlaceholder', currentLanguage)} />
                             </SelectTrigger>
                             <SelectContent>
                               {loopDirections.map(dir => (
-                                <SelectItem key={dir} value={dir}>{dir === 'ANY' ? 'Any Direction' : dir}</SelectItem>
+                                <SelectItem key={dir} value={dir}>{dir === 'ANY' ? t('routeGenerator.loop.directionAny', currentLanguage) : dir}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
@@ -319,22 +324,22 @@ export function RouteGeneratorModal({
 
               {/* Preferences */} 
               <div className="mt-5 pb-6">
-                <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Surface Preference</div>
+                <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">{t('routeGenerator.surface.label', currentLanguage)}</div>
                 <div className="grid gap-1.5">
                   <div className="flex items-center">
                     <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 mr-2">
                       <Map className="w-3.5 h-3.5" />
                     </div>
-                    <Label htmlFor="surfaceTypeGenModal" className="text-sm">Terrain Type</Label>
+                    <Label htmlFor="surfaceTypeGenModal" className="text-sm">{t('routeGenerator.surface.terrainTypeLabel', currentLanguage)}</Label>
                   </div>
                   <Select value={surfaceType} onValueChange={(value: string) => setSurfaceType(value as 'paved' | 'mixed' | 'unpaved')}>
                     <SelectTrigger id="surfaceTypeGenModal" className="border-gray-300 dark:border-gray-600">
-                      <SelectValue placeholder="Select surface type" />
+                      <SelectValue placeholder={t('routeGenerator.surface.terrainTypePlaceholder', currentLanguage)} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="unpaved">Prefer Trails & Nature</SelectItem>
-                      <SelectItem value="mixed" disabled className="text-gray-400 dark:text-gray-500">Balanced Mix (Coming Soon)</SelectItem>
-                      <SelectItem value="paved" disabled className="text-gray-400 dark:text-gray-500">Prefer Paved Paths (Coming Soon)</SelectItem>
+                      <SelectItem value="unpaved">{t('routeGenerator.surface.option.unpaved', currentLanguage)}</SelectItem>
+                      <SelectItem value="mixed" disabled className="text-gray-400 dark:text-gray-500">{t('routeGenerator.surface.option.mixed', currentLanguage)}</SelectItem>
+                      <SelectItem value="paved" disabled className="text-gray-400 dark:text-gray-500">{t('routeGenerator.surface.option.paved', currentLanguage)}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -350,7 +355,7 @@ export function RouteGeneratorModal({
                     onClick={onClose}
                     className="flex-1 h-10 border-gray-300 dark:border-gray-600"
                   >
-                    Cancel
+                    {t('routeGenerator.actions.cancel', currentLanguage)}
                   </Button>
                 </DialogClose>
                 <Button 
@@ -360,7 +365,7 @@ export function RouteGeneratorModal({
                   className="flex-1 h-10 bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/30"
                 >
                   <ChevronRight className="w-4 h-4 mr-1" />
-                  Generate
+                  {t('routeGenerator.actions.generate', currentLanguage)}
                 </Button>
               </div>
             </div>
@@ -370,7 +375,7 @@ export function RouteGeneratorModal({
         {isGenerating && (
           <div className="border-t border-gray-100 dark:border-gray-800 px-4 py-3">
             <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
-              Please wait while we create your route
+              {t('routeGenerator.generatingState.footerMessage', currentLanguage)}
             </p>
           </div>
         )}

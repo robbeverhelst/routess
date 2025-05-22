@@ -1,6 +1,7 @@
 import type { Coordinate } from '@/types/map';
 import { Logger } from '@/lib/logger';
 import type { TimeOfDay } from '@/components/ui/route-controls';
+import type { SupportedLanguage } from '@/lib/i18n';
 
 // Data structure stored in local storage
 interface StoredRouteData {
@@ -162,5 +163,38 @@ export function saveLastMapViewToLocalStorage(viewState: MapViewState): void {
     localStorage.setItem(LAST_MAP_VIEW_KEY, JSON.stringify(viewState));
   } catch (error) {
     Logger.error('[LocalStorageService] Error saving map view state to localStorage:', error);
+  }
+}
+
+// --- Selected Language --- //
+const LANGUAGE_STORAGE_KEY = 'routingAppLanguage';
+
+export function loadLanguageFromLocalStorage(): SupportedLanguage {
+  try {
+    const storedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    if (storedLanguage) {
+      const knownLanguages: SupportedLanguage[] = ['en', 'nl', 'fr', 'de'];
+      if (knownLanguages.includes(storedLanguage as SupportedLanguage)) {
+        Logger.info(`[LocalStorageService] Loaded language: ${storedLanguage}`);
+        return storedLanguage as SupportedLanguage;
+      }
+      Logger.warn('[LocalStorageService] Invalid language found in localStorage:', storedLanguage);
+      localStorage.removeItem(LANGUAGE_STORAGE_KEY); // Clear invalid entry
+    }
+  } catch (error) {
+    Logger.error('[LocalStorageService] Error loading language from localStorage:', error);
+  }
+  Logger.info('[LocalStorageService] No language found or error, defaulting to en.');
+  return 'en'; // Default to English
+}
+
+export function saveLanguageToLocalStorage(language: SupportedLanguage): void {
+  try {
+    localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
+    if (import.meta.env.DEV) {
+      Logger.info(`[LocalStorageService] Saved language: ${language}`);
+    }
+  } catch (error) {
+    Logger.error('[LocalStorageService] Error saving language to localStorage:', error);
   }
 } 
