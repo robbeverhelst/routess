@@ -212,11 +212,13 @@ export function RouteGeneratorModal({
                       <Label htmlFor="startPointSearch" className="text-sm">{routeType === 'a-to-b' ? 'Start Point' : 'Start/End Point'}</Label>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="flex-grow">
+                      <div>
                         <LocationSearch 
                           mapboxToken={mapboxToken} 
                           onSelectLocation={setStartPoint} 
                           currentValue={startPoint?.name}
+                          startDesktopExpanded={true}
+                          desktopInputWidthClass="w-64"
                         />
                       </div>
                       <Button 
@@ -247,11 +249,13 @@ export function RouteGeneratorModal({
                           <Label htmlFor="endPointSearch" className="text-sm">End Point</Label>
                         </div>
                         <div className="flex items-center gap-2">
-                          <div className="flex-grow">
+                          <div>
                             <LocationSearch 
                               mapboxToken={mapboxToken} 
                               onSelectLocation={setEndPoint} 
                               currentValue={endPoint?.name}
+                              startDesktopExpanded={true}
+                              desktopInputWidthClass="w-64"
                             />
                           </div>
                           <Button 

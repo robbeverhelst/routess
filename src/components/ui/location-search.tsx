@@ -18,6 +18,8 @@ interface LocationSearchProps {
   isMobileContext?: boolean;
   isMobileSearchOpen?: boolean;
   onToggleMobileSearch?: () => void;
+  startDesktopExpanded?: boolean;
+  desktopInputWidthClass?: string;
 }
 
 export function LocationSearch({ 
@@ -26,13 +28,15 @@ export function LocationSearch({
   currentValue,
   isMobileContext = false,
   isMobileSearchOpen = false,
-  onToggleMobileSearch 
+  onToggleMobileSearch,
+  startDesktopExpanded = false,
+  desktopInputWidthClass = "w-56"
 }: LocationSearchProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<GeocodingFeature[]>([]);
   const [loading, setLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
-  const [isDesktopSearchExpanded, setIsDesktopSearchExpanded] = useState(false);
+  const [isDesktopSearchExpanded, setIsDesktopSearchExpanded] = useState(startDesktopExpanded);
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -71,7 +75,7 @@ export function LocationSearch({
         const data = await response.json();
         setResults(data.features || []);
       } catch (error) {
-        Logger.error("Error searching for locations:", error);
+        console.error("Error searching for locations:", error);
         setResults([]);
       } finally {
         setLoading(false);
@@ -91,16 +95,23 @@ export function LocationSearch({
           setQuery("");
           setResults([]);
         } else if (!isMobileContext && isDesktopSearchExpanded) {
-          setIsDesktopSearchExpanded(false);
-          setQuery("");
-          setResults([]);
+          if (startDesktopExpanded) {
+            // If it started expanded (e.g. in modal), only hide results on outside click.
+            // The input itself remains visible.
+            setShowResults(false);
+          } else {
+            // If it started collapsed (e.g. on map page), then an outside click should collapse it again.
+            setIsDesktopSearchExpanded(false);
+            setQuery("");
+            setResults([]);
+          }
         }
       }
     }
     
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isMobileContext, isMobileSearchOpen, onToggleMobileSearch, isDesktopSearchExpanded]);
+  }, [isMobileContext, isMobileSearchOpen, onToggleMobileSearch, isDesktopSearchExpanded, startDesktopExpanded]);
   
   const handleSelect = (result: GeocodingFeature) => {
     const selectedLocation = {
@@ -211,7 +222,7 @@ export function LocationSearch({
 
     // Expanded Desktop View
     return (
-      <div ref={searchRef} className="relative w-56"> {/* Reduced width from w-64 to w-56 */}
+      <div ref={searchRef} className={`relative ${desktopInputWidthClass}`}>
         <div className="relative flex items-center">
           <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
           <input
