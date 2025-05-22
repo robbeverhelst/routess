@@ -1055,6 +1055,8 @@ export default function MapWithRouting({
         attributionControl={false}
         projection="globe"
         antialias={true}
+        minPitch={45}
+        maxPitch={45}
         onLoad={handleMapLoad}
       >
         {popup && mapRef.current && (
