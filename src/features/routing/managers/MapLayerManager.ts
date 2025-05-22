@@ -27,6 +27,19 @@ const KM_MARKER_VISIBILITY_CONFIG = {
   minorMarkerMinZoom: 12   // Zoom level from which 'minor' (e.g., 1km, 2km) markers are shown.
 };
 
+// Configuration for waypoint dynamic sizing based on zoom levels
+const WAYPOINT_SCALING_CONFIG = {
+  zoomStops: [
+    // [zoomLevel, radius, shadowRadiusOffset, strokeWidth]
+    [6, 1, 1, 0.5],   // Very small at low zoom
+    [8, 2, 1.5, 0.75], // Small
+    [10, 4, 2, 1],    // Medium-small
+    [12, 6, 2.5, 1.5], // Default/Medium (current default is radius 6, shadow 8)
+    [14, 8, 3, 2],    // Large
+    [16, 10, 3.5, 2.5] // Very large at high zoom
+  ]
+};
+
 export const initializeSourcesAndLayers = (map: MapboxMap): void => {
   if (!map.getSource(ROUTE_SOURCE_ID)) {
     map.addSource(ROUTE_SOURCE_ID, {
@@ -119,7 +132,12 @@ export const initializeSourcesAndLayers = (map: MapboxMap): void => {
       type: 'circle',
       source: WAYPOINTS_SOURCE_ID,
       paint: {
-        'circle-radius': 8,
+        'circle-radius': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          ...WAYPOINT_SCALING_CONFIG.zoomStops.flatMap(stop => [stop[0], stop[1] + stop[2]]) // stop[1] is radius, stop[2] is shadowOffset
+        ],
         'circle-color': '#000',
         'circle-opacity': 0.4,
         'circle-translate': [1, 1]
@@ -130,7 +148,12 @@ export const initializeSourcesAndLayers = (map: MapboxMap): void => {
       type: 'circle',
       source: WAYPOINTS_SOURCE_ID,
       paint: {
-        'circle-radius': 6,
+        'circle-radius': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          ...WAYPOINT_SCALING_CONFIG.zoomStops.flatMap(stop => [stop[0], stop[1]]) // stop[1] is radius
+        ],
         'circle-color': [
           'match',
           ['get', 'pointType'],
@@ -139,7 +162,12 @@ export const initializeSourcesAndLayers = (map: MapboxMap): void => {
           'direct', '#f1c40f',
           '#3887be' // intermediate/other
         ],
-        'circle-stroke-width': 1.5,
+        'circle-stroke-width': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          ...WAYPOINT_SCALING_CONFIG.zoomStops.flatMap(stop => [stop[0], stop[3]]) // stop[3] is strokeWidth
+        ],
         'circle-stroke-color': '#fff'
       }
     });
