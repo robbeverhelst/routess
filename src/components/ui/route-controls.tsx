@@ -9,7 +9,7 @@ import {
   ArrowLeftCircle, ArrowRightCircle, Locate, RefreshCw, Lock, Unlock, 
   SunIcon, MoonIcon, SunriseIcon, SunsetIcon, SparklesIcon as Sparkles,
   ArrowUp, ArrowDown, ArrowLeft, ArrowRight, // Added cardinal direction arrows
-  Plus, Minus, Share2 // Added Plus and Minus icons for zoom, Added Share2
+  Plus, Minus, Share2, Maximize // Added Plus and Minus icons for zoom, Added Share2, Added Maximize for Zoom to Route
 } from "lucide-react";
 
 // Define TimeOfDay type locally
@@ -34,6 +34,7 @@ interface RouteControlsProps {
   onZoomIn: () => void; // New prop for zoom in
   onZoomOut: () => void; // New prop for zoom out
   onCopyShareLink: () => void; // New prop for copying share link
+  onZoomToRoute: () => void; // New prop for zooming to route
 }
 
 // Helper to get the icon component based on TimeOfDay
@@ -81,7 +82,8 @@ export function RouteControls({
   onCycleBearing,
   onZoomIn,
   onZoomOut,
-  onCopyShareLink
+  onCopyShareLink,
+  onZoomToRoute
 }: RouteControlsProps) {
   const TimeOfDayIcon = getIconForTimeOfDay(currentTimeOfDay);
   const { Icon: OrientationIcon, title: orientationTitle } = getOrientationIconAndLabel(currentBearing);
@@ -181,6 +183,22 @@ export function RouteControls({
           </TooltipTrigger>
           <TooltipContent>
             <p>Copy share link</p>
+          </TooltipContent>
+        </Tooltip>
+        
+        <Tooltip delayDuration={500}>
+          <TooltipTrigger asChild>
+            <Button
+              variant="secondary"
+              onClick={onZoomToRoute}
+              disabled={!hasRoute || isLocked}
+              className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 disabled:opacity-50 h-10 w-10"
+            >
+              <Maximize size={18} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Zoom to route</p>
           </TooltipContent>
         </Tooltip>
         

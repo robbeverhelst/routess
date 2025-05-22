@@ -290,10 +290,10 @@ export default function MapWithRouting({
   }, []);
 
   // Handle map load
-  const handleMapLoad = useCallback((event: { target: mapboxgl.Map }) => {
+  const handleMapLoad = useCallback(async (event: { target: mapboxgl.Map }) => {
     console.log('[MapWithRouting] Map loaded, setting up routing');
     mapRef.current = event.target;
-    const disposer = setupRouting(
+    const disposer = await setupRouting(
       event.target,
       MAPBOX_TOKEN,
       setRouteDistance,
@@ -1100,6 +1100,7 @@ export default function MapWithRouting({
               onZoomIn={handleZoomIn}
               onZoomOut={handleZoomOut}
               onCopyShareLink={handleCopyShareLinkToClipboard}
+              onZoomToRoute={handleZoomToRoute}
             />
           </div>
 
@@ -1167,6 +1168,7 @@ export default function MapWithRouting({
             onZoomIn={handleZoomIn}
             onZoomOut={handleZoomOut}
             onCopyShareLink={handleCopyShareLinkToClipboard}
+            onZoomToRoute={handleZoomToRoute}
         />
       </div>
 
