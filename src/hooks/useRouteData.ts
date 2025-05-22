@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { getWaypoints, getDirectFlags } from '@/features/routing/managers/WaypointManager';
 import { serializeAndCompress } from '@/lib/shareUtils';
+import { Logger } from '@/lib/logger';
 
 export interface RouteDataState {
   routeDistance: string;
@@ -59,7 +60,7 @@ export function useRouteData(): RouteDataState & RouteDataHandlers {
           setTimeout(() => setShareNotification(''), 2000);
         })
         .catch(err => {
-          console.error('[useRouteData] Failed to copy share link:', err);
+          Logger.error('[useRouteData] Failed to copy share link:', err);
           handleRouteInfoError('Failed to copy link. Please try again.');
           setDisplayedShareUrl(null); // Clear URL display on error
         });
@@ -77,7 +78,7 @@ export function useRouteData(): RouteDataState & RouteDataHandlers {
         setTimeout(() => setShareNotification(''), 2000); 
       })
       .catch(err => {
-        console.error('[useRouteData] Failed to copy share link from sidebar button:', err);
+        Logger.error('[useRouteData] Failed to copy share link from sidebar button:', err);
         handleRouteInfoError('Failed to copy. Please try again.');
       });
   }, [handleRouteInfoError]);

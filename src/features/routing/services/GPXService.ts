@@ -3,6 +3,7 @@
 import type { Coordinate } from '@/types/map';
 // Import checkNearRoad from RoutingUtils
 import { checkNearRoad } from '@/features/routing/utils/RoutingUtils';
+import { Logger } from '@/lib/logger';
 
 /**
  * Generates a GPX data string from waypoints and a route path.
@@ -59,7 +60,7 @@ export const generateGPXString = (waypoints: Coordinate[], routePath: Coordinate
 export const parseGPXFile = async (gpxString: string): Promise<{ waypoints?: Coordinate[], error?: string }> => {
   // Check for DOMParser availability (browser environment)
   if (typeof window === 'undefined' || typeof window.DOMParser === 'undefined') {
-    console.error("[GPXService.parseGPXFile] DOMParser is not available. GPX parsing currently requires a browser environment.");
+    Logger.error("[GPXService.parseGPXFile] DOMParser is not available. GPX parsing currently requires a browser environment.");
     return { error: "GPX parsing is not available in this environment. DOMParser not found." };
   }
 
@@ -70,7 +71,7 @@ export const parseGPXFile = async (gpxString: string): Promise<{ waypoints?: Coo
     const parserError = xmlDoc.getElementsByTagName("parsererror");
     if (parserError.length > 0) {
       const errorContent = parserError[0].textContent || "Unknown XML parsing error";
-      console.error("[GPXService.parseGPXFile] Error parsing GPX XML:", errorContent);
+      Logger.error("[GPXService.parseGPXFile] Error parsing GPX XML:", errorContent);
       return { error: `Invalid GPX file: ${errorContent}` };
     }
 
@@ -82,12 +83,12 @@ export const parseGPXFile = async (gpxString: string): Promise<{ waypoints?: Coo
 
     if (rteptElements.length > 0) {
       pointsToParse = rteptElements;
-      console.log(`[GPXService.parseGPXFile] Found ${rteptElements.length} <rtept> elements.`);
+      Logger.info(`[GPXService.parseGPXFile] Found ${rteptElements.length} <rtept> elements.`);
     } else if (trkptElements.length > 0) {
       pointsToParse = trkptElements;
-      console.log(`[GPXService.parseGPXFile] Found ${trkptElements.length} <trkpt> elements.`);
+      Logger.info(`[GPXService.parseGPXFile] Found ${trkptElements.length} <trkpt> elements.`);
     } else {
-      console.warn("[GPXService.parseGPXFile] No <rtept> or <trkpt> elements found in GPX file.");
+      Logger.warn("[GPXService.parseGPXFile] No <rtept> or <trkpt> elements found in GPX file.");
       return { error: "No route or track points found in the GPX file." };
     }
 
@@ -100,22 +101,22 @@ export const parseGPXFile = async (gpxString: string): Promise<{ waypoints?: Coo
         if (!isNaN(lonNum) && !isNaN(latNum)) {
           gpxCoords.push([lonNum, latNum]);
         } else {
-          console.warn(`[GPXService.parseGPXFile] Skipped invalid coordinate: lat='${latStr}', lon='${lonStr}'`);
+          Logger.warn(`[GPXService.parseGPXFile] Skipped invalid coordinate: lat='${latStr}', lon='${lonStr}'`);
         }
       }
     }
 
     if (gpxCoords.length === 0) {
-      console.warn("[GPXService.parseGPXFile] No valid waypoints extracted from GPX.");
+      Logger.warn("[GPXService.parseGPXFile] No valid waypoints extracted from GPX.");
       return { error: "Could not extract any waypoints from the GPX file." };
     }
     
-    console.log(`[GPXService.parseGPXFile] Successfully parsed ${gpxCoords.length} waypoints.`);
+    Logger.info(`[GPXService.parseGPXFile] Successfully parsed ${gpxCoords.length} waypoints.`);
     return { waypoints: gpxCoords };
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error during GPX parsing";
-    console.error("[GPXService.parseGPXFile] Error parsing GPX:", error);
+    Logger.error("[GPXService.parseGPXFile] Error parsing GPX:", error);
     return { error: `Error parsing GPX: ${errorMessage}` };
   }
 };
@@ -135,11 +136,11 @@ export const processGPXWaypoints = async (
   }
 
   try {
-    console.log(`[GPXService.processGPXWaypoints] Checking road proximity for ${gpxWaypoints.length} points...`);
+    Logger.info(`[GPXService.processGPXWaypoints] Checking road proximity for ${gpxWaypoints.length} points...`);
     const roadChecks = await Promise.all(
       gpxWaypoints.map(coord => checkNearRoad(coord, accessToken))
     );
-    console.log("[GPXService.processGPXWaypoints] Road proximity checks complete.");
+    Logger.info("[GPXService.processGPXWaypoints] Road proximity checks complete.");
 
     const finalNewWaypoints: Coordinate[] = [];
     const newDirectFlags: boolean[] = [];
@@ -150,12 +151,12 @@ export const processGPXWaypoints = async (
       newDirectFlags.push(!(roadChecks[index]?.isValid));
     });
 
-    console.log("[GPXService.processGPXWaypoints] Determined directFlags:", JSON.stringify(newDirectFlags));
+    Logger.info("[GPXService.processGPXWaypoints] Determined directFlags:", JSON.stringify(newDirectFlags));
     return { finalWaypoints: finalNewWaypoints, finalDirectFlags: newDirectFlags };
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error during waypoint processing";
-    console.error("[GPXService.processGPXWaypoints] Error processing GPX waypoints:", error);
+    Logger.error("[GPXService.processGPXWaypoints] Error processing GPX waypoints:", error);
     return { error: `Error processing GPX waypoints: ${errorMessage}` };
   }
 }; 

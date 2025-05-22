@@ -1,5 +1,6 @@
 import type { Map as MapboxMap, GeoJSONSource } from 'mapbox-gl';
 import type { Coordinate } from '@/types/map';
+import { Logger } from '@/lib/logger';
 
 export const ROUTE_SOURCE_ID = 'route';
 export const ROUTE_LAYER_ID = 'route';
@@ -244,7 +245,7 @@ export const initializeSourcesAndLayers = (map: MapboxMap): void => {
       paint: { 'line-color': '#3887be', 'line-width': 3, 'line-opacity': 0.75 }
     });
   }
-  console.log('[MapLayerManager] All sources and layers initialized (if not already present).');
+  Logger.info('[MapLayerManager] All sources and layers initialized (if not already present).');
 };
 
 export const updateWaypointsLayer = (map: MapboxMap, points: Coordinate[], isMapLocked: boolean): void => {

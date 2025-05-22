@@ -22,7 +22,7 @@ export function useUserLocation() {
           return parsed as [number, number];
         }
       } catch (e) {
-        console.error("Failed to parse lastKnownLocation from localStorage", e);
+        Logger.error("Failed to parse lastKnownLocation from localStorage", e);
       }
     }
     return null;

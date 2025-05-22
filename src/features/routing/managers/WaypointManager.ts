@@ -8,6 +8,7 @@ import { saveWaypointsToLocalStorage } from '@/features/routing/services/LocalSt
 import { snapshot } from '@/features/routing/managers/HistoryManager';
 import { closestPointOnSegment, haversine } from '@/features/routing/utils/RoutingUtils';
 import { getCurrentRoutePath } from '@/features/routing/services/RouteCalculationService';
+import { Logger } from '@/lib/logger';
 
 // Store references and state outside of the setup function to persist across renders
 let waypoints: Coordinate[] = [];
@@ -16,18 +17,18 @@ let directFlags: boolean[] = []; // parallel to waypoints, true if waypoint is d
 const reinitializeWaypointState = () => {
   waypoints = [];
   directFlags = [];
-  console.log('[WaypointManager.ts] Module state explicitly re-initialized.');
+  Logger.info('[WaypointManager.ts] Module state explicitly re-initialized.');
 };
 
 reinitializeWaypointState(); // Initial call
 
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {
-    console.log('[WaypointManager.ts] HMR disposing old instance.');
+    Logger.info('[WaypointManager.ts] HMR disposing old instance.');
     // State will be reset by the new instance's reinitializeWaypointState() via accept or top-level call
   });
   import.meta.hot.accept(() => {
-    console.log('[WaypointManager.ts] HMR accept: Forcing state re-initialization.');
+    Logger.info('[WaypointManager.ts] HMR accept: Forcing state re-initialization.');
     reinitializeWaypointState();
   });
 }
@@ -40,7 +41,7 @@ export const _addWaypointInternal = async (
   if (isDirect || waypoints.length === 0) {
     waypoints.push(coords);
     directFlags.push(isDirect);
-    console.log('[_addWaypointInternal] Added direct/initial waypoint (raw):', coords);
+    Logger.info('[_addWaypointInternal] Added direct/initial waypoint (raw):', coords);
     return { success: true, snappedCoords: coords, checkNearRoadFailed: false };
   }
 
@@ -51,14 +52,14 @@ export const _addWaypointInternal = async (
     // checkNearRoad succeeded (within 49m)
     waypoints.push(roadCheck.snappedCoords);
     directFlags.push(false); // It's not direct if it went through roadCheck
-    console.log('[_addWaypointInternal] Added waypoint via checkNearRoad (49m snap):', roadCheck.snappedCoords);
+    Logger.info('[_addWaypointInternal] Added waypoint via checkNearRoad (49m snap):', roadCheck.snappedCoords);
     return { success: true, snappedCoords: roadCheck.snappedCoords, checkNearRoadFailed: false };
   } else {
     // checkNearRoad failed (e.g., >49m or other error from Matching API)
     // Add the raw coordinates for now. The main addWaypoint will try getRouteFromService.
     waypoints.push(coords);
     directFlags.push(false);
-    console.log('[_addWaypointInternal] checkNearRoad failed. Added waypoint raw for now:', coords);
+    Logger.info('[_addWaypointInternal] checkNearRoad failed. Added waypoint raw for now:', coords);
     return { success: true, snappedCoords: coords, checkNearRoadFailed: true }; 
   }
 };
@@ -69,31 +70,30 @@ export const getDirectFlags = () => directFlags; // Added export for directFlags
 
 export const setWaypointsAndFlags = (newWaypoints: Coordinate[], newDirectFlags: boolean[]) => {
   if (newWaypoints.length === 0 && waypoints.length > 0) { // Log only when clearing existing waypoints
-    console.warn('[WaypointManager.setWaypointsAndFlags] Clearing existing waypoints. Current count:', waypoints.length, 'Call stack:');
-    console.trace();
+    Logger.warn('[WaypointManager.setWaypointsAndFlags] Clearing existing waypoints. Current count:', waypoints.length, 'Call stack:');
   }
   waypoints = newWaypoints;
   directFlags = newDirectFlags;
-  console.log('[WaypointManager] Waypoints and flags set. Count:', waypoints.length);
+  Logger.info('[WaypointManager] Waypoints and flags set. Count:', waypoints.length);
 };
 
 export const _removeWaypointInternal = (index: number): void => {
   if (index < 0 || index >= waypoints.length) {
-    console.warn('[_removeWaypointInternal] Invalid index:', index);
+    Logger.warn('[_removeWaypointInternal] Invalid index:', index);
     return;
   }
   waypoints.splice(index, 1);
   directFlags.splice(index, 1);
-  console.log('[_removeWaypointInternal] Waypoint removed at index:', index, 'New waypoints:', waypoints);
+  Logger.info('[_removeWaypointInternal] Waypoint removed at index:', index, 'New waypoints:', waypoints);
 };
 
 export const _updateWaypointPositionInternal = (index: number, newCoords: Coordinate): void => {
   if (index < 0 || index >= waypoints.length) {
-    console.warn('[_updateWaypointPositionInternal] Invalid index:', index);
+    Logger.warn('[_updateWaypointPositionInternal] Invalid index:', index);
     return;
   }
   waypoints[index] = newCoords;
-  console.log('[_updateWaypointPositionInternal] Waypoint updated at index:', index, 'to:', newCoords, 'New waypoints:', waypoints);
+  Logger.info('[_updateWaypointPositionInternal] Waypoint updated at index:', index, 'to:', newCoords, 'New waypoints:', waypoints);
 };
 
 export const addWaypoint = async (
@@ -115,19 +115,19 @@ export const addWaypoint = async (
   if (getWaypoints().length === 1 && initialWaypointCount === 0 && !isDirect) {
     // This is the VERY FIRST waypoint being added, AND it's meant to be a routed point.
     // _addWaypointInternal added it raw. Let's try to snap it immediately with checkNearRoad.
-    console.log('[WaypointManager.addWaypoint] First non-direct waypoint. Attempting immediate 49m snap via checkNearRoad...');
+    Logger.info('[WaypointManager.addWaypoint] First non-direct waypoint. Attempting immediate 49m snap via checkNearRoad...');
     const currentFirstPoint = getWaypoints()[0]; // This is the raw point
     const singlePointRoadCheck = await checkNearRoad(currentFirstPoint, accessToken);
 
     if (singlePointRoadCheck.isValid && singlePointRoadCheck.snappedCoords) {
-      console.log('[WaypointManager.addWaypoint] First non-direct waypoint snapped by checkNearRoad (49m). Updating.');
+      Logger.info('[WaypointManager.addWaypoint] First non-direct waypoint snapped by checkNearRoad (49m). Updating.');
       setWaypointsAndFlags([singlePointRoadCheck.snappedCoords], [false]); // Update the single waypoint
       updateWaypointsLayer(map, getWaypoints(), isMapLocked);
       saveWaypointsToLocalStorage(getWaypoints(), getDirectFlags());
       snapshot();
       return true;
     } else {
-      console.warn('[WaypointManager.addWaypoint] First non-direct waypoint failed checkNearRoad (49m). Rejecting.');
+      Logger.warn('[WaypointManager.addWaypoint] First non-direct waypoint failed checkNearRoad (49m). Rejecting.');
       if (handleWaypointError) handleWaypointError("Point is too far from any road or path.");
       
       _removeWaypointInternal(0); // Remove the raw point that was provisionally added
@@ -143,12 +143,12 @@ export const addWaypoint = async (
   saveWaypointsToLocalStorage(getWaypoints(), getDirectFlags()); // Provisional save
 
   if (getWaypoints().length >= 2) {
-    console.log('[WaypointManager.addWaypoint] Recalculating route for 2+ waypoints...');
+    Logger.info('[WaypointManager.addWaypoint] Recalculating route for 2+ waypoints...');
     const routeResult: RouteResult = await getRouteFromService(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
 
     if (routeResult.success) {
       if (routeResult.waypointsSnapped && routeResult.snappedWaypoints && routeResult.snappedDirectFlags) {
-        console.log("[WaypointManager.addWaypoint] Directions API snapped waypoints. Updating state.");
+        Logger.info("[WaypointManager.addWaypoint] Directions API snapped waypoints. Updating state.");
         setWaypointsAndFlags(routeResult.snappedWaypoints, routeResult.snappedDirectFlags);
         updateWaypointsLayer(map, getWaypoints(), isMapLocked);
       }
@@ -156,7 +156,7 @@ export const addWaypoint = async (
       snapshot();
       return true;
     } else { // getRouteFromService FAILED for 2+ waypoints
-      console.warn('[WaypointManager.addWaypoint] getRouteFromService failed for 2+ waypoints.');
+      Logger.warn('[WaypointManager.addWaypoint] getRouteFromService failed for 2+ waypoints.');
       const currentWaypoints = getWaypoints(); 
       const indexOfLastAddedPoint = currentWaypoints.length - 1;
       
@@ -167,14 +167,14 @@ export const addWaypoint = async (
         currentWaypoints[indexOfLastAddedPoint][1] === coords[1];
 
       if (lastAddedPointWasRawDueToCheckNearRoadFailure) {
-        console.warn('[WaypointManager.addWaypoint] Route calculation failed AND the last added waypoint was raw (>49m). Removing it.');
+        Logger.warn('[WaypointManager.addWaypoint] Route calculation failed AND the last added waypoint was raw (>49m). Removing it.');
         if (handleWaypointError) handleWaypointError(routeResult.error || "Last added point is too far from any road for routing.");
 
         _removeWaypointInternal(indexOfLastAddedPoint);
         updateWaypointsLayer(map, getWaypoints(), isMapLocked);
 
         if (getWaypoints().length >= 2) {
-          console.log('[WaypointManager.addWaypoint] Retrying route calculation with remaining waypoints after removing bad point...');
+          Logger.info('[WaypointManager.addWaypoint] Retrying route calculation with remaining waypoints after removing bad point...');
           const retryRouteResult: RouteResult = await getRouteFromService(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
           if (retryRouteResult.success && retryRouteResult.waypointsSnapped && retryRouteResult.snappedWaypoints && retryRouteResult.snappedDirectFlags) {
             setWaypointsAndFlags(retryRouteResult.snappedWaypoints, retryRouteResult.snappedDirectFlags);
@@ -188,7 +188,7 @@ export const addWaypoint = async (
         snapshot(); 
         return false; 
       } else {
-        console.warn('[WaypointManager.addWaypoint] Route calculation failed for other reasons (e.g. disconnected network, or a previous point was too far).');
+        Logger.warn('[WaypointManager.addWaypoint] Route calculation failed for other reasons (e.g. disconnected network, or a previous point was too far).');
         if (handleWaypointError) handleWaypointError(routeResult.error || "Could not calculate route.");
         // Point added by _addWaypointInternal remains. If it was a first point that was raw, it stays raw.
         // If it was a subsequent point that passed checkNearRoad, it stays (49m-snapped).
@@ -200,7 +200,7 @@ export const addWaypoint = async (
   } else if (getWaypoints().length === 1 && (initialWaypointCount === 0 && isDirect)) {
     // This handles: First waypoint added, AND it IS direct.
     // _addWaypointInternal already added it raw. No immediate snap check needed for direct.
-    console.log('[WaypointManager.addWaypoint] First waypoint added (direct). No immediate snap/route.');
+    Logger.info('[WaypointManager.addWaypoint] First waypoint added (direct). No immediate snap/route.');
     setRouteDistance(''); setRouteDuration(''); setHasRoute(false);
     clearCurrentRoutePath(); clearRouteLayer(map); clearKilometerMarkersLayer(map);
     saveWaypointsToLocalStorage(getWaypoints(), getDirectFlags());
@@ -215,11 +215,11 @@ export const addWaypoint = async (
       // This case means a first, non-direct point was attempted, failed checkNearRoad, and was removed.
       // The function already returned false in that block.
       // This is more of a safeguard or for clarity if other paths lead to 0 waypoints.
-      console.log('[WaypointManager.addWaypoint] No waypoints remain after add attempt (likely first non-direct point rejected).');
+      Logger.info('[WaypointManager.addWaypoint] No waypoints remain after add attempt (likely first non-direct point rejected).');
       return false; // Explicitly return false if ended up with 0 waypoints and it was an add attempt.
   }
 
-  console.warn('[WaypointManager.addWaypoint] Reached unexpected end of function logic. Waypoint count:', getWaypoints().length, 'Initial count:', initialWaypointCount, 'IsDirect:', isDirect);
+  Logger.warn('[WaypointManager.addWaypoint] Reached unexpected end of function logic. Waypoint count:', getWaypoints().length, 'Initial count:', initialWaypointCount, 'IsDirect:', isDirect);
   return false; 
 };
 
@@ -234,7 +234,7 @@ export const removeWaypoint = async (
   isMapLocked: boolean
 ): Promise<void> => {
   if (index < 0 || index >= getWaypoints().length) {
-    console.warn('[WaypointManager.removeWaypoint] Invalid index:', index);
+    Logger.warn('[WaypointManager.removeWaypoint] Invalid index:', index);
     if (handleWaypointError) {
       handleWaypointError("Invalid waypoint index. Waypoint may no longer exist.");
     }
@@ -248,10 +248,10 @@ export const removeWaypoint = async (
 
   const currentWaypointsCount = getWaypoints().length;
   if (currentWaypointsCount >= 2) {
-    console.log('[WaypointManager.removeWaypoint] Recalculating route...');
+    Logger.info('[WaypointManager.removeWaypoint] Recalculating route...');
     const routeResult: RouteResult = await getRouteFromService(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
     if (routeResult.success && routeResult.waypointsSnapped && routeResult.snappedWaypoints && routeResult.snappedDirectFlags) {
-        console.log("[WaypointManager.removeWaypoint] Route service snapped waypoints. Updating WaypointManager state.");
+        Logger.info("[WaypointManager.removeWaypoint] Route service snapped waypoints. Updating WaypointManager state.");
         setWaypointsAndFlags(routeResult.snappedWaypoints, routeResult.snappedDirectFlags);
         updateWaypointsLayer(map, getWaypoints(), isMapLocked);
         saveWaypointsToLocalStorage(getWaypoints(), getDirectFlags());
@@ -270,7 +270,7 @@ export const removeWaypoint = async (
     // Snapshot because the removal leading to 0 or 1 waypoint is a completed, undoable action.
     snapshot(); 
   }
-  console.log('[WaypointManager.removeWaypoint] Waypoint removed and route updated.');
+  Logger.info('[WaypointManager.removeWaypoint] Waypoint removed and route updated.');
 };
 
 export const updateWaypointPositionAndRecalculate = async (
@@ -284,9 +284,9 @@ export const updateWaypointPositionAndRecalculate = async (
   handleWaypointError: (message: string | null) => void,
   isMapLocked: boolean
 ): Promise<void> => {
-  console.log(`[WaypointManager.updateWaypointPositionAndRecalculate] Called for index: ${index}, newCoords:`, newCoords);
+  Logger.info(`[WaypointManager.updateWaypointPositionAndRecalculate] Called for index: ${index}, newCoords:`, newCoords);
   if (index < 0 || index >= getWaypoints().length) {
-    console.warn('[WaypointManager.updateWaypointPosition] Invalid index:', index);
+    Logger.warn('[WaypointManager.updateWaypointPosition] Invalid index:', index);
     if (handleWaypointError) handleWaypointError("Invalid waypoint index for update.");
     return;
   }
@@ -297,10 +297,10 @@ export const updateWaypointPositionAndRecalculate = async (
   // Attempt pre-validation with checkNearRoad (49m)
   const roadCheck = await checkNearRoad(newCoords, accessToken);
   if (roadCheck.isValid && roadCheck.snappedCoords) {
-    console.log('[WaypointManager.updateWaypointPositionAndRecalculate] checkNearRoad (49m) succeeded. Using its snapped point initially.');
+    Logger.info('[WaypointManager.updateWaypointPositionAndRecalculate] checkNearRoad (49m) succeeded. Using its snapped point initially.');
     coordsToUpdate = roadCheck.snappedCoords;
   } else {
-    console.log('[WaypointManager.updateWaypointPositionAndRecalculate] checkNearRoad (49m) failed or no snap. Using raw coords for now.');
+    Logger.info('[WaypointManager.updateWaypointPositionAndRecalculate] checkNearRoad (49m) failed or no snap. Using raw coords for now.');
     // coordsToUpdate remains newCoords (raw)
   }
 
@@ -321,20 +321,20 @@ export const updateWaypointPositionAndRecalculate = async (
   if (routeRecalcResult.success) {
     // Route calculation successful
     if (routeRecalcResult.waypointsSnapped && routeRecalcResult.snappedWaypoints && routeRecalcResult.snappedDirectFlags) {
-      console.log("[WaypointManager.updateWaypointPositionAndRecalculate] Directions API snapped waypoints. Updating WaypointManager state.");
+      Logger.info("[WaypointManager.updateWaypointPositionAndRecalculate] Directions API snapped waypoints. Updating WaypointManager state.");
       setWaypointsAndFlags(routeRecalcResult.snappedWaypoints, routeRecalcResult.snappedDirectFlags);
       updateWaypointsLayer(map, getWaypoints(), isMapLocked); // Update layer with final API snapped points
     } else {
       // Directions API calculated a route but didn't further snap the points beyond what we gave it
       // (which was either 49m-snapped or raw if checkNearRoad failed).
-      console.log("[WaypointManager.updateWaypointPositionAndRecalculate] Directions API successful, no *further* snapping occurred.");
+      Logger.info("[WaypointManager.updateWaypointPositionAndRecalculate] Directions API successful, no *further* snapping occurred.");
       // The waypoints are already what they should be from _updateWaypointPositionInternal.
     }
     saveWaypointsToLocalStorage(getWaypoints(), getDirectFlags());
     snapshot();
   } else {
     // Route recalculation by Directions API failed
-    console.warn('[WaypointManager.updateWaypointPositionAndRecalculate] Directions API route recalculation failed.');
+    Logger.warn('[WaypointManager.updateWaypointPositionAndRecalculate] Directions API route recalculation failed.');
     // At this point, checkNearRoad might have failed OR succeeded.
     // If checkNearRoad succeeded, coordsToUpdate is the 49m-snapped point.
     // If checkNearRoad failed, coordsToUpdate is the raw newCoords.
@@ -360,7 +360,7 @@ export const reverseRoute = async (
 ): Promise<void> => {
   const currentWaypoints = getWaypoints();
   if (currentWaypoints.length < 2) {
-    console.log('[WaypointManager.reverseRoute] Not enough waypoints to reverse.');
+    Logger.info('[WaypointManager.reverseRoute] Not enough waypoints to reverse.');
     return;
   }
 
@@ -376,11 +376,11 @@ export const reverseRoute = async (
   updateWaypointsLayer(map, getWaypoints(), isMapLocked);
   saveWaypointsToLocalStorage(getWaypoints(), getDirectFlags());
 
-  console.log('[WaypointManager.reverseRoute] Route reversed. Recalculating route.');
+  Logger.info('[WaypointManager.reverseRoute] Route reversed. Recalculating route.');
   const routeResult: RouteResult = await getRouteFromService(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
 
   if (routeResult.success && routeResult.waypointsSnapped && routeResult.snappedWaypoints && routeResult.snappedDirectFlags) {
-    console.log("[WaypointManager.reverseRoute] Route service snapped waypoints after reverse. Updating WaypointManager state.");
+    Logger.info("[WaypointManager.reverseRoute] Route service snapped waypoints after reverse. Updating WaypointManager state.");
     setWaypointsAndFlags(routeResult.snappedWaypoints, routeResult.snappedDirectFlags);
     updateWaypointsLayer(map, getWaypoints(), isMapLocked);
     saveWaypointsToLocalStorage(getWaypoints(), getDirectFlags());
@@ -388,7 +388,7 @@ export const reverseRoute = async (
   }
   // Snapshot after route calculation and potential snapping is complete.
   snapshot();
-  console.log('[WaypointManager.reverseRoute] Reverse complete, route updated.');
+  Logger.info('[WaypointManager.reverseRoute] Reverse complete, route updated.');
 };
 
 export const insertWaypointAtLocation = async (
@@ -402,11 +402,11 @@ export const insertWaypointAtLocation = async (
   isMapLocked: boolean,
   options?: { skipRouteCalcAndSnapshot?: boolean }
 ): Promise<{ success: boolean; newIndex?: number; error?: string }> => {
-  console.log('[WaypointManager.insertWaypoint] Attempting to insert waypoint at:', clickedCoords, 'Options:', options);
+  Logger.info('[WaypointManager.insertWaypoint] Attempting to insert waypoint at:', clickedCoords, 'Options:', options);
 
   const currentWaypoints = getWaypoints();
   if (currentWaypoints.length < 1) { 
-    console.warn('[WaypointManager.insertWaypoint] Not enough waypoints to define a route segment.');
+    Logger.warn('[WaypointManager.insertWaypoint] Not enough waypoints to define a route segment.');
     const errorMsg = "Cannot add waypoint: No existing route segment.";
     if (handleWaypointError) handleWaypointError(errorMsg);
     return { success: false, error: errorMsg };
@@ -424,7 +424,7 @@ export const insertWaypointAtLocation = async (
   }
   
   if (routePathToUse.length < 2) {
-    console.warn('[WaypointManager.insertWaypoint] Route path is too short (less than 2 points).');
+    Logger.warn('[WaypointManager.insertWaypoint] Route path is too short (less than 2 points).');
     const errorMsg = "Cannot add waypoint: Route path is not defined or too short.";
     if (handleWaypointError) handleWaypointError(errorMsg);
     return { success: false, error: errorMsg };
@@ -476,13 +476,13 @@ export const insertWaypointAtLocation = async (
 
   const MAX_CLICK_DISTANCE_FROM_ROUTE_KM = 0.1;
   if (minDistance > MAX_CLICK_DISTANCE_FROM_ROUTE_KM && getWaypoints().length >= 2) {
-    console.warn(`[WaypointManager.insertWaypoint] Click was too far from the route path. Distance: ${minDistance.toFixed(3)}km`);
+    Logger.warn(`[WaypointManager.insertWaypoint] Click was too far from the route path. Distance: ${minDistance.toFixed(3)}km`);
     const errorMsg = "Cannot add waypoint: Click too far from route.";
     if (handleWaypointError) handleWaypointError(errorMsg);
     return { success: false, error: errorMsg };
   }
 
-  console.log('[WaypointManager.insertWaypoint] Closest point on route:', closestPointOnRoute, 'Insert index:', insertIndex);
+  Logger.info('[WaypointManager.insertWaypoint] Closest point on route:', closestPointOnRoute, 'Insert index:', insertIndex);
 
   // snapshot(); // REMOVED: Initial snapshot. Snapshot will be taken after async operations and potential snapping.
 
@@ -509,7 +509,7 @@ export const insertWaypointAtLocation = async (
 
   // Conditionally skip route calculation and snapshot
   if (options?.skipRouteCalcAndSnapshot) {
-    console.log('[WaypointManager.insertWaypoint] Skipping route calculation and snapshot as per options.');
+    Logger.info('[WaypointManager.insertWaypoint] Skipping route calculation and snapshot as per options.');
     // Still need to return success and index for the MapInteractionManager to start dragging
     return { success: true, newIndex: insertIndex };
   }
@@ -535,7 +535,7 @@ export const insertWaypointAtLocation = async (
     clearKilometerMarkersLayer(map);
     snapshot(); // Snapshot for completed action even if no route calculation
   }
-  console.log('[WaypointManager.insertWaypoint] Waypoint inserted and route recalculated (or skipped).');
+  Logger.info('[WaypointManager.insertWaypoint] Waypoint inserted and route recalculated (or skipped).');
   return { success: true, newIndex: insertIndex };
 };
 

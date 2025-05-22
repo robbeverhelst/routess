@@ -15,6 +15,7 @@ import {
   updateWaypointPositionAndRecalculate,
   insertWaypointAtLocation // Added import
 } from '@/features/routing/managers/WaypointManager';
+import { Logger } from '@/lib/logger';
 // For getWaypoints: import { getWaypoints } from '@/features/routing/managers/WaypointManager';
 
 // Assuming updateDragLinesLayer will be moved to MapLayerManager or similar
@@ -76,7 +77,7 @@ const getPopupInfo = (
     const idx = typeof idxRaw === 'string' ? parseInt(idxRaw, 10) : typeof idxRaw === 'number' ? idxRaw : -1;
 
     if (isNaN(idx) || idx < 0 || idx >= getWaypoints().length || idx === -1) {
-      console.error('[MapInteractionManager] Invalid waypoint index on feature query:', idxRaw);
+      Logger.error('[MapInteractionManager] Invalid waypoint index on feature query:', idxRaw);
       return null;
     }
     return {
@@ -125,11 +126,11 @@ export const initializeMapInteractions = (
       longPressTimeoutRef = null;
       currentLongPressId = null;
       touchStartPos = null;
-      console.log('[MapInteractionManager] Click event detected, cancelled pending long press timer.');
+      Logger.info('[MapInteractionManager] Click event detected, cancelled pending long press timer.');
     }
 
     if (e.defaultPrevented) {
-      console.log('[MapInteractionManager] Click event default prevented, likely due to drag. Ignoring.');
+      Logger.info('[MapInteractionManager] Click event default prevented, likely due to drag. Ignoring.');
       return;
     }
     // Check if the click was on an existing waypoint or other interactive route feature
@@ -138,12 +139,12 @@ export const initializeMapInteractions = (
     });
 
     if (features.length > 0) {
-      console.log('[MapInteractionManager] Clicked on existing feature. Popup cleared. No new waypoint added.', features.map(f => f.layer?.id).filter(id => id !== undefined));
+      Logger.info('[MapInteractionManager] Clicked on existing feature. Popup cleared. No new waypoint added.', features.map(f => f.layer?.id).filter(id => id !== undefined));
       setPopup(null); 
       return; 
     }
 
-    console.log('[MapInteractionManager] Map click on empty area. Clearing popup and adding waypoint.', e.lngLat);
+    Logger.info('[MapInteractionManager] Map click on empty area. Clearing popup and adding waypoint.', e.lngLat);
     setPopup(null); 
 
     addWaypoint(
@@ -160,14 +161,14 @@ export const initializeMapInteractions = (
   };
 
   map.on('click', handleMapClickInternal);
-  console.log('[MapInteractionManager] Unified map click listener added.');
+  Logger.info('[MapInteractionManager] Unified map click listener added.');
 
 
   // --- ON CONTEXT MENU LOGIC ---
   const handleContextMenuInternal = (e: MapMouseEvent | MapTouchEvent) => {
     if (isMapLockedRef.current) return; // Exit if map is locked
     e.preventDefault();
-    console.log('[MapInteractionManager] Context menu event at:', e.lngLat);
+    Logger.info('[MapInteractionManager] Context menu event at:', e.lngLat);
 
     let eventPointXY: { x: number; y: number };
     if (e.type === 'contextmenu' && 'point' in e) {
@@ -180,7 +181,7 @@ export const initializeMapInteractions = (
       } else if ('point' in e) {
          eventPointXY = e.point; 
       } else {
-        console.error('[MapInteractionManager] Could not determine event point for context menu.');
+        Logger.error('[MapInteractionManager] Could not determine event point for context menu.');
         return;
       }
     }
@@ -191,7 +192,7 @@ export const initializeMapInteractions = (
   };
   
   map.on('contextmenu', handleContextMenuInternal);
-  console.log('[MapInteractionManager] Map context menu listener added.');
+  Logger.info('[MapInteractionManager] Map context menu listener added.');
 
   // --- GENERAL MOUSE DOWN HANDLER (for dragging existing waypoints or creating new ones on route) ---
   const generalMouseDownHandler = async (e: MapMouseEvent) => {
@@ -218,14 +219,14 @@ export const initializeMapInteractions = (
         draggedWaypointIndex = idx;
         currentLngLat = [e.lngLat.lng, e.lngLat.lat]; // Store initial position
         mapCanvas.style.cursor = 'grabbing';
-        console.log(`[MapInteractionManager] Mousedown on waypoint ${idx}, starting drag.`);
+        Logger.info(`[MapInteractionManager] Mousedown on waypoint ${idx}, starting drag.`);
 
         // Attach move and up listeners
         map.on('mousemove', onMapMouseMoveForDrag);
         window.addEventListener('mouseup', onMapMouseUpInternal, { once: true });
       }
     } else if (routeFeature) {
-      console.log('[MapInteractionManager] Mousedown on route. Attempting to insert and drag new waypoint.');
+      Logger.info('[MapInteractionManager] Mousedown on route. Attempting to insert and drag new waypoint.');
       e.preventDefault(); // Prevent map drag
 
       const result = await insertWaypointAtLocation(
@@ -250,13 +251,13 @@ export const initializeMapInteractions = (
         const newWpCoords = getWaypoints()[result.newIndex];
         currentLngLat = newWpCoords ? [...newWpCoords] as Coordinate : [e.lngLat.lng, e.lngLat.lat];
         mapCanvas.style.cursor = 'grabbing';
-        console.log(`[MapInteractionManager] New waypoint ${result.newIndex} inserted on route, starting drag from`, currentLngLat);
+        Logger.info(`[MapInteractionManager] New waypoint ${result.newIndex} inserted on route, starting drag from`, currentLngLat);
         
         // Attach move and up listeners
         map.on('mousemove', onMapMouseMoveForDrag);
         map.on('mouseup', onMapMouseUpInternal);
       } else {
-        console.warn('[MapInteractionManager] Failed to insert waypoint on route for dragging.', result.error);
+        Logger.warn('[MapInteractionManager] Failed to insert waypoint on route for dragging.', result.error);
         // Potentially call handleWaypointError(result.error) if not already handled by insertWaypointAtLocation's onError
       }
     }
@@ -264,12 +265,12 @@ export const initializeMapInteractions = (
   };
 
   map.on('mousedown', generalMouseDownHandler);
-  console.log('[MapInteractionManager] General mousedown listener added.');
+  Logger.info('[MapInteractionManager] General mousedown listener added.');
 
 
   // --- LONG PRESS & TOUCH LOGIC ---
   const handleLongPressInternal = (lngLat: { lng: number; lat: number }, point: { x: number; y: number }) => {
-    console.log('[MapInteractionManager] Long press at:', lngLat);
+    Logger.info('[MapInteractionManager] Long press at:', lngLat);
     // Use the helper function
     const popupInfo = getPopupInfo(map, lngLat, point);
     setPopup(popupInfo);
@@ -305,13 +306,13 @@ export const initializeMapInteractions = (
         startInteractiveTouch();
         isDragging = true;
         draggedWaypointIndex = idx;
-        console.log(`[MapInteractionManager] Touchstart on waypoint ${idx}, starting drag.`);
+        Logger.info(`[MapInteractionManager] Touchstart on waypoint ${idx}, starting drag.`);
         map.on('touchmove', onMapTouchMoveForDrag);
         map.on('touchend', onMapTouchEndInternal);
         map.on('touchcancel', onMapTouchEndInternal); // Also handle cancel
       }
     } else if (routeFeature) {
-      console.log('[MapInteractionManager] Touchstart on route. Attempting to insert and drag new waypoint.');
+      Logger.info('[MapInteractionManager] Touchstart on route. Attempting to insert and drag new waypoint.');
       // Note: For touch, usually long press opens context menu.
       // A direct touch-and-drag-to-create-waypoint might conflict with map panning if not careful.
       // Here, we assume a touchstart on a route *could* initiate a drag-to-create.
@@ -341,12 +342,12 @@ export const initializeMapInteractions = (
         startInteractiveTouch(true); // Pass true as it's a new waypoint
         isDragging = true;
         draggedWaypointIndex = result.newIndex;
-        console.log(`[MapInteractionManager] New waypoint ${result.newIndex} inserted on route (touch), starting drag from`, currentLngLat);
+        Logger.info(`[MapInteractionManager] New waypoint ${result.newIndex} inserted on route (touch), starting drag from`, currentLngLat);
         map.on('touchmove', onMapTouchMoveForDrag);
         map.on('touchend', onMapTouchEndInternal);
         map.on('touchcancel', onMapTouchEndInternal);
       } else {
-        console.warn('[MapInteractionManager] Failed to insert waypoint on route for touch-dragging.', result.error);
+        Logger.warn('[MapInteractionManager] Failed to insert waypoint on route for touch-dragging.', result.error);
         // If insertion fails, re-enable pan/zoom as we might have prematurely disabled it.
         // However, since insertWaypointAtLocation is async, this is tricky.
         // Better: only call disable() *after* successful insertion.
@@ -371,10 +372,10 @@ export const initializeMapInteractions = (
       longPressTimeoutRef = window.setTimeout(() => {
         const timerFiredMessage = `[MapInteractionManager] Long press timer fired. Target ID: ${uniquePressId}, Current Active ID: ${currentLongPressId}, TouchStartPos: ${JSON.stringify(touchStartPos)}`;
         if (currentLongPressId === uniquePressId && touchStartPos) { 
-          console.log(timerFiredMessage + ' -> Conditions MET. Calling handleLongPressInternal.');
+          Logger.info(timerFiredMessage + ' -> Conditions MET. Calling handleLongPressInternal.');
           handleLongPressInternal(originalEventLngLat, touchStartPos);
         } else {
-          console.log(timerFiredMessage + ' -> Conditions NOT MET (already cancelled or touch moved/ended).');
+          Logger.info(timerFiredMessage + ' -> Conditions NOT MET (already cancelled or touch moved/ended).');
         }
         longPressTimeoutRef = null; // Clear ref after execution or if condition fails
       }, LONG_PRESS_DURATION);
@@ -382,7 +383,7 @@ export const initializeMapInteractions = (
   };
   
   map.on('touchstart', generalTouchStartHandler);
-  console.log('[MapInteractionManager] General touchstart listener added.');
+  Logger.info('[MapInteractionManager] General touchstart listener added.');
 
 
   // --- DRAG MOVE HANDLERS (largely unchanged, ensure they use module-scoped drag state) ---
@@ -406,7 +407,7 @@ export const initializeMapInteractions = (
     if (nextWaypoint && currentLngLat) {
       dragLineFeatures.push({ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [currentLngLat, nextWaypoint] }});
     }
-    console.log('[MapInteractionManager] Drag line features (mouse):', JSON.stringify(dragLineFeatures)); // Diagnostic log
+    Logger.info('[MapInteractionManager] Drag line features (mouse):', JSON.stringify(dragLineFeatures)); // Diagnostic log
     updateDragLinesLayer(map, dragLineFeatures);
 
     // Optional: Throttled update of the actual waypoint position and route for live preview
@@ -432,7 +433,7 @@ export const initializeMapInteractions = (
     if (nextWaypoint && currentLngLat) {
       dragLineFeatures.push({ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [currentLngLat, nextWaypoint] }});
     }
-    console.log('[MapInteractionManager] Drag line features (touch):', JSON.stringify(dragLineFeatures)); // Diagnostic log
+    Logger.info('[MapInteractionManager] Drag line features (touch):', JSON.stringify(dragLineFeatures)); // Diagnostic log
     updateDragLinesLayer(map, dragLineFeatures);
   };
 
@@ -451,7 +452,7 @@ export const initializeMapInteractions = (
     map.dragPan.enable();
     mapCanvas.style.cursor = '';
 
-    console.log(`[MapInteractionManager] Mouseup: Drag ended for waypoint ${draggedWaypointIndex} at`, currentLngLat);
+    Logger.info(`[MapInteractionManager] Mouseup: Drag ended for waypoint ${draggedWaypointIndex} at`, currentLngLat);
     
     // Check if currentLngLat is materially different from original before snapshot and update
     // This prevents unnecessary updates if it was just a click.
@@ -491,7 +492,7 @@ export const initializeMapInteractions = (
     }
     currentLongPressId = null;
     touchStartPos = null;
-    console.log(`[MapInteractionManager] onMapTouchEndInternal. Was timeout active: ${wasTimeoutActive}. Prev long press ID: ${prevLongPressId}. Cleared long press state.`);
+    Logger.info(`[MapInteractionManager] onMapTouchEndInternal. Was timeout active: ${wasTimeoutActive}. Prev long press ID: ${prevLongPressId}. Cleared long press state.`);
 
     if (!isDragging || draggedWaypointIndex === -1 || !currentLngLat) {
       // Ensure map interactions are re-enabled if drag didn't actually happen or was for a different purpose
@@ -511,7 +512,7 @@ export const initializeMapInteractions = (
     map.touchZoomRotate.enable();
     mapCanvas.style.cursor = '';
 
-    console.log(`[MapInteractionManager] Touchend: Drag ended for waypoint ${draggedWaypointIndex} at`, currentLngLat);
+    Logger.info(`[MapInteractionManager] Touchend: Drag ended for waypoint ${draggedWaypointIndex} at`, currentLngLat);
 
     // snapshot(); // REMOVED: WaypointManager now handles its own snapshots correctly
     await updateWaypointPositionAndRecalculate(
@@ -563,7 +564,7 @@ export const initializeMapInteractions = (
       }
       currentLongPressId = null; // Invalidate this specific long press attempt
       touchStartPos = null;
-      console.log(`[MapInteractionManager] Pointer moved, cancelling long press. Was timeout active: ${wasTimeoutActive}. Prev ID: ${prevLongPressId}`);
+      Logger.info(`[MapInteractionManager] Pointer moved, cancelling long press. Was timeout active: ${wasTimeoutActive}. Prev ID: ${prevLongPressId}`);
     }
   };
 
@@ -604,11 +605,11 @@ export const initializeMapInteractions = (
 
   map.on('mouseenter', ROUTE_LAYER_ID, mouseEnterRouteHandler);
   map.on('mouseleave', ROUTE_LAYER_ID, mouseLeaveRouteHandler);
-  console.log('[MapInteractionManager] Route hover listeners added to', ROUTE_LAYER_ID);
+  Logger.info('[MapInteractionManager] Route hover listeners added to', ROUTE_LAYER_ID);
 
   // --- Disposer function to clean up all listeners ---
   return () => {
-    console.log('[MapInteractionManager] Disposing map interaction listeners.');
+    Logger.info('[MapInteractionManager] Disposing map interaction listeners.');
     map.off('click', handleMapClickInternal);
     map.off('contextmenu', handleContextMenuInternal);
     
@@ -643,7 +644,7 @@ export const initializeMapInteractions = (
         map.removeFeatureState({ source: ROUTE_SOURCE_ID, id: 'main_route_line' }, 'hover'); 
     }
     hoveredRouteFeatureId = undefined;
-    console.log('[MapInteractionManager] All interaction listeners and states reset.');
+    Logger.info('[MapInteractionManager] All interaction listeners and states reset.');
   };
 };
 

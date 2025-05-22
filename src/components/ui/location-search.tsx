@@ -71,7 +71,7 @@ export function LocationSearch({
         const data = await response.json();
         setResults(data.features || []);
       } catch (error) {
-        console.error("Error searching for locations:", error);
+        Logger.error("Error searching for locations:", error);
         setResults([]);
       } finally {
         setLoading(false);

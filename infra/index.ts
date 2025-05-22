@@ -95,6 +95,10 @@ const deployment = new apps.v1.Deployment(deploymentName, {
                         {
                             name: "VITE_MAPBOX_ACCESS_TOKEN",
                             value: process.env.VITE_MAPBOX_ACCESS_TOKEN || "",
+                        },
+                        {
+                            name: "NODE_ENV",
+                            value: "production",
                         }
                     ],
                     resources: {

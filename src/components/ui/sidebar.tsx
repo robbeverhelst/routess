@@ -12,6 +12,7 @@ import { useState, useRef } from "react";
 import type { Map as MapboxMap } from 'mapbox-gl'; // Import MapboxMap type
 import { exportRouteToGPX, importRouteFromGPX } from '../../lib/routing'; // Import GPX functions
 import type { Dispatch, SetStateAction } from 'react';
+import { Logger } from '@/lib/logger';
 
 interface SidebarProps {
   onUndo: () => void;
@@ -75,7 +76,7 @@ export function Sidebar({
     if (!result.success && result.message) {
       onImportError(result.message); // Reusing onImportError for feedback
     } else if (result.success) {
-      console.log('Route exported successfully.'); // Placeholder for success feedback
+      Logger.info('Route exported successfully.'); // Placeholder for success feedback
       // onImportError("Route exported successfully."); // Or use the same feedback for success
     }
   };
@@ -83,7 +84,7 @@ export function Sidebar({
   const handleImportGPX = () => {
     if (!map || !accessToken) {
       onImportError("Map or access token is not available for import.");
-      console.error("Map instance or accessToken not available for GPX import.");
+      Logger.error("Map instance or accessToken not available for GPX import.");
       return;
     }
 
@@ -114,7 +115,7 @@ export function Sidebar({
               onImportError
             );
           } catch (error) {
-            console.error("Error processing GPX file:", error);
+            Logger.error("Error processing GPX file:", error);
             onImportError(error instanceof Error ? error.message : "An unknown error occurred during GPX import.");
           }
         };

@@ -49,7 +49,7 @@ export function serializeAndCompress(
     const compressedData = pako.deflate(jsonString);
     return uint8ArrayToUrlSafeBase64(compressedData);
   } catch (error) {
-    console.error('[ShareUtils] Error serializing/compressing data:', error);
+    Logger.error('[ShareUtils] Error serializing/compressing data:', error);
     return null;
   }
 }
@@ -66,10 +66,10 @@ export function decompressAndParse(
     if (parsedData && Array.isArray(parsedData.w) && Array.isArray(parsedData.f)) {
       return parsedData;
     }
-    console.error('[ShareUtils] Decompressed data is not in the expected format.');
+    Logger.error('[ShareUtils] Decompressed data is not in the expected format.');
     return null;
   } catch (error) {
-    console.error('[ShareUtils] Error decompressing/parsing data:', error);
+    Logger.error('[ShareUtils] Error decompressing/parsing data:', error);
     return null;
   }
 } 

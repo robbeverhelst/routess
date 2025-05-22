@@ -5,6 +5,7 @@ import { initializeMapInteractions, type PopupInfo as MIMPopupInfo } from '@/fea
 import type { Feature, Point as GeoJsonPoint } from 'geojson';
 import { calculateTargetCoordinate, zoomToRoute } from '@/features/routing/utils/RoutingUtils';
 import type { LoopDirection } from '@/components/ui/RouteGeneratorModal';
+import { Logger } from '@/lib/logger';
 
 // Import from WaypointManager
 import { 
@@ -78,7 +79,7 @@ async function generateSimplifiedLoop(
   accessToken: string
 ): Promise<NaturalLoopResult> {
   try {
-    console.log(`[routing.ts] Attempting simplified loop generation from ${startPoint}`);
+    Logger.info(`[routing.ts] Attempting simplified loop generation from ${startPoint}`);
     
     // Create a simple out-and-back route - just go in one direction and back
     const halfDistance = targetLengthKm / 2;
@@ -96,7 +97,7 @@ async function generateSimplifiedLoop(
     const response = await fetch(apiUrl);
     
     if (!response.ok) {
-      console.log(`[routing.ts] Simplified loop API request failed`);
+      Logger.info(`[routing.ts] Simplified loop API request failed`);
       return { success: false, error: 'Failed to generate even a simplified route.' };
     }
     
@@ -113,7 +114,7 @@ async function generateSimplifiedLoop(
     
     return { success: false, error: 'No routes found for simplified loop.' };
   } catch (error) {
-    console.error(`[routing.ts] Error in simplified loop generation:`, error);
+    Logger.error(`[routing.ts] Error in simplified loop generation:`, error);
     return { success: false, error: 'Error in simplified loop generation.' };
   }
 }
@@ -200,7 +201,7 @@ export const exportRouteToGPX = (): { success: boolean; message?: string } => {
     URL.revokeObjectURL(link.href);
     return { success: true };
   } catch (error: unknown) {
-    console.error('[GPX Export] Error exporting route:', error);
+    Logger.error('[GPX Export] Error exporting route:', error);
     return { success: false, message: 'Error exporting route. See console for details.' };
   }
 };
@@ -219,14 +220,14 @@ export const importRouteFromGPX = async (
     // 1. Parse and process GPX data
     const parsedResult = await parseGPXFile(gpxString);
     if (parsedResult.error || !parsedResult.waypoints) {
-      console.error("[routing.ts.importRouteFromGPX] Error parsing GPX:", parsedResult.error);
+      Logger.error("[routing.ts.importRouteFromGPX] Error parsing GPX:", parsedResult.error);
       if (onError) onError(parsedResult.error || "Unknown parsing error.");
       return;
     }
 
     const processedResult = await processGPXWaypoints(parsedResult.waypoints, accessToken);
     if (processedResult.error || !processedResult.finalWaypoints || !processedResult.finalDirectFlags) {
-      console.error("[routing.ts.importRouteFromGPX] Error processing GPX waypoints:", processedResult.error);
+      Logger.error("[routing.ts.importRouteFromGPX] Error processing GPX waypoints:", processedResult.error);
       if (onError) onError(processedResult.error || "Unknown waypoint processing error.");
       return;
     }
@@ -254,12 +255,12 @@ export const importRouteFromGPX = async (
           setWaypointsAndFlags(routeResult.snappedWaypoints, routeResult.snappedDirectFlags);
           updateWaypointsLayer(map, getWaypoints(), _isMapLockedRef?.current ?? false);
         } else if (!routeResult.success) {
-          console.warn('[importRouteFromGPX] Route calculation after GPX import indicated failure:', routeResult.error);
+          Logger.warn('[importRouteFromGPX] Route calculation after GPX import indicated failure:', routeResult.error);
           if (onError && routeResult.error) onError(routeResult.error); 
           // UI state (distance, duration, hasRoute) already handled by getRouteFromService on failure
         }
       } catch (error: unknown) {
-        console.error('[importRouteFromGPX] Route calculation failed after GPX import:', error);
+        Logger.error('[importRouteFromGPX] Route calculation failed after GPX import:', error);
         if (onError) {
           const errorMessage = error instanceof Error ? error.message : 'Failed to calculate route after GPX import.';
           onError(errorMessage);
@@ -286,11 +287,11 @@ export const importRouteFromGPX = async (
     // 5. Finalize: Save to storage and take ONE snapshot
     saveWaypointsToStorage(getWaypoints(), getDirectFlags());
     historySnapshot(); 
-    console.log(`[routing.ts.importRouteFromGPX] Successfully imported ${getWaypoints().length} waypoints. Final snapshot taken.`);
+    Logger.info(`[routing.ts.importRouteFromGPX] Successfully imported ${getWaypoints().length} waypoints. Final snapshot taken.`);
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error during GPX import process';
-    console.error("[routing.ts.importRouteFromGPX] Critical error during import:", error);
+    Logger.error("[routing.ts.importRouteFromGPX] Critical error during import:", error);
     if (onError) onError(`Error importing GPX: ${errorMessage}`);
   }
 };
@@ -340,7 +341,7 @@ export const setRouteData = async (
           updateWaypointsLayer(map, getWaypoints(), _isMapLockedRef?.current ?? false);
         }
       } else {
-        console.error('[setRouteData] Route calculation failed:', routeResult.error);
+        Logger.error('[setRouteData] Route calculation failed:', routeResult.error);
         clearRouteLayer(map); // Ensure layers are clear on failure
         clearKilometerMarkersLayer(map);
         // currentRoutePath is already cleared by clearRoute or getRouteFromService on failure
@@ -350,7 +351,7 @@ export const setRouteData = async (
         setIsRouteCoordsReady(false); 
       }
     } catch (error: unknown) {
-      console.error('[setRouteData] Critical error during route calculation:', error);
+      Logger.error('[setRouteData] Critical error during route calculation:', error);
       clearRouteLayer(map);
       clearKilometerMarkersLayer(map);
       setRouteDistance('');
@@ -374,7 +375,7 @@ export const setRouteData = async (
   // 4. Save final state to localStorage and take ONE snapshot for the entire operation
   saveWaypointsToStorage(getWaypoints(), getDirectFlags());
   historySnapshot(); 
-  console.log(`[setRouteData] Successfully set ${getWaypoints().length} waypoints. Final snapshot taken.`);
+  Logger.info(`[setRouteData] Successfully set ${getWaypoints().length} waypoints. Final snapshot taken.`);
 };
 
 // removeWaypoint function body is removed.
@@ -430,36 +431,36 @@ export const setupRouting = async (
     const loadedData = loadWaypointsFromStorageService();
     if (loadedData) {
       setWaypointsAndFlags(loadedData.waypoints, loadedData.directFlags);
-      console.log('[routing.ts] Waypoints loaded from local storage by routing.ts.');
+      Logger.info('[routing.ts] Waypoints loaded from local storage by routing.ts.');
       updateWaypointsLayer(map, getWaypoints(), isMapLockedRef.current);
 
       if (getWaypoints().length >= 1) { 
         const result: RouteResult = await getRouteFromService(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
         if (result.success && result.waypointsSnapped && result.snappedWaypoints && result.snappedDirectFlags) {
-          console.log("[routing.ts] Initial route calculated and waypoints snapped by routing.ts.");
+          Logger.info("[routing.ts] Initial route calculated and waypoints snapped by routing.ts.");
           setWaypointsAndFlags(result.snappedWaypoints, result.snappedDirectFlags);
           updateWaypointsLayer(map, getWaypoints(), isMapLockedRef.current);
           saveWaypointsToStorage(getWaypoints(), getDirectFlags());
         } else if (!result.success && getWaypoints().length === 1) {
-          console.log('[routing.ts] Single waypoint loaded, no route to calculate yet or snapping failed.');
+          Logger.info('[routing.ts] Single waypoint loaded, no route to calculate yet or snapping failed.');
         } else if (!result.success) {
-            console.warn('[routing.ts] Failed to calculate initial route by routing.ts. Service indicated failure.');
+            Logger.warn('[routing.ts] Failed to calculate initial route by routing.ts. Service indicated failure.');
         }
       }
     } else {
-      console.log('[routing.ts] No waypoints found in local storage by routing.ts.');
+      Logger.info('[routing.ts] No waypoints found in local storage by routing.ts.');
     }
   } catch (error: unknown) { 
-    console.error('[routing.ts] Error loading waypoints from local storage in setupRouting by routing.ts:', error);
+    Logger.error('[routing.ts] Error loading waypoints from local storage in setupRouting by routing.ts:', error);
   }
   // Single snapshot after all initial loading and processing is complete.
   historySnapshot();
-  console.log('[routing.ts] Final initial snapshot taken after setupRouting completion.');
+  Logger.info('[routing.ts] Final initial snapshot taken after setupRouting completion.');
 
   // Define the event handler for history changes here, so it has access to setters
   const handleHistoryApplied = async (historyState: WaypointHistory) => {
     if (!_mapInstance || !_accessToken) {
-      console.error('[routing.ts.handleHistoryApplied] Map instance or access token not available for history event.');
+      Logger.error('[routing.ts.handleHistoryApplied] Map instance or access token not available for history event.');
       return;
     }
     // Waypoints and flags are already set by HistoryManager's setWaypointsAndFlags,
@@ -479,7 +480,7 @@ export const setupRouting = async (
         // Update what will be saved to storage
         finalPointsToSave = routeResult.snappedWaypoints;
         finalFlagsToSave = routeResult.snappedDirectFlags;
-        console.log('[routing.ts.handleHistoryApplied] Waypoints snapped during route recalculation after history change.');
+        Logger.info('[routing.ts.handleHistoryApplied] Waypoints snapped during route recalculation after history change.');
       } else if (!routeResult.success) {
         // Route calculation failed, might need to clear route display
         clearRouteLayer(_mapInstance);
@@ -488,7 +489,7 @@ export const setupRouting = async (
         setRouteDistance('');
         setRouteDuration('');
         setHasRoute(false);
-                  console.warn('[routing.ts.handleHistoryApplied] Route recalculation failed after history change.');
+                  Logger.warn('[routing.ts.handleHistoryApplied] Route recalculation failed after history change.');
       }
     } else { // 0 or 1 waypoint
       clearRouteLayer(_mapInstance);
@@ -502,7 +503,7 @@ export const setupRouting = async (
     
     // Save the final state (either original from history or snapped) to local storage
     saveWaypointsToStorage(finalPointsToSave, finalFlagsToSave); 
-    console.log('[routing.ts.handleHistoryApplied] History change processed. Points saved to storage:', finalPointsToSave.length);
+    Logger.info('[routing.ts.handleHistoryApplied] History change processed. Points saved to storage:', finalPointsToSave.length);
   };
 
   // Subscribe to history changes only once
@@ -511,7 +512,7 @@ export const setupRouting = async (
   }
   unsubscribeFromHistory = subscribeToHistoryChanges('historyApplied', handleHistoryApplied);
 
-  console.log('[routing.ts] Routing module setup complete. History event listener subscribed.');
+  Logger.info('[routing.ts] Routing module setup complete. History event listener subscribed.');
   
   return mapInteractionDisposer; 
 };
@@ -521,11 +522,11 @@ export const teardownRouting = () => {
   if (unsubscribeFromHistory) {
     unsubscribeFromHistory();
     unsubscribeFromHistory = null;
-    console.log('[routing.ts] Unsubscribed from history changes.');
+    Logger.info('[routing.ts] Unsubscribed from history changes.');
   }
   _mapInstance = null;
   _accessToken = null;
-  console.log('[routing.ts] Cleared map instance and access token references for history handler.');
+  Logger.info('[routing.ts] Cleared map instance and access token references for history handler.');
   // Note: The disposer from initializeMapInteractions (map listeners) is handled by the caller (MapWithRouting.tsx)
 };
 
@@ -560,7 +561,7 @@ export const resetRouting = (
     
   clearCurrentRoutePath();
 
-  console.log('[routing.ts] Routing reset complete.');
+  Logger.info('[routing.ts] Routing reset complete.');
 };
 
 // Function to update the user location point on the map
@@ -581,7 +582,7 @@ export async function generateAndDisplayRouteAtoB(
   setIsRouteCoordsReady: Dispatch<SetStateAction<boolean>>,
   handleWaypointError: (message: string | null) => void 
 ): Promise<void> {
-  console.log('[routing.ts] generateAndDisplayRouteAtoB called.');
+  Logger.info('[routing.ts] generateAndDisplayRouteAtoB called.');
 
   clearRoute(map); 
   setWaypointsAndFlags([startCoord, endCoord], [false, false]);
@@ -592,7 +593,7 @@ export async function generateAndDisplayRouteAtoB(
     const result = await calculateAtoBRoute(startCoord, endCoord, accessToken, surfaceType);
 
     if (result.success && result.geometry && typeof result.distance === 'number' && typeof result.duration === 'number') {
-      console.log('[routing.ts] Successfully generated A-to-B route.');
+      Logger.info('[routing.ts] Successfully generated A-to-B route.');
       
       updateRouteLayerFromMapLayerManager(map, result.geometry); 
       const kmFeatures = generateKmMarkerFeatures(result.geometry);
@@ -610,7 +611,7 @@ export async function generateAndDisplayRouteAtoB(
       zoomToRoute(map, result.geometry); // Use imported zoomToRoute
 
     } else {
-      console.error('[routing.ts] Failed to generate A-to-B route:', result.error);
+      Logger.error('[routing.ts] Failed to generate A-to-B route:', result.error);
       if (handleWaypointError) handleWaypointError(result.error || 'Failed to generate route.');
       setRouteDistance('');
       setRouteDuration('');
@@ -622,7 +623,7 @@ export async function generateAndDisplayRouteAtoB(
       saveWaypointsToStorage([], []); 
     }
   } catch (error: unknown) {
-    console.error('[routing.ts] Critical error in generateAndDisplayRouteAtoB:', error);
+    Logger.error('[routing.ts] Critical error in generateAndDisplayRouteAtoB:', error);
     if (handleWaypointError) handleWaypointError(error instanceof Error ? error.message : 'A critical error occurred.');
     setRouteDistance('');
     setRouteDuration('');
@@ -651,7 +652,7 @@ export async function generateAndDisplayRouteLoop(
   setIsRouteCoordsReady: Dispatch<SetStateAction<boolean>>,
   handleWaypointError: (message: string | null) => void 
 ): Promise<void> {
-  console.log('[routing.ts] Natural loop generation started.');
+  Logger.info('[routing.ts] Natural loop generation started.');
   const startCoord: Coordinate = [startPoint.lng, startPoint.lat];
 
   // Take a snapshot of the current state BEFORE this function makes any changes.
@@ -687,7 +688,7 @@ export async function generateAndDisplayRouteLoop(
     );
     
     if (!loopResult.success || !loopResult.geometry) {
-      console.log('[routing.ts] Natural loop generation failed, trying simplified approach');
+      Logger.info('[routing.ts] Natural loop generation failed, trying simplified approach');
       loopResult = await generateSimplifiedLoop(
         startCoord,
         loopLengthKm,
@@ -755,20 +756,20 @@ export async function generateAndDisplayRouteLoop(
         
         // Final snapshot for successful loop generation
         historySnapshot(); 
-        console.log(`[routing.ts] Natural loop generation successful. Created ${getWaypoints().length} waypoints.`);
+        Logger.info(`[routing.ts] Natural loop generation successful. Created ${getWaypoints().length} waypoints.`);
       } else {
-        console.error('[routing.ts] Route calculation failed:', routeResult.error);
+        Logger.error('[routing.ts] Route calculation failed:', routeResult.error);
         if (handleWaypointError) handleWaypointError(routeResult.error || 'Failed to calculate final route through waypoints.');
         setIsRouteCoordsReady(false); setHasRoute(false); setRouteDistance(''); setRouteDuration('');
       }
     } catch (error: unknown) {
-      console.error('[routing.ts] Error calculating route through waypoints:', error);
+      Logger.error('[routing.ts] Error calculating route through waypoints:', error);
       if (handleWaypointError) handleWaypointError(error instanceof Error ? error.message : 'A critical error occurred calculating the final route.');
       setIsRouteCoordsReady(false); setHasRoute(false); setRouteDistance(''); setRouteDuration('');
     }
 
   } catch (error: unknown) {
-    console.error('[routing.ts] Critical error in natural loop generation:', error);
+    Logger.error('[routing.ts] Critical error in natural loop generation:', error);
     if (handleWaypointError) handleWaypointError(error instanceof Error ? error.message : 'A critical error occurred during loop generation.');
     setIsRouteCoordsReady(false); setHasRoute(false); setRouteDistance(''); setRouteDuration('');
     clearRoute(map);
@@ -803,7 +804,7 @@ async function generateNaturalLoop(
   accessToken: string,
   surfaceType: 'paved' | 'mixed' | 'unpaved'
 ): Promise<NaturalLoopResult> {
-  console.log(`[routing.ts] Generating natural loop from ${startPoint}, target=${targetLengthKm}km, bearing=${initialBearing}°`);
+  Logger.info(`[routing.ts] Generating natural loop from ${startPoint}, target=${targetLengthKm}km, bearing=${initialBearing}°`);
 
   if (targetLengthKm < 0.5) {
     return { success: false, error: 'Target loop length is too short.' };
@@ -832,7 +833,7 @@ async function generateNaturalLoop(
   // Apply a scaling factor to compensate for the real road network being longer than direct distances
   // Increased from 1 to 1.1 to allow for finding more paths by extending search range
   const scalingFactor = 1.1;
-  console.log(`[routing.ts] Spider exploration phase using profile: ${profile}, target: ${targetLengthKm}km, scaling: ${scalingFactor}`);
+  Logger.info(`[routing.ts] Spider exploration phase using profile: ${profile}, target: ${targetLengthKm}km, scaling: ${scalingFactor}`);
   
   // Create a wider range of directions to explore for more diverse route options
   // Use more directions to find better loops but bias toward OSM trail networks
@@ -871,7 +872,7 @@ async function generateNaturalLoop(
     const secondBearing = (outboundBearing + turnAngle) % 360;
     const thirdBearing = (secondBearing + turnAngle) % 360;
     
-    console.log(`[routing.ts] Trying circular loop with bearings: ${outboundBearing}° → ${secondBearing}° → ${thirdBearing}°`);
+    Logger.info(`[routing.ts] Trying circular loop with bearings: ${outboundBearing}° → ${secondBearing}° → ${thirdBearing}°`);
     
     try {
       // Create a multi-waypoint route using 4 points to form a more circular shape:
@@ -910,12 +911,12 @@ async function generateNaturalLoop(
           haversineDistance(point3, point4) < minDistanceBetweenPoints ||
           haversineDistance(point4, point5) < minDistanceBetweenPoints ||
           haversineDistance(point5, startPoint) < minDistanceBetweenPoints) {
-        console.log(`[routing.ts] Points too close together, skipping this configuration`);
+        Logger.info(`[routing.ts] Points too close together, skipping this configuration`);
         continue;
       }
       
       // Get route through all waypoints
-      console.log(`[routing.ts] Getting multi-waypoint route through: start → p1 → p2 → p3 → p4 → p5 → start`);
+      Logger.info(`[routing.ts] Getting multi-waypoint route through: start → p1 → p2 → p3 → p4 → p5 → start`);
       const waypointsStr = `${startPoint[0]},${startPoint[1]};${point1[0]},${point1[1]};${point2[0]},${point2[1]};${point3[0]},${point3[1]};${point4[0]},${point4[1]};${point5[0]},${point5[1]};${startPoint[0]},${startPoint[1]}`;
       
       // Create URL with simple parameters to avoid API errors
@@ -924,7 +925,7 @@ async function generateNaturalLoop(
       const response = await fetch(apiUrl);
       
       if (!response.ok) {
-        console.log(`[routing.ts] Multi-waypoint route API request failed`);
+        Logger.info(`[routing.ts] Multi-waypoint route API request failed`);
         continue;
       }
       
@@ -999,45 +1000,45 @@ async function generateNaturalLoop(
           const tooMuchOverlap = bestRoute.overlapRatio > 0.4; // Reject if more than 40% overlap
           
           if (tooLong || tooShort) {
-            console.log(`[routing.ts] Rejecting route: ${(bestRoute.distanceMeters/1000).toFixed(1)}km - ${tooLong ? 'too long' : 'too short'} vs target ${targetLengthKm}km`);
+            Logger.info(`[routing.ts] Rejecting route: ${(bestRoute.distanceMeters/1000).toFixed(1)}km - ${tooLong ? 'too long' : 'too short'} vs target ${targetLengthKm}km`);
             continue;
           }
           
           if (tooMuchOverlap) {
-            console.log(`[routing.ts] Rejecting route: Too much road overlap (${(bestRoute.overlapRatio * 100).toFixed(0)}%)`);
+            Logger.info(`[routing.ts] Rejecting route: Too much road overlap (${(bestRoute.overlapRatio * 100).toFixed(0)}%)`);
             continue;
           }
           
           // Verify the route actually returns to the start
           const startDistance = haversineDistance(startPoint, bestRoute.geometry[bestRoute.geometry.length - 1]);
           if (startDistance > 0.2) { // More than 200m from the start point
-            console.log(`[routing.ts] Rejecting route: Doesn't return to start (${startDistance.toFixed(3)}km away)`);
+            Logger.info(`[routing.ts] Rejecting route: Doesn't return to start (${startDistance.toFixed(3)}km away)`);
             continue;
           }
           
-          console.log(`[routing.ts] Found route: ${(bestRoute.distanceMeters/1000).toFixed(1)}km, score=${bestRoute.score.toFixed(2)} (length_ratio=${bestRoute.lengthRatio.toFixed(2)}, overlap=${(bestRoute.overlapRatio * 100).toFixed(0)}%)`);
+          Logger.info(`[routing.ts] Found route: ${(bestRoute.distanceMeters/1000).toFixed(1)}km, score=${bestRoute.score.toFixed(2)} (length_ratio=${bestRoute.lengthRatio.toFixed(2)}, overlap=${(bestRoute.overlapRatio * 100).toFixed(0)}%)`);
           
           // If it's our first result or better than what we have, keep it
           if (!bestLoop || bestRoute.score < bestLoop.score) {
             bestLoop = bestRoute;
-            console.log(`[routing.ts] New best loop found`);
+            Logger.info(`[routing.ts] New best loop found`);
             
             // If we found an excellent match with very low overlap, break early
             if (bestRoute.score < 0.15 && bestRoute.overlapRatio < 0.2) {
-              console.log(`[routing.ts] Found excellent loop match with low overlap, using it immediately`);
+              Logger.info(`[routing.ts] Found excellent loop match with low overlap, using it immediately`);
               break;
             }
           }
         }
       }
     } catch (error) {
-      console.warn(`[routing.ts] Error during loop creation:`, error);
+      Logger.warn(`[routing.ts] Error during loop creation:`, error);
     }
   }
   
   if (!bestLoop) {
     // Try an alternative strategy if no loop was found
-    console.log(`[routing.ts] No loops found with circular approach, trying rectangular strategy`);
+    Logger.info(`[routing.ts] No loops found with circular approach, trying rectangular strategy`);
     
     try {
       // Create a rectangular shape with 4 waypoints
@@ -1068,7 +1069,7 @@ async function generateNaturalLoop(
       const point5 = calculateTargetCoordinate(point4, segmentLength, thirdBearing);
       const point6 = calculateTargetCoordinate(point5, segmentLength, thirdBearing);
       
-      console.log(`[routing.ts] Enhanced rectangular approach: start → p1 → p2 → p3 → p4 → p5 → p6 → start`);
+      Logger.info(`[routing.ts] Enhanced rectangular approach: start → p1 → p2 → p3 → p4 → p5 → p6 → start`);
       
       const waypointsStr = `${startPoint[0]},${startPoint[1]};${point1[0]},${point1[1]};${point2[0]},${point2[1]};${point3[0]},${point3[1]};${point4[0]},${point4[1]};${point5[0]},${point5[1]};${point6[0]},${point6[1]};${startPoint[0]},${startPoint[1]}`;
       
@@ -1093,7 +1094,7 @@ async function generateNaturalLoop(
         const tooShort = actualDistance < targetLengthKm * 0.50;
         
         if (tooLong || tooShort) {
-          console.log(`[routing.ts] Rectangular route ${tooLong ? 'too long' : 'too short'}: ${actualDistance.toFixed(1)}km vs ${targetLengthKm}km, rejecting`);
+          Logger.info(`[routing.ts] Rectangular route ${tooLong ? 'too long' : 'too short'}: ${actualDistance.toFixed(1)}km vs ${targetLengthKm}km, rejecting`);
           return { success: false, error: 'Generated route too far from target length.' };
         }
         
@@ -1101,7 +1102,7 @@ async function generateNaturalLoop(
         const lastPoint = route.geometry.coordinates[route.geometry.coordinates.length - 1];
         const startDistance = haversineDistance(startPoint, lastPoint);
         if (startDistance > 0.2) { // More than 200m from the start point
-          console.log(`[routing.ts] Rectangular route doesn't return to start (${startDistance.toFixed(3)}km away), rejecting`);
+          Logger.info(`[routing.ts] Rectangular route doesn't return to start (${startDistance.toFixed(3)}km away), rejecting`);
           return { success: false, error: 'Generated route doesn\'t return to the starting point.' };
         }
         
@@ -1113,7 +1114,7 @@ async function generateNaturalLoop(
         };
       }
     } catch (error) {
-      console.error(`[routing.ts] Error in rectangular loop strategy:`, error);
+      Logger.error(`[routing.ts] Error in rectangular loop strategy:`, error);
     }
     
     return { success: false, error: 'Could not generate any viable loop routes.' };

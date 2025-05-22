@@ -3,6 +3,7 @@ import type { Coordinate } from '@/types/map';
 import type { Map as MapboxMap } from 'mapbox-gl';
 import { getWaypoints, getDirectFlags } from '@/features/routing/managers/WaypointManager';
 import { haversine } from '@/features/routing/utils/RoutingUtils';
+import { Logger } from '@/lib/logger';
 
 // Import from MapLayerManager
 import {
@@ -16,17 +17,17 @@ let currentRoutePathCoordinates: Coordinate[] = [];
 
 const reinitializeRouteCalcState = () => {
   currentRoutePathCoordinates = [];
-  console.log('[RouteCalculationService.ts] Module state explicitly re-initialized.');
+  Logger.info('[RouteCalculationService.ts] Module state explicitly re-initialized.');
 };
 
 reinitializeRouteCalcState(); // Initial call
 
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {
-    console.log('[RouteCalculationService.ts] HMR disposing old instance.');
+    Logger.info('[RouteCalculationService.ts] HMR disposing old instance.');
   });
   import.meta.hot.accept(() => {
-    console.log('[RouteCalculationService.ts] HMR accept: Forcing state re-initialization.');
+    Logger.info('[RouteCalculationService.ts] HMR accept: Forcing state re-initialization.');
     reinitializeRouteCalcState();
   });
 }
@@ -39,10 +40,10 @@ if (import.meta.hot) {
 // Calculate and place kilometer markers along the route
 const addKilometerMarkers = (map: MapboxMap, coordinates: Coordinate[]) => {
   if (!map || coordinates.length < 2) { // Removed map.getSource checks as MapLayerManager will handle it
-    console.warn('[RCS/addKilometerMarkers] Map not available or not enough coords. Aborting.');
+    Logger.warn('[RCS/addKilometerMarkers] Map not available or not enough coords. Aborting.');
     return;
   }
-  console.log('[RCS/addKilometerMarkers] Calculating kilometer markers...');
+  Logger.info('[RCS/addKilometerMarkers] Calculating kilometer markers...');
   const kmMarkerFeatures: GeoJSON.Feature<GeoJSON.Point, GeoJSON.GeoJsonProperties>[] = []; // Typed correctly
   let distanceCovered = 0;
   let nextKmMarker = 1;
@@ -76,14 +77,14 @@ const addKilometerMarkers = (map: MapboxMap, coordinates: Coordinate[]) => {
   }
   // Use MapLayerManager to update the layer
   updateKilometerMarkersLayer(map, kmMarkerFeatures);
-  console.log(`[RCS/addKilometerMarkers] Updated ${kmMarkerFeatures.length} kilometer markers via MapLayerManager`);
+  Logger.info(`[RCS/addKilometerMarkers] Updated ${kmMarkerFeatures.length} kilometer markers via MapLayerManager`);
 };
 
 // Clear kilometer markers from the map
 const clearKilometerMarkers = (map: MapboxMap) => {
   // Use MapLayerManager to clear the layer
   clearKilometerMarkersLayer(map);
-  console.log('[RCS/clearKilometerMarkers] Cleared kilometer markers via MapLayerManager');
+  Logger.info('[RCS/clearKilometerMarkers] Cleared kilometer markers via MapLayerManager');
 };
 
 
@@ -124,7 +125,7 @@ async function buildMixedRoute(
       try {
         const res = await fetch(url);
         if (!res.ok) {
-            console.error(`[RCS/buildMixedRoute] API request failed with status ${res.status} for segment ${i}-${i+1}`);
+            Logger.error(`[RCS/buildMixedRoute] API request failed with status ${res.status} for segment ${i}-${i+1}`);
             throw new Error(`API request failed: ${res.statusText}`);
         }
         const json = await res.json();
@@ -145,18 +146,18 @@ async function buildMixedRoute(
             const newWp0 = json.waypoints[0].location as Coordinate;
             const newWp1 = json.waypoints[1].location as Coordinate;
             if (!workingDirectFlags[i] && (workingWaypoints[i][0] !== newWp0[0] || workingWaypoints[i][1] !== newWp0[1])) {
-              console.log(`[RCS/buildMixedRoute] Snapping waypoint ${i} from ${workingWaypoints[i]} to ${newWp0}`);
+              Logger.info(`[RCS/buildMixedRoute] Snapping waypoint ${i} from ${workingWaypoints[i]} to ${newWp0}`);
               workingWaypoints[i] = newWp0;
               waypointsWereInternallyModified = true;
             }
             if (!workingDirectFlags[i+1] && (workingWaypoints[i+1][0] !== newWp1[0] || workingWaypoints[i+1][1] !== newWp1[1])) {
-              console.log(`[RCS/buildMixedRoute] Snapping waypoint ${i+1} from ${workingWaypoints[i+1]} to ${newWp1}`);
+              Logger.info(`[RCS/buildMixedRoute] Snapping waypoint ${i+1} from ${workingWaypoints[i+1]} to ${newWp1}`);
               workingWaypoints[i+1] = newWp1;
               waypointsWereInternallyModified = true;
             }
           }
         } else {
-          console.warn(`[RCS/buildMixedRoute] No route found or issue with API response for segment ${i}-${i+1}. Falling back to direct.`);
+          Logger.warn(`[RCS/buildMixedRoute] No route found or issue with API response for segment ${i}-${i+1}. Falling back to direct.`);
           if (!workingDirectFlags[i+1]) {
             workingDirectFlags[i+1] = true;
             waypointsWereInternallyModified = true;
@@ -168,7 +169,7 @@ async function buildMixedRoute(
           totalDist += haversine(from, to);
         }
       } catch(err) {
-        console.error(`[RCS/buildMixedRoute] Error fetching segment ${i}-${i+1}: `, err);
+        Logger.error(`[RCS/buildMixedRoute] Error fetching segment ${i}-${i+1}: `, err);
         if (!workingDirectFlags[i+1]) {
             workingDirectFlags[i+1] = true;
             waypointsWereInternallyModified = true;
@@ -182,7 +183,7 @@ async function buildMixedRoute(
     }
   }
   if (waypointsWereInternallyModified) {
-    console.log('[RCS/buildMixedRoute] Waypoints or directFlags were modified during mixed route calculation.');
+    Logger.info('[RCS/buildMixedRoute] Waypoints or directFlags were modified during mixed route calculation.');
     return { coordsAccum, totalDist, waypointsUpdated: true, snappedWaypoints: workingWaypoints, snappedDirectFlags: workingDirectFlags };
   }
   return { coordsAccum, totalDist, waypointsUpdated: false, snappedWaypoints: null, snappedDirectFlags: null };
@@ -206,7 +207,7 @@ export const getRoute = async (
   setHasRoute: Dispatch<SetStateAction<boolean>>
 ): Promise<RouteResult> => {
   if (!map) { // Removed map.getSource check as MapLayerManager will handle it
-    console.warn('[RCS/getRoute] Map is not available. Aborting.');
+    Logger.warn('[RCS/getRoute] Map is not available. Aborting.');
     return { success: false, waypointsSnapped: false };
   }
 
@@ -224,7 +225,7 @@ export const getRoute = async (
     setRouteDistance('');
     setRouteDuration('');
     setHasRoute(false);
-    console.log('[RCS/getRoute] Not enough waypoints for a route.');
+    Logger.info('[RCS/getRoute] Not enough waypoints for a route.');
     return { success: true, waypointsSnapped: false }; // Success as in operation completed, no route but no error.
   }
 
@@ -250,7 +251,7 @@ export const getRoute = async (
   const mixedSegments = !allSegmentsDirect && !allSegmentsRouted;
 
   if (allSegmentsDirect) {
-    console.log('[RCS/getRoute] All segments are direct. Calculating straight lines.');
+    Logger.info('[RCS/getRoute] All segments are direct. Calculating straight lines.');
     currentRoutePathCoordinates = [];
     let cumulativeDistance = 0;
     for (let i = 0; i < waypoints.length - 1; i++) {
@@ -268,7 +269,7 @@ export const getRoute = async (
   }
   
   if (mixedSegments) { 
-    console.log('[RCS/getRoute] Calculating mixed route (direct and routed segments).');
+    Logger.info('[RCS/getRoute] Calculating mixed route (direct and routed segments).');
     const { coordsAccum, totalDist, waypointsUpdated, snappedWaypoints, snappedDirectFlags: mixedSnappedDirectFlags } = await buildMixedRoute(accessToken);
     updateRouteLayer(map, coordsAccum); 
     currentRoutePathCoordinates = coordsAccum;
@@ -277,7 +278,7 @@ export const getRoute = async (
       waypointsUpdatedBySnapping = true;
       finalSnappedWaypoints = snappedWaypoints;
       finalSnappedDirectFlags = mixedSnappedDirectFlags; 
-      console.log('[RCS/getRoute] buildMixedRoute indicates waypoints/flags were snapped.');
+      Logger.info('[RCS/getRoute] buildMixedRoute indicates waypoints/flags were snapped.');
     }
     const duration = Math.round(totalDist / 5 * 60);
     setRouteDistance(`${totalDist.toFixed(2)} km`);
@@ -290,7 +291,7 @@ export const getRoute = async (
   // Fallback: All segments are to be routed via Mapbox Directions API (allSegmentsRouted should be true here)
   if (allSegmentsRouted) { // Explicitly check for clarity, though it's the remaining case for >=2 waypoints
     try {
-      console.log('[RCS/getRoute] Calculating route using Mapbox Directions API for all segments.');
+      Logger.info('[RCS/getRoute] Calculating route using Mapbox Directions API for all segments.');
       const currentWaypointsForAPI = [...waypoints]; // Use a snapshot for the API call
       const waypointsString = currentWaypointsForAPI.map(point => `${point[0]},${point[1]}`).join(';');
       const radiusesString = currentWaypointsForAPI.map(() => '150').join(';'); // Keep generous radius for snapping
@@ -300,13 +301,13 @@ export const getRoute = async (
 
 const response = await fetch(queryUrl, { method: 'GET' });
 if (!response.ok) {
-  console.error(`[RCS/getRoute] API request failed with status ${response.status}`);
+  Logger.error(`[RCS/getRoute] API request failed with status ${response.status}`);
   throw new Error(`API request failed: ${response.statusText}`);
 }
 const json = await response.json();
 
       if (!json || !json.routes || json.routes.length === 0 || !json.routes[0].geometry) {
-        console.error('[RCS/getRoute] Invalid API response or no route geometry. Response:', json);
+        Logger.error('[RCS/getRoute] Invalid API response or no route geometry. Response:', json);
         setHasRoute(false);
         updateRouteLayer(map, []); // Clear route on map
         currentRoutePathCoordinates = [];
@@ -326,7 +327,7 @@ const json = await response.json();
                                   );
 
           if (!isContextStillValid) {
-            console.log('[RCS/getRoute] Global waypoints changed during API call. Discarding API snapping.');
+            Logger.info('[RCS/getRoute] Global waypoints changed during API call. Discarding API snapping.');
           } else {
             let actualChangeMadeBySnapping = false;
             const newSnappedWaypoints = [...currentGlobalWaypoints]; // Start with current global state
@@ -336,7 +337,7 @@ const json = await response.json();
               if (!directFlags[i] && 
                   (currentGlobalWaypoints[i][0] !== apiSnappedWaypoints[i][0] || 
                    currentGlobalWaypoints[i][1] !== apiSnappedWaypoints[i][1])) {
-                console.log(`[RCS/getRoute] API Snapping waypoint ${i} from ${currentGlobalWaypoints[i]} to ${apiSnappedWaypoints[i]}`);
+                Logger.info(`[RCS/getRoute] API Snapping waypoint ${i} from ${currentGlobalWaypoints[i]} to ${apiSnappedWaypoints[i]}`);
                 newSnappedWaypoints[i] = apiSnappedWaypoints[i];
                 actualChangeMadeBySnapping = true;
               }
@@ -345,7 +346,7 @@ const json = await response.json();
               waypointsUpdatedBySnapping = true;
               finalSnappedWaypoints = newSnappedWaypoints;
               finalSnappedDirectFlags = [...directFlags]; // Direct flags don't change from this type of snapping
-              console.log('[RCS/getRoute] Mapbox API snapping indicates waypoints were modified.');
+              Logger.info('[RCS/getRoute] Mapbox API snapping indicates waypoints were modified.');
               // DO NOT call updatePoints or save here. Return info to caller.
             }
           }
@@ -362,7 +363,7 @@ const json = await response.json();
       return { success: true, waypointsSnapped: waypointsUpdatedBySnapping, snappedWaypoints: finalSnappedWaypoints ?? undefined, snappedDirectFlags: finalSnappedDirectFlags ?? undefined };
 
     } catch (error) {
-      console.error('[RCS/getRoute] Error fetching route:', error);
+      Logger.error('[RCS/getRoute] Error fetching route:', error);
       setHasRoute(false);
       updateRouteLayer(map, []); // Clear route on map
       currentRoutePathCoordinates = [];
@@ -371,7 +372,7 @@ const json = await response.json();
   }
   
   // Should not be reached if logic is correct for waypoints.length >= 2
-  console.warn('[RCS/getRoute] Unhandled routing condition. Waypoints:', waypoints.length, 'Flags:', JSON.stringify(directFlags));
+  Logger.warn('[RCS/getRoute] Unhandled routing condition. Waypoints:', waypoints.length, 'Flags:', JSON.stringify(directFlags));
   updateRouteLayer(map, []); 
   currentRoutePathCoordinates = [];
   setRouteDistance('');
@@ -388,7 +389,7 @@ export const getCurrentRoutePath = (): Coordinate[] => {
 // Function to clear the current route path (e.g. when route is cleared in routing.ts)
 export const clearCurrentRoutePath = (): void => {
   currentRoutePathCoordinates = [];
-  console.log('[RouteCalculationService] Cleared currentRoutePathCoordinates.');
+  Logger.info('[RouteCalculationService] Cleared currentRoutePathCoordinates.');
 };
 
 
@@ -403,26 +404,26 @@ export async function calculateAtoBRoute(
 
   if (surfaceType === 'paved') {
     profile = 'mapbox/driving-traffic'; 
-    console.log(`[RCS/calculateAtoBRoute] Using '${profile}' for 'paved' surface type.`);
+    Logger.info(`[RCS/calculateAtoBRoute] Using '${profile}' for 'paved' surface type.`);
   } else if (surfaceType === 'mixed') {
     profile = 'mapbox/cycling';
-    console.log(`[RCS/calculateAtoBRoute] Using '${profile}' for 'mixed' surface type.`);
+    Logger.info(`[RCS/calculateAtoBRoute] Using '${profile}' for 'mixed' surface type.`);
   } else if (surfaceType === 'unpaved') {
     profile = 'mapbox/walking'; 
-    console.warn(`[RCS/calculateAtoBRoute] 'unpaved' surface type selected. Using '${profile}' profile. This may result in slower estimated times and routes more suited for walking/hiking.`);
+    Logger.warn(`[RCS/calculateAtoBRoute] 'unpaved' surface type selected. Using '${profile}' profile. This may result in slower estimated times and routes more suited for walking/hiking.`);
   }
 
   const coordinates = `${startCoord[0]},${startCoord[1]};${endCoord[0]},${endCoord[1]}`;
   const apiUrl = `https://api.mapbox.com/directions/v5/${profile}/${coordinates}?overview=full&geometries=geojson&steps=true&access_token=${accessToken}`;
 
-  console.log(`[RCS/calculateAtoBRoute] Fetching A-to-B route from: ${apiUrl.replace(accessToken, "<REDACTED_TOKEN>")}`);
+  Logger.info(`[RCS/calculateAtoBRoute] Fetching A-to-B route from: ${apiUrl.replace(accessToken, "<REDACTED_TOKEN>")}`);
 
   try {
     const response = await fetch(apiUrl);
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: response.statusText }));
       const errorMessage = errorData.message || `API request failed with status ${response.status}`;
-      console.error(`[RCS/calculateAtoBRoute] API error: ${errorMessage}`, errorData);
+      Logger.error(`[RCS/calculateAtoBRoute] API error: ${errorMessage}`, errorData);
       return { success: false, error: errorMessage };
     }
 
@@ -434,7 +435,7 @@ export async function calculateAtoBRoute(
       const distance = route.distance; // in meters
       const duration = route.duration; // in seconds
 
-      console.log(`[RCS/calculateAtoBRoute] Route found: Distance=${(distance/1000).toFixed(2)}km, Duration=${(duration/60).toFixed(1)}min`);
+      Logger.info(`[RCS/calculateAtoBRoute] Route found: Distance=${(distance/1000).toFixed(2)}km, Duration=${(duration/60).toFixed(1)}min`);
       currentRoutePathCoordinates = [...geometry]; // Update module-level path
 
       return {
@@ -445,11 +446,11 @@ export async function calculateAtoBRoute(
       };
     } else {
       const noRouteMessage = data.message || 'No route found between the specified points.';
-      console.warn(`[RCS/calculateAtoBRoute] No route found: ${noRouteMessage}`);
+      Logger.warn(`[RCS/calculateAtoBRoute] No route found: ${noRouteMessage}`);
       return { success: false, error: noRouteMessage };
     }
   } catch (error) {
-    console.error('[RCS/calculateAtoBRoute] Network or parsing error:', error);
+    Logger.error('[RCS/calculateAtoBRoute] Network or parsing error:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Network error or failed to parse response.' };
   }
 } 

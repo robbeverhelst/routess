@@ -36,7 +36,7 @@ import { useRouteData } from '@/hooks/useRouteData';
 import { useUndoRedoState } from '@/hooks/useUndoRedoState';
 import { getCurrentRoutePath } from '@/features/routing/services/RouteCalculationService';
 import { closestPointOnSegment, haversine } from '@/features/routing/utils/RoutingUtils'; // Import helpers
-
+import { Logger } from '@/lib/logger';
 // Import the new modal and its types
 import { RouteGeneratorModal, type RouteGenerationParams } from '@/components/ui/RouteGeneratorModal';
 
@@ -45,12 +45,12 @@ const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
 
 // Fallback for development (remove in production)
 // if (!MAPBOX_TOKEN) {
-//   console.error('Mapbox token not found in environment variables! Please add VITE_MAPBOX_ACCESS_TOKEN to your .env file');
+//   Logger.error('Mapbox token not found in environment variables! Please add VITE_MAPBOX_ACCESS_TOKEN to your .env file');
 // }
 
 // More detailed check for debugging
 if (import.meta.env.DEV && (!MAPBOX_TOKEN || MAPBOX_TOKEN.length < 10)) { // Check if it's falsy or too short to be a real token
-  console.error(
+  Logger.error(
     `[MapWithRouting] Mapbox token issue: 
     Raw import.meta.env.VITE_MAPBOX_ACCESS_TOKEN: '${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}', 
     Assigned MAPBOX_TOKEN value: '${MAPBOX_TOKEN}', 
@@ -58,7 +58,7 @@ if (import.meta.env.DEV && (!MAPBOX_TOKEN || MAPBOX_TOKEN.length < 10)) { // Che
     Please verify VITE_MAPBOX_ACCESS_TOKEN in your .env file or CI secrets.`
   );
 } else if (import.meta.env.DEV) {
-  console.log(
+  Logger.info(
     `[MapWithRouting] Mapbox token loaded. 
     Type: ${typeof MAPBOX_TOKEN}, 
     Value length: ${MAPBOX_TOKEN?.length ?? 0} (token partially redacted)`
@@ -94,11 +94,11 @@ try {
     const parsed = JSON.parse(storedData);
     if (parsed && parsed.waypoints && parsed.waypoints.length > 0) {
       detectedRouteInLocalStorageOnInit = true;
-      console.log('[MapWithRouting Init] Detected route in localStorage on component initialization.');
+      Logger.info('[MapWithRouting Init] Detected route in localStorage on component initialization.');
     }
   }
 } catch (e) {
-  console.error('[MapWithRouting Init] Error reading waypoints from localStorage on init:', e);
+  Logger.error('[MapWithRouting Init] Error reading waypoints from localStorage on init:', e);
 }
 
 // Check for last known location in localStorage
@@ -109,11 +109,11 @@ try {
     const parsed = JSON.parse(lastKnownStr);
     if (Array.isArray(parsed) && parsed.length === 2 && typeof parsed[0] === 'number' && typeof parsed[1] === 'number') {
       lastKnownLocationFromStorage = parsed as [number, number];
-      console.log('[MapWithRouting Init] Detected last known location in localStorage.');
+      Logger.info('[MapWithRouting Init] Detected last known location in localStorage.');
     }
   }
 } catch (e) {
-  console.error('[MapWithRouting Init] Error reading lastKnownLocation from localStorage on init:', e);
+  Logger.error('[MapWithRouting Init] Error reading lastKnownLocation from localStorage on init:', e);
 }
 
 // Define route colors for day and night modes
@@ -238,7 +238,7 @@ export default function MapWithRouting({
           setTimeout(() => setShareNotification(''), 2000);
         })
         .catch(err => {
-          console.error('[MapWithRouting] Failed to copy share link for RouteControls:', err);
+          Logger.error('[MapWithRouting] Failed to copy share link for RouteControls:', err);
           handleRouteInfoErrorFromHook('Failed to copy link. Please try again.');
         });
     } else {
@@ -291,7 +291,7 @@ export default function MapWithRouting({
 
   // Handle map load
   const handleMapLoad = useCallback(async (event: { target: mapboxgl.Map }) => {
-    console.log('[MapWithRouting] Map loaded, setting up routing');
+    Logger.info('[MapWithRouting] Map loaded, setting up routing');
     mapRef.current = event.target;
     const disposer = await setupRouting(
       event.target,
@@ -311,25 +311,25 @@ export default function MapWithRouting({
       // Create a timeout to ensure setIsRouteCoordsReady is called even if something goes wrong
       routeInitTimeoutRef.current = window.setTimeout(() => {
         if (!isRouteCoordsReady) {
-          console.log('[MapWithRouting] Forcing isRouteCoordsReady after timeout');
+          Logger.info('[MapWithRouting] Forcing isRouteCoordsReady after timeout');
           setIsRouteCoordsReady(true);
         }
       }, 1500); // Give it 1.5 seconds to initialize properly
     }
     
-    console.log('[MapWithRouting] Routing setup complete');
+    Logger.info('[MapWithRouting] Routing setup complete');
 
     // Check for shared route data in URL
     const urlParams = new URLSearchParams(window.location.search);
     const routeDataParam = urlParams.get('route');
 
     if (routeDataParam) {
-      console.log('[MapWithRouting] Found route data in URL, attempting to load...');
+      Logger.info('[MapWithRouting] Found route data in URL, attempting to load...');
       let loadedData: ReturnType<typeof decompressAndParse> | null = null;
       try {
         loadedData = decompressAndParse(routeDataParam);
       } catch (err) {
-        console.error('[MapWithRouting] Could not decompress or parse route param:', err);
+        Logger.error('[MapWithRouting] Could not decompress or parse route param:', err);
         handleRouteInfoErrorFromHook('Failed to read shared route data. The link may be corrupted or invalid.');
         // No return here, allow map to load normally without shared route
       }
@@ -345,16 +345,16 @@ export default function MapWithRouting({
           setHasRoute,
           setIsRouteCoordsReady
         ).then(() => {
-          console.log('[MapWithRouting] Route data loaded from URL successfully.');
+          Logger.info('[MapWithRouting] Route data loaded from URL successfully.');
           // If lock state is present in shared data and is true, lock the map
           if (typeof loadedData.l === 'boolean' && loadedData.l === true) {
-            console.log('[MapWithRouting] Shared route indicates locked state, applying lock.');
+            Logger.info('[MapWithRouting] Shared route indicates locked state, applying lock.');
             setIsMapLocked(true); // This will also trigger saving to localStorage via useEffect
           }
           // Optionally, clean the URL
           window.history.replaceState({}, document.title, window.location.pathname);
         }).catch(err => {
-          console.error('[MapWithRouting] Error setting route data from URL:', err);
+          Logger.error('[MapWithRouting] Error setting route data from URL:', err);
           // Show an error to the user if loading fails
           handleRouteInfoErrorFromHook('Failed to load shared route. The link may be invalid or corrupted.');
         });
@@ -364,7 +364,7 @@ export default function MapWithRouting({
       } else {
         // This case implies routeDataParam was present but loadedData is null for other reasons
         // (e.g. decompressAndParse returned null without throwing, or one of the other conditions failed)
-        console.warn('[MapWithRouting] Failed to process route data from URL (e.g. map not ready, token missing, or data invalid but not throwing). RouteDataParam was present.');
+        Logger.warn('[MapWithRouting] Failed to process route data from URL (e.g. map not ready, token missing, or data invalid but not throwing). RouteDataParam was present.');
         // Avoid showing a generic error if a specific one was already shown by the catch block for decompressAndParse
         if(loadedData !== null) { // Only show this if decompressAndParse didn't fail and show its own error
             handleRouteInfoErrorFromHook('Could not load shared route. The link appears to be invalid or data is missing.');
@@ -389,7 +389,7 @@ export default function MapWithRouting({
       if (currentRouteCoords && currentRouteCoords.length > 0) {
         zoomToRoute(mapRef.current, currentRouteCoords);
       } else {
-        console.warn('[MapWithRouting] No route path coordinates available to zoom to.');
+        Logger.warn('[MapWithRouting] No route path coordinates available to zoom to.');
       }
     }
   }, [hasRoute]);
@@ -403,16 +403,16 @@ export default function MapWithRouting({
       }
       
       if (routingDisposerRef.current) {
-        console.log('[MapWithRouting] Cleaning up map interaction listeners.');
+        Logger.info('[MapWithRouting] Cleaning up map interaction listeners.');
         routingDisposerRef.current();
         routingDisposerRef.current = null;
       }
       // Call the general routing teardown
-      console.log('[MapWithRouting] Tearing down routing module subscriptions and refs.');
+      Logger.info('[MapWithRouting] Tearing down routing module subscriptions and refs.');
       teardownRouting();
 
       if (mapRef.current) {
-        console.log('[MapWithRouting] Removing map instance (commented out).');
+        Logger.info('[MapWithRouting] Removing map instance (commented out).');
         // mapRef.current.remove(); // This can cause issues if map is removed elsewhere or if used in strict mode with double invokes
       }
     };
@@ -425,42 +425,42 @@ export default function MapWithRouting({
     // Only execute this if no initial zoom has happened yet
     if (hasInitiallyZoomedToUser.current || initialRouteZoomDoneRef.current) return;
     
-    console.log('[MapWithRouting] Determining initial map position with priority order...');
+    Logger.info('[MapWithRouting] Determining initial map position with priority order...');
 
     // Priority 1: Zoom to route if available
     if (hasRoute && isRouteCoordsReady) {
-      console.log('[MapWithRouting] Priority 1: Zooming to available route');
+      Logger.info('[MapWithRouting] Priority 1: Zooming to available route');
       const currentRouteCoords = getCurrentRoutePath();
       if (currentRouteCoords && currentRouteCoords.length > 0) {
         zoomToRoute(mapRef.current, currentRouteCoords);
         initialRouteZoomDoneRef.current = true;
         hasInitiallyZoomedToUser.current = true;
-        console.log('[MapWithRouting] Successfully zoomed to initial route.');
+        Logger.info('[MapWithRouting] Successfully zoomed to initial route.');
         return;
       } else {
-        console.warn('[MapWithRouting] hasRoute is true but no route coordinates available');
+        Logger.warn('[MapWithRouting] hasRoute is true but no route coordinates available');
       }
     } else if (detectedRouteInLocalStorageOnInit && mapRef.current) {
       // For routes from localStorage, first check if the route path is already available
       const currentRouteCoords = getCurrentRoutePath();
       if (currentRouteCoords && currentRouteCoords.length > 0) {
-        console.log('[MapWithRouting] Route coordinates available from localStorage, zooming to route');
+        Logger.info('[MapWithRouting] Route coordinates available from localStorage, zooming to route');
         zoomToRoute(mapRef.current, currentRouteCoords);
         initialRouteZoomDoneRef.current = true;
         hasInitiallyZoomedToUser.current = true;
-        console.log('[MapWithRouting] Successfully zoomed to route from localStorage.');
+        Logger.info('[MapWithRouting] Successfully zoomed to route from localStorage.');
         return;
       }
       
       // If a route is detected in localStorage but hasRoute is not yet true and no coordinates available,
       // wait for the route to be properly loaded before proceeding to other options
-      console.log('[MapWithRouting] Route detected in localStorage, waiting for route data to be ready');
+      Logger.info('[MapWithRouting] Route detected in localStorage, waiting for route data to be ready');
       return;
     }
 
     // Priority 2: Zoom to current user location if available
     if (userLocation && !isUserLocationLoading && !locationError) {
-      console.log('[MapWithRouting] Priority 2: Zooming to current user location');
+      Logger.info('[MapWithRouting] Priority 2: Zooming to current user location');
       mapRef.current.flyTo({ 
         center: userLocation, 
         zoom: 15,
@@ -469,13 +469,13 @@ export default function MapWithRouting({
         padding: { top: 0, bottom: 0, left: 0, right: 0 }
       });
       hasInitiallyZoomedToUser.current = true;
-      console.log('[MapWithRouting] Successfully zoomed to current user location.');
+      Logger.info('[MapWithRouting] Successfully zoomed to current user location.');
       return;
     }
 
     // Priority 3: Zoom to last known location from localStorage
     if (lastKnownLocationFromStorage) {
-      console.log('[MapWithRouting] Priority 3: Zooming to last known location from localStorage');
+      Logger.info('[MapWithRouting] Priority 3: Zooming to last known location from localStorage');
       mapRef.current.flyTo({ 
         center: lastKnownLocationFromStorage, 
         zoom: 14,
@@ -484,12 +484,12 @@ export default function MapWithRouting({
         padding: { top: 0, bottom: 0, left: 0, right: 0 }
       });
       hasInitiallyZoomedToUser.current = true;
-      console.log('[MapWithRouting] Successfully zoomed to last known location from localStorage.');
+      Logger.info('[MapWithRouting] Successfully zoomed to last known location from localStorage.');
       return;
     }
 
     // Priority 4: Use default location (already set in initialViewState)
-    console.log('[MapWithRouting] Priority 4: Using default location (already set in initialViewState)');
+    Logger.info('[MapWithRouting] Priority 4: Using default location (already set in initialViewState)');
     
   }, [isMapReady, hasRoute, isRouteCoordsReady, userLocation, isUserLocationLoading, locationError, lastKnownLocationFromStorage, detectedRouteInLocalStorageOnInit]);
 
@@ -532,8 +532,8 @@ export default function MapWithRouting({
         }
       } catch (e) {
         // Layer or source might not exist if map is being changed/removed
-        // console.warn('Error setting paint property for halo:', e);
-        if (typeof e === 'undefined') console.log('Suppressed error');
+        // Logger.warn('Error setting paint property for halo:', e);
+        if (typeof e === 'undefined') Logger.info('Suppressed error');
       }
       animationFrameIdRef.current = requestAnimationFrame(animateHalo);
     };
@@ -550,7 +550,7 @@ export default function MapWithRouting({
       //     map.setPaintProperty('user-location-halo', 'circle-radius', 16); // Default radius from routing.ts
       //   }
       // } catch (error) {
-      //   // console.warn('Error resetting halo radius:', error);
+      //   // Logger.warn('Error resetting halo radius:', error);
       // }
     };
   }, [isMapReady]);
@@ -585,7 +585,7 @@ export default function MapWithRouting({
   }, [isGeneratingRoute]);
 
   const handleGenerateCustomRoute = useCallback(async (params: RouteGenerationParams) => {
-    console.log('[MapWithRouting] Generate Custom Route called with params:', params);
+    Logger.info('[MapWithRouting] Generate Custom Route called with params:', params);
     // Set generating state to true
     setIsGeneratingRoute(true);
     
@@ -593,13 +593,13 @@ export default function MapWithRouting({
     // setIsRouteGeneratorModalOpen(false);
 
     if (params.routeType === 'a-to-b' && params.startPoint && params.endPoint && mapRef.current && MAPBOX_TOKEN) {
-      console.log('[MapWithRouting] Resetting existing route before generation for A-to-B...');
+      Logger.info('[MapWithRouting] Resetting existing route before generation for A-to-B...');
       resetRouting(mapRef.current, setRouteDistance, setRouteDuration, setHasRoute);
       clearShareState(); 
       setWaypointError(null);
       setIsRouteCoordsReady(false);
 
-      console.log(`[MapWithRouting] Attempting to generate A-to-B route from ${params.startPoint.name} to ${params.endPoint.name} with surface ${params.surfaceType}`);
+      Logger.info(`[MapWithRouting] Attempting to generate A-to-B route from ${params.startPoint.name} to ${params.endPoint.name} with surface ${params.surfaceType}`);
       
       try {
         const startCoord: [number, number] = [params.startPoint.lng, params.startPoint.lat];
@@ -617,10 +617,10 @@ export default function MapWithRouting({
           setIsRouteCoordsReady,
           handleWaypointError
         );
-        console.log('[MapWithRouting] generateAndDisplayRouteAtoB call completed.');
+        Logger.info('[MapWithRouting] generateAndDisplayRouteAtoB call completed.');
 
       } catch (error) {
-        console.error('[MapWithRouting] Error during A-to-B custom route generation attempt:', error);
+        Logger.error('[MapWithRouting] Error during A-to-B custom route generation attempt:', error);
         handleRouteInfoErrorFromHook(typeof error === 'string' ? error : 'Failed to generate A-to-B route. Please try again.');
         setIsRouteCoordsReady(false);
       } finally {
@@ -630,17 +630,17 @@ export default function MapWithRouting({
       }
 
     } else if (params.routeType === 'loop' && params.startPoint && params.loopLengthKm && mapRef.current && MAPBOX_TOKEN) {
-      console.log('[MapWithRouting] Resetting existing route before attempting loop generation...');
+      Logger.info('[MapWithRouting] Resetting existing route before attempting loop generation...');
       resetRouting(mapRef.current, setRouteDistance, setRouteDuration, setHasRoute);
       clearShareState();
       setWaypointError(null);
       setIsRouteCoordsReady(false);
       
-      console.log(`[MapWithRouting] Loop route generation requested:`);
-      console.log(`  Start: ${params.startPoint.name} (${params.startPoint.lat.toFixed(5)}, ${params.startPoint.lng.toFixed(5)})`);
-      console.log(`  Length: ${params.loopLengthKm} km`);
-      console.log(`  Direction: ${params.loopDirection || 'ANY'}`);
-      console.log(`  Surface: ${params.surfaceType}`);
+      Logger.info(`[MapWithRouting] Loop route generation requested:`);
+      Logger.info(`  Start: ${params.startPoint.name} (${params.startPoint.lat.toFixed(5)}, ${params.startPoint.lng.toFixed(5)})`);
+      Logger.info(`  Length: ${params.loopLengthKm} km`);
+      Logger.info(`  Direction: ${params.loopDirection || 'ANY'}`);
+      Logger.info(`  Surface: ${params.surfaceType}`);
       
       try {
         await generateAndDisplayRouteLoop(
@@ -656,9 +656,9 @@ export default function MapWithRouting({
           setIsRouteCoordsReady,
           handleWaypointError
         );
-        console.log('[MapWithRouting] generateAndDisplayRouteLoop call completed.');
+        Logger.info('[MapWithRouting] generateAndDisplayRouteLoop call completed.');
       } catch (error) {
-        console.error('[MapWithRouting] Error during loop custom route generation attempt:', error);
+        Logger.error('[MapWithRouting] Error during loop custom route generation attempt:', error);
         handleRouteInfoErrorFromHook(typeof error === 'string' ? error : 'Failed to generate loop route. Please try again.');
         setIsRouteCoordsReady(false);
       } finally {
@@ -669,7 +669,7 @@ export default function MapWithRouting({
 
     } else if (params.routeType === 'loop') {
       // This case handles if loop params are somehow missing despite the modal's validation
-      console.warn('[MapWithRouting] Loop generation requested but essential parameters are missing.', params);
+      Logger.warn('[MapWithRouting] Loop generation requested but essential parameters are missing.', params);
       handleRouteInfoErrorFromHook('Loop generation failed: missing start point or length.');
       setIsGeneratingRoute(false);
       setIsRouteGeneratorModalOpen(false);
@@ -679,19 +679,19 @@ export default function MapWithRouting({
   // Handler functions for controls
   const handleUndo = useCallback(() => {
     if (historyHasUndo()) {
-      console.log('[MapWithRouting] Calling stepBack');
+      Logger.info('[MapWithRouting] Calling stepBack');
       stepBack();
     } else {
-      console.warn('[MapWithRouting] Undo called but no history to undo.');
+      Logger.warn('[MapWithRouting] Undo called but no history to undo.');
     }
   }, []);
 
   const handleRedo = useCallback(() => {
     if (historyHasRedo()) {
-      console.log('[MapWithRouting] Calling stepForward');
+      Logger.info('[MapWithRouting] Calling stepForward');
       stepForward();
     } else {
-      console.warn('[MapWithRouting] Redo called but no history to redo.');
+      Logger.warn('[MapWithRouting] Redo called but no history to redo.');
     }
   }, []);
 
@@ -709,12 +709,12 @@ export default function MapWithRouting({
     clearShareState();
     setWaypointError(null);
     
-    console.log('[MapWithRouting] handleReset completed, UI states cleared.');
+    Logger.info('[MapWithRouting] handleReset completed, UI states cleared.');
   }, [setRouteDistance, setRouteDuration, setHasRoute, clearShareState]);
 
   const handleReverseRoute = useCallback(async () => {
     if (!mapRef.current || !MAPBOX_TOKEN || !hasRoute) return;
-    console.log('[MapWithRouting] Attempting to reverse route.');
+    Logger.info('[MapWithRouting] Attempting to reverse route.');
     await reverseRoute(
       mapRef.current, 
       MAPBOX_TOKEN!, 
@@ -723,7 +723,7 @@ export default function MapWithRouting({
       setHasRoute,
       isMapLockedRef.current 
     );
-    console.log('[MapWithRouting] Reverse route call executed.');
+    Logger.info('[MapWithRouting] Reverse route call executed.');
   }, [MAPBOX_TOKEN, hasRoute, setRouteDistance, setRouteDuration, setHasRoute, isMapLockedRef]);
 
   const handleLocate = useCallback(() => {
@@ -732,9 +732,9 @@ export default function MapWithRouting({
         mapRef.current.flyTo({ center: userLocation, zoom: 17 });
       } else if (lastKnownLocationFromStorage) {
         mapRef.current.flyTo({ center: lastKnownLocationFromStorage, zoom: 15 });
-        console.log('[MapWithRouting] Centered on last known location.');
+        Logger.info('[MapWithRouting] Centered on last known location.');
       } else {
-        console.log('[MapWithRouting] Locate called, but no current or last known location available.');
+        Logger.info('[MapWithRouting] Locate called, but no current or last known location available.');
       }
     }
   }, [userLocation, locationError, lastKnownLocationFromStorage]);
@@ -748,7 +748,7 @@ export default function MapWithRouting({
   const handleAddDirectWaypoint = useCallback(() => {
     if (!mapRef.current || !popup) return;
     
-    console.log('[MapWithRouting] Adding direct waypoint at:', [popup.longitude, popup.latitude]);
+    Logger.info('[MapWithRouting] Adding direct waypoint at:', [popup.longitude, popup.latitude]);
     
     addWaypoint(
       mapRef.current,
@@ -769,7 +769,7 @@ export default function MapWithRouting({
   const handleRemoveWaypoint = useCallback(() => {
     if (!mapRef.current || !popup || popup.type !== 'remove' || popup.waypointIndex === undefined) return;
     
-    console.log('[MapWithRouting] Removing waypoint at index:', popup.waypointIndex);
+    Logger.info('[MapWithRouting] Removing waypoint at index:', popup.waypointIndex);
     
     removeWaypoint(
       mapRef.current,
@@ -789,7 +789,7 @@ export default function MapWithRouting({
   const handleAddWaypointOnRoute = useCallback(async () => {
     if (!mapRef.current || !popup || popup.type !== 'add_on_route' || !MAPBOX_TOKEN) return;
 
-    console.log('[MapWithRouting] Adding waypoint on route at:', [popup.longitude, popup.latitude]);
+    Logger.info('[MapWithRouting] Adding waypoint on route at:', [popup.longitude, popup.latitude]);
 
     await insertWaypointAtLocation(
       mapRef.current,
@@ -809,7 +809,7 @@ export default function MapWithRouting({
   const handleSelectLocation = useCallback((location: { lng: number; lat: number; name: string }) => {
     if (!mapRef.current) return;
     
-    console.log('[MapWithRouting] Selected location:', location);
+    Logger.info('[MapWithRouting] Selected location:', location);
     
     // Fly to the selected location
     mapRef.current.flyTo({
@@ -853,15 +853,15 @@ export default function MapWithRouting({
       // The saving to localStorage is now handled by the useEffect listening to isMapLocked
       if (newLockedState && mapRef.current && hasRoute) {
         try {
-          console.log('[MapWithRouting] Map locked, zooming to full route view');
+          Logger.info('[MapWithRouting] Map locked, zooming to full route view');
           const currentRouteCoords = getCurrentRoutePath();
           if (currentRouteCoords && currentRouteCoords.length > 0) {
             zoomToRoute(mapRef.current, currentRouteCoords);
           } else {
-            console.warn('[MapWithRouting] No route coordinates available for auto-zoom on lock');
+            Logger.warn('[MapWithRouting] No route coordinates available for auto-zoom on lock');
           }
         } catch (err) {
-          console.error('[MapWithRouting] Error zooming to route on lock:', err);
+          Logger.error('[MapWithRouting] Error zooming to route on lock:', err);
         }
       }
       return newLockedState;
@@ -931,7 +931,7 @@ export default function MapWithRouting({
       const nextBearing = BEARING_PRESETS[nextIndex];
       map.flyTo({ bearing: nextBearing, duration: 500 }); // Smoothly fly to new bearing
       setCurrentBearing(nextBearing);
-      console.log(`[MapWithRouting] Bearing set to: ${nextBearing}`);
+      Logger.info(`[MapWithRouting] Bearing set to: ${nextBearing}`);
     }
   }, [mapRef, currentBearing]); // Added currentBearing to dependencies
 
@@ -1028,9 +1028,9 @@ export default function MapWithRouting({
                 map.removeSource(LINE_TO_ROUTE_SOURCE_ID);
             }
         } catch (e) {
-            // console.warn("Error during line-to-route cleanup on unmount/re-effect:", e);
+            // Logger.warn("Error during line-to-route cleanup on unmount/re-effect:", e);
             // Errors can happen here if map is already being destroyed.
-             if (typeof e === 'undefined') console.log('Suppressed error during cleanup');
+             if (typeof e === 'undefined') Logger.info('Suppressed error during cleanup');
         }
       }
     };

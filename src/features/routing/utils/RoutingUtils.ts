@@ -2,6 +2,7 @@ import type { Coordinate } from '@/types/map';
 import { LngLatBounds, type Map as MapboxMap } from 'mapbox-gl';
 import { LngLat } from 'mapbox-gl';
 import type { LoopDirection } from '@/components/ui/RouteGeneratorModal'; // Assuming this type is exported
+import { Logger } from '@/lib/logger';
 
 export type LoopDirectionOrBearing = LoopDirection | number;
 
@@ -50,7 +51,7 @@ export const checkNearRoad = async (
     
     const response = await fetch(url);
     if (!response.ok) {
-      console.error('[checkNearRoad] Matching API request failed:', response.status, await response.text());
+      Logger.error('[checkNearRoad] Matching API request failed:', response.status, await response.text());
       return { isValid: false };
     }
     const json = await response.json();
@@ -59,11 +60,11 @@ export const checkNearRoad = async (
       const snappedTracepoint = json.tracepoints[0];
       // A null tracepoint means no matching road segment was found within the radius.
       if (snappedTracepoint === null) {
-        console.log('[checkNearRoad] Point is off-road (tracepoint is null).');
+        Logger.info('[checkNearRoad] Point is off-road (tracepoint is null).');
         return { isValid: false };
       }
       if (!snappedTracepoint.location) {
-  console.log('[checkNearRoad] Tracepoint has no location – treating as off-road.');
+  Logger.info('[checkNearRoad] Tracepoint has no location – treating as off-road.');
   return { isValid: false };
 }
 const snappedCoords = snappedTracepoint.location as Coordinate;
@@ -71,17 +72,17 @@ const snappedCoords = snappedTracepoint.location as Coordinate;
       
       // Use the effectiveRadius (converted to km) for the distance check
       if (dist > (effectiveRadius / 1000) + 0.001) { // Add 1m tolerance to haversine check vs radius
-        console.log(`[checkNearRoad] Snapped point is too far (Dist: ${dist.toFixed(3)}km, Radius: ${effectiveRadius}m). Deeming off-road.`);
+        Logger.info(`[checkNearRoad] Snapped point is too far (Dist: ${dist.toFixed(3)}km, Radius: ${effectiveRadius}m). Deeming off-road.`);
         return { isValid: false };
       }
-      console.log(`[checkNearRoad] Point is on-road (Radius: ${effectiveRadius}m). Snapped from [${coords.join(',')}] to [${snappedCoords.join(',')}] Dist: ${dist.toFixed(3)}km`);
+      Logger.info(`[checkNearRoad] Point is on-road (Radius: ${effectiveRadius}m). Snapped from [${coords.join(',')}] to [${snappedCoords.join(',')}] Dist: ${dist.toFixed(3)}km`);
       return { isValid: true, snappedCoords };
     } else {
-      console.warn('[checkNearRoad] Matching API did not return a successful result or tracepoints:', json.code, json.message);
+      Logger.warn('[checkNearRoad] Matching API did not return a successful result or tracepoints:', json.code, json.message);
       return { isValid: false }; // No match or error
     }
   } catch (error) {
-    console.error('[checkNearRoad] Error calling Matching API:', error);
+    Logger.error('[checkNearRoad] Error calling Matching API:', error);
     // If fetch itself fails, console.timeEnd might not be reached for the fetch timer.
     // No specific timeEnd here, as the overall function duration might be more relevant for catch.
     return { isValid: false }; // Network error or other exception
@@ -162,7 +163,7 @@ export function calculateTargetCoordinate(
     if (bearingInDegrees < 0) {
       bearingInDegrees += 360;
     }
-    console.log(`[RoutingUtils] Calculating target coordinate using direct bearing: start=${startPoint}, dist=${distanceKm}km, bearing=${bearingInDegrees}°`);
+    Logger.info(`[RoutingUtils] Calculating target coordinate using direct bearing: start=${startPoint}, dist=${distanceKm}km, bearing=${bearingInDegrees}°`);
   } else {
     switch (directionOrBearing) {
       case 'N': bearingInDegrees = 0; break;
@@ -176,11 +177,11 @@ export function calculateTargetCoordinate(
       case 'ANY': 
       default: bearingInDegrees = 0; break;
     }
-    console.log(`[RoutingUtils] Calculating target coordinate using LoopDirection: start=${startPoint}, dist=${distanceKm}km, bearing=${bearingInDegrees}° (direction: ${directionOrBearing})`);
+    Logger.info(`[RoutingUtils] Calculating target coordinate using LoopDirection: start=${startPoint}, dist=${distanceKm}km, bearing=${bearingInDegrees}° (direction: ${directionOrBearing})`);
   }
   
   const geometricTarget = destinationPoint(startPoint, distanceKm, bearingInDegrees);
-  console.log(`[RoutingUtils] Calculated geometric target: ${geometricTarget}`);
+  Logger.info(`[RoutingUtils] Calculated geometric target: ${geometricTarget}`);
   return geometricTarget;
 }
 
@@ -191,13 +192,13 @@ export function calculateTargetCoordinate(
  */
 export const zoomToRoute = (map: MapboxMap, coordinates: Coordinate[]): void => {
   if (!map || !map.getBounds || !coordinates || coordinates.length === 0) {
-    console.warn('[RoutingUtils.zoomToRoute] Map not ready or no coordinates to zoom to.');
+    Logger.warn('[RoutingUtils.zoomToRoute] Map not ready or no coordinates to zoom to.');
     return;
   }
 
   // Add a check to see if the map is currently animating
   if (map.isEasing()) {
-    console.log('[RoutingUtils.zoomToRoute] Map is currently easing, skipping zoom.');
+    Logger.info('[RoutingUtils.zoomToRoute] Map is currently easing, skipping zoom.');
     return;
   }
 
@@ -234,7 +235,7 @@ export const zoomToRoute = (map: MapboxMap, coordinates: Coordinate[]): void => 
       const zoomDiff = Math.abs(camera.zoom - currentZoom);
 
       if (centerDiff < centerTolerance && zoomDiff < zoomTolerance) {
-        console.log('[RoutingUtils.zoomToRoute] Map view is already close to optimal for the route, skipping zoom animation.');
+        Logger.info('[RoutingUtils.zoomToRoute] Map view is already close to optimal for the route, skipping zoom animation.');
         return; // Skip the fitBounds call
       }
     }
@@ -247,9 +248,9 @@ export const zoomToRoute = (map: MapboxMap, coordinates: Coordinate[]): void => 
       pitch: currentPitch,      // Preserve current pitch
       bearing: currentBearing   // Preserve current bearing
     });
-    console.log('[RoutingUtils.zoomToRoute] Adjusted map bounds, preserving pitch and bearing.');
+    Logger.info('[RoutingUtils.zoomToRoute] Adjusted map bounds, preserving pitch and bearing.');
   } catch (error) {
-    console.error('[RoutingUtils.zoomToRoute] Error fitting bounds:', error);
+    Logger.error('[RoutingUtils.zoomToRoute] Error fitting bounds:', error);
   }
 };
 
