@@ -87,13 +87,13 @@ export function LocationSearch({
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
         setShowResults(false);
         if (isMobileContext && isMobileSearchOpen && onToggleMobileSearch) {
-          // Optional: close mobile search on outside click.
-          // Consider if this is desired, or if only X button should close it.
-          // onToggleMobileSearch(); 
+          onToggleMobileSearch();
+          setQuery("");
+          setResults([]);
         } else if (!isMobileContext && isDesktopSearchExpanded) {
           setIsDesktopSearchExpanded(false);
-          // setQuery(""); // Optionally clear query on outside click when closing
-          // setResults([]);
+          setQuery("");
+          setResults([]);
         }
       }
     }
