@@ -53,13 +53,16 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
         
-      - name: Check for Mapbox Token availability
+      - name: Check for secrets availability
         run: |
           echo "VITE_MAPBOX_ACCESS_TOKEN secret is present: ${{ secrets.VITE_MAPBOX_ACCESS_TOKEN != '' }}"
+          echo "VITE_GOOGLE_CLIENT_ID secret is present: ${{ secrets.VITE_GOOGLE_CLIENT_ID != '' }}"
 
       - name: Create .env file
         run: |
           echo "VITE_MAPBOX_ACCESS_TOKEN=${{ secrets.VITE_MAPBOX_ACCESS_TOKEN }}" > .env
+          echo "VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}" >> .env
+          echo "VITE_APP_URL=https://maps.robbeverhelst.com" >> .env
 
       - name: Build application with Turbo
         run: bunx turbo run build
@@ -182,6 +185,8 @@ jobs:
       - name: Create .env file for Docker build
         run: |
           echo "VITE_MAPBOX_ACCESS_TOKEN=${{ secrets.VITE_MAPBOX_ACCESS_TOKEN }}" > .env
+          echo "VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}" >> .env
+          echo "VITE_APP_URL=https://maps.robbeverhelst.be" >> .env
           
       - name: Extract metadata for Docker
         id: metadata
@@ -254,6 +259,8 @@ jobs:
           PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
           APP_VERSION: ${{ needs.release.outputs.version }}
           VITE_MAPBOX_ACCESS_TOKEN: ${{ secrets.VITE_MAPBOX_ACCESS_TOKEN }}
+          VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+          VITE_APP_URL: "https://maps.robbeverhelst.be"
           
       - name: Pulumi Update
         uses: pulumi/actions@v6
@@ -267,6 +274,8 @@ jobs:
           PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
           APP_VERSION: ${{ needs.release.outputs.version }}
           VITE_MAPBOX_ACCESS_TOKEN: ${{ secrets.VITE_MAPBOX_ACCESS_TOKEN }}
+          VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+          VITE_APP_URL: "https://maps.robbeverhelst.be"
           
       - name: Clean up old resources (if any)
         run: |

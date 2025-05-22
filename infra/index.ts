@@ -97,6 +97,14 @@ const deployment = new apps.v1.Deployment(deploymentName, {
                             value: process.env.VITE_MAPBOX_ACCESS_TOKEN || "",
                         },
                         {
+                            name: "VITE_GOOGLE_CLIENT_ID",
+                            value: process.env.VITE_GOOGLE_CLIENT_ID || "",
+                        },
+                        {
+                            name: "VITE_APP_URL",
+                            value: process.env.VITE_APP_URL || "https://maps.robbeverhelst.be",
+                        },
+                        {
                             name: "NODE_ENV",
                             value: "production",
                         }
