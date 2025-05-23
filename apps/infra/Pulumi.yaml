@@ -2,7 +2,8 @@ name: infra
 runtime:
   name: nodejs
   options:
-    packagemanager: pnpm
+    packagemanager: auto
+main: bin/index.js
 description: A minimal Kubernetes TypeScript Pulumi program
 config:
   pulumi:tags:

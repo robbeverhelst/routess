@@ -3,7 +3,7 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**", "bin/**"]
     },
     "dev": {
       "cache": false,
@@ -20,6 +20,22 @@
     },
     "docker:build": {
       "dependsOn": ["^build"]
+    },
+    "infra:preview": {
+      "cache": false,
+      "dependsOn": ["@maps/infra#build"]
+    },
+    "infra:deploy": {
+      "cache": false,
+      "dependsOn": ["@maps/infra#build"]
+    },
+    "infra:refresh": {
+      "cache": false,
+      "dependsOn": ["@maps/infra#build"]
+    },
+    "infra:destroy": {
+      "cache": false,
+      "dependsOn": ["@maps/infra#build"]
     }
   }
 } 

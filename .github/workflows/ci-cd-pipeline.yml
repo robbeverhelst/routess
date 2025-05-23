@@ -219,7 +219,7 @@ jobs:
           cache-from: type=registry,ref=ghcr.io/${{ env.REPO_OWNER_LOWER }}/maps:buildcache
           cache-to: type=registry,ref=ghcr.io/${{ env.REPO_OWNER_LOWER }}/maps:buildcache,mode=max
 
-  # Updated job for deploying infrastructure with Pulumi
+  # Updated job for deploying infrastructure with Pulumi using Turborepo
   deploy:
     name: Deploy Infrastructure
     needs: [docker, release]
@@ -233,14 +233,16 @@ jobs:
           ref: main  # Ensure we're using the latest main branch with the version update
           fetch-depth: 1
           
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
         with:
-          node-version: '18'
+          bun-version: latest
           
       - name: Install dependencies
-        working-directory: ./infra
-        run: npm install
+        run: bun install --frozen-lockfile
+        
+      - name: Build infrastructure
+        run: bunx turbo run build --filter=@maps/infra
         
       - name: Use version from release job
         run: |
@@ -252,7 +254,7 @@ jobs:
         with:
           command: refresh
           stack-name: prod
-          work-dir: ./infra
+          work-dir: ./apps/infra
           upsert: true
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
@@ -267,7 +269,7 @@ jobs:
         with:
           command: up
           stack-name: prod
-          work-dir: ./infra
+          work-dir: ./apps/infra
           upsert: true
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
