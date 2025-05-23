@@ -8,12 +8,19 @@ import {
 // Get configuration
 const config = new pulumi.Config();
 const appName = "maps";
-const appLabels = { app: appName };
+const webAppLabels = { app: `${appName}-web` };
+const apiAppLabels = { app: `${appName}-api` };
 const namespace = "maps";
 
 // Get app version from environment variable or use "latest" as fallback
 const appVersion = process.env.APP_VERSION || "latest";
 console.log(`Deploying version: ${appVersion}`);
+
+// Get image names from environment variables
+const webImage = process.env.WEB_IMAGE || `ghcr.io/robbeverhelst/maps-web:${appVersion}`;
+const apiImage = process.env.API_IMAGE || `ghcr.io/robbeverhelst/maps-api:${appVersion}`;
+console.log(`Web image: ${webImage}`);
+console.log(`API image: ${apiImage}`);
 
 // Create a Kubernetes provider instance that uses kubeconfig from Pulumi configuration
 const provider = new Provider("k8s-provider", {
@@ -57,14 +64,15 @@ const ns = new core.v1.Namespace(namespace, {
 //     },
 // }, { provider, dependsOn: ns });
 
-// Create a unique name for the deployment to force an update
-const deploymentName = `${appName}-deployment-${appVersion.replace(/\./g, '-')}`;
+// Create unique names for the deployments to force updates
+const webDeploymentName = `${appName}-web-deployment-${appVersion.replace(/\./g, '-')}`;
+const apiDeploymentName = `${appName}-api-deployment-${appVersion.replace(/\./g, '-')}`;
 
-// Create a Kubernetes deployment
-const deployment = new apps.v1.Deployment(deploymentName, {
+// Create a Kubernetes deployment for the web application
+const webDeployment = new apps.v1.Deployment(webDeploymentName, {
     metadata: {
         namespace: namespace,
-        labels: appLabels,
+        labels: webAppLabels,
         annotations: {
             // Add annotation to force update and handle field conflicts
             "pulumi.com/skipAwait": "true",
@@ -75,12 +83,12 @@ const deployment = new apps.v1.Deployment(deploymentName, {
     },
     spec: {
         selector: {
-            matchLabels: appLabels,
+            matchLabels: webAppLabels,
         },
         replicas: 2,
         template: {
             metadata: {
-                labels: appLabels,
+                labels: webAppLabels,
                 annotations: {
                     // Add version annotation for tracking
                     "app.kubernetes.io/version": appVersion
@@ -88,8 +96,8 @@ const deployment = new apps.v1.Deployment(deploymentName, {
             },
             spec: {
                 containers: [{
-                    name: appName,
-                    image: `ghcr.io/robbeverhelst/maps:${appVersion}`,
+                    name: `${appName}-web`,
+                    image: webImage,
                     ports: [{ containerPort: 80 }],
                     env: [
                         {
@@ -127,22 +135,113 @@ const deployment = new apps.v1.Deployment(deploymentName, {
     },
 }, { provider, dependsOn: [ns] });
 
-// Create a Kubernetes service to expose the deployment
-const service = new core.v1.Service(`${appName}-service`, {
+// Create a Kubernetes deployment for the API
+const apiDeployment = new apps.v1.Deployment(apiDeploymentName, {
     metadata: {
         namespace: namespace,
-        labels: appLabels,
+        labels: apiAppLabels,
+        annotations: {
+            // Add annotation to force update and handle field conflicts
+            "pulumi.com/skipAwait": "true",
+            "pulumi.com/patchForce": "true",
+            // Add version annotation for tracking
+            "app.kubernetes.io/version": appVersion
+        }
+    },
+    spec: {
+        selector: {
+            matchLabels: apiAppLabels,
+        },
+        replicas: 2,
+        template: {
+            metadata: {
+                labels: apiAppLabels,
+                annotations: {
+                    // Add version annotation for tracking
+                    "app.kubernetes.io/version": appVersion
+                }
+            },
+            spec: {
+                containers: [{
+                    name: `${appName}-api`,
+                    image: apiImage,
+                    ports: [{ containerPort: 3000 }],
+                    env: [
+                        {
+                            name: "NODE_ENV",
+                            value: "production",
+                        },
+                        {
+                            name: "PORT",
+                            value: "3000",
+                        }
+                    ],
+                    resources: {
+                        limits: {
+                            cpu: "500m",
+                            memory: "512Mi",
+                        },
+                        requests: {
+                            cpu: "250m",
+                            memory: "256Mi",
+                        },
+                    },
+                    imagePullPolicy: "Always",
+                    // Add health checks for the API
+                    livenessProbe: {
+                        httpGet: {
+                            path: "/",
+                            port: 3000,
+                        },
+                        initialDelaySeconds: 30,
+                        periodSeconds: 10,
+                    },
+                    readinessProbe: {
+                        httpGet: {
+                            path: "/",
+                            port: 3000,
+                        },
+                        initialDelaySeconds: 5,
+                        periodSeconds: 5,
+                    },
+                }],
+                // imagePullSecrets: [{ name: dockerSecret.metadata.name }],
+            },
+        },
+    },
+}, { provider, dependsOn: [ns] });
+
+// Create a Kubernetes service to expose the web deployment
+const webService = new core.v1.Service(`${appName}-web-service`, {
+    metadata: {
+        namespace: namespace,
+        labels: webAppLabels,
     },
     spec: {
         type: "ClusterIP",
         ports: [{ port: 80, targetPort: 80 }],
-        selector: appLabels,
+        selector: webAppLabels,
     },
-}, { provider, dependsOn: deployment });
+}, { provider, dependsOn: webDeployment });
 
-// Export the service name and namespace
-export const serviceName = service.metadata.name;
-export const serviceNamespace = service.metadata.namespace;
+// Create a Kubernetes service to expose the API deployment
+const apiService = new core.v1.Service(`${appName}-api-service`, {
+    metadata: {
+        namespace: namespace,
+        labels: apiAppLabels,
+    },
+    spec: {
+        type: "ClusterIP",
+        ports: [{ port: 3000, targetPort: 3000 }],
+        selector: apiAppLabels,
+    },
+}, { provider, dependsOn: apiDeployment });
+
+// Export the service names and namespace
+export const webServiceName = webService.metadata.name;
+export const apiServiceName = apiService.metadata.name;
+export const serviceNamespace = webService.metadata.namespace;
 export const kubernetesCluster = config.require("clusterName");
-export const serviceUrl = pulumi.interpolate`${serviceName}.${serviceNamespace}.svc.cluster.local`;
+export const webServiceUrl = pulumi.interpolate`${webServiceName}.${serviceNamespace}.svc.cluster.local`;
+export const apiServiceUrl = pulumi.interpolate`${apiServiceName}.${serviceNamespace}.svc.cluster.local:3000`;
 export const deployedVersion = appVersion;

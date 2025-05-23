@@ -35,7 +35,10 @@ jobs:
         run: bunx turbo run check-types
         
       - name: Run tests
-        run: bun test || echo "No tests configured yet"
+        run: bunx turbo run test
+        
+      - name: Test API build
+        run: bunx turbo run build --filter=api
 
   build:
     name: Build Application
@@ -71,6 +74,13 @@ jobs:
 
       - name: Build application with Turbo
         run: bunx turbo run build
+        
+      - name: Verify builds
+        run: |
+          echo "Verifying web build..."
+          ls -la apps/web/dist/ || echo "Web dist folder not found"
+          echo "Verifying API build..."
+          ls -la apps/api/dist/ || echo "API dist folder not found"
         
       - name: Verify token in built files
         run: |
@@ -152,7 +162,7 @@ jobs:
           
   # Separate job for Docker image building with multi-arch support
   docker:
-    name: Build and Push Multi-Arch Docker Image
+    name: Build and Push Multi-Arch Docker Images
     needs: release
     runs-on: ubuntu-latest  
     permissions:
@@ -198,11 +208,22 @@ jobs:
           echo "VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}" >> .env
           echo "VITE_APP_URL=https://maps.robbeverhelst.be" >> .env
           
-      - name: Extract metadata for Docker
-        id: metadata
+      - name: Extract metadata for Web Docker
+        id: metadata-web
         uses: docker/metadata-action@v4
         with:
-          images: ghcr.io/${{ github.repository_owner }}/maps
+          images: ghcr.io/${{ github.repository_owner }}/maps-web
+          tags: |
+            type=semver,pattern={{version}},value=${{ needs.release.outputs.version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ needs.release.outputs.version }}
+            type=semver,pattern={{major}},value=${{ needs.release.outputs.version }}
+            type=raw,value=latest,enable={{is_default_branch}}
+            
+      - name: Extract metadata for API Docker
+        id: metadata-api
+        uses: docker/metadata-action@v4
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/maps-api
           tags: |
             type=semver,pattern={{version}},value=${{ needs.release.outputs.version }}
             type=semver,pattern={{major}}.{{minor}},value=${{ needs.release.outputs.version }}
@@ -216,7 +237,7 @@ jobs:
           echo "REPO_OWNER_LOWER=$REPO_OWNER_LOWER" >> $GITHUB_ENV
           echo "repo_owner_lower=$REPO_OWNER_LOWER" >> $GITHUB_OUTPUT
           
-      - name: Build and push Docker image
+      - name: Build and push Web Docker image
         if: github.event_name != 'pull_request'
         uses: docker/build-push-action@v4
         with:
@@ -224,10 +245,23 @@ jobs:
           file: apps/web/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ steps.metadata.outputs.tags }}
-          labels: ${{ steps.metadata.outputs.labels }}
-          cache-from: type=registry,ref=ghcr.io/${{ env.REPO_OWNER_LOWER }}/maps:buildcache
-          cache-to: type=registry,ref=ghcr.io/${{ env.REPO_OWNER_LOWER }}/maps:buildcache,mode=max
+          tags: ${{ steps.metadata-web.outputs.tags }}
+          labels: ${{ steps.metadata-web.outputs.labels }}
+          cache-from: type=registry,ref=ghcr.io/${{ env.REPO_OWNER_LOWER }}/maps-web:buildcache
+          cache-to: type=registry,ref=ghcr.io/${{ env.REPO_OWNER_LOWER }}/maps-web:buildcache,mode=max
+          
+      - name: Build and push API Docker image
+        if: github.event_name != 'pull_request'
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.metadata-api.outputs.tags }}
+          labels: ${{ steps.metadata-api.outputs.labels }}
+          cache-from: type=registry,ref=ghcr.io/${{ env.REPO_OWNER_LOWER }}/maps-api:buildcache
+          cache-to: type=registry,ref=ghcr.io/${{ env.REPO_OWNER_LOWER }}/maps-api:buildcache,mode=max
 
   # Updated job for deploying infrastructure with Pulumi using Turborepo
   deploy:
@@ -263,6 +297,8 @@ jobs:
         run: |
           echo "VERSION=${{ needs.release.outputs.version }}" >> $GITHUB_ENV
           echo "Using version: ${{ needs.release.outputs.version }}"
+          echo "WEB_IMAGE=ghcr.io/${{ github.repository_owner }}/maps-web:${{ needs.release.outputs.version }}" >> $GITHUB_ENV
+          echo "API_IMAGE=ghcr.io/${{ github.repository_owner }}/maps-api:${{ needs.release.outputs.version }}" >> $GITHUB_ENV
           
       - name: Pulumi Refresh
         uses: pulumi/actions@v6
@@ -275,6 +311,8 @@ jobs:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
           PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
           APP_VERSION: ${{ needs.release.outputs.version }}
+          WEB_IMAGE: ${{ env.WEB_IMAGE }}
+          API_IMAGE: ${{ env.API_IMAGE }}
           VITE_MAPBOX_ACCESS_TOKEN: ${{ secrets.VITE_MAPBOX_ACCESS_TOKEN }}
           VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
           VITE_APP_URL: "https://maps.robbeverhelst.be"
@@ -290,6 +328,8 @@ jobs:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
           PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
           APP_VERSION: ${{ needs.release.outputs.version }}
+          WEB_IMAGE: ${{ env.WEB_IMAGE }}
+          API_IMAGE: ${{ env.API_IMAGE }}
           VITE_MAPBOX_ACCESS_TOKEN: ${{ secrets.VITE_MAPBOX_ACCESS_TOKEN }}
           VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
           VITE_APP_URL: "https://maps.robbeverhelst.be"

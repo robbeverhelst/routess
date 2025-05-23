@@ -16,6 +16,7 @@
     "test": "turbo run test",
     "docker:build": "turbo run docker:build",
     "docker:build:web": "docker build -f apps/web/Dockerfile -t maps-web .",
+    "docker:build:api": "docker build -f apps/api/Dockerfile -t maps-api .",
     "infra:preview": "turbo run infra:preview",
     "infra:deploy": "turbo run infra:deploy",
     "infra:refresh": "turbo run infra:refresh",
