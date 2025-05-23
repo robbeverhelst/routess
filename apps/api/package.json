@@ -14,10 +14,10 @@
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:cov": "jest --coverage",
-    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
+    "test": "jest --config jest.config.js",
+    "test:watch": "jest --watch --config jest.config.js",
+    "test:cov": "jest --coverage --config jest.config.js",
+    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand --config jest.config.js",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "check-types": "tsc --noEmit",
     "docker:build": "docker build -f Dockerfile -t maps-api ../.."
@@ -52,22 +52,5 @@
     "ts-node": "^10.0.0",
     "tsconfig-paths": "4.1.0",
     "typescript": "~5.8.3"
-  },
-  "jest": {
-    "moduleFileExtensions": [
-      "js",
-      "json",
-      "ts"
-    ],
-    "rootDir": "src",
-    "testRegex": ".*\\.spec\\.ts$",
-    "transform": {
-      "^.+\\.(t|j)s$": "ts-jest"
-    },
-    "collectCoverageFrom": [
-      "**/*.(t|j)s"
-    ],
-    "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
   }
 }
