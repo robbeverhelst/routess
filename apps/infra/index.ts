@@ -35,34 +35,34 @@ const ns = new core.v1.Namespace(namespace, {
 }, { provider });
 
 // Get GitHub credentials from config
-// const githubUsername = config.require("githubUsername");
-// const githubToken = config.requireSecret("githubToken");
+const githubUsername = config.require("githubUsername");
+const githubToken = config.requireSecret("githubToken");
 
-// // Create auth string for GitHub Container Registry
-// const authString = pulumi.interpolate`${githubUsername}:${githubToken}`.apply(
-//     s => Buffer.from(s).toString('base64')
-// );
+// Create auth string for GitHub Container Registry
+const authString = pulumi.interpolate`${githubUsername}:${githubToken}`.apply(
+    s => Buffer.from(s).toString('base64')
+);
 
-// // Create Docker config JSON
-// const dockerConfigJson = authString.apply(auth => JSON.stringify({
-//     auths: {
-//         "ghcr.io": {
-//             auth: auth
-//         }
-//     }
-// }));
+// Create Docker config JSON
+const dockerConfigJson = authString.apply(auth => JSON.stringify({
+    auths: {
+        "ghcr.io": {
+            auth: auth
+        }
+    }
+}));
 
-// // Create a Docker registry secret for GitHub Container Registry
-// const dockerSecret = new core.v1.Secret(`${appName}-ghcr-secret`, {
-//     metadata: {
-//         name: "ghcr-pull-secret",
-//         namespace: namespace,
-//     },
-//     type: "kubernetes.io/dockerconfigjson",
-//     stringData: {
-//         ".dockerconfigjson": dockerConfigJson,
-//     },
-// }, { provider, dependsOn: ns });
+// Create a Docker registry secret for GitHub Container Registry
+const dockerSecret = new core.v1.Secret(`${appName}-ghcr-secret`, {
+    metadata: {
+        name: "ghcr-pull-secret",
+        namespace: namespace,
+    },
+    type: "kubernetes.io/dockerconfigjson",
+    stringData: {
+        ".dockerconfigjson": dockerConfigJson,
+    },
+}, { provider, dependsOn: ns });
 
 // Create simple deployment names without version
 const webDeploymentName = `${appName}-web-deployment`;
@@ -129,11 +129,11 @@ const webDeployment = new apps.v1.Deployment(webDeploymentName, {
                     },
                     imagePullPolicy: "Always",
                 }],
-                // imagePullSecrets: [{ name: dockerSecret.metadata.name }],
+                imagePullSecrets: [{ name: dockerSecret.metadata.name }],
             },
         },
     },
-}, { provider, dependsOn: [ns] });
+}, { provider, dependsOn: [ns, dockerSecret] });
 
 // Create a Kubernetes deployment for the API
 const apiDeployment = new apps.v1.Deployment(apiDeploymentName, {
@@ -205,11 +205,11 @@ const apiDeployment = new apps.v1.Deployment(apiDeploymentName, {
                         periodSeconds: 5,
                     },
                 }],
-                // imagePullSecrets: [{ name: dockerSecret.metadata.name }],
+                imagePullSecrets: [{ name: dockerSecret.metadata.name }],
             },
         },
     },
-}, { provider, dependsOn: [ns] });
+}, { provider, dependsOn: [ns, dockerSecret] });
 
 // Create a Kubernetes service to expose the web deployment
 const webService = new core.v1.Service(`${appName}-web-service`, {
