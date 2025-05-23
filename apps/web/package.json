@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "check-types": "tsc --noEmit",
     "preview": "vite preview",
-    "docker:build": "docker build -f Dockerfile -t maps-web ../.."
+    "docker:build": "docker build -f Dockerfile -t maps-web ../..",
+    "generate-icons": "node scripts/generate-icons.js"
   },
   "dependencies": {
     "@google-cloud/local-auth": "^3.0.1",
@@ -46,6 +47,7 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.19",
     "globals": "^16.0.0",
+    "sharp": "^0.34.2",
     "tw-animate-css": "^1.2.9",
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.30.1",

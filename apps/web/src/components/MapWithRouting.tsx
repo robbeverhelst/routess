@@ -820,6 +820,46 @@ export default function MapWithRouting({
     }
   }, [userLocation, locationError, lastKnownLocationFromStorage]);
 
+  // PWA Shortcut Event Listeners
+  useEffect(() => {
+    const handlePWAShortcut = (event: CustomEvent) => {
+      const { action } = event.detail;
+      Logger.info('[MapWithRouting] PWA shortcut triggered:', action);
+      
+      switch (action) {
+        case 'new-route':
+          // Open route generator modal
+          setIsRouteGeneratorModalOpen(true);
+          break;
+        case 'locate':
+          // Trigger location finding
+          handleLocate();
+          break;
+        case 'import': {
+          // Trigger GPX import by simulating a click on the import button
+          // We'll need to trigger the file input from the sidebar
+          const fileInput = document.querySelector('input[type="file"][accept=".gpx"]') as HTMLInputElement;
+          if (fileInput) {
+            fileInput.click();
+          } else {
+            Logger.warn('[MapWithRouting] Could not find GPX file input for PWA import shortcut');
+          }
+          break;
+        }
+        default:
+          Logger.warn('[MapWithRouting] Unknown PWA shortcut action:', action);
+      }
+    };
+
+    // Add event listener for PWA shortcuts
+    window.addEventListener('pwa-shortcut', handlePWAShortcut as EventListener);
+
+    return () => {
+      // Cleanup event listener
+      window.removeEventListener('pwa-shortcut', handlePWAShortcut as EventListener);
+    };
+  }, [handleLocate]); // Include handleLocate in dependencies
+
   const handleImportError = useCallback((message: string) => {
     // Reuse handleWaypointError or create a more specific one if needed
     handleWaypointError(`Import Error: ${message}`);
