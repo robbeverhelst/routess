@@ -14,7 +14,7 @@ RUN mkdir -p apps packages
 COPY apps/web/package.json ./apps/web/
 
 # Install dependencies from workspace root
-RUN bun install --frozen-lockfile
+RUN bun install
 
 # Copy the web app source code
 COPY apps/web/ ./apps/web/
