@@ -314,6 +314,8 @@ jobs:
           APP_VERSION: ${{ needs.release.outputs.version }}
           WEB_IMAGE: ${{ env.WEB_IMAGE }}
           API_IMAGE: ${{ env.API_IMAGE }}
+          GHCR_USERNAME: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VITE_MAPBOX_ACCESS_TOKEN: ${{ secrets.VITE_MAPBOX_ACCESS_TOKEN }}
           VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
           VITE_APP_URL: "https://maps.robbeverhelst.be"
@@ -331,6 +333,8 @@ jobs:
           APP_VERSION: ${{ needs.release.outputs.version }}
           WEB_IMAGE: ${{ env.WEB_IMAGE }}
           API_IMAGE: ${{ env.API_IMAGE }}
+          GHCR_USERNAME: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VITE_MAPBOX_ACCESS_TOKEN: ${{ secrets.VITE_MAPBOX_ACCESS_TOKEN }}
           VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
           VITE_APP_URL: "https://maps.robbeverhelst.be"

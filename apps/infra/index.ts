@@ -34,9 +34,32 @@ const ns = new core.v1.Namespace(namespace, {
     },
 }, { provider });
 
-// Get GitHub credentials from config
-const githubUsername = config.require("githubUsername");
-const githubToken = config.requireSecret("githubToken");
+// Get GitHub credentials: Prefer GHA environment variables, fallback to Pulumi config
+const githubUsername = process.env.GHCR_USERNAME || config.require("githubUsername");
+const githubTokenInput = process.env.GHCR_TOKEN || config.requireSecret("githubToken");
+const githubToken = pulumi.output(githubTokenInput); // Ensure it's an Output for interpolation
+
+// Validate GitHub credentials
+if (!githubUsername || githubUsername.trim() === "") {
+    throw new Error("GitHub username for GHCR is required (from GHCR_USERNAME env or Pulumi config 'githubUsername').");
+}
+
+githubToken.apply(token => {
+    if (!token || token.trim() === "") {
+        throw new Error("GitHub token for GHCR is required (from GHCR_TOKEN env or Pulumi config 'githubToken').");
+    }
+    // Basic check for PAT format if not using GITHUB_TOKEN (which has a different format)
+    if (!process.env.GHCR_TOKEN && (!token.startsWith("ghp_") || token.length < 40)) {
+        console.warn(`Warning: Configured 'githubToken' (from Pulumi config) does not look like a standard GitHub PAT (ghp_...). Please verify it's correct. Length: ${token.length}`);
+    }
+});
+
+console.log(`Using GitHub username for GHCR: ${githubUsername}`);
+if (process.env.GHCR_TOKEN) {
+    console.log("Using GHCR_TOKEN from GitHub Actions environment for GHCR authentication.");
+} else {
+    console.log("GHCR_TOKEN not found in environment, using 'githubToken' from Pulumi config for GHCR authentication (secret will not be displayed).");
+}
 
 // Create auth string for GitHub Container Registry
 const authString = pulumi.interpolate`${githubUsername}:${githubToken}`.apply(
