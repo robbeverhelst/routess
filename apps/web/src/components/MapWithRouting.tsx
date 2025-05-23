@@ -34,6 +34,7 @@ import { useUserLocation } from '@/hooks/useUserLocation';
 import { MapPopup, type PopupInfo as MapPopupInfo } from '@/components/ui/MapPopup';
 import { useRouteData } from '@/hooks/useRouteData';
 import { useUndoRedoState } from '@/hooks/useUndoRedoState';
+import { useServiceWorker } from '@/hooks/useServiceWorker';
 import { getCurrentRoutePath } from '@/features/routing/services/RouteCalculationService';
 import { closestPointOnSegment, haversine } from '@/features/routing/utils/RoutingUtils'; // Import helpers
 import { Logger } from '@/lib/logger';
@@ -247,6 +248,8 @@ export default function MapWithRouting({
 
   const { canUndo, canRedo } = useUndoRedoState();
 
+  const { isOnline } = useServiceWorker();
+
   const [popup, setPopup] = useState<MapPopupInfo | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
@@ -259,6 +262,16 @@ export default function MapWithRouting({
   useEffect(() => {
     saveLanguageToLocalStorage(currentLanguage);
   }, [currentLanguage]);
+
+  // Effect to automatically lock map when offline
+  useEffect(() => {
+    if (!isOnline && !isMapLocked) {
+      setIsMapLocked(true);
+      isMapLockedRef.current = true;
+      saveMapLockStateToLocalStorage(true);
+      Logger.info('[MapWithRouting] Map automatically locked due to offline status');
+    }
+  }, [isOnline, isMapLocked]);
 
   // Handler for the new onCopyShareLink in RouteControls
   const handleCopyShareLinkToClipboard = useCallback(() => {
@@ -1263,6 +1276,7 @@ export default function MapWithRouting({
               onCopyShareLink={handleCopyShareLinkToClipboard}
               onZoomToRoute={handleZoomToRoute}
               currentLanguage={currentLanguage}
+              isOffline={!isOnline}
             />
           </div>
 
@@ -1334,6 +1348,7 @@ export default function MapWithRouting({
             onCopyShareLink={handleCopyShareLinkToClipboard}
             onZoomToRoute={handleZoomToRoute}
             currentLanguage={currentLanguage}
+            isOffline={!isOnline}
         />
       </div>
 

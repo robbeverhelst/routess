@@ -275,6 +275,12 @@
     "fr": "Verrouiller l'interaction avec la carte",
     "de": "Karteninteraktion sperren"
   },
+  "routeControls.tooltip.lockedOffline": {
+    "en": "Map locked - offline mode",
+    "nl": "Kaart vergrendeld - offline modus",
+    "fr": "Carte verrouillée - mode hors ligne",
+    "de": "Karte gesperrt - Offline-Modus"
+  },
   "routeControls.tooltip.copyShareLink": {
     "en": "Copy share link",
     "nl": "Deelbare link kopiëren",

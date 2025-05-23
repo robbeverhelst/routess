@@ -9,7 +9,7 @@ import {
   ArrowLeftCircle, ArrowRightCircle, Locate, RefreshCw, Lock, Unlock, 
   SunIcon, MoonIcon, SunriseIcon, SunsetIcon, SparklesIcon as Sparkles,
   ArrowUp, ArrowDown, ArrowLeft, ArrowRight, ArrowRightLeft, // Added ArrowRightLeft
-  Plus, Minus, Share2, Maximize // Added Plus and Minus icons for zoom, Added Share2, Added Maximize for Zoom to Route
+  Plus, Minus, Share2, Maximize, WifiOff // Added Plus and Minus icons for zoom, Added Share2, Added Maximize for Zoom to Route, Added WifiOff for offline indicator
 } from "lucide-react";
 import { t, type SupportedLanguage } from '@/lib/i18n'; // Added
 
@@ -39,6 +39,7 @@ interface RouteControlsProps {
   onCopyShareLink: () => void; // New prop for copying share link
   onZoomToRoute: () => void; // New prop for zooming to route
   currentLanguage: SupportedLanguage; // Added
+  isOffline?: boolean; // New prop for offline status
 }
 
 // Helper to get the icon component based on TimeOfDay
@@ -90,7 +91,8 @@ export function RouteControls({
   onZoomOut,
   onCopyShareLink,
   onZoomToRoute,
-  currentLanguage // Destructure new prop
+  currentLanguage, // Destructure new prop
+  isOffline // Destructure new prop
 }: RouteControlsProps) {
   const TimeOfDayIcon = getIconForTimeOfDay(currentTimeOfDay);
   const { Icon: OrientationIcon, title: orientationTitle } = getOrientationIconAndLabel(currentBearing, currentLanguage);
@@ -196,17 +198,30 @@ export function RouteControls({
             <Button
               variant="secondary"
               onClick={onToggleLock}
-              className={`h-10 w-10 ${
-                isLocked
+              disabled={isOffline} // Disable toggle when offline
+              className={`h-10 w-10 relative ${
+                isLocked || isOffline
                   ? 'bg-amber-100 dark:bg-amber-800/30 text-amber-700 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-800/50 border border-amber-300 dark:border-amber-600'
                   : 'bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60'
               }`}
             >
-              {isLocked ? <Lock size={18} /> : <Unlock size={18} />}
+              {isLocked || isOffline ? <Lock size={18} /> : <Unlock size={18} />}
+              {isOffline && (
+                <div className="absolute -top-1 -right-1">
+                  <WifiOff size={12} className="text-red-500 bg-white dark:bg-black rounded-full p-0.5" />
+                </div>
+              )}
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>{isLocked ? t('routeControls.tooltip.unlockMap', currentLanguage) : t('routeControls.tooltip.lockMap', currentLanguage)}</p>
+            <p>
+              {isOffline 
+                ? t('routeControls.tooltip.lockedOffline', currentLanguage)
+                : isLocked 
+                  ? t('routeControls.tooltip.unlockMap', currentLanguage) 
+                  : t('routeControls.tooltip.lockMap', currentLanguage)
+              }
+            </p>
           </TooltipContent>
         </Tooltip>
         

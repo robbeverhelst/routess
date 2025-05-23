@@ -369,6 +369,32 @@ export const getRoute = async (
       setHasRoute(true);
       addKilometerMarkers(map, currentRoutePathCoordinates); // Uses MapLayerManager
 
+      // If this is a fresh online route (not from cache), precache it for offline use
+      if (!isOfflineRoute && 'serviceWorker' in navigator) {
+        try {
+          // Send route data to service worker for enhanced caching
+          navigator.serviceWorker.ready.then(registration => {
+            if (registration.active) {
+              registration.active.postMessage({
+                type: 'PRECACHE_ROUTE',
+                data: {
+                  routeData: {
+                    waypoints: waypoints,
+                    geometry: currentRoutePathCoordinates,
+                    distance: data.distance,
+                    duration: data.duration,
+                    url: queryUrl.replace(/access_token=[^&]+/, 'access_token=***')
+                  }
+                }
+              });
+              Logger.info('[RCS/getRoute] Route data sent to service worker for enhanced caching');
+            }
+          });
+        } catch (error) {
+          Logger.warn('[RCS/getRoute] Failed to precache route:', error);
+        }
+      }
+
       return { success: true, waypointsSnapped: waypointsUpdatedBySnapping, snappedWaypoints: finalSnappedWaypoints ?? undefined, snappedDirectFlags: finalSnappedDirectFlags ?? undefined };
 
     } catch (error) {
@@ -468,6 +494,31 @@ export async function calculateAtoBRoute(
 
       Logger.info(`[RCS/calculateAtoBRoute] Route found: Distance=${(distance/1000).toFixed(2)}km, Duration=${(duration/60).toFixed(1)}min`);
       currentRoutePathCoordinates = [...geometry]; // Update module-level path
+
+      // If this is a fresh online route (not from cache), precache it for offline use
+      if (!isOfflineRoute && 'serviceWorker' in navigator) {
+        try {
+          navigator.serviceWorker.ready.then(registration => {
+            if (registration.active) {
+              registration.active.postMessage({
+                type: 'PRECACHE_ROUTE',
+                data: {
+                  routeData: {
+                    waypoints: [startCoord, endCoord],
+                    geometry: geometry,
+                    distance: distance,
+                    duration: duration,
+                    url: apiUrl.replace(/access_token=[^&]+/, 'access_token=***')
+                  }
+                }
+              });
+              Logger.info('[RCS/calculateAtoBRoute] Route data sent to service worker for enhanced caching');
+            }
+          });
+        } catch (error) {
+          Logger.warn('[RCS/calculateAtoBRoute] Failed to precache route:', error);
+        }
+      }
 
       return {
         success: true,

@@ -259,8 +259,35 @@ async function networkFirstWithCacheFallback(request, cacheName) {
     const networkResponse = await fetch(request);
     
     if (networkResponse.ok) {
-      // Cache successful responses
-      cache.put(request, networkResponse.clone());
+      // For directions API, enhance the response with metadata before caching
+      if (request.url.includes('api.mapbox.com/directions')) {
+        const responseClone = networkResponse.clone();
+        try {
+          const routeData = await responseClone.json();
+          if (routeData.routes && routeData.routes[0]) {
+            // Add metadata to help with offline reconstruction
+            const enhancedResponse = new Response(JSON.stringify({
+              ...routeData,
+              _cached_at: Date.now(),
+              _request_url: request.url,
+              _waypoints_hash: hashWaypoints(request.url)
+            }), {
+              status: networkResponse.status,
+              statusText: networkResponse.statusText,
+              headers: networkResponse.headers
+            });
+            
+            cache.put(request, enhancedResponse);
+            console.log('[SW] Cached enhanced route data for offline use');
+          }
+        } catch (error) {
+          // If enhancement fails, cache the original response
+          cache.put(request, networkResponse.clone());
+        }
+      } else {
+        // Cache other responses normally
+        cache.put(request, networkResponse.clone());
+      }
       
       // Clean up old entries
       await cleanupCache(cacheName);
@@ -451,14 +478,13 @@ async function precacheRoute(routeData) {
   // Implementation would depend on your specific route data structure
 }
 
-// Generate offline route response for Mapbox Directions API
+// Enhanced route caching and offline route generation
 async function generateOfflineRouteResponse(request) {
   try {
     const url = new URL(request.url);
     const pathParts = url.pathname.split('/');
     
     // Extract coordinates from the URL path
-    // Format: /directions/v5/mapbox/walking/lng1,lat1;lng2,lat2
     const coordinatesIndex = pathParts.findIndex(part => part === 'walking' || part === 'cycling' || part === 'driving' || part === 'driving-traffic');
     if (coordinatesIndex === -1 || coordinatesIndex + 1 >= pathParts.length) {
       throw new Error('Could not parse coordinates from URL');
@@ -474,59 +500,19 @@ async function generateOfflineRouteResponse(request) {
       throw new Error('Need at least 2 waypoints for route');
     }
     
-    // Calculate direct route
-    const geometry = { coordinates: waypoints, type: 'LineString' };
-    let totalDistance = 0;
+    // First, try to find cached route segments
+    const cachedRouteGeometry = await tryReconstructFromCachedSegments(waypoints);
     
-    // Calculate total distance using Haversine formula
-    for (let i = 0; i < waypoints.length - 1; i++) {
-      const [lng1, lat1] = waypoints[i];
-      const [lng2, lat2] = waypoints[i + 1];
-      totalDistance += haversineDistance(lat1, lng1, lat2, lng2);
+    if (cachedRouteGeometry && cachedRouteGeometry.length > waypoints.length) {
+      // We found a good cached route, use it
+      console.log('[SW] Using reconstructed route from cached segments');
+      return createRouteResponse(cachedRouteGeometry, waypoints, true);
     }
     
-    const totalDistanceMeters = totalDistance * 1000;
-    const estimatedDuration = Math.round(totalDistanceMeters / 1.4); // ~5 km/h walking speed
-    
-    // Create a Mapbox-compatible response
-    const offlineResponse = {
-      routes: [{
-        geometry: geometry,
-        distance: totalDistanceMeters,
-        duration: estimatedDuration,
-        weight_name: 'routability',
-        weight: estimatedDuration,
-        legs: waypoints.slice(0, -1).map((waypoint, i) => {
-          const nextWaypoint = waypoints[i + 1];
-          const legDistance = haversineDistance(waypoint[1], waypoint[0], nextWaypoint[1], nextWaypoint[0]) * 1000;
-          return {
-            distance: legDistance,
-            duration: Math.round(legDistance / 1.4),
-            summary: 'Offline direct route',
-            steps: []
-          };
-        })
-      }],
-      waypoints: waypoints.map((coord, i) => ({
-        hint: '',
-        distance: 0,
-        name: i === 0 ? 'Start' : i === waypoints.length - 1 ? 'End' : `Waypoint ${i}`,
-        location: coord
-      })),
-      code: 'Ok',
-      uuid: 'offline-route-' + Date.now()
-    };
-    
-    console.log('[SW] Generated offline route:', offlineResponse);
-    
-    return new Response(JSON.stringify(offlineResponse), {
-      status: 200,
-      statusText: 'OK',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Offline-Route': 'true'
-      }
-    });
+    // Fallback to direct route with intermediate points for better visualization
+    console.log('[SW] No cached route found, generating enhanced direct route');
+    const enhancedGeometry = generateEnhancedDirectRoute(waypoints);
+    return createRouteResponse(enhancedGeometry, waypoints, false);
     
   } catch (error) {
     console.error('[SW] Error generating offline route:', error);
@@ -541,6 +527,145 @@ async function generateOfflineRouteResponse(request) {
   }
 }
 
+// Try to reconstruct route from cached API responses
+async function tryReconstructFromCachedSegments(waypoints) {
+  const cache = await caches.open(CACHE_NAMES.API_CACHE);
+  const cachedRequests = await cache.keys();
+  
+  // Look for cached routes that might contain segments we need
+  for (const request of cachedRequests) {
+    if (request.url.includes('api.mapbox.com/directions')) {
+      try {
+        const cachedResponse = await cache.match(request);
+        if (cachedResponse) {
+          const cachedData = await cachedResponse.json();
+          if (cachedData.routes && cachedData.routes[0] && cachedData.routes[0].geometry) {
+            const cachedGeometry = cachedData.routes[0].geometry.coordinates;
+            const cachedWaypoints = cachedData.waypoints?.map(wp => wp.location) || [];
+            
+            // Check if this cached route is similar to what we need
+            if (isRouteSimilar(waypoints, cachedWaypoints, cachedGeometry)) {
+              console.log('[SW] Found similar cached route');
+              return cachedGeometry;
+            }
+          }
+        }
+      } catch (error) {
+        console.log('[SW] Error checking cached route:', error);
+      }
+    }
+  }
+  
+  return null;
+}
+
+// Check if a cached route is similar enough to use
+function isRouteSimilar(requestedWaypoints, cachedWaypoints, cachedGeometry) {
+  if (!cachedWaypoints || cachedWaypoints.length < 2) return false;
+  
+  const tolerance = 0.01; // ~1km tolerance
+  
+  // Check if start and end points are close enough
+  const startMatch = isPointNear(requestedWaypoints[0], cachedWaypoints[0], tolerance);
+  const endMatch = isPointNear(
+    requestedWaypoints[requestedWaypoints.length - 1], 
+    cachedWaypoints[cachedWaypoints.length - 1], 
+    tolerance
+  );
+  
+  return startMatch && endMatch && cachedGeometry.length > requestedWaypoints.length;
+}
+
+// Check if two points are within tolerance
+function isPointNear(point1, point2, tolerance) {
+  return Math.abs(point1[0] - point2[0]) < tolerance && 
+         Math.abs(point1[1] - point2[1]) < tolerance;
+}
+
+// Generate enhanced direct route with intermediate points for better visualization
+function generateEnhancedDirectRoute(waypoints) {
+  const enhancedGeometry = [];
+  
+  for (let i = 0; i < waypoints.length - 1; i++) {
+    const start = waypoints[i];
+    const end = waypoints[i + 1];
+    
+    // Add start point
+    if (i === 0) enhancedGeometry.push(start);
+    
+    // Add intermediate points for longer segments to make the line look more natural
+    const distance = haversineDistance(start[1], start[0], end[1], end[0]);
+    const numIntermediatePoints = Math.min(Math.floor(distance * 2), 10); // Max 10 intermediate points
+    
+    for (let j = 1; j <= numIntermediatePoints; j++) {
+      const fraction = j / (numIntermediatePoints + 1);
+      const intermediateLng = start[0] + fraction * (end[0] - start[0]);
+      const intermediateLat = start[1] + fraction * (end[1] - start[1]);
+      enhancedGeometry.push([intermediateLng, intermediateLat]);
+    }
+    
+    // Add end point
+    enhancedGeometry.push(end);
+  }
+  
+  return enhancedGeometry;
+}
+
+// Create a standardized route response
+function createRouteResponse(geometry, waypoints, isFromCache) {
+  let totalDistance = 0;
+  
+  // Calculate total distance
+  for (let i = 0; i < geometry.length - 1; i++) {
+    const [lng1, lat1] = geometry[i];
+    const [lng2, lat2] = geometry[i + 1];
+    totalDistance += haversineDistance(lat1, lng1, lat2, lng2);
+  }
+  
+  const totalDistanceMeters = totalDistance * 1000;
+  const estimatedDuration = Math.round(totalDistanceMeters / 1.4); // ~5 km/h walking speed
+  
+  const offlineResponse = {
+    routes: [{
+      geometry: { coordinates: geometry, type: 'LineString' },
+      distance: totalDistanceMeters,
+      duration: estimatedDuration,
+      weight_name: 'routability',
+      weight: estimatedDuration,
+      legs: waypoints.slice(0, -1).map((waypoint, i) => {
+        const nextWaypoint = waypoints[i + 1];
+        const legDistance = haversineDistance(waypoint[1], waypoint[0], nextWaypoint[1], nextWaypoint[0]) * 1000;
+        return {
+          distance: legDistance,
+          duration: Math.round(legDistance / 1.4),
+          summary: isFromCache ? 'Cached route segment' : 'Offline direct route',
+          steps: []
+        };
+      })
+    }],
+    waypoints: waypoints.map((coord, i) => ({
+      hint: '',
+      distance: 0,
+      name: i === 0 ? 'Start' : i === waypoints.length - 1 ? 'End' : `Waypoint ${i}`,
+      location: coord
+    })),
+    code: 'Ok',
+    uuid: 'offline-route-' + Date.now()
+  };
+  
+  console.log(`[SW] Generated ${isFromCache ? 'cached' : 'direct'} offline route:`, offlineResponse);
+  
+  return new Response(JSON.stringify(offlineResponse), {
+    status: 200,
+    statusText: 'OK',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Offline-Route': 'true',
+      'X-Route-Source': isFromCache ? 'cached' : 'direct'
+    }
+  });
+}
+
 // Haversine distance calculation for offline routing
 function haversineDistance(lat1, lng1, lat2, lng2) {
   const R = 6371; // Earth's radius in kilometers
@@ -551,6 +676,26 @@ function haversineDistance(lat1, lng1, lat2, lng2) {
             Math.sin(dLng / 2) * Math.sin(dLng / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
+}
+
+// Generate a simple hash for waypoints to help match similar routes
+function hashWaypoints(url) {
+  try {
+    const urlObj = new URL(url);
+    const pathParts = urlObj.pathname.split('/');
+    const coordinatesIndex = pathParts.findIndex(part => part === 'walking' || part === 'cycling' || part === 'driving' || part === 'driving-traffic');
+    if (coordinatesIndex !== -1 && coordinatesIndex + 1 < pathParts.length) {
+      const coordinatesString = pathParts[coordinatesIndex + 1];
+      // Simple hash based on rounded coordinates
+      return coordinatesString.split(';').map(coord => {
+        const [lng, lat] = coord.split(',').map(Number);
+        return `${Math.round(lng * 100)},${Math.round(lat * 100)}`;
+      }).join(';');
+    }
+  } catch (error) {
+    console.log('[SW] Error hashing waypoints:', error);
+  }
+  return '';
 }
 
 console.log('[SW] Service worker script loaded'); 
