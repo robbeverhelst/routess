@@ -10,8 +10,9 @@ COPY package.json bun.lockb ./
 # Create the workspace directories that are referenced in package.json
 RUN mkdir -p apps packages
 
-# Copy the web app package.json
+# Copy ALL workspace package.json files to match lockfile structure
 COPY apps/web/package.json ./apps/web/
+COPY apps/infra/package.json ./apps/infra/
 
 # Install dependencies from workspace root
 RUN bun install --frozen-lockfile
