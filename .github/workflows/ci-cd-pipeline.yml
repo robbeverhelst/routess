@@ -297,8 +297,9 @@ jobs:
         run: |
           echo "VERSION=${{ needs.release.outputs.version }}" >> $GITHUB_ENV
           echo "Using version: ${{ needs.release.outputs.version }}"
-          echo "WEB_IMAGE=ghcr.io/${{ github.repository_owner }}/maps-web:${{ needs.release.outputs.version }}" >> $GITHUB_ENV
-          echo "API_IMAGE=ghcr.io/${{ github.repository_owner }}/maps-api:${{ needs.release.outputs.version }}" >> $GITHUB_ENV
+          REPO_OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          echo "WEB_IMAGE=ghcr.io/${REPO_OWNER_LOWER}/maps-web:${{ needs.release.outputs.version }}" >> $GITHUB_ENV
+          echo "API_IMAGE=ghcr.io/${REPO_OWNER_LOWER}/maps-api:${{ needs.release.outputs.version }}" >> $GITHUB_ENV
           
       - name: Pulumi Refresh
         uses: pulumi/actions@v6

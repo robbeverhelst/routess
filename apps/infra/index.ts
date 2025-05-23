@@ -16,7 +16,7 @@ const namespace = "maps";
 const appVersion = process.env.APP_VERSION || "latest";
 console.log(`Deploying version: ${appVersion}`);
 
-// Get image names from environment variables
+// Get image names from environment variables with lowercase repository owner
 const webImage = process.env.WEB_IMAGE || `ghcr.io/robbeverhelst/maps-web:${appVersion}`;
 const apiImage = process.env.API_IMAGE || `ghcr.io/robbeverhelst/maps-api:${appVersion}`;
 console.log(`Web image: ${webImage}`);
@@ -64,9 +64,9 @@ const ns = new core.v1.Namespace(namespace, {
 //     },
 // }, { provider, dependsOn: ns });
 
-// Create unique names for the deployments to force updates
-const webDeploymentName = `${appName}-web-deployment-${appVersion.replace(/\./g, '-')}`;
-const apiDeploymentName = `${appName}-api-deployment-${appVersion.replace(/\./g, '-')}`;
+// Create simple deployment names without version
+const webDeploymentName = `${appName}-web-deployment`;
+const apiDeploymentName = `${appName}-api-deployment`;
 
 // Create a Kubernetes deployment for the web application
 const webDeployment = new apps.v1.Deployment(webDeploymentName, {
