@@ -64,20 +64,17 @@ const dockerSecret = new core.v1.Secret(`${appName}-ghcr-secret`, {
     },
 }, { provider, dependsOn: ns });
 
-// Create simple deployment names without version
-const webDeploymentName = `${appName}-web-deployment`;
-const apiDeploymentName = `${appName}-api-deployment`;
+// Create simple deployment names
+const webDeploymentName = `${appName}-web`;
+const apiDeploymentName = `${appName}-api`;
 
 // Create a Kubernetes deployment for the web application
 const webDeployment = new apps.v1.Deployment(webDeploymentName, {
     metadata: {
+        name: webDeploymentName, // Ensure the name is explicitly set
         namespace: namespace,
         labels: webAppLabels,
         annotations: {
-            // Add annotation to force update and handle field conflicts
-            "pulumi.com/skipAwait": "true",
-            "pulumi.com/patchForce": "true",
-            // Add version annotation for tracking
             "app.kubernetes.io/version": appVersion
         }
     },
@@ -86,11 +83,11 @@ const webDeployment = new apps.v1.Deployment(webDeploymentName, {
             matchLabels: webAppLabels,
         },
         replicas: 2,
+        strategy: { type: "Recreate" }, 
         template: {
             metadata: {
                 labels: webAppLabels,
                 annotations: {
-                    // Add version annotation for tracking
                     "app.kubernetes.io/version": appVersion
                 }
             },
@@ -129,7 +126,7 @@ const webDeployment = new apps.v1.Deployment(webDeploymentName, {
                     },
                     imagePullPolicy: "Always",
                 }],
-                imagePullSecrets: [{ name: dockerSecret.metadata.name }],
+                imagePullSecrets: [{ name: "ghcr-pull-secret" }],
             },
         },
     },
@@ -138,13 +135,10 @@ const webDeployment = new apps.v1.Deployment(webDeploymentName, {
 // Create a Kubernetes deployment for the API
 const apiDeployment = new apps.v1.Deployment(apiDeploymentName, {
     metadata: {
+        name: apiDeploymentName, // Ensure the name is explicitly set
         namespace: namespace,
         labels: apiAppLabels,
         annotations: {
-            // Add annotation to force update and handle field conflicts
-            "pulumi.com/skipAwait": "true",
-            "pulumi.com/patchForce": "true",
-            // Add version annotation for tracking
             "app.kubernetes.io/version": appVersion
         }
     },
@@ -153,11 +147,11 @@ const apiDeployment = new apps.v1.Deployment(apiDeploymentName, {
             matchLabels: apiAppLabels,
         },
         replicas: 2,
+        strategy: { type: "Recreate" }, 
         template: {
             metadata: {
                 labels: apiAppLabels,
                 annotations: {
-                    // Add version annotation for tracking
                     "app.kubernetes.io/version": appVersion
                 }
             },
@@ -187,7 +181,6 @@ const apiDeployment = new apps.v1.Deployment(apiDeploymentName, {
                         },
                     },
                     imagePullPolicy: "Always",
-                    // Add health checks for the API
                     livenessProbe: {
                         httpGet: {
                             path: "/",
@@ -205,7 +198,7 @@ const apiDeployment = new apps.v1.Deployment(apiDeploymentName, {
                         periodSeconds: 5,
                     },
                 }],
-                imagePullSecrets: [{ name: dockerSecret.metadata.name }],
+                imagePullSecrets: [{ name: "ghcr-pull-secret" }],
             },
         },
     },
