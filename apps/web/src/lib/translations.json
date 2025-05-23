@@ -682,5 +682,419 @@
     "nl": "Maak eerst een route",
     "fr": "Créez d'abord un itinéraire",
     "de": "Erstellen Sie zuerst eine Route"
+  },
+  "cacheManager.title": {
+    "en": "Offline Storage",
+    "nl": "Offline Opslag",
+    "fr": "Stockage Hors Ligne",
+    "de": "Offline-Speicher"
+  },
+  "cacheManager.description": {
+    "en": "Manage your app's offline storage and cache settings",
+    "nl": "Beheer de offline opslag en cache-instellingen van je app",
+    "fr": "Gérez le stockage hors ligne et les paramètres de cache de votre application",
+    "de": "Verwalten Sie den Offline-Speicher und die Cache-Einstellungen Ihrer App"
+  },
+  "cacheManager.networkStatus": {
+    "en": "Network Status",
+    "nl": "Netwerkstatus",
+    "fr": "État du Réseau",
+    "de": "Netzwerkstatus"
+  },
+  "cacheManager.online": {
+    "en": "Online",
+    "nl": "Online",
+    "fr": "En Ligne",
+    "de": "Online"
+  },
+  "cacheManager.offline": {
+    "en": "Offline",
+    "nl": "Offline",
+    "fr": "Hors Ligne",
+    "de": "Offline"
+  },
+  "cacheManager.connectionType": {
+    "en": "Connection",
+    "nl": "Verbinding",
+    "fr": "Connexion",
+    "de": "Verbindung"
+  },
+  "cacheManager.speed": {
+    "en": "Speed",
+    "nl": "Snelheid",
+    "fr": "Vitesse",
+    "de": "Geschwindigkeit"
+  },
+  "cacheManager.serviceWorker": {
+    "en": "Service Worker",
+    "nl": "Service Worker",
+    "fr": "Service Worker",
+    "de": "Service Worker"
+  },
+  "cacheManager.swNotSupported": {
+    "en": "Service workers not supported in this browser",
+    "nl": "Service workers worden niet ondersteund in deze browser",
+    "fr": "Les service workers ne sont pas pris en charge dans ce navigateur",
+    "de": "Service Worker werden in diesem Browser nicht unterstützt"
+  },
+  "cacheManager.swUpdateAvailable": {
+    "en": "Update available - click to install",
+    "nl": "Update beschikbaar - klik om te installeren",
+    "fr": "Mise à jour disponible - cliquez pour installer",
+    "de": "Update verfügbar - klicken Sie zum Installieren"
+  },
+  "cacheManager.swActive": {
+    "en": "Active and caching content",
+    "nl": "Actief en inhoud cachen",
+    "fr": "Actif et mise en cache du contenu",
+    "de": "Aktiv und Inhalte werden zwischengespeichert"
+  },
+  "cacheManager.swInstalling": {
+    "en": "Installing...",
+    "nl": "Installeren...",
+    "fr": "Installation...",
+    "de": "Installiere..."
+  },
+  "cacheManager.swRegistered": {
+    "en": "Registered but not active",
+    "nl": "Geregistreerd maar niet actief",
+    "fr": "Enregistré mais pas actif",
+    "de": "Registriert aber nicht aktiv"
+  },
+  "cacheManager.swNotRegistered": {
+    "en": "Not registered",
+    "nl": "Niet geregistreerd",
+    "fr": "Non enregistré",
+    "de": "Nicht registriert"
+  },
+  "cacheManager.update": {
+    "en": "Update",
+    "nl": "Bijwerken",
+    "fr": "Mettre à jour",
+    "de": "Aktualisieren"
+  },
+  "cacheManager.cacheOverview": {
+    "en": "Cache Overview",
+    "nl": "Cache Overzicht",
+    "fr": "Aperçu du Cache",
+    "de": "Cache-Übersicht"
+  },
+  "cacheManager.refresh": {
+    "en": "Refresh",
+    "nl": "Vernieuwen",
+    "fr": "Actualiser",
+    "de": "Aktualisieren"
+  },
+  "cacheManager.clearAll": {
+    "en": "Clear All",
+    "nl": "Alles Wissen",
+    "fr": "Tout Effacer",
+    "de": "Alles Löschen"
+  },
+  "cacheManager.clear": {
+    "en": "Clear",
+    "nl": "Wissen",
+    "fr": "Effacer",
+    "de": "Löschen"
+  },
+  "cacheManager.clearing": {
+    "en": "Clearing...",
+    "nl": "Wissen...",
+    "fr": "Effacement...",
+    "de": "Lösche..."
+  },
+  "cacheManager.loading": {
+    "en": "Loading cache status...",
+    "nl": "Cache status laden...",
+    "fr": "Chargement de l'état du cache...",
+    "de": "Cache-Status wird geladen..."
+  },
+  "cacheManager.totalSize": {
+    "en": "Total Size",
+    "nl": "Totale Grootte",
+    "fr": "Taille Totale",
+    "de": "Gesamtgröße"
+  },
+  "cacheManager.totalEntries": {
+    "en": "Total Entries",
+    "nl": "Totaal Aantal Items",
+    "fr": "Entrées Totales",
+    "de": "Gesamteinträge"
+  },
+  "cacheManager.entries": {
+    "en": "entries",
+    "nl": "items",
+    "fr": "entrées",
+    "de": "Einträge"
+  },
+  "cacheManager.noCaches": {
+    "en": "No cached data found",
+    "nl": "Geen gecachte gegevens gevonden",
+    "fr": "Aucune donnée en cache trouvée",
+    "de": "Keine zwischengespeicherten Daten gefunden"
+  },
+  "cacheManager.unavailable": {
+    "en": "Cache information unavailable",
+    "nl": "Cache informatie niet beschikbaar",
+    "fr": "Informations de cache non disponibles",
+    "de": "Cache-Informationen nicht verfügbar"
+  },
+  "cacheManager.appShell": {
+    "en": "App Shell",
+    "nl": "App Shell",
+    "fr": "Shell d'Application",
+    "de": "App-Shell"
+  },
+  "cacheManager.apiCache": {
+    "en": "API Cache",
+    "nl": "API Cache",
+    "fr": "Cache API",
+    "de": "API-Cache"
+  },
+  "cacheManager.mapAssets": {
+    "en": "Map Assets",
+    "nl": "Kaart Assets",
+    "fr": "Ressources de Carte",
+    "de": "Karten-Assets"
+  },
+  "cacheManager.runtime": {
+    "en": "Runtime Cache",
+    "nl": "Runtime Cache",
+    "fr": "Cache d'Exécution",
+    "de": "Laufzeit-Cache"
+  },
+  "cacheManager.unknown": {
+    "en": "Unknown Cache",
+    "nl": "Onbekende Cache",
+    "fr": "Cache Inconnu",
+    "de": "Unbekannter Cache"
+  },
+  "cacheManager.appShellDesc": {
+    "en": "Core app files for instant loading",
+    "nl": "Kern app bestanden voor direct laden",
+    "fr": "Fichiers d'application principaux pour un chargement instantané",
+    "de": "Kern-App-Dateien für sofortiges Laden"
+  },
+  "cacheManager.apiCacheDesc": {
+    "en": "Route calculations and location data",
+    "nl": "Route berekeningen en locatie gegevens",
+    "fr": "Calculs d'itinéraires et données de localisation",
+    "de": "Routenberechnungen und Standortdaten"
+  },
+  "cacheManager.mapAssetsDesc": {
+    "en": "Map tiles, styles, and fonts",
+    "nl": "Kaart tegels, stijlen en lettertypen",
+    "fr": "Tuiles de carte, styles et polices",
+    "de": "Kartenkacheln, Stile und Schriftarten"
+  },
+  "cacheManager.runtimeDesc": {
+    "en": "Temporary cached content",
+    "nl": "Tijdelijk gecachte inhoud",
+    "fr": "Contenu temporairement mis en cache",
+    "de": "Temporär zwischengespeicherte Inhalte"
+  },
+  "cacheManager.unknownDesc": {
+    "en": "Other cached data",
+    "nl": "Andere gecachte gegevens",
+    "fr": "Autres données en cache",
+    "de": "Andere zwischengespeicherte Daten"
+  },
+  "cacheManager.offlineFeatures": {
+    "en": "Offline Features",
+    "nl": "Offline Functies",
+    "fr": "Fonctionnalités Hors Ligne",
+    "de": "Offline-Funktionen"
+  },
+  "cacheManager.feature1": {
+    "en": "App works completely offline after first visit",
+    "nl": "App werkt volledig offline na eerste bezoek",
+    "fr": "L'application fonctionne complètement hors ligne après la première visite",
+    "de": "App funktioniert nach dem ersten Besuch vollständig offline"
+  },
+  "cacheManager.feature2": {
+    "en": "Route calculations cached for faster access",
+    "nl": "Route berekeningen gecacht voor snellere toegang",
+    "fr": "Calculs d'itinéraires mis en cache pour un accès plus rapide",
+    "de": "Routenberechnungen werden für schnelleren Zugriff zwischengespeichert"
+  },
+  "cacheManager.feature3": {
+    "en": "Map tiles stored locally for offline viewing",
+    "nl": "Kaart tegels lokaal opgeslagen voor offline bekijken",
+    "fr": "Tuiles de carte stockées localement pour la visualisation hors ligne",
+    "de": "Kartenkacheln werden lokal für die Offline-Anzeige gespeichert"
+  },
+  "cacheManager.feature4": {
+    "en": "Your routes and waypoints saved locally",
+    "nl": "Je routes en waypoints lokaal opgeslagen",
+    "fr": "Vos itinéraires et points de passage sauvegardés localement",
+    "de": "Ihre Routen und Wegpunkte werden lokal gespeichert"
+  },
+  "settings.title": {
+    "en": "Settings",
+    "nl": "Instellingen",
+    "fr": "Paramètres",
+    "de": "Einstellungen"
+  },
+  "settings.description": {
+    "en": "Customize your Maps experience and manage your preferences",
+    "nl": "Pas je Maps-ervaring aan en beheer je voorkeuren",
+    "fr": "Personnalisez votre expérience Maps et gérez vos préférences",
+    "de": "Passen Sie Ihre Maps-Erfahrung an und verwalten Sie Ihre Einstellungen"
+  },
+  "settings.general": {
+    "en": "General",
+    "nl": "Algemeen",
+    "fr": "Général",
+    "de": "Allgemein"
+  },
+  "settings.generalDesc": {
+    "en": "Language and basic preferences",
+    "nl": "Taal en basisvoorkeuren",
+    "fr": "Langue et préférences de base",
+    "de": "Sprache und Grundeinstellungen"
+  },
+  "settings.storage": {
+    "en": "Storage",
+    "nl": "Opslag",
+    "fr": "Stockage",
+    "de": "Speicher"
+  },
+  "settings.storageDesc": {
+    "en": "Offline data and cache management",
+    "nl": "Offline gegevens en cache beheer",
+    "fr": "Données hors ligne et gestion du cache",
+    "de": "Offline-Daten und Cache-Verwaltung"
+  },
+  "settings.appearance": {
+    "en": "Appearance",
+    "nl": "Uiterlijk",
+    "fr": "Apparence",
+    "de": "Erscheinungsbild"
+  },
+  "settings.appearanceDesc": {
+    "en": "Theme and visual preferences",
+    "nl": "Thema en visuele voorkeuren",
+    "fr": "Thème et préférences visuelles",
+    "de": "Design und visuelle Einstellungen"
+  },
+  "settings.account": {
+    "en": "Account",
+    "nl": "Account",
+    "fr": "Compte",
+    "de": "Konto"
+  },
+  "settings.accountDesc": {
+    "en": "Profile and privacy settings",
+    "nl": "Profiel en privacy instellingen",
+    "fr": "Profil et paramètres de confidentialité",
+    "de": "Profil- und Datenschutzeinstellungen"
+  },
+  "settings.language": {
+    "en": "Language",
+    "nl": "Taal",
+    "fr": "Langue",
+    "de": "Sprache"
+  },
+  "settings.languageDesc": {
+    "en": "Choose your preferred language for the interface",
+    "nl": "Kies je voorkeurstaal voor de interface",
+    "fr": "Choisissez votre langue préférée pour l'interface",
+    "de": "Wählen Sie Ihre bevorzugte Sprache für die Benutzeroberfläche"
+  },
+  "settings.mapDefaults": {
+    "en": "Map Defaults",
+    "nl": "Kaart Standaarden",
+    "fr": "Paramètres par Défaut de la Carte",
+    "de": "Karten-Standardeinstellungen"
+  },
+  "settings.mapDefaultsDesc": {
+    "en": "Default map style and behavior preferences",
+    "nl": "Standaard kaartstijl en gedragsvoorkeuren",
+    "fr": "Style de carte par défaut et préférences de comportement",
+    "de": "Standard-Kartenstil und Verhaltenseinstellungen"
+  },
+  "settings.offlineStorage": {
+    "en": "Offline Storage",
+    "nl": "Offline Opslag",
+    "fr": "Stockage Hors Ligne",
+    "de": "Offline-Speicher"
+  },
+  "settings.offlineStorageDesc": {
+    "en": "Manage cached data for offline use",
+    "nl": "Beheer gecachte gegevens voor offline gebruik",
+    "fr": "Gérer les données en cache pour une utilisation hors ligne",
+    "de": "Verwalten Sie zwischengespeicherte Daten für die Offline-Nutzung"
+  },
+  "settings.dataManagement": {
+    "en": "Data Management",
+    "nl": "Gegevensbeheer",
+    "fr": "Gestion des Données",
+    "de": "Datenverwaltung"
+  },
+  "settings.dataManagementDesc": {
+    "en": "Export and import your routes and preferences",
+    "nl": "Exporteer en importeer je routes en voorkeuren",
+    "fr": "Exportez et importez vos itinéraires et préférences",
+    "de": "Exportieren und importieren Sie Ihre Routen und Einstellungen"
+  },
+  "settings.theme": {
+    "en": "Theme",
+    "nl": "Thema",
+    "fr": "Thème",
+    "de": "Design"
+  },
+  "settings.themeDesc": {
+    "en": "Choose between light and dark mode",
+    "nl": "Kies tussen lichte en donkere modus",
+    "fr": "Choisissez entre le mode clair et sombre",
+    "de": "Wählen Sie zwischen hellem und dunklem Modus"
+  },
+  "settings.mapStyle": {
+    "en": "Map Style",
+    "nl": "Kaartstijl",
+    "fr": "Style de Carte",
+    "de": "Kartenstil"
+  },
+  "settings.mapStyleDesc": {
+    "en": "Customize the appearance of the map",
+    "nl": "Pas het uiterlijk van de kaart aan",
+    "fr": "Personnalisez l'apparence de la carte",
+    "de": "Passen Sie das Erscheinungsbild der Karte an"
+  },
+  "settings.accountInfo": {
+    "en": "Account Information",
+    "nl": "Accountinformatie",
+    "fr": "Informations du Compte",
+    "de": "Kontoinformationen"
+  },
+  "settings.privacy": {
+    "en": "Privacy",
+    "nl": "Privacy",
+    "fr": "Confidentialité",
+    "de": "Datenschutz"
+  },
+  "settings.privacyDesc": {
+    "en": "Control what data is shared and stored",
+    "nl": "Bepaal welke gegevens worden gedeeld en opgeslagen",
+    "fr": "Contrôlez quelles données sont partagées et stockées",
+    "de": "Kontrollieren Sie, welche Daten geteilt und gespeichert werden"
+  },
+  "settings.savedRoutes": {
+    "en": "Saved Routes",
+    "nl": "Opgeslagen Routes",
+    "fr": "Itinéraires Sauvegardés",
+    "de": "Gespeicherte Routen"
+  },
+  "settings.savedRoutesDesc": {
+    "en": "Manage your saved routes and collections",
+    "nl": "Beheer je opgeslagen routes en collecties",
+    "fr": "Gérez vos itinéraires sauvegardés et collections",
+    "de": "Verwalten Sie Ihre gespeicherten Routen und Sammlungen"
+  },
+  "settings.comingSoon": {
+    "en": "Coming soon...",
+    "nl": "Binnenkort beschikbaar...",
+    "fr": "Bientôt disponible...",
+    "de": "Demnächst verfügbar..."
   }
 } 

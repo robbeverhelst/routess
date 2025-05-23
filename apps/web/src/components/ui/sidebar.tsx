@@ -1,6 +1,27 @@
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { Menu, User, LogIn, Upload, Share2, FileDown, X, AlertCircle, MapPin, Clock, Copy, RotateCcw as BackIcon, ArrowRightLeft, Focus, Wand2, Lock, Unlock, Save, BookMarked, Settings } from "lucide-react";
+import { 
+  Menu, 
+  User, 
+  LogIn, 
+  Upload, 
+  Share2, 
+  FileDown, 
+  X, 
+  AlertCircle, 
+  MapPin, 
+  Clock, 
+  Copy, 
+  ArrowRightLeft, 
+  Focus, 
+  Wand2, 
+  Lock, 
+  Unlock, 
+  Save, 
+  BookMarked, 
+  Settings,
+  ArrowLeft as BackIcon
+} from "lucide-react";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { 
   Tooltip,
@@ -10,15 +31,16 @@ import {
 } from "@/components/ui/tooltip";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { useState, useRef, useEffect } from "react";
-import type { Map as MapboxMap } from 'mapbox-gl'; // Import MapboxMap type
-import { GB, NL, FR, DE } from 'country-flag-icons/react/3x2'; // Changed US to GB
-import { exportRouteToGPX, importRouteFromGPX } from '../../lib/routing'; // Import GPX functions
-import { t } from '../../lib/i18n'; // Corrected i18n import
-import type { SupportedLanguage } from '../../lib/i18n'; // Type-only import for SupportedLanguage
+import type { Map as MapboxMap } from 'mapbox-gl';
+import { GB, NL, FR, DE } from 'country-flag-icons/react/3x2';
+import { exportRouteToGPX, importRouteFromGPX } from '../../lib/routing';
+import { t } from '../../lib/i18n';
+import type { SupportedLanguage } from '../../lib/i18n';
 import type { Dispatch, SetStateAction } from 'react';
 import { Logger } from '../../lib/logger';
 import { LoginModal } from '../auth/login-modal';
 import { googleAuth, type GoogleUser } from '../../lib/google-auth';
+import { SettingsModal } from "@/components/ui/settings-modal";
 
 interface SidebarProps {
   onUndo: () => void;
@@ -81,6 +103,7 @@ export function Sidebar({
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<GoogleUser | null>(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [isLangPopoverOpen, setIsLangPopoverOpen] = useState(false);
 
@@ -610,7 +633,7 @@ export function Sidebar({
                     variant="ghost"
                     size="sm"
                     className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-md"
-                    onClick={() => {}}
+                    onClick={() => setIsSettingsModalOpen(true)}
                   >
                     <Settings size={12} />
                   </Button>
@@ -678,6 +701,16 @@ export function Sidebar({
         onOpenChange={setIsLoginModalOpen}
         onLoginSuccess={handleLoginSuccess}
         currentLanguage={currentLanguage}
+      />
+
+      {/* Settings Modal */}
+      <SettingsModal
+        isOpen={isSettingsModalOpen}
+        onOpenChange={setIsSettingsModalOpen}
+        currentLanguage={currentLanguage}
+        onLanguageChange={onLanguageChange}
+        isLoggedIn={isLoggedIn}
+        currentUser={currentUser}
       />
     </>
   );
