@@ -105,24 +105,24 @@ export function CacheManager({ currentLanguage }: CacheManagerProps) {
       <DialogTrigger asChild>
         <Button variant="ghost" size="sm" className="gap-2">
           <Database className="h-4 w-4" />
-          {t('cacheManager.title', currentLanguage)}
+          <span className="hidden sm:inline">{t('cacheManager.title', currentLanguage)}</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] sm:max-h-[80vh] overflow-y-auto w-[95vw] sm:w-full">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Database className="h-5 w-5" />
             {t('cacheManager.title', currentLanguage)}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="hidden sm:block">
             {t('cacheManager.description', currentLanguage)}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* Network Status */}
-          <Card className="p-4">
-            <div className="flex items-center justify-between mb-3">
+          <Card className="p-3 sm:p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 gap-2">
               <h3 className="font-medium flex items-center gap-2">
                 {isOnline ? (
                   <Wifi className="h-4 w-4 text-green-500" />
@@ -131,7 +131,7 @@ export function CacheManager({ currentLanguage }: CacheManagerProps) {
                 )}
                 {t('cacheManager.networkStatus', currentLanguage)}
               </h3>
-              <span className={`text-sm px-2 py-1 rounded ${
+              <span className={`text-sm px-2 py-1 rounded self-start ${
                 isOnline ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
               }`}>
                 {isOnline ? t('cacheManager.online', currentLanguage) : t('cacheManager.offline', currentLanguage)}
@@ -148,8 +148,8 @@ export function CacheManager({ currentLanguage }: CacheManagerProps) {
           </Card>
 
           {/* Service Worker Status */}
-          <Card className="p-4">
-            <div className="flex items-center justify-between mb-3">
+          <Card className="p-3 sm:p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 gap-2">
               <h3 className="font-medium flex items-center gap-2">
                 {getServiceWorkerStatusIcon()}
                 {t('cacheManager.serviceWorker', currentLanguage)}
@@ -158,7 +158,7 @@ export function CacheManager({ currentLanguage }: CacheManagerProps) {
                 <Button 
                   size="sm" 
                   onClick={updateServiceWorker}
-                  className="gap-2"
+                  className="gap-2 self-start"
                 >
                   <Download className="h-3 w-3" />
                   {t('cacheManager.update', currentLanguage)}
@@ -169,13 +169,13 @@ export function CacheManager({ currentLanguage }: CacheManagerProps) {
           </Card>
 
           {/* Cache Overview */}
-          <Card className="p-4">
-            <div className="flex items-center justify-between mb-3">
+          <Card className="p-3 sm:p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 gap-2">
               <h3 className="font-medium flex items-center gap-2">
                 <HardDrive className="h-4 w-4" />
                 {t('cacheManager.cacheOverview', currentLanguage)}
               </h3>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Button 
                   size="sm" 
                   variant="outline" 
@@ -208,7 +208,7 @@ export function CacheManager({ currentLanguage }: CacheManagerProps) {
               </div>
             ) : cacheStatus ? (
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4 text-sm">
                   <div>
                     <span className="font-medium">{t('cacheManager.totalSize', currentLanguage)}: </span>
                     <span>{formatCacheSize(getTotalCacheSize())}</span>
@@ -227,24 +227,26 @@ export function CacheManager({ currentLanguage }: CacheManagerProps) {
                   <div className="space-y-3">
                     {Object.entries(cacheStatus).map(([cacheName, cacheInfo]) => (
                       <div key={cacheName} className="border rounded-lg p-3">
-                        <div className="flex items-center justify-between mb-2">
-                          <div>
-                            <h4 className="font-medium text-sm">{getCacheTypeLabel(cacheName)}</h4>
-                            <p className="text-xs text-gray-500">{getCacheTypeDescription(cacheName)}</p>
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 gap-2">
+                          <div className="min-w-0 flex-1">
+                            <h4 className="font-medium text-sm truncate">{getCacheTypeLabel(cacheName)}</h4>
+                            <p className="text-xs text-gray-500 line-clamp-2 sm:line-clamp-1">{getCacheTypeDescription(cacheName)}</p>
                           </div>
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => handleClearCache(cacheName)}
                             disabled={isClearing === cacheName}
-                            className="gap-2"
+                            className="gap-2 self-start sm:self-center flex-shrink-0"
                           >
                             {isClearing === cacheName ? (
                               <Loader2 className="h-3 w-3 animate-spin" />
                             ) : (
                               <Trash2 className="h-3 w-3" />
                             )}
-                            {isClearing === cacheName ? t('cacheManager.clearing', currentLanguage) : t('cacheManager.clear', currentLanguage)}
+                            <span className="hidden sm:inline">
+                              {isClearing === cacheName ? t('cacheManager.clearing', currentLanguage) : t('cacheManager.clear', currentLanguage)}
+                            </span>
                           </Button>
                         </div>
                         <div className="flex justify-between text-xs text-gray-600">
@@ -264,7 +266,7 @@ export function CacheManager({ currentLanguage }: CacheManagerProps) {
           </Card>
 
           {/* Offline Features Info */}
-          <Card className="p-4 bg-blue-50 border-blue-200">
+          <Card className="p-3 sm:p-4 bg-blue-50 border-blue-200">
             <h3 className="font-medium text-blue-900 mb-2">
               {t('cacheManager.offlineFeatures', currentLanguage)}
             </h3>

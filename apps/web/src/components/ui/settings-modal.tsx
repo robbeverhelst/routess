@@ -14,7 +14,9 @@ import {
   Settings,
   Database,
   Palette,
-  User
+  User,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 
 interface SettingsModalProps {
@@ -35,6 +37,7 @@ export function SettingsModal({
   currentUser
 }: SettingsModalProps) {
   const [activeSection, setActiveSection] = useState<string>('general');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const settingsSections = [
     {
@@ -66,6 +69,13 @@ export function SettingsModal({
     });
   }
 
+  const currentSection = settingsSections.find(section => section.id === activeSection);
+
+  const handleSectionChange = (sectionId: string) => {
+    setActiveSection(sectionId);
+    setIsSidebarOpen(false); // Close sidebar on mobile after selection
+  };
+
   const renderSectionContent = () => {
     switch (activeSection) {
       case 'general':
@@ -78,7 +88,7 @@ export function SettingsModal({
               <p className="text-xs text-gray-500 mb-3">
                 {t('settings.languageDesc', currentLanguage)}
               </p>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {[
                   { code: 'en' as SupportedLanguage, name: 'English' },
                   { code: 'nl' as SupportedLanguage, name: 'Nederlands' },
@@ -220,28 +230,43 @@ export function SettingsModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden p-0">
-        <DialogHeader className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+      <DialogContent className="max-w-4xl max-h-[90vh] sm:max-h-[80vh] overflow-hidden p-0 w-[95vw] sm:w-full">
+        <DialogHeader className="px-4 sm:px-6 py-4 border-b border-gray-100 dark:border-gray-800">
           <DialogTitle className="flex items-center gap-2">
             <Settings className="h-5 w-5" />
             {t('settings.title', currentLanguage)}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="hidden sm:block">
             {t('settings.description', currentLanguage)}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex h-[60vh]">
+        <div className="flex flex-col sm:flex-row h-[70vh] sm:h-[60vh]">
           {/* Sidebar */}
-          <div className="w-64 border-r border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50">
+          <div className="w-full sm:w-64 border-b sm:border-b-0 sm:border-r border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50">
             <div className="p-4">
-              <div className="space-y-1">
+              {/* Mobile toggle button */}
+              <div className="sm:hidden mb-3">
+                <button
+                  onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-md bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    {currentSection && <currentSection.icon className="h-4 w-4" />}
+                    <span className="font-medium">{currentSection?.label}</span>
+                  </div>
+                  {isSidebarOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </button>
+              </div>
+
+              {/* Navigation items */}
+              <div className={`space-y-1 ${isSidebarOpen ? 'block' : 'hidden'} sm:block`}>
                 {settingsSections.map((section) => {
                   const IconComponent = section.icon;
                   return (
                     <button
                       key={section.id}
-                      onClick={() => setActiveSection(section.id)}
+                      onClick={() => handleSectionChange(section.id)}
                       className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-left transition-colors ${
                         activeSection === section.id
                           ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
@@ -253,7 +278,7 @@ export function SettingsModal({
                         <div className="text-sm font-medium truncate">
                           {section.label}
                         </div>
-                        <div className="text-xs text-gray-500 truncate">
+                        <div className="text-xs text-gray-500 truncate hidden sm:block">
                           {section.description}
                         </div>
                       </div>
@@ -266,7 +291,7 @@ export function SettingsModal({
 
           {/* Content */}
           <div className="flex-1 overflow-y-auto">
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               {renderSectionContent()}
             </div>
           </div>
