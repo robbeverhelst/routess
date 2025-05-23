@@ -50,6 +50,11 @@ jobs:
         with:
           bun-version: latest
           
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          
       - name: Install dependencies
         run: bun install --frozen-lockfile
         
@@ -103,6 +108,11 @@ jobs:
         uses: oven-sh/setup-bun@v1
         with:
           bun-version: latest
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
           
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -237,6 +247,11 @@ jobs:
         uses: oven-sh/setup-bun@v1
         with:
           bun-version: latest
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
           
       - name: Install dependencies
         run: bun install --frozen-lockfile
