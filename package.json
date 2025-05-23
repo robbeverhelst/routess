@@ -23,17 +23,14 @@
     "infra:destroy": "turbo run infra:destroy"
   },
   "devDependencies": {
-    "@semantic-release/commit-analyzer": "^13.0.0",
-    "@semantic-release/git": "^10.0.1",
-    "@semantic-release/github": "^11.0.0",
-    "@semantic-release/npm": "^12.0.1",
-    "@semantic-release/release-notes-generator": "^14.0.1",
-    "@types/jest": "^29.5.14",
-    "@types/node": "^22.15.18",
-    "jest": "^29.7.0",
-    "semantic-release": "^24.2.4",
-    "ts-jest": "^29.3.4",
     "turbo": "^2.5.3",
-    "typescript": "~5.8.3"
+    "@types/node": "^22.15.18",
+    "typescript": "~5.8.3",
+    "semantic-release": "^24.2.4",
+    "@semantic-release/commit-analyzer": "^13.0.0",
+    "@semantic-release/release-notes-generator": "^14.0.1",
+    "@semantic-release/npm": "^12.0.1",
+    "@semantic-release/github": "^11.0.0",
+    "@semantic-release/git": "^10.0.1"
   }
 }
