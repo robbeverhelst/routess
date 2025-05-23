@@ -274,8 +274,15 @@ async function networkFirstWithCacheFallback(request, cacheName) {
     if (cachedResponse) {
       // Check if cached response is still valid
       if (await isCacheEntryValid(cachedResponse, cacheName)) {
+        console.log('[SW] Returning cached response for:', request.url);
         return cachedResponse;
       }
+    }
+    
+    // Special handling for Mapbox Directions API - provide offline fallback
+    if (request.url.includes('api.mapbox.com/directions')) {
+      console.log('[SW] Generating offline route fallback for:', request.url);
+      return generateOfflineRouteResponse(request);
     }
     
     throw error;
@@ -442,6 +449,108 @@ async function precacheRoute(routeData) {
   // This could be used to precache map tiles along a route
   console.log('[SW] Precaching route data:', routeData);
   // Implementation would depend on your specific route data structure
+}
+
+// Generate offline route response for Mapbox Directions API
+async function generateOfflineRouteResponse(request) {
+  try {
+    const url = new URL(request.url);
+    const pathParts = url.pathname.split('/');
+    
+    // Extract coordinates from the URL path
+    // Format: /directions/v5/mapbox/walking/lng1,lat1;lng2,lat2
+    const coordinatesIndex = pathParts.findIndex(part => part === 'walking' || part === 'cycling' || part === 'driving' || part === 'driving-traffic');
+    if (coordinatesIndex === -1 || coordinatesIndex + 1 >= pathParts.length) {
+      throw new Error('Could not parse coordinates from URL');
+    }
+    
+    const coordinatesString = pathParts[coordinatesIndex + 1];
+    const waypoints = coordinatesString.split(';').map(coord => {
+      const [lng, lat] = coord.split(',').map(Number);
+      return [lng, lat];
+    });
+    
+    if (waypoints.length < 2) {
+      throw new Error('Need at least 2 waypoints for route');
+    }
+    
+    // Calculate direct route
+    const geometry = { coordinates: waypoints, type: 'LineString' };
+    let totalDistance = 0;
+    
+    // Calculate total distance using Haversine formula
+    for (let i = 0; i < waypoints.length - 1; i++) {
+      const [lng1, lat1] = waypoints[i];
+      const [lng2, lat2] = waypoints[i + 1];
+      totalDistance += haversineDistance(lat1, lng1, lat2, lng2);
+    }
+    
+    const totalDistanceMeters = totalDistance * 1000;
+    const estimatedDuration = Math.round(totalDistanceMeters / 1.4); // ~5 km/h walking speed
+    
+    // Create a Mapbox-compatible response
+    const offlineResponse = {
+      routes: [{
+        geometry: geometry,
+        distance: totalDistanceMeters,
+        duration: estimatedDuration,
+        weight_name: 'routability',
+        weight: estimatedDuration,
+        legs: waypoints.slice(0, -1).map((waypoint, i) => {
+          const nextWaypoint = waypoints[i + 1];
+          const legDistance = haversineDistance(waypoint[1], waypoint[0], nextWaypoint[1], nextWaypoint[0]) * 1000;
+          return {
+            distance: legDistance,
+            duration: Math.round(legDistance / 1.4),
+            summary: 'Offline direct route',
+            steps: []
+          };
+        })
+      }],
+      waypoints: waypoints.map((coord, i) => ({
+        hint: '',
+        distance: 0,
+        name: i === 0 ? 'Start' : i === waypoints.length - 1 ? 'End' : `Waypoint ${i}`,
+        location: coord
+      })),
+      code: 'Ok',
+      uuid: 'offline-route-' + Date.now()
+    };
+    
+    console.log('[SW] Generated offline route:', offlineResponse);
+    
+    return new Response(JSON.stringify(offlineResponse), {
+      status: 200,
+      statusText: 'OK',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Offline-Route': 'true'
+      }
+    });
+    
+  } catch (error) {
+    console.error('[SW] Error generating offline route:', error);
+    return new Response(JSON.stringify({
+      code: 'NoRoute',
+      message: 'Could not generate offline route'
+    }), {
+      status: 404,
+      statusText: 'Not Found',
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+}
+
+// Haversine distance calculation for offline routing
+function haversineDistance(lat1, lng1, lat2, lng2) {
+  const R = 6371; // Earth's radius in kilometers
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
 }
 
 console.log('[SW] Service worker script loaded'); 

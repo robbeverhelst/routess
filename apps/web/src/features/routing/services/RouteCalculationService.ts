@@ -169,7 +169,8 @@ async function buildMixedRoute(
           totalDist += haversine(from, to);
         }
       } catch(err) {
-        Logger.error(`[RCS/buildMixedRoute] Error fetching segment ${i}-${i+1}: `, err);
+        Logger.warn(`[RCS/buildMixedRoute] Network error for segment ${i}-${i+1}, falling back to direct route: `, err);
+        // Offline fallback: use direct route
         if (!workingDirectFlags[i+1]) {
             workingDirectFlags[i+1] = true;
             waypointsWereInternallyModified = true;
@@ -299,12 +300,19 @@ export const getRoute = async (
                       `steps=true&geometries=geojson&overview=full&continue_straight=true&` +
                       `access_token=${accessToken}&radiuses=${radiusesString}`;
 
-const response = await fetch(queryUrl, { method: 'GET' });
-if (!response.ok) {
-  Logger.error(`[RCS/getRoute] API request failed with status ${response.status}`);
-  throw new Error(`API request failed: ${response.statusText}`);
-}
-const json = await response.json();
+      const response = await fetch(queryUrl, { method: 'GET' });
+      if (!response.ok) {
+        Logger.error(`[RCS/getRoute] API request failed with status ${response.status}`);
+        throw new Error(`API request failed: ${response.statusText}`);
+      }
+
+      // Check if this is an offline route from service worker
+      const isOfflineRoute = response.headers.get('X-Offline-Route') === 'true';
+      if (isOfflineRoute) {
+        Logger.info('[RCS/getRoute] Using offline route from service worker');
+      }
+
+      const json = await response.json();
 
       if (!json || !json.routes || json.routes.length === 0 || !json.routes[0].geometry) {
         Logger.error('[RCS/getRoute] Invalid API response or no route geometry. Response:', json);
@@ -355,19 +363,36 @@ const json = await response.json();
 
       const distance = data.distance / 1000;
       const duration = Math.round(data.duration / 60);
-      setRouteDistance(`${distance.toFixed(2)} km`);
-      setRouteDuration(`${duration} min`);
+      const offlineIndicator = isOfflineRoute ? ' (offline)' : '';
+      setRouteDistance(`${distance.toFixed(2)} km${offlineIndicator}`);
+      setRouteDuration(`${duration} min${isOfflineRoute ? ' (estimated)' : ''}`);
       setHasRoute(true);
       addKilometerMarkers(map, currentRoutePathCoordinates); // Uses MapLayerManager
 
       return { success: true, waypointsSnapped: waypointsUpdatedBySnapping, snappedWaypoints: finalSnappedWaypoints ?? undefined, snappedDirectFlags: finalSnappedDirectFlags ?? undefined };
 
     } catch (error) {
-      Logger.error('[RCS/getRoute] Error fetching route:', error);
-      setHasRoute(false);
-      updateRouteLayer(map, []); // Clear route on map
+      Logger.warn('[RCS/getRoute] Network error fetching route, falling back to direct routes:', error);
+      
+      // Offline fallback: Convert all segments to direct routes
+      Logger.info('[RCS/getRoute] Converting to direct routes for offline use');
       currentRoutePathCoordinates = [];
-      return { success: false, waypointsSnapped: false };
+      let cumulativeDistance = 0;
+      
+      for (let i = 0; i < waypoints.length - 1; i++) {
+        if (i === 0) currentRoutePathCoordinates.push(waypoints[i]);
+        currentRoutePathCoordinates.push(waypoints[i+1]);
+        cumulativeDistance += haversine(waypoints[i], waypoints[i+1]);
+      }
+      
+      updateRouteLayer(map, currentRoutePathCoordinates);
+      const duration = Math.round(cumulativeDistance / 5 * 60); // Assume 5 km/h average
+      setRouteDistance(`${cumulativeDistance.toFixed(2)} km (offline)`);
+      setRouteDuration(`${duration} min (estimated)`);
+      setHasRoute(true);
+      addKilometerMarkers(map, currentRoutePathCoordinates);
+      
+      return { success: true, waypointsSnapped: false, error: 'Using offline direct routes' };
     }
   }
   
@@ -427,6 +452,12 @@ export async function calculateAtoBRoute(
       return { success: false, error: errorMessage };
     }
 
+    // Check if this is an offline route from service worker
+    const isOfflineRoute = response.headers.get('X-Offline-Route') === 'true';
+    if (isOfflineRoute) {
+      Logger.info('[RCS/calculateAtoBRoute] Using offline route from service worker');
+    }
+
     const data = await response.json();
 
     if (data.routes && data.routes.length > 0) {
@@ -450,7 +481,22 @@ export async function calculateAtoBRoute(
       return { success: false, error: noRouteMessage };
     }
   } catch (error) {
-    Logger.error('[RCS/calculateAtoBRoute] Network or parsing error:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Network error or failed to parse response.' };
+    Logger.warn('[RCS/calculateAtoBRoute] Network error, falling back to direct route:', error);
+    
+    // Offline fallback: Create a direct route
+    const directGeometry: Coordinate[] = [startCoord, endCoord];
+    const directDistance = haversine(startCoord, endCoord) * 1000; // Convert to meters
+    const directDuration = Math.round((directDistance / 1000) / 5 * 60 * 60); // 5 km/h in seconds
+    
+    Logger.info(`[RCS/calculateAtoBRoute] Using direct route: Distance=${(directDistance/1000).toFixed(2)}km, Duration=${(directDuration/60).toFixed(1)}min`);
+    currentRoutePathCoordinates = [...directGeometry];
+    
+    return {
+      success: true,
+      geometry: directGeometry,
+      distance: directDistance,
+      duration: directDuration,
+      error: 'Using offline direct route'
+    };
   }
 } 
