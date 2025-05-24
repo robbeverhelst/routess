@@ -626,18 +626,16 @@ export function Sidebar({
           {/* MODIFIED Footer with language button and background */}
           <div className="absolute bottom-0 inset-x-0 px-4 py-3 border-t border-gray-100 dark:border-gray-800 bg-white/80 dark:bg-black/70 backdrop-blur-sm">
             <div className="flex items-center text-xs text-gray-500 dark:text-gray-400">
-              {/* Left side with settings icon when logged in */}
+              {/* Left side with settings icon */}
               <div className="flex-1 flex justify-start">
-                {isLoggedIn && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-md"
-                    onClick={() => setIsSettingsModalOpen(true)}
-                  >
-                    <Settings size={12} />
-                  </Button>
-                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-md"
+                  onClick={() => setIsSettingsModalOpen(true)}
+                >
+                  <Settings size={12} />
+                </Button>
               </div>
               
               {/* Centered "Made by" text */}
