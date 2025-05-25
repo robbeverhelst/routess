@@ -1426,7 +1426,7 @@ export default function MapWithRouting({
       <div className="absolute top-4 left-0 right-0 z-10 p-4 lg:hidden pointer-events-none">
         <div className="flex justify-between items-start w-full">
           {/* Top-Left: RouteControls (stacked) */}
-          <div className="flex flex-col items-start gap-2 pointer-events-auto">
+          <div className="flex flex-col items-start gap-2 pointer-events-auto max-h-[calc(100vh-4rem)] overflow-y-auto scrollbar-hide">
             <RouteControls
               onUndo={handleUndo}
               onRedo={handleRedo}
