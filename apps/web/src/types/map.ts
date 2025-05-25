@@ -15,6 +15,9 @@ export interface MapboxMapProps {
   height?: string | number;
 }
 
+// Map style types
+export type MapStyle = 'standard' | 'satellite';
+
 // Added just for type compatibility with the imported code
 export interface BirdSighting {
   id: string;

@@ -25,7 +25,7 @@ import { decompressAndParse, serializeAndCompress } from '@/lib/shareUtils';
 import {
   getWaypoints, getDirectFlags
 } from '@/features/routing/managers/WaypointManager';
-import { updateWaypointsLayer, ROUTE_LAYER_ID, ROUTE_CASING_LAYER_ID, WAYPOINTS_LAYER_ID, ROUTE_ARROWS_LAYER_ID } from '@/features/routing/managers/MapLayerManager';
+import { updateWaypointsLayer, ROUTE_LAYER_ID, ROUTE_CASING_LAYER_ID, WAYPOINTS_LAYER_ID, ROUTE_ARROWS_LAYER_ID, initializeSourcesAndLayers, updateRouteLayer, updateKilometerMarkersLayer } from '@/features/routing/managers/MapLayerManager';
 import {
   hasUndo as historyHasUndo,
   hasRedo as historyHasRedo,
@@ -41,6 +41,20 @@ import { Logger } from '@/lib/logger';
 // Import the new modal and its types
 import { RouteGeneratorModal, type RouteGenerationParams } from '@/components/ui/RouteGeneratorModal';
 import { type SupportedLanguage } from '@/lib/i18n'; // Added
+
+import { 
+  loadMapLockStateFromLocalStorage, 
+  saveMapLockStateToLocalStorage,
+  loadLightPresetFromLocalStorage,
+  saveLightPresetToLocalStorage,
+  loadLastMapViewFromLocalStorage,
+  saveLastMapViewToLocalStorage,
+  loadLanguageFromLocalStorage,
+  saveLanguageToLocalStorage,
+  loadMapStyleFromLocalStorage,
+  saveMapStyleToLocalStorage,
+  type MapStyle
+} from '@/features/routing/services/LocalStorageService';
 
 // Get Mapbox access token from environment variables
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
@@ -66,17 +80,6 @@ if (import.meta.env.DEV && (!MAPBOX_TOKEN || MAPBOX_TOKEN.length < 10)) { // Che
     Value length: ${MAPBOX_TOKEN?.length ?? 0} (token partially redacted)`
   );
 }
-
-import { 
-  loadMapLockStateFromLocalStorage, 
-  saveMapLockStateToLocalStorage,
-  loadLightPresetFromLocalStorage,
-  saveLightPresetToLocalStorage,
-  loadLastMapViewFromLocalStorage,
-  saveLastMapViewToLocalStorage,
-  loadLanguageFromLocalStorage,
-  saveLanguageToLocalStorage
-} from '@/features/routing/services/LocalStorageService';
 
 interface MapboxMapProps {
   initialViewState?: {
@@ -221,6 +224,9 @@ export default function MapWithRouting({
   // New loading state for route generation
   const [isGeneratingRoute, setIsGeneratingRoute] = useState(false);
   
+  // Map style state
+  const [currentMapStyle, setCurrentMapStyle] = useState<MapStyle>(loadMapStyleFromLocalStorage());
+
   const { 
     location: userLocation, 
     error: locationError, 
@@ -978,6 +984,93 @@ export default function MapWithRouting({
     saveLightPresetToLocalStorage(currentLightPreset);
   }, [currentLightPreset]);
 
+  // Effect to save currentMapStyle to localStorage when it changes
+  useEffect(() => {
+    saveMapStyleToLocalStorage(currentMapStyle);
+  }, [currentMapStyle]);
+
+  // Effect to handle map style changes and re-apply custom styling
+  useEffect(() => {
+    if (!mapRef.current || !isMapReady) return;
+
+    const map = mapRef.current;
+
+    const handleStyleLoad = () => {
+      Logger.info('[MapWithRouting] Map style loaded, re-initializing layers and data');
+      
+      // Re-apply light preset after style change
+      map.setConfigProperty('basemap', 'lightPreset', currentLightPreset);
+      
+      // Re-initialize all sources and layers (this is crucial for restoring the route)
+      initializeSourcesAndLayers(map);
+      
+      // Re-apply route colors based on current light preset
+      const isDarkMode = currentLightPreset === 'dusk' || currentLightPreset === 'night';
+      
+      // Wait a bit for layers to be available after style change
+      setTimeout(() => {
+        // Re-apply route data if we have a route
+        if (hasRoute) {
+          const currentRouteCoords = getCurrentRoutePath();
+          const currentWaypoints = getWaypoints();
+          
+          if (currentRouteCoords && currentRouteCoords.length > 0) {
+            Logger.info('[MapWithRouting] Restoring route data after style change');
+            updateRouteLayer(map, currentRouteCoords);
+            updateKilometerMarkersLayer(map, currentRouteCoords);
+          }
+          
+          if (currentWaypoints && currentWaypoints.length > 0) {
+            Logger.info('[MapWithRouting] Restoring waypoints after style change');
+            updateWaypointsLayer(map, currentWaypoints, isMapLocked);
+          }
+        }
+        
+        // Re-apply user location if available
+        if (userLocation) {
+          updateUserLocationPoint(map, userLocation);
+        }
+        
+        // Re-apply custom styling
+        if (map.getLayer(ROUTE_LAYER_ID)) {
+          map.setPaintProperty(ROUTE_LAYER_ID, 'line-color', [
+            'case',
+            ['boolean', ['feature-state', 'hover'], false],
+            isDarkMode ? NIGHT_ROUTE_HOVER_COLOR : DAY_ROUTE_HOVER_COLOR,
+            isDarkMode ? NIGHT_ROUTE_COLOR : DAY_ROUTE_COLOR
+          ]);
+        }
+        if (map.getLayer(ROUTE_CASING_LAYER_ID)) {
+          map.setPaintProperty(ROUTE_CASING_LAYER_ID, 'line-color', isDarkMode ? NIGHT_ROUTE_CASING_COLOR : DAY_ROUTE_CASING_COLOR);
+          map.setPaintProperty(ROUTE_CASING_LAYER_ID, 'line-opacity', isDarkMode ? NIGHT_ROUTE_CASING_OPACITY : DAY_ROUTE_CASING_OPACITY);
+        }
+        if (map.getLayer(WAYPOINTS_LAYER_ID)) {
+          map.setPaintProperty(WAYPOINTS_LAYER_ID, 'circle-color', [
+            'match',
+            ['get', 'pointType'],
+            'start', isDarkMode ? NIGHT_WAYPOINT_START_COLOR : DAY_WAYPOINT_START_COLOR,
+            'end', isDarkMode ? NIGHT_WAYPOINT_END_COLOR : DAY_WAYPOINT_END_COLOR,
+            'direct', isDarkMode ? NIGHT_WAYPOINT_DIRECT_COLOR : DAY_WAYPOINT_DIRECT_COLOR,
+            isDarkMode ? NIGHT_WAYPOINT_DEFAULT_COLOR : DAY_WAYPOINT_DEFAULT_COLOR
+          ]);
+          map.setPaintProperty(WAYPOINTS_LAYER_ID, 'circle-stroke-color', isDarkMode ? NIGHT_WAYPOINT_STROKE_COLOR : DAY_WAYPOINT_STROKE_COLOR);
+        }
+        if (map.getLayer(ROUTE_ARROWS_LAYER_ID)) {
+          map.setPaintProperty(ROUTE_ARROWS_LAYER_ID, 'text-color', isDarkMode ? NIGHT_ROUTE_ARROW_TEXT_COLOR : DAY_ROUTE_ARROW_TEXT_COLOR);
+          map.setPaintProperty(ROUTE_ARROWS_LAYER_ID, 'text-halo-color', isDarkMode ? NIGHT_ROUTE_ARROW_HALO_COLOR : DAY_ROUTE_ARROW_HALO_COLOR);
+        }
+        
+        Logger.info('[MapWithRouting] Style change restoration complete');
+      }, 100);
+    };
+
+    map.on('style.load', handleStyleLoad);
+
+    return () => {
+      map.off('style.load', handleStyleLoad);
+    };
+  }, [currentMapStyle, currentLightPreset, isMapReady, hasRoute, userLocation, isMapLocked]);
+
   // Effect to save map view state on moveend
   useEffect(() => {
     if (!mapRef.current) return;
@@ -1111,6 +1204,41 @@ export default function MapWithRouting({
     mapRef.current?.zoomOut();
   }, []);
 
+  // Handler for toggling map style
+  const handleToggleMapStyle = useCallback(() => {
+    if (mapRef.current) {
+      const newStyle: MapStyle = currentMapStyle === 'standard' ? 'satellite' : 'standard';
+      const mapStyleUrl = newStyle === 'satellite' 
+        ? 'mapbox://styles/mapbox/satellite-v9' 
+        : 'mapbox://styles/mapbox/standard';
+      
+      mapRef.current.setStyle(mapStyleUrl);
+      setCurrentMapStyle(newStyle);
+      
+      // For satellite view, ensure we maintain the space background
+      if (newStyle === 'satellite') {
+        // Wait for style to load, then configure atmosphere and projection
+        mapRef.current.once('style.load', () => {
+          if (mapRef.current) {
+            // Ensure globe projection is maintained
+            mapRef.current.setProjection('globe');
+            
+            // Configure atmosphere for space background
+            mapRef.current.setFog({
+              'color': 'rgb(186, 210, 235)', // Light blue
+              'high-color': 'rgb(36, 92, 223)', // Dark blue
+              'horizon-blend': 0.02,
+              'space-color': 'rgb(11, 11, 25)', // Dark space color
+              'star-intensity': 0.6
+            });
+          }
+        });
+      }
+      
+      Logger.info(`[MapWithRouting] Map style changed to: ${newStyle}`);
+    }
+  }, [currentMapStyle]);
+
   // Effect to manage the line-to-route display
   useEffect(() => {
     if (!isMapReady || !mapRef.current) {
@@ -1214,7 +1342,7 @@ export default function MapWithRouting({
           bearing: effectiveInitialViewState.bearing ?? currentBearing,
         }}
         style={{ width, height }}
-        mapStyle="mapbox://styles/mapbox/standard"
+        mapStyle={currentMapStyle === 'satellite' ? 'mapbox://styles/mapbox/satellite-v9' : 'mapbox://styles/mapbox/standard'}
         reuseMaps
         attributionControl={false}
         projection="globe"
@@ -1222,6 +1350,13 @@ export default function MapWithRouting({
         minPitch={45}
         maxPitch={45}
         onLoad={handleMapLoad}
+        fog={{
+          'color': 'rgb(186, 210, 235)', // Light blue
+          'high-color': 'rgb(36, 92, 223)', // Dark blue
+          'horizon-blend': 0.02,
+          'space-color': 'rgb(11, 11, 25)', // Dark space color
+          'star-intensity': 0.6
+        }}
       >
         {popup && mapRef.current && (
           <MapPopup 
@@ -1277,6 +1412,8 @@ export default function MapWithRouting({
               onZoomToRoute={handleZoomToRoute}
               currentLanguage={currentLanguage}
               isOffline={!isOnline}
+              currentMapStyle={currentMapStyle}
+              onToggleMapStyle={handleToggleMapStyle}
             />
           </div>
 
@@ -1349,6 +1486,8 @@ export default function MapWithRouting({
             onZoomToRoute={handleZoomToRoute}
             currentLanguage={currentLanguage}
             isOffline={!isOnline}
+            currentMapStyle={currentMapStyle}
+            onToggleMapStyle={handleToggleMapStyle}
         />
       </div>
 

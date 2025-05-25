@@ -9,12 +9,15 @@ import {
   ArrowLeftCircle, ArrowRightCircle, Locate, RefreshCw, Lock, Unlock, 
   SunIcon, MoonIcon, SunriseIcon, SunsetIcon, SparklesIcon as Sparkles,
   ArrowUp, ArrowDown, ArrowLeft, ArrowRight, ArrowRightLeft, // Added ArrowRightLeft
-  Plus, Minus, Share2, Maximize, WifiOff // Added Plus and Minus icons for zoom, Added Share2, Added Maximize for Zoom to Route, Added WifiOff for offline indicator
+  Plus, Minus, Share2, Maximize, WifiOff, Layers // Added Plus and Minus icons for zoom, Added Share2, Added Maximize for Zoom to Route, Added WifiOff for offline indicator, Added Layers
 } from "lucide-react";
 import { t, type SupportedLanguage } from '@/lib/i18n'; // Added
 
 // Define TimeOfDay type locally
 export type TimeOfDay = 'dawn' | 'day' | 'dusk' | 'night';
+
+// Define MapStyle type locally
+export type MapStyle = 'standard' | 'satellite';
 
 interface RouteControlsProps {
   onUndo: () => void;
@@ -40,6 +43,8 @@ interface RouteControlsProps {
   onZoomToRoute: () => void; // New prop for zooming to route
   currentLanguage: SupportedLanguage; // Added
   isOffline?: boolean; // New prop for offline status
+  currentMapStyle: MapStyle; // New prop for current map style
+  onToggleMapStyle: () => void; // New prop for toggling map style
 }
 
 // Helper to get the icon component based on TimeOfDay
@@ -92,7 +97,9 @@ export function RouteControls({
   onCopyShareLink,
   onZoomToRoute,
   currentLanguage, // Destructure new prop
-  isOffline // Destructure new prop
+  isOffline, // Destructure new prop
+  currentMapStyle, // Destructure new prop
+  onToggleMapStyle // Destructure new prop
 }: RouteControlsProps) {
   const TimeOfDayIcon = getIconForTimeOfDay(currentTimeOfDay);
   const { Icon: OrientationIcon, title: orientationTitle } = getOrientationIconAndLabel(currentBearing, currentLanguage);
@@ -109,6 +116,9 @@ export function RouteControls({
     locateTooltipText = t('routeControls.locate.lastKnown', currentLanguage);
     locateDotColorClass = "bg-orange-500"; // Orange dot for last known
   }
+
+  // Get current map style display name for tooltip
+  const currentMapStyleName = t(`routeControls.mapStyle.${currentMapStyle}`, currentLanguage);
 
   return (
     <TooltipProvider>
@@ -262,13 +272,38 @@ export function RouteControls({
             <Button
               variant="secondary"
               onClick={onCycleTimeOfDay}
-              className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 h-10 w-10"
+              disabled={currentMapStyle === 'satellite'}
+              className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 disabled:opacity-50 h-10 w-10"
             >
               <TimeOfDayIcon size={18} />
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>{t('routeControls.tooltip.cycleTimeOfDay', currentLanguage, { time: currentTimeOfDay })}</p>
+            <p>
+              {currentMapStyle === 'satellite' 
+                ? t('routeControls.tooltip.timeOfDayDisabledSatellite', currentLanguage)
+                : t('routeControls.tooltip.cycleTimeOfDay', currentLanguage, { time: currentTimeOfDay })
+              }
+            </p>
+          </TooltipContent>
+        </Tooltip>
+
+        <Tooltip delayDuration={500}>
+          <TooltipTrigger asChild>
+            <Button
+              variant="secondary"
+              onClick={onToggleMapStyle}
+              className={`h-10 w-10 ${
+                currentMapStyle === 'satellite'
+                  ? 'bg-blue-100 dark:bg-blue-800/30 text-blue-700 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-800/50 border border-blue-300 dark:border-blue-600'
+                  : 'bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60'
+              }`}
+            >
+              <Layers size={18} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{t('routeControls.tooltip.toggleMapStyle', currentLanguage, { style: currentMapStyleName })}</p>
           </TooltipContent>
         </Tooltip>
         

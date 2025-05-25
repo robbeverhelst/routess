@@ -299,6 +299,12 @@
     "fr": "Changer l'heure du jour (Actuel: {time})",
     "de": "Tageszeit wechseln (Aktuell: {time})"
   },
+  "routeControls.tooltip.timeOfDayDisabledSatellite": {
+    "en": "Time of day not available in satellite view",
+    "nl": "Tijdstip niet beschikbaar in satellietweergave",
+    "fr": "Heure du jour non disponible en vue satellite",
+    "de": "Tageszeit nicht verfügbar in Satellitenansicht"
+  },
   "routeControls.tooltip.setMapOrientation": {
     "en": "Set map orientation: {orientation}",
     "nl": "Kaartoriëntatie instellen: {orientation}",
@@ -316,6 +322,24 @@
     "nl": "Uitzoomen",
     "fr": "Zoom Arrière",
     "de": "Verkleinern"
+  },
+  "routeControls.tooltip.toggleMapStyle": {
+    "en": "Toggle map style (Current: {style})",
+    "nl": "Wissel kaartstijl (Huidig: {style})",
+    "fr": "Changer le style de carte (Actuel: {style})",
+    "de": "Kartenstil wechseln (Aktuell: {style})"
+  },
+  "routeControls.mapStyle.standard": {
+    "en": "Standard",
+    "nl": "Standaard",
+    "fr": "Standard",
+    "de": "Standard"
+  },
+  "routeControls.mapStyle.satellite": {
+    "en": "Satellite",
+    "nl": "Satelliet",
+    "fr": "Satellite",
+    "de": "Satellit"
   },
   "locationSearch.button.searchTitle": {
     "en": "Search",

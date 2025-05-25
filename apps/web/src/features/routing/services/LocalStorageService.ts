@@ -221,4 +221,39 @@ export function saveLanguageToLocalStorage(language: SupportedLanguage): void {
   } catch (error) {
     Logger.error('[LocalStorageService] Error saving language to localStorage:', error);
   }
+}
+
+// --- Map Style --- //
+const MAP_STYLE_KEY = 'mapStyle';
+
+export type MapStyle = 'standard' | 'satellite';
+
+export function loadMapStyleFromLocalStorage(): MapStyle {
+  try {
+    const storedStyle = localStorage.getItem(MAP_STYLE_KEY);
+    if (storedStyle) {
+      const knownStyles: MapStyle[] = ['standard', 'satellite'];
+      if (knownStyles.includes(storedStyle as MapStyle)) {
+        Logger.info(`[LocalStorageService] Loaded map style from localStorage: ${storedStyle}`);
+        return storedStyle as MapStyle;
+      }
+      Logger.warn(`[LocalStorageService] Invalid map style '${storedStyle}' found in localStorage. Defaulting to 'standard'.`);
+      localStorage.removeItem(MAP_STYLE_KEY); // Clear invalid entry
+    }
+    return 'standard'; // Default to standard
+  } catch (error) {
+    Logger.error('[LocalStorageService] Error loading map style from localStorage:', error);
+    return 'standard'; // Default to standard on error
+  }
+}
+
+export function saveMapStyleToLocalStorage(style: MapStyle): void {
+  try {
+    localStorage.setItem(MAP_STYLE_KEY, style);
+    if (import.meta.env.DEV) {
+      Logger.info(`[LocalStorageService] Saved map style: ${style}`);
+    }
+  } catch (error) {
+    Logger.error('[LocalStorageService] Error saving map style to localStorage:', error);
+  }
 } 
