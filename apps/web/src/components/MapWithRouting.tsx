@@ -59,6 +59,9 @@ import {
 // Get Mapbox access token from environment variables
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
 
+// Map configuration constants
+const MAP_PITCH = 30; // Default pitch angle for the map
+
 // Fallback for development (remove in production)
 // if (!MAPBOX_TOKEN) {
 //   Logger.error('Mapbox token not found in environment variables! Please add VITE_MAPBOX_ACCESS_TOKEN to your .env file');
@@ -331,7 +334,7 @@ export default function MapWithRouting({
         latitude: userLocation[1],
         zoom: 15,
         bearing: initialViewState.bearing ?? 0,
-        pitch: 45
+        pitch: MAP_PITCH
       }
     : lastKnownLocationFromStorage 
     ? {
@@ -339,7 +342,7 @@ export default function MapWithRouting({
         latitude: lastKnownLocationFromStorage[1],
         zoom: 14,
         bearing: initialViewState.bearing ?? 0,
-        pitch: 30
+        pitch: MAP_PITCH
       }
     : initialViewState; // Fallback to prop or default (which includes bearing and pitch)
 
@@ -565,7 +568,7 @@ export default function MapWithRouting({
         center: userLocation, 
         zoom: 15,
         bearing: 0,
-        pitch: 45,
+        pitch: MAP_PITCH,
         padding: { top: 0, bottom: 0, left: 0, right: 0 }
       });
       hasInitiallyZoomedToUser.current = true;
@@ -580,7 +583,7 @@ export default function MapWithRouting({
         center: lastKnownLocationFromStorage, 
         zoom: 14,
         bearing: 0,
-        pitch: 30,
+        pitch: MAP_PITCH,
         padding: { top: 0, bottom: 0, left: 0, right: 0 }
       });
       hasInitiallyZoomedToUser.current = true;
@@ -1338,7 +1341,7 @@ export default function MapWithRouting({
         mapboxAccessToken={MAPBOX_TOKEN}
         initialViewState={{
           ...effectiveInitialViewState,
-          pitch: effectiveInitialViewState.pitch ?? 45,
+          pitch: effectiveInitialViewState.pitch ?? MAP_PITCH,
           bearing: effectiveInitialViewState.bearing ?? currentBearing,
         }}
         style={{ width, height }}
@@ -1347,8 +1350,8 @@ export default function MapWithRouting({
         attributionControl={false}
         projection="globe"
         antialias={true}
-        minPitch={45}
-        maxPitch={45}
+        minPitch={MAP_PITCH}
+        maxPitch={MAP_PITCH}
         onLoad={handleMapLoad}
         fog={{
           'color': 'rgb(186, 210, 235)', // Light blue
