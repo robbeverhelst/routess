@@ -975,6 +975,43 @@ export default function MapWithRouting({
     }, 3000);
   }, []);
 
+  // Keyboard shortcuts for undo/redo
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Check for Cmd (Mac) or Ctrl (Windows/Linux)
+      const isModifierPressed = event.metaKey || event.ctrlKey;
+      
+      if (!isModifierPressed) return;
+      
+      // Prevent default browser behavior for these shortcuts
+      if (event.key === 'z' || event.key === 'Z') {
+        event.preventDefault();
+        
+        if (event.shiftKey) {
+          // Cmd/Ctrl + Shift + Z = Redo
+          if (canRedo) {
+            handleRedo();
+            Logger.info('[MapWithRouting] Redo triggered via keyboard shortcut');
+          }
+        } else {
+          // Cmd/Ctrl + Z = Undo
+          if (canUndo) {
+            handleUndo();
+            Logger.info('[MapWithRouting] Undo triggered via keyboard shortcut');
+          }
+        }
+      }
+    };
+
+    // Add event listener
+    window.addEventListener('keydown', handleKeyDown);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [canUndo, canRedo, handleUndo, handleRedo]);
+
   // Effect to update the ref whenever isMapLocked changes
   useEffect(() => {
     isMapLockedRef.current = isMapLocked;
