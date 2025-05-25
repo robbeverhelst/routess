@@ -25,7 +25,7 @@ import { decompressAndParse, serializeAndCompress } from '@/lib/shareUtils';
 import {
   getWaypoints, getDirectFlags
 } from '@/features/routing/managers/WaypointManager';
-import { updateWaypointsLayer, ROUTE_LAYER_ID, ROUTE_CASING_LAYER_ID, WAYPOINTS_LAYER_ID, ROUTE_ARROWS_LAYER_ID, initializeSourcesAndLayers, updateRouteLayer, updateKilometerMarkersLayer } from '@/features/routing/managers/MapLayerManager';
+import { updateWaypointsLayer, ROUTE_LAYER_ID, ROUTE_CASING_LAYER_ID, WAYPOINTS_LAYER_ID, ROUTE_ARROWS_LAYER_ID, initializeSourcesAndLayers, updateRouteLayer } from '@/features/routing/managers/MapLayerManager';
 import {
   hasUndo as historyHasUndo,
   hasRedo as historyHasRedo,
@@ -1020,7 +1020,6 @@ export default function MapWithRouting({
           if (currentRouteCoords && currentRouteCoords.length > 0) {
             Logger.info('[MapWithRouting] Restoring route data after style change');
             updateRouteLayer(map, currentRouteCoords);
-            updateKilometerMarkersLayer(map, currentRouteCoords);
           }
           
           if (currentWaypoints && currentWaypoints.length > 0) {
