@@ -20,26 +20,9 @@ export const generateGPXString = (waypoints: Coordinate[], routePath: Coordinate
   </metadata>
 `;
 
-  if (waypoints.length > 0) {
-    gpxString += `  <rte>
-    <name>Planned Route Waypoints</name>
-`;
-    waypoints.forEach((waypoint: Coordinate, index: number) => {
-      const lat = waypoint[1];
-      const lon = waypoint[0];
-      gpxString += `    <rtept lat="${lat}" lon="${lon}">
-`;
-      gpxString += `      <name>Waypoint ${index + 1}</name>
-`;
-      gpxString += `    </rtept>
-`;
-    });
-    gpxString += `  </rte>
-`;
-  }
-
+  // Only export the calculated route path, not the direct waypoint connections
   if (routePath.length > 0) {
-    gpxString += `  <trk>\n    <name>Tracked Path</name>\n    <trkseg>\n`;
+    gpxString += `  <trk>\n    <name>Calculated Route</name>\n    <trkseg>\n`;
     routePath.forEach((coord: Coordinate) => {
       const lat = coord[1];
       const lon = coord[0];
