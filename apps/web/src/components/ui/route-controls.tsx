@@ -1,3 +1,4 @@
+import React from "react";
 import { Button } from "@/components/ui/button";
 import { 
   Tooltip,
@@ -45,6 +46,9 @@ interface RouteControlsProps {
   isOffline?: boolean; // New prop for offline status
   currentMapStyle: MapStyle; // New prop for current map style
   onToggleMapStyle: () => void; // New prop for toggling map style
+  // Enhanced location props
+  isLocationTracking?: boolean; // New prop for tracking state
+  locationAccuracy?: number | null; // New prop for location accuracy
 }
 
 // Helper to get the icon component based on TimeOfDay
@@ -99,7 +103,10 @@ export function RouteControls({
   currentLanguage, // Destructure new prop
   isOffline, // Destructure new prop
   currentMapStyle, // Destructure new prop
-  onToggleMapStyle // Destructure new prop
+  onToggleMapStyle, // Destructure new prop
+  // Enhanced location props
+  isLocationTracking = false,
+  locationAccuracy
 }: RouteControlsProps) {
   const TimeOfDayIcon = getIconForTimeOfDay(currentTimeOfDay);
   const { Icon: OrientationIcon, title: orientationTitle } = getOrientationIconAndLabel(currentBearing, currentLanguage);
@@ -107,14 +114,44 @@ export function RouteControls({
   const isLocateButtonDisabled = !canLocateCurrent && !canLocateLastKnown;
   
   let locateTooltipText = t('routeControls.locate.notAvailable', currentLanguage);
-  let locateDotColorClass = "bg-red-500"; // Default to red dot if disabled
+  let badgeType: 'none' | 'blue-pulse' | 'orange' | 'red' = 'red'; // Default to red if no location
+  const locateIcon = Locate;
+  const locateButtonClass = "bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 disabled:opacity-50 h-10 w-10";
+  let iconColor = "text-gray-400"; // Default gray when disabled
 
-  if (canLocateCurrent) {
-    locateTooltipText = t('routeControls.locate.current', currentLanguage);
-    // No dot needed when current location is active, icon itself will be blue
+  // Determine badge type and icon color based on location state
+  if (canLocateCurrent && !isLocationTracking) {
+    // Current location available, not actively tracking
+    badgeType = 'none';
+    iconColor = "text-blue-500";
+    locateTooltipText = hasRoute 
+      ? "Center on location & start tracking"
+      : t('routeControls.locate.current', currentLanguage);
+  } else if (isLocationTracking) {
+    // Actively tracking location
+    badgeType = 'blue-pulse';
+    iconColor = "text-blue-500";
+    locateTooltipText = "Center on location & force update";
+    
+    // Add accuracy info if available
+    if (locationAccuracy !== null && locationAccuracy !== undefined) {
+      const accuracyText = locationAccuracy <= 10 
+        ? t('location.accuracy.high', currentLanguage, { accuracy: Math.round(locationAccuracy).toString() })
+        : locationAccuracy <= 50
+        ? t('location.accuracy.medium', currentLanguage, { accuracy: Math.round(locationAccuracy).toString() })
+        : t('location.accuracy.low', currentLanguage, { accuracy: Math.round(locationAccuracy).toString() });
+      locateTooltipText += ` - ${accuracyText}`;
+    }
   } else if (canLocateLastKnown) {
+    // No current location but have last known
+    badgeType = 'orange';
+    iconColor = "text-orange-500";
     locateTooltipText = t('routeControls.locate.lastKnown', currentLanguage);
-    locateDotColorClass = "bg-orange-500"; // Orange dot for last known
+  } else {
+    // No location data at all
+    badgeType = 'red';
+    iconColor = "text-red-500";
+    locateTooltipText = t('routeControls.locate.notAvailable', currentLanguage);
   }
 
   // Get current map style display name for tooltip
@@ -357,13 +394,25 @@ export function RouteControls({
             <Button
               variant="secondary"
               onClick={onLocate}
-              disabled={isLocateButtonDisabled}
-              className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 disabled:opacity-50 h-10 w-10"
+              disabled={isLocateButtonDisabled && !isLocationTracking}
+              className={locateButtonClass}
             >
               <div className="relative">
-                <Locate size={18} className={canLocateCurrent ? "text-blue-500" : "text-gray-400"} />
-                {!canLocateCurrent && ( // Show dot only if not using current location
-                  <div className={`absolute -top-1 -right-1 w-2 h-2 ${locateDotColorClass} rounded-full`} />
+                {React.createElement(locateIcon, {
+                  size: 18,
+                  className: iconColor
+                })}
+                {/* Status badges */}
+                {badgeType === 'blue-pulse' && (
+                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full border border-white dark:border-black flex items-center justify-center">
+                    <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+                  </div>
+                )}
+                {badgeType === 'orange' && (
+                  <div className="absolute -top-1 -right-1 w-2 h-2 bg-orange-500 rounded-full border border-white dark:border-black" />
+                )}
+                {badgeType === 'red' && (
+                  <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full border border-white dark:border-black" />
                 )}
               </div>
             </Button>

@@ -30,7 +30,7 @@ import {
   hasUndo as historyHasUndo,
   hasRedo as historyHasRedo,
 } from '@/features/routing/managers/HistoryManager';
-import { useUserLocation } from '@/hooks/useUserLocation';
+import { useEnhancedLocation } from '@/hooks/useEnhancedLocation';
 import { MapPopup, type PopupInfo as MapPopupInfo } from '@/components/ui/MapPopup';
 import { useRouteData } from '@/hooks/useRouteData';
 import { useUndoRedoState } from '@/hooks/useUndoRedoState';
@@ -230,12 +230,31 @@ export default function MapWithRouting({
   // Map style state
   const [currentMapStyle, setCurrentMapStyle] = useState<MapStyle>(loadMapStyleFromLocalStorage());
 
-  const { 
-    location: userLocation, 
-    error: locationError, 
-    isLoading: isUserLocationLoading, 
-    hasInitiallyZoomedRef: hasInitiallyZoomedToUser 
-  } = useUserLocation();
+  const {
+    location: userLocation,
+    error: locationError,
+    isLoading: isUserLocationLoading,
+    isTracking: isLocationTracking,
+    accuracy: locationAccuracy,
+    hasCurrentLocation,
+    hasLastKnownLocation,
+    startTracking: startLocationTracking,
+    stopTracking: stopLocationTracking,
+    getCurrentLocation,
+    getLastKnownLocation
+  } = useEnhancedLocation({
+    autoStart: false, // Start manually when needed
+    trackingMode: 'walking', // Optimized for walking
+    onLocationUpdate: (state) => {
+      // Update map with new location
+      if (mapRef.current && state.location) {
+        updateUserLocationPoint(mapRef.current, state.location);
+      }
+    }
+  });
+
+  // Keep compatibility with existing code that expects hasInitiallyZoomedRef
+  const hasInitiallyZoomedToUser = useRef(false);
 
   const {
     routeDistance,
@@ -324,6 +343,7 @@ export default function MapWithRouting({
 
   // Use user location for initial view state if available, 
   // UNLESS a route was detected in localStorage at component initialization.
+  const lastKnownFromService = getLastKnownLocation();
   const effectiveInitialViewState = 
     lastSavedMapView ? { ...lastSavedMapView } :
     detectedRouteInLocalStorageOnInit
@@ -336,10 +356,10 @@ export default function MapWithRouting({
         bearing: initialViewState.bearing ?? 0,
         pitch: MAP_PITCH
       }
-    : lastKnownLocationFromStorage 
+    : lastKnownFromService 
     ? {
-        longitude: lastKnownLocationFromStorage[0],
-        latitude: lastKnownLocationFromStorage[1],
+        longitude: lastKnownFromService[0],
+        latitude: lastKnownFromService[1],
         zoom: 14,
         bearing: initialViewState.bearing ?? 0,
         pitch: MAP_PITCH
@@ -829,18 +849,79 @@ export default function MapWithRouting({
     Logger.info('[MapWithRouting] Reverse route call executed.');
   }, [MAPBOX_TOKEN, hasRoute, setRouteDistance, setRouteDuration, setHasRoute, isMapLockedRef]);
 
+
+
   const handleLocate = useCallback(() => {
     if (mapRef.current) {
-      if (userLocation && !locationError) {
+      if (userLocation && hasCurrentLocation) {
         mapRef.current.flyTo({ center: userLocation, zoom: 17 });
-      } else if (lastKnownLocationFromStorage) {
-        mapRef.current.flyTo({ center: lastKnownLocationFromStorage, zoom: 15 });
-        Logger.info('[MapWithRouting] Centered on last known location.');
+        Logger.info('[MapWithRouting] Centered on current location');
+      } else if (hasLastKnownLocation) {
+        const lastKnown = getLastKnownLocation();
+        if (lastKnown) {
+          mapRef.current.flyTo({ center: lastKnown, zoom: 15 });
+          Logger.info('[MapWithRouting] Centered on last known location');
+        }
       } else {
-        Logger.info('[MapWithRouting] Locate called, but no current or last known location available.');
+        Logger.info('[MapWithRouting] No location available to center on');
       }
     }
-  }, [userLocation, locationError, lastKnownLocationFromStorage]);
+  }, [userLocation, hasCurrentLocation, hasLastKnownLocation, getLastKnownLocation]);
+
+  // Combined handler for the locate button that handles both locating and tracking
+  const handleLocateButtonClick = useCallback(async () => {
+    // Always try to locate first
+    handleLocate();
+    
+    // If tracking is active, force a quick location update
+    if (isLocationTracking) {
+      Logger.info('[MapWithRouting] Forcing quick location update during tracking');
+      try {
+        // Get a fresh location reading with high priority
+        const freshLocation = await getCurrentLocation({
+          enableHighAccuracy: true,
+          timeout: 8000,
+          maximumAge: 0 // Force fresh reading
+        });
+        
+        // Center on the fresh location if we got one
+        if (freshLocation.location && mapRef.current) {
+          mapRef.current.flyTo({ center: freshLocation.location, zoom: 17 });
+          Logger.info('[MapWithRouting] Centered on fresh location from quick update');
+        }
+      } catch (error) {
+        Logger.warn('[MapWithRouting] Quick location update failed:', error);
+      }
+    } else {
+      // If not tracking and we have a route, start tracking
+      if (hasRoute) {
+        Logger.info('[MapWithRouting] Starting location tracking from locate button');
+        startLocationTracking();
+      }
+    }
+  }, [handleLocate, isLocationTracking, hasRoute, startLocationTracking, getCurrentLocation]);
+
+  // Auto-start tracking when user has a route
+  useEffect(() => {
+    if (isMapReady && hasRoute && !isLocationTracking) {
+      Logger.info('[MapWithRouting] Auto-starting location tracking for route navigation');
+      startLocationTracking();
+    }
+  }, [isMapReady, hasRoute, isLocationTracking, startLocationTracking]);
+
+  // Auto-stop tracking display when there are persistent errors
+  useEffect(() => {
+    if (isLocationTracking && locationError) {
+      const timer = setTimeout(() => {
+        if (isLocationTracking && locationError) {
+          Logger.info('[MapWithRouting] Auto-stopping location tracking due to persistent errors');
+          stopLocationTracking();
+        }
+      }, 10000); // Stop after 10 seconds of persistent errors
+
+      return () => clearTimeout(timer);
+    }
+  }, [isLocationTracking, locationError, stopLocationTracking]);
 
   // PWA Shortcut Event Listeners
   useEffect(() => {
@@ -1432,11 +1513,11 @@ export default function MapWithRouting({
               onRedo={handleRedo}
               onReverseRoute={handleReverseRoute}
               onReset={handleReset}
-              onLocate={handleLocate}
+              onLocate={handleLocateButtonClick}
               canUndo={canUndo}
               canRedo={canRedo}
-              canLocateCurrent={!!userLocation && !locationError}
-              canLocateLastKnown={!!lastKnownLocationFromStorage}
+              canLocateCurrent={hasCurrentLocation}
+              canLocateLastKnown={hasLastKnownLocation}
               hasRoute={hasRoute}
               isLocked={isMapLocked}
               onToggleLock={handleToggleLock}
@@ -1453,6 +1534,8 @@ export default function MapWithRouting({
               isOffline={!isOnline}
               currentMapStyle={currentMapStyle}
               onToggleMapStyle={handleToggleMapStyle}
+              isLocationTracking={isLocationTracking}
+              locationAccuracy={locationAccuracy}
             />
           </div>
 
@@ -1501,16 +1584,16 @@ export default function MapWithRouting({
 
       {/* Desktop: RouteControls - Top Center */}
       <div className="absolute top-8 left-1/2 transform -translate-x-1/2 z-10 hidden lg:flex">
-        <RouteControls
+                <RouteControls
             onUndo={handleUndo}
             onRedo={handleRedo}
             onReverseRoute={handleReverseRoute}
             onReset={handleReset}
-            onLocate={handleLocate}
+            onLocate={handleLocateButtonClick}
             canUndo={canUndo}
             canRedo={canRedo}
-            canLocateCurrent={!!userLocation && !locationError}
-            canLocateLastKnown={!!lastKnownLocationFromStorage}
+            canLocateCurrent={hasCurrentLocation}
+            canLocateLastKnown={hasLastKnownLocation}
             hasRoute={hasRoute}
             isLocked={isMapLocked}
             onToggleLock={handleToggleLock}
@@ -1527,7 +1610,9 @@ export default function MapWithRouting({
             isOffline={!isOnline}
             currentMapStyle={currentMapStyle}
             onToggleMapStyle={handleToggleMapStyle}
-        />
+            isLocationTracking={isLocationTracking}
+            locationAccuracy={locationAccuracy}
+          />
       </div>
 
       {/* Desktop: Search and Sidebar - Top Right */}
@@ -1565,6 +1650,8 @@ export default function MapWithRouting({
           onLanguageChange={setCurrentLanguage}
         />
       </div>
+
+
 
       {/* Waypoint error notification - MOVED TO BOTTOM LEFT */}
       {waypointError && (
@@ -1623,4 +1710,4 @@ export default function MapWithRouting({
       )}
     </div>
   );
-} 
+}

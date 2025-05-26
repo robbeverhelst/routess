@@ -1126,5 +1126,107 @@
     "nl": "Binnenkort beschikbaar...",
     "fr": "Bientôt disponible...",
     "de": "Demnächst verfügbar..."
+  },
+  "location.tracking.started": {
+    "en": "Location tracking started",
+    "nl": "Locatie tracking gestart",
+    "fr": "Suivi de localisation démarré",
+    "de": "Standortverfolgung gestartet"
+  },
+  "location.tracking.stopped": {
+    "en": "Location tracking stopped",
+    "nl": "Locatie tracking gestopt",
+    "fr": "Suivi de localisation arrêté",
+    "de": "Standortverfolgung gestoppt"
+  },
+  "location.tracking.updating": {
+    "en": "Updating location...",
+    "nl": "Locatie bijwerken...",
+    "fr": "Mise à jour de la localisation...",
+    "de": "Standort wird aktualisiert..."
+  },
+  "location.tracking.acquiring": {
+    "en": "Acquiring GPS signal...",
+    "nl": "GPS-signaal verkrijgen...",
+    "fr": "Acquisition du signal GPS...",
+    "de": "GPS-Signal wird erfasst..."
+  },
+  "location.error.permissionDenied": {
+    "en": "Location access denied. Please enable location services in your browser.",
+    "nl": "Locatietoegang geweigerd. Schakel locatieservices in je browser in.",
+    "fr": "Accès à la localisation refusé. Veuillez activer les services de localisation dans votre navigateur.",
+    "de": "Standortzugriff verweigert. Bitte aktivieren Sie die Standortdienste in Ihrem Browser."
+  },
+  "location.error.positionUnavailable": {
+    "en": "GPS signal weak. Try moving outdoors or near a window.",
+    "nl": "GPS-signaal zwak. Probeer naar buiten te gaan of bij een raam.",
+    "fr": "Signal GPS faible. Essayez de vous déplacer à l'extérieur ou près d'une fenêtre.",
+    "de": "GPS-Signal schwach. Versuchen Sie, nach draußen oder in die Nähe eines Fensters zu gehen."
+  },
+  "location.error.timeout": {
+    "en": "Location request timed out. Retrying...",
+    "nl": "Locatieverzoek verlopen. Opnieuw proberen...",
+    "fr": "Demande de localisation expirée. Nouvelle tentative...",
+    "de": "Standortanfrage ist abgelaufen. Erneuter Versuch..."
+  },
+  "location.error.notSupported": {
+    "en": "Geolocation is not supported by this browser",
+    "nl": "Geolocatie wordt niet ondersteund door deze browser",
+    "fr": "La géolocalisation n'est pas prise en charge par ce navigateur",
+    "de": "Geolokalisierung wird von diesem Browser nicht unterstützt"
+  },
+  "location.accuracy.high": {
+    "en": "High accuracy (±{accuracy}m)",
+    "nl": "Hoge nauwkeurigheid (±{accuracy}m)",
+    "fr": "Haute précision (±{accuracy}m)",
+    "de": "Hohe Genauigkeit (±{accuracy}m)"
+  },
+  "location.accuracy.medium": {
+    "en": "Medium accuracy (±{accuracy}m)",
+    "nl": "Gemiddelde nauwkeurigheid (±{accuracy}m)",
+    "fr": "Précision moyenne (±{accuracy}m)",
+    "de": "Mittlere Genauigkeit (±{accuracy}m)"
+  },
+  "location.accuracy.low": {
+    "en": "Low accuracy (±{accuracy}m)",
+    "nl": "Lage nauwkeurigheid (±{accuracy}m)",
+    "fr": "Faible précision (±{accuracy}m)",
+    "de": "Niedrige Genauigkeit (±{accuracy}m)"
+  },
+  "location.mode.walking": {
+    "en": "Walking mode - High accuracy updates",
+    "nl": "Wandelmodus - Hoge nauwkeurigheid updates",
+    "fr": "Mode marche - Mises à jour haute précision",
+    "de": "Gehenmodus - Hochpräzise Updates"
+  },
+  "location.mode.driving": {
+    "en": "Driving mode - Balanced updates",
+    "nl": "Rijmodus - Gebalanceerde updates",
+    "fr": "Mode conduite - Mises à jour équilibrées",
+    "de": "Fahrmodus - Ausgewogene Updates"
+  },
+  "location.mode.batteryOptimized": {
+    "en": "Battery optimized - Reduced frequency",
+    "nl": "Batterij geoptimaliseerd - Verminderde frequentie",
+    "fr": "Optimisé batterie - Fréquence réduite",
+    "de": "Batterieoptimiert - Reduzierte Häufigkeit"
+  },
+  "routeControls.locate.tracking": {
+    "en": "Location tracking active",
+    "nl": "Locatie tracking actief",
+    "fr": "Suivi de localisation actif",
+    "de": "Standortverfolgung aktiv"
+  },
+  "routeControls.locate.startTracking": {
+    "en": "Start location tracking",
+    "nl": "Start locatie tracking",
+    "fr": "Démarrer le suivi de localisation",
+    "de": "Standortverfolgung starten"
+  },
+  "routeControls.locate.stopTracking": {
+    "en": "Stop location tracking",
+    "nl": "Stop locatie tracking",
+    "fr": "Arrêter le suivi de localisation",
+    "de": "Standortverfolgung stoppen"
   }
 } 
