@@ -443,6 +443,12 @@ export const clearCurrentRoutePath = (): void => {
   Logger.info('[RouteCalculationService] Cleared currentRoutePathCoordinates.');
 };
 
+// Function to set the current route path directly (e.g. for GPX import)
+export const setCurrentRoutePath = (coordinates: Coordinate[]): void => {
+  currentRoutePathCoordinates = [...coordinates];
+  Logger.info(`[RouteCalculationService] Set currentRoutePathCoordinates with ${coordinates.length} coordinates.`);
+};
+
 
 // --- New A-to-B Route Calculation Function ---
 export async function calculateAtoBRoute(

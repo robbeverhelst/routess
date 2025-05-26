@@ -31,7 +31,7 @@ import type { WaypointHistory } from '@/types/map';
 import { saveWaypointsToLocalStorage as saveWaypointsToStorage, loadWaypointsFromLocalStorage as loadWaypointsFromStorageService } from '@/features/routing/services/LocalStorageService';
 
 // Import the new GPX service functions
-import { generateGPXString, parseGPXFile, processGPXWaypoints } from '@/features/routing/services/GPXService';
+import { generateGPXString, parseGPXFile, processGPXWaypoints, processHybridGPXData } from '@/features/routing/services/GPXService';
 
 // Import the RouteCalculationService and its result type
 import { 
@@ -186,7 +186,7 @@ export const exportRouteToGPX = (): { success: boolean; message?: string } => {
     return { success: false, message: 'No route to export.' };
   }
 
-  // Use the new service function to generate the GPX string
+  // Use the new service function to generate the GPX string with both waypoints and route path
   const gpxString = generateGPXString(currentWaypoints, routePath);
 
   try {
@@ -217,77 +217,126 @@ export const importRouteFromGPX = async (
   onError?: (message: string) => void
 ) => {
   try {
-    // 1. Parse and process GPX data
+    // 1. Parse GPX data
     const parsedResult = await parseGPXFile(gpxString);
-    if (parsedResult.error || !parsedResult.waypoints) {
+    if (parsedResult.error) {
       Logger.error("[routing.ts.importRouteFromGPX] Error parsing GPX:", parsedResult.error);
-      if (onError) onError(parsedResult.error || "Unknown parsing error.");
+      if (onError) onError(parsedResult.error);
       return;
     }
 
-    const processedResult = await processGPXWaypoints(parsedResult.waypoints, accessToken);
-    if (processedResult.error || !processedResult.finalWaypoints || !processedResult.finalDirectFlags) {
-      Logger.error("[routing.ts.importRouteFromGPX] Error processing GPX waypoints:", processedResult.error);
-      if (onError) onError(processedResult.error || "Unknown waypoint processing error.");
-      return;
-    }
-    const { finalWaypoints: finalNewWaypoints, finalDirectFlags: newDirectFlags } = processedResult;
+    // 2. Take a snapshot before making any changes (for undo functionality)
+    historySnapshot();
 
-    // 2. Clear current route state (manual reset, no snapshot from resetRouting)
+    // 3. Clear current route state
     setWaypointsAndFlags([], []); 
     updateWaypointsLayer(map, [], _isMapLockedRef?.current ?? false); 
-    clearRoute(map); // Clears layers and currentRoutePath in RouteCalculationService
+    clearRoute(map);
     setRouteDistance(''); 
     setRouteDuration(''); 
     setHasRoute(false);
-    // localStorage is not cleared here, it will be overwritten by the new route
 
-    // 3. Set new waypoints from processed GPX data
-    setWaypointsAndFlags(finalNewWaypoints, newDirectFlags);
-    updateWaypointsLayer(map, getWaypoints(), _isMapLockedRef?.current ?? false);
+    if (parsedResult.waypoints) {
+      // Check if we have both waypoints and track points (hybrid approach)
+      if (parsedResult.trackPoints && parsedResult.trackPoints.length > 0) {
+        Logger.info(`[routing.ts.importRouteFromGPX] Processing hybrid GPX: ${parsedResult.waypoints.length} waypoints + ${parsedResult.trackPoints.length} track points.`);
+        
+        const processedResult = await processHybridGPXData(parsedResult.waypoints, parsedResult.trackPoints);
+        if (processedResult.error || !processedResult.finalWaypoints || !processedResult.finalDirectFlags) {
+          Logger.error("[routing.ts.importRouteFromGPX] Error processing hybrid GPX data:", processedResult.error);
+          if (onError) onError(processedResult.error || "Unknown hybrid GPX processing error.");
+          return;
+        }
+        
+        const { finalWaypoints: finalNewWaypoints, finalDirectFlags: newDirectFlags } = processedResult;
+        
+        // Set waypoints for editing capability
+        setWaypointsAndFlags(finalNewWaypoints, newDirectFlags);
+        updateWaypointsLayer(map, getWaypoints(), _isMapLockedRef?.current ?? false);
+        
+        // The track points are already set as the route path by processHybridGPXData
+        // We need to update the map layers and UI to show the exact track
+        const currentRouteGeom = getCurrentRoutePath();
+        if (currentRouteGeom && currentRouteGeom.length > 0) {
+          updateRouteLayerFromMapLayerManager(map, currentRouteGeom);
+          const kmFeatures = generateKmMarkerFeatures(currentRouteGeom);
+          updateKilometerMarkersLayerFromMapLayerManager(map, kmFeatures);
+          
+          // Calculate distance and duration from track points
+          let totalDistance = 0;
+          for (let i = 0; i < currentRouteGeom.length - 1; i++) {
+            totalDistance += haversineDistance(currentRouteGeom[i], currentRouteGeom[i + 1]);
+          }
+          
+          const distanceKm = totalDistance.toFixed(1);
+          // Estimate duration based on walking speed (5 km/h)
+          const durationMinutes = Math.round((totalDistance / 5) * 60);
+          
+          setRouteDistance(`${distanceKm} km`);
+          setRouteDuration(`${durationMinutes} min`);
+          setHasRoute(true);
+          
+          Logger.info(`[routing.ts.importRouteFromGPX] Hybrid GPX imported: ${distanceKm} km, ${durationMinutes} min from exact track.`);
+        }
+        
+      } else {
+        // Process GPX waypoints only (either from route points or smart-converted from track points)
+        Logger.info(`[routing.ts.importRouteFromGPX] Processing ${parsedResult.waypoints.length} waypoints only.`);
+        
+        const processedResult = await processGPXWaypoints(parsedResult.waypoints, accessToken);
+        if (processedResult.error || !processedResult.finalWaypoints || !processedResult.finalDirectFlags) {
+          Logger.error("[routing.ts.importRouteFromGPX] Error processing GPX waypoints:", processedResult.error);
+          if (onError) onError(processedResult.error || "Unknown waypoint processing error.");
+          return;
+        }
+        
+        const { finalWaypoints: finalNewWaypoints, finalDirectFlags: newDirectFlags } = processedResult;
+        
+        // Set waypoints and calculate route
+        setWaypointsAndFlags(finalNewWaypoints, newDirectFlags);
+        updateWaypointsLayer(map, getWaypoints(), _isMapLockedRef?.current ?? false);
 
-    // 4. Calculate route (with potential snapping)
-    if (getWaypoints().length >= 2) {
-      try {
-        const routeResult: RouteResult = await getRouteFromService(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
-        if (routeResult.success && routeResult.waypointsSnapped && routeResult.snappedWaypoints && routeResult.snappedDirectFlags) {
-          // Update WaypointManager's state again if snapping occurred
-          setWaypointsAndFlags(routeResult.snappedWaypoints, routeResult.snappedDirectFlags);
-          updateWaypointsLayer(map, getWaypoints(), _isMapLockedRef?.current ?? false);
-        } else if (!routeResult.success) {
-          Logger.warn('[importRouteFromGPX] Route calculation after GPX import indicated failure:', routeResult.error);
-          if (onError && routeResult.error) onError(routeResult.error); 
-          // UI state (distance, duration, hasRoute) already handled by getRouteFromService on failure
+        if (getWaypoints().length >= 2) {
+          try {
+            const routeResult: RouteResult = await getRouteFromService(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
+            if (routeResult.success && routeResult.waypointsSnapped && routeResult.snappedWaypoints && routeResult.snappedDirectFlags) {
+              // Update WaypointManager's state if snapping occurred
+              setWaypointsAndFlags(routeResult.snappedWaypoints, routeResult.snappedDirectFlags);
+              updateWaypointsLayer(map, getWaypoints(), _isMapLockedRef?.current ?? false);
+            } else if (!routeResult.success) {
+              Logger.warn('[importRouteFromGPX] Route calculation failed:', routeResult.error);
+              if (onError && routeResult.error) onError(routeResult.error); 
+            }
+          } catch (error: unknown) {
+            Logger.error('[importRouteFromGPX] Route calculation failed:', error);
+            if (onError) {
+              const errorMessage = error instanceof Error ? error.message : 'Failed to calculate route after GPX import.';
+              onError(errorMessage);
+            }
+            clearRouteLayer(map);
+            clearKilometerMarkersLayer(map);
+            setRouteDistance('');
+            setRouteDuration('');
+            setHasRoute(false);
+          }
+        } else if (getWaypoints().length === 1) {
+          // Only one waypoint, no route to display
+          setRouteDistance('');
+          setRouteDuration('');
+          setHasRoute(false);
+          clearRouteLayer(map);
+          clearKilometerMarkersLayer(map);
         }
-      } catch (error: unknown) {
-        Logger.error('[importRouteFromGPX] Route calculation failed after GPX import:', error);
-        if (onError) {
-          const errorMessage = error instanceof Error ? error.message : 'Failed to calculate route after GPX import.';
-          onError(errorMessage);
-        }
-        // Clear visual route elements if calc fails catastrophically
-        clearRouteLayer(map);
-        clearKilometerMarkersLayer(map);
-        // currentRoutePath is cleared by getRouteFromService on failure or clearRoute
-        setRouteDistance('');
-        setRouteDuration('');
-        setHasRoute(false);
       }
-    } else if (getWaypoints().length === 1) {
-      // Only one waypoint, ensure no route displayed
-      setRouteDistance('');
-      setRouteDuration('');
-      setHasRoute(false);
-      clearRouteLayer(map);
-      clearKilometerMarkersLayer(map);
-      // currentRoutePath already cleared or not applicable
-    }
-    // If 0 waypoints, state is already clear.
 
-    // 5. Finalize: Save to storage and take ONE snapshot
-    saveWaypointsToStorage(getWaypoints(), getDirectFlags());
-    historySnapshot(); 
-    Logger.info(`[routing.ts.importRouteFromGPX] Successfully imported ${getWaypoints().length} waypoints. Final snapshot taken.`);
+      // Save waypoints and take snapshot
+      saveWaypointsToStorage(getWaypoints(), getDirectFlags());
+      historySnapshot(); 
+      Logger.info(`[routing.ts.importRouteFromGPX] Successfully imported ${getWaypoints().length} waypoints.`);
+    } else {
+      Logger.error("[routing.ts.importRouteFromGPX] No valid data found in GPX file.");
+      if (onError) onError("No valid route or waypoint data found in the GPX file.");
+    }
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error during GPX import process';
