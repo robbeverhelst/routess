@@ -417,79 +417,42 @@ export function Sidebar({
                   {t('sidebar.zoomToRoute', currentLanguage)}
                 </Button>
 
-                {/* Route-related user actions - always visible */}
-                {!isLoggedIn ? (
-                  <Tooltip delayDuration={0}>
-                    <TooltipTrigger asChild>
-                      <span className="w-full">
-                        <Button
-                          variant="outline"
-                          onClick={isLoggedIn ? () => {} : undefined}
-                          disabled={!hasRoute || !isLoggedIn}
-                          className={`w-full h-10 justify-center rounded-md mb-2 ${
-                            !hasRoute || !isLoggedIn 
-                              ? 'opacity-50 cursor-not-allowed' 
-                              : 'hover:bg-gray-100 dark:hover:bg-gray-800'
-                          }`}
-                        >
-                          <Save className="w-4 h-4 mr-2" />
-                          {t('auth.feature.saveRoute', currentLanguage)}
-                        </Button>
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{t('auth.tooltip.loginRequired', currentLanguage)}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                ) : (
-                  <Button
-                    variant="outline"
-                    onClick={() => {}}
-                    disabled={!hasRoute}
-                    className={`w-full h-10 justify-center rounded-md mb-2 ${
-                      !hasRoute 
-                        ? 'opacity-50 cursor-not-allowed' 
-                        : 'hover:bg-gray-100 dark:hover:bg-gray-800'
-                    }`}
-                  >
-                    <Save className="w-4 h-4 mr-2" />
-                    {t('auth.feature.saveRoute', currentLanguage)}
-                  </Button>
-                )}
+                {/* Route-related user actions - coming soon */}
+                <Tooltip delayDuration={0}>
+                  <TooltipTrigger asChild>
+                    <span className="w-full">
+                      <Button
+                        variant="outline"
+                        disabled={true}
+                        className="w-full h-10 justify-center rounded-md mb-2 opacity-50 cursor-not-allowed"
+                      >
+                        <Save className="w-4 h-4 mr-2" />
+                        {t('auth.feature.saveRoute', currentLanguage)}
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Coming soon</p>
+                  </TooltipContent>
+                </Tooltip>
 
-                {!isLoggedIn ? (
-                  <Tooltip delayDuration={0}>
-                    <TooltipTrigger asChild>
-                      <span className="w-full">
-                        <Button
-                          variant="outline"
-                          onClick={isLoggedIn ? () => {} : undefined}
-                          disabled={!isLoggedIn}
-                          className={`w-full h-10 justify-center rounded-md mb-2 ${
-                            !isLoggedIn 
-                              ? 'opacity-50 cursor-not-allowed' 
-                              : 'hover:bg-gray-100 dark:hover:bg-gray-800'
-                          }`}
-                        >
-                          <BookMarked className="w-4 h-4 mr-2" />
-                          {t('auth.feature.myRoutes', currentLanguage)}
-                        </Button>
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{t('auth.tooltip.loginRequired', currentLanguage)}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                ) : (
-                  <Button
-                    variant="outline"
-                    onClick={() => {}}
-                    className="w-full h-10 justify-center rounded-md mb-2 hover:bg-gray-100 dark:hover:bg-gray-800"
-                  >
-                    <BookMarked className="w-4 h-4 mr-2" />
-                    {t('auth.feature.myRoutes', currentLanguage)}
-                  </Button>
-                )}
+                <Tooltip delayDuration={0}>
+                  <TooltipTrigger asChild>
+                    <span className="w-full">
+                      <Button
+                        variant="outline"
+                        disabled={true}
+                        className="w-full h-10 justify-center rounded-md mb-2 opacity-50 cursor-not-allowed"
+                      >
+                        <BookMarked className="w-4 h-4 mr-2" />
+                        {t('auth.feature.myRoutes', currentLanguage)}
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Coming soon</p>
+                  </TooltipContent>
+                </Tooltip>
               </TooltipProvider>
             </div>
             
