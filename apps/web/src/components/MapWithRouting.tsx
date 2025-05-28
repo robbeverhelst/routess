@@ -1329,7 +1329,7 @@ export default function MapWithRouting({
     if (mapRef.current) {
       const newStyle: MapStyle = currentMapStyle === 'standard' ? 'satellite' : 'standard';
       const mapStyleUrl = newStyle === 'satellite' 
-        ? 'mapbox://styles/mapbox/satellite-v9' 
+        ? 'mapbox://styles/mapbox/satellite-streets-v12' 
         : 'mapbox://styles/mapbox/standard';
       
       mapRef.current.setStyle(mapStyleUrl);
@@ -1462,7 +1462,7 @@ export default function MapWithRouting({
           bearing: effectiveInitialViewState.bearing ?? currentBearing,
         }}
         style={{ width, height }}
-        mapStyle={currentMapStyle === 'satellite' ? 'mapbox://styles/mapbox/satellite-v9' : 'mapbox://styles/mapbox/standard'}
+        mapStyle={currentMapStyle === 'satellite' ? 'mapbox://styles/mapbox/satellite-streets-v12' : 'mapbox://styles/mapbox/standard'}
         reuseMaps
         attributionControl={false}
         projection="globe"
