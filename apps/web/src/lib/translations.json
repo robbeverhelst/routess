@@ -1300,5 +1300,41 @@
     "nl": "W",
     "fr": "O",
     "de": "W"
+  },
+  "version.notification.updating": {
+    "en": "Updating App...",
+    "nl": "App bijwerken...",
+    "fr": "Mise à jour de l'app...",
+    "de": "App wird aktualisiert..."
+  },
+  "version.notification.clearingCache": {
+    "en": "Clearing cached data to ensure you get the latest features",
+    "nl": "Gecachte gegevens wissen om de nieuwste functies te krijgen",
+    "fr": "Effacement des données en cache pour obtenir les dernières fonctionnalités",
+    "de": "Cache-Daten werden gelöscht, um die neuesten Funktionen zu erhalten"
+  },
+  "version.notification.updated": {
+    "en": "App Updated!",
+    "nl": "App bijgewerkt!",
+    "fr": "App mise à jour !",
+    "de": "App aktualisiert!"
+  },
+  "version.notification.updatedAndRefreshed": {
+    "en": "App Updated & Refreshed!",
+    "nl": "App bijgewerkt & ververst!",
+    "fr": "App mise à jour et actualisée !",
+    "de": "App aktualisiert & aktualisiert!"
+  },
+  "version.notification.updatedWithWarning": {
+    "en": "App Updated",
+    "nl": "App bijgewerkt",
+    "fr": "App mise à jour",
+    "de": "App aktualisiert"
+  },
+  "version.notification.cacheWarning": {
+    "en": "(cache clear failed)",
+    "nl": "(cache wissen mislukt)",
+    "fr": "(échec de l'effacement du cache)",
+    "de": "(Cache-Löschung fehlgeschlagen)"
   }
 } 
