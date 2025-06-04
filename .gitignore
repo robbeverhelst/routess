@@ -29,4 +29,17 @@ dist-ssr
 .env.development
 .env.production
 
+# Test coverage
+coverage
+*.lcov
+
+# Testing
+.nyc_output
+
+# Temporary folders
+temp
+tmp
+*.tmp
+*.temp
+
 .turbo

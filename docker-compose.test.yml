@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  postgres-test:
+    image: postgres:15-alpine
+    container_name: maps-postgres-test
+    environment:
+      POSTGRES_DB: maps_test_db
+      POSTGRES_USER: maps_test_user
+      POSTGRES_PASSWORD: maps_test_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U maps_test_user -d maps_test_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  postgres_test_data: 
