@@ -26,6 +26,8 @@ interface SettingsModalProps {
   onLanguageChange: (lang: SupportedLanguage) => void;
   isLoggedIn: boolean;
   currentUser?: { name?: string; email?: string } | null;
+  showSunDirection: boolean;
+  onToggleSunDirection: (enabled: boolean) => void;
 }
 
 export function SettingsModal({ 
@@ -34,7 +36,9 @@ export function SettingsModal({
   currentLanguage,
   onLanguageChange,
   isLoggedIn,
-  currentUser
+  currentUser,
+  showSunDirection,
+  onToggleSunDirection
 }: SettingsModalProps) {
   const [activeSection, setActiveSection] = useState<string>('general');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -118,6 +122,26 @@ export function SettingsModal({
               <div className="text-xs text-gray-400">
                 {t('settings.comingSoon', currentLanguage)}
               </div>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+                Sun Direction Indicator
+              </h3>
+              <p className="text-xs text-gray-500 mb-3">
+                Show sun direction on the map to help plan your routes based on sunlight
+              </p>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showSunDirection}
+                  onChange={(e) => onToggleSunDirection(e.target.checked)}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
+                />
+                <span className="text-sm text-gray-700 dark:text-gray-300">
+                  Show sun direction indicator
+                </span>
+              </label>
             </div>
           </div>
         );

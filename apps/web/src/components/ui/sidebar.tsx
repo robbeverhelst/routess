@@ -70,6 +70,8 @@ interface SidebarProps {
   onOpenRouteGenerator: () => void;
   currentLanguage: SupportedLanguage;
   onLanguageChange: (lang: SupportedLanguage) => void;
+  showSunDirection: boolean;
+  onToggleSunDirection: (enabled: boolean) => void;
 }
 
 export function Sidebar({
@@ -98,7 +100,9 @@ export function Sidebar({
   onClearShareDisplay,
   onOpenRouteGenerator,
   currentLanguage,
-  onLanguageChange
+  onLanguageChange,
+  showSunDirection,
+  onToggleSunDirection
 }: SidebarProps) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<GoogleUser | null>(null);
@@ -672,6 +676,8 @@ export function Sidebar({
         onLanguageChange={onLanguageChange}
         isLoggedIn={isLoggedIn}
         currentUser={currentUser}
+        showSunDirection={showSunDirection}
+        onToggleSunDirection={onToggleSunDirection}
       />
     </>
   );

@@ -1228,5 +1228,41 @@
     "nl": "Stop locatie tracking",
     "fr": "Arrêter le suivi de localisation",
     "de": "Standortverfolgung stoppen"
+  },
+  "routeControls.tooltip.cycleTimeOfDayWithSun": {
+    "en": "Cycle time of day (currently {time}) - shows sun direction",
+    "nl": "Wissel tijdstip (nu {time}) - toont zonrichting",
+    "fr": "Changer l'heure (actuellement {time}) - affiche la direction du soleil",
+    "de": "Tageszeit wechseln (aktuell {time}) - zeigt Sonnenrichtung"
+  },
+  "sunPosition.direction": {
+    "en": "Sun direction",
+    "nl": "Zonrichting",
+    "fr": "Direction du soleil",
+    "de": "Sonnenrichtung"
+  },
+  "sunPosition.compass.north": {
+    "en": "N",
+    "nl": "N",
+    "fr": "N",
+    "de": "N"
+  },
+  "sunPosition.compass.south": {
+    "en": "S",
+    "nl": "Z",
+    "fr": "S",
+    "de": "S"
+  },
+  "sunPosition.compass.east": {
+    "en": "E",
+    "nl": "O",
+    "fr": "E",
+    "de": "O"
+  },
+  "sunPosition.compass.west": {
+    "en": "W",
+    "nl": "W",
+    "fr": "O",
+    "de": "W"
   }
 } 

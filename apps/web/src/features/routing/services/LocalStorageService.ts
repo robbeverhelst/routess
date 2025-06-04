@@ -250,10 +250,32 @@ export function loadMapStyleFromLocalStorage(): MapStyle {
 export function saveMapStyleToLocalStorage(style: MapStyle): void {
   try {
     localStorage.setItem(MAP_STYLE_KEY, style);
-    if (import.meta.env.DEV) {
-      Logger.info(`[LocalStorageService] Saved map style: ${style}`);
-    }
   } catch (error) {
     Logger.error('[LocalStorageService] Error saving map style to localStorage:', error);
+  }
+}
+
+// --- Sun Direction Setting --- //
+const SUN_DIRECTION_STORAGE_KEY = 'routingAppShowSunDirection';
+
+export function loadSunDirectionSettingFromLocalStorage(): boolean {
+  try {
+    const storedSetting = localStorage.getItem(SUN_DIRECTION_STORAGE_KEY);
+    if (storedSetting !== null) {
+      const isEnabled = JSON.parse(storedSetting);
+      return typeof isEnabled === 'boolean' ? isEnabled : false; // Default to false
+    }
+    return false; // Default to false when not set
+  } catch (error) {
+    Logger.error('[LocalStorageService] Error loading sun direction setting from localStorage:', error);
+    return false; // Default to false on error
+  }
+}
+
+export function saveSunDirectionSettingToLocalStorage(enabled: boolean): void {
+  try {
+    localStorage.setItem(SUN_DIRECTION_STORAGE_KEY, JSON.stringify(enabled));
+  } catch (error) {
+    Logger.error('[LocalStorageService] Error saving sun direction setting to localStorage:', error);
   }
 } 

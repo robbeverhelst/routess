@@ -42,6 +42,10 @@ import { Logger } from '@/lib/logger';
 import { RouteGeneratorModal, type RouteGenerationParams } from '@/components/ui/RouteGeneratorModal';
 import { type SupportedLanguage } from '@/lib/i18n'; // Added
 
+// Import solar calculation utilities
+import { SolarCalculator, type SolarPosition } from '@/lib/solar';
+import { SunPositionIndicator } from '@/components/ui/SunPositionIndicator';
+
 import { 
   loadMapLockStateFromLocalStorage, 
   saveMapLockStateToLocalStorage,
@@ -53,6 +57,8 @@ import {
   saveLanguageToLocalStorage,
   loadMapStyleFromLocalStorage,
   saveMapStyleToLocalStorage,
+  loadSunDirectionSettingFromLocalStorage,
+  saveSunDirectionSettingToLocalStorage,
   type MapStyle
 } from '@/features/routing/services/LocalStorageService';
 
@@ -230,6 +236,9 @@ export default function MapWithRouting({
   // Map style state
   const [currentMapStyle, setCurrentMapStyle] = useState<MapStyle>(loadMapStyleFromLocalStorage());
 
+  // Sun direction setting state
+  const [showSunDirection, setShowSunDirection] = useState<boolean>(loadSunDirectionSettingFromLocalStorage());
+
   const {
     location: userLocation,
     error: locationError,
@@ -286,6 +295,9 @@ export default function MapWithRouting({
 
   const [currentLanguage, setCurrentLanguage] = useState<SupportedLanguage>(loadLanguageFromLocalStorage());
 
+  // Sun position state
+  const [currentSunPosition, setCurrentSunPosition] = useState<SolarPosition | null>(null);
+
   // Effect to save language to localStorage when it changes
   useEffect(() => {
     saveLanguageToLocalStorage(currentLanguage);
@@ -300,6 +312,19 @@ export default function MapWithRouting({
       Logger.info('[MapWithRouting] Map automatically locked due to offline status');
     }
   }, [isOnline, isMapLocked]);
+
+  // Effect to calculate initial sun position when user location becomes available
+  useEffect(() => {
+    if (userLocation && !currentSunPosition) {
+      const sunPos = SolarCalculator.getSolarPositionForTimeOfDay(
+        currentLightPreset,
+        userLocation[1],
+        userLocation[0]
+      );
+      setCurrentSunPosition(sunPos);
+      Logger.info(`[MapWithRouting] Initial sun position calculated: azimuth=${sunPos.azimuth.toFixed(1)}°, elevation=${sunPos.elevation.toFixed(1)}°`);
+    }
+  }, [userLocation, currentLightPreset, currentSunPosition]);
 
   // Handler for the new onCopyShareLink in RouteControls
   const handleCopyShareLinkToClipboard = useCallback(() => {
@@ -1110,6 +1135,11 @@ export default function MapWithRouting({
     saveMapStyleToLocalStorage(currentMapStyle);
   }, [currentMapStyle]);
 
+  // Effect to save sun direction setting to localStorage when it changes
+  useEffect(() => {
+    saveSunDirectionSettingToLocalStorage(showSunDirection);
+  }, [showSunDirection]);
+
   // Effect to handle map style changes and re-apply custom styling
   useEffect(() => {
     if (!mapRef.current || !isMapReady) return;
@@ -1190,174 +1220,6 @@ export default function MapWithRouting({
       map.off('style.load', handleStyleLoad);
     };
   }, [currentMapStyle, currentLightPreset, isMapReady, hasRoute, userLocation, isMapLocked]);
-
-  // Effect to save map view state on moveend
-  useEffect(() => {
-    if (!mapRef.current) return;
-
-    const handleMoveEnd = () => {
-      if (mapRef.current) {
-        const currentView = {
-          longitude: mapRef.current.getCenter().lng,
-          latitude: mapRef.current.getCenter().lat,
-          zoom: mapRef.current.getZoom(),
-          bearing: mapRef.current.getBearing(),
-          pitch: mapRef.current.getPitch(),
-        };
-        saveLastMapViewToLocalStorage(currentView);
-      }
-    };
-
-    mapRef.current.on('moveend', handleMoveEnd);
-
-    return () => {
-      if (mapRef.current) {
-        mapRef.current.off('moveend', handleMoveEnd);
-      }
-    };
-  }, [isMapReady]); // Re-bind if map becomes ready again, though typically only once.
-
-  const handleToggleLock = useCallback(() => {
-    setIsMapLocked(prev => {
-      const newLockedState = !prev;
-      // The saving to localStorage is now handled by the useEffect listening to isMapLocked
-      if (newLockedState && mapRef.current && hasRoute) {
-        try {
-          Logger.info('[MapWithRouting] Map locked, zooming to full route view');
-          const currentRouteCoords = getCurrentRoutePath();
-          if (currentRouteCoords && currentRouteCoords.length > 0) {
-            zoomToRoute(mapRef.current, currentRouteCoords);
-          } else {
-            Logger.warn('[MapWithRouting] No route coordinates available for auto-zoom on lock');
-          }
-        } catch (err) {
-          Logger.error('[MapWithRouting] Error zooming to route on lock:', err);
-        }
-      }
-      return newLockedState;
-    });
-  }, [hasRoute]); // Removed setIsMapLocked from here if it was, save is handled by useEffect
-
-  const handleCycleTimeOfDay = useCallback(() => {
-    if (mapRef.current) {
-      const map = mapRef.current;
-      const currentIndex = lightPresetsOrder.indexOf(currentLightPreset);
-      const nextIndex = (currentIndex + 1) % lightPresetsOrder.length;
-      const nextLightPreset = lightPresetsOrder[nextIndex];
-      
-      setCurrentLightPreset(nextLightPreset);
-      map.setConfigProperty('basemap', 'lightPreset', nextLightPreset);
-
-      const isDarkMode = nextLightPreset === 'dusk' || nextLightPreset === 'night';
-
-      if (map.getLayer(ROUTE_LAYER_ID)) {
-        map.setPaintProperty(ROUTE_LAYER_ID, 'line-color', [
-          'case',
-          ['boolean', ['feature-state', 'hover'], false],
-          isDarkMode ? NIGHT_ROUTE_HOVER_COLOR : DAY_ROUTE_HOVER_COLOR,
-          isDarkMode ? NIGHT_ROUTE_COLOR : DAY_ROUTE_COLOR
-        ]);
-      }
-
-      if (map.getLayer(ROUTE_CASING_LAYER_ID)) {
-        map.setPaintProperty(ROUTE_CASING_LAYER_ID, 'line-color', isDarkMode ? NIGHT_ROUTE_CASING_COLOR : DAY_ROUTE_CASING_COLOR);
-        map.setPaintProperty(ROUTE_CASING_LAYER_ID, 'line-opacity', isDarkMode ? NIGHT_ROUTE_CASING_OPACITY : DAY_ROUTE_CASING_OPACITY);
-      }
-
-      // Update waypoint colors
-      if (map.getLayer(WAYPOINTS_LAYER_ID)) {
-        map.setPaintProperty(WAYPOINTS_LAYER_ID, 'circle-color', [
-          'match',
-          ['get', 'pointType'],
-          'start', isDarkMode ? NIGHT_WAYPOINT_START_COLOR : DAY_WAYPOINT_START_COLOR,
-          'end', isDarkMode ? NIGHT_WAYPOINT_END_COLOR : DAY_WAYPOINT_END_COLOR,
-          'direct', isDarkMode ? NIGHT_WAYPOINT_DIRECT_COLOR : DAY_WAYPOINT_DIRECT_COLOR,
-          isDarkMode ? NIGHT_WAYPOINT_DEFAULT_COLOR : DAY_WAYPOINT_DEFAULT_COLOR // intermediate/other
-        ]);
-        map.setPaintProperty(WAYPOINTS_LAYER_ID, 'circle-stroke-color', isDarkMode ? NIGHT_WAYPOINT_STROKE_COLOR : DAY_WAYPOINT_STROKE_COLOR);
-      }
-
-      // Update route arrow colors
-      if (map.getLayer(ROUTE_ARROWS_LAYER_ID)) {
-        map.setPaintProperty(ROUTE_ARROWS_LAYER_ID, 'text-color', isDarkMode ? NIGHT_ROUTE_ARROW_TEXT_COLOR : DAY_ROUTE_ARROW_TEXT_COLOR);
-        map.setPaintProperty(ROUTE_ARROWS_LAYER_ID, 'text-halo-color', isDarkMode ? NIGHT_ROUTE_ARROW_HALO_COLOR : DAY_ROUTE_ARROW_HALO_COLOR);
-      }
-    }
-  }, [currentLightPreset, mapRef]);
-  
-  // Effect to set initial light preset on map load, if map is ready before this effect runs.
-  // Or, if you prefer, set it once handleMapLoad has confirmed map readiness.
-  useEffect(() => {
-    if (mapRef.current && isMapReady) { // Ensure map is ready
-        // const map = mapRef.current; // map is already mapRef.current
-        // map.setConfigProperty('basemap', 'lightPreset', currentLightPreset); // Moved to handleMapLoad
-        // Also apply initial route colors based on the initial light preset // Moved to handleMapLoad
-        // const isDarkMode = currentLightPreset === 'dusk' || currentLightPreset === 'night';
-        // if (map.getLayer(ROUTE_LAYER_ID)) { ... } // Moved
-        // if (map.getLayer(ROUTE_CASING_LAYER_ID)) { ... } // Moved
-        // if (map.getLayer(WAYPOINTS_LAYER_ID)) { ... } // Moved
-        // if (map.getLayer(ROUTE_ARROWS_LAYER_ID)) { ... } // Moved
-    }
-  }, [isMapReady, currentLightPreset]); // Rerun if currentLightPreset changes (e.g. initial load) or map becomes ready
-
-  // Handler for cycling bearing
-  const handleCycleBearing = useCallback(() => {
-    if (mapRef.current) {
-      const map = mapRef.current;
-      // Get current bearing directly from state, as it should be one of the presets
-      const currentIndex = BEARING_PRESETS.indexOf(currentBearing);
-      // If currentBearing is somehow not in presets (e.g. map was panned manually), find closest or default to N
-      const safeCurrentIndex = currentIndex === -1 ? BEARING_PRESETS.indexOf(0) : currentIndex;
-      const nextIndex = (safeCurrentIndex + 1) % BEARING_PRESETS.length;
-      const nextBearing = BEARING_PRESETS[nextIndex];
-      map.flyTo({ bearing: nextBearing, duration: 500 }); // Smoothly fly to new bearing
-      setCurrentBearing(nextBearing);
-      Logger.info(`[MapWithRouting] Bearing set to: ${nextBearing}`);
-    }
-  }, [mapRef, currentBearing]); // Added currentBearing to dependencies
-
-  const handleZoomIn = useCallback(() => {
-    mapRef.current?.zoomIn();
-  }, []);
-
-  const handleZoomOut = useCallback(() => {
-    mapRef.current?.zoomOut();
-  }, []);
-
-  // Handler for toggling map style
-  const handleToggleMapStyle = useCallback(() => {
-    if (mapRef.current) {
-      const newStyle: MapStyle = currentMapStyle === 'standard' ? 'satellite' : 'standard';
-      const mapStyleUrl = newStyle === 'satellite' 
-        ? 'mapbox://styles/mapbox/satellite-streets-v12' 
-        : 'mapbox://styles/mapbox/standard';
-      
-      mapRef.current.setStyle(mapStyleUrl);
-      setCurrentMapStyle(newStyle);
-      
-      // For satellite view, ensure we maintain the space background
-      if (newStyle === 'satellite') {
-        // Wait for style to load, then configure atmosphere and projection
-        mapRef.current.once('style.load', () => {
-          if (mapRef.current) {
-            // Ensure globe projection is maintained
-            mapRef.current.setProjection('globe');
-            
-            // Configure atmosphere for space background
-            mapRef.current.setFog({
-              'color': 'rgb(186, 210, 235)', // Light blue
-              'high-color': 'rgb(36, 92, 223)', // Dark blue
-              'horizon-blend': 0.02,
-              'space-color': 'rgb(11, 11, 25)', // Dark space color
-              'star-intensity': 0.6
-            });
-          }
-        });
-      }
-      
-      Logger.info(`[MapWithRouting] Map style changed to: ${newStyle}`);
-    }
-  }, [currentMapStyle]);
 
   // Effect to manage the line-to-route display
   useEffect(() => {
@@ -1452,6 +1314,175 @@ export default function MapWithRouting({
     };
   }, [isMapLocked, userLocation, hasRoute, isRouteCoordsReady, isMapReady, mapRef]);
 
+  // Handler for toggling sun direction setting
+  const handleToggleSunDirection = useCallback((enabled: boolean) => {
+    setShowSunDirection(enabled);
+  }, []);
+
+  const handleToggleLock = useCallback(() => {
+    setIsMapLocked(prev => {
+      const newLockedState = !prev;
+      // The saving to localStorage is now handled by the useEffect listening to isMapLocked
+      if (newLockedState && mapRef.current && hasRoute) {
+        try {
+          Logger.info('[MapWithRouting] Map locked, zooming to full route view');
+          const currentRouteCoords = getCurrentRoutePath();
+          if (currentRouteCoords && currentRouteCoords.length > 0) {
+            zoomToRoute(mapRef.current, currentRouteCoords);
+          } else {
+            Logger.warn('[MapWithRouting] No route coordinates available for auto-zoom on lock');
+          }
+        } catch (err) {
+          Logger.error('[MapWithRouting] Error zooming to route on lock:', err);
+        }
+      }
+      return newLockedState;
+    });
+  }, [hasRoute]);
+
+  const handleCycleTimeOfDay = useCallback(() => {
+    if (mapRef.current) {
+      const map = mapRef.current;
+      const currentIndex = lightPresetsOrder.indexOf(currentLightPreset);
+      const nextIndex = (currentIndex + 1) % lightPresetsOrder.length;
+      const nextLightPreset = lightPresetsOrder[nextIndex];
+      
+      setCurrentLightPreset(nextLightPreset);
+      map.setConfigProperty('basemap', 'lightPreset', nextLightPreset);
+
+      // Calculate sun position if user location is available
+      if (userLocation) {
+        const sunPos = SolarCalculator.getSolarPositionForTimeOfDay(
+          nextLightPreset,
+          userLocation[1], // latitude
+          userLocation[0]  // longitude
+        );
+        setCurrentSunPosition(sunPos);
+        Logger.info(`[MapWithRouting] Sun position for ${nextLightPreset}: azimuth=${sunPos.azimuth.toFixed(1)}°, elevation=${sunPos.elevation.toFixed(1)}°`);
+      }
+
+      const isDarkMode = nextLightPreset === 'dusk' || nextLightPreset === 'night';
+
+      if (map.getLayer(ROUTE_LAYER_ID)) {
+        map.setPaintProperty(ROUTE_LAYER_ID, 'line-color', [
+          'case',
+          ['boolean', ['feature-state', 'hover'], false],
+          isDarkMode ? NIGHT_ROUTE_HOVER_COLOR : DAY_ROUTE_HOVER_COLOR,
+          isDarkMode ? NIGHT_ROUTE_COLOR : DAY_ROUTE_COLOR
+        ]);
+      }
+
+      if (map.getLayer(ROUTE_CASING_LAYER_ID)) {
+        map.setPaintProperty(ROUTE_CASING_LAYER_ID, 'line-color', isDarkMode ? NIGHT_ROUTE_CASING_COLOR : DAY_ROUTE_CASING_COLOR);
+        map.setPaintProperty(ROUTE_CASING_LAYER_ID, 'line-opacity', isDarkMode ? NIGHT_ROUTE_CASING_OPACITY : DAY_ROUTE_CASING_OPACITY);
+      }
+
+      // Update waypoint colors
+      if (map.getLayer(WAYPOINTS_LAYER_ID)) {
+        map.setPaintProperty(WAYPOINTS_LAYER_ID, 'circle-color', [
+          'match',
+          ['get', 'pointType'],
+          'start', isDarkMode ? NIGHT_WAYPOINT_START_COLOR : DAY_WAYPOINT_START_COLOR,
+          'end', isDarkMode ? NIGHT_WAYPOINT_END_COLOR : DAY_WAYPOINT_END_COLOR,
+          'direct', isDarkMode ? NIGHT_WAYPOINT_DIRECT_COLOR : DAY_WAYPOINT_DIRECT_COLOR,
+          isDarkMode ? NIGHT_WAYPOINT_DEFAULT_COLOR : DAY_WAYPOINT_DEFAULT_COLOR
+        ]);
+        map.setPaintProperty(WAYPOINTS_LAYER_ID, 'circle-stroke-color', isDarkMode ? NIGHT_WAYPOINT_STROKE_COLOR : DAY_WAYPOINT_STROKE_COLOR);
+      }
+
+      // Update route arrow colors
+      if (map.getLayer(ROUTE_ARROWS_LAYER_ID)) {
+        map.setPaintProperty(ROUTE_ARROWS_LAYER_ID, 'text-color', isDarkMode ? NIGHT_ROUTE_ARROW_TEXT_COLOR : DAY_ROUTE_ARROW_TEXT_COLOR);
+        map.setPaintProperty(ROUTE_ARROWS_LAYER_ID, 'text-halo-color', isDarkMode ? NIGHT_ROUTE_ARROW_HALO_COLOR : DAY_ROUTE_ARROW_HALO_COLOR);
+      }
+    }
+  }, [currentLightPreset, mapRef, userLocation]);
+
+  // Handler for cycling bearing
+  const handleCycleBearing = useCallback(() => {
+    if (mapRef.current) {
+      const map = mapRef.current;
+      // Get current bearing directly from state, as it should be one of the presets
+      const currentIndex = BEARING_PRESETS.indexOf(currentBearing);
+      // If currentBearing is somehow not in presets (e.g. map was panned manually), find closest or default to N
+      const safeCurrentIndex = currentIndex === -1 ? BEARING_PRESETS.indexOf(0) : currentIndex;
+      const nextIndex = (safeCurrentIndex + 1) % BEARING_PRESETS.length;
+      const nextBearing = BEARING_PRESETS[nextIndex];
+      map.flyTo({ bearing: nextBearing, duration: 500 }); // Smoothly fly to new bearing
+      setCurrentBearing(nextBearing);
+      Logger.info(`[MapWithRouting] Bearing set to: ${nextBearing}`);
+    }
+  }, [mapRef, currentBearing]);
+
+  const handleZoomIn = useCallback(() => {
+    mapRef.current?.zoomIn();
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    mapRef.current?.zoomOut();
+  }, []);
+
+  // Handler for toggling map style
+  const handleToggleMapStyle = useCallback(() => {
+    if (mapRef.current) {
+      const newStyle: MapStyle = currentMapStyle === 'standard' ? 'satellite' : 'standard';
+      const mapStyleUrl = newStyle === 'satellite' 
+        ? 'mapbox://styles/mapbox/satellite-streets-v12' 
+        : 'mapbox://styles/mapbox/standard';
+      
+      mapRef.current.setStyle(mapStyleUrl);
+      setCurrentMapStyle(newStyle);
+      
+      // For satellite view, ensure we maintain the space background
+      if (newStyle === 'satellite') {
+        // Wait for style to load, then configure atmosphere and projection
+        mapRef.current.once('style.load', () => {
+          if (mapRef.current) {
+            // Ensure globe projection is maintained
+            mapRef.current.setProjection('globe');
+            
+            // Configure atmosphere for space background
+            mapRef.current.setFog({
+              'color': 'rgb(186, 210, 235)', // Light blue
+              'high-color': 'rgb(36, 92, 223)', // Dark blue
+              'horizon-blend': 0.02,
+              'space-color': 'rgb(11, 11, 25)', // Dark space color
+              'star-intensity': 0.6
+            });
+          }
+        });
+      }
+      
+      Logger.info(`[MapWithRouting] Map style changed to: ${newStyle}`);
+    }
+  }, [currentMapStyle]);
+
+  // Effect to save map view state on moveend
+  useEffect(() => {
+    if (!mapRef.current) return;
+
+    const handleMoveEnd = () => {
+      if (mapRef.current) {
+        const currentView = {
+          longitude: mapRef.current.getCenter().lng,
+          latitude: mapRef.current.getCenter().lat,
+          zoom: mapRef.current.getZoom(),
+          bearing: mapRef.current.getBearing(),
+          pitch: mapRef.current.getPitch(),
+        };
+        saveLastMapViewToLocalStorage(currentView);
+      }
+    };
+
+    mapRef.current.on('moveend', handleMoveEnd);
+
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.off('moveend', handleMoveEnd);
+      }
+    };
+  }, [isMapReady]);
+
   return (
     <div className={`w-full h-full relative ${isMapLocked ? 'cursor-not-allowed' : ''}`}>
       <Map
@@ -1503,6 +1534,16 @@ export default function MapWithRouting({
         currentLanguage={currentLanguage}
       />
 
+      {/* Sun Position Indicator - Shows sun on map edges */}
+      {showSunDirection && currentSunPosition && userLocation && (
+        <SunPositionIndicator
+          azimuth={currentSunPosition.azimuth}
+          elevation={currentSunPosition.elevation}
+          isVisible={currentSunPosition.isUp}
+          timeOfDay={currentLightPreset}
+        />
+      )}
+
       {/* Mobile Controls Layout - REMOVING mt-12 from RouteControls wrapper */}
       <div className="absolute top-4 left-0 right-0 z-10 p-4 lg:hidden pointer-events-none">
         <div className="flex justify-between items-start w-full">
@@ -1536,6 +1577,7 @@ export default function MapWithRouting({
               onToggleMapStyle={handleToggleMapStyle}
               isLocationTracking={isLocationTracking}
               locationAccuracy={locationAccuracy}
+              userLocation={userLocation}
             />
           </div>
 
@@ -1576,6 +1618,8 @@ export default function MapWithRouting({
                 onOpenRouteGenerator={handleOpenRouteGeneratorModal}
                 currentLanguage={currentLanguage}
                 onLanguageChange={setCurrentLanguage}
+                showSunDirection={showSunDirection}
+                onToggleSunDirection={handleToggleSunDirection}
               />
             </div>
           </div>
@@ -1612,6 +1656,7 @@ export default function MapWithRouting({
             onToggleMapStyle={handleToggleMapStyle}
             isLocationTracking={isLocationTracking}
             locationAccuracy={locationAccuracy}
+            userLocation={userLocation}
           />
       </div>
 
@@ -1648,6 +1693,8 @@ export default function MapWithRouting({
           onOpenRouteGenerator={handleOpenRouteGeneratorModal}
           currentLanguage={currentLanguage}
           onLanguageChange={setCurrentLanguage}
+          showSunDirection={showSunDirection}
+          onToggleSunDirection={handleToggleSunDirection}
         />
       </div>
 

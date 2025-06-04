@@ -49,6 +49,7 @@ interface RouteControlsProps {
   // Enhanced location props
   isLocationTracking?: boolean; // New prop for tracking state
   locationAccuracy?: number | null; // New prop for location accuracy
+  userLocation?: [number, number] | null; // New prop for user location
 }
 
 // Helper to get the icon component based on TimeOfDay
@@ -106,7 +107,8 @@ export function RouteControls({
   onToggleMapStyle, // Destructure new prop
   // Enhanced location props
   isLocationTracking = false,
-  locationAccuracy
+  locationAccuracy,
+  userLocation,
 }: RouteControlsProps) {
   const TimeOfDayIcon = getIconForTimeOfDay(currentTimeOfDay);
   const { Icon: OrientationIcon, title: orientationTitle } = getOrientationIconAndLabel(currentBearing, currentLanguage);
@@ -310,16 +312,20 @@ export function RouteControls({
               variant="secondary"
               onClick={onCycleTimeOfDay}
               disabled={currentMapStyle === 'satellite'}
-              className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 disabled:opacity-50 h-10 w-10"
+              className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 disabled:opacity-50 h-10 w-10 relative"
             >
-              <TimeOfDayIcon size={18} />
+              <div className="relative">
+                <TimeOfDayIcon size={18} />
+              </div>
             </Button>
           </TooltipTrigger>
           <TooltipContent>
             <p>
               {currentMapStyle === 'satellite' 
                 ? t('routeControls.tooltip.timeOfDayDisabledSatellite', currentLanguage)
-                : t('routeControls.tooltip.cycleTimeOfDay', currentLanguage, { time: currentTimeOfDay })
+                : userLocation 
+                  ? t('routeControls.tooltip.cycleTimeOfDayWithSun', currentLanguage, { time: currentTimeOfDay })
+                  : t('routeControls.tooltip.cycleTimeOfDay', currentLanguage, { time: currentTimeOfDay })
               }
             </p>
           </TooltipContent>
