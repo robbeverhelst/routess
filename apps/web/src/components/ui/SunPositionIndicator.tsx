@@ -1,6 +1,5 @@
-import React from 'react';
-import { Sun } from 'lucide-react';
 import { DirectionalIndicator } from './DirectionalIndicator';
+import { Sun } from 'lucide-react';
 
 interface SunPositionIndicatorProps {
   azimuth: number;      // Sun direction in degrees (0° = North, 90° = East, etc.)
