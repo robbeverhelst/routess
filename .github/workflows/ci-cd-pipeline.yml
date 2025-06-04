@@ -71,6 +71,7 @@ jobs:
           echo "VITE_MAPBOX_ACCESS_TOKEN=${{ secrets.VITE_MAPBOX_ACCESS_TOKEN }}" > .env
           echo "VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}" >> .env
           echo "VITE_APP_URL=https://maps.robbeverhelst.com" >> .env
+          echo "VITE_APP_VERSION=${{ github.sha }}" >> .env
 
       - name: Build application with Turbo
         run: bunx turbo run build
@@ -207,6 +208,7 @@ jobs:
           echo "VITE_MAPBOX_ACCESS_TOKEN=${{ secrets.VITE_MAPBOX_ACCESS_TOKEN }}" > .env
           echo "VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}" >> .env
           echo "VITE_APP_URL=https://maps.robbeverhelst.be" >> .env
+          echo "VITE_APP_VERSION=${{ needs.release.outputs.version }}" >> .env
           
       - name: Extract metadata for Web Docker
         id: metadata-web
@@ -319,6 +321,7 @@ jobs:
           VITE_MAPBOX_ACCESS_TOKEN: ${{ secrets.VITE_MAPBOX_ACCESS_TOKEN }}
           VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
           VITE_APP_URL: "https://maps.robbeverhelst.be"
+          VITE_APP_VERSION: ${{ needs.release.outputs.version }}
           
       - name: Pulumi Update
         uses: pulumi/actions@v6
@@ -338,6 +341,7 @@ jobs:
           VITE_MAPBOX_ACCESS_TOKEN: ${{ secrets.VITE_MAPBOX_ACCESS_TOKEN }}
           VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
           VITE_APP_URL: "https://maps.robbeverhelst.be"
+          VITE_APP_VERSION: ${{ needs.release.outputs.version }}
           
       - name: Clean up old resources (if any)
         run: |

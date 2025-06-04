@@ -1127,6 +1127,42 @@
     "fr": "Bientôt disponible...",
     "de": "Demnächst verfügbar..."
   },
+  "settings.about": {
+    "en": "About",
+    "nl": "Over",
+    "fr": "À propos",
+    "de": "Über"
+  },
+  "settings.aboutDesc": {
+    "en": "App version and information",
+    "nl": "App versie en informatie",
+    "fr": "Version de l'app et informations",
+    "de": "App-Version und Informationen"
+  },
+  "settings.version": {
+    "en": "Version",
+    "nl": "Versie",
+    "fr": "Version",
+    "de": "Version"
+  },
+  "settings.versionDesc": {
+    "en": "Current application version",
+    "nl": "Huidige applicatieversie",
+    "fr": "Version actuelle de l'application",
+    "de": "Aktuelle Anwendungsversion"
+  },
+  "settings.versionChanged": {
+    "en": "App updated to new version",
+    "nl": "App bijgewerkt naar nieuwe versie",
+    "fr": "App mise à jour vers une nouvelle version",
+    "de": "App auf neue Version aktualisiert"
+  },
+  "settings.previousVersion": {
+    "en": "Previous version",
+    "nl": "Vorige versie",
+    "fr": "Version précédente",
+    "de": "Vorherige Version"
+  },
   "location.tracking.started": {
     "en": "Location tracking started",
     "nl": "Locatie tracking gestart",

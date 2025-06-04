@@ -133,6 +133,10 @@ const webDeployment = new apps.v1.Deployment(webDeploymentName, {
                             value: process.env.VITE_APP_URL || "https://maps.robbeverhelst.be",
                         },
                         {
+                            name: "VITE_APP_VERSION",
+                            value: process.env.VITE_APP_VERSION || appVersion,
+                        },
+                        {
                             name: "NODE_ENV",
                             value: "production",
                         }

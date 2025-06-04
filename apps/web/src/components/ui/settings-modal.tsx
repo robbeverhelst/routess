@@ -11,13 +11,21 @@ import { CacheManager } from '@/components/ui/cache-manager';
 import { t } from '@/lib/i18n';
 import type { SupportedLanguage } from '@/lib/i18n';
 import { 
+  getVersionDisplay, 
+  getStoredVersionInfo, 
+  checkVersionChange,
+  formatVersion
+} from '@/lib/version';
+import { 
   Settings,
   Database,
   Palette,
   User,
+  Info,
   ChevronDown,
   ChevronUp
 } from 'lucide-react';
+import React from 'react';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -43,6 +51,13 @@ export function SettingsModal({
   const [activeSection, setActiveSection] = useState<string>('general');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
+  // Check for version changes when modal opens
+  React.useEffect(() => {
+    if (isOpen) {
+      checkVersionChange();
+    }
+  }, [isOpen]);
+
   const settingsSections = [
     {
       id: 'general',
@@ -61,6 +76,12 @@ export function SettingsModal({
       label: t('settings.appearance', currentLanguage),
       icon: Palette,
       description: t('settings.appearanceDesc', currentLanguage)
+    },
+    {
+      id: 'about',
+      label: t('settings.about', currentLanguage),
+      icon: Info,
+      description: t('settings.aboutDesc', currentLanguage)
     }
   ];
 
@@ -242,6 +263,48 @@ export function SettingsModal({
               </p>
               <div className="text-xs text-gray-400">
                 {t('settings.comingSoon', currentLanguage)}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'about':
+        return (
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+                {t('settings.version', currentLanguage)}
+              </h3>
+              <p className="text-xs text-gray-500 mb-3">
+                {t('settings.versionDesc', currentLanguage)}
+              </p>
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+                <div className="text-sm font-medium text-gray-900 dark:text-white">
+                  {getVersionDisplay()}
+                </div>
+                {(() => {
+                  const versionInfo = getStoredVersionInfo();
+                  if (versionInfo?.previous) {
+                    return (
+                      <div className="text-xs text-gray-500 mt-1">
+                        {t('settings.previousVersion', currentLanguage)}: {formatVersion(versionInfo.previous)}
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+                Maps Application
+              </h3>
+              <p className="text-xs text-gray-500 mb-3">
+                A modern route planning and navigation tool
+              </p>
+              <div className="text-xs text-gray-400">
+                Built with React, TypeScript, and Mapbox
               </div>
             </div>
           </div>
