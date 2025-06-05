@@ -1541,6 +1541,7 @@ export default function MapWithRouting({
           elevation={currentSunPosition.elevation}
           isVisible={currentSunPosition.isUp}
           timeOfDay={currentLightPreset}
+          mapBearing={currentBearing}
         />
       )}
 

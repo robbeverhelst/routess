@@ -317,7 +317,7 @@ export function SettingsModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] sm:max-h-[80vh] overflow-hidden p-0 w-[95vw] sm:w-full">
+      <DialogContent className="max-w-4xl max-h-[90vh] sm:max-h-[80vh] p-0 w-[95vw] sm:w-full">
         <DialogHeader className="px-4 sm:px-6 py-4 border-b border-gray-100 dark:border-gray-800">
           <DialogTitle className="flex items-center gap-2">
             <Settings className="h-5 w-5" />
@@ -328,7 +328,7 @@ export function SettingsModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col sm:flex-row h-[70vh] sm:h-[60vh]">
+        <div className="flex flex-col sm:flex-row min-h-[60vh] max-h-[70vh]">
           {/* Sidebar */}
           <div className="w-full sm:w-64 border-b sm:border-b-0 sm:border-r border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50">
             <div className="p-4">

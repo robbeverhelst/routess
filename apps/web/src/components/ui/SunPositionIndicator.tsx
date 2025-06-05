@@ -6,20 +6,24 @@ interface SunPositionIndicatorProps {
   elevation: number;    // Sun height above horizon (-90° to +90°)
   isVisible: boolean;   // Whether sun is above horizon
   timeOfDay: 'dawn' | 'day' | 'dusk' | 'night';
+  mapBearing?: number;  // Current map bearing in degrees (0° = North up)
 }
 
 export function SunPositionIndicator({ 
   azimuth, 
   elevation, 
   isVisible, 
-  timeOfDay 
+  timeOfDay,
+  mapBearing = 0 // Default to 0 if not provided
 }: SunPositionIndicatorProps) {
   if (!isVisible || elevation <= 0) {
     return null;
   }
 
-  // Calculate position on map edge based on azimuth
-  const normalizedAzimuth = ((azimuth % 360) + 360) % 360;
+  // Adjust azimuth for map bearing - subtract map bearing to rotate sun with map
+  // When map bearing is 90° (East up), sun at 90° should appear at top (North position on screen)
+  const adjustedAzimuth = azimuth - mapBearing;
+  const normalizedAzimuth = ((adjustedAzimuth % 360) + 360) % 360;
   
   // Calculate which edge and position
   let position: { top?: string; bottom?: string; left?: string; right?: string };
