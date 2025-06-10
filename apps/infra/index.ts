@@ -62,30 +62,30 @@ if (process.env.GHCR_TOKEN) {
 }
 
 // Create auth string for GitHub Container Registry
-// const authString = pulumi.interpolate`${githubUsername}:${githubToken}`.apply(
-//     s => Buffer.from(s).toString('base64')
-// );
+const authString = pulumi.interpolate`${githubUsername}:${githubToken}`.apply(
+    s => Buffer.from(s).toString('base64')
+);
 
 // Create Docker config JSON
-// const dockerConfigJson = authString.apply(auth => JSON.stringify({
-//     auths: {
-//         "ghcr.io": {
-//             auth: auth
-//         }
-//     }
-// }));
+const dockerConfigJson = authString.apply(auth => JSON.stringify({
+    auths: {
+        "ghcr.io": {
+            auth: auth
+        }
+    }
+}));
 
 // Create a Docker registry secret for GitHub Container Registry
-// const dockerSecret = new core.v1.Secret(`${appName}-ghcr-secret`, {
-//     metadata: {
-//         name: "ghcr-pull-secret",
-//         namespace: namespace,
-//     },
-//     type: "kubernetes.io/dockerconfigjson",
-//     stringData: {
-//         ".dockerconfigjson": dockerConfigJson,
-//     },
-// }, { provider, dependsOn: ns });
+const dockerSecret = new core.v1.Secret(`${appName}-ghcr-secret`, {
+    metadata: {
+        name: "ghcr-pull-secret",
+        namespace: namespace,
+    },
+    type: "kubernetes.io/dockerconfigjson",
+    stringData: {
+        ".dockerconfigjson": dockerConfigJson,
+    },
+}, { provider, dependsOn: ns });
 
 // Create simple deployment names
 const webDeploymentName = `${appName}-web`;
@@ -153,11 +153,11 @@ const webDeployment = new apps.v1.Deployment(webDeploymentName, {
                     },
                     imagePullPolicy: "Always",
                 }],
-                // imagePullSecrets: [{ name: "ghcr-pull-secret" }], // Commented out for public images
+                imagePullSecrets: [{ name: "ghcr-pull-secret" }],
             },
         },
     },
-}, { provider, dependsOn: [ns] }); // Removed dockerSecret dependency for public images
+}, { provider, dependsOn: [ns, dockerSecret] });
 
 // Create a Kubernetes deployment for the API
 const apiDeployment = new apps.v1.Deployment(apiDeploymentName, {
@@ -225,11 +225,11 @@ const apiDeployment = new apps.v1.Deployment(apiDeploymentName, {
                         periodSeconds: 5,
                     },
                 }],
-                // imagePullSecrets: [{ name: "ghcr-pull-secret" }], // Commented out for public images
+                imagePullSecrets: [{ name: "ghcr-pull-secret" }],
             },
         },
     },
-}, { provider, dependsOn: [ns] }); // Removed dockerSecret dependency for public images
+}, { provider, dependsOn: [ns, dockerSecret] });
 
 // Create a Kubernetes service to expose the web deployment
 const webService = new core.v1.Service(`${appName}-web-service`, {
