@@ -24,7 +24,7 @@
   },
   "devDependencies": {
     "turbo": "^2.5.3",
-    "@types/node": "^22.15.18",
+    "@types/node": "^24.0.1",
     "typescript": "~5.8.3",
     "semantic-release": "^24.2.4",
     "@semantic-release/commit-analyzer": "^13.0.0",
@@ -32,5 +32,8 @@
     "@semantic-release/npm": "^12.0.1",
     "@semantic-release/github": "^11.0.0",
     "@semantic-release/git": "^10.0.1"
+  },
+  "overrides": {
+    "brace-expansion": "^2.0.1"
   }
 }
