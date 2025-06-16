@@ -607,7 +607,7 @@ export function Sidebar({
               
               {/* Centered "Made by" text */}
               <p className="text-center flex-shrink-0 flex items-center">
-                {t('footer.madeBy', currentLanguage)} <a href="https://github.com/RobbeVerhelst" target="_blank" rel="noopener noreferrer" className="hover:underline">RobbeVerhelst</a>
+                {t('footer.madeBy', currentLanguage)} <a href={currentLanguage === 'nl' ? 'https://robbeverhelst.be' : 'https://robbeverhelst.com'} target="_blank" rel="noopener noreferrer" className="hover:underline">RobbeVerhelst</a>
               </p>
               
               {/* Right-aligned language popover */}

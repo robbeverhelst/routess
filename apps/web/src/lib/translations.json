@@ -1336,5 +1336,35 @@
     "nl": "(cache wissen mislukt)",
     "fr": "(échec de l'effacement du cache)",
     "de": "(Cache-Löschung fehlgeschlagen)"
+  },
+  "settings.developer": {
+    "en": "Developer",
+    "nl": "Ontwikkelaar",
+    "fr": "Développeur",
+    "de": "Entwickler"
+  },
+  "settings.developerDesc": {
+    "en": "Created by RobbeVerhelst",
+    "nl": "Gemaakt door RobbeVerhelst",
+    "fr": "Créé par RobbeVerhelst",
+    "de": "Erstellt von RobbeVerhelst"
+  },
+  "settings.madeBy": {
+    "en": "Made by",
+    "nl": "Gemaakt door",
+    "fr": "Créé par",
+    "de": "Erstellt von"
+  },
+  "settings.visitWebsite": {
+    "en": "Visit Website",
+    "nl": "Bezoek Website",
+    "fr": "Visiter le Site Web",
+    "de": "Website Besuchen"
+  },
+  "settings.viewGithub": {
+    "en": "View on GitHub",
+    "nl": "Bekijk op GitHub",
+    "fr": "Voir sur GitHub",
+    "de": "Auf GitHub Anzeigen"
   }
 } 

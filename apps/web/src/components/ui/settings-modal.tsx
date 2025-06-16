@@ -307,6 +307,35 @@ export function SettingsModal({
                 Built with React, TypeScript, and Mapbox
               </div>
             </div>
+
+            <div>
+              <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+                {t('settings.developer', currentLanguage)}
+              </h3>
+              <p className="text-xs text-gray-500 mb-3">
+                {t('settings.developerDesc', currentLanguage)}
+              </p>
+              <div className="flex flex-col gap-2">
+                <div className="flex flex-wrap gap-2">
+                  <a
+                    href={currentLanguage === 'nl' ? 'https://robbeverhelst.be' : 'https://robbeverhelst.com'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-md hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+                  >
+                    {t('settings.visitWebsite', currentLanguage)}
+                  </a>
+                  <a
+                    href="https://github.com/robbeverhelst"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 text-xs bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    {t('settings.viewGithub', currentLanguage)}
+                  </a>
+                </div>
+              </div>
+            </div>
           </div>
         );
 
