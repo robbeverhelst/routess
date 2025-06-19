@@ -28,7 +28,7 @@
     "country-flag-icons": "^1.5.19",
     "google-auth-library": "^10.1.0",
     "googleapis": "^150.0.1",
-    "lucide-react": "^0.515.0",
+    "lucide-react": "^0.518.0",
     "mapbox-gl": "^3.12.0",
     "pako": "^2.1.0",
     "react": "^19.1.0",
