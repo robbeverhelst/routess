@@ -29,6 +29,7 @@ const postgresConfig = {
 // Create a Kubernetes provider instance that uses kubeconfig from Pulumi configuration
 const provider = new Provider("k8s-provider", {
   kubeconfig: config.requireSecret("kubeconfig"),
+  enableServerSideApply: true,
 });
 
 // Create a Kubernetes namespace

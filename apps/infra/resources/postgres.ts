@@ -59,20 +59,6 @@ export class PostgresResource extends ComponentResource {
         provider: config.provider,
         dependsOn: config.dependencies,
         parent: this,
-        transformations: [
-          (args: any) => {
-            if (args.type === "kubernetes:apps/v1:StatefulSet") {
-              return {
-                ...args,
-                opts: {
-                  ...args.opts,
-                  serverSideApply: true,
-                },
-              };
-            }
-            return undefined;
-          },
-        ],
       },
     );
 
