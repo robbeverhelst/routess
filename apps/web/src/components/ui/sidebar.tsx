@@ -75,6 +75,8 @@ interface SidebarProps {
   onLanguageChange: (lang: SupportedLanguage) => void;
   showSunDirection: boolean;
   onToggleSunDirection: (enabled: boolean) => void;
+  onOpenRouteLibrary: () => void;
+  onSaveRoute: () => void;
 }
 
 export function Sidebar({
@@ -106,6 +108,8 @@ export function Sidebar({
   onLanguageChange,
   showSunDirection,
   onToggleSunDirection,
+  onOpenRouteLibrary,
+  onSaveRoute,
 }: SidebarProps) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<ApiUser | null>(null);
@@ -484,8 +488,9 @@ export function Sidebar({
                     <span className="w-full">
                       <Button
                         variant="outline"
-                        disabled={true}
-                        className="w-full h-10 justify-center rounded-md mb-2 opacity-50 cursor-not-allowed"
+                        disabled={!isLoggedIn || !hasRoute}
+                        onClick={onSaveRoute}
+                        className="w-full h-10 justify-center rounded-md mb-2"
                       >
                         <Save className="w-4 h-4 mr-2" />
                         {t("auth.feature.saveRoute", currentLanguage)}
@@ -493,7 +498,13 @@ export function Sidebar({
                     </span>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Coming soon</p>
+                    <p>
+                      {!isLoggedIn
+                        ? t("auth.loginRequired", currentLanguage)
+                        : !hasRoute
+                          ? t("routeControls.tooltip.noRoute", currentLanguage)
+                          : t("routeControls.tooltip.saveRoute", currentLanguage)}
+                    </p>
                   </TooltipContent>
                 </Tooltip>
 
@@ -502,8 +513,9 @@ export function Sidebar({
                     <span className="w-full">
                       <Button
                         variant="outline"
-                        disabled={true}
-                        className="w-full h-10 justify-center rounded-md mb-2 opacity-50 cursor-not-allowed"
+                        disabled={!isLoggedIn}
+                        onClick={onOpenRouteLibrary}
+                        className="w-full h-10 justify-center rounded-md mb-2"
                       >
                         <BookMarked className="w-4 h-4 mr-2" />
                         {t("auth.feature.myRoutes", currentLanguage)}
@@ -511,7 +523,11 @@ export function Sidebar({
                     </span>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Coming soon</p>
+                    <p>
+                      {isLoggedIn
+                        ? t("routeLibrary.tooltip", currentLanguage)
+                        : t("auth.loginRequired", currentLanguage)}
+                    </p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>

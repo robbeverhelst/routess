@@ -49,7 +49,12 @@ import {
   RouteGeneratorModal,
   type RouteGenerationParams,
 } from "@/components/ui/RouteGeneratorModal";
+import { SaveRouteModal } from "@/components/modals/SaveRouteModal";
+import { RouteLibraryModal } from "@/components/modals/RouteLibraryModal";
+import { LoginModal } from "@/components/auth/login-modal";
 import { type SupportedLanguage } from "@/lib/i18n"; // Added
+import { type ApiRoute, type Waypoint, apiService } from "@/lib/api";
+import { googleAuth } from "@/lib/google-auth";
 
 // Import solar calculation utilities
 import { SolarCalculator, type SolarPosition } from "@/lib/solar";
@@ -322,6 +327,11 @@ export default function MapWithRouting({
 
   // State for the new Route Generator Modal
   const [isRouteGeneratorModalOpen, setIsRouteGeneratorModalOpen] = useState(false);
+
+  // State for Save Route and Route Library modals
+  const [isSaveRouteModalOpen, setIsSaveRouteModalOpen] = useState(false);
+  const [isRouteLibraryModalOpen, setIsRouteLibraryModalOpen] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
   const [currentLanguage, setCurrentLanguage] = useState<SupportedLanguage>(
     loadLanguageFromLocalStorage(),
@@ -824,6 +834,71 @@ export default function MapWithRouting({
       setIsRouteGeneratorModalOpen(false);
     }
   }, [isGeneratingRoute]);
+
+  // --- Handlers for Save Route Modal ---
+  const handleOpenSaveRouteModal = useCallback(() => {
+    if (googleAuth.isSignedIn()) {
+      setIsSaveRouteModalOpen(true);
+    } else {
+      setIsLoginModalOpen(true);
+    }
+  }, []);
+
+  const handleCloseSaveRouteModal = useCallback(() => {
+    setIsSaveRouteModalOpen(false);
+  }, []);
+
+  const handleLoginSuccess = useCallback(() => {
+    setIsLoginModalOpen(false);
+    // Refresh the API service token after login
+    apiService.refreshToken();
+    // After successful login, open the save route modal
+    setIsSaveRouteModalOpen(true);
+  }, []);
+
+  // --- Handlers for Route Library Modal ---
+  const handleOpenRouteLibraryModal = useCallback(() => {
+    if (googleAuth.isSignedIn()) {
+      setIsRouteLibraryModalOpen(true);
+    } else {
+      setIsLoginModalOpen(true);
+    }
+  }, []);
+
+  const handleCloseRouteLibraryModal = useCallback(() => {
+    setIsRouteLibraryModalOpen(false);
+  }, []);
+
+  const handleLoadRoute = useCallback(
+    (route: ApiRoute) => {
+      if (!mapRef.current) return;
+
+      try {
+        // Convert API route waypoints to the format expected by setRouteData
+        const waypoints = route.waypoints.map(
+          (wp: Waypoint) => [wp.lng, wp.lat] as [number, number],
+        );
+        const directFlags = route.waypoints.map((wp: Waypoint) => wp.type === "direct");
+
+        setRouteData(
+          mapRef.current,
+          MAPBOX_TOKEN,
+          waypoints,
+          directFlags,
+          setRouteDistance,
+          setRouteDuration,
+          setHasRoute,
+          setIsRouteCoordsReady,
+        );
+        setIsRouteLibraryModalOpen(false);
+
+        Logger.info("[MapWithRouting] Loaded route from library:", route.name);
+      } catch (error) {
+        Logger.error("[MapWithRouting] Failed to load route:", error);
+      }
+    },
+    [setHasRoute, setRouteDistance, setRouteDuration, setIsRouteCoordsReady],
+  );
 
   const handleGenerateCustomRoute = useCallback(
     async (params: RouteGenerationParams) => {
@@ -1727,6 +1802,38 @@ export default function MapWithRouting({
         currentLanguage={currentLanguage}
       />
 
+      {/* Save Route Modal */}
+      <SaveRouteModal
+        isOpen={isSaveRouteModalOpen}
+        onClose={handleCloseSaveRouteModal}
+        waypoints={getWaypoints().map((wp) => ({
+          lat: wp[1],
+          lng: wp[0],
+          type: getDirectFlags()[getWaypoints().indexOf(wp)] ? "direct" : "routed",
+        }))}
+        distance={routeDistance ? parseFloat(routeDistance.split(" ")[0]) : undefined}
+        currentLanguage={currentLanguage}
+        onSuccess={() => {
+          // Optionally show success notification or refresh route library
+        }}
+      />
+
+      {/* Route Library Modal */}
+      <RouteLibraryModal
+        isOpen={isRouteLibraryModalOpen}
+        onClose={handleCloseRouteLibraryModal}
+        onLoadRoute={handleLoadRoute}
+        currentLanguage={currentLanguage}
+      />
+
+      {/* Login Modal */}
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onOpenChange={setIsLoginModalOpen}
+        onLoginSuccess={handleLoginSuccess}
+        currentLanguage={currentLanguage}
+      />
+
       {/* Sun Position Indicator - Shows sun on map edges */}
       {showSunDirection && currentSunPosition && userLocation && (
         <SunPositionIndicator
@@ -1765,6 +1872,7 @@ export default function MapWithRouting({
               onZoomOut={handleZoomOut}
               onCopyShareLink={handleCopyShareLinkToClipboard}
               onZoomToRoute={handleZoomToRoute}
+              onSaveRoute={handleOpenSaveRouteModal}
               currentLanguage={currentLanguage}
               isOffline={!isOnline}
               currentMapStyle={currentMapStyle}
@@ -1816,6 +1924,8 @@ export default function MapWithRouting({
                 onLanguageChange={setCurrentLanguage}
                 showSunDirection={showSunDirection}
                 onToggleSunDirection={handleToggleSunDirection}
+                onOpenRouteLibrary={handleOpenRouteLibraryModal}
+                onSaveRoute={handleOpenSaveRouteModal}
               />
             </div>
           </div>
@@ -1846,6 +1956,7 @@ export default function MapWithRouting({
           onZoomOut={handleZoomOut}
           onCopyShareLink={handleCopyShareLinkToClipboard}
           onZoomToRoute={handleZoomToRoute}
+          onSaveRoute={handleOpenSaveRouteModal}
           currentLanguage={currentLanguage}
           isOffline={!isOnline}
           currentMapStyle={currentMapStyle}
@@ -1891,6 +2002,8 @@ export default function MapWithRouting({
           onLanguageChange={setCurrentLanguage}
           showSunDirection={showSunDirection}
           onToggleSunDirection={handleToggleSunDirection}
+          onOpenRouteLibrary={handleOpenRouteLibraryModal}
+          onSaveRoute={handleOpenSaveRouteModal}
         />
       </div>
 

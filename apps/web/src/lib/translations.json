@@ -1372,5 +1372,161 @@
     "nl": "Bekijk op GitHub",
     "fr": "Voir sur GitHub",
     "de": "Auf GitHub Anzeigen"
+  },
+  "routeControls.tooltip.saveRoute": {
+    "en": "Save current route",
+    "nl": "Huidige route opslaan",
+    "fr": "Enregistrer l'itinéraire actuel",
+    "de": "Aktuelle Route speichern"
+  },
+  "saveRoute.title": {
+    "en": "Save Route",
+    "nl": "Route Opslaan",
+    "fr": "Enregistrer l'Itinéraire",
+    "de": "Route Speichern"
+  },
+  "saveRoute.description": {
+    "en": "Save your route to access it later from any device",
+    "nl": "Sla je route op om er later vanaf elk apparaat toegang toe te hebben",
+    "fr": "Sauvegardez votre itinéraire pour y accéder plus tard depuis n'importe quel appareil",
+    "de": "Speichern Sie Ihre Route, um später von jedem Gerät darauf zugreifen zu können"
+  },
+  "saveRoute.fields.name": {
+    "en": "Route Name",
+    "nl": "Route Naam",
+    "fr": "Nom de l'Itinéraire",
+    "de": "Routenname"
+  },
+  "saveRoute.fields.description": {
+    "en": "Description",
+    "nl": "Beschrijving",
+    "fr": "Description",
+    "de": "Beschreibung"
+  },
+  "saveRoute.placeholders.name": {
+    "en": "Enter a name for your route",
+    "nl": "Voer een naam in voor je route",
+    "fr": "Entrez un nom pour votre itinéraire",
+    "de": "Geben Sie einen Namen für Ihre Route ein"
+  },
+  "saveRoute.placeholders.description": {
+    "en": "Optional description or notes",
+    "nl": "Optionele beschrijving of notities",
+    "fr": "Description ou notes optionnelles",
+    "de": "Optionale Beschreibung oder Notizen"
+  },
+  "saveRoute.error.nameRequired": {
+    "en": "Route name is required",
+    "nl": "Route naam is vereist",
+    "fr": "Le nom de l'itinéraire est requis",
+    "de": "Routenname ist erforderlich"
+  },
+  "saveRoute.error.saveFailed": {
+    "en": "Failed to save route. Please try again.",
+    "nl": "Route opslaan mislukt. Probeer opnieuw.",
+    "fr": "Échec de la sauvegarde de l'itinéraire. Veuillez réessayer.",
+    "de": "Route konnte nicht gespeichert werden. Bitte versuchen Sie es erneut."
+  },
+  "saveRoute.info.distance": {
+    "en": "Distance: {distance}",
+    "nl": "Afstand: {distance}",
+    "fr": "Distance : {distance}",
+    "de": "Entfernung: {distance}"
+  },
+  "saveRoute.saving": {
+    "en": "Saving...",
+    "nl": "Opslaan...",
+    "fr": "Sauvegarde...",
+    "de": "Speichern..."
+  },
+  "saveRoute.save": {
+    "en": "Save",
+    "nl": "Opslaan",
+    "fr": "Enregistrer",
+    "de": "Speichern"
+  },
+  "routeLibrary.title": {
+    "en": "My Routes",
+    "nl": "Mijn Routes",
+    "fr": "Mes Itinéraires",
+    "de": "Meine Routen"
+  },
+  "routeLibrary.description": {
+    "en": "Manage and load your saved routes",
+    "nl": "Beheer en laad je opgeslagen routes",
+    "fr": "Gérez et chargez vos itinéraires sauvegardés",
+    "de": "Verwalten und laden Sie Ihre gespeicherten Routen"
+  },
+  "routeLibrary.searchPlaceholder": {
+    "en": "Search routes...",
+    "nl": "Zoek routes...",
+    "fr": "Rechercher des itinéraires...",
+    "de": "Routen suchen..."
+  },
+  "routeLibrary.error.loadFailed": {
+    "en": "Failed to load routes. Please try again.",
+    "nl": "Routes laden mislukt. Probeer opnieuw.",
+    "fr": "Échec du chargement des itinéraires. Veuillez réessayer.",
+    "de": "Routen konnten nicht geladen werden. Bitte versuchen Sie es erneut."
+  },
+  "routeLibrary.error.deleteFailed": {
+    "en": "Failed to delete route. Please try again.",
+    "nl": "Route verwijderen mislukt. Probeer opnieuw.",
+    "fr": "Échec de la suppression de l'itinéraire. Veuillez réessayer.",
+    "de": "Route konnte nicht gelöscht werden. Bitte versuchen Sie es erneut."
+  },
+  "routeLibrary.noResults": {
+    "en": "No routes found matching your search",
+    "nl": "Geen routes gevonden die overeenkomen met je zoekopdracht",
+    "fr": "Aucun itinéraire trouvé correspondant à votre recherche",
+    "de": "Keine Routen gefunden, die Ihrer Suche entsprechen"
+  },
+  "routeLibrary.noRoutes": {
+    "en": "You haven't saved any routes yet",
+    "nl": "Je hebt nog geen routes opgeslagen",
+    "fr": "Vous n'avez pas encore sauvegardé d'itinéraires",
+    "de": "Sie haben noch keine Routen gespeichert"
+  },
+  "routeLibrary.waypoints": {
+    "en": "{count} waypoints",
+    "nl": "{count} waypoints",
+    "fr": "{count} points de passage",
+    "de": "{count} Wegpunkte"
+  },
+  "routeLibrary.load": {
+    "en": "Load",
+    "nl": "Laden",
+    "fr": "Charger",
+    "de": "Laden"
+  },
+  "routeLibrary.tooltip": {
+    "en": "Open route library",
+    "nl": "Route bibliotheek openen",
+    "fr": "Ouvrir la bibliothèque d'itinéraires",
+    "de": "Routenbibliothek öffnen"
+  },
+  "common.cancel": {
+    "en": "Cancel",
+    "nl": "Annuleren",
+    "fr": "Annuler",
+    "de": "Abbrechen"
+  },
+  "common.retry": {
+    "en": "Retry",
+    "nl": "Opnieuw proberen",
+    "fr": "Réessayer",
+    "de": "Erneut versuchen"
+  },
+  "common.edit": {
+    "en": "Edit",
+    "nl": "Bewerken",
+    "fr": "Modifier",
+    "de": "Bearbeiten"
+  },
+  "common.delete": {
+    "en": "Delete",
+    "nl": "Verwijderen",
+    "fr": "Supprimer",
+    "de": "Löschen"
   }
 }

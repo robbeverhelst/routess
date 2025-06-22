@@ -11,9 +11,15 @@ import { User } from "../entities/user.entity";
   imports: [
     MikroOrmModule.forFeature([User]),
     PassportModule.register({ defaultStrategy: "jwt" }),
-    JwtModule.register({
-      secret: process.env.JWT_SECRET || "your-secret-key",
-      signOptions: { expiresIn: "24h" },
+    JwtModule.registerAsync({
+      useFactory: () => {
+        const secret = process.env.JWT_SECRET || "your-secret-key";
+        console.log("[AuthModule] Configuring JWT with secret:", secret.substring(0, 10) + "...");
+        return {
+          secret: secret,
+          signOptions: { expiresIn: "24h" },
+        };
+      },
     }),
   ],
   controllers: [AuthController],

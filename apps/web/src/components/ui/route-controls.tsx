@@ -23,7 +23,8 @@ import {
   Share2,
   Maximize,
   WifiOff,
-  Layers, // Added Plus and Minus icons for zoom, Added Share2, Added Maximize for Zoom to Route, Added WifiOff for offline indicator, Added Layers
+  Layers,
+  Save, // Added Plus and Minus icons for zoom, Added Share2, Added Maximize for Zoom to Route, Added WifiOff for offline indicator, Added Layers
 } from "lucide-react";
 import { t, type SupportedLanguage } from "@/lib/i18n"; // Added
 
@@ -55,6 +56,7 @@ interface RouteControlsProps {
   onZoomOut: () => void; // New prop for zoom out
   onCopyShareLink: () => void; // New prop for copying share link
   onZoomToRoute: () => void; // New prop for zooming to route
+  onSaveRoute: () => void; // New prop for saving route
   currentLanguage: SupportedLanguage; // Added
   isOffline?: boolean; // New prop for offline status
   currentMapStyle: MapStyle; // New prop for current map style
@@ -125,6 +127,7 @@ export function RouteControls({
   onZoomOut,
   onCopyShareLink,
   onZoomToRoute,
+  onSaveRoute,
   currentLanguage, // Destructure new prop
   isOffline, // Destructure new prop
   currentMapStyle, // Destructure new prop
@@ -324,6 +327,22 @@ export function RouteControls({
           </TooltipTrigger>
           <TooltipContent>
             <p>{t("routeControls.tooltip.copyShareLink", currentLanguage)}</p>
+          </TooltipContent>
+        </Tooltip>
+
+        <Tooltip delayDuration={500}>
+          <TooltipTrigger asChild>
+            <Button
+              variant="secondary"
+              onClick={onSaveRoute}
+              disabled={!hasRoute || isLocked}
+              className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 disabled:opacity-50 h-10 w-10"
+            >
+              <Save size={18} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{t("routeControls.tooltip.saveRoute", currentLanguage)}</p>
           </TooltipContent>
         </Tooltip>
 
