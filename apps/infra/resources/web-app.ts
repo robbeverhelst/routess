@@ -30,7 +30,13 @@ export class WebAppResource extends ComponentResource {
             matchLabels: config.labels,
           },
           replicas: config.replicas || 2,
-          strategy: { type: "Recreate" },
+          strategy: {
+            type: "RollingUpdate",
+            rollingUpdate: {
+              maxUnavailable: 1,
+              maxSurge: 1,
+            },
+          },
           template: {
             metadata: {
               labels: config.labels,
