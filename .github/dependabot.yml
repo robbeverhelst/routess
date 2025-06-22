@@ -15,4 +15,4 @@ updates:
     groups:
       all-dependencies:
         patterns:
-          - "*" 
+          - "*"

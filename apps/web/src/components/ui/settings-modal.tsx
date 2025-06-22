@@ -1,31 +1,23 @@
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogHeader, 
-  DialogTitle 
-} from '@/components/ui/dialog';
-import { CacheManager } from '@/components/ui/cache-manager';
-import { t } from '@/lib/i18n';
-import type { SupportedLanguage } from '@/lib/i18n';
-import { 
-  getVersionDisplay, 
-  getStoredVersionInfo, 
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { CacheManager } from "@/components/ui/cache-manager";
+import { t } from "@/lib/i18n";
+import type { SupportedLanguage } from "@/lib/i18n";
+import {
+  getVersionDisplay,
+  getStoredVersionInfo,
   checkVersionChange,
-  formatVersion
-} from '@/lib/version';
-import { 
-  Settings,
-  Database,
-  Palette,
-  User,
-  Info,
-  ChevronDown,
-  ChevronUp
-} from 'lucide-react';
-import React from 'react';
+  formatVersion,
+} from "@/lib/version";
+import { Settings, Database, Palette, User, Info, ChevronDown, ChevronUp } from "lucide-react";
+import React from "react";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -38,17 +30,17 @@ interface SettingsModalProps {
   onToggleSunDirection: (enabled: boolean) => void;
 }
 
-export function SettingsModal({ 
-  isOpen, 
-  onOpenChange, 
+export function SettingsModal({
+  isOpen,
+  onOpenChange,
   currentLanguage,
   onLanguageChange,
   isLoggedIn,
   currentUser,
   showSunDirection,
-  onToggleSunDirection
+  onToggleSunDirection,
 }: SettingsModalProps) {
-  const [activeSection, setActiveSection] = useState<string>('general');
+  const [activeSection, setActiveSection] = useState<string>("general");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Check for version changes when modal opens
@@ -60,41 +52,41 @@ export function SettingsModal({
 
   const settingsSections = [
     {
-      id: 'general',
-      label: t('settings.general', currentLanguage),
+      id: "general",
+      label: t("settings.general", currentLanguage),
       icon: Settings,
-      description: t('settings.generalDesc', currentLanguage)
+      description: t("settings.generalDesc", currentLanguage),
     },
     {
-      id: 'storage',
-      label: t('settings.storage', currentLanguage),
+      id: "storage",
+      label: t("settings.storage", currentLanguage),
       icon: Database,
-      description: t('settings.storageDesc', currentLanguage)
+      description: t("settings.storageDesc", currentLanguage),
     },
     {
-      id: 'appearance',
-      label: t('settings.appearance', currentLanguage),
+      id: "appearance",
+      label: t("settings.appearance", currentLanguage),
       icon: Palette,
-      description: t('settings.appearanceDesc', currentLanguage)
+      description: t("settings.appearanceDesc", currentLanguage),
     },
     {
-      id: 'about',
-      label: t('settings.about', currentLanguage),
+      id: "about",
+      label: t("settings.about", currentLanguage),
       icon: Info,
-      description: t('settings.aboutDesc', currentLanguage)
-    }
+      description: t("settings.aboutDesc", currentLanguage),
+    },
   ];
 
   if (isLoggedIn) {
     settingsSections.push({
-      id: 'account',
-      label: t('settings.account', currentLanguage),
+      id: "account",
+      label: t("settings.account", currentLanguage),
       icon: User,
-      description: t('settings.accountDesc', currentLanguage)
+      description: t("settings.accountDesc", currentLanguage),
     });
   }
 
-  const currentSection = settingsSections.find(section => section.id === activeSection);
+  const currentSection = settingsSections.find((section) => section.id === activeSection);
 
   const handleSectionChange = (sectionId: string) => {
     setActiveSection(sectionId);
@@ -103,26 +95,26 @@ export function SettingsModal({
 
   const renderSectionContent = () => {
     switch (activeSection) {
-      case 'general':
+      case "general":
         return (
           <div className="space-y-4">
             <div>
               <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
-                {t('settings.language', currentLanguage)}
+                {t("settings.language", currentLanguage)}
               </h3>
               <p className="text-xs text-gray-500 mb-3">
-                {t('settings.languageDesc', currentLanguage)}
+                {t("settings.languageDesc", currentLanguage)}
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {[
-                  { code: 'en' as SupportedLanguage, name: 'English' },
-                  { code: 'nl' as SupportedLanguage, name: 'Nederlands' },
-                  { code: 'fr' as SupportedLanguage, name: 'Français' },
-                  { code: 'de' as SupportedLanguage, name: 'Deutsch' }
+                  { code: "en" as SupportedLanguage, name: "English" },
+                  { code: "nl" as SupportedLanguage, name: "Nederlands" },
+                  { code: "fr" as SupportedLanguage, name: "Français" },
+                  { code: "de" as SupportedLanguage, name: "Deutsch" },
                 ].map((lang) => (
                   <Button
                     key={lang.code}
-                    variant={currentLanguage === lang.code ? 'default' : 'outline'}
+                    variant={currentLanguage === lang.code ? "default" : "outline"}
                     size="sm"
                     onClick={() => onLanguageChange(lang.code)}
                     className="justify-start"
@@ -135,13 +127,13 @@ export function SettingsModal({
 
             <div>
               <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
-                {t('settings.mapDefaults', currentLanguage)}
+                {t("settings.mapDefaults", currentLanguage)}
               </h3>
               <p className="text-xs text-gray-500 mb-3">
-                {t('settings.mapDefaultsDesc', currentLanguage)}
+                {t("settings.mapDefaultsDesc", currentLanguage)}
               </p>
               <div className="text-xs text-gray-400">
-                {t('settings.comingSoon', currentLanguage)}
+                {t("settings.comingSoon", currentLanguage)}
               </div>
             </div>
 
@@ -167,116 +159,114 @@ export function SettingsModal({
           </div>
         );
 
-      case 'storage':
+      case "storage":
         return (
           <div className="space-y-4">
             <div>
               <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
-                {t('settings.offlineStorage', currentLanguage)}
+                {t("settings.offlineStorage", currentLanguage)}
               </h3>
               <p className="text-xs text-gray-500 mb-3">
-                {t('settings.offlineStorageDesc', currentLanguage)}
+                {t("settings.offlineStorageDesc", currentLanguage)}
               </p>
               <CacheManager currentLanguage={currentLanguage} />
             </div>
 
             <div>
               <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
-                {t('settings.dataManagement', currentLanguage)}
+                {t("settings.dataManagement", currentLanguage)}
               </h3>
               <p className="text-xs text-gray-500 mb-3">
-                {t('settings.dataManagementDesc', currentLanguage)}
+                {t("settings.dataManagementDesc", currentLanguage)}
               </p>
               <div className="text-xs text-gray-400">
-                {t('settings.comingSoon', currentLanguage)}
+                {t("settings.comingSoon", currentLanguage)}
               </div>
             </div>
           </div>
         );
 
-      case 'appearance':
+      case "appearance":
         return (
           <div className="space-y-4">
             <div>
               <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
-                {t('settings.theme', currentLanguage)}
+                {t("settings.theme", currentLanguage)}
               </h3>
               <p className="text-xs text-gray-500 mb-3">
-                {t('settings.themeDesc', currentLanguage)}
+                {t("settings.themeDesc", currentLanguage)}
               </p>
               <div className="text-xs text-gray-400">
-                {t('settings.comingSoon', currentLanguage)}
+                {t("settings.comingSoon", currentLanguage)}
               </div>
             </div>
 
             <div>
               <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
-                {t('settings.mapStyle', currentLanguage)}
+                {t("settings.mapStyle", currentLanguage)}
               </h3>
               <p className="text-xs text-gray-500 mb-3">
-                {t('settings.mapStyleDesc', currentLanguage)}
+                {t("settings.mapStyleDesc", currentLanguage)}
               </p>
               <div className="text-xs text-gray-400">
-                {t('settings.comingSoon', currentLanguage)}
+                {t("settings.comingSoon", currentLanguage)}
               </div>
             </div>
           </div>
         );
 
-      case 'account':
+      case "account":
         return (
           <div className="space-y-4">
             {isLoggedIn && currentUser && (
               <div>
                 <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
-                  {t('settings.accountInfo', currentLanguage)}
+                  {t("settings.accountInfo", currentLanguage)}
                 </h3>
                 <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
                   <div className="text-sm font-medium text-gray-900 dark:text-white">
-                    {currentUser.name || 'User'}
+                    {currentUser.name || "User"}
                   </div>
-                  <div className="text-xs text-gray-500">
-                    {currentUser.email || 'No email'}
-                  </div>
+                  <div className="text-xs text-gray-500">{currentUser.email || "No email"}</div>
                 </div>
               </div>
             )}
 
             <div>
               <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
-                {t('settings.privacy', currentLanguage)}
+                {t("settings.privacy", currentLanguage)}
               </h3>
               <p className="text-xs text-gray-500 mb-3">
-                {t('settings.privacyDesc', currentLanguage)}
+                {t("settings.privacyDesc", currentLanguage)}
               </p>
               <div className="text-xs text-gray-400">
-                {t('settings.comingSoon', currentLanguage)}
+                {t("settings.comingSoon", currentLanguage)}
               </div>
             </div>
 
             <div>
               <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
-                {t('settings.savedRoutes', currentLanguage)}
+                {t("settings.savedRoutes", currentLanguage)}
               </h3>
               <p className="text-xs text-gray-500 mb-3">
-                {t('settings.savedRoutesDesc', currentLanguage)}
+                {t("settings.savedRoutesDesc", currentLanguage)}
               </p>
               <div className="text-xs text-gray-400">
-                {t('settings.comingSoon', currentLanguage)}
+                {t("settings.comingSoon", currentLanguage)}
               </div>
             </div>
           </div>
         );
 
-      case 'about':
+      case "about":
         return (
           <div className="space-y-4">
             <div>
               <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
-                {t('settings.version', currentLanguage)}
+                {t("settings.version", currentLanguage)}
               </h3>
               <p className="text-xs text-gray-500 mb-3">
-                {t('settings.versionDesc', currentLanguage)}
+                {t("settings.versionDesc", currentLanguage)}
               </p>
               <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
                 <div className="text-sm font-medium text-gray-900 dark:text-white">
@@ -287,7 +277,8 @@ export function SettingsModal({
                   if (versionInfo?.previous) {
                     return (
                       <div className="text-xs text-gray-500 mt-1">
-                        {t('settings.previousVersion', currentLanguage)}: {formatVersion(versionInfo.previous)}
+                        {t("settings.previousVersion", currentLanguage)}:{" "}
+                        {formatVersion(versionInfo.previous)}
                       </div>
                     );
                   }
@@ -303,27 +294,29 @@ export function SettingsModal({
               <p className="text-xs text-gray-500 mb-3">
                 A modern route planning and navigation tool
               </p>
-              <div className="text-xs text-gray-400">
-                Built with React, TypeScript, and Mapbox
-              </div>
+              <div className="text-xs text-gray-400">Built with React, TypeScript, and Mapbox</div>
             </div>
 
             <div>
               <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
-                {t('settings.developer', currentLanguage)}
+                {t("settings.developer", currentLanguage)}
               </h3>
               <p className="text-xs text-gray-500 mb-3">
-                {t('settings.developerDesc', currentLanguage)}
+                {t("settings.developerDesc", currentLanguage)}
               </p>
               <div className="flex flex-col gap-2">
                 <div className="flex flex-wrap gap-2">
                   <a
-                    href={currentLanguage === 'nl' ? 'https://robbeverhelst.be' : 'https://robbeverhelst.com'}
+                    href={
+                      currentLanguage === "nl"
+                        ? "https://robbeverhelst.be"
+                        : "https://robbeverhelst.com"
+                    }
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 px-3 py-1.5 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-md hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
                   >
-                    {t('settings.visitWebsite', currentLanguage)}
+                    {t("settings.visitWebsite", currentLanguage)}
                   </a>
                   <a
                     href="https://github.com/robbeverhelst"
@@ -331,7 +324,7 @@ export function SettingsModal({
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 px-3 py-1.5 text-xs bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                   >
-                    {t('settings.viewGithub', currentLanguage)}
+                    {t("settings.viewGithub", currentLanguage)}
                   </a>
                 </div>
               </div>
@@ -350,10 +343,10 @@ export function SettingsModal({
         <DialogHeader className="px-4 sm:px-6 py-4 border-b border-gray-100 dark:border-gray-800">
           <DialogTitle className="flex items-center gap-2">
             <Settings className="h-5 w-5" />
-            {t('settings.title', currentLanguage)}
+            {t("settings.title", currentLanguage)}
           </DialogTitle>
           <DialogDescription className="hidden sm:block">
-            {t('settings.description', currentLanguage)}
+            {t("settings.description", currentLanguage)}
           </DialogDescription>
         </DialogHeader>
 
@@ -371,12 +364,16 @@ export function SettingsModal({
                     {currentSection && <currentSection.icon className="h-4 w-4" />}
                     <span className="font-medium">{currentSection?.label}</span>
                   </div>
-                  {isSidebarOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  {isSidebarOpen ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
                 </button>
               </div>
 
               {/* Navigation items */}
-              <div className={`space-y-1 ${isSidebarOpen ? 'block' : 'hidden'} sm:block`}>
+              <div className={`space-y-1 ${isSidebarOpen ? "block" : "hidden"} sm:block`}>
                 {settingsSections.map((section) => {
                   const IconComponent = section.icon;
                   return (
@@ -385,15 +382,13 @@ export function SettingsModal({
                       onClick={() => handleSectionChange(section.id)}
                       className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-left transition-colors ${
                         activeSection === section.id
-                          ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
-                          : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'
+                          ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"
+                          : "hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
                       }`}
                     >
                       <IconComponent className="h-4 w-4 flex-shrink-0" />
                       <div className="min-w-0">
-                        <div className="text-sm font-medium truncate">
-                          {section.label}
-                        </div>
+                        <div className="text-sm font-medium truncate">{section.label}</div>
                         <div className="text-xs text-gray-500 truncate hidden sm:block">
                           {section.description}
                         </div>
@@ -407,12 +402,10 @@ export function SettingsModal({
 
           {/* Content */}
           <div className="flex-1 overflow-y-auto">
-            <div className="p-4 sm:p-6">
-              {renderSectionContent()}
-            </div>
+            <div className="p-4 sm:p-6">{renderSectionContent()}</div>
           </div>
         </div>
       </DialogContent>
     </Dialog>
   );
-} 
+}

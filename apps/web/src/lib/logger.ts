@@ -52,6 +52,6 @@ export const Logger = {
   error: (...messages: unknown[]): void => log(LogLevel.ERROR, messages),
 };
 
-if (process.env.NODE_ENV === 'production') {
+if (process.env.NODE_ENV === "production") {
   setLogLevel(LogLevel.NONE);
-} 
+}

@@ -1,0 +1,17 @@
+# Build outputs
+**/dist/**
+**/bin/**
+**/build/**
+**/.next/**
+
+# Dependencies
+**/node_modules/**
+
+# Cache directories
+**/.turbo/**
+
+# Generated files
+**/coverage/**
+
+# IDE settings
+.claude/

@@ -4,13 +4,13 @@ interface VersionInfo {
   lastChecked: number;
 }
 
-const VERSION_STORAGE_KEY = 'maps-app-version';
+const VERSION_STORAGE_KEY = "maps-app-version";
 
 /**
  * Get the current app version from environment variables
  */
 export function getCurrentVersion(): string {
-  return import.meta.env.VITE_APP_VERSION || 'development';
+  return import.meta.env.VITE_APP_VERSION || "development";
 }
 
 /**
@@ -21,7 +21,7 @@ export function getStoredVersionInfo(): VersionInfo | null {
     const stored = localStorage.getItem(VERSION_STORAGE_KEY);
     return stored ? JSON.parse(stored) : null;
   } catch (error) {
-    console.warn('Failed to parse stored version info:', error);
+    console.warn("Failed to parse stored version info:", error);
     return null;
   }
 }
@@ -33,7 +33,7 @@ export function storeVersionInfo(versionInfo: VersionInfo): void {
   try {
     localStorage.setItem(VERSION_STORAGE_KEY, JSON.stringify(versionInfo));
   } catch (error) {
-    console.warn('Failed to store version info:', error);
+    console.warn("Failed to store version info:", error);
   }
 }
 
@@ -44,32 +44,32 @@ export function storeVersionInfo(versionInfo: VersionInfo): void {
 export function checkVersionChange(): boolean {
   const currentVersion = getCurrentVersion();
   const storedInfo = getStoredVersionInfo();
-  
+
   if (!storedInfo) {
     // First time - store current version
     storeVersionInfo({
       current: currentVersion,
-      lastChecked: Date.now()
+      lastChecked: Date.now(),
     });
     return false;
   }
-  
+
   if (storedInfo.current !== currentVersion) {
     // Version has changed
     storeVersionInfo({
       current: currentVersion,
       previous: storedInfo.current,
-      lastChecked: Date.now()
+      lastChecked: Date.now(),
     });
     return true;
   }
-  
+
   // Update last checked time
   storeVersionInfo({
     ...storedInfo,
-    lastChecked: Date.now()
+    lastChecked: Date.now(),
   });
-  
+
   return false;
 }
 
@@ -89,12 +89,12 @@ export function formatVersion(version: string): string {
   if (/^[a-f0-9]{7,40}$/i.test(version)) {
     return `${version.substring(0, 7)} (dev)`;
   }
-  
+
   // If it's a semantic version, return with v prefix
   if (version.match(/^\d+\.\d+\.\d+/)) {
     return `v${version}`;
   }
-  
+
   // For anything else (including 'development'), return as-is
   return version;
-} 
+}

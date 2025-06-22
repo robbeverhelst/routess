@@ -5,10 +5,10 @@ on:
   workflow_dispatch:
   # Runs on push events to the main branch
   push:
-    branches: [ main ]
+    branches: [main]
   # Runs on pull requests to the main branch
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   test:
@@ -19,24 +19,27 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-        
+
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-          
+
       - name: Install dependencies
-        run: bun install 
-        
+        run: bun install
+
+      - name: Check formatting
+        run: bunx turbo run format:check
+
       - name: Run linting
         run: bunx turbo run lint
-        
+
       - name: Run type checking
         run: bunx turbo run check-types
-        
+
       - name: Run tests
         run: bunx turbo run test --filter='!api'
-        
+
       - name: Test API build
         run: bunx turbo run build --filter=api
 
@@ -47,20 +50,20 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-          
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          
+          node-version: "20"
+
       - name: Install dependencies
-        run: bun install 
-        
+        run: bun install
+
       - name: Check for secrets availability
         run: |
           echo "VITE_MAPBOX_ACCESS_TOKEN secret is present: ${{ secrets.VITE_MAPBOX_ACCESS_TOKEN != '' }}"
@@ -75,27 +78,27 @@ jobs:
 
       - name: Build application with Turbo
         run: bunx turbo run build
-        
+
       - name: Verify builds
         run: |
           echo "Verifying web build..."
           ls -la apps/web/dist/ || echo "Web dist folder not found"
           echo "Verifying API build..."
           ls -la apps/api/dist/ || echo "API dist folder not found"
-        
+
       - name: Verify token in built files
         run: |
           echo "Listing JS files in apps/web/dist/assets:"
           ls -l apps/web/dist/assets/*.js || echo "No JS files found in apps/web/dist/assets"
           echo "Grepping for Mapbox token prefix 'pk.eyJ1' in JS files..."
           grep -r 'pk.eyJ1' apps/web/dist/assets || echo "Token prefix not found in apps/web/dist/assets (grep exit code $?)"
-          
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: build-files
           path: apps/web/dist/
-          
+
   release:
     name: Create Release
     needs: build
@@ -114,25 +117,25 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          
+
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-          
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          
+          node-version: "20"
+
       - name: Install dependencies
-        run: bun install 
-        
+        run: bun install
+
       - name: Verify semantic-release config
         run: |
           echo "Using existing .releaserc.json configuration:"
           cat .releaserc.json
-          
+
       - name: Semantic Release
         id: semantic
         env:
@@ -147,25 +150,25 @@ jobs:
           git config --global --add safe.directory /home/runner/_work/maps/maps
           # Required for @semantic-release/git to push changes using the GITHUB_TOKEN
           git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
-          
+
           echo "Running semantic-release..."
           # semantic-release will analyze commits, bump version in package.json,
           # commit, tag, push, and create a GitHub release if a new version is warranted.
           # If no release is needed, it exits successfully without making changes.
           bunx semantic-release
-          
+
           # Read the version from package.json.
           # This will be the new version if a release was made, or the current one if not.
           # This is then output for subsequent jobs.
           VERSION=$(bun -e "console.log(require('./package.json').version)")
           echo "Version from package.json after semantic-release: $VERSION"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          
+
   # Separate job for Docker image building with multi-arch support
   docker:
     name: Build and Push Multi-Arch Docker Images
     needs: release
-    runs-on: ubuntu-latest  
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
@@ -175,21 +178,21 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
-        
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
         with:
-          platforms: 'arm64,amd64'
-          
+          platforms: "arm64,amd64"
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-          
+
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
           name: build-files
           path: apps/web/dist
-          
+
       - name: Login to GitHub Container Registry
         if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
@@ -197,11 +200,11 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-          
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: Create .env file for Docker build
         run: |
@@ -209,7 +212,7 @@ jobs:
           echo "VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}" >> .env
           echo "VITE_APP_URL=https://maps.robbeverhelst.be" >> .env
           echo "VITE_APP_VERSION=${{ needs.release.outputs.version }}" >> .env
-          
+
       - name: Extract metadata for Web Docker
         id: metadata-web
         uses: docker/metadata-action@v5
@@ -220,7 +223,7 @@ jobs:
             type=semver,pattern={{major}}.{{minor}},value=${{ needs.release.outputs.version }}
             type=semver,pattern={{major}},value=${{ needs.release.outputs.version }}
             type=raw,value=latest,enable={{is_default_branch}}
-            
+
       - name: Extract metadata for API Docker
         id: metadata-api
         uses: docker/metadata-action@v5
@@ -231,14 +234,14 @@ jobs:
             type=semver,pattern={{major}}.{{minor}},value=${{ needs.release.outputs.version }}
             type=semver,pattern={{major}},value=${{ needs.release.outputs.version }}
             type=raw,value=latest,enable={{is_default_branch}}
-          
+
       - name: Convert repository owner to lowercase
         id: repo-name
         run: |
           REPO_OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           echo "REPO_OWNER_LOWER=$REPO_OWNER_LOWER" >> $GITHUB_ENV
           echo "repo_owner_lower=$REPO_OWNER_LOWER" >> $GITHUB_OUTPUT
-          
+
       - name: Build and push Web Docker image
         if: github.event_name != 'pull_request'
         uses: docker/build-push-action@v6
@@ -251,7 +254,7 @@ jobs:
           labels: ${{ steps.metadata-web.outputs.labels }}
           cache-from: type=registry,ref=ghcr.io/${{ env.REPO_OWNER_LOWER }}/maps-web:buildcache
           cache-to: type=registry,ref=ghcr.io/${{ env.REPO_OWNER_LOWER }}/maps-web:buildcache,mode=max
-          
+
       - name: Build and push API Docker image
         if: github.event_name != 'pull_request'
         uses: docker/build-push-action@v6
@@ -276,25 +279,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: main  # Ensure we're using the latest main branch with the version update
+          ref: main # Ensure we're using the latest main branch with the version update
           fetch-depth: 1
-          
+
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-          
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          
+          node-version: "20"
+
       - name: Install dependencies
-        run: bun install 
-        
+        run: bun install
+
       - name: Build infrastructure
         run: bunx turbo run build --filter=@maps/infra
-        
+
       - name: Use version from release job
         run: |
           echo "VERSION=${{ needs.release.outputs.version }}" >> $GITHUB_ENV
@@ -302,7 +305,7 @@ jobs:
           REPO_OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           echo "WEB_IMAGE=ghcr.io/${REPO_OWNER_LOWER}/maps-web:${{ needs.release.outputs.version }}" >> $GITHUB_ENV
           echo "API_IMAGE=ghcr.io/${REPO_OWNER_LOWER}/maps-api:${{ needs.release.outputs.version }}" >> $GITHUB_ENV
-          
+
       - name: Pulumi Refresh
         uses: pulumi/actions@v6
         with:
@@ -322,7 +325,7 @@ jobs:
           VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
           VITE_APP_URL: "https://maps.robbeverhelst.be"
           VITE_APP_VERSION: ${{ needs.release.outputs.version }}
-          
+
       - name: Pulumi Update
         uses: pulumi/actions@v6
         with:
@@ -342,7 +345,7 @@ jobs:
           VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
           VITE_APP_URL: "https://maps.robbeverhelst.be"
           VITE_APP_VERSION: ${{ needs.release.outputs.version }}
-          
+
       - name: Clean up old resources (if any)
         run: |
           echo "Deployment completed successfully. Old resources will be garbage collected by Pulumi."

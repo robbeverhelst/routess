@@ -1,6 +1,6 @@
-import { Logger } from '@/lib/logger';
-import { t } from '@/lib/i18n';
-import { loadLanguageFromLocalStorage } from '@/features/routing/services/LocalStorageService';
+import { Logger } from "@/lib/logger";
+import { t } from "@/lib/i18n";
+import { loadLanguageFromLocalStorage } from "@/features/routing/services/LocalStorageService";
 
 export interface LocationState {
   location: [number, number] | null;
@@ -11,7 +11,7 @@ export interface LocationState {
   error: string | null;
   isLoading: boolean;
   isTracking: boolean;
-  permissionState: 'granted' | 'denied' | 'prompt' | 'unknown';
+  permissionState: "granted" | "denied" | "prompt" | "unknown";
   lastUpdateTime: number | null;
 }
 
@@ -42,7 +42,7 @@ export class LocationService {
   private retryCount = 0;
   private isDestroyed = false;
   private permissionWatcher: PermissionStatus | null = null;
-  
+
   // Default options optimized for walking/navigation
   private defaultOptions: LocationOptions = {
     enableHighAccuracy: true,
@@ -51,7 +51,7 @@ export class LocationService {
     distanceFilter: 5, // 5 meters minimum movement
     updateInterval: 2000, // 2 seconds minimum between updates
     retryAttempts: 5,
-    retryDelay: 1000 // Start with 1 second, exponential backoff
+    retryDelay: 1000, // Start with 1 second, exponential backoff
   };
 
   private currentOptions: LocationOptions;
@@ -66,8 +66,8 @@ export class LocationService {
       error: null,
       isLoading: false,
       isTracking: false,
-      permissionState: 'unknown',
-      lastUpdateTime: null
+      permissionState: "unknown",
+      lastUpdateTime: null,
     };
     this.currentOptions = { ...this.defaultOptions };
     this.lastKnownGoodLocation = this.state.location;
@@ -90,59 +90,68 @@ export class LocationService {
 
   private loadLastKnownLocation(): [number, number] | null {
     try {
-      const stored = localStorage.getItem('lastKnownLocation');
+      const stored = localStorage.getItem("lastKnownLocation");
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length === 2 && 
-            typeof parsed[0] === 'number' && typeof parsed[1] === 'number') {
-          Logger.info('[LocationService] Loaded last known location from storage');
+        if (
+          Array.isArray(parsed) &&
+          parsed.length === 2 &&
+          typeof parsed[0] === "number" &&
+          typeof parsed[1] === "number"
+        ) {
+          Logger.info("[LocationService] Loaded last known location from storage");
           return parsed as [number, number];
         }
       }
     } catch (error) {
-      Logger.error('[LocationService] Error loading last known location:', error);
+      Logger.error("[LocationService] Error loading last known location:", error);
     }
     return null;
   }
 
   private saveLastKnownLocation(location: [number, number]): void {
     try {
-      localStorage.setItem('lastKnownLocation', JSON.stringify(location));
+      localStorage.setItem("lastKnownLocation", JSON.stringify(location));
       this.lastKnownGoodLocation = location;
     } catch (error) {
-      Logger.error('[LocationService] Error saving last known location:', error);
+      Logger.error("[LocationService] Error saving last known location:", error);
     }
   }
 
   private async initializePermissionWatcher(): Promise<void> {
-    if (!('permissions' in navigator)) {
-      Logger.warn('[LocationService] Permissions API not supported');
+    if (!("permissions" in navigator)) {
+      Logger.warn("[LocationService] Permissions API not supported");
       return;
     }
 
     try {
-      const permission = await navigator.permissions.query({ name: 'geolocation' });
+      const permission = await navigator.permissions.query({ name: "geolocation" });
       this.state.permissionState = permission.state;
       this.permissionWatcher = permission;
-      
-      permission.addEventListener('change', () => {
+
+      permission.addEventListener("change", () => {
         this.state.permissionState = permission.state;
-        this.notifyCallbacks('onPermissionChange', permission.state);
-        
-        if (permission.state === 'denied' && this.state.isTracking) {
+        this.notifyCallbacks("onPermissionChange", permission.state);
+
+        if (permission.state === "denied" && this.state.isTracking) {
           this.stopTracking();
-          this.updateState({ 
-            error: 'Location permission denied. Please enable location access in your browser settings.',
-            isLoading: false 
+          this.updateState({
+            error:
+              "Location permission denied. Please enable location access in your browser settings.",
+            isLoading: false,
           });
-        } else if (permission.state === 'granted' && !this.state.isTracking && this.watchId === null) {
+        } else if (
+          permission.state === "granted" &&
+          !this.state.isTracking &&
+          this.watchId === null
+        ) {
           // Auto-resume tracking if permission was re-granted
-          Logger.info('[LocationService] Permission re-granted, resuming tracking');
+          Logger.info("[LocationService] Permission re-granted, resuming tracking");
           this.startTracking();
         }
       });
     } catch (error) {
-      Logger.error('[LocationService] Error setting up permission watcher:', error);
+      Logger.error("[LocationService] Error setting up permission watcher:", error);
     }
   }
 
@@ -152,10 +161,10 @@ export class LocationService {
 
   public updateOptions(options: Partial<LocationOptions>): void {
     this.currentOptions = { ...this.currentOptions, ...options };
-    
+
     // If tracking is active, restart with new options
     if (this.state.isTracking) {
-      Logger.info('[LocationService] Options updated, restarting tracking');
+      Logger.info("[LocationService] Options updated, restarting tracking");
       this.stopTracking();
       this.startTracking();
     }
@@ -168,7 +177,7 @@ export class LocationService {
   public async getCurrentLocation(options?: Partial<LocationOptions>): Promise<LocationState> {
     if (!this.isGeolocationSupported()) {
       const currentLanguage = loadLanguageFromLocalStorage();
-      const error = t('location.error.notSupported', currentLanguage);
+      const error = t("location.error.notSupported", currentLanguage);
       this.updateState({ error, isLoading: false });
       throw new Error(error);
     }
@@ -178,7 +187,7 @@ export class LocationService {
 
     return new Promise((resolve, reject) => {
       const timeoutId = setTimeout(() => {
-        const error = 'Location request timed out';
+        const error = "Location request timed out";
         this.updateState({ error, isLoading: false });
         reject(new Error(error));
       }, opts.timeout || this.defaultOptions.timeout!);
@@ -192,34 +201,34 @@ export class LocationService {
         (error) => {
           clearTimeout(timeoutId);
           this.handleLocationError(error);
-          reject(new Error(this.state.error || 'Unknown location error'));
+          reject(new Error(this.state.error || "Unknown location error"));
         },
         {
           enableHighAccuracy: opts.enableHighAccuracy,
           timeout: opts.timeout,
-          maximumAge: opts.maximumAge
-        }
+          maximumAge: opts.maximumAge,
+        },
       );
     });
   }
 
   public startTracking(options?: Partial<LocationOptions>): void {
     if (this.isDestroyed) {
-      Logger.warn('[LocationService] Cannot start tracking - service is destroyed');
+      Logger.warn("[LocationService] Cannot start tracking - service is destroyed");
       return;
     }
 
     if (!this.isGeolocationSupported()) {
       const currentLanguage = loadLanguageFromLocalStorage();
-      this.updateState({ 
-        error: t('location.error.notSupported', currentLanguage),
-        isLoading: false 
+      this.updateState({
+        error: t("location.error.notSupported", currentLanguage),
+        isLoading: false,
       });
       return;
     }
 
     if (this.state.isTracking) {
-      Logger.info('[LocationService] Already tracking location');
+      Logger.info("[LocationService] Already tracking location");
       return;
     }
 
@@ -230,8 +239,8 @@ export class LocationService {
     this.updateState({ isTracking: true, isLoading: true, error: null });
     this.retryCount = 0;
     this.startLocationWatch();
-    
-    Logger.info('[LocationService] Started location tracking with options:', this.currentOptions);
+
+    Logger.info("[LocationService] Started location tracking with options:", this.currentOptions);
   }
 
   public stopTracking(): void {
@@ -247,8 +256,8 @@ export class LocationService {
 
     this.updateState({ isTracking: false, isLoading: false });
     this.retryCount = 0;
-    
-    Logger.info('[LocationService] Stopped location tracking');
+
+    Logger.info("[LocationService] Stopped location tracking");
   }
 
   private startLocationWatch(): void {
@@ -262,23 +271,23 @@ export class LocationService {
       {
         enableHighAccuracy: this.currentOptions.enableHighAccuracy,
         timeout: this.currentOptions.timeout,
-        maximumAge: this.currentOptions.maximumAge
-      }
+        maximumAge: this.currentOptions.maximumAge,
+      },
     );
   }
 
   private handleLocationSuccess(position: GeolocationPosition): void {
     const now = Date.now();
     const coords = position.coords;
-    
+
     // Validate location data
     if (!this.isValidLocation(coords)) {
-      Logger.warn('[LocationService] Invalid location data received:', coords);
+      Logger.warn("[LocationService] Invalid location data received:", coords);
       return;
     }
 
     const newLocation: [number, number] = [coords.longitude, coords.latitude];
-    
+
     // Apply distance filter
     if (this.shouldFilterByDistance(newLocation)) {
       return;
@@ -298,42 +307,42 @@ export class LocationService {
       timestamp: position.timestamp,
       error: null,
       isLoading: false,
-      lastUpdateTime: now
+      lastUpdateTime: now,
     });
 
     // Save to localStorage
     this.saveLastKnownLocation(newLocation);
-    
+
     // Reset retry count on success
     this.retryCount = 0;
 
-    Logger.debug('[LocationService] Location updated:', {
+    Logger.debug("[LocationService] Location updated:", {
       location: newLocation,
       accuracy: coords.accuracy,
       speed: coords.speed,
-      heading: coords.heading
+      heading: coords.heading,
     });
   }
 
   private handleLocationError(error: GeolocationPositionError): void {
     const currentLanguage = loadLanguageFromLocalStorage();
-    let errorMessage = 'Unable to access your location';
+    let errorMessage = "Unable to access your location";
     let shouldRetry = false;
     let shouldStopTracking = false;
 
     switch (error.code) {
       case error.PERMISSION_DENIED:
-        errorMessage = t('location.error.permissionDenied', currentLanguage);
-        this.updateState({ permissionState: 'denied' });
+        errorMessage = t("location.error.permissionDenied", currentLanguage);
+        this.updateState({ permissionState: "denied" });
         shouldStopTracking = true; // Stop tracking for permission denied
         break;
       case error.POSITION_UNAVAILABLE:
-        errorMessage = t('location.error.positionUnavailable', currentLanguage);
+        errorMessage = t("location.error.positionUnavailable", currentLanguage);
         shouldRetry = true;
         // For position unavailable, we'll be more patient and try longer
         break;
       case error.TIMEOUT:
-        errorMessage = t('location.error.timeout', currentLanguage);
+        errorMessage = t("location.error.timeout", currentLanguage);
         shouldRetry = true;
         break;
       default:
@@ -344,45 +353,56 @@ export class LocationService {
 
     // Log position unavailable as warning since it's common and often temporary
     if (error.code === error.POSITION_UNAVAILABLE) {
-      Logger.warn('[LocationService] Position unavailable (common GPS issue):', { code: error.code, message: error.message });
+      Logger.warn("[LocationService] Position unavailable (common GPS issue):", {
+        code: error.code,
+        message: error.message,
+      });
     } else {
-      Logger.error('[LocationService] Location error:', { code: error.code, message: error.message });
+      Logger.error("[LocationService] Location error:", {
+        code: error.code,
+        message: error.message,
+      });
     }
 
     // Stop tracking immediately for unrecoverable errors
     if (shouldStopTracking) {
-      this.updateState({ 
-        error: errorMessage, 
+      this.updateState({
+        error: errorMessage,
         isLoading: false,
-        isTracking: false
+        isTracking: false,
       });
       this.stopTracking();
       return;
     }
 
-    this.updateState({ 
-      error: errorMessage, 
-      isLoading: shouldRetry && this.retryCount < (this.currentOptions.retryAttempts || 0)
+    this.updateState({
+      error: errorMessage,
+      isLoading: shouldRetry && this.retryCount < (this.currentOptions.retryAttempts || 0),
     });
 
     // Retry logic for recoverable errors
-    if (shouldRetry && this.state.isTracking && this.retryCount < (this.currentOptions.retryAttempts || 0)) {
+    if (
+      shouldRetry &&
+      this.state.isTracking &&
+      this.retryCount < (this.currentOptions.retryAttempts || 0)
+    ) {
       this.scheduleRetry();
     } else if (this.state.isTracking && this.currentOptions.enableHighAccuracy) {
       // If we've exhausted retries but still tracking, try with lower accuracy
       this.tryFallbackOptions();
     } else if (this.state.isTracking && error.code === error.POSITION_UNAVAILABLE) {
       // For position unavailable, keep trying with extended patience
-      Logger.info('[LocationService] Position unavailable - continuing with extended retry');
+      Logger.info("[LocationService] Position unavailable - continuing with extended retry");
       this.retryCount = Math.max(0, this.retryCount - 2); // Reduce retry count to extend attempts
       this.scheduleRetry();
     } else if (this.state.isTracking) {
       // If we've exhausted all options, stop tracking
-      Logger.warn('[LocationService] All location attempts failed, stopping tracking');
-      this.updateState({ 
-        error: 'Unable to get your location after multiple attempts. Please check your GPS and try again.',
+      Logger.warn("[LocationService] All location attempts failed, stopping tracking");
+      this.updateState({
+        error:
+          "Unable to get your location after multiple attempts. Please check your GPS and try again.",
         isLoading: false,
-        isTracking: false
+        isTracking: false,
       });
       this.stopTracking();
     }
@@ -391,9 +411,9 @@ export class LocationService {
   private scheduleRetry(): void {
     this.retryCount++;
     const delay = (this.currentOptions.retryDelay || 1000) * Math.pow(2, this.retryCount - 1); // Exponential backoff
-    
+
     Logger.info(`[LocationService] Scheduling retry ${this.retryCount} in ${delay}ms`);
-    
+
     this.retryTimeoutId = window.setTimeout(() => {
       if (this.state.isTracking && !this.isDestroyed) {
         Logger.info(`[LocationService] Retrying location request (attempt ${this.retryCount})`);
@@ -404,20 +424,20 @@ export class LocationService {
 
   private tryFallbackOptions(): void {
     if (this.currentOptions.enableHighAccuracy) {
-      Logger.info('[LocationService] Trying fallback with lower accuracy');
+      Logger.info("[LocationService] Trying fallback with lower accuracy");
       this.updateOptions({
         enableHighAccuracy: false,
         timeout: 20000,
-        maximumAge: 60000
+        maximumAge: 60000,
       });
       this.retryCount = 0; // Reset retry count for fallback attempt
     } else {
       // Already tried fallback, stop tracking
-      Logger.warn('[LocationService] Fallback options also failed, stopping tracking');
-      this.updateState({ 
-        error: 'Unable to get your location. Please check your GPS settings and try again.',
+      Logger.warn("[LocationService] Fallback options also failed, stopping tracking");
+      this.updateState({
+        error: "Unable to get your location. Please check your GPS settings and try again.",
         isLoading: false,
-        isTracking: false
+        isTracking: false,
       });
       this.stopTracking();
     }
@@ -425,8 +445,8 @@ export class LocationService {
 
   private isValidLocation(coords: GeolocationCoordinates): boolean {
     return (
-      typeof coords.latitude === 'number' &&
-      typeof coords.longitude === 'number' &&
+      typeof coords.latitude === "number" &&
+      typeof coords.longitude === "number" &&
       !isNaN(coords.latitude) &&
       !isNaN(coords.longitude) &&
       coords.latitude >= -90 &&
@@ -451,19 +471,19 @@ export class LocationService {
       return false;
     }
 
-    return (now - this.state.lastUpdateTime) < this.currentOptions.updateInterval;
+    return now - this.state.lastUpdateTime < this.currentOptions.updateInterval;
   }
 
   private calculateDistance(coord1: [number, number], coord2: [number, number]): number {
     const R = 6371000; // Earth's radius in meters
-    const lat1 = coord1[1] * Math.PI / 180;
-    const lat2 = coord2[1] * Math.PI / 180;
-    const deltaLat = (coord2[1] - coord1[1]) * Math.PI / 180;
-    const deltaLon = (coord2[0] - coord1[0]) * Math.PI / 180;
+    const lat1 = (coord1[1] * Math.PI) / 180;
+    const lat2 = (coord2[1] * Math.PI) / 180;
+    const deltaLat = ((coord2[1] - coord1[1]) * Math.PI) / 180;
+    const deltaLon = ((coord2[0] - coord1[0]) * Math.PI) / 180;
 
-    const a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
-              Math.cos(lat1) * Math.cos(lat2) *
-              Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2);
+    const a =
+      Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+      Math.cos(lat1) * Math.cos(lat2) * Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
     return R * c; // Distance in meters
@@ -471,14 +491,14 @@ export class LocationService {
 
   private updateState(updates: Partial<LocationState>): void {
     this.state = { ...this.state, ...updates };
-    this.notifyCallbacks('onLocationUpdate', this.state);
-    
+    this.notifyCallbacks("onLocationUpdate", this.state);
+
     if (updates.error) {
-      this.notifyCallbacks('onError', updates.error, this.state);
+      this.notifyCallbacks("onError", updates.error, this.state);
     }
-    
+
     if (updates.isTracking !== undefined) {
-      this.notifyCallbacks('onTrackingStateChange', updates.isTracking);
+      this.notifyCallbacks("onTrackingStateChange", updates.isTracking);
     }
   }
 
@@ -495,21 +515,21 @@ export class LocationService {
   }
 
   private isGeolocationSupported(): boolean {
-    return 'geolocation' in navigator;
+    return "geolocation" in navigator;
   }
 
   public destroy(): void {
     this.isDestroyed = true;
     this.stopTracking();
-    
+
     if (this.permissionWatcher) {
       // Note: There's no standard way to remove permission event listeners
       // The listener will be cleaned up when the page unloads
       this.permissionWatcher = null;
     }
-    
+
     this.callbacks = {};
-    Logger.info('[LocationService] Service destroyed');
+    Logger.info("[LocationService] Service destroyed");
   }
 
   // Utility methods for external use
@@ -518,8 +538,11 @@ export class LocationService {
   }
 
   public hasCurrentLocation(): boolean {
-    return this.hasValidLocation() && this.state.timestamp !== null && 
-           (Date.now() - this.state.timestamp) < 30000; // Within last 30 seconds
+    return (
+      this.hasValidLocation() &&
+      this.state.timestamp !== null &&
+      Date.now() - this.state.timestamp < 30000
+    ); // Within last 30 seconds
   }
 
   public hasLastKnownLocation(): boolean {
@@ -548,7 +571,7 @@ export class LocationService {
       distanceFilter: 3, // 3 meters for walking
       updateInterval: 1500, // 1.5 seconds for responsive updates
       retryAttempts: 5, // More retry attempts for position unavailable
-      retryDelay: 3000 // Longer delay between retries
+      retryDelay: 3000, // Longer delay between retries
     };
   }
 
@@ -560,7 +583,7 @@ export class LocationService {
       distanceFilter: 10, // 10 meters for driving
       updateInterval: 3000, // 3 seconds
       retryAttempts: 5,
-      retryDelay: 1000
+      retryDelay: 1000,
     };
   }
 
@@ -572,10 +595,10 @@ export class LocationService {
       distanceFilter: 50, // 50 meters
       updateInterval: 10000, // 10 seconds
       retryAttempts: 2,
-      retryDelay: 5000
+      retryDelay: 5000,
     };
   }
 }
 
 // Export singleton instance
-export const locationService = LocationService.getInstance(); 
+export const locationService = LocationService.getInstance();

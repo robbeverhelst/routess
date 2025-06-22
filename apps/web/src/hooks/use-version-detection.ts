@@ -1,7 +1,7 @@
-import { useEffect, useState, useCallback } from 'react';
-import { checkVersionChange, getStoredVersionInfo, getCurrentVersion } from '@/lib/version';
-import { useServiceWorker } from '@/hooks/useServiceWorker';
-import { Logger } from '@/lib/logger';
+import { useEffect, useState, useCallback } from "react";
+import { checkVersionChange, getStoredVersionInfo, getCurrentVersion } from "@/lib/version";
+import { useServiceWorker } from "@/hooks/useServiceWorker";
+import { Logger } from "@/lib/logger";
 
 interface VersionState {
   hasChanged: boolean;
@@ -27,43 +27,42 @@ export function useVersionDetection() {
   const { clearAllCaches, swState, refreshCacheStatus } = useServiceWorker();
 
   const clearCachesForVersionUpdate = useCallback(async () => {
-    setVersionState(prev => ({ ...prev, isClearingCaches: true, error: undefined }));
-    
+    setVersionState((prev) => ({ ...prev, isClearingCaches: true, error: undefined }));
+
     try {
-      Logger.info('[useVersionDetection] Version change detected, clearing all caches...');
-      
+      Logger.info("[useVersionDetection] Version change detected, clearing all caches...");
+
       // Clear all service worker caches
       await clearAllCaches();
-      
+
       // Refresh cache status to ensure it's updated
       await refreshCacheStatus();
-      
+
       // Force reload the service worker to get the latest version
-      if (swState.isControlling && 'serviceWorker' in navigator) {
+      if (swState.isControlling && "serviceWorker" in navigator) {
         const registration = await navigator.serviceWorker.ready;
         if (registration.waiting) {
           // If there's a waiting service worker, activate it
-          registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+          registration.waiting.postMessage({ type: "SKIP_WAITING" });
         } else if (registration.active) {
           // Force update check
           await registration.update();
         }
       }
-      
-      Logger.info('[useVersionDetection] Caches cleared successfully for version update');
-      
-      setVersionState(prev => ({
+
+      Logger.info("[useVersionDetection] Caches cleared successfully for version update");
+
+      setVersionState((prev) => ({
         ...prev,
         isClearingCaches: false,
-        cachesClearedSuccessfully: true
+        cachesClearedSuccessfully: true,
       }));
-      
     } catch (error) {
-      Logger.error('[useVersionDetection] Failed to clear caches for version update:', error);
-      setVersionState(prev => ({
+      Logger.error("[useVersionDetection] Failed to clear caches for version update:", error);
+      setVersionState((prev) => ({
         ...prev,
         isClearingCaches: false,
-        error: error instanceof Error ? error.message : 'Failed to clear caches'
+        error: error instanceof Error ? error.message : "Failed to clear caches",
       }));
     }
   }, [clearAllCaches, refreshCacheStatus, swState.isControlling]);
@@ -71,7 +70,7 @@ export function useVersionDetection() {
   useEffect(() => {
     const hasChanged = checkVersionChange();
     const versionInfo = getStoredVersionInfo();
-    
+
     const newState: VersionState = {
       hasChanged,
       currentVersion: getCurrentVersion(),
@@ -79,15 +78,20 @@ export function useVersionDetection() {
       isClearingCaches: false,
       cachesClearedSuccessfully: false,
     };
-    
+
     setVersionState(newState);
-    
+
     // If version has changed and we have a previous version, clear caches
     if (hasChanged && versionInfo?.previous) {
-      Logger.info('[useVersionDetection] Version changed from', versionInfo.previous, 'to', getCurrentVersion());
+      Logger.info(
+        "[useVersionDetection] Version changed from",
+        versionInfo.previous,
+        "to",
+        getCurrentVersion(),
+      );
       clearCachesForVersionUpdate();
     }
   }, [clearCachesForVersionUpdate]);
 
   return versionState;
-} 
+}

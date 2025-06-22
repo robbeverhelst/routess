@@ -33,3 +33,5 @@ dist-ssr
 
 coverage/
 **/coverage/
+
+CLAUDE.md

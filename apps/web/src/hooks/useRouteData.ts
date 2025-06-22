@@ -1,7 +1,7 @@
-import { useState, useCallback } from 'react';
-import { getWaypoints, getDirectFlags } from '@/features/routing/managers/WaypointManager';
-import { serializeAndCompress } from '@/lib/shareUtils';
-import { Logger } from '@/lib/logger';
+import { useState, useCallback } from "react";
+import { getWaypoints, getDirectFlags } from "@/features/routing/managers/WaypointManager";
+import { serializeAndCompress } from "@/lib/shareUtils";
+import { Logger } from "@/lib/logger";
 
 export interface RouteDataState {
   routeDistance: string;
@@ -25,20 +25,20 @@ export interface RouteDataHandlers {
 }
 
 export function useRouteData(): RouteDataState & RouteDataHandlers {
-  const [routeDistance, setRouteDistance] = useState<string>('');
-  const [routeDuration, setRouteDuration] = useState<string>('');
+  const [routeDistance, setRouteDistance] = useState<string>("");
+  const [routeDuration, setRouteDuration] = useState<string>("");
   const [hasRoute, setHasRoute] = useState<boolean>(false);
-  const [shareNotification, setShareNotification] = useState('');
+  const [shareNotification, setShareNotification] = useState("");
   const [displayedShareUrl, setDisplayedShareUrl] = useState<string | null>(null);
   const [showRouteInfoError, setShowRouteInfoError] = useState(false);
-  const [routeInfoErrorMessage, setRouteInfoErrorMessage] = useState('');
+  const [routeInfoErrorMessage, setRouteInfoErrorMessage] = useState("");
 
   const handleRouteInfoError = useCallback((message: string) => {
     setShowRouteInfoError(true);
     setRouteInfoErrorMessage(message);
     setTimeout(() => {
       setShowRouteInfoError(false);
-      setRouteInfoErrorMessage('');
+      setRouteInfoErrorMessage("");
     }, 5000);
   }, []);
 
@@ -54,40 +54,45 @@ export function useRouteData(): RouteDataState & RouteDataHandlers {
     const encodedData = serializeAndCompress(waypoints, directFlags, true);
     if (encodedData) {
       const shareUrl = `${window.location.origin}${window.location.pathname}?route=${encodedData}`;
-      navigator.clipboard.writeText(shareUrl)
+      navigator.clipboard
+        .writeText(shareUrl)
         .then(() => {
-          setShareNotification('Link copied to clipboard!');
-          setTimeout(() => setShareNotification(''), 2000);
+          setShareNotification("Link copied to clipboard!");
+          setTimeout(() => setShareNotification(""), 2000);
         })
-        .catch(err => {
-          Logger.error('[useRouteData] Failed to copy share link:', err);
-          handleRouteInfoError('Failed to copy link. Please try again.');
+        .catch((err) => {
+          Logger.error("[useRouteData] Failed to copy share link:", err);
+          handleRouteInfoError("Failed to copy link. Please try again.");
           setDisplayedShareUrl(null); // Clear URL display on error
         });
       setDisplayedShareUrl(shareUrl);
     } else {
-      handleRouteInfoError('Could not generate shareable link.');
+      handleRouteInfoError("Could not generate shareable link.");
       setDisplayedShareUrl(null);
     }
   }, [handleRouteInfoError]);
 
-  const handleCopySharedUrl = useCallback((urlToCopy: string) => {
-    navigator.clipboard.writeText(urlToCopy)
-      .then(() => {
-        setShareNotification('Share link copied!');
-        setTimeout(() => setShareNotification(''), 2000); 
-      })
-      .catch(err => {
-        Logger.error('[useRouteData] Failed to copy share link from sidebar button:', err);
-        handleRouteInfoError('Failed to copy. Please try again.');
-      });
-  }, [handleRouteInfoError]);
-  
+  const handleCopySharedUrl = useCallback(
+    (urlToCopy: string) => {
+      navigator.clipboard
+        .writeText(urlToCopy)
+        .then(() => {
+          setShareNotification("Share link copied!");
+          setTimeout(() => setShareNotification(""), 2000);
+        })
+        .catch((err) => {
+          Logger.error("[useRouteData] Failed to copy share link from sidebar button:", err);
+          handleRouteInfoError("Failed to copy. Please try again.");
+        });
+    },
+    [handleRouteInfoError],
+  );
+
   const clearShareState = useCallback(() => {
     setDisplayedShareUrl(null);
-    setShareNotification('');
+    setShareNotification("");
     setShowRouteInfoError(false);
-    setRouteInfoErrorMessage('');
+    setRouteInfoErrorMessage("");
   }, []);
 
   return {
@@ -107,4 +112,4 @@ export function useRouteData(): RouteDataState & RouteDataHandlers {
     clearShareState,
     setShareNotification,
   };
-} 
+}

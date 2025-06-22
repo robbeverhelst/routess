@@ -5,124 +5,141 @@ This directory contains the Pulumi infrastructure code to deploy the Maps applic
 ## Prerequisites
 
 - [Pulumi CLI](https://www.pulumi.com/docs/get-started/install/)
-- [Node.js](https://nodejs.org/en/download/)
+- [Bun](https://bun.sh/) (for package management and building)
 - Access to a Kubernetes cluster with a valid kubeconfig file
-- GitHub Container Registry with the Maps application image
+- GitHub Container Registry access with a Personal Access Token
 
-## Configuration
+## Quick Setup
 
-Before deploying, you need to set up the following configuration values:
+Run the automated setup script that handles everything:
 
 ```bash
-# Set the cluster name
+# Navigate to the infra directory
+cd apps/infra
+
+# Run the complete setup (installs deps, builds, configures Pulumi)
+bun run setup
+```
+
+The setup script will:
+
+1. ✅ Check prerequisites (Pulumi CLI, Bun)
+2. 📦 Install dependencies
+3. 🔨 Build TypeScript code
+4. 🚀 Create/select Pulumi stack
+5. ⚙️ Configure all required settings interactively
+6. 🔍 Run preview to show planned changes
+
+## Manual Configuration (Alternative)
+
+If you prefer manual configuration:
+
+```bash
+# Install dependencies and build
+bun install && bun run build
+
+# Create/select stack
+pulumi stack init prod  # or pulumi stack select prod
+
+# Configure settings
 pulumi config set clusterName homelab
-
-# Set the kubeconfig (this will be encrypted)
 pulumi config set --secret kubeconfig "$(cat ~/homelab/admin.conf)"
-
-# Set GitHub credentials for pulling images from GitHub Container Registry
-# You can create a Personal Access Token with 'read:packages' scope at https://github.com/settings/tokens
 pulumi config set githubUsername YOUR_GITHUB_USERNAME
 pulumi config set --secret githubToken YOUR_GITHUB_TOKEN
+pulumi config set --secret postgresPassword YOUR_POSTGRES_PASSWORD  # optional
 ```
 
-Alternatively, you can use the provided setup script:
+## Deployment Commands
 
 ```bash
-# Make the script executable
-chmod +x setup-stack.sh
+# Preview changes
+bun run preview
 
-# Run the setup script
-./setup-stack.sh
-```
+# Deploy infrastructure
+bun run deploy
 
-## Deployment
+# Refresh state
+bun run refresh
 
-To deploy the infrastructure:
-
-```bash
-# Preview the changes
-pulumi preview
-
-# Deploy the changes
-pulumi up
+# Destroy infrastructure
+bun run destroy
 ```
 
 ## Resources Created
 
-This Pulumi program creates the following resources:
+This infrastructure creates:
 
-- Kubernetes namespace: `maps`
-- Kubernetes deployment: `maps-deployment`
-- Kubernetes service: `maps-service`
+- **Kubernetes Namespace**: `maps`
+- **PostgreSQL Database**: Bitnami Helm chart with persistent storage
+- **Web Application**: React frontend deployment and service
+- **API Application**: NestJS backend deployment and service with database connectivity
+- **Secrets**: GitHub Container Registry pull secrets
 
-## Accessing the Application
+## Architecture
 
-Once deployed, the application will be accessible within the cluster at `maps-service.maps.svc.cluster.local`. 
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Web App       │    │   API Service   │    │   PostgreSQL    │
+│   (React)       │───▶│   (NestJS)      │───▶│   (Helm Chart)  │
+│   Port: 80      │    │   Port: 3000    │    │   Port: 5432    │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+```
 
-The public URL for the application will be `maps.robbeverhelst.com`. To expose this service externally, you'll need to configure Cloudflared to point to this Kubernetes service.
+## Services
 
-## Cloudflared Configuration
+- **Web Service**: `maps-web-service.maps.svc.cluster.local:80`
+- **API Service**: `maps-api-service.maps.svc.cluster.local:3000`
+- **PostgreSQL**: `maps-postgres-postgresql.maps.svc.cluster.local:5432`
 
-After deploying the Kubernetes resources, update your Cloudflared configuration to route traffic from `maps.robbeverhelst.com` to the internal service:
+## CI/CD Integration
 
-```yaml
-# Example Cloudflared configuration
-ingress:
-  - hostname: maps.robbeverhelst.com
-    service: http://maps-service.maps.svc.cluster.local
-  - service: http_status:404
+### Required GitHub Secrets
+
+1. **`PULUMI_ACCESS_TOKEN`**: From [Pulumi Account Settings](https://app.pulumi.com/account/tokens)
+2. **`PULUMI_CONFIG_PASSPHRASE`**: Encryption passphrase (can be empty string)
+
+### Pipeline Flow
+
+1. **Build**: Compiles applications with Bun
+2. **Docker**: Builds and pushes multi-arch images to GHCR
+3. **Deploy**: Updates infrastructure with Pulumi
+
+The pipeline automatically:
+
+- ✅ Creates stacks if they don't exist
+- 🔄 Handles updates and rollbacks
+- 📊 Reports deployment status to GitHub
+
+## Development
+
+```bash
+# Lint code
+bun run lint
+
+# Type check
+bun run check-types
+
+# Build TypeScript
+bun run build
 ```
 
 ## Cleanup
 
-To remove all resources:
-
 ```bash
-pulumi destroy
-``` 
+# Remove all infrastructure
+bun run destroy
+```
 
-## CI/CD Integration
+## Troubleshooting
 
-This project includes a GitHub Actions workflow that automatically builds and deploys the application and infrastructure when changes are pushed to the main branch.
+### Common Issues
 
-### Required GitHub Secrets
+1. **Kubeconfig not found**: Ensure the path is correct and file exists
+2. **GitHub token invalid**: Create a new PAT with `read:packages` scope
+3. **Pulumi state conflicts**: Run `pulumi refresh` to sync state
 
-To enable the CI/CD pipeline, you need to set up the following secrets in your GitHub repository:
+### Getting Help
 
-1. `PULUMI_ACCESS_TOKEN`: Your Pulumi access token for authenticating with the Pulumi service.
-   - Generate this from the [Pulumi Account Settings](https://app.pulumi.com/account/tokens)
-
-2. `PULUMI_CONFIG_PASSPHRASE`: The passphrase used to encrypt/decrypt sensitive configuration values.
-   - This can be any string you choose (even an empty string)
-   - You must use the same passphrase that was used when creating the stack locally
-   - If you used an empty passphrase locally, set this to an empty string in GitHub
-
-### Initial Stack Setup
-
-Before running the CI/CD pipeline for the first time, you need to create and configure the Pulumi stack:
-
-1. Install the Pulumi CLI locally
-2. Navigate to the `infra` directory
-3. Run the setup script: `./setup-stack.sh`
-4. This will create the stack and set the necessary configuration values
-
-After the initial setup, the CI/CD pipeline will use the `upsert: true` option to work with the existing stack.
-
-### How the CI/CD Pipeline Works
-
-The CI/CD pipeline consists of three main jobs:
-
-1. **Build**: Builds the application using Bun.
-2. **Docker**: Builds and pushes a multi-architecture Docker image to GitHub Container Registry.
-3. **Deploy**: Deploys the infrastructure using the official Pulumi GitHub Actions integration.
-
-The deployment job only runs on pushes to the main branch, not on pull requests. The Pulumi GitHub Action automatically handles:
-
-- Creating the stack if it doesn't exist (`upsert: true`)
-- Running the Pulumi update
-- Reporting the status back to GitHub
-
-### Manual Deployment
-
-You can also manually trigger the workflow from the GitHub Actions tab in your repository. 
+- Check Pulumi logs: `pulumi logs`
+- View current config: `pulumi config`
+- Stack information: `pulumi stack`

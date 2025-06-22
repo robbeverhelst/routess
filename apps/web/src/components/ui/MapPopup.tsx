@@ -1,12 +1,12 @@
-import React from 'react';
-import type { Map } from 'mapbox-gl';
-import { Button } from '@/components/ui/button';
+import React from "react";
+import type { Map } from "mapbox-gl";
+import { Button } from "@/components/ui/button";
 import { t, type SupportedLanguage } from "@/lib/i18n";
 
 export interface PopupInfo {
   longitude: number;
   latitude: number;
-  type: 'direct' | 'remove' | 'info' | 'add_on_route';
+  type: "direct" | "remove" | "info" | "add_on_route";
   waypointIndex?: number;
   message?: string;
 }
@@ -39,22 +39,22 @@ export const MapPopup: React.FC<MapPopupProps> = ({
       style={{
         left: position.x,
         top: position.y - 10, // Adjusted for better pointing, original was -30 which might be too high
-        transform: 'translate(-50%, -100%)',
+        transform: "translate(-50%, -100%)",
       }}
     >
-      {popupInfo.type === 'direct' && (
+      {popupInfo.type === "direct" && (
         <div className="p-2 bg-white rounded-md shadow-md border border-border">
           <Button
             variant="ghost"
             className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
             onClick={onAddDirectWaypoint}
           >
-            {t('mapPopup.button.addDirectWaypoint', currentLanguage)}
+            {t("mapPopup.button.addDirectWaypoint", currentLanguage)}
           </Button>
         </div>
       )}
-      
-      {popupInfo.type === 'remove' && (
+
+      {popupInfo.type === "remove" && (
         <div className="p-2 bg-white rounded-md shadow-md border border-border">
           <Button
             variant="ghost"
@@ -62,30 +62,28 @@ export const MapPopup: React.FC<MapPopupProps> = ({
             onClick={onRemoveWaypoint}
           >
             <span className="text-lg">🗑️</span>
-            <span>{t('mapPopup.button.removePoint', currentLanguage)}</span>
+            <span>{t("mapPopup.button.removePoint", currentLanguage)}</span>
           </Button>
         </div>
       )}
-      
-      {popupInfo.type === 'add_on_route' && (
+
+      {popupInfo.type === "add_on_route" && (
         <div className="p-2 bg-white rounded-md shadow-md border border-border">
           <Button
             variant="ghost"
             className="text-green-600 hover:text-green-800 hover:bg-green-50"
             onClick={onAddWaypointOnRoute}
           >
-            {t('mapPopup.button.addWaypointHere', currentLanguage)}
+            {t("mapPopup.button.addWaypointHere", currentLanguage)}
           </Button>
         </div>
       )}
-      
-      {popupInfo.type === 'info' && popupInfo.message && (
+
+      {popupInfo.type === "info" && popupInfo.message && (
         <div className="p-2 bg-white rounded-md shadow-md border border-border">
-          <div className="text-sm text-gray-800">
-            {popupInfo.message}
-          </div>
+          <div className="text-sm text-gray-800">{popupInfo.message}</div>
         </div>
       )}
     </div>
   );
-}; 
+};

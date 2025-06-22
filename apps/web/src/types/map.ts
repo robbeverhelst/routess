@@ -16,7 +16,7 @@ export interface MapboxMapProps {
 }
 
 // Map style types
-export type MapStyle = 'standard' | 'satellite';
+export type MapStyle = "standard" | "satellite";
 
 // Added just for type compatibility with the imported code
 export interface BirdSighting {
@@ -24,4 +24,4 @@ export interface BirdSighting {
   location: Coordinate;
   species: string;
   timestamp: string;
-} 
+}

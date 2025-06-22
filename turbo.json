@@ -15,6 +15,12 @@
     "check-types": {
       "dependsOn": ["^check-types"]
     },
+    "format": {
+      "cache": false
+    },
+    "format:check": {
+      "cache": false
+    },
     "test": {
       "dependsOn": ["^test"]
     },
@@ -38,4 +44,4 @@
       "dependsOn": ["@maps/infra#build"]
     }
   }
-} 
+}

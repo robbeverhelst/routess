@@ -35,22 +35,26 @@ A web-based mapping application with advanced routing capabilities built using R
 ### Getting Started
 
 1. Clone the repository:
+
    ```
    git clone https://github.com/yourusername/maps.git
    cd maps
    ```
 
 2. Install dependencies:
+
    ```
    bun install
    ```
 
 3. Create a `.env` file in the project root with your Mapbox access token:
+
    ```
    VITE_MAPBOX_ACCESS_TOKEN=your_mapbox_token_here
    ```
 
 4. Start the development server:
+
    ```
    bun dev
    ```
@@ -60,7 +64,7 @@ A web-based mapping application with advanced routing capabilities built using R
 ## Usage Instructions
 
 - **Add Waypoints**: Click on the map to add waypoints
-- **Add Direct Waypoints**: Right-click and select "Add direct waypoint" 
+- **Add Direct Waypoints**: Right-click and select "Add direct waypoint"
 - **Remove Waypoints**: Right-click on a waypoint and select "Remove point"
 - **Undo/Redo**: Use the top-right controls to undo or redo waypoint actions
 - **Reset Route**: Click the reset button in the top-right controls

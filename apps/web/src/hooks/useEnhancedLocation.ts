@@ -1,10 +1,15 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { locationService, type LocationState, type LocationOptions, LocationService } from '@/services/LocationService';
-import { Logger } from '@/lib/logger';
+import { useState, useEffect, useCallback, useRef } from "react";
+import {
+  locationService,
+  type LocationState,
+  type LocationOptions,
+  LocationService,
+} from "@/services/LocationService";
+import { Logger } from "@/lib/logger";
 
 export interface UseEnhancedLocationOptions {
   autoStart?: boolean;
-  trackingMode?: 'walking' | 'driving' | 'battery-optimized' | 'custom';
+  trackingMode?: "walking" | "driving" | "battery-optimized" | "custom";
   customOptions?: Partial<LocationOptions>;
   onLocationUpdate?: (state: LocationState) => void;
   onError?: (error: string, state: LocationState) => void;
@@ -21,44 +26,50 @@ export interface UseEnhancedLocationReturn {
   error: string | null;
   isLoading: boolean;
   isTracking: boolean;
-  permissionState: 'granted' | 'denied' | 'prompt' | 'unknown';
+  permissionState: "granted" | "denied" | "prompt" | "unknown";
   lastUpdateTime: number | null;
-  
+
   // Utility states
   hasValidLocation: boolean;
   hasCurrentLocation: boolean;
   hasLastKnownLocation: boolean;
   isHighAccuracy: boolean;
   locationAge: number | null;
-  
+
   // Control functions
   startTracking: (options?: Partial<LocationOptions>) => void;
   stopTracking: () => void;
   getCurrentLocation: (options?: Partial<LocationOptions>) => Promise<LocationState>;
   updateOptions: (options: Partial<LocationOptions>) => void;
-  
+
   // Utility functions
   getLastKnownLocation: () => [number, number] | null;
-  setTrackingMode: (mode: 'walking' | 'driving' | 'battery-optimized') => void;
+  setTrackingMode: (mode: "walking" | "driving" | "battery-optimized") => void;
 }
 
-export function useEnhancedLocation(options: UseEnhancedLocationOptions = {}): UseEnhancedLocationReturn {
+export function useEnhancedLocation(
+  options: UseEnhancedLocationOptions = {},
+): UseEnhancedLocationReturn {
   const {
     autoStart = false,
-    trackingMode = 'walking',
+    trackingMode = "walking",
     customOptions,
     onLocationUpdate,
     onError,
-    onPermissionChange
+    onPermissionChange,
   } = options;
 
   // State from location service
   const [locationState, setLocationState] = useState<LocationState>(locationService.getState());
-  
+
   // Derived utility states
   const [hasValidLocation, setHasValidLocation] = useState(locationService.hasValidLocation());
-  const [hasCurrentLocation, setHasCurrentLocation] = useState(locationService.hasCurrentLocation());
-  const [hasLastKnownLocation, setHasLastKnownLocation] = useState(locationService.hasLastKnownLocation());
+  const [hasCurrentLocation, setHasCurrentLocation] = useState(
+    locationService.hasCurrentLocation(),
+  );
+  const [hasLastKnownLocation, setHasLastKnownLocation] = useState(
+    locationService.hasLastKnownLocation(),
+  );
   const [isHighAccuracy, setIsHighAccuracy] = useState(locationService.isHighAccuracy());
   const [locationAge, setLocationAge] = useState(locationService.getLocationAge());
 
@@ -108,15 +119,15 @@ export function useEnhancedLocation(options: UseEnhancedLocationOptions = {}): U
       },
       onPermissionChange: (permission: PermissionState) => {
         // Update the state to reflect permission change
-        setLocationState(prev => ({ ...prev, permissionState: permission }));
+        setLocationState((prev) => ({ ...prev, permissionState: permission }));
         if (onPermissionChangeRef.current) {
           onPermissionChangeRef.current(permission);
         }
       },
       onTrackingStateChange: (isTracking: boolean) => {
-        setLocationState(prev => ({ ...prev, isTracking }));
+        setLocationState((prev) => ({ ...prev, isTracking }));
         Logger.info(`[useEnhancedLocation] Tracking state changed: ${isTracking}`);
-      }
+      },
     };
 
     locationService.setCallbacks(callbacks);
@@ -136,16 +147,16 @@ export function useEnhancedLocation(options: UseEnhancedLocationOptions = {}): U
     let modeOptions: Partial<LocationOptions> = {};
 
     switch (trackingMode) {
-      case 'walking':
+      case "walking":
         modeOptions = LocationService.getWalkingConfig();
         break;
-      case 'driving':
+      case "driving":
         modeOptions = LocationService.getDrivingConfig();
         break;
-      case 'battery-optimized':
+      case "battery-optimized":
         modeOptions = LocationService.getBatteryOptimizedConfig();
         break;
-      case 'custom':
+      case "custom":
         modeOptions = customOptions || {};
         break;
     }
@@ -158,29 +169,32 @@ export function useEnhancedLocation(options: UseEnhancedLocationOptions = {}): U
   // Auto-start tracking if requested
   useEffect(() => {
     if (autoStart && !locationState.isTracking) {
-      Logger.info('[useEnhancedLocation] Auto-starting location tracking');
+      Logger.info("[useEnhancedLocation] Auto-starting location tracking");
       locationService.startTracking();
     }
   }, [autoStart, locationState.isTracking]);
 
   // Control functions
   const startTracking = useCallback((trackingOptions?: Partial<LocationOptions>) => {
-    Logger.info('[useEnhancedLocation] Starting location tracking');
+    Logger.info("[useEnhancedLocation] Starting location tracking");
     locationService.startTracking(trackingOptions);
   }, []);
 
   const stopTracking = useCallback(() => {
-    Logger.info('[useEnhancedLocation] Stopping location tracking');
+    Logger.info("[useEnhancedLocation] Stopping location tracking");
     locationService.stopTracking();
   }, []);
 
-  const getCurrentLocation = useCallback(async (locationOptions?: Partial<LocationOptions>): Promise<LocationState> => {
-    Logger.info('[useEnhancedLocation] Getting current location');
-    return locationService.getCurrentLocation(locationOptions);
-  }, []);
+  const getCurrentLocation = useCallback(
+    async (locationOptions?: Partial<LocationOptions>): Promise<LocationState> => {
+      Logger.info("[useEnhancedLocation] Getting current location");
+      return locationService.getCurrentLocation(locationOptions);
+    },
+    [],
+  );
 
   const updateLocationOptions = useCallback((newOptions: Partial<LocationOptions>) => {
-    Logger.info('[useEnhancedLocation] Updating location options:', newOptions);
+    Logger.info("[useEnhancedLocation] Updating location options:", newOptions);
     locationService.updateOptions(newOptions);
   }, []);
 
@@ -188,22 +202,22 @@ export function useEnhancedLocation(options: UseEnhancedLocationOptions = {}): U
     return locationService.getLastKnownLocation();
   }, []);
 
-  const setTrackingMode = useCallback((mode: 'walking' | 'driving' | 'battery-optimized') => {
+  const setTrackingMode = useCallback((mode: "walking" | "driving" | "battery-optimized") => {
     Logger.info(`[useEnhancedLocation] Setting tracking mode to: ${mode}`);
-    
+
     let modeOptions: Partial<LocationOptions>;
     switch (mode) {
-      case 'walking':
+      case "walking":
         modeOptions = LocationService.getWalkingConfig();
         break;
-      case 'driving':
+      case "driving":
         modeOptions = LocationService.getDrivingConfig();
         break;
-      case 'battery-optimized':
+      case "battery-optimized":
         modeOptions = LocationService.getBatteryOptimizedConfig();
         break;
     }
-    
+
     locationService.updateOptions(modeOptions);
   }, []);
 
@@ -212,7 +226,7 @@ export function useEnhancedLocation(options: UseEnhancedLocationOptions = {}): U
     return () => {
       // Only stop tracking if this hook was the one that started it with autoStart
       if (autoStart && locationState.isTracking) {
-        Logger.info('[useEnhancedLocation] Component unmounting, stopping auto-started tracking');
+        Logger.info("[useEnhancedLocation] Component unmounting, stopping auto-started tracking");
         locationService.stopTracking();
       }
     };
@@ -230,22 +244,22 @@ export function useEnhancedLocation(options: UseEnhancedLocationOptions = {}): U
     isTracking: locationState.isTracking,
     permissionState: locationState.permissionState,
     lastUpdateTime: locationState.lastUpdateTime,
-    
+
     // Utility states
     hasValidLocation,
     hasCurrentLocation,
     hasLastKnownLocation,
     isHighAccuracy,
     locationAge,
-    
+
     // Control functions
     startTracking,
     stopTracking,
     getCurrentLocation,
     updateOptions: updateLocationOptions,
-    
+
     // Utility functions
     getLastKnownLocation,
-    setTrackingMode
+    setTrackingMode,
   };
-} 
+}

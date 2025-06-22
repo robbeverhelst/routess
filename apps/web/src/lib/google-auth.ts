@@ -1,4 +1,4 @@
-import { Logger } from './logger';
+import { Logger } from "./logger";
 
 // Google OAuth Configuration
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
@@ -43,32 +43,31 @@ interface GoogleJWTPayload {
 
 // Google Auth Service Class
 class GoogleAuthService {
-  
   // Parse JWT token to get user information
   private parseCredential(credential: string): GoogleUser {
     try {
-      const base64Url = credential.split('.')[1];
-      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const base64Url = credential.split(".")[1];
+      const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
       const jsonPayload = decodeURIComponent(
         atob(base64)
-          .split('')
-          .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-          .join('')
+          .split("")
+          .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+          .join(""),
       );
-      
+
       const payload = JSON.parse(jsonPayload) as GoogleJWTPayload;
-      
+
       return {
         id: payload.sub,
         email: payload.email,
         name: payload.name,
         picture: payload.picture,
         given_name: payload.given_name,
-        family_name: payload.family_name
+        family_name: payload.family_name,
       };
     } catch (error) {
-      Logger.error('Failed to parse Google credential:', error);
-      throw new Error('Invalid Google credential');
+      Logger.error("Failed to parse Google credential:", error);
+      throw new Error("Invalid Google credential");
     }
   }
 
@@ -76,41 +75,41 @@ class GoogleAuthService {
   async handleGoogleSuccess(credentialResponse: CredentialResponse): Promise<GoogleUser> {
     try {
       if (!credentialResponse.credential) {
-        throw new Error('No credential received from Google');
+        throw new Error("No credential received from Google");
       }
 
       // Parse the JWT credential to get user info
       const user = this.parseCredential(credentialResponse.credential);
-      
+
       // Store user data and credential
-      localStorage.setItem('google_credential', credentialResponse.credential);
-      localStorage.setItem('google_user', JSON.stringify(user));
-      
-      Logger.info('Google Sign-In successful:', { email: user.email, name: user.name });
-      
+      localStorage.setItem("google_credential", credentialResponse.credential);
+      localStorage.setItem("google_user", JSON.stringify(user));
+
+      Logger.info("Google Sign-In successful:", { email: user.email, name: user.name });
+
       return user;
     } catch (error) {
-      Logger.error('Google login processing failed:', error);
+      Logger.error("Google login processing failed:", error);
       throw error;
     }
   }
 
   // Handle Google login error
   handleGoogleError(error?: unknown): void {
-    Logger.error('Google Sign-In failed:', error);
-    throw new Error('Google authentication failed');
+    Logger.error("Google Sign-In failed:", error);
+    throw new Error("Google authentication failed");
   }
 
   // Sign out
   async signOut(): Promise<void> {
     try {
       // Clear stored data
-      localStorage.removeItem('google_credential');
-      localStorage.removeItem('google_user');
-      
-      Logger.info('Google Sign-Out successful');
+      localStorage.removeItem("google_credential");
+      localStorage.removeItem("google_user");
+
+      Logger.info("Google Sign-Out successful");
     } catch (error) {
-      Logger.error('Google Sign-Out failed:', error);
+      Logger.error("Google Sign-Out failed:", error);
       throw error;
     }
   }
@@ -118,25 +117,25 @@ class GoogleAuthService {
   // Get current authentication state
   getAuthState(): AuthState {
     try {
-      const credential = localStorage.getItem('google_credential');
-      const userJson = localStorage.getItem('google_user');
-      
+      const credential = localStorage.getItem("google_credential");
+      const userJson = localStorage.getItem("google_user");
+
       if (credential && userJson) {
         const user = JSON.parse(userJson) as GoogleUser;
         return {
           isAuthenticated: true,
           user,
-          accessToken: credential // Using credential as token for now
+          accessToken: credential, // Using credential as token for now
         };
       }
     } catch (error) {
-      Logger.error('Failed to get auth state:', error);
+      Logger.error("Failed to get auth state:", error);
     }
-    
+
     return {
       isAuthenticated: false,
       user: null,
-      accessToken: null
+      accessToken: null,
     };
   }
 
@@ -152,13 +151,15 @@ class GoogleAuthService {
 
   // Get stored credential
   getCredential(): string | null {
-    return localStorage.getItem('google_credential');
+    return localStorage.getItem("google_credential");
   }
 
   // Get Google Client ID
   getClientId(): string {
     if (!GOOGLE_CLIENT_ID) {
-      throw new Error('Google Client ID not configured. Please set VITE_GOOGLE_CLIENT_ID in your environment.');
+      throw new Error(
+        "Google Client ID not configured. Please set VITE_GOOGLE_CLIENT_ID in your environment.",
+      );
     }
     return GOOGLE_CLIENT_ID;
   }
@@ -169,12 +170,12 @@ export const googleAuth = new GoogleAuthService();
 
 // Google Identity Services button configuration interface
 interface GoogleButtonConfig {
-  theme?: 'outline' | 'filled_blue' | 'filled_black';
-  size?: 'large' | 'medium' | 'small';
-  type?: 'standard' | 'icon';
-  shape?: 'rectangular' | 'pill' | 'circle' | 'square';
-  text?: 'signin_with' | 'signup_with' | 'continue_with' | 'signin';
-  logo_alignment?: 'left' | 'center';
+  theme?: "outline" | "filled_blue" | "filled_black";
+  size?: "large" | "medium" | "small";
+  type?: "standard" | "icon";
+  shape?: "rectangular" | "pill" | "circle" | "square";
+  text?: "signin_with" | "signup_with" | "continue_with" | "signin";
+  logo_alignment?: "left" | "center";
   width?: string;
   locale?: string;
 }
@@ -212,4 +213,4 @@ declare global {
       };
     };
   }
-} 
+}

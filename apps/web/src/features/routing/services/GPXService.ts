@@ -1,38 +1,38 @@
-// GPXService.ts - Handles GPX data parsing and generation. 
+// GPXService.ts - Handles GPX data parsing and generation.
 
-import type { Coordinate } from '@/types/map';
+import type { Coordinate } from "@/types/map";
 // Import checkNearRoad from RoutingUtils
-import { checkNearRoad } from '@/features/routing/utils/RoutingUtils';
-import { Logger } from '@/lib/logger';
+import { checkNearRoad } from "@/features/routing/utils/RoutingUtils";
+import { Logger } from "@/lib/logger";
 
 // Import RouteCalculationService to set track points directly
-import { setCurrentRoutePath } from '@/features/routing/services/RouteCalculationService';
+import { setCurrentRoutePath } from "@/features/routing/services/RouteCalculationService";
 
 // Helper function to calculate bearing between two coordinates
 function calculateBearing(coord1: Coordinate, coord2: Coordinate): number {
-  const lat1 = coord1[1] * Math.PI / 180;
-  const lat2 = coord2[1] * Math.PI / 180;
-  const deltaLon = (coord2[0] - coord1[0]) * Math.PI / 180;
-  
+  const lat1 = (coord1[1] * Math.PI) / 180;
+  const lat2 = (coord2[1] * Math.PI) / 180;
+  const deltaLon = ((coord2[0] - coord1[0]) * Math.PI) / 180;
+
   const y = Math.sin(deltaLon) * Math.cos(lat2);
   const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(deltaLon);
-  
-  const bearing = Math.atan2(y, x) * 180 / Math.PI;
+
+  const bearing = (Math.atan2(y, x) * 180) / Math.PI;
   return (bearing + 360) % 360; // Normalize to 0-360
 }
 
 // Helper function to calculate distance between coordinates (Haversine formula)
 function calculateDistance(coord1: Coordinate, coord2: Coordinate): number {
   const R = 6371; // Earth's radius in kilometers
-  const lat1 = coord1[1] * Math.PI / 180;
-  const lat2 = coord2[1] * Math.PI / 180;
-  const deltaLat = (coord2[1] - coord1[1]) * Math.PI / 180;
-  const deltaLon = (coord2[0] - coord1[0]) * Math.PI / 180;
+  const lat1 = (coord1[1] * Math.PI) / 180;
+  const lat2 = (coord2[1] * Math.PI) / 180;
+  const deltaLat = ((coord2[1] - coord1[1]) * Math.PI) / 180;
+  const deltaLon = ((coord2[0] - coord1[0]) * Math.PI) / 180;
 
-  const a = Math.sin(deltaLat/2) * Math.sin(deltaLat/2) +
-            Math.cos(lat1) * Math.cos(lat2) *
-            Math.sin(deltaLon/2) * Math.sin(deltaLon/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  const a =
+    Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
   return R * c; // Distance in kilometers
 }
@@ -60,13 +60,15 @@ export function convertTrackToSmartWaypoints(trackPoints: Coordinate[]): Coordin
   const minDirectionChangeThreshold = 30; // degrees
   const maxDistanceInterval = 2.0; // kilometers
   const minDistanceBetweenWaypoints = 0.1; // kilometers (100m minimum)
-  
+
   // Always include start point
   waypoints.push(trackPoints[0]);
   let lastWaypointIndex = 0;
   let cumulativeDistance = 0;
 
-  Logger.info(`[GPXService.convertTrackToSmartWaypoints] Processing ${trackPoints.length} track points...`);
+  Logger.info(
+    `[GPXService.convertTrackToSmartWaypoints] Processing ${trackPoints.length} track points...`,
+  );
 
   for (let i = 1; i < trackPoints.length - 1; i++) {
     const currentPoint = trackPoints[i];
@@ -84,7 +86,7 @@ export function convertTrackToSmartWaypoints(trackPoints: Coordinate[]): Coordin
     }
 
     let shouldAddWaypoint = false;
-    let reason = '';
+    let reason = "";
 
     // Check for significant direction change
     if (i >= 2 && i < trackPoints.length - 2) {
@@ -92,7 +94,7 @@ export function convertTrackToSmartWaypoints(trackPoints: Coordinate[]): Coordin
       const windowSize = Math.min(3, Math.floor(trackPoints.length / 20));
       const beforeIndex = Math.max(0, i - windowSize);
       const afterIndex = Math.min(trackPoints.length - 1, i + windowSize);
-      
+
       const bearingBefore = calculateBearing(trackPoints[beforeIndex], currentPoint);
       const bearingAfter = calculateBearing(currentPoint, trackPoints[afterIndex]);
       const directionChange = angleDifference(bearingBefore, bearingAfter);
@@ -106,7 +108,7 @@ export function convertTrackToSmartWaypoints(trackPoints: Coordinate[]): Coordin
     // Check for distance interval
     if (cumulativeDistance >= maxDistanceInterval) {
       shouldAddWaypoint = true;
-      reason = reason ? `${reason} + distance interval` : 'distance interval';
+      reason = reason ? `${reason} + distance interval` : "distance interval";
       cumulativeDistance = 0; // Reset cumulative distance
     }
 
@@ -116,7 +118,9 @@ export function convertTrackToSmartWaypoints(trackPoints: Coordinate[]): Coordin
     if (shouldAddWaypoint) {
       waypoints.push(currentPoint);
       lastWaypointIndex = i;
-      Logger.debug(`[GPXService.convertTrackToSmartWaypoints] Added waypoint ${waypoints.length} at index ${i}: ${reason}`);
+      Logger.debug(
+        `[GPXService.convertTrackToSmartWaypoints] Added waypoint ${waypoints.length} at index ${i}: ${reason}`,
+      );
     }
   }
 
@@ -124,30 +128,37 @@ export function convertTrackToSmartWaypoints(trackPoints: Coordinate[]): Coordin
   const lastPoint = trackPoints[trackPoints.length - 1];
   const lastWaypoint = waypoints[waypoints.length - 1];
   const distanceToEnd = calculateDistance(lastWaypoint, lastPoint);
-  
+
   if (distanceToEnd >= minDistanceBetweenWaypoints) {
     waypoints.push(lastPoint);
   }
 
   // Ensure we don't have too many waypoints (cap at 15 for usability)
   if (waypoints.length > 15) {
-    Logger.info(`[GPXService.convertTrackToSmartWaypoints] Too many waypoints (${waypoints.length}), reducing to 15...`);
+    Logger.info(
+      `[GPXService.convertTrackToSmartWaypoints] Too many waypoints (${waypoints.length}), reducing to 15...`,
+    );
     const reducedWaypoints = [waypoints[0]]; // Always keep start
-    
+
     // Keep evenly distributed waypoints from the middle
     const step = Math.max(1, Math.floor((waypoints.length - 2) / 13)); // -2 for start/end, 13 for middle points
     for (let i = step; i < waypoints.length - 1; i += step) {
-      if (reducedWaypoints.length < 14) { // Leave room for end point
+      if (reducedWaypoints.length < 14) {
+        // Leave room for end point
         reducedWaypoints.push(waypoints[i]);
       }
     }
-    
+
     reducedWaypoints.push(waypoints[waypoints.length - 1]); // Always keep end
-    Logger.info(`[GPXService.convertTrackToSmartWaypoints] Reduced to ${reducedWaypoints.length} waypoints`);
+    Logger.info(
+      `[GPXService.convertTrackToSmartWaypoints] Reduced to ${reducedWaypoints.length} waypoints`,
+    );
     return reducedWaypoints;
   }
 
-  Logger.info(`[GPXService.convertTrackToSmartWaypoints] Generated ${waypoints.length} smart waypoints from ${trackPoints.length} track points`);
+  Logger.info(
+    `[GPXService.convertTrackToSmartWaypoints] Generated ${waypoints.length} smart waypoints from ${trackPoints.length} track points`,
+  );
   return waypoints;
 }
 
@@ -202,14 +213,18 @@ export const generateGPXString = (waypoints: Coordinate[], routePath: Coordinate
  * @param gpxString - The GPX data as a string.
  * @returns A promise that resolves to an object containing waypoints, optional trackPoints, or an error message.
  */
-export const parseGPXFile = async (gpxString: string): Promise<{ 
-  waypoints?: Coordinate[], 
-  trackPoints?: Coordinate[],
-  error?: string 
+export const parseGPXFile = async (
+  gpxString: string,
+): Promise<{
+  waypoints?: Coordinate[];
+  trackPoints?: Coordinate[];
+  error?: string;
 }> => {
   // Check for DOMParser availability (browser environment)
-  if (typeof window === 'undefined' || typeof window.DOMParser === 'undefined') {
-    Logger.error("[GPXService.parseGPXFile] DOMParser is not available. GPX parsing currently requires a browser environment.");
+  if (typeof window === "undefined" || typeof window.DOMParser === "undefined") {
+    Logger.error(
+      "[GPXService.parseGPXFile] DOMParser is not available. GPX parsing currently requires a browser environment.",
+    );
     return { error: "GPX parsing is not available in this environment. DOMParser not found." };
   }
 
@@ -229,9 +244,11 @@ export const parseGPXFile = async (gpxString: string): Promise<{
 
     if (rteptElements.length > 0) {
       // Use route points as waypoints (preferred approach)
-      Logger.info(`[GPXService.parseGPXFile] Found ${rteptElements.length} <rtept> elements, using as waypoints.`);
+      Logger.info(
+        `[GPXService.parseGPXFile] Found ${rteptElements.length} <rtept> elements, using as waypoints.`,
+      );
       const waypoints: Coordinate[] = [];
-      
+
       for (let i = 0; i < rteptElements.length; i++) {
         const latStr = rteptElements[i].getAttribute("lat");
         const lonStr = rteptElements[i].getAttribute("lon");
@@ -241,19 +258,23 @@ export const parseGPXFile = async (gpxString: string): Promise<{
           if (!isNaN(lonNum) && !isNaN(latNum)) {
             waypoints.push([lonNum, latNum]);
           } else {
-            Logger.warn(`[GPXService.parseGPXFile] Skipped invalid route point: lat='${latStr}', lon='${lonStr}'`);
+            Logger.warn(
+              `[GPXService.parseGPXFile] Skipped invalid route point: lat='${latStr}', lon='${lonStr}'`,
+            );
           }
         }
       }
-      
+
       if (waypoints.length === 0) {
         Logger.warn("[GPXService.parseGPXFile] No valid waypoints extracted from route points.");
         return { error: "Could not extract any valid waypoints from the GPX route points." };
       }
-      
+
       // Check if we also have track points for exact route display
       if (trkptElements.length > 0) {
-        Logger.info(`[GPXService.parseGPXFile] Also found ${trkptElements.length} track points for exact route display.`);
+        Logger.info(
+          `[GPXService.parseGPXFile] Also found ${trkptElements.length} track points for exact route display.`,
+        );
         const trackPoints: Coordinate[] = [];
         for (let i = 0; i < trkptElements.length; i++) {
           const latStr = trkptElements[i].getAttribute("lat");
@@ -266,18 +287,23 @@ export const parseGPXFile = async (gpxString: string): Promise<{
             }
           }
         }
-        
-        Logger.info(`[GPXService.parseGPXFile] Successfully parsed ${waypoints.length} waypoints and ${trackPoints.length} track points.`);
+
+        Logger.info(
+          `[GPXService.parseGPXFile] Successfully parsed ${waypoints.length} waypoints and ${trackPoints.length} track points.`,
+        );
         return { waypoints, trackPoints };
       }
-      
-      Logger.info(`[GPXService.parseGPXFile] Successfully parsed ${waypoints.length} waypoints from route points.`);
+
+      Logger.info(
+        `[GPXService.parseGPXFile] Successfully parsed ${waypoints.length} waypoints from route points.`,
+      );
       return { waypoints };
-      
     } else if (trkptElements.length > 0) {
       // Import track points and convert to smart waypoints for editing
-      Logger.info(`[GPXService.parseGPXFile] Found ${trkptElements.length} <trkpt> elements, converting to smart waypoints.`);
-      
+      Logger.info(
+        `[GPXService.parseGPXFile] Found ${trkptElements.length} <trkpt> elements, converting to smart waypoints.`,
+      );
+
       const allTrackPoints: Coordinate[] = [];
       for (let i = 0; i < trkptElements.length; i++) {
         const latStr = trkptElements[i].getAttribute("lat");
@@ -290,25 +316,26 @@ export const parseGPXFile = async (gpxString: string): Promise<{
           }
         }
       }
-      
+
       if (allTrackPoints.length === 0) {
         Logger.warn("[GPXService.parseGPXFile] No valid track points extracted from GPX.");
         return { error: "Could not extract any valid track points from the GPX file." };
       }
-      
+
       // Convert track points to smart waypoints
       const smartWaypoints = convertTrackToSmartWaypoints(allTrackPoints);
-      
-      Logger.info(`[GPXService.parseGPXFile] Successfully converted ${allTrackPoints.length} track points to ${smartWaypoints.length} smart waypoints.`);
+
+      Logger.info(
+        `[GPXService.parseGPXFile] Successfully converted ${allTrackPoints.length} track points to ${smartWaypoints.length} smart waypoints.`,
+      );
       return { waypoints: smartWaypoints };
-      
     } else {
       Logger.warn("[GPXService.parseGPXFile] No <rtept> or <trkpt> elements found in GPX file.");
       return { error: "No route or track points found in the GPX file." };
     }
-
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error during GPX parsing";
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error during GPX parsing";
     Logger.error("[GPXService.parseGPXFile] Error parsing GPX:", error);
     return { error: `Error parsing GPX: ${errorMessage}` };
   }
@@ -321,17 +348,19 @@ export const parseGPXFile = async (gpxString: string): Promise<{
  * @returns A promise that resolves to an object containing final waypoints and their direct flags, or an error.
  */
 export const processGPXWaypoints = async (
-  gpxWaypoints: Coordinate[], 
-  accessToken: string
-): Promise<{ finalWaypoints?: Coordinate[], finalDirectFlags?: boolean[], error?: string }> => {
+  gpxWaypoints: Coordinate[],
+  accessToken: string,
+): Promise<{ finalWaypoints?: Coordinate[]; finalDirectFlags?: boolean[]; error?: string }> => {
   if (!gpxWaypoints || gpxWaypoints.length === 0) {
     return { error: "No waypoints provided for processing." };
   }
 
   try {
-    Logger.info(`[GPXService.processGPXWaypoints] Checking road proximity for ${gpxWaypoints.length} points...`);
+    Logger.info(
+      `[GPXService.processGPXWaypoints] Checking road proximity for ${gpxWaypoints.length} points...`,
+    );
     const roadChecks = await Promise.all(
-      gpxWaypoints.map(coord => checkNearRoad(coord, accessToken))
+      gpxWaypoints.map((coord) => checkNearRoad(coord, accessToken)),
     );
     Logger.info("[GPXService.processGPXWaypoints] Road proximity checks complete.");
 
@@ -341,14 +370,17 @@ export const processGPXWaypoints = async (
     gpxWaypoints.forEach((coord, index) => {
       finalNewWaypoints.push(coord);
       // If roadCheck is valid, it's NOT a direct point. If invalid/off-road, it IS a direct point.
-      newDirectFlags.push(!(roadChecks[index]?.isValid));
+      newDirectFlags.push(!roadChecks[index]?.isValid);
     });
 
-    Logger.info("[GPXService.processGPXWaypoints] Determined directFlags:", JSON.stringify(newDirectFlags));
+    Logger.info(
+      "[GPXService.processGPXWaypoints] Determined directFlags:",
+      JSON.stringify(newDirectFlags),
+    );
     return { finalWaypoints: finalNewWaypoints, finalDirectFlags: newDirectFlags };
-
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error during waypoint processing";
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error during waypoint processing";
     Logger.error("[GPXService.processGPXWaypoints] Error processing GPX waypoints:", error);
     return { error: `Error processing GPX waypoints: ${errorMessage}` };
   }
@@ -364,26 +396,32 @@ export const processGPXWaypoints = async (
  */
 export const processHybridGPXData = async (
   waypoints: Coordinate[],
-  trackPoints: Coordinate[]
-): Promise<{ finalWaypoints?: Coordinate[], finalDirectFlags?: boolean[], error?: string }> => {
+  trackPoints: Coordinate[],
+): Promise<{ finalWaypoints?: Coordinate[]; finalDirectFlags?: boolean[]; error?: string }> => {
   try {
-    Logger.info(`[GPXService.processHybridGPXData] Processing hybrid GPX: ${waypoints.length} waypoints, ${trackPoints.length} track points.`);
-    
+    Logger.info(
+      `[GPXService.processHybridGPXData] Processing hybrid GPX: ${waypoints.length} waypoints, ${trackPoints.length} track points.`,
+    );
+
     // Set the track points directly as the current route path for exact display
     setCurrentRoutePath(trackPoints);
-    Logger.info(`[GPXService.processHybridGPXData] Set ${trackPoints.length} track points as exact route path.`);
-    
+    Logger.info(
+      `[GPXService.processHybridGPXData] Set ${trackPoints.length} track points as exact route path.`,
+    );
+
     // For hybrid imports, we don't want to draw direct lines between waypoints
     // since we already have the exact track path. Set all waypoints as non-direct.
     const finalWaypoints = waypoints;
     const finalDirectFlags = new Array(waypoints.length).fill(false);
-    
-    Logger.info(`[GPXService.processHybridGPXData] Successfully processed hybrid GPX data. All waypoints set as non-direct to avoid line drawing.`);
+
+    Logger.info(
+      `[GPXService.processHybridGPXData] Successfully processed hybrid GPX data. All waypoints set as non-direct to avoid line drawing.`,
+    );
     return { finalWaypoints, finalDirectFlags };
-    
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error during hybrid GPX processing";
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error during hybrid GPX processing";
     Logger.error("[GPXService.processHybridGPXData] Error processing hybrid GPX data:", error);
     return { error: `Error processing hybrid GPX data: ${errorMessage}` };
   }
-}; 
+};
