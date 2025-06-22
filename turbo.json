@@ -42,6 +42,9 @@
     "infra:destroy": {
       "cache": false,
       "dependsOn": ["@maps/infra#build"]
+    },
+    "clean": {
+      "cache": false
     }
   }
 }

@@ -17,6 +17,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "ci": "bun run format && bun run lint && bun run build && bun run check-types",
+    "clean": "turbo run clean && rm -rf node_modules/.cache && rm -rf .turbo",
     "docker:build": "turbo run docker:build",
     "docker:build:web": "docker build -f apps/web/Dockerfile -t maps-web .",
     "docker:build:api": "docker build -f apps/api/Dockerfile -t maps-api .",

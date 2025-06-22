@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "check-types": "tsc --noEmit",
     "preview": "vite preview",
+    "clean": "rm -rf dist && rm -rf node_modules/.vite",
     "docker:build": "docker build -f Dockerfile -t maps-web ../.."
   },
   "dependencies": {

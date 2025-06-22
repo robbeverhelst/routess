@@ -6,6 +6,7 @@
     "build": "tsc",
     "lint": "eslint . --max-warnings 0",
     "check-types": "tsc --noEmit",
+    "clean": "rm -rf bin",
     "setup": "./setup.sh",
     "deploy": "pulumi up --yes",
     "preview": "pulumi preview",

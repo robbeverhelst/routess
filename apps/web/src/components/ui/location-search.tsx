@@ -60,7 +60,7 @@ export function LocationSearch({
     // If currentValue is cleared by the parent, and the user is not actively typing,
     // we might want to clear the query. However, the parent should control clearing.
     // For now, this primarily sets the initial/selected value.
-  }, [currentValue]);
+  }, [currentValue, query]);
 
   // Search for locations when query changes
   useEffect(() => {

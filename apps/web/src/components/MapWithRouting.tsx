@@ -597,8 +597,8 @@ export default function MapWithRouting({
       setPopup,
       handleWaypointError,
       handleRouteInfoErrorFromHook,
-      isMapLocked,
       isRouteCoordsReady,
+      currentLightPreset,
     ],
   );
 
@@ -732,8 +732,6 @@ export default function MapWithRouting({
     userLocation,
     isUserLocationLoading,
     locationError,
-    lastKnownLocationFromStorage,
-    detectedRouteInLocalStorageOnInit,
   ]);
 
   // Effect to update map with user location from hook
@@ -1003,7 +1001,7 @@ export default function MapWithRouting({
       isMapLockedRef.current,
     );
     Logger.info("[MapWithRouting] Reverse route call executed.");
-  }, [MAPBOX_TOKEN, hasRoute, setRouteDistance, setRouteDuration, setHasRoute, isMapLockedRef]);
+  }, [hasRoute, setRouteDistance, setRouteDuration, setHasRoute, isMapLockedRef]);
 
   const handleLocate = useCallback(() => {
     if (mapRef.current) {
@@ -1146,15 +1144,7 @@ export default function MapWithRouting({
     );
 
     setPopup(null);
-  }, [
-    popup,
-    handleWaypointError,
-    MAPBOX_TOKEN,
-    setRouteDistance,
-    setRouteDuration,
-    setHasRoute,
-    isMapLockedRef,
-  ]);
+  }, [popup, handleWaypointError, setRouteDistance, setRouteDuration, setHasRoute, isMapLockedRef]);
 
   // Handle remove waypoint button click
   const handleRemoveWaypoint = useCallback(() => {
@@ -1175,15 +1165,7 @@ export default function MapWithRouting({
     );
 
     setPopup(null);
-  }, [
-    popup,
-    MAPBOX_TOKEN,
-    setRouteDistance,
-    setRouteDuration,
-    setHasRoute,
-    handleWaypointError,
-    isMapLockedRef,
-  ]);
+  }, [popup, setRouteDistance, setRouteDuration, setHasRoute, handleWaypointError, isMapLockedRef]);
 
   // New: Handle "Add waypoint here" button click from route context menu
   const handleAddWaypointOnRoute = useCallback(async () => {
@@ -1203,15 +1185,7 @@ export default function MapWithRouting({
     );
 
     setPopup(null);
-  }, [
-    popup,
-    MAPBOX_TOKEN,
-    setRouteDistance,
-    setRouteDuration,
-    setHasRoute,
-    handleWaypointError,
-    isMapLockedRef,
-  ]);
+  }, [popup, setRouteDistance, setRouteDuration, setHasRoute, handleWaypointError, isMapLockedRef]);
 
   // Add a new handler for location search
   const handleSelectLocation = useCallback(
