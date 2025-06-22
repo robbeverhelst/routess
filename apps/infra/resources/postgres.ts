@@ -27,7 +27,7 @@ export class PostgresResource extends ComponentResource {
             persistence: config.persistence || {
               enabled: true,
               size: "10Gi",
-              storageClass: "",
+              storageClass: "truenas-hdd-mirror-iscsi",
             },
             resources: config.resources?.primary || {
               limits: {
