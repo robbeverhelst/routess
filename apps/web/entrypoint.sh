@@ -25,24 +25,24 @@ replace_placeholders() {
     
     # Replace environment variable placeholders with actual values
     if [ -n "$VITE_MAPBOX_ACCESS_TOKEN" ]; then
-        sed -i "s|__VITE_MAPBOX_ACCESS_TOKEN__|$VITE_MAPBOX_ACCESS_TOKEN|g" "$file"
+        sed -i "s#__VITE_MAPBOX_ACCESS_TOKEN__#${VITE_MAPBOX_ACCESS_TOKEN}#g" "$file"
         echo "Replaced __VITE_MAPBOX_ACCESS_TOKEN__ with actual token"
     fi
     
     if [ -n "$VITE_GOOGLE_CLIENT_ID" ]; then
-        sed -i "s|__VITE_GOOGLE_CLIENT_ID__|$VITE_GOOGLE_CLIENT_ID|g" "$file"
+        sed -i "s#__VITE_GOOGLE_CLIENT_ID__#${VITE_GOOGLE_CLIENT_ID}#g" "$file"
     fi
     
     if [ -n "$VITE_APP_URL" ]; then
-        sed -i "s|__VITE_APP_URL__|$VITE_APP_URL|g" "$file"
+        sed -i "s#__VITE_APP_URL__#${VITE_APP_URL}#g" "$file"
     fi
     
     if [ -n "$VITE_API_URL" ]; then
-        sed -i "s|__VITE_API_URL__|$VITE_API_URL|g" "$file"
+        sed -i "s#__VITE_API_URL__#${VITE_API_URL}#g" "$file"
     fi
     
     if [ -n "$VITE_APP_VERSION" ]; then
-        sed -i "s|__VITE_APP_VERSION__|$VITE_APP_VERSION|g" "$file"
+        sed -i "s#__VITE_APP_VERSION__#${VITE_APP_VERSION}#g" "$file"
     fi
     
     echo "Processed: $file"
