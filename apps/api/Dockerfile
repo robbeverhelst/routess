@@ -40,5 +40,8 @@ EXPOSE 3000
 # Set working directory to api
 WORKDIR /app/apps/api
 
+# Add node_modules/.bin to PATH for CLI tools
+ENV PATH="/app/node_modules/.bin:${PATH}"
+
 # Start the application
 CMD ["bun", "run", "start:prod"] 
