@@ -199,6 +199,11 @@ jobs:
           labels: ${{ steps.metadata.outputs.labels }}
           cache-from: type=registry,ref=ghcr.io/${{ env.REPO_OWNER_LOWER }}/maps-${{ matrix.app }}:buildcache
           cache-to: type=registry,ref=ghcr.io/${{ env.REPO_OWNER_LOWER }}/maps-${{ matrix.app }}:buildcache,mode=max
+          build-args: |
+            VITE_MAPBOX_ACCESS_TOKEN=${{ secrets.VITE_MAPBOX_ACCESS_TOKEN }}
+            VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+            VITE_APP_URL=https://maps.robbeverhelst.com
+            VITE_APP_VERSION=${{ needs.release.outputs.version }}
 
   # Updated job for deploying infrastructure with Pulumi using Turborepo
   deploy:
