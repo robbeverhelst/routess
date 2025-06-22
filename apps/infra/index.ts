@@ -111,7 +111,7 @@ const webEnv = [
   },
   {
     name: "VITE_APP_URL",
-    value: process.env.VITE_APP_URL || "https://maps.robbeverhelst.be",
+    value: process.env.VITE_APP_URL || "https://maps.robbeverhelst.com",
   },
   {
     name: "VITE_APP_VERSION",

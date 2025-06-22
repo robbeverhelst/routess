@@ -10,7 +10,7 @@
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
-    "predev": "mikro-orm schema:create --run",
+    "predev": "mikro-orm schema:update --run || true",
     "dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "mikro-orm schema:create --run && node dist/main",

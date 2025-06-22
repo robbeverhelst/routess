@@ -21,5 +21,25 @@ services:
       start_period: 15s
     restart: unless-stopped
 
+  pgadmin:
+    image: dpage/pgadmin4:8.3
+    container_name: maps-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@maps.dev
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    ports:
+      - "8080:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./pgadmin/servers.json:/pgadmin4/servers.json:ro
+      - ./pgadmin/pgpass:/pgadmin4/pgpass:ro
+    restart: unless-stopped
+
 volumes:
   postgres_data:
+  pgadmin_data:

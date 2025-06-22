@@ -182,7 +182,7 @@ jobs:
         run: |
           echo "VITE_MAPBOX_ACCESS_TOKEN=${{ secrets.VITE_MAPBOX_ACCESS_TOKEN }}" > .env
           echo "VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}" >> .env
-          echo "VITE_APP_URL=https://maps.robbeverhelst.be" >> .env
+          echo "VITE_APP_URL=https://maps.robbeverhelst.com" >> .env
           echo "VITE_APP_VERSION=${{ needs.release.outputs.version }}" >> .env
 
       - name: Extract metadata for Docker
