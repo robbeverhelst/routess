@@ -13,9 +13,20 @@ JS_FILES="/usr/share/nginx/html/assets/*.js"
 replace_placeholders() {
     local file="$1"
     
+    echo "Processing file: $file"
+    echo "VITE_MAPBOX_ACCESS_TOKEN value: $VITE_MAPBOX_ACCESS_TOKEN"
+    
+    # Check if placeholder exists in file
+    if grep -q "__VITE_MAPBOX_ACCESS_TOKEN__" "$file"; then
+        echo "Found placeholder __VITE_MAPBOX_ACCESS_TOKEN__ in $file"
+    else
+        echo "No placeholder __VITE_MAPBOX_ACCESS_TOKEN__ found in $file"
+    fi
+    
     # Replace environment variable placeholders with actual values
     if [ -n "$VITE_MAPBOX_ACCESS_TOKEN" ]; then
         sed -i "s|__VITE_MAPBOX_ACCESS_TOKEN__|$VITE_MAPBOX_ACCESS_TOKEN|g" "$file"
+        echo "Replaced __VITE_MAPBOX_ACCESS_TOKEN__ with actual token"
     fi
     
     if [ -n "$VITE_GOOGLE_CLIENT_ID" ]; then

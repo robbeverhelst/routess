@@ -21,7 +21,7 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "check-types": "tsc --noEmit",
-    "clean": "rimraf dist",
+    "clean": "rimraf dist coverage .nest node_modules/.cache && bun install",
     "docker:build": "docker build -f Dockerfile -t maps-api ../..",
     "db:up": "cd ../.. && docker-compose up -d postgres",
     "db:down": "cd ../.. && docker-compose down",
