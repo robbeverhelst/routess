@@ -72,7 +72,7 @@ import {
 } from "@/features/routing/services/LocalStorageService";
 
 // Get Mapbox access token from environment variables
-const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
+const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN || "__VITE_MAPBOX_ACCESS_TOKEN__";
 
 // Map configuration constants
 const MAP_PITCH = 30; // Default pitch angle for the map
@@ -87,7 +87,7 @@ if (import.meta.env.DEV && (!MAPBOX_TOKEN || MAPBOX_TOKEN.length < 10)) {
   // Check if it's falsy or too short to be a real token
   Logger.error(
     `[MapWithRouting] Mapbox token issue: 
-    Raw import.meta.env.VITE_MAPBOX_ACCESS_TOKEN: '${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}', 
+    Raw import.meta.env.VITE_MAPBOX_ACCESS_TOKEN: '${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN || "__VITE_MAPBOX_ACCESS_TOKEN__"}', 
     Assigned MAPBOX_TOKEN value: '${MAPBOX_TOKEN}', 
     Type of MAPBOX_TOKEN: '${typeof MAPBOX_TOKEN}'. 
     Please verify VITE_MAPBOX_ACCESS_TOKEN in your .env file or CI secrets.`,

@@ -2,7 +2,7 @@ import { Logger } from "./logger";
 import { apiService, type ApiUser, type AuthResponse } from "./api";
 
 // Google OAuth Configuration
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "__VITE_GOOGLE_CLIENT_ID__";
 
 // User profile interface
 export interface GoogleUser {

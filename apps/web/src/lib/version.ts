@@ -10,7 +10,7 @@ const VERSION_STORAGE_KEY = "maps-app-version";
  * Get the current app version from environment variables
  */
 export function getCurrentVersion(): string {
-  return import.meta.env.VITE_APP_VERSION || "development";
+  return import.meta.env.VITE_APP_VERSION || "__VITE_APP_VERSION__";
 }
 
 /**

@@ -19,9 +19,6 @@ RUN bun install
 # Copy the web app source code
 COPY apps/web/ ./apps/web/
 
-# Copy root .env file for build-time environment variables
-COPY .env ./
-
 # Build the web application
 WORKDIR /app/apps/web
 RUN bun run build
@@ -35,8 +32,12 @@ COPY --from=builder /app/apps/web/dist/ /usr/share/nginx/html/
 # Copy nginx config
 COPY --from=builder /app/apps/web/nginx.conf /etc/nginx/conf.d/default.conf
 
+# Copy entrypoint script for runtime environment variable replacement
+COPY --from=builder /app/apps/web/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 # Expose port
 EXPOSE 80
 
-# Start nginx
-CMD ["nginx", "-g", "daemon off;"] 
+# Use entrypoint script to replace environment variables at runtime
+ENTRYPOINT ["/entrypoint.sh"] 
