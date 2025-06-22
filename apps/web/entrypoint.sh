@@ -19,14 +19,21 @@ replace_placeholders() {
     # Check if placeholder exists in file
     if grep -q "__VITE_MAPBOX_ACCESS_TOKEN__" "$file"; then
         echo "Found placeholder __VITE_MAPBOX_ACCESS_TOKEN__ in $file"
+        # Replace environment variable placeholders with actual values
+        if [ -n "$VITE_MAPBOX_ACCESS_TOKEN" ]; then
+            # Remove any newlines from the token
+            CLEAN_TOKEN=$(echo "$VITE_MAPBOX_ACCESS_TOKEN" | tr -d '\n\r')
+            sed -i "s#__VITE_MAPBOX_ACCESS_TOKEN__#${CLEAN_TOKEN}#g" "$file"
+            echo "Replaced __VITE_MAPBOX_ACCESS_TOKEN__ with actual token"
+            # Verify replacement worked
+            if grep -q "__VITE_MAPBOX_ACCESS_TOKEN__" "$file"; then
+                echo "ERROR: Replacement failed, placeholder still exists!"
+            else
+                echo "SUCCESS: Placeholder replaced successfully"
+            fi
+        fi
     else
         echo "No placeholder __VITE_MAPBOX_ACCESS_TOKEN__ found in $file"
-    fi
-    
-    # Replace environment variable placeholders with actual values
-    if [ -n "$VITE_MAPBOX_ACCESS_TOKEN" ]; then
-        sed -i "s#__VITE_MAPBOX_ACCESS_TOKEN__#${VITE_MAPBOX_ACCESS_TOKEN}#g" "$file"
-        echo "Replaced __VITE_MAPBOX_ACCESS_TOKEN__ with actual token"
     fi
     
     if [ -n "$VITE_GOOGLE_CLIENT_ID" ]; then
