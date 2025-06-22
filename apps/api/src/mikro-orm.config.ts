@@ -1,5 +1,6 @@
 import { Options } from "@mikro-orm/core";
 import { PostgreSqlDriver } from "@mikro-orm/postgresql";
+import { join } from "path";
 
 const config: Options = {
   driver: PostgreSqlDriver,
@@ -8,7 +9,7 @@ const config: Options = {
   user: process.env.DB_USER || "postgres",
   password: process.env.DB_PASSWORD || "postgres",
   dbName: process.env.DB_NAME || "maps_db",
-  entities: ["./dist/**/*.entity.js"],
+  entities: [join(__dirname, "**/*.entity.js")],
   entitiesTs: ["./src/**/*.entity.ts"],
   migrations: {
     path: "./src/migrations",

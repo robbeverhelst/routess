@@ -49,6 +49,13 @@ export default tseslint.config(
       "@typescript-eslint/interface-name-prefix": "off",
       "@typescript-eslint/explicit-function-return-type": "off",
       "@typescript-eslint/explicit-module-boundary-types": "off",
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "ImportNamespaceSpecifier",
+          message: "Import named exports instead of namespace imports",
+        },
+      ],
     },
   },
 
@@ -62,6 +69,14 @@ export default tseslint.config(
     rules: {
       ...reactHooks.configs.recommended.rules,
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
+    },
+  },
+
+  // Override for shadcn UI components - allow namespace imports
+  {
+    files: ["apps/web/src/components/ui/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-syntax": "off",
     },
   },
 

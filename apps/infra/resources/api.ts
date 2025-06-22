@@ -75,6 +75,7 @@ export class ApiResource extends ComponentResource {
       `${config.appName}-api-service`,
       {
         metadata: {
+          name: `${config.appName}-api-service`,
           namespace: config.namespace,
           labels: config.labels,
         },

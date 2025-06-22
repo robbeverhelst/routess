@@ -73,6 +73,7 @@ export class WebAppResource extends ComponentResource {
       `${config.appName}-web-service`,
       {
         metadata: {
+          name: `${config.appName}-web-service`,
           namespace: config.namespace,
           labels: config.labels,
         },
