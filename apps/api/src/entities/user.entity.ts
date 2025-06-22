@@ -11,8 +11,17 @@ export class User {
   @Property()
   name!: string;
 
-  @Property({ hidden: true })
-  password!: string;
+  @Property({ hidden: true, nullable: true })
+  password?: string;
+
+  @Property({ nullable: true })
+  googleId?: string;
+
+  @Property({ nullable: true })
+  avatar?: string;
+
+  @Property({ default: false })
+  isEmailVerified = false;
 
   @Property()
   createdAt = new Date();

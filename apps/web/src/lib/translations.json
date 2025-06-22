@@ -629,6 +629,12 @@
     "fr": "Continuer avec Google",
     "de": "Mit Google fortfahren"
   },
+  "auth.signingIn": {
+    "en": "Signing in...",
+    "nl": "Inloggen...",
+    "fr": "Connexion en cours...",
+    "de": "Anmelden..."
+  },
   "auth.benefits": {
     "en": "Benefits",
     "nl": "Voordelen",

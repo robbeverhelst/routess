@@ -41,7 +41,8 @@ import type { SupportedLanguage } from "../../lib/i18n";
 import type { Dispatch, SetStateAction } from "react";
 import { Logger } from "../../lib/logger";
 import { LoginModal } from "../auth/login-modal";
-import { googleAuth, type GoogleUser } from "../../lib/google-auth";
+import { googleAuth } from "../../lib/google-auth";
+import type { ApiUser } from "../../lib/api";
 import { SettingsModal } from "@/components/ui/settings-modal";
 
 interface SidebarProps {
@@ -107,7 +108,7 @@ export function Sidebar({
   onToggleSunDirection,
 }: SidebarProps) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [currentUser, setCurrentUser] = useState<GoogleUser | null>(null);
+  const [currentUser, setCurrentUser] = useState<ApiUser | null>(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const closeButtonRef = useRef<HTMLButtonElement>(null);

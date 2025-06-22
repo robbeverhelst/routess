@@ -1,4 +1,5 @@
 import { Logger } from "./logger";
+import { apiService, type ApiUser, type AuthResponse } from "./api";
 
 // Google OAuth Configuration
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
@@ -16,7 +17,7 @@ export interface GoogleUser {
 // Auth state interface
 export interface AuthState {
   isAuthenticated: boolean;
-  user: GoogleUser | null;
+  user: ApiUser | null;
   accessToken: string | null;
 }
 
@@ -27,67 +28,28 @@ export interface CredentialResponse {
   clientId?: string;
 }
 
-// JWT Payload interface
-interface GoogleJWTPayload {
-  sub: string;
-  email: string;
-  name: string;
-  picture?: string;
-  given_name?: string;
-  family_name?: string;
-  iat: number;
-  exp: number;
-  aud: string;
-  iss: string;
-}
-
 // Google Auth Service Class
 class GoogleAuthService {
-  // Parse JWT token to get user information
-  private parseCredential(credential: string): GoogleUser {
-    try {
-      const base64Url = credential.split(".")[1];
-      const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-      const jsonPayload = decodeURIComponent(
-        atob(base64)
-          .split("")
-          .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-          .join(""),
-      );
-
-      const payload = JSON.parse(jsonPayload) as GoogleJWTPayload;
-
-      return {
-        id: payload.sub,
-        email: payload.email,
-        name: payload.name,
-        picture: payload.picture,
-        given_name: payload.given_name,
-        family_name: payload.family_name,
-      };
-    } catch (error) {
-      Logger.error("Failed to parse Google credential:", error);
-      throw new Error("Invalid Google credential");
-    }
-  }
-
   // Handle successful Google login
-  async handleGoogleSuccess(credentialResponse: CredentialResponse): Promise<GoogleUser> {
+  async handleGoogleSuccess(credentialResponse: CredentialResponse): Promise<ApiUser> {
     try {
       if (!credentialResponse.credential) {
         throw new Error("No credential received from Google");
       }
 
-      // Parse the JWT credential to get user info
-      const user = this.parseCredential(credentialResponse.credential);
+      // Send credential to backend for verification and user creation/login
+      const authResponse: AuthResponse = await apiService.googleAuth(credentialResponse.credential);
 
-      // Store user data and credential
-      localStorage.setItem("google_credential", credentialResponse.credential);
-      localStorage.setItem("google_user", JSON.stringify(user));
+      // Store access token and user data
+      localStorage.setItem("access_token", authResponse.accessToken);
+      localStorage.setItem("user", JSON.stringify(authResponse.user));
 
-      Logger.info("Google Sign-In successful:", { email: user.email, name: user.name });
+      Logger.info("Google Sign-In successful:", {
+        email: authResponse.user.email,
+        name: authResponse.user.name,
+      });
 
-      return user;
+      return authResponse.user;
     } catch (error) {
       Logger.error("Google login processing failed:", error);
       throw error;
@@ -103,9 +65,10 @@ class GoogleAuthService {
   // Sign out
   async signOut(): Promise<void> {
     try {
-      // Clear stored data
-      localStorage.removeItem("google_credential");
-      localStorage.removeItem("google_user");
+      // Call API logout and clear stored data
+      await apiService.logout();
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("user");
 
       Logger.info("Google Sign-Out successful");
     } catch (error) {
@@ -117,15 +80,15 @@ class GoogleAuthService {
   // Get current authentication state
   getAuthState(): AuthState {
     try {
-      const credential = localStorage.getItem("google_credential");
-      const userJson = localStorage.getItem("google_user");
+      const accessToken = localStorage.getItem("access_token");
+      const userJson = localStorage.getItem("user");
 
-      if (credential && userJson) {
-        const user = JSON.parse(userJson) as GoogleUser;
+      if (accessToken && userJson) {
+        const user = JSON.parse(userJson) as ApiUser;
         return {
           isAuthenticated: true,
           user,
-          accessToken: credential, // Using credential as token for now
+          accessToken,
         };
       }
     } catch (error) {
@@ -145,13 +108,13 @@ class GoogleAuthService {
   }
 
   // Get current user
-  getCurrentUser(): GoogleUser | null {
+  getCurrentUser(): ApiUser | null {
     return this.getAuthState().user;
   }
 
-  // Get stored credential
-  getCredential(): string | null {
-    return localStorage.getItem("google_credential");
+  // Get stored access token
+  getAccessToken(): string | null {
+    return localStorage.getItem("access_token");
   }
 
   // Get Google Client ID

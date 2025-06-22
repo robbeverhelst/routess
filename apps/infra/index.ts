@@ -169,6 +169,18 @@ const apiEnv = [
     name: "DB_PASSWORD",
     value: postgresConfig.password,
   },
+  {
+    name: "JWT_SECRET",
+    value: process.env.JWT_SECRET || "change-me-in-production",
+  },
+  {
+    name: "GOOGLE_CLIENT_ID",
+    value: process.env.GOOGLE_CLIENT_ID || "",
+  },
+  {
+    name: "FRONTEND_URL",
+    value: process.env.FRONTEND_URL || "https://maps.robbeverhelst.com",
+  },
 ];
 
 // Deploy API
