@@ -11,8 +11,8 @@ on:
     branches: [main]
 
 jobs:
-  test:
-    name: Test Application
+  test-and-build:
+    name: Test and Build Application
     runs-on: arc-runner-set-maps
     steps:
       - name: Checkout code
@@ -25,6 +25,11 @@ jobs:
         with:
           bun-version: latest
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
       - name: Cache dependencies
         uses: actions/cache@v4
         with:
@@ -36,36 +41,8 @@ jobs:
       - name: Install dependencies
         run: bun install
 
-      - name: Run all checks and tests
-        run: |
-          bunx turbo run format:check lint check-types test --filter='!api'
-          bunx turbo run build --filter=api
-
-  build:
-    name: Build Application
-    needs: test
-    runs-on: arc-runner-set-maps
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Install dependencies
-        run: bun install
-
-      - name: Check for secrets availability
-        run: |
-          echo "VITE_MAPBOX_ACCESS_TOKEN secret is present: ${{ secrets.VITE_MAPBOX_ACCESS_TOKEN != '' }}"
-          echo "VITE_GOOGLE_CLIENT_ID secret is present: ${{ secrets.VITE_GOOGLE_CLIENT_ID != '' }}"
+      - name: Run tests and checks
+        run: bunx turbo run format:check lint check-types test --filter='!api'
 
       - name: Create .env file
         run: |
@@ -74,7 +51,7 @@ jobs:
           echo "VITE_APP_URL=https://maps.robbeverhelst.com" >> .env
           echo "VITE_APP_VERSION=${{ github.sha }}" >> .env
 
-      - name: Build application with Turbo
+      - name: Build all applications
         run: bunx turbo run build
 
       - name: Verify builds
@@ -91,7 +68,7 @@ jobs:
 
   release:
     name: Create Release
-    needs: build
+    needs: test-and-build
     runs-on: arc-runner-set-maps
     # Only run on main branch pushes, not PRs
     if: github.event_name != 'pull_request'
@@ -154,7 +131,7 @@ jobs:
           echo "Version from package.json after semantic-release: $VERSION"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-  # Separate job for Docker image building
+  # Parallel Docker image building
   docker:
     name: Build and Push Docker Images
     needs: release
@@ -162,6 +139,15 @@ jobs:
     permissions:
       contents: read
       packages: write
+    strategy:
+      matrix:
+        include:
+          - app: web
+            dockerfile: apps/web/Dockerfile
+            needs_artifacts: true
+          - app: api
+            dockerfile: apps/api/Dockerfile
+            needs_artifacts: false
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -173,6 +159,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Download build artifacts
+        if: matrix.needs_artifacts
         uses: actions/download-artifact@v4
         with:
           name: build-files
@@ -193,22 +180,11 @@ jobs:
           echo "VITE_APP_URL=https://maps.robbeverhelst.be" >> .env
           echo "VITE_APP_VERSION=${{ needs.release.outputs.version }}" >> .env
 
-      - name: Extract metadata for Web Docker
-        id: metadata-web
+      - name: Extract metadata for Docker
+        id: metadata
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/maps-web
-          tags: |
-            type=semver,pattern={{version}},value=${{ needs.release.outputs.version }}
-            type=semver,pattern={{major}}.{{minor}},value=${{ needs.release.outputs.version }}
-            type=semver,pattern={{major}},value=${{ needs.release.outputs.version }}
-            type=raw,value=latest,enable={{is_default_branch}}
-
-      - name: Extract metadata for API Docker
-        id: metadata-api
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository_owner }}/maps-api
+          images: ghcr.io/${{ github.repository_owner }}/maps-${{ matrix.app }}
           tags: |
             type=semver,pattern={{version}},value=${{ needs.release.outputs.version }}
             type=semver,pattern={{major}}.{{minor}},value=${{ needs.release.outputs.version }}
@@ -220,33 +196,19 @@ jobs:
         run: |
           REPO_OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           echo "REPO_OWNER_LOWER=$REPO_OWNER_LOWER" >> $GITHUB_ENV
-          echo "repo_owner_lower=$REPO_OWNER_LOWER" >> $GITHUB_OUTPUT
 
-      - name: Build and push Web Docker image
+      - name: Build and push Docker image
         if: github.event_name != 'pull_request'
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: apps/web/Dockerfile
+          file: ${{ matrix.dockerfile }}
           platforms: linux/amd64
           push: true
-          tags: ${{ steps.metadata-web.outputs.tags }}
-          labels: ${{ steps.metadata-web.outputs.labels }}
-          cache-from: type=registry,ref=ghcr.io/${{ env.REPO_OWNER_LOWER }}/maps-web:buildcache
-          cache-to: type=registry,ref=ghcr.io/${{ env.REPO_OWNER_LOWER }}/maps-web:buildcache,mode=max
-
-      - name: Build and push API Docker image
-        if: github.event_name != 'pull_request'
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: apps/api/Dockerfile
-          platforms: linux/amd64
-          push: true
-          tags: ${{ steps.metadata-api.outputs.tags }}
-          labels: ${{ steps.metadata-api.outputs.labels }}
-          cache-from: type=registry,ref=ghcr.io/${{ env.REPO_OWNER_LOWER }}/maps-api:buildcache
-          cache-to: type=registry,ref=ghcr.io/${{ env.REPO_OWNER_LOWER }}/maps-api:buildcache,mode=max
+          tags: ${{ steps.metadata.outputs.tags }}
+          labels: ${{ steps.metadata.outputs.labels }}
+          cache-from: type=registry,ref=ghcr.io/${{ env.REPO_OWNER_LOWER }}/maps-${{ matrix.app }}:buildcache
+          cache-to: type=registry,ref=ghcr.io/${{ env.REPO_OWNER_LOWER }}/maps-${{ matrix.app }}:buildcache,mode=max
 
   # Updated job for deploying infrastructure with Pulumi using Turborepo
   deploy:
