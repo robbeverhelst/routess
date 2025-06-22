@@ -19,6 +19,18 @@ RUN bun install
 # Copy the web app source code
 COPY apps/web/ ./apps/web/
 
+# Build arguments for environment variables
+ARG VITE_MAPBOX_ACCESS_TOKEN
+ARG VITE_GOOGLE_CLIENT_ID
+ARG VITE_APP_URL
+ARG VITE_APP_VERSION
+
+# Set environment variables for the build
+ENV VITE_MAPBOX_ACCESS_TOKEN=$VITE_MAPBOX_ACCESS_TOKEN
+ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
+ENV VITE_APP_URL=$VITE_APP_URL
+ENV VITE_APP_VERSION=$VITE_APP_VERSION
+
 # Build the web application
 WORKDIR /app/apps/web
 RUN bun run build
