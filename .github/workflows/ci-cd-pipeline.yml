@@ -60,12 +60,6 @@ jobs:
           ls -la apps/web/dist/ apps/api/dist/ 2>/dev/null || echo "Build folders verified"
           grep -r 'pk.eyJ1' apps/web/dist/assets 2>/dev/null || echo "Token verification complete"
 
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-files
-          path: apps/web/dist/
-
   release:
     name: Create Release
     needs: test-and-build
@@ -158,12 +152,23 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Download build artifacts
+      - name: Setup Bun (for web build)
         if: matrix.needs_artifacts
-        uses: actions/download-artifact@v4
+        uses: oven-sh/setup-bun@v2
         with:
-          name: build-files
-          path: apps/web/dist
+          bun-version: latest
+
+      - name: Setup Node.js (for web build)
+        if: matrix.needs_artifacts
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies and build web
+        if: matrix.needs_artifacts
+        run: |
+          bun install
+          bunx turbo run build --filter=web
 
       - name: Login to GitHub Container Registry
         if: github.event_name != 'pull_request'
