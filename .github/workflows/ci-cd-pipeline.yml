@@ -133,8 +133,8 @@ jobs:
 
       - name: Verify semantic-release config
         run: |
-          echo "Using existing .releaserc.json configuration:"
-          cat .releaserc.json
+          echo "Using existing .releaserc configuration:"
+          cat .releaserc
 
       - name: Semantic Release
         id: semantic

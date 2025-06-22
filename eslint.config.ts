@@ -69,9 +69,6 @@ export default tseslint.config(
   {
     files: ["apps/api/**/*.ts"],
     languageOptions: {
-      parserOptions: {
-        project: "tsconfig.json",
-      },
       globals: {
         ...globals.jest,
       },
@@ -81,11 +78,6 @@ export default tseslint.config(
   // Pulumi/Infrastructure-specific config
   {
     files: ["apps/infra/**/*.ts"],
-    languageOptions: {
-      parserOptions: {
-        project: "tsconfig.json",
-      },
-    },
   },
 
   // Prettier integration
