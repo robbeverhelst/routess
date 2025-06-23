@@ -46,6 +46,7 @@ export class AuthService {
 
       let user = await this.userRepository.findOne({
         $or: [{ googleId }, { email }],
+        deletedAt: null,
       });
 
       if (!user) {
@@ -90,11 +91,11 @@ export class AuthService {
   }
 
   async validateUserById(userId: number): Promise<User | null> {
-    return this.userRepository.findOne({ id: userId });
+    return this.userRepository.findOne({ id: userId, deletedAt: null });
   }
 
   async getProfile(userId: number): Promise<User> {
-    const user = await this.userRepository.findOne({ id: userId });
+    const user = await this.userRepository.findOne({ id: userId, deletedAt: null });
     if (!user) {
       throw new UnauthorizedException("User not found");
     }

@@ -1,5 +1,6 @@
 import { Entity, PrimaryKey, Property, ManyToOne, type Ref } from "@mikro-orm/core";
 import { User } from "./user.entity";
+import { BaseEntity } from "./base.entity";
 
 export interface Waypoint {
   lat: number;
@@ -8,7 +9,7 @@ export interface Waypoint {
 }
 
 @Entity()
-export class Route {
+export class Route extends BaseEntity {
   @PrimaryKey()
   id!: number;
 
@@ -26,10 +27,4 @@ export class Route {
 
   @ManyToOne(() => User)
   user!: Ref<User>;
-
-  @Property()
-  createdAt = new Date();
-
-  @Property({ onUpdate: () => new Date() })
-  updatedAt = new Date();
 }

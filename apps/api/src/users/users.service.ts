@@ -19,11 +19,11 @@ export class UsersService {
   }
 
   async findAll(): Promise<User[]> {
-    return this.userRepository.findAll();
+    return this.userRepository.find({ deletedAt: null });
   }
 
   async findOne(id: number): Promise<User> {
-    const user = await this.userRepository.findOne(id);
+    const user = await this.userRepository.findOne({ id, deletedAt: null });
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
@@ -39,6 +39,15 @@ export class UsersService {
 
   async remove(id: number): Promise<void> {
     const user = await this.findOne(id);
+    user.deletedAt = new Date();
+    await this.em.persistAndFlush(user);
+  }
+
+  async hardDelete(id: number): Promise<void> {
+    const user = await this.userRepository.findOne(id);
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
     await this.em.removeAndFlush(user);
   }
 }

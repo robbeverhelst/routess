@@ -24,11 +24,11 @@ export class RoutesService {
   }
 
   async findAll(userId: number): Promise<Route[]> {
-    return this.routeRepository.find({ user: userId });
+    return this.routeRepository.find({ user: userId, deletedAt: null });
   }
 
   async findOne(id: number, userId: number): Promise<Route> {
-    const route = await this.routeRepository.findOne({ id, user: userId });
+    const route = await this.routeRepository.findOne({ id, user: userId, deletedAt: null });
 
     if (!route) {
       throw new NotFoundException(`Route with ID ${id} not found`);
@@ -48,6 +48,15 @@ export class RoutesService {
 
   async remove(id: number, userId: number): Promise<void> {
     const route = await this.findOne(id, userId);
+    route.deletedAt = new Date();
+    await this.em.persistAndFlush(route);
+  }
+
+  async hardDelete(id: number, userId: number): Promise<void> {
+    const route = await this.routeRepository.findOne({ id, user: userId });
+    if (!route) {
+      throw new NotFoundException(`Route with ID ${id} not found`);
+    }
     await this.em.removeAndFlush(route);
   }
 }

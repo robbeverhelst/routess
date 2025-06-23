@@ -1,7 +1,8 @@
 import { Entity, PrimaryKey, Property } from "@mikro-orm/core";
+import { BaseEntity } from "./base.entity";
 
 @Entity()
-export class User {
+export class User extends BaseEntity {
   @PrimaryKey()
   id!: number;
 
@@ -22,10 +23,4 @@ export class User {
 
   @Property({ default: false })
   isEmailVerified = false;
-
-  @Property()
-  createdAt = new Date();
-
-  @Property({ onUpdate: () => new Date() })
-  updatedAt = new Date();
 }
