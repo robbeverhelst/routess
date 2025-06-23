@@ -112,22 +112,22 @@ function App() {
           <div
             style={{
               position: "fixed",
-              top: "20px",
-              right: "20px",
+              bottom: "20px",
+              left: "20px",
               background: getNotificationContent().bgColor,
               color: "white",
-              padding: "12px 20px",
-              borderRadius: "8px",
+              padding: "8px 12px",
+              borderRadius: "6px",
               zIndex: 1000,
               boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-              maxWidth: "320px",
+              maxWidth: "240px",
             }}
           >
-            <div className="flex items-center gap-3">
+            <div className="flex items-start gap-3">
               {getNotificationContent().showSpinner && (
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent flex-shrink-0 mt-0.5"></div>
               )}
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <div className="font-medium mb-1">{getNotificationContent().title}</div>
                 <div className="text-sm opacity-90">
                   {getNotificationContent().message}
@@ -139,6 +139,16 @@ function App() {
                   )}
                 </div>
               </div>
+              <button
+                onClick={() => setShowVersionNotification(false)}
+                className="flex-shrink-0 ml-2 text-white/80 hover:text-white transition-colors"
+                style={{ background: "none", border: "none", cursor: "pointer", padding: "2px" }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
             </div>
           </div>
         )}
