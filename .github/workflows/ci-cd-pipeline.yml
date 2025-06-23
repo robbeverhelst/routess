@@ -15,22 +15,6 @@ jobs:
     name: Test and Build Application
     runs-on: arc-runner-set-maps
 
-    # Add PostgreSQL service for API tests
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_USER: postgres
-          POSTGRES_DB: maps_db_test
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -60,11 +44,11 @@ jobs:
 
       - name: Run tests and checks
         env:
-          # Database configuration for API tests
-          DB_HOST: localhost
+          # Database configuration for API tests - using cluster-local PostgreSQL service
+          DB_HOST: ${{ secrets.DB_HOST }}
           DB_PORT: 5432
-          DB_USER: postgres
-          DB_PASSWORD: postgres
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           DB_NAME: maps_db_test
           # Other test environment variables
           NODE_ENV: test
