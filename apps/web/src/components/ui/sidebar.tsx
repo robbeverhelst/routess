@@ -500,9 +500,9 @@ export function Sidebar({
                   <TooltipContent>
                     <p>
                       {!isLoggedIn
-                        ? t("auth.loginRequired", currentLanguage)
+                        ? t("auth.tooltip.loginRequired", currentLanguage)
                         : !hasRoute
-                          ? t("routeControls.tooltip.noRoute", currentLanguage)
+                          ? t("auth.tooltip.createRouteFirst", currentLanguage)
                           : t("routeControls.tooltip.saveRoute", currentLanguage)}
                     </p>
                   </TooltipContent>
@@ -526,7 +526,7 @@ export function Sidebar({
                     <p>
                       {isLoggedIn
                         ? t("routeLibrary.tooltip", currentLanguage)
-                        : t("auth.loginRequired", currentLanguage)}
+                        : t("auth.tooltip.loginRequired", currentLanguage)}
                     </p>
                   </TooltipContent>
                 </Tooltip>
