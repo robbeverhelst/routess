@@ -34,6 +34,9 @@ RUN bun install --production
 # Copy built application from builder stage
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 
+# Copy migrations folder (needed for mikro-orm)
+COPY --from=builder /app/apps/api/src/migrations ./apps/api/src/migrations
+
 # Expose port
 EXPOSE 3000
 
