@@ -42,7 +42,10 @@ jobs:
       - name: Install dependencies
         run: bun install
 
-      - name: Run tests and checks
+      - name: Run format check, lint, and type checks
+        run: bunx turbo run format:check lint check-types
+
+      - name: Run tests
         env:
           # Database configuration for API tests - using cluster-local PostgreSQL service
           DB_HOST: ${{ secrets.DB_HOST }}
@@ -54,7 +57,7 @@ jobs:
           NODE_ENV: test
           JWT_SECRET: test-secret-key
           GOOGLE_CLIENT_ID: test-google-client-id
-        run: bunx turbo run format:check lint check-types test
+        run: bunx turbo run test
 
       - name: Upload test coverage to Codecov
         uses: codecov/codecov-action@v5
