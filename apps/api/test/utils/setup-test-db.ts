@@ -40,7 +40,10 @@ async function setupTestDatabase() {
     console.error("Error setting up test database:", error);
     // In development, this is a critical error
     // In CI, we'll handle this differently
-    if (process.env.NODE_ENV === "test" && !(process.env.CI === "true" || process.env.GITHUB_ACTIONS === "true")) {
+    if (
+      process.env.NODE_ENV === "test" &&
+      !(process.env.CI === "true" || process.env.GITHUB_ACTIONS === "true")
+    ) {
       throw error;
     } else {
       console.log("Continuing without database setup...");

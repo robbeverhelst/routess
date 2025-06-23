@@ -2,13 +2,16 @@ import { Options } from "@mikro-orm/core";
 import { PostgreSqlDriver } from "@mikro-orm/postgresql";
 
 // Import entities only in development/test
-let entities: any[];
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let entities: string[] | any[];
 if (process.env.NODE_ENV === "production") {
   // In production, use entity discovery with JS files
   entities = ["./dist/src/entities/*.entity.js"];
 } else {
   // In development/test, import entities directly
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { User } = require("./entities/user.entity");
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { Route } = require("./entities/route.entity");
   entities = [User, Route];
 }

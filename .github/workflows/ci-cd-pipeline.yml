@@ -275,6 +275,7 @@ jobs:
 
       - name: Pulumi Refresh
         uses: pulumi/actions@v6
+        timeout-minutes: 5
         with:
           command: refresh
           stack-name: prod
@@ -285,6 +286,7 @@ jobs:
 
       - name: Pulumi Update
         uses: pulumi/actions@v6
+        timeout-minutes: 5
         with:
           command: up
           stack-name: prod
