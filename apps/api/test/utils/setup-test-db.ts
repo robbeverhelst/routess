@@ -9,6 +9,9 @@ async function setupTestDatabase() {
   // In CI environment, we use the existing PostgreSQL service in the cluster
   if (process.env.CI === "true" || process.env.GITHUB_ACTIONS === "true") {
     console.log("CI environment detected - using cluster PostgreSQL service");
+    console.log("DB_HOST:", process.env.DB_HOST || "NOT SET");
+    console.log("DB_USER:", process.env.DB_USER || "NOT SET");
+    console.log("DB_PASSWORD:", process.env.DB_PASSWORD ? "SET" : "NOT SET");
     // Still try to create the test database if it doesn't exist
   }
 
