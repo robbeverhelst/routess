@@ -1,7 +1,17 @@
 import { Options } from "@mikro-orm/core";
 import { PostgreSqlDriver } from "@mikro-orm/postgresql";
-import { User } from "./entities/user.entity";
-import { Route } from "./entities/route.entity";
+
+// Import entities only in development/test
+let entities: any[];
+if (process.env.NODE_ENV === "production") {
+  // In production, use entity discovery with JS files
+  entities = ["./dist/src/entities/*.entity.js"];
+} else {
+  // In development/test, import entities directly
+  const { User } = require("./entities/user.entity");
+  const { Route } = require("./entities/route.entity");
+  entities = [User, Route];
+}
 
 const config: Options = {
   driver: PostgreSqlDriver,
@@ -10,7 +20,7 @@ const config: Options = {
   user: process.env.DB_USER || "postgres",
   password: process.env.DB_PASSWORD || "postgres",
   dbName: process.env.DB_NAME || "maps_db",
-  entities: [User, Route],
+  entities,
   migrations: {
     path: "./src/migrations",
     pathTs: "./src/migrations",
