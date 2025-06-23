@@ -16,6 +16,13 @@ import { UsersService } from "./users.service";
 import { CreateUserDto, UpdateUserDto } from "./dto/user.dto";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 
+interface AuthenticatedRequest extends Request {
+  user: {
+    id: number;
+    email: string;
+  };
+}
+
 @Controller("users")
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
@@ -32,7 +39,7 @@ export class UsersController {
 
   @Get("profile")
   @UseGuards(JwtAuthGuard)
-  async getProfile(@Request() req: any) {
+  async getProfile(@Request() req: AuthenticatedRequest) {
     return this.usersService.findOne(req.user.id);
   }
 
@@ -55,7 +62,7 @@ export class UsersController {
   async partialUpdate(
     @Param("id") id: string,
     @Body() updateUserDto: UpdateUserDto,
-    @Request() req: any,
+    @Request() req: AuthenticatedRequest,
   ) {
     const userId = parseInt(id);
     if (isNaN(userId)) {
@@ -70,7 +77,7 @@ export class UsersController {
 
   @Delete(":id")
   @UseGuards(JwtAuthGuard)
-  async remove(@Param("id") id: string, @Request() req: any) {
+  async remove(@Param("id") id: string, @Request() req: AuthenticatedRequest) {
     const userId = parseInt(id);
     if (isNaN(userId)) {
       throw new BadRequestException("Invalid user ID");
