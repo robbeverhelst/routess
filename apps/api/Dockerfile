@@ -37,6 +37,9 @@ COPY --from=builder /app/apps/api/dist ./apps/api/dist
 # Copy migrations folder (needed for mikro-orm)
 COPY --from=builder /app/apps/api/src/migrations ./apps/api/src/migrations
 
+# Copy mikro-orm config to root level (where CLI expects it)
+COPY --from=builder /app/apps/api/dist/mikro-orm.config.js ./mikro-orm.config.js
+
 # Expose port
 EXPOSE 3000
 
