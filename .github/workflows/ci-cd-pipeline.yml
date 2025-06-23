@@ -14,7 +14,7 @@ jobs:
   test-and-build:
     name: Test and Build Application
     runs-on: arc-runner-set-maps
-    
+
     # Add PostgreSQL service for API tests
     services:
       postgres:
@@ -30,7 +30,7 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
