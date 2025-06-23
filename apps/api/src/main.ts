@@ -4,7 +4,8 @@ import { AppModule } from "./app.module";
 import { config } from "dotenv";
 import { join } from "path";
 import helmet from "helmet";
-import compression from "compression";
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const compression = require("compression");
 import { GlobalExceptionFilter } from "./common/filters/global-exception.filter";
 import { initializeOpenTelemetry } from "./telemetry/tracing";
 import { Logger } from "nestjs-pino";

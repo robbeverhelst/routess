@@ -1,89 +1,224 @@
-# Maps Routing Application
+# 🗺️ Maps Routing Platform
 
-A web-based mapping application with advanced routing capabilities built using React, TypeScript, and Mapbox GL JS. This project allows users to plot routes, add waypoints, and calculate distances and estimated travel times.
+[![CI](https://img.shields.io/github/actions/workflow/status/robbeverhelst/maps/ci.yml?branch=main&label=CI&logo=github)](https://github.com/robbeverhelst/maps/actions)
+[![Version](https://img.shields.io/github/package-json/v/robbeverhelst/maps?logo=npm)](https://github.com/robbeverhelst/maps)
+[![License](https://img.shields.io/github/license/robbeverhelst/maps?color=blue)](LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue?logo=typescript)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-19-61dafb?logo=react)](https://reactjs.org/)
+[![NestJS](https://img.shields.io/badge/NestJS-11-e0234e?logo=nestjs)](https://nestjs.com/)
+[![Bun](https://img.shields.io/badge/Bun-1.1.38-f9f1e1?logo=bun)](https://bun.sh/)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ed?logo=docker)](https://www.docker.com/)
 
-## Features
+A modern, full-stack mapping application with advanced routing capabilities, user management, and real-time analytics. Built with React, NestJS, and PostgreSQL in a scalable monorepo architecture.
 
-- **Interactive Map**: Full-screen, interactive map with smooth zooming and panning
-- **Location Tracking**: Centers on user's location with pulsing blue indicator
-- **Multiple Routing Options**:
-  - Regular waypoints that snap to the nearest road
-  - Direct waypoints for straight-line travel (as the crow flies)
-- **Route Management**:
-  - Add waypoints by clicking on the map
-  - Remove waypoints with right-click context menu
-  - Undo/Redo functionality for waypoint changes
-  - Reset route with a single click
-- **Detailed Information**:
-  - Distance calculations in kilometers
-  - Estimated travel time in minutes
+## ✨ Features
 
-## Technology Stack
+### 🎯 Core Functionality
 
-- **Framework**: React 19 with TypeScript
-- **Mapping**: Mapbox GL JS and React Map GL
-- **Styling**: Tailwind CSS with custom animations
-- **Build Tool**: Vite
+- **Interactive Mapping** - Full-screen Mapbox-powered interface with smooth controls
+- **Advanced Routing** - Multiple waypoint types (routed & direct) with real-time calculations
+- **User Authentication** - Google OAuth integration with JWT tokens
+- **Route Management** - Save, organize, and share your custom routes
+- **Location Services** - GPS tracking with enhanced accuracy
 
-## Setup and Installation
+### 🔧 Technical Highlights
+
+- **Observability** - OpenTelemetry metrics, structured logging, health checks
+- **Performance** - Response compression, caching, rate limiting
+- **Security** - Helmet protection, CORS configuration, input validation
+- **Testing** - 96 test suite with 100% CI/CD coverage
+- **Infrastructure** - Docker deployment with Pulumi IaC
+
+## 🏗️ Architecture
+
+```
+maps/
+├── apps/
+│   ├── web/          # React frontend with Mapbox GL
+│   ├── api/          # NestJS REST API with PostgreSQL
+│   └── infra/        # Pulumi infrastructure as code
+├── packages/         # Shared libraries and utilities
+└── docker-compose.yml
+```
+
+### Technology Stack
+
+**Frontend**
+
+- React 19 + TypeScript + Vite
+- Mapbox GL JS for interactive mapping
+- Tailwind CSS + shadcn/ui components
+- Progressive Web App (PWA) support
+
+**Backend**
+
+- NestJS + TypeScript
+- PostgreSQL with MikroORM
+- Google OAuth2 authentication
+- OpenTelemetry observability
+
+**Infrastructure**
+
+- Docker containerization
+- Pulumi for cloud deployment
+- GitHub Actions CI/CD
+- Automated testing & quality gates
+
+## 🚀 Quick Start
 
 ### Prerequisites
 
-- Node.js 18+ and Bun
-- A Mapbox account and access token
+- **Bun** >= 1.1.38 (package manager)
+- **Docker** & Docker Compose
+- **Mapbox** access token
+- **Google OAuth** client credentials
 
-### Getting Started
+### Development Setup
 
-1. Clone the repository:
+1. **Clone and install**
 
-   ```
-   git clone https://github.com/yourusername/maps.git
+   ```bash
+   git clone https://github.com/robbeverhelst/maps.git
    cd maps
-   ```
-
-2. Install dependencies:
-
-   ```
    bun install
    ```
 
-3. Create a `.env` file in the project root with your Mapbox access token:
+2. **Environment configuration**
 
-   ```
-   VITE_MAPBOX_ACCESS_TOKEN=your_mapbox_token_here
+   ```bash
+   # Create .env file with required variables
+   cp .env.example .env
+
+   # Add your API keys:
+   VITE_MAPBOX_ACCESS_TOKEN=your_mapbox_token
+   GOOGLE_CLIENT_ID=your_google_client_id
+   GOOGLE_CLIENT_SECRET=your_google_client_secret
+   DATABASE_URL=postgresql://postgres:password@localhost:5432/maps_db
    ```
 
-4. Start the development server:
+3. **Start services**
 
-   ```
+   ```bash
+   # Start database and development servers
    bun dev
+
+   # Applications will be available at:
+   # Frontend: http://localhost:5173
+   # API: http://localhost:3000
+   # Database Admin: http://localhost:8080
    ```
 
-5. Open your browser and navigate to `http://localhost:5173`
+### Production Deployment
 
-## Usage Instructions
+```bash
+# Build all applications
+bun run build
 
-- **Add Waypoints**: Click on the map to add waypoints
-- **Add Direct Waypoints**: Right-click and select "Add direct waypoint"
-- **Remove Waypoints**: Right-click on a waypoint and select "Remove point"
-- **Undo/Redo**: Use the top-right controls to undo or redo waypoint actions
-- **Reset Route**: Click the reset button in the top-right controls
-- **Find Your Location**: Click the locate button to center the map on your current position
-- **View Route Details**: Route distance and duration are displayed in the bottom-right card
+# Deploy to cloud (requires Pulumi setup)
+cd apps/infra
+pulumi up
+```
 
-## Security Notes
+## 📖 Usage Guide
 
-- Your Mapbox API key should be stored in a `.env` file
-- The `.env` file is included in `.gitignore` and should never be committed to version control
-- If you accidentally commit your API key, follow best practices to reset it:
-  1. Revoke the compromised token in your Mapbox account
-  2. Generate a new token
-  3. Update your `.env` file with the new token
+### Basic Operations
 
-## Contributing
+- **🖱️ Click map** → Add waypoint
+- **🖱️ Right-click** → Context menu (direct waypoint, remove)
+- **⌨️ Ctrl+Z/Y** → Undo/Redo actions
+- **📍 Location button** → Center on your position
+- **💾 Save route** → Store route in your library
 
-Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
+### Advanced Features
 
-## License
+- **Route Sharing** → Export GPX or share links
+- **Solar Positioning** → Sun angle visualization
+- **Multi-language** → i18n support
+- **Offline Mode** → PWA caching
 
-[MIT](https://choosealicense.com/licenses/mit/)
+## 🧪 Development
+
+### Available Scripts
+
+```bash
+# Development
+bun dev              # Start all services
+bun run format       # Code formatting
+bun run lint         # Linting
+bun run check-types  # TypeScript validation
+
+# Testing
+bun test             # Run all tests
+bun run ci           # Full CI pipeline
+
+# Production
+bun run build        # Build all apps
+bun run docker:build # Docker images
+```
+
+### Code Quality
+
+- **ESLint** + **Prettier** for code consistency
+- **TypeScript** strict mode enabled
+- **96 tests** covering critical paths
+- **OpenTelemetry** metrics for production monitoring
+
+### API Documentation
+
+- Health checks: `GET /health`
+- Metrics: `GET /metrics` (Prometheus format)
+- Authentication: `POST /api/v1/auth/google`
+- Routes CRUD: `/api/v1/routes`
+- User management: `/api/v1/users`
+
+## 📊 Monitoring & Observability
+
+The application includes comprehensive monitoring:
+
+- **Health Checks** - Liveness, readiness, and dependency health
+- **Metrics** - HTTP requests, business KPIs, database performance
+- **Logging** - Structured JSON logs with request correlation
+- **Tracing** - Distributed tracing for request flows
+
+Access monitoring endpoints:
+
+- Health: `http://localhost:3000/health`
+- Metrics: `http://localhost:3000/metrics`
+
+## 🔒 Security
+
+- **Authentication** via Google OAuth 2.0
+- **Authorization** with JWT tokens
+- **Input Validation** using class-validator
+- **Rate Limiting** to prevent abuse
+- **Security Headers** via Helmet
+- **CORS** properly configured
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Make changes and add tests
+4. Ensure CI passes: `bun run ci`
+5. Submit a pull request
+
+### Development Guidelines
+
+- Follow existing code style (enforced by ESLint/Prettier)
+- Add tests for new features
+- Update documentation as needed
+- Keep commits atomic and well-described
+
+## 📄 License
+
+This project is licensed under the [MIT License](LICENSE).
+
+## 🙋 Support
+
+- **Issues**: [GitHub Issues](https://github.com/robbeverhelst/maps/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/robbeverhelst/maps/discussions)
+- **Documentation**: See `/apps/*/README.md` for component-specific docs
+
+---
+
+**Built with ❤️ using modern web technologies**
