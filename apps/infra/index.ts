@@ -194,7 +194,7 @@ const api = new ApiResource("api", {
   env: apiEnv,
   livenessProbe: {
     httpGet: {
-      path: "/",
+      path: "/health/live",
       port: 3000,
     },
     initialDelaySeconds: 30,
@@ -202,7 +202,7 @@ const api = new ApiResource("api", {
   },
   readinessProbe: {
     httpGet: {
-      path: "/",
+      path: "/health/ready",
       port: 3000,
     },
     initialDelaySeconds: 5,

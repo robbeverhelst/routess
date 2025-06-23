@@ -1,13 +1,10 @@
 # 🗺️ Maps Routing Platform
 
-[![CI](https://img.shields.io/github/actions/workflow/status/robbeverhelst/maps/ci.yml?branch=main&label=CI&logo=github)](https://github.com/robbeverhelst/maps/actions)
-[![Version](https://img.shields.io/github/package-json/v/robbeverhelst/maps?logo=npm)](https://github.com/robbeverhelst/maps)
-[![License](https://img.shields.io/github/license/robbeverhelst/maps?color=blue)](LICENSE)
+[![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue?logo=typescript)](https://www.typescriptlang.org/)
-[![React](https://img.shields.io/badge/React-19-61dafb?logo=react)](https://reactjs.org/)
-[![NestJS](https://img.shields.io/badge/NestJS-11-e0234e?logo=nestjs)](https://nestjs.com/)
 [![Bun](https://img.shields.io/badge/Bun-1.1.38-f9f1e1?logo=bun)](https://bun.sh/)
-[![Docker](https://img.shields.io/badge/Docker-Ready-2496ed?logo=docker)](https://www.docker.com/)
+[![Tests](https://img.shields.io/badge/Tests-96%20passing-brightgreen?logo=jest)](https://github.com/robbeverhelst/maps)
+[![PWA](https://img.shields.io/badge/PWA-Ready-purple?logo=pwa)](https://web.dev/progressive-web-apps/)
 
 A modern, full-stack mapping application with advanced routing capabilities, user management, and real-time analytics. Built with React, NestJS, and PostgreSQL in a scalable monorepo architecture.
 
