@@ -35,7 +35,7 @@ RUN bun install --production
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 
 # Copy mikro-orm config from the built dist folder (correct path)
-COPY --from=builder /app/apps/api/dist/src/mikro-orm.config.js ./mikro-orm.config.js
+COPY --from=builder /app/apps/api/dist/src/mikro-orm.config.js ./apps/api/mikro-orm.config.js
 
 # Copy migrations folder (needed for mikro-orm)
 COPY --from=builder /app/apps/api/src/migrations ./apps/api/src/migrations
