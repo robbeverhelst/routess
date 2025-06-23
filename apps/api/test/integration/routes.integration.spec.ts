@@ -64,7 +64,7 @@ describe("Routes Integration Tests", () => {
       };
 
       const response = await supertest(app.getHttpServer())
-        .post("/routes")
+        .post("/api/v1/routes")
         .set("Authorization", `Bearer ${authToken}`)
         .send(routeData)
         .expect(201);
@@ -86,7 +86,7 @@ describe("Routes Integration Tests", () => {
         waypoints: [{ lat: 52.52, lng: 13.405, type: "routed" }],
       };
 
-      await supertest(app.getHttpServer()).post("/routes").send(routeData).expect(401);
+      await supertest(app.getHttpServer()).post("/api/v1/routes").send(routeData).expect(401);
     });
 
     it("should validate required fields", async () => {
@@ -95,7 +95,7 @@ describe("Routes Integration Tests", () => {
       };
 
       await supertest(app.getHttpServer())
-        .post("/routes")
+        .post("/api/v1/routes")
         .set("Authorization", `Bearer ${authToken}`)
         .send(invalidRoute)
         .expect(400);
@@ -108,7 +108,7 @@ describe("Routes Integration Tests", () => {
       };
 
       await supertest(app.getHttpServer())
-        .post("/routes")
+        .post("/api/v1/routes")
         .set("Authorization", `Bearer ${authToken}`)
         .send(routeWithoutType)
         .expect(400);
@@ -151,7 +151,7 @@ describe("Routes Integration Tests", () => {
 
     it("should return only authenticated user's routes", async () => {
       const response = await supertest(app.getHttpServer())
-        .get("/routes")
+        .get("/api/v1/routes")
         .set("Authorization", `Bearer ${authToken}`)
         .expect(200);
 
@@ -166,7 +166,7 @@ describe("Routes Integration Tests", () => {
       await orm.em.flush();
 
       const response = await supertest(app.getHttpServer())
-        .get("/routes")
+        .get("/api/v1/routes")
         .set("Authorization", `Bearer ${authToken}`)
         .expect(200);
 
@@ -175,7 +175,7 @@ describe("Routes Integration Tests", () => {
     });
 
     it("should fail without authentication", async () => {
-      await supertest(app.getHttpServer()).get("/routes").expect(401);
+      await supertest(app.getHttpServer()).get("/api/v1/routes").expect(401);
     });
   });
 
@@ -195,7 +195,7 @@ describe("Routes Integration Tests", () => {
 
     it("should return route by id for owner", async () => {
       const response = await supertest(app.getHttpServer())
-        .get(`/routes/${testRoute.id}`)
+        .get(`/api/v1/routes/${testRoute.id}`)
         .set("Authorization", `Bearer ${authToken}`)
         .expect(200);
 
@@ -205,14 +205,14 @@ describe("Routes Integration Tests", () => {
 
     it("should return 404 for non-owner", async () => {
       await supertest(app.getHttpServer())
-        .get(`/routes/${testRoute.id}`)
+        .get(`/api/v1/routes/${testRoute.id}`)
         .set("Authorization", `Bearer ${otherAuthToken}`)
         .expect(404);
     });
 
     it("should return 404 for non-existent route", async () => {
       await supertest(app.getHttpServer())
-        .get("/routes/999999")
+        .get("/api/v1/routes/999999")
         .set("Authorization", `Bearer ${authToken}`)
         .expect(404);
     });
@@ -222,7 +222,7 @@ describe("Routes Integration Tests", () => {
       await orm.em.flush();
 
       await supertest(app.getHttpServer())
-        .get(`/routes/${testRoute.id}`)
+        .get(`/api/v1/routes/${testRoute.id}`)
         .set("Authorization", `Bearer ${authToken}`)
         .expect(404);
     });
@@ -250,7 +250,7 @@ describe("Routes Integration Tests", () => {
       };
 
       const response = await supertest(app.getHttpServer())
-        .patch(`/routes/${testRoute.id}`)
+        .patch(`/api/v1/routes/${testRoute.id}`)
         .set("Authorization", `Bearer ${authToken}`)
         .send(updateData)
         .expect(200);
@@ -265,7 +265,7 @@ describe("Routes Integration Tests", () => {
 
     it("should return 404 when non-owner tries to update", async () => {
       await supertest(app.getHttpServer())
-        .patch(`/routes/${testRoute.id}`)
+        .patch(`/api/v1/routes/${testRoute.id}`)
         .set("Authorization", `Bearer ${otherAuthToken}`)
         .send({ name: "Hacked Name" })
         .expect(404);
@@ -281,7 +281,7 @@ describe("Routes Integration Tests", () => {
       };
 
       await supertest(app.getHttpServer())
-        .patch(`/routes/${testRoute.id}`)
+        .patch(`/api/v1/routes/${testRoute.id}`)
         .set("Authorization", `Bearer ${authToken}`)
         .send(invalidUpdate)
         .expect(400);
@@ -304,7 +304,7 @@ describe("Routes Integration Tests", () => {
 
     it("should soft delete route for owner", async () => {
       await supertest(app.getHttpServer())
-        .delete(`/routes/${testRoute.id}`)
+        .delete(`/api/v1/routes/${testRoute.id}`)
         .set("Authorization", `Bearer ${authToken}`)
         .expect(200);
 
@@ -314,7 +314,7 @@ describe("Routes Integration Tests", () => {
 
       // Verify route is not returned in list
       const response = await supertest(app.getHttpServer())
-        .get("/routes")
+        .get("/api/v1/routes")
         .set("Authorization", `Bearer ${authToken}`)
         .expect(200);
 
@@ -323,7 +323,7 @@ describe("Routes Integration Tests", () => {
 
     it("should return 404 when non-owner tries to delete", async () => {
       await supertest(app.getHttpServer())
-        .delete(`/routes/${testRoute.id}`)
+        .delete(`/api/v1/routes/${testRoute.id}`)
         .set("Authorization", `Bearer ${otherAuthToken}`)
         .expect(404);
 
@@ -337,7 +337,7 @@ describe("Routes Integration Tests", () => {
       await orm.em.flush();
 
       await supertest(app.getHttpServer())
-        .delete(`/routes/${testRoute.id}`)
+        .delete(`/api/v1/routes/${testRoute.id}`)
         .set("Authorization", `Bearer ${authToken}`)
         .expect(404);
     });

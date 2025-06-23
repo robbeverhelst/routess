@@ -63,7 +63,7 @@ class ApiService {
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = `${this.baseUrl}${endpoint}`;
+    const url = `${this.baseUrl}/api/v1${endpoint}`;
     console.log(`[ApiService] Making request to: ${endpoint}`);
 
     // Check if token in memory is stale compared to localStorage

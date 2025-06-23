@@ -8,11 +8,11 @@ describe("User Flows E2E Tests", () => {
   let mockVerifyIdToken: jest.Mock;
 
   beforeAll(async () => {
-    // Setup OAuth2Client mock
+    // Setup OAuth2Client mock by overriding the prototype
     mockVerifyIdToken = jest.fn();
-    (OAuth2Client as any).mockImplementation(() => ({
-      verifyIdToken: mockVerifyIdToken,
-    }));
+
+    // Override the prototype method directly
+    OAuth2Client.prototype.verifyIdToken = mockVerifyIdToken;
 
     app = await createTestApp();
   });
@@ -42,7 +42,7 @@ describe("User Flows E2E Tests", () => {
       });
 
       const authResponse = await supertest(app.getHttpServer())
-        .post("/auth/google")
+        .post("/api/v1/auth/google")
         .send({ credential: "mock-google-token" })
         .expect(201);
 
@@ -67,7 +67,7 @@ describe("User Flows E2E Tests", () => {
       };
 
       const createRouteResponse = await supertest(app.getHttpServer())
-        .post("/routes")
+        .post("/api/v1/routes")
         .set("Authorization", `Bearer ${accessToken}`)
         .send(routeData)
         .expect(201);
@@ -78,7 +78,7 @@ describe("User Flows E2E Tests", () => {
 
       // Step 3: User views their routes
       const routesListResponse = await supertest(app.getHttpServer())
-        .get("/routes")
+        .get("/api/v1/routes")
         .set("Authorization", `Bearer ${accessToken}`)
         .expect(200);
 
@@ -87,7 +87,7 @@ describe("User Flows E2E Tests", () => {
 
       // Step 4: User views specific route details
       const routeDetailResponse = await supertest(app.getHttpServer())
-        .get(`/routes/${createdRoute.id}`)
+        .get(`/api/v1/routes/${createdRoute.id}`)
         .set("Authorization", `Bearer ${accessToken}`)
         .expect(200);
 
@@ -100,7 +100,7 @@ describe("User Flows E2E Tests", () => {
       };
 
       const updateResponse = await supertest(app.getHttpServer())
-        .patch(`/routes/${createdRoute.id}`)
+        .patch(`/api/v1/routes/${createdRoute.id}`)
         .set("Authorization", `Bearer ${accessToken}`)
         .send(updateData)
         .expect(200);
@@ -109,13 +109,13 @@ describe("User Flows E2E Tests", () => {
 
       // Step 6: User deletes their route
       await supertest(app.getHttpServer())
-        .delete(`/routes/${createdRoute.id}`)
+        .delete(`/api/v1/routes/${createdRoute.id}`)
         .set("Authorization", `Bearer ${accessToken}`)
         .expect(200);
 
       // Step 7: Verify route is deleted (soft delete)
       const finalRoutesResponse = await supertest(app.getHttpServer())
-        .get("/routes")
+        .get("/api/v1/routes")
         .set("Authorization", `Bearer ${accessToken}`)
         .expect(200);
 
@@ -142,7 +142,7 @@ describe("User Flows E2E Tests", () => {
         });
 
         const authResponse = await supertest(app.getHttpServer())
-          .post("/auth/google")
+          .post("/api/v1/auth/google")
           .send({ credential: `mock-token-${i}` })
           .expect(201);
 
@@ -155,7 +155,7 @@ describe("User Flows E2E Tests", () => {
 
       for (let i = 0; i < 2; i++) {
         const routeResponse = await supertest(app.getHttpServer())
-          .post("/routes")
+          .post("/api/v1/routes")
           .set("Authorization", `Bearer ${tokens[i]}`)
           .send({
             name: `User ${i + 1} Route`,
@@ -174,7 +174,7 @@ describe("User Flows E2E Tests", () => {
       // Verify each user can only see their own routes
       for (let i = 0; i < 2; i++) {
         const routesResponse = await supertest(app.getHttpServer())
-          .get("/routes")
+          .get("/api/v1/routes")
           .set("Authorization", `Bearer ${tokens[i]}`)
           .expect(200);
 
@@ -184,12 +184,12 @@ describe("User Flows E2E Tests", () => {
 
       // Verify users cannot access each other's routes
       await supertest(app.getHttpServer())
-        .get(`/routes/${routeIds[0]}`)
+        .get(`/api/v1/routes/${routeIds[0]}`)
         .set("Authorization", `Bearer ${tokens[1]}`)
         .expect(404);
 
       await supertest(app.getHttpServer())
-        .get(`/routes/${routeIds[1]}`)
+        .get(`/api/v1/routes/${routeIds[1]}`)
         .set("Authorization", `Bearer ${tokens[0]}`)
         .expect(404);
     });
@@ -198,10 +198,10 @@ describe("User Flows E2E Tests", () => {
   describe("Error Recovery Flow", () => {
     it("should handle various error scenarios gracefully", async () => {
       // Attempt to access protected endpoints without auth
-      await supertest(app.getHttpServer()).get("/routes").expect(401);
+      await supertest(app.getHttpServer()).get("/api/v1/routes").expect(401);
 
       await supertest(app.getHttpServer())
-        .post("/routes")
+        .post("/api/v1/routes")
         .send({ name: "Unauthorized Route" })
         .expect(401);
 
@@ -218,7 +218,7 @@ describe("User Flows E2E Tests", () => {
       });
 
       const authResponse = await supertest(app.getHttpServer())
-        .post("/auth/google")
+        .post("/api/v1/auth/google")
         .send({ credential: "mock-token" })
         .expect(201);
 
@@ -237,7 +237,7 @@ describe("User Flows E2E Tests", () => {
 
       for (const invalidRoute of invalidRoutes) {
         await supertest(app.getHttpServer())
-          .post("/routes")
+          .post("/api/v1/routes")
           .set("Authorization", `Bearer ${accessToken}`)
           .send(invalidRoute)
           .expect(400);
@@ -245,18 +245,18 @@ describe("User Flows E2E Tests", () => {
 
       // Try to access non-existent resources
       await supertest(app.getHttpServer())
-        .get("/routes/999999")
+        .get("/api/v1/routes/999999")
         .set("Authorization", `Bearer ${accessToken}`)
         .expect(404);
 
       await supertest(app.getHttpServer())
-        .patch("/routes/999999")
+        .patch("/api/v1/routes/999999")
         .set("Authorization", `Bearer ${accessToken}`)
         .send({ name: "Updated" })
         .expect(404);
 
       await supertest(app.getHttpServer())
-        .delete("/routes/999999")
+        .delete("/api/v1/routes/999999")
         .set("Authorization", `Bearer ${accessToken}`)
         .expect(404);
     });
@@ -277,7 +277,7 @@ describe("User Flows E2E Tests", () => {
       });
 
       const authResponse = await supertest(app.getHttpServer())
-        .post("/auth/google")
+        .post("/api/v1/auth/google")
         .send({ credential: "mock-token" })
         .expect(201);
 
@@ -299,7 +299,7 @@ describe("User Flows E2E Tests", () => {
         };
 
         const result = await supertest(app.getHttpServer())
-          .post("/routes")
+          .post("/api/v1/routes")
           .set("Authorization", `Bearer ${accessToken}`)
           .send(routeData)
           .expect(201);
@@ -310,7 +310,7 @@ describe("User Flows E2E Tests", () => {
       // Retrieve all routes
       const startTime = Date.now();
       const routesResponse = await supertest(app.getHttpServer())
-        .get("/routes")
+        .get("/api/v1/routes")
         .set("Authorization", `Bearer ${accessToken}`)
         .expect(200);
 

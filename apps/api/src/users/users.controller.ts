@@ -15,6 +15,11 @@ import {
 import { UsersService } from "./users.service";
 import { CreateUserDto, UpdateUserDto } from "./dto/user.dto";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import {
+  ThrottleModerate,
+  ThrottleStrict,
+  ThrottlePublic,
+} from "../common/decorators/throttle.decorator";
 
 interface AuthenticatedRequest extends Request {
   user: {
@@ -27,22 +32,26 @@ interface AuthenticatedRequest extends Request {
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
+  @ThrottleStrict() // Strict rate limiting for user creation
   @Post()
   async create(@Body() createUserDto: CreateUserDto) {
     return this.usersService.create(createUserDto);
   }
 
+  @ThrottlePublic() // Public endpoint - more lenient rate limiting
   @Get()
   async findAll() {
     return this.usersService.findAll();
   }
 
+  @ThrottleModerate() // Moderate rate limiting for profile access
   @Get("profile")
   @UseGuards(JwtAuthGuard)
   async getProfile(@Request() req: AuthenticatedRequest) {
     return this.usersService.findOne(req.user.id);
   }
 
+  @ThrottlePublic() // Public endpoint for user lookup
   @Get(":id")
   async findOne(@Param("id") id: string) {
     const userId = parseInt(id);
@@ -52,11 +61,13 @@ export class UsersController {
     return this.usersService.findOne(userId);
   }
 
+  @ThrottleModerate() // Moderate rate limiting for updates
   @Put(":id")
   async update(@Param("id") id: string, @Body() updateUserDto: UpdateUserDto) {
     return this.usersService.update(+id, updateUserDto);
   }
 
+  @ThrottleModerate() // Moderate rate limiting for partial updates
   @Patch(":id")
   @UseGuards(JwtAuthGuard)
   async partialUpdate(
@@ -75,6 +86,7 @@ export class UsersController {
     return this.usersService.update(userId, updateUserDto);
   }
 
+  @ThrottleStrict() // Strict rate limiting for account deletion
   @Delete(":id")
   @UseGuards(JwtAuthGuard)
   async remove(@Param("id") id: string, @Request() req: AuthenticatedRequest) {

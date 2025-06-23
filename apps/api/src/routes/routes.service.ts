@@ -4,6 +4,7 @@ import { EntityManager, EntityRepository } from "@mikro-orm/core";
 import { Route } from "../entities/route.entity";
 import { CreateRouteDto } from "./dto/create-route.dto";
 import { UpdateRouteDto } from "./dto/update-route.dto";
+import { MetricsService } from "../telemetry/metrics.service";
 
 @Injectable()
 export class RoutesService {
@@ -11,6 +12,7 @@ export class RoutesService {
     @InjectRepository(Route)
     private readonly routeRepository: EntityRepository<Route>,
     private readonly em: EntityManager,
+    private readonly metricsService: MetricsService,
   ) {}
 
   async create(createRouteDto: CreateRouteDto, userId: number): Promise<Route> {
@@ -21,15 +23,29 @@ export class RoutesService {
 
     await this.em.persistAndFlush(route);
     await this.em.populate(route, ["user"]);
+
+    // Record route creation metric
+    this.metricsService.recordRouteCreated(userId);
+
     return route;
   }
 
   async findAll(userId: number): Promise<Route[]> {
-    return this.routeRepository.find({ user: userId, deletedAt: null }, { populate: ["user"] });
+    return this.routeRepository.find(
+      { user: userId, deletedAt: null },
+      {
+        populate: ["user"],
+        orderBy: { createdAt: "DESC" }, // Most recent routes first
+        limit: 100, // Prevent loading too many routes at once
+      },
+    );
   }
 
   async findOne(id: number, userId: number): Promise<Route> {
-    const route = await this.routeRepository.findOne({ id, user: userId, deletedAt: null });
+    const route = await this.routeRepository.findOne(
+      { id, user: userId, deletedAt: null },
+      { populate: ["user"] },
+    );
 
     if (!route) {
       throw new NotFoundException(`Route with ID ${id} not found`);
@@ -51,6 +67,9 @@ export class RoutesService {
     const route = await this.findOne(id, userId);
     route.deletedAt = new Date();
     await this.em.persistAndFlush(route);
+
+    // Record route deletion metric
+    this.metricsService.recordRouteDeleted(userId);
   }
 
   async hardDelete(id: number, userId: number): Promise<void> {

@@ -51,3 +51,8 @@ export const createMockFn = () => {
   fn: createMockFn,
   clearAllMocks: () => {},
 };
+
+// Setup function to initialize mocks
+export const setupMocks = () => {
+  // Initialize any global mocks here if needed
+};

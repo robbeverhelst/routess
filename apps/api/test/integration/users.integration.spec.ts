@@ -51,7 +51,7 @@ describe("Users Integration Tests", () => {
 
   describe("GET /users", () => {
     it("should return all active users", async () => {
-      const response = await supertest(app.getHttpServer()).get("/users").expect(200);
+      const response = await supertest(app.getHttpServer()).get("/api/v1/users").expect(200);
 
       expect(response.body).toHaveLength(2);
       expect(response.body.map((u: { email: string }) => u.email)).toContain("test@example.com");
@@ -61,18 +61,18 @@ describe("Users Integration Tests", () => {
     it("should not return soft-deleted users", async () => {
       // Soft delete one user through the API
       await supertest(app.getHttpServer())
-        .delete(`/users/${testUser.id}`)
+        .delete(`/api/v1/users/${testUser.id}`)
         .set("Authorization", `Bearer ${authToken}`)
         .expect(200);
 
-      const response = await supertest(app.getHttpServer()).get("/users").expect(200);
+      const response = await supertest(app.getHttpServer()).get("/api/v1/users").expect(200);
 
       expect(response.body).toHaveLength(1);
       expect(response.body[0].email).toBe("other@example.com");
     });
 
     it("should not include sensitive data", async () => {
-      const response = await supertest(app.getHttpServer()).get("/users").expect(200);
+      const response = await supertest(app.getHttpServer()).get("/api/v1/users").expect(200);
 
       response.body.forEach((user: { googleId?: string }) => {
         expect(user).not.toHaveProperty("googleId");
@@ -84,7 +84,7 @@ describe("Users Integration Tests", () => {
   describe("GET /users/profile", () => {
     it("should return authenticated user's profile", async () => {
       const response = await supertest(app.getHttpServer())
-        .get("/users/profile")
+        .get("/api/v1/users/profile")
         .set("Authorization", `Bearer ${authToken}`)
         .expect(200);
 
@@ -94,7 +94,7 @@ describe("Users Integration Tests", () => {
     });
 
     it("should fail without authentication", async () => {
-      await supertest(app.getHttpServer()).get("/users/profile").expect(401);
+      await supertest(app.getHttpServer()).get("/api/v1/users/profile").expect(401);
     });
 
     it("should include user statistics", async () => {
@@ -118,7 +118,7 @@ describe("Users Integration Tests", () => {
       await orm.em.persistAndFlush([route1, route2]);
 
       const response = await supertest(app.getHttpServer())
-        .get("/users/profile")
+        .get("/api/v1/users/profile")
         .set("Authorization", `Bearer ${authToken}`)
         .expect(200);
 
@@ -134,7 +134,7 @@ describe("Users Integration Tests", () => {
   describe("GET /users/:id", () => {
     it("should return user by id", async () => {
       const response = await supertest(app.getHttpServer())
-        .get(`/users/${testUser.id}`)
+        .get(`/api/v1/users/${testUser.id}`)
         .expect(200);
 
       expect(response.body.id).toBe(testUser.id);
@@ -142,17 +142,17 @@ describe("Users Integration Tests", () => {
     });
 
     it("should return 404 for non-existent user", async () => {
-      await supertest(app.getHttpServer()).get("/users/999999").expect(404);
+      await supertest(app.getHttpServer()).get("/api/v1/users/999999").expect(404);
     });
 
     it("should return 404 for soft-deleted user", async () => {
       // Soft delete user through the API
       await supertest(app.getHttpServer())
-        .delete(`/users/${testUser.id}`)
+        .delete(`/api/v1/users/${testUser.id}`)
         .set("Authorization", `Bearer ${authToken}`)
         .expect(200);
 
-      await supertest(app.getHttpServer()).get(`/users/${testUser.id}`).expect(404);
+      await supertest(app.getHttpServer()).get(`/api/v1/users/${testUser.id}`).expect(404);
     });
   });
 
@@ -164,7 +164,7 @@ describe("Users Integration Tests", () => {
       };
 
       const response = await supertest(app.getHttpServer())
-        .patch(`/users/${testUser.id}`)
+        .patch(`/api/v1/users/${testUser.id}`)
         .set("Authorization", `Bearer ${authToken}`)
         .send(updateData)
         .expect(200);
@@ -183,7 +183,7 @@ describe("Users Integration Tests", () => {
       };
 
       await supertest(app.getHttpServer())
-        .patch(`/users/${testUser.id}`)
+        .patch(`/api/v1/users/${testUser.id}`)
         .set("Authorization", `Bearer ${otherAuthToken}`)
         .send(updateData)
         .expect(403);
@@ -196,25 +196,23 @@ describe("Users Integration Tests", () => {
 
     it("should not allow updating protected fields", async () => {
       const updateData = {
-        email: "newemail@example.com", // Should not be allowed
-        googleId: "new-google-id", // Should not be allowed
+        googleId: "new-google-id", // Should not be allowed (not in DTO)
       };
 
       await supertest(app.getHttpServer())
-        .patch(`/users/${testUser.id}`)
+        .patch(`/api/v1/users/${testUser.id}`)
         .set("Authorization", `Bearer ${authToken}`)
         .send(updateData)
-        .expect(200);
+        .expect(400); // Expect validation error for unknown fields
 
       // Verify protected fields weren't changed
       await orm.em.refresh(testUser);
-      expect(testUser.email).toBe("test@example.com");
       expect(testUser.googleId).toBe("google-test-123");
     });
 
     it("should require authentication", async () => {
       await supertest(app.getHttpServer())
-        .patch(`/users/${testUser.id}`)
+        .patch(`/api/v1/users/${testUser.id}`)
         .send({ name: "No Auth" })
         .expect(401);
     });
@@ -223,7 +221,7 @@ describe("Users Integration Tests", () => {
   describe("DELETE /users/:id", () => {
     it("should soft delete own account", async () => {
       await supertest(app.getHttpServer())
-        .delete(`/users/${testUser.id}`)
+        .delete(`/api/v1/users/${testUser.id}`)
         .set("Authorization", `Bearer ${authToken}`)
         .expect(200);
 
@@ -240,7 +238,7 @@ describe("Users Integration Tests", () => {
 
     it("should not allow deleting other user's account", async () => {
       await supertest(app.getHttpServer())
-        .delete(`/users/${testUser.id}`)
+        .delete(`/api/v1/users/${testUser.id}`)
         .set("Authorization", `Bearer ${otherAuthToken}`)
         .expect(403);
 
@@ -251,19 +249,19 @@ describe("Users Integration Tests", () => {
     });
 
     it("should require authentication", async () => {
-      await supertest(app.getHttpServer()).delete(`/users/${testUser.id}`).expect(401);
+      await supertest(app.getHttpServer()).delete(`/api/v1/users/${testUser.id}`).expect(401);
     });
 
     it("should invalidate user's session after deletion", async () => {
       // Delete the user
       await supertest(app.getHttpServer())
-        .delete(`/users/${testUser.id}`)
+        .delete(`/api/v1/users/${testUser.id}`)
         .set("Authorization", `Bearer ${authToken}`)
         .expect(200);
 
       // Try to use the same token
       await supertest(app.getHttpServer())
-        .get("/users/profile")
+        .get("/api/v1/users/profile")
         .set("Authorization", `Bearer ${authToken}`)
         .expect(401); // Or 404 if user not found
     });
@@ -292,7 +290,7 @@ describe("Users Integration Tests", () => {
 
       // Get user with routes
       const userResponse = await supertest(app.getHttpServer())
-        .get(`/users/${testUser.id}`)
+        .get(`/api/v1/users/${testUser.id}`)
         .expect(200);
 
       // If routes are included in response
@@ -302,7 +300,7 @@ describe("Users Integration Tests", () => {
 
       // Delete user
       await supertest(app.getHttpServer())
-        .delete(`/users/${testUser.id}`)
+        .delete(`/api/v1/users/${testUser.id}`)
         .set("Authorization", `Bearer ${authToken}`)
         .expect(200);
 

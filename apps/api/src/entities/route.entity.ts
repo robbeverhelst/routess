@@ -1,4 +1,4 @@
-import { Entity, PrimaryKey, Property, ManyToOne, type Ref } from "@mikro-orm/core";
+import { Entity, PrimaryKey, Property, ManyToOne, type Ref, Index } from "@mikro-orm/core";
 import { User } from "./user.entity";
 import { BaseEntity } from "./base.entity";
 
@@ -10,6 +10,9 @@ export interface Waypoint {
 }
 
 @Entity()
+@Index({ properties: ["user"] }) // Index for user-based route lookups
+@Index({ properties: ["createdAt"] }) // Index for chronological sorting
+@Index({ properties: ["user", "createdAt"] }) // Composite index for user routes by date
 export class Route extends BaseEntity {
   @PrimaryKey()
   id!: number;

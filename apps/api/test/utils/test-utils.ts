@@ -1,8 +1,11 @@
-import { INestApplication, ValidationPipe } from "@nestjs/common";
+import { INestApplication, ValidationPipe, VersioningType } from "@nestjs/common";
 import { Test, TestingModule } from "@nestjs/testing";
 import { MikroORM, RequestContext } from "@mikro-orm/core";
 import { AppModule } from "src/app.module";
 import { JwtService } from "@nestjs/jwt";
+import helmet from "helmet";
+import compression from "compression";
+import { GlobalExceptionFilter } from "../../src/common/filters/global-exception.filter";
 
 export async function createTestApp(): Promise<INestApplication> {
   process.env.NODE_ENV = "test";
@@ -15,12 +18,54 @@ export async function createTestApp(): Promise<INestApplication> {
   }).compile();
 
   const app = moduleFixture.createNestApplication();
+
+  // Apply middleware like in main.ts
+  app.use(
+    compression({
+      filter: (req, res) => {
+        if (req.headers["x-no-compression"]) {
+          return false;
+        }
+        return compression.filter(req, res);
+      },
+      threshold: 1024,
+    }),
+  );
+
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          scriptSrc: ["'self'"],
+          imgSrc: ["'self'", "data:", "https:"],
+        },
+      },
+      crossOriginEmbedderPolicy: false,
+    }),
+  );
+
+  // Enable API versioning
+  app.enableVersioning({
+    type: VersioningType.URI,
+    defaultVersion: "1",
+    prefix: "api/v",
+  });
+
+  app.useGlobalFilters(new GlobalExceptionFilter());
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
       transform: true,
+      forbidNonWhitelisted: true,
+      transformOptions: {
+        enableImplicitConversion: true,
+      },
     }),
   );
+
   app.enableCors({
     origin: process.env.FRONTEND_URL || "http://localhost:3001",
   });

@@ -1,7 +1,9 @@
-import { Entity, PrimaryKey, Property } from "@mikro-orm/core";
+import { Entity, PrimaryKey, Property, Index } from "@mikro-orm/core";
 import { BaseEntity } from "./base.entity";
 
 @Entity()
+@Index({ properties: ["email"] }) // Index for email lookups
+@Index({ properties: ["googleId"] }) // Index for Google authentication
 export class User extends BaseEntity {
   @PrimaryKey({ type: "number" })
   id!: number;

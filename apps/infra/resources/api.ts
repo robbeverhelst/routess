@@ -1,11 +1,13 @@
 import { ComponentResource, ComponentResourceOptions, Output, interpolate } from "@pulumi/pulumi";
 import { Deployment } from "@pulumi/kubernetes/apps/v1";
 import { Service } from "@pulumi/kubernetes/core/v1";
+import { CustomResource } from "@pulumi/kubernetes/apiextensions";
 import { AppResourceConfig } from "./types";
 
 export class ApiResource extends ComponentResource {
   public readonly deployment: Deployment;
   public readonly service: Service;
+  public readonly serviceMonitor: CustomResource;
   public readonly serviceUrl: Output<string>;
 
   constructor(name: string, config: AppResourceConfig, opts?: ComponentResourceOptions) {
@@ -39,9 +41,15 @@ export class ApiResource extends ComponentResource {
           },
           template: {
             metadata: {
-              labels: config.labels,
+              labels: {
+                ...config.labels,
+                "app.kubernetes.io/component": "api",
+              },
               annotations: {
                 "app.kubernetes.io/version": appVersion,
+                "prometheus.io/scrape": "true",
+                "prometheus.io/port": config.port.toString(),
+                "prometheus.io/path": "/metrics",
               },
             },
             spec: {
@@ -87,8 +95,18 @@ export class ApiResource extends ComponentResource {
         },
         spec: {
           type: "ClusterIP",
-          ports: [{ port: config.port, targetPort: config.port }],
-          selector: config.labels,
+          ports: [
+            {
+              name: "http",
+              port: config.port,
+              targetPort: config.port,
+              protocol: "TCP",
+            },
+          ],
+          selector: {
+            ...config.labels,
+            "app.kubernetes.io/component": "api",
+          },
         },
       },
       {
@@ -100,9 +118,45 @@ export class ApiResource extends ComponentResource {
 
     this.serviceUrl = interpolate`${this.service.metadata.name}.${config.namespace}.svc.cluster.local:${config.port}`;
 
+    // ServiceMonitor for Prometheus scraping
+    this.serviceMonitor = new CustomResource(
+      `${config.appName}-api-servicemonitor`,
+      {
+        apiVersion: "monitoring.coreos.com/v1",
+        kind: "ServiceMonitor",
+        metadata: {
+          name: `${config.appName}-api-metrics`,
+          namespace: config.namespace,
+          labels: {
+            ...config.labels,
+            "app.kubernetes.io/component": "metrics",
+          },
+        },
+        spec: {
+          selector: {
+            matchLabels: config.labels,
+          },
+          endpoints: [
+            {
+              port: "http",
+              path: "/metrics",
+              interval: "30s",
+              scrapeTimeout: "10s",
+            },
+          ],
+        },
+      },
+      {
+        provider: config.provider,
+        dependsOn: [this.service],
+        parent: this,
+      },
+    );
+
     this.registerOutputs({
       deployment: this.deployment,
       service: this.service,
+      serviceMonitor: this.serviceMonitor,
       serviceUrl: this.serviceUrl,
     });
   }

@@ -11,11 +11,11 @@ describe("Auth Integration Tests", () => {
   let mockVerifyIdToken: jest.Mock;
 
   beforeAll(async () => {
-    // Setup OAuth2Client mock
+    // Setup OAuth2Client mock by overriding the prototype
     mockVerifyIdToken = jest.fn();
-    (OAuth2Client as any).mockImplementation(() => ({
-      verifyIdToken: mockVerifyIdToken,
-    }));
+
+    // Override the prototype method directly
+    OAuth2Client.prototype.verifyIdToken = mockVerifyIdToken;
 
     app = await createTestApp();
     orm = app.get(MikroORM);
@@ -47,7 +47,7 @@ describe("Auth Integration Tests", () => {
       });
 
       const response = await supertest(app.getHttpServer())
-        .post("/auth/google")
+        .post("/api/v1/auth/google")
         .send({ credential: "mock-google-token" })
         .expect(201);
 
@@ -83,7 +83,7 @@ describe("Auth Integration Tests", () => {
       });
 
       const response = await supertest(app.getHttpServer())
-        .post("/auth/google")
+        .post("/api/v1/auth/google")
         .send({ credential: "mock-google-token" })
         .expect(201);
 
@@ -95,16 +95,20 @@ describe("Auth Integration Tests", () => {
     });
 
     it("should fail with invalid Google token", async () => {
-      mockVerifyIdToken.mockRejectedValue(new Error("Invalid token"));
+      // Use a more controlled error approach that doesn't throw during test execution
+      mockVerifyIdToken.mockImplementation(() => {
+        return Promise.reject(new Error("Invalid token"));
+      });
 
-      await supertest(app.getHttpServer())
-        .post("/auth/google")
-        .send({ credential: "invalid-token" })
-        .expect(401);
+      const response = await supertest(app.getHttpServer())
+        .post("/api/v1/auth/google")
+        .send({ credential: "invalid-token" });
+
+      expect(response.status).toBe(401);
     });
 
     it("should fail without credential", async () => {
-      await supertest(app.getHttpServer()).post("/auth/google").send({}).expect(400);
+      await supertest(app.getHttpServer()).post("/api/v1/auth/google").send({}).expect(400);
     });
   });
 
@@ -128,18 +132,18 @@ describe("Auth Integration Tests", () => {
 
     it("should access protected route with valid JWT", async () => {
       await supertest(app.getHttpServer())
-        .get("/auth/me")
+        .get("/api/v1/auth/me")
         .set("Authorization", `Bearer ${validToken}`)
         .expect(200);
     });
 
     it("should fail to access protected route without JWT", async () => {
-      await supertest(app.getHttpServer()).get("/auth/me").expect(401);
+      await supertest(app.getHttpServer()).get("/api/v1/auth/me").expect(401);
     });
 
     it("should fail to access protected route with invalid JWT", async () => {
       await supertest(app.getHttpServer())
-        .get("/auth/me")
+        .get("/api/v1/auth/me")
         .set("Authorization", "Bearer invalid-token")
         .expect(401);
     });

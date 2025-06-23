@@ -6,6 +6,7 @@ import { EntityRepository, EntityManager } from "@mikro-orm/core";
 import { User } from "../entities/user.entity";
 import { GoogleAuthDto, AuthResponseDto } from "./dto";
 import { JwtPayload } from "./strategies/jwt.strategy";
+import { MetricsService } from "../telemetry/metrics.service";
 
 @Injectable()
 export class AuthService {
@@ -16,6 +17,7 @@ export class AuthService {
     private userRepository: EntityRepository<User>,
     private entityManager: EntityManager,
     private jwtService: JwtService,
+    private metricsService: MetricsService,
   ) {
     this.googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
   }
@@ -58,6 +60,9 @@ export class AuthService {
           isEmailVerified: true,
         });
         await this.entityManager.persistAndFlush(user);
+
+        // Record new user registration metric
+        this.metricsService.recordUserRegistration("google");
       } else {
         if (!user.googleId) {
           user.googleId = googleId;
@@ -73,6 +78,9 @@ export class AuthService {
       };
 
       console.log("Google Auth - About to return success response");
+
+      // Increment active users
+      this.metricsService.incrementActiveUsers();
 
       return {
         accessToken: this.jwtService.sign(jwtPayload),
