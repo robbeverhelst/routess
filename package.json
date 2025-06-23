@@ -16,7 +16,7 @@
     "test": "turbo run test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "ci": "bun run format && bun run lint && bun run build && bun run check-types",
+    "ci": "bun run format && bun run lint && bun run build && bun run check-types && bun run test",
     "clean": "pkill -f 'esbuild' || true && killall -9 turbo node || true && turbo daemon stop || true && rm -rf node_modules apps/*/node_modules packages/*/node_modules .turbo /tmp/esbuild* && bun install",
     "docker:build": "turbo run docker:build",
     "docker:build:web": "docker build -f apps/web/Dockerfile -t maps-web .",
@@ -50,5 +50,9 @@
   },
   "overrides": {
     "brace-expansion": "^2.0.1"
+  },
+  "dependencies": {
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.2"
   }
 }

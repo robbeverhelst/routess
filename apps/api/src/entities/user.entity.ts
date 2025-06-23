@@ -3,7 +3,7 @@ import { BaseEntity } from "./base.entity";
 
 @Entity()
 export class User extends BaseEntity {
-  @PrimaryKey()
+  @PrimaryKey({ type: "number" })
   id!: number;
 
   @Property({ unique: true })
@@ -15,7 +15,7 @@ export class User extends BaseEntity {
   @Property({ hidden: true, nullable: true })
   password?: string;
 
-  @Property({ nullable: true })
+  @Property({ hidden: true, nullable: true })
   googleId?: string;
 
   @Property({ nullable: true })

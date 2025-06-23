@@ -16,6 +16,7 @@ const config: Options = {
     pathTs: "./src/migrations",
   },
   debug: process.env.NODE_ENV !== "production",
+  allowGlobalContext: true, // Required for tests and simplified operations
 };
 
 export default config;

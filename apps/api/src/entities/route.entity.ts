@@ -5,7 +5,8 @@ import { BaseEntity } from "./base.entity";
 export interface Waypoint {
   lat: number;
   lng: number;
-  type: "routed" | "direct";
+  type?: "routed" | "direct";
+  timestamp?: string;
 }
 
 @Entity()

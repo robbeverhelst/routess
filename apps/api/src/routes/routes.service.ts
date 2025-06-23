@@ -20,11 +20,12 @@ export class RoutesService {
     });
 
     await this.em.persistAndFlush(route);
+    await this.em.populate(route, ["user"]);
     return route;
   }
 
   async findAll(userId: number): Promise<Route[]> {
-    return this.routeRepository.find({ user: userId, deletedAt: null });
+    return this.routeRepository.find({ user: userId, deletedAt: null }, { populate: ["user"] });
   }
 
   async findOne(id: number, userId: number): Promise<Route> {

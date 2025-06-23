@@ -42,7 +42,17 @@ jobs:
         run: bun install
 
       - name: Run tests and checks
-        run: bunx turbo run format:check lint check-types test --filter='!api'
+        run: bunx turbo run format:check lint check-types test
+
+      - name: Upload test coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./apps/api/coverage/lcov.info,./apps/web/coverage/lcov.info
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+          verbose: true
+          token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Build all applications
         run: bunx turbo run build

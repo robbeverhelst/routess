@@ -32,7 +32,16 @@ export class UsersService {
 
   async update(id: number, updateUserDto: UpdateUserDto): Promise<User> {
     const user = await this.findOne(id);
-    this.userRepository.assign(user, updateUserDto);
+
+    // Only allow updating certain fields
+    if (updateUserDto.name !== undefined) {
+      user.name = updateUserDto.name;
+    }
+    if (updateUserDto.avatar !== undefined) {
+      user.avatar = updateUserDto.avatar;
+    }
+    // Note: email and googleId updates are not allowed
+
     await this.em.persistAndFlush(user);
     return user;
   }
