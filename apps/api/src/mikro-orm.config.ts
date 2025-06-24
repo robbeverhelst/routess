@@ -13,7 +13,9 @@ if (process.env.NODE_ENV === "production") {
   const { User } = require("./entities/user.entity");
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { Route } = require("./entities/route.entity");
-  entities = [User, Route];
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { Session } = require("./entities/session.entity");
+  entities = [User, Route, Session];
 }
 
 const config: Options = {

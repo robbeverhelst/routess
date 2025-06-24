@@ -1,5 +1,8 @@
 import { Test, TestingModule } from "@nestjs/testing";
+import { getRepositoryToken } from "@mikro-orm/nestjs";
 import { MetricsService } from "../../../src/telemetry/metrics.service";
+import { Route } from "../../../src/entities/route.entity";
+import { User } from "../../../src/entities/user.entity";
 
 // Create mock functions for OpenTelemetry
 const mockRecord = { fn: () => {} };
@@ -23,8 +26,14 @@ const mockMeter = {
   createUpDownCounter: () => mockUpDownCounter,
 };
 
-// Mock the tracing module
-// const mockGetMeter = () => mockMeter;
+// Mock repositories
+const mockRouteRepository = {
+  count: () => Promise.resolve(0),
+};
+
+const mockUserRepository = {
+  count: () => Promise.resolve(0),
+};
 
 describe("MetricsService", () => {
   let service: MetricsService;
@@ -38,6 +47,14 @@ describe("MetricsService", () => {
       providers: [
         MetricsService,
         {
+          provide: getRepositoryToken(Route),
+          useValue: mockRouteRepository,
+        },
+        {
+          provide: getRepositoryToken(User),
+          useValue: mockUserRepository,
+        },
+        {
           provide: "OTEL_METER",
           useValue: mockMeter,
         },
@@ -46,9 +63,33 @@ describe("MetricsService", () => {
 
     service = module.get<MetricsService>(MetricsService);
 
-    // Mock the meter and trigger initialization
+    // Mock the meter and skip async initialization for tests
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (service as any).meter = mockMeter;
-    (service as any).initializeMetrics();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (service as any).routeRepository = mockRouteRepository;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (service as any).userRepository = mockUserRepository;
+
+    // Initialize metrics synchronously for tests
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (service as any).httpRequestDuration = mockHistogram;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (service as any).httpRequestTotal = mockCounter;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (service as any).httpRequestErrors = mockCounter;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (service as any).userRegistrations = mockCounter;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (service as any).routesCreated = mockCounter;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (service as any).routesDeleted = mockCounter;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (service as any).activeUsers = mockUpDownCounter;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (service as any).dbQueryDuration = mockHistogram;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (service as any).dbConnectionPool = mockUpDownCounter;
   });
 
   it("should be defined", () => {

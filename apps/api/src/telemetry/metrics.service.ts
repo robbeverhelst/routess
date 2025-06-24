@@ -1,10 +1,21 @@
 import { Injectable, OnModuleInit } from "@nestjs/common";
+import { InjectRepository } from "@mikro-orm/nestjs";
+import { EntityRepository } from "@mikro-orm/core";
 import { getMeter } from "./tracing";
 import { Counter, Histogram, UpDownCounter } from "@opentelemetry/api";
+import { Route } from "../entities/route.entity";
+import { User } from "../entities/user.entity";
 
 @Injectable()
 export class MetricsService implements OnModuleInit {
   private meter = getMeter();
+
+  constructor(
+    @InjectRepository(Route)
+    private readonly routeRepository: EntityRepository<Route>,
+    @InjectRepository(User)
+    private readonly userRepository: EntityRepository<User>,
+  ) {}
 
   // HTTP metrics
   private httpRequestDuration: Histogram;
@@ -21,11 +32,11 @@ export class MetricsService implements OnModuleInit {
   private dbQueryDuration: Histogram;
   private dbConnectionPool: UpDownCounter;
 
-  onModuleInit() {
-    this.initializeMetrics();
+  async onModuleInit() {
+    await this.initializeMetrics();
   }
 
-  private initializeMetrics() {
+  private async initializeMetrics() {
     // HTTP metrics
     this.httpRequestDuration = this.meter.createHistogram("http_request_duration_ms", {
       description: "Duration of HTTP requests in milliseconds",
@@ -66,6 +77,34 @@ export class MetricsService implements OnModuleInit {
     this.dbConnectionPool = this.meter.createUpDownCounter("db_connection_pool_size", {
       description: "Current size of database connection pool",
     });
+
+    // Initialize counters with historical data
+    await this.initializeBusinessMetrics();
+  }
+
+  private async initializeBusinessMetrics() {
+    try {
+      // Initialize routes created counter with total routes in database
+      const totalRoutes = await this.routeRepository.count({ deletedAt: null });
+      this.routesCreated.add(totalRoutes);
+
+      // Initialize user registrations counter with total users
+      const totalUsers = await this.userRepository.count();
+      this.userRegistrations.add(totalUsers);
+
+      // Initialize routes deleted counter with soft-deleted routes
+      const deletedRoutes = await this.routeRepository.count({ deletedAt: { $ne: null } });
+      this.routesDeleted.add(deletedRoutes);
+
+      // Set active users to 0 initially (will be updated as users log in)
+      this.activeUsers.add(0);
+
+      console.log(
+        `Metrics initialized: ${totalRoutes} routes, ${totalUsers} users, ${deletedRoutes} deleted routes`,
+      );
+    } catch (error) {
+      console.error("Failed to initialize business metrics:", error);
+    }
   }
 
   // HTTP metrics methods

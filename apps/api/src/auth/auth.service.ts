@@ -5,8 +5,8 @@ import { InjectRepository } from "@mikro-orm/nestjs";
 import { EntityRepository, EntityManager } from "@mikro-orm/core";
 import { User } from "../entities/user.entity";
 import { GoogleAuthDto, AuthResponseDto } from "./dto";
-import { JwtPayload } from "./strategies/jwt.strategy";
 import { MetricsService } from "../telemetry/metrics.service";
+import { SessionService } from "./session.service";
 
 @Injectable()
 export class AuthService {
@@ -18,6 +18,7 @@ export class AuthService {
     private entityManager: EntityManager,
     private jwtService: JwtService,
     private metricsService: MetricsService,
+    private sessionService: SessionService,
   ) {
     this.googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
   }
@@ -66,16 +67,11 @@ export class AuthService {
         }
       }
 
-      const jwtPayload: JwtPayload = {
-        sub: user.id,
-        email: user.email,
-      };
-
-      // Increment active users
-      this.metricsService.incrementActiveUsers();
+      // Create session and get JWT with session tracking
+      const accessToken = await this.sessionService.createSession(user.id);
 
       return {
-        accessToken: this.jwtService.sign(jwtPayload),
+        accessToken,
         user: {
           id: user.id,
           email: user.email,
@@ -99,5 +95,9 @@ export class AuthService {
       throw new UnauthorizedException("User not found");
     }
     return user;
+  }
+
+  async logout(jti: string): Promise<void> {
+    await this.sessionService.invalidateSession(jti);
   }
 }

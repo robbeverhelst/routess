@@ -1,28 +1,33 @@
 import { Module } from "@nestjs/common";
 import { JwtModule } from "@nestjs/jwt";
 import { PassportModule } from "@nestjs/passport";
+import { ScheduleModule } from "@nestjs/schedule";
 import { MikroOrmModule } from "@mikro-orm/nestjs";
 import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
+import { SessionService } from "./session.service";
+import { SessionCleanupService } from "./session-cleanup.service";
 import { JwtStrategy } from "./strategies/jwt.strategy";
 import { User } from "../entities/user.entity";
+import { Session } from "../entities/session.entity";
 
 @Module({
   imports: [
-    MikroOrmModule.forFeature([User]),
+    MikroOrmModule.forFeature([User, Session]),
     PassportModule.register({ defaultStrategy: "jwt" }),
+    ScheduleModule.forRoot(),
     JwtModule.registerAsync({
       useFactory: () => {
         const secret = process.env.JWT_SECRET || "your-secret-key";
         return {
           secret: secret,
-          signOptions: { expiresIn: "24h" },
+          signOptions: { expiresIn: "7d" },
         };
       },
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
-  exports: [AuthService, JwtStrategy],
+  providers: [AuthService, SessionService, SessionCleanupService, JwtStrategy],
+  exports: [AuthService, SessionService, JwtStrategy],
 })
 export class AuthModule {}
