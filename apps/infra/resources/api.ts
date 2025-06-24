@@ -130,6 +130,7 @@ export class ApiResource extends ComponentResource {
           labels: {
             ...config.labels,
             "app.kubernetes.io/component": "metrics",
+            release: "prometheus", // Required for Prometheus ServiceMonitor discovery
           },
         },
         spec: {
