@@ -21,7 +21,6 @@ import {
 } from "@/lib/routing";
 import { zoomToRoute } from "@/features/routing/utils/RoutingUtils";
 import { decompressAndParse, serializeAndCompress } from "@/lib/shareUtils";
-// import type { MapTouchEvent, MapMouseEvent } from 'mapbox-gl'; // REMOVED - No longer used
 import { getWaypoints, getDirectFlags } from "@/features/routing/managers/WaypointManager";
 import {
   updateWaypointsLayer,
@@ -48,10 +47,10 @@ import { Logger } from "@/lib/logger";
 import {
   RouteGeneratorModal,
   type RouteGenerationParams,
-} from "@/components/ui/RouteGeneratorModal";
+} from "@/components/modals/RouteGeneratorModal";
 import { SaveRouteModal } from "@/components/modals/SaveRouteModal";
 import { RouteLibraryModal } from "@/components/modals/RouteLibraryModal";
-import { LoginModal } from "@/components/auth/login-modal";
+import { LoginModal } from "@/components/auth/LoginModal";
 import { type SupportedLanguage } from "@/lib/i18n"; // Added
 import { type ApiRoute, type Waypoint, apiService } from "@/lib/api";
 import { googleAuth } from "@/lib/google-auth";
@@ -83,9 +82,6 @@ const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN || "__VITE_MAPBOX_
 const MAP_PITCH = 30; // Default pitch angle for the map
 
 // Fallback for development (remove in production)
-// if (!MAPBOX_TOKEN) {
-//   Logger.error('Mapbox token not found in environment variables! Please add VITE_MAPBOX_ACCESS_TOKEN to your .env file');
-// }
 
 // More detailed check for debugging
 if (import.meta.env.DEV && (!MAPBOX_TOKEN || MAPBOX_TOKEN.length < 10)) {
@@ -652,7 +648,6 @@ export default function MapWithRouting({
 
       if (mapRef.current) {
         Logger.info("[MapWithRouting] Removing map instance (commented out).");
-        // mapRef.current.remove(); // This can cause issues if map is removed elsewhere or if used in strict mode with double invokes
       }
     };
   }, []); // Empty dependency array means this runs once on mount and cleanup on unmount
@@ -795,14 +790,6 @@ export default function MapWithRouting({
       if (animationFrameIdRef.current) {
         cancelAnimationFrame(animationFrameIdRef.current);
       }
-      // Optionally, reset to a default radius if needed when component unmounts or effect re-runs
-      // try {
-      //   if (map.getLayer('user-location-halo')) {
-      //     map.setPaintProperty('user-location-halo', 'circle-radius', 16); // Default radius from routing.ts
-      //   }
-      // } catch (error) {
-      //   // Logger.warn('Error resetting halo radius:', error);
-      // }
     };
   }, [isMapReady]);
 

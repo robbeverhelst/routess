@@ -1,7 +1,7 @@
 import type { Coordinate } from "@/types/map";
 import { LngLatBounds, type Map as MapboxMap } from "mapbox-gl";
 import { LngLat } from "mapbox-gl";
-import type { LoopDirection } from "@/components/ui/RouteGeneratorModal"; // Assuming this type is exported
+import type { LoopDirection } from "@/components/modals/RouteGeneratorModal"; // Assuming this type is exported
 import { Logger } from "@/lib/logger";
 
 export type LoopDirectionOrBearing = LoopDirection | number;

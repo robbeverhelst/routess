@@ -16,11 +16,9 @@ import {
   insertWaypointAtLocation, // Added import
 } from "@/features/routing/managers/WaypointManager";
 import { Logger } from "@/lib/logger";
-// For getWaypoints: import { getWaypoints } from '@/features/routing/managers/WaypointManager';
 
 // Assuming updateDragLinesLayer will be moved to MapLayerManager or similar
 // For now, direct import if it was part of routing.ts or its own module.
-// import { updateDragLinesLayer } from '@/lib/routing'; // Placeholder
 // We need a concrete definition or import for updateDragLinesLayer & WAYPOINTS_LAYER_ID
 // For now, I will define them locally as placeholders if not directly available for import.
 

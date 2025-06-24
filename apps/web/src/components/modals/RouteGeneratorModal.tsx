@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { LocationSearch } from "./location-search";
+import { LocationSearch } from "../ui/location-search";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,

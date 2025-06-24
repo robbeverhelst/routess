@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Logger } from "@/lib/logger";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -59,7 +60,7 @@ export function SaveRouteModal({
       onSuccess?.();
       onClose();
     } catch (err) {
-      console.error("Failed to save route:", err);
+      Logger.error("Failed to save route:", err);
       setError(t("saveRoute.error.saveFailed", currentLanguage));
     } finally {
       setIsLoading(false);

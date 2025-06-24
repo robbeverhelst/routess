@@ -1,3 +1,5 @@
+import { Logger } from "@/lib/logger";
+
 interface VersionInfo {
   current: string;
   previous?: string;
@@ -21,7 +23,7 @@ export function getStoredVersionInfo(): VersionInfo | null {
     const stored = localStorage.getItem(VERSION_STORAGE_KEY);
     return stored ? JSON.parse(stored) : null;
   } catch (error) {
-    console.warn("Failed to parse stored version info:", error);
+    Logger.warn("Failed to parse stored version info:", error);
     return null;
   }
 }
@@ -33,7 +35,7 @@ export function storeVersionInfo(versionInfo: VersionInfo): void {
   try {
     localStorage.setItem(VERSION_STORAGE_KEY, JSON.stringify(versionInfo));
   } catch (error) {
-    console.warn("Failed to store version info:", error);
+    Logger.warn("Failed to store version info:", error);
   }
 }
 

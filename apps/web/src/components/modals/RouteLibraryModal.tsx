@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import { Logger } from "@/lib/logger";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -59,7 +60,7 @@ export function RouteLibraryModal({
       setRoutes(userRoutes);
       setFilteredRoutes(userRoutes);
     } catch (err) {
-      console.error("Failed to load routes:", err);
+      Logger.error("Failed to load routes:", err);
       setError(t("routeLibrary.error.loadFailed", currentLanguage));
     } finally {
       setIsLoading(false);
@@ -99,7 +100,7 @@ export function RouteLibraryModal({
         ),
       );
     } catch (err) {
-      console.error("Failed to delete route:", err);
+      Logger.error("Failed to delete route:", err);
       setError(t("routeLibrary.error.deleteFailed", currentLanguage));
     }
   };

@@ -7,7 +7,7 @@ import {
 } from "@/features/routing/managers/MapInteractionManager";
 import type { Feature, Point as GeoJsonPoint } from "geojson";
 import { calculateTargetCoordinate, zoomToRoute } from "@/features/routing/utils/RoutingUtils";
-import type { LoopDirection } from "@/components/ui/RouteGeneratorModal";
+import type { LoopDirection } from "@/components/modals/RouteGeneratorModal";
 import { Logger } from "@/lib/logger";
 
 // Import from WaypointManager

@@ -40,7 +40,7 @@ import { t } from "../../lib/i18n";
 import type { SupportedLanguage } from "../../lib/i18n";
 import type { Dispatch, SetStateAction } from "react";
 import { Logger } from "../../lib/logger";
-import { LoginModal } from "../auth/login-modal";
+import { LoginModal } from "../auth/LoginModal";
 import { googleAuth } from "../../lib/google-auth";
 import type { ApiUser } from "../../lib/api";
 import { SettingsModal } from "@/components/ui/settings-modal";

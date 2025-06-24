@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { t, type SupportedLanguage } from "@/lib/i18n";
+import { Logger } from "@/lib/logger";
 
 // Define the result type from Mapbox geocoding API
 interface GeocodingFeature {
@@ -78,7 +79,7 @@ export function LocationSearch({
         const data = await response.json();
         setResults(data.features || []);
       } catch (error) {
-        console.error("Error searching for locations:", error);
+        Logger.error("Error searching for locations:", error);
         setResults([]);
       } finally {
         setLoading(false);

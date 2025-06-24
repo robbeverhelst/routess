@@ -719,5 +719,3 @@ export const insertWaypointAtLocation = async (
   );
   return { success: true, newIndex: insertIndex };
 };
-
-// TODO: Consider how to handle dependencies like map, accessToken, state setters, and other services.

@@ -33,28 +33,19 @@ class GoogleAuthService {
   // Handle successful Google login
   async handleGoogleSuccess(credentialResponse: CredentialResponse): Promise<ApiUser> {
     try {
-      console.log("[GoogleAuth] handleGoogleSuccess called with:", credentialResponse);
-
       if (!credentialResponse.credential) {
         throw new Error("No credential received from Google");
       }
 
-      console.log("[GoogleAuth] Sending credential to backend...");
       // Send credential to backend for verification and user creation/login
       const authResponse: AuthResponse = await apiService.googleAuth(credentialResponse.credential);
-
-      console.log("[GoogleAuth] Backend response:", authResponse);
 
       // Store access token and user data
       localStorage.setItem("access_token", authResponse.accessToken);
       localStorage.setItem("user", JSON.stringify(authResponse.user));
 
-      console.log("[GoogleAuth] Token stored in localStorage:", authResponse.accessToken);
-      console.log("[GoogleAuth] User stored in localStorage:", authResponse.user);
-
       // Ensure apiService refreshes its token from localStorage
       apiService.refreshToken();
-      console.log("[GoogleAuth] Called apiService.refreshToken() to sync token");
 
       Logger.info("Google Sign-In successful:", {
         email: authResponse.user.email,

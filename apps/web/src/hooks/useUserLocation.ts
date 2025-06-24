@@ -1,11 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { Logger } from "@/lib/logger";
-// import type { Map } from 'mapbox-gl'; // Removed unused import
 
 // Assuming updateUserLocationPoint is now a standalone utility or part of a map service
 // For now, let's assume it's passed in or handled differently, as it directly interacts with the map instance.
 // If it's from '@/lib/routing', it might need refactoring or to be passed as a dependency.
-// import { updateUserLocationPoint } from '@/lib/routing'; // Or its new location
 
 export interface UserLocationState {
   location: [number, number] | null;
@@ -57,13 +55,6 @@ export function useUserLocation() {
       localStorage.setItem("lastKnownLocation", JSON.stringify(newLocation));
       setError(null);
       setIsLoading(false);
-
-      // The original component had:
-      // if (mapRef.current) {
-      //   updateUserLocationPoint(mapRef.current, newLocation);
-      // }
-      // This direct map manipulation should ideally be handled outside or via a callback
-      // For now, we'll rely on the component using the hook to react to location changes.
     };
 
     const errorCallback = (err: GeolocationPositionError) => {
