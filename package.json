@@ -1,7 +1,7 @@
 {
   "name": "maps-monorepo",
   "private": true,
-  "version": "1.78.0",
+  "version": "1.78.1",
   "type": "module",
   "packageManager": "bun@1.1.38",
   "workspaces": [
