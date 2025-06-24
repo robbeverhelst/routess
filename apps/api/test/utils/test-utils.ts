@@ -6,6 +6,7 @@ import { JwtService } from "@nestjs/jwt";
 import helmet from "helmet";
 import compression from "compression";
 import { GlobalExceptionFilter } from "../../src/common/filters/global-exception.filter";
+import { User } from "../../src/entities/user.entity";
 
 export async function createTestApp(): Promise<INestApplication> {
   process.env.NODE_ENV = "test";
@@ -89,6 +90,41 @@ export async function closeTestApp(app: INestApplication) {
 export function generateTestJWT(userId: number, email: string, app: INestApplication): string {
   const jwtService = app.get(JwtService);
   return jwtService.sign({ sub: userId, email });
+}
+
+export async function createTestUserWithAuth(
+  app: INestApplication,
+  userData: Partial<{
+    email: string;
+    name: string;
+    googleId: string;
+    avatar: string;
+    isEmailVerified: boolean;
+  }> = {},
+): Promise<{ user: any; accessToken: string }> {
+  const defaultUserData = {
+    email: "test@example.com",
+    name: "Test User",
+    googleId: "google-test-user",
+    avatar: "https://example.com/test.jpg",
+    isEmailVerified: true,
+    ...userData,
+  };
+
+  let user: any;
+  let accessToken: string;
+
+  await withRequestContext(app, async () => {
+    const orm = app.get(MikroORM);
+    const userRepo = orm.em.getRepository(User);
+
+    user = userRepo.create(defaultUserData);
+    await orm.em.persistAndFlush(user);
+
+    accessToken = generateTestJWT(user.id, user.email, app);
+  });
+
+  return { user: user!, accessToken: accessToken! };
 }
 
 export async function withRequestContext<T>(

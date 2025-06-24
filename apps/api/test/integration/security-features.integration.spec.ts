@@ -1,43 +1,25 @@
 import { INestApplication } from "@nestjs/common";
 import request from "supertest";
-import { createTestApp, closeTestApp } from "../utils/test-utils";
+import { createTestApp, closeTestApp, createTestUserWithAuth } from "../utils/test-utils";
 import { setupMocks } from "../utils/setup-mocks";
-import { OAuth2Client } from "google-auth-library";
 
 describe("Security Features Integration", () => {
   let app: INestApplication;
   let accessToken: string;
-  let mockVerifyIdToken: jest.Mock;
 
   beforeAll(async () => {
     setupMocks();
-
-    // Setup OAuth2Client mock by overriding the prototype
-    mockVerifyIdToken = jest.fn();
-
-    // Override the prototype method directly
-    OAuth2Client.prototype.verifyIdToken = mockVerifyIdToken;
-
     app = await createTestApp();
 
-    // Create a test user and get access token
-    const mockPayload = {
-      sub: "google-security-test",
+    // Create a test user directly in the database and generate JWT
+    const { accessToken: token } = await createTestUserWithAuth(app, {
       email: "security@example.com",
       name: "Security Test User",
-      picture: "https://example.com/security.jpg",
-    };
-
-    mockVerifyIdToken.mockResolvedValue({
-      getPayload: () => mockPayload,
+      googleId: "google-security-test",
+      avatar: "https://example.com/security.jpg",
     });
 
-    const authResponse = await request(app.getHttpServer())
-      .post("/api/v1/auth/google")
-      .send({ credential: "mock-token" })
-      .expect(201);
-
-    accessToken = authResponse.body.accessToken;
+    accessToken = token;
   });
 
   afterAll(async () => {

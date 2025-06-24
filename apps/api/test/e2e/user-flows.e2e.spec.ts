@@ -1,52 +1,33 @@
 import { INestApplication } from "@nestjs/common";
 import supertest from "supertest";
-import { createTestApp, clearDatabase, closeTestApp } from "../utils";
-import { OAuth2Client } from "google-auth-library";
+import { createTestApp, clearDatabase, closeTestApp, createTestUserWithAuth } from "../utils";
+import { User } from "../../src/entities/user.entity";
 
 describe("User Flows E2E Tests", () => {
   let app: INestApplication;
-  let mockVerifyIdToken: jest.Mock;
 
   beforeAll(async () => {
-    // Setup OAuth2Client mock by overriding the prototype
-    mockVerifyIdToken = jest.fn();
-
-    // Override the prototype method directly
-    OAuth2Client.prototype.verifyIdToken = mockVerifyIdToken;
-
     app = await createTestApp();
   });
 
   beforeEach(async () => {
     await clearDatabase(app);
-    mockVerifyIdToken.mockClear();
   });
 
   afterAll(async () => {
     await closeTestApp(app);
-    jest.restoreAllMocks();
   });
 
   describe("Complete User Journey: Sign up → Create Route → View Routes → Delete Route", () => {
     it("should complete full user journey", async () => {
-      // Step 1: User signs up with Google
-      const mockGooglePayload = {
-        sub: "google-e2e-user",
+      // Step 1: Create test user and get access token
+      const { user, accessToken } = await createTestUserWithAuth(app, {
         email: "e2e@example.com",
         name: "E2E Test User",
-        picture: "https://example.com/e2e.jpg",
-      };
-
-      mockVerifyIdToken.mockResolvedValue({
-        getPayload: () => mockGooglePayload,
+        googleId: "google-e2e-user",
+        avatar: "https://example.com/e2e.jpg",
       });
 
-      const authResponse = await supertest(app.getHttpServer())
-        .post("/api/v1/auth/google")
-        .send({ credential: "mock-google-token" })
-        .expect(201);
-
-      const { accessToken, user } = authResponse.body;
       expect(accessToken).toBeDefined();
       expect(user.email).toBe("e2e@example.com");
 
@@ -126,28 +107,18 @@ describe("User Flows E2E Tests", () => {
   describe("Multi-User Collaboration Flow", () => {
     it("should handle multiple users with separate route collections", async () => {
       // Create two users
-      const users = [];
-      const tokens = [];
+      const users: User[] = [];
+      const tokens: string[] = [];
 
       for (let i = 1; i <= 2; i++) {
-        const mockPayload = {
-          sub: `google-user-${i}`,
+        const { user, accessToken } = await createTestUserWithAuth(app, {
           email: `user${i}@example.com`,
           name: `User ${i}`,
-          picture: `https://example.com/user${i}.jpg`,
-        };
-
-        mockVerifyIdToken.mockResolvedValue({
-          getPayload: () => mockPayload,
+          googleId: `google-user-${i}`,
+          avatar: `https://example.com/user${i}.jpg`,
         });
-
-        const authResponse = await supertest(app.getHttpServer())
-          .post("/api/v1/auth/google")
-          .send({ credential: `mock-token-${i}` })
-          .expect(201);
-
-        users.push(authResponse.body.user);
-        tokens.push(authResponse.body.accessToken);
+        users.push(user);
+        tokens.push(accessToken);
       }
 
       // Each user creates routes
@@ -206,23 +177,12 @@ describe("User Flows E2E Tests", () => {
         .expect(401);
 
       // Create a user and get token
-      const mockPayload = {
-        sub: "google-error-test",
+      const { accessToken } = await createTestUserWithAuth(app, {
         email: "error@example.com",
         name: "Error Test User",
-        picture: "https://example.com/error.jpg",
-      };
-
-      mockVerifyIdToken.mockResolvedValue({
-        getPayload: () => mockPayload,
+        googleId: "google-error-test",
+        avatar: "https://example.com/error.jpg",
       });
-
-      const authResponse = await supertest(app.getHttpServer())
-        .post("/api/v1/auth/google")
-        .send({ credential: "mock-token" })
-        .expect(201);
-
-      const { accessToken } = authResponse.body;
 
       // Try to create invalid routes
       const invalidRoutes = [
@@ -265,23 +225,12 @@ describe("User Flows E2E Tests", () => {
   describe("Performance and Load Testing Scenarios", () => {
     it("should handle bulk route creation and retrieval", async () => {
       // Create user
-      const mockPayload = {
-        sub: "google-perf-test",
+      const { accessToken } = await createTestUserWithAuth(app, {
         email: "perf@example.com",
         name: "Performance Test User",
-        picture: "https://example.com/perf.jpg",
-      };
-
-      mockVerifyIdToken.mockResolvedValue({
-        getPayload: () => mockPayload,
+        googleId: "google-perf-test",
+        avatar: "https://example.com/perf.jpg",
       });
-
-      const authResponse = await supertest(app.getHttpServer())
-        .post("/api/v1/auth/google")
-        .send({ credential: "mock-token" })
-        .expect(201);
-
-      const { accessToken } = authResponse.body;
 
       // Create 10 routes sequentially to avoid connection issues
       for (let i = 0; i < 10; i++) {

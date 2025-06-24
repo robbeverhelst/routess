@@ -1,6 +1,12 @@
 import { INestApplication } from "@nestjs/common";
 import supertest from "supertest";
-import { createTestApp, clearDatabase, closeTestApp, generateTestJWT } from "../utils";
+import {
+  createTestApp,
+  clearDatabase,
+  closeTestApp,
+  createTestUserWithAuth,
+  withRequestContext,
+} from "../utils";
 import { MikroORM } from "@mikro-orm/core";
 import { User } from "src/entities/user.entity";
 import { OAuth2Client } from "google-auth-library";
@@ -56,20 +62,26 @@ describe("Auth Integration Tests", () => {
       expect(response.body.user.email).toBe("test@example.com");
 
       // Verify user was created in database
-      const user = await orm.em.findOne(User, { email: "test@example.com" });
-      expect(user).toBeDefined();
-      expect(user?.googleId).toBe("google-user-123");
+      await withRequestContext(app, async () => {
+        const user = await orm.em.findOne(User, { email: "test@example.com" });
+        expect(user).toBeDefined();
+        expect(user?.googleId).toBe("google-user-123");
+      });
     });
 
     it("should return existing user when Google user already exists", async () => {
       // Create existing user
-      const existingUser = orm.em.create(User, {
-        email: "existing@example.com",
-        name: "Existing User",
-        googleId: "google-existing-123",
-        avatar: "https://example.com/existing.jpg",
+      let existingUserId: number;
+      await withRequestContext(app, async () => {
+        const existingUser = orm.em.create(User, {
+          email: "existing@example.com",
+          name: "Existing User",
+          googleId: "google-existing-123",
+          avatar: "https://example.com/existing.jpg",
+        });
+        await orm.em.persistAndFlush(existingUser);
+        existingUserId = existingUser.id;
       });
-      await orm.em.persistAndFlush(existingUser);
 
       const mockGooglePayload = {
         sub: "google-existing-123",
@@ -87,11 +99,13 @@ describe("Auth Integration Tests", () => {
         .send({ credential: "mock-google-token" })
         .expect(201);
 
-      expect(response.body.user.id).toBe(existingUser.id);
+      expect(response.body.user.id).toBe(existingUserId!);
 
       // Verify only one user exists
-      const userCount = await orm.em.count(User);
-      expect(userCount).toBe(1);
+      await withRequestContext(app, async () => {
+        const userCount = await orm.em.count(User);
+        expect(userCount).toBe(1);
+      });
     });
 
     it("should fail with invalid Google token", async () => {
@@ -113,21 +127,18 @@ describe("Auth Integration Tests", () => {
   });
 
   describe("JWT Authentication", () => {
-    let testUser: User;
     let validToken: string;
 
     beforeEach(async () => {
       // Create test user
-      testUser = orm.em.create(User, {
+      const { accessToken } = await createTestUserWithAuth(app, {
         email: "jwt-test@example.com",
         name: "JWT Test User",
         googleId: "google-jwt-test",
         avatar: "https://example.com/jwt-test.jpg",
       });
-      await orm.em.persistAndFlush(testUser);
 
-      // Get valid JWT token
-      validToken = generateTestJWT(testUser.id, testUser.email, app);
+      validToken = accessToken;
     });
 
     it("should access protected route with valid JWT", async () => {

@@ -1,43 +1,43 @@
 import { INestApplication } from "@nestjs/common";
 import request from "supertest";
-import { createTestApp, closeTestApp } from "../utils/test-utils";
+import {
+  createTestApp,
+  closeTestApp,
+  generateTestJWT,
+  withRequestContext,
+} from "../utils/test-utils";
 import { setupMocks } from "../utils/setup-mocks";
-import { OAuth2Client } from "google-auth-library";
+import { User } from "../../src/entities/user.entity";
+import { MikroORM } from "@mikro-orm/core";
 
 describe("Performance Features Integration", () => {
   let app: INestApplication;
   let accessToken: string;
-  let mockVerifyIdToken: any;
 
   beforeAll(async () => {
     setupMocks();
-
-    // Setup OAuth2Client mock by overriding the prototype
-    mockVerifyIdToken = jest.fn();
-
-    // Override the prototype method directly
-    OAuth2Client.prototype.verifyIdToken = mockVerifyIdToken;
-
     app = await createTestApp();
 
-    // Create a test user and get access token
-    const mockPayload = {
-      sub: "google-perf-test",
-      email: "perf@example.com",
-      name: "Performance Test User",
-      picture: "https://example.com/perf.jpg",
-    };
+    // Create a test user directly in the database and generate JWT
+    await withRequestContext(app, async () => {
+      const orm = app.get(MikroORM);
+      const userRepo = orm.em.getRepository(User);
 
-    mockVerifyIdToken.mockResolvedValue({
-      getPayload: () => mockPayload,
+      let user = await userRepo.findOne({ email: "perf@example.com" });
+      if (!user) {
+        user = userRepo.create({
+          email: "perf@example.com",
+          name: "Performance Test User",
+          googleId: "google-perf-test",
+          avatar: "https://example.com/perf.jpg",
+          isEmailVerified: true,
+        });
+        await orm.em.persistAndFlush(user);
+      }
+
+      // Generate JWT directly without going through auth flow
+      accessToken = generateTestJWT(user.id, user.email, app);
     });
-
-    const authResponse = await request(app.getHttpServer())
-      .post("/api/v1/auth/google")
-      .send({ credential: "mock-token" })
-      .expect(201);
-
-    accessToken = authResponse.body.accessToken;
   });
 
   afterAll(async () => {
