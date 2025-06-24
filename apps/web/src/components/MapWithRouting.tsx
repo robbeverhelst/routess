@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import Map from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { RouteControls, type TimeOfDay } from "@/components/ui/route-controls";
@@ -111,6 +112,10 @@ interface MapboxMapProps {
   };
   width?: string | number;
   height?: string | number;
+  // New router-based props
+  initialCenter?: [number, number];
+  initialZoom?: number;
+  routeId?: string;
 }
 
 // Default Europe-centered view if user location unavailable
@@ -242,7 +247,11 @@ export default function MapWithRouting({
   initialViewState = DEFAULT_VIEW_STATE,
   width = "100%",
   height = "100%",
+  initialCenter,
+  initialZoom,
+  routeId,
 }: MapboxMapProps) {
+  const navigate = useNavigate();
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const [waypointError, setWaypointError] = useState<string | null>(null);
   const [isMapReady, setIsMapReady] = useState(false);
@@ -407,30 +416,39 @@ export default function MapWithRouting({
     }
   }, [isMapReady, initialViewState.bearing]);
 
-  // Use user location for initial view state if available,
+  // Use router props first, then user location for initial view state if available,
   // UNLESS a route was detected in localStorage at component initialization.
   const lastKnownFromService = getLastKnownLocation();
-  const effectiveInitialViewState = lastSavedMapView
-    ? { ...lastSavedMapView }
-    : detectedRouteInLocalStorageOnInit
-      ? DEFAULT_VIEW_STATE
-      : userLocation
-        ? {
-            longitude: userLocation[0],
-            latitude: userLocation[1],
-            zoom: 15,
-            bearing: initialViewState.bearing ?? 0,
-            pitch: MAP_PITCH,
-          }
-        : lastKnownFromService
-          ? {
-              longitude: lastKnownFromService[0],
-              latitude: lastKnownFromService[1],
-              zoom: 14,
-              bearing: initialViewState.bearing ?? 0,
-              pitch: MAP_PITCH,
-            }
-          : initialViewState; // Fallback to prop or default (which includes bearing and pitch)
+  const effectiveInitialViewState =
+    initialCenter && initialZoom
+      ? {
+          longitude: initialCenter[0],
+          latitude: initialCenter[1],
+          zoom: initialZoom,
+          bearing: initialViewState.bearing ?? 0,
+          pitch: MAP_PITCH,
+        }
+      : lastSavedMapView
+        ? { ...lastSavedMapView }
+        : detectedRouteInLocalStorageOnInit
+          ? DEFAULT_VIEW_STATE
+          : userLocation
+            ? {
+                longitude: userLocation[0],
+                latitude: userLocation[1],
+                zoom: 15,
+                bearing: initialViewState.bearing ?? 0,
+                pitch: MAP_PITCH,
+              }
+            : lastKnownFromService
+              ? {
+                  longitude: lastKnownFromService[0],
+                  latitude: lastKnownFromService[1],
+                  zoom: 14,
+                  bearing: initialViewState.bearing ?? 0,
+                  pitch: MAP_PITCH,
+                }
+              : initialViewState; // Fallback to prop or default (which includes bearing and pitch)
 
   // Show waypoint error message
   const handleWaypointError = useCallback((message: string | null) => {
@@ -536,6 +554,45 @@ export default function MapWithRouting({
       const urlParams = new URLSearchParams(window.location.search);
       const routeDataParam = urlParams.get("route");
 
+      // Check for routeId from router props
+      if (routeId && !routeDataParam) {
+        Logger.info("[MapWithRouting] Loading route from routeId:", routeId);
+        try {
+          const loadedData = decompressAndParse(routeId);
+          if (loadedData && mapRef.current && MAPBOX_TOKEN) {
+            setRouteData(
+              mapRef.current,
+              MAPBOX_TOKEN,
+              loadedData.w, // waypoints
+              loadedData.f, // directFlags
+              setRouteDistance,
+              setRouteDuration,
+              setHasRoute,
+              setIsRouteCoordsReady,
+            )
+              .then(() => {
+                Logger.info("[MapWithRouting] Route data loaded from routeId successfully.");
+                // If lock state is present in shared data and is true, lock the map
+                if (typeof loadedData.l === "boolean" && loadedData.l === true) {
+                  Logger.info("[MapWithRouting] Route indicates locked state, applying lock.");
+                  setIsMapLocked(true);
+                }
+              })
+              .catch((err) => {
+                Logger.error("[MapWithRouting] Error setting route data from routeId:", err);
+                handleRouteInfoErrorFromHook(
+                  "Failed to load route. The route data may be invalid or corrupted.",
+                );
+              });
+          }
+        } catch (err) {
+          Logger.error("[MapWithRouting] Could not parse routeId:", err);
+          handleRouteInfoErrorFromHook(
+            "Failed to read route data. The route may be corrupted or invalid.",
+          );
+        }
+      }
+
       if (routeDataParam) {
         Logger.info("[MapWithRouting] Found route data in URL, attempting to load...");
         let loadedData: ReturnType<typeof decompressAndParse> | null = null;
@@ -605,6 +662,7 @@ export default function MapWithRouting({
       handleRouteInfoErrorFromHook,
       isRouteCoordsReady,
       currentLightPreset,
+      routeId,
     ],
   );
 
@@ -1708,20 +1766,35 @@ export default function MapWithRouting({
     }
   }, [currentMapStyle]);
 
-  // Effect to save map view state on moveend
+  // Effect to save map view state on moveend and update URL
   useEffect(() => {
     if (!mapRef.current) return;
 
     const handleMoveEnd = () => {
       if (mapRef.current) {
+        const center = mapRef.current.getCenter();
+        const zoom = mapRef.current.getZoom();
         const currentView = {
-          longitude: mapRef.current.getCenter().lng,
-          latitude: mapRef.current.getCenter().lat,
-          zoom: mapRef.current.getZoom(),
+          longitude: center.lng,
+          latitude: center.lat,
+          zoom: zoom,
           bearing: mapRef.current.getBearing(),
           pitch: mapRef.current.getPitch(),
         };
+
+        // Save to localStorage
         saveLastMapViewToLocalStorage(currentView);
+
+        // TODO: Fix URL state update for TanStack Router
+        // Update URL with current map state
+        // navigate({
+        //   search: (prev: any) => ({
+        //     ...prev,
+        //     center: `${center.lat.toFixed(6)},${center.lng.toFixed(6)}`,
+        //     zoom: zoom.toFixed(2),
+        //   }),
+        //   replace: true, // Don't create new history entries for map moves
+        // });
       }
     };
 
@@ -1732,7 +1805,7 @@ export default function MapWithRouting({
         mapRef.current.off("moveend", handleMoveEnd);
       }
     };
-  }, [isMapReady]);
+  }, [isMapReady, navigate]);
 
   return (
     <div className={`w-full h-full relative ${isMapLocked ? "cursor-not-allowed" : ""}`}>

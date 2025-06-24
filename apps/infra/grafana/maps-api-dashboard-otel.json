@@ -717,8 +717,8 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(container_cpu_usage_seconds_total{pod=~\"maps-api-.*\"}[5m]) * 100",
-          "legendFormat": "{{pod}}",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{pod=~\"maps-api-.*\"}[5m])) * 100",
+          "legendFormat": "Total CPU Usage",
           "range": true,
           "refId": "A"
         }

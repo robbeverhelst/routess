@@ -34,6 +34,7 @@
     "@semantic-release/github": "^11.0.0",
     "@semantic-release/npm": "^12.0.1",
     "@semantic-release/release-notes-generator": "^14.0.1",
+    "@tanstack/react-router-devtools": "^1.121.34",
     "@types/node": "^24.0.1",
     "eslint": "^9.17.0",
     "eslint-plugin-prettier": "^5.2.1",

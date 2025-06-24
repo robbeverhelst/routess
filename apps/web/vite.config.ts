@@ -2,10 +2,23 @@ import path from "path";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
+import { TanStackRouterVite } from "@tanstack/router-plugin/vite";
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [
+    // Disable TanStack Router plugin in Docker builds to prevent conflicts
+    ...(process.env.DOCKER_BUILD
+      ? []
+      : [
+          TanStackRouterVite({
+            routeFileIgnorePrefix: "-",
+            generatedRouteTree: "./src/routeTree.gen.ts",
+          }),
+        ]),
+    react(),
+    tailwindcss(),
+  ],
   envDir: path.resolve(__dirname, "../../"),
   resolve: {
     alias: {

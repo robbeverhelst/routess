@@ -449,7 +449,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum(max by (type) (user_registrations_total{job=\"maps-api-service\"}))",
+          "expr": "max(user_registrations_total{job=\"maps-api-service\"}) or vector(0)",
           "refId": "A"
         }
       ],
@@ -508,7 +508,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum(max by (user_id) (routes_created_total{job=\"maps-api-service\"}))",
+          "expr": "max(routes_created_total{job=\"maps-api-service\"}) or vector(0)",
           "refId": "A"
         }
       ],
@@ -567,7 +567,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "max(active_users{job=\"maps-api-service\"})",
+          "expr": "sum(active_users{job=\"maps-api-service\"})",
           "refId": "A"
         }
       ],
@@ -626,7 +626,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum(max by (user_id) (routes_deleted_total{job=\"maps-api-service\"}))",
+          "expr": "max(routes_deleted_total{job=\"maps-api-service\"}) or vector(0)",
           "refId": "A"
         }
       ],
@@ -728,7 +728,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "active_users{job=\"maps-api-service\"}",
+          "expr": "sum(active_users{job=\"maps-api-service\"})",
           "refId": "A",
           "legendFormat": "Active Users"
         }
@@ -813,7 +813,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "increase(user_registrations_total{job=\"maps-api-service\"}[1h])",
+          "expr": "sum(increase(user_registrations_total{job=\"maps-api-service\"}[1h]))",
           "refId": "A",
           "legendFormat": "{{type}} logins"
         }
@@ -885,7 +885,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "max_over_time(active_users{job=\"maps-api-service\"}[24h])",
+          "expr": "max_over_time(sum(active_users{job=\"maps-api-service\"})[24h:1m])",
           "refId": "A"
         }
       ],
@@ -944,7 +944,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "increase(user_registrations_total{job=\"maps-api-service\"}[24h])",
+          "expr": "sum(increase(user_registrations_total{job=\"maps-api-service\"}[24h]))",
           "refId": "A"
         }
       ],
@@ -1004,7 +1004,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum by (type) (user_registrations_total{job=\"maps-api-service\"})",
+          "expr": "sum by (type) (increase(user_registrations_total{job=\"maps-api-service\"}[24h]))",
           "refId": "A",
           "legendFormat": "{{type}}"
         }
@@ -1064,7 +1064,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "avg_over_time(active_users{job=\"maps-api-service\"}[1h])",
+          "expr": "avg_over_time(sum(active_users{job=\"maps-api-service\"})[1h:1m])",
           "refId": "A"
         }
       ],
@@ -1258,9 +1258,9 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{pod=~\"maps-api-.*\",container=\"maps-api\"}[5m])) * 100",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{pod=~\"maps-api-.*\",container=\"maps-api\"}[5m])) * 100",
           "refId": "A",
-          "legendFormat": "CPU Usage - {{pod}}"
+          "legendFormat": "Total CPU Usage"
         },
         {
           "datasource": {

@@ -40,6 +40,7 @@ export interface CreateRouteRequest {
   description?: string;
   waypoints: Waypoint[];
   distance?: number;
+  elevationGain?: number;
 }
 
 export interface UpdateRouteRequest {

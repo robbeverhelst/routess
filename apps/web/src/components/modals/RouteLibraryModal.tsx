@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Logger } from "@/lib/logger";
+import { useUserRoutes, useDeleteRoute } from "@/lib/api-queries";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -27,7 +27,7 @@ import {
   Edit,
   Loader2,
 } from "lucide-react";
-import { apiService, type ApiRoute } from "@/lib/api";
+import { type ApiRoute } from "@/lib/api";
 import { t, type SupportedLanguage } from "@/lib/i18n";
 
 interface RouteLibraryModalProps {
@@ -45,34 +45,14 @@ export function RouteLibraryModal({
   onLoadRoute,
   onEditRoute,
 }: RouteLibraryModalProps) {
-  const [routes, setRoutes] = useState<ApiRoute[]>([]);
   const [filteredRoutes, setFilteredRoutes] = useState<ApiRoute[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadRoutes = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
+  const { data: routes = [], isLoading, error: queryError, refetch } = useUserRoutes();
+  const deleteRouteMutation = useDeleteRoute();
 
-    try {
-      const userRoutes = await apiService.getRoutes();
-      setRoutes(userRoutes);
-      setFilteredRoutes(userRoutes);
-    } catch (err) {
-      Logger.error("Failed to load routes:", err);
-      setError(t("routeLibrary.error.loadFailed", currentLanguage));
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentLanguage]);
-
-  useEffect(() => {
-    if (isOpen) {
-      loadRoutes();
-    }
-  }, [isOpen, loadRoutes]);
-
+  // Update filtered routes when routes data or search query changes
   useEffect(() => {
     if (searchQuery.trim()) {
       const filtered = routes.filter(
@@ -86,23 +66,21 @@ export function RouteLibraryModal({
     }
   }, [searchQuery, routes]);
 
-  const handleDeleteRoute = async (routeId: number) => {
-    try {
-      await apiService.deleteRoute(routeId);
-      const updatedRoutes = routes.filter((r) => r.id !== routeId);
-      setRoutes(updatedRoutes);
-      setFilteredRoutes(
-        updatedRoutes.filter(
-          (route) =>
-            !searchQuery.trim() ||
-            route.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            route.description?.toLowerCase().includes(searchQuery.toLowerCase()),
-        ),
-      );
-    } catch (err) {
-      Logger.error("Failed to delete route:", err);
-      setError(t("routeLibrary.error.deleteFailed", currentLanguage));
+  // Handle query errors
+  useEffect(() => {
+    if (queryError) {
+      setError(t("routeLibrary.error.loadFailed", currentLanguage));
+    } else {
+      setError(null);
     }
+  }, [queryError, currentLanguage]);
+
+  const handleDeleteRoute = (routeId: number) => {
+    deleteRouteMutation.mutate(routeId, {
+      onError: () => {
+        setError(t("routeLibrary.error.deleteFailed", currentLanguage));
+      },
+    });
   };
 
   const formatDate = (dateString: string) => {
@@ -153,7 +131,7 @@ export function RouteLibraryModal({
             ) : error ? (
               <div className="text-center py-8">
                 <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-                <Button variant="outline" onClick={loadRoutes} className="mt-2">
+                <Button variant="outline" onClick={() => refetch()} className="mt-2">
                   {t("common.retry", currentLanguage)}
                 </Button>
               </div>

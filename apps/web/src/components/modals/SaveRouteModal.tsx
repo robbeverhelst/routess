@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Logger } from "@/lib/logger";
+import { useSaveRoute } from "@/lib/api-queries";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -13,7 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Save, Loader2 } from "lucide-react";
-import { apiService, type Waypoint } from "@/lib/api";
+import { type Waypoint } from "@/lib/api";
 import { t, type SupportedLanguage } from "@/lib/i18n";
 
 interface SaveRouteModalProps {
@@ -21,6 +21,7 @@ interface SaveRouteModalProps {
   onClose: () => void;
   waypoints: Waypoint[];
   distance?: number;
+  elevation?: number;
   currentLanguage: SupportedLanguage;
   onSuccess?: () => void;
 }
@@ -30,45 +31,48 @@ export function SaveRouteModal({
   onClose,
   waypoints,
   distance,
+  elevation,
   currentLanguage,
   onSuccess,
 }: SaveRouteModalProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSave = async () => {
+  const saveRouteMutation = useSaveRoute();
+
+  const handleSave = () => {
     if (!name.trim()) {
       setError(t("saveRoute.error.nameRequired", currentLanguage));
       return;
     }
 
-    setIsLoading(true);
     setError(null);
 
-    try {
-      await apiService.createRoute({
+    saveRouteMutation.mutate(
+      {
         name: name.trim(),
         description: description.trim() || undefined,
         waypoints,
-        distance,
-      });
-
-      setName("");
-      setDescription("");
-      onSuccess?.();
-      onClose();
-    } catch (err) {
-      Logger.error("Failed to save route:", err);
-      setError(t("saveRoute.error.saveFailed", currentLanguage));
-    } finally {
-      setIsLoading(false);
-    }
+        distance: distance || 0,
+        elevationGain: elevation || 0,
+      },
+      {
+        onSuccess: () => {
+          setName("");
+          setDescription("");
+          onSuccess?.();
+          onClose();
+        },
+        onError: () => {
+          setError(t("saveRoute.error.saveFailed", currentLanguage));
+        },
+      },
+    );
   };
 
   const handleClose = () => {
-    if (!isLoading) {
+    if (!saveRouteMutation.isPending) {
       setName("");
       setDescription("");
       setError(null);
@@ -95,7 +99,7 @@ export function SaveRouteModal({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder={t("saveRoute.placeholders.name", currentLanguage)}
-              disabled={isLoading}
+              disabled={saveRouteMutation.isPending}
             />
           </div>
 
@@ -108,7 +112,7 @@ export function SaveRouteModal({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder={t("saveRoute.placeholders.description", currentLanguage)}
-              disabled={isLoading}
+              disabled={saveRouteMutation.isPending}
               rows={3}
             />
           </div>
@@ -125,11 +129,11 @@ export function SaveRouteModal({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={handleClose} disabled={isLoading}>
+          <Button variant="outline" onClick={handleClose} disabled={saveRouteMutation.isPending}>
             {t("common.cancel", currentLanguage)}
           </Button>
-          <Button onClick={handleSave} disabled={isLoading || !name.trim()}>
-            {isLoading ? (
+          <Button onClick={handleSave} disabled={saveRouteMutation.isPending || !name.trim()}>
+            {saveRouteMutation.isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 {t("saveRoute.saving", currentLanguage)}
