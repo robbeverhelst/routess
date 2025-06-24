@@ -386,9 +386,7 @@
       "options": {
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -827,11 +825,7 @@
   "refresh": "10s",
   "schemaVersion": 38,
   "style": "dark",
-  "tags": [
-    "maps",
-    "api",
-    "opentelemetry"
-  ],
+  "tags": ["maps", "api", "opentelemetry"],
   "templating": {
     "list": [
       {

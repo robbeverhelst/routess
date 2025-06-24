@@ -449,7 +449,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "max(user_registrations_total{job=\"maps-api-service\"})",
+          "expr": "sum(max by (type) (user_registrations_total{job=\"maps-api-service\"}))",
           "refId": "A"
         }
       ],
@@ -508,7 +508,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "max(routes_created_total{job=\"maps-api-service\"})",
+          "expr": "sum(max by (user_id) (routes_created_total{job=\"maps-api-service\"}))",
           "refId": "A"
         }
       ],
@@ -626,7 +626,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "max(routes_deleted_total{job=\"maps-api-service\"})",
+          "expr": "sum(max by (user_id) (routes_deleted_total{job=\"maps-api-service\"}))",
           "refId": "A"
         }
       ],

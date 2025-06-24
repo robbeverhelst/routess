@@ -9,6 +9,7 @@ const compression = require("compression");
 import { GlobalExceptionFilter } from "./common/filters/global-exception.filter";
 import { initializeOpenTelemetry } from "./telemetry/tracing";
 import { Logger } from "nestjs-pino";
+import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 
 // Load environment variables from root .env file
 config({ path: join(__dirname, "../../../.env") });
@@ -77,6 +78,41 @@ async function bootstrap() {
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
+  });
+
+  // Swagger/OpenAPI Documentation
+  const config = new DocumentBuilder()
+    .setTitle("Maps Routing API")
+    .setDescription("A comprehensive API for route management and mapping functionality")
+    .setVersion("1.0")
+    .addBearerAuth(
+      {
+        type: "http",
+        scheme: "bearer",
+        bearerFormat: "JWT",
+        name: "JWT",
+        description: "Enter JWT token",
+        in: "header",
+      },
+      "JWT-auth", // This name here is important for matching up with @ApiBearerAuth() in your controller
+    )
+    .addServer("http://localhost:3000", "Development server")
+    .addServer("https://api.yourdomain.com", "Production server")
+    .addTag("auth", "Authentication endpoints")
+    .addTag("routes", "Route management")
+    .addTag("users", "User management")
+    .addTag("health", "Health and monitoring")
+    .build();
+
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup("api", app, document, {
+    swaggerOptions: {
+      persistAuthorization: true,
+      tagsSorter: "alpha",
+      operationsSorter: "alpha",
+    },
+    customfavIcon: "/favicon.ico",
+    customSiteTitle: "Maps API Documentation",
   });
 
   await app.listen(3000);
