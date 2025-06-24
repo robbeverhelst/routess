@@ -15,7 +15,7 @@
       }
     ]
   },
-  "description": "Monitor Maps API performance, health, and business metrics",
+  "description": "Monitor Maps API performance, health, and business metrics (OpenTelemetry)",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
@@ -37,7 +37,7 @@
       },
       "id": 1,
       "panels": [],
-      "title": "Overview",
+      "title": "HTTP Metrics",
       "type": "row"
     },
     {
@@ -45,7 +45,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Total HTTP requests per minute",
+      "description": "Total HTTP requests per second by route",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -108,25 +108,29 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "single",
           "sort": "none"
         }
       },
+      "pluginVersion": "9.5.2",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum by (method, route) (rate(http_requests_total{job=\"maps-api-service\"}[5m]))",
-          "refId": "A",
-          "legendFormat": "{{method}} {{route}}"
+          "editorMode": "code",
+          "expr": "sum by (http_route) (rate(http_server_duration_count{job=\"maps-api-service\",http_route!=\"\"}[5m]))",
+          "legendFormat": "{{http_route}}",
+          "range": true,
+          "refId": "A"
         }
       ],
-      "title": "HTTP Request Rate",
+      "title": "Request Rate by Route",
       "type": "timeseries"
     },
     {
@@ -134,7 +138,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Response time percentiles",
+      "description": "HTTP request latency percentiles",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -197,82 +201,107 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "single",
           "sort": "none"
         }
       },
+      "pluginVersion": "9.5.2",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "histogram_quantile(0.50, rate(http_server_duration_bucket{job=\"maps-api-service\"}[5m]))",
-          "refId": "A",
-          "legendFormat": "50th percentile"
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(http_server_duration_bucket{job=\"maps-api-service\"}[5m]))) * 1000",
+          "legendFormat": "p50",
+          "range": true,
+          "refId": "A"
         },
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "histogram_quantile(0.90, rate(http_server_duration_bucket{job=\"maps-api-service\"}[5m]))",
-          "refId": "B",
-          "legendFormat": "90th percentile"
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_duration_bucket{job=\"maps-api-service\"}[5m]))) * 1000",
+          "legendFormat": "p95",
+          "range": true,
+          "refId": "B"
         },
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "histogram_quantile(0.99, rate(http_server_duration_bucket{job=\"maps-api-service\"}[5m]))",
-          "refId": "C",
-          "legendFormat": "99th percentile"
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_duration_bucket{job=\"maps-api-service\"}[5m]))) * 1000",
+          "legendFormat": "p99",
+          "range": true,
+          "refId": "C"
         }
       ],
-      "title": "Response Time Percentiles",
+      "title": "Request Latency Percentiles",
       "type": "timeseries"
     },
     {
-      "collapsed": false,
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 9
-      },
-      "id": 4,
-      "panels": [],
-      "title": "HTTP Status Codes",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "HTTP requests by status code",
+      "description": "HTTP status code distribution",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
               "vis": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
             }
           },
           "mappings": [],
-          "unit": "short"
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "reqps"
         },
         "overrides": []
       },
@@ -280,38 +309,37 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 10
+        "y": 9
       },
-      "id": 5,
+      "id": 4,
       "options": {
         "legend": {
+          "calcs": [],
           "displayMode": "list",
-          "placement": "right"
-        },
-        "pieType": "pie",
-        "reduceOptions": {
-          "calcs": ["lastNotNull"],
-          "fields": "",
-          "values": false
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "single",
           "sort": "none"
         }
       },
+      "pluginVersion": "9.5.2",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum by (status_code) (rate(http_requests_total{job=\"maps-api-service\"}[5m]))",
-          "refId": "A",
-          "legendFormat": "{{status_code}}"
+          "editorMode": "code",
+          "expr": "sum by (http_status_code) (rate(http_server_duration_count{job=\"maps-api-service\"}[5m]))",
+          "legendFormat": "{{http_status_code}}",
+          "range": true,
+          "refId": "A"
         }
       ],
-      "title": "Status Code Distribution",
-      "type": "piechart"
+      "title": "Requests by Status Code",
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -352,13 +380,15 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 10
+        "y": 9
       },
-      "id": 6,
+      "id": 5,
       "options": {
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
@@ -366,18 +396,21 @@
         "showThresholdMarkers": true,
         "text": {}
       },
-      "pluginVersion": "8.5.0",
+      "pluginVersion": "9.5.2",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "(sum(rate(http_request_errors_total{job=\"maps-api-service\"}[5m])) / sum(rate(http_requests_total{job=\"maps-api-service\"}[5m]))) * 100",
+          "editorMode": "code",
+          "expr": "(sum(rate(http_server_duration_count{job=\"maps-api-service\",http_status_code=~\"4..|5..\"}[5m])) / sum(rate(http_server_duration_count{job=\"maps-api-service\"}[5m]))) * 100",
+          "legendFormat": "__auto",
+          "range": true,
           "refId": "A"
         }
       ],
-      "title": "Error Rate",
+      "title": "Error Rate %",
       "type": "gauge"
     },
     {
@@ -390,264 +423,11 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 18
-      },
-      "id": 7,
-      "panels": [],
-      "title": "Business Metrics",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Total user registrations",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 0,
-        "y": 19
-      },
-      "id": 8,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": ["lastNotNull"],
-          "fields": "",
-          "values": false
-        },
-        "text": {},
-        "textMode": "auto"
-      },
-      "pluginVersion": "8.5.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "expr": "max(user_registrations_total{job=\"maps-api-service\"})",
-          "refId": "A"
-        }
-      ],
-      "title": "Total User Registrations",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Total routes created",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 6,
-        "y": 19
-      },
-      "id": 9,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": ["lastNotNull"],
-          "fields": "",
-          "values": false
-        },
-        "text": {},
-        "textMode": "auto"
-      },
-      "pluginVersion": "8.5.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "expr": "max(routes_created_total{job=\"maps-api-service\"})",
-          "refId": "A"
-        }
-      ],
-      "title": "Total Routes Created",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Currently active users",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 12,
-        "y": 19
+        "y": 17
       },
       "id": 10,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": ["lastNotNull"],
-          "fields": "",
-          "values": false
-        },
-        "text": {},
-        "textMode": "auto"
-      },
-      "pluginVersion": "8.5.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "expr": "max(active_users{job=\"maps-api-service\"})",
-          "refId": "A"
-        }
-      ],
-      "title": "Active Users",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Routes deleted",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 18,
-        "y": 19
-      },
-      "id": 11,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": ["lastNotNull"],
-          "fields": "",
-          "values": false
-        },
-        "text": {},
-        "textMode": "auto"
-      },
-      "pluginVersion": "8.5.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "expr": "max(routes_deleted_total{job=\"maps-api-service\"})",
-          "refId": "A"
-        }
-      ],
-      "title": "Routes Deleted",
-      "type": "stat"
-    },
-    {
-      "collapsed": false,
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 23
-      },
-      "id": 12,
       "panels": [],
-      "title": "Database & Infrastructure",
+      "title": "Database Metrics",
       "type": "row"
     },
     {
@@ -655,7 +435,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Database query response times",
+      "description": "Database query latency",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -711,32 +491,36 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 24
+        "y": 18
       },
-      "id": 13,
+      "id": 11,
       "options": {
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "single",
           "sort": "none"
         }
       },
+      "pluginVersion": "9.5.2",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "histogram_quantile(0.95, rate(db_query_duration_ms_bucket{job=\"maps-api-service\"}[5m]))",
-          "refId": "A",
-          "legendFormat": "{{operation}} - 95th percentile"
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.95, sum by (le, db_operation) (rate(db_client_operation_duration_bucket{job=\"maps-api-service\"}[5m]))) * 1000",
+          "legendFormat": "{{db_operation}} p95",
+          "range": true,
+          "refId": "A"
         }
       ],
-      "title": "Database Query Duration",
+      "title": "Database Query Latency (p95)",
       "type": "timeseries"
     },
     {
@@ -744,7 +528,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Pod memory and CPU usage",
+      "description": "Database operations per second",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -792,6 +576,213 @@
               }
             ]
           },
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 18
+      },
+      "id": 12,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "9.5.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "sum by (db_operation) (rate(db_client_operation_duration_count{job=\"maps-api-service\"}[5m]))",
+          "legendFormat": "{{db_operation}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Database Operations Rate",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 26
+      },
+      "id": 20,
+      "panels": [],
+      "title": "Resource Usage",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "CPU usage percentage",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "vis": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 27
+      },
+      "id": 21,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "9.5.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(container_cpu_usage_seconds_total{pod=~\"maps-api-.*\"}[5m]) * 100",
+          "legendFormat": "{{pod}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "CPU Usage %",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Memory usage percentage",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "vis": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
           "unit": "percent"
         },
         "overrides": []
@@ -800,48 +791,47 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 24
+        "y": 27
       },
-      "id": 14,
+      "id": 22,
       "options": {
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
           "mode": "single",
           "sort": "none"
         }
       },
+      "pluginVersion": "9.5.2",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{pod=~\"maps-api-.*\",container=\"maps-api\"}[5m])) * 100",
-          "refId": "A",
-          "legendFormat": "CPU Usage - {{pod}}"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "expr": "(container_memory_working_set_bytes{pod=~\"maps-api-.*\",container=\"maps-api\"} / container_spec_memory_limit_bytes{pod=~\"maps-api-.*\",container=\"maps-api\"}) * 100",
-          "refId": "B",
-          "legendFormat": "Memory Usage - {{pod}}"
+          "editorMode": "code",
+          "expr": "(container_memory_working_set_bytes{pod=~\"maps-api-.*\"} / container_spec_memory_limit_bytes{pod=~\"maps-api-.*\"}) * 100",
+          "legendFormat": "{{pod}}",
+          "range": true,
+          "refId": "A"
         }
       ],
-      "title": "Resource Usage",
+      "title": "Memory Usage %",
       "type": "timeseries"
     }
   ],
-  "refresh": "5s",
-  "schemaVersion": 36,
+  "refresh": "10s",
+  "schemaVersion": 38,
   "style": "dark",
-  "tags": ["maps", "api", "nestjs", "prometheus"],
+  "tags": [
+    "maps",
+    "api",
+    "opentelemetry"
+  ],
   "templating": {
     "list": [
       {
@@ -852,11 +842,12 @@
         },
         "hide": 0,
         "includeAll": false,
-        "label": "Prometheus",
+        "label": "Datasource",
         "multi": false,
         "name": "DS_PROMETHEUS",
         "options": [],
         "query": "prometheus",
+        "queryValue": "",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
@@ -865,13 +856,13 @@
     ]
   },
   "time": {
-    "from": "now-1h",
+    "from": "now-30m",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "",
-  "title": "Maps API Dashboard",
-  "uid": "maps-api-dashboard",
+  "title": "Maps API Dashboard (OpenTelemetry)",
+  "uid": "maps-api-otel",
   "version": 1,
   "weekStart": ""
 }
