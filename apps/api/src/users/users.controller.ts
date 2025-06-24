@@ -20,11 +20,11 @@ import {
   ThrottleStrict,
   ThrottlePublic,
 } from "../common/decorators/throttle.decorator";
-
 interface AuthenticatedRequest extends Request {
   user: {
     id: number;
     email: string;
+    name: string;
   };
 }
 
@@ -38,9 +38,10 @@ export class UsersController {
     return this.usersService.create(createUserDto);
   }
 
-  @ThrottlePublic() // Public endpoint - more lenient rate limiting
+  @ThrottlePublic() // Public endpoint for admin/testing - TODO: Add admin guard in production
   @Get()
   async findAll() {
+    // TODO: In production, this should require admin authentication
     return this.usersService.findAll();
   }
 
@@ -51,20 +52,34 @@ export class UsersController {
     return this.usersService.findOne(req.user.id);
   }
 
-  @ThrottlePublic() // Public endpoint for user lookup
+  @ThrottlePublic() // Public endpoint for testing - TODO: Add proper authorization in production
   @Get(":id")
   async findOne(@Param("id") id: string) {
     const userId = parseInt(id);
     if (isNaN(userId)) {
       throw new BadRequestException("Invalid user ID");
     }
+    // TODO: In production, add proper user authorization checks
     return this.usersService.findOne(userId);
   }
 
   @ThrottleModerate() // Moderate rate limiting for updates
+  @UseGuards(JwtAuthGuard)
   @Put(":id")
-  async update(@Param("id") id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(+id, updateUserDto);
+  async update(
+    @Param("id") id: string,
+    @Body() updateUserDto: UpdateUserDto,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    const userId = parseInt(id);
+    if (isNaN(userId)) {
+      throw new BadRequestException("Invalid user ID");
+    }
+    // Users can only update their own profile
+    if (userId !== req.user.id) {
+      throw new ForbiddenException("Cannot update other users' profiles");
+    }
+    return this.usersService.update(userId, updateUserDto);
   }
 
   @ThrottleModerate() // Moderate rate limiting for partial updates

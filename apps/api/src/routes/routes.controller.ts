@@ -50,7 +50,6 @@ export class RoutesController {
   @ThrottleModerate() // Moderate rate limiting for route creation
   @Post()
   create(@Body() createRouteDto: CreateRouteDto, @Request() req: AuthenticatedRequest) {
-    console.log("[RoutesController] Create route - User:", req.user);
     return this.routesService.create(createRouteDto, req.user.id);
   }
 

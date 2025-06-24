@@ -24,9 +24,6 @@ export class AuthService {
 
   async googleAuth(googleAuthDto: GoogleAuthDto): Promise<AuthResponseDto> {
     try {
-      console.log("Google Auth - Received credential:", !!googleAuthDto.credential);
-      console.log("Google Auth - Client ID configured:", !!process.env.GOOGLE_CLIENT_ID);
-
       const ticket = await this.googleClient.verifyIdToken({
         idToken: googleAuthDto.credential,
         audience: process.env.GOOGLE_CLIENT_ID,
@@ -34,11 +31,8 @@ export class AuthService {
 
       const payload = ticket.getPayload();
       if (!payload) {
-        console.log("Google Auth - No payload from token");
         throw new UnauthorizedException("Invalid Google token");
       }
-
-      console.log("Google Auth - Token verified successfully");
 
       const { sub: googleId, email, name, picture } = payload;
 
@@ -77,8 +71,6 @@ export class AuthService {
         email: user.email,
       };
 
-      console.log("Google Auth - About to return success response");
-
       // Increment active users
       this.metricsService.incrementActiveUsers();
 
@@ -92,8 +84,7 @@ export class AuthService {
           isEmailVerified: user.isEmailVerified,
         },
       };
-    } catch (error) {
-      console.log("Google Auth - Error occurred:", error.message);
+    } catch {
       throw new UnauthorizedException("Failed to authenticate with Google");
     }
   }

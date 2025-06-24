@@ -14,7 +14,6 @@ import { User } from "../entities/user.entity";
     JwtModule.registerAsync({
       useFactory: () => {
         const secret = process.env.JWT_SECRET || "your-secret-key";
-        console.log("[AuthModule] Configuring JWT with secret:", secret.substring(0, 10) + "...");
         return {
           secret: secret,
           signOptions: { expiresIn: "24h" },
