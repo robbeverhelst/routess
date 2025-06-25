@@ -143,8 +143,6 @@ export function RouteControls({
     currentLanguage,
   );
 
-  const isLocateButtonDisabled = !canLocateCurrent && !canLocateLastKnown;
-
   let locateTooltipText = t("routeControls.locate.notAvailable", currentLanguage);
   let badgeType: "none" | "blue-pulse" | "orange" | "red" = "red"; // Default to red if no location
   const locateIcon = Locate;
@@ -467,7 +465,7 @@ export function RouteControls({
             <Button
               variant="secondary"
               onClick={onLocate}
-              disabled={isLocateButtonDisabled && !isLocationTracking}
+              disabled={false} // Always allow locate button click
               className={locateButtonClass}
             >
               <div className="relative">

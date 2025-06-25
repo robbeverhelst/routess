@@ -15,11 +15,13 @@ import {
 import { Save, Loader2 } from "lucide-react";
 import { type Waypoint } from "@/lib/api";
 import { t, type SupportedLanguage } from "@/lib/i18n";
+import { getDirectFlags } from "@/features/routing/managers/WaypointManager";
+import type { Coordinate } from "@/types/map";
 
 interface SaveRouteModalProps {
   isOpen: boolean;
   onClose: () => void;
-  waypoints: Waypoint[];
+  waypoints: Coordinate[];
   distance?: number;
   elevation?: number;
   currentLanguage: SupportedLanguage;
@@ -49,11 +51,19 @@ export function SaveRouteModal({
 
     setError(null);
 
+    // Transform Coordinate[] to Waypoint[] for API
+    const directFlags = getDirectFlags();
+    const transformedWaypoints: Waypoint[] = waypoints.map((coord, index) => ({
+      lng: coord[0],
+      lat: coord[1],
+      type: directFlags[index] ? "direct" : "routed",
+    }));
+
     saveRouteMutation.mutate(
       {
         name: name.trim(),
         description: description.trim() || undefined,
-        waypoints,
+        waypoints: transformedWaypoints,
         distance: distance || 0,
         elevationGain: elevation || 0,
       },

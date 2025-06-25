@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { useUserRoutes, useDeleteRoute } from "@/lib/api-queries";
 import { Input } from "@/components/ui/input";
@@ -45,25 +45,22 @@ export function RouteLibraryModal({
   onLoadRoute,
   onEditRoute,
 }: RouteLibraryModalProps) {
-  const [filteredRoutes, setFilteredRoutes] = useState<ApiRoute[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const { data: routes = [], isLoading, error: queryError, refetch } = useUserRoutes();
   const deleteRouteMutation = useDeleteRoute();
 
-  // Update filtered routes when routes data or search query changes
-  useEffect(() => {
+  // Use useMemo to compute filtered routes instead of useEffect to avoid infinite loops
+  const filteredRoutes = useMemo(() => {
     if (searchQuery.trim()) {
-      const filtered = routes.filter(
+      return routes.filter(
         (route) =>
           route.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
           route.description?.toLowerCase().includes(searchQuery.toLowerCase()),
       );
-      setFilteredRoutes(filtered);
-    } else {
-      setFilteredRoutes(routes);
     }
+    return routes;
   }, [searchQuery, routes]);
 
   // Handle query errors

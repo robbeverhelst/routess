@@ -87,8 +87,21 @@ class ApiService {
     });
 
     if (!response.ok) {
-      Logger.error(`[ApiService] API Error: ${response.status} ${response.statusText}`);
-      throw new Error(`API Error: ${response.status} ${response.statusText}`);
+      // Try to get more detailed error information
+      let errorDetails = "";
+      try {
+        const errorBody = await response.text();
+        errorDetails = errorBody;
+        Logger.error(
+          `[ApiService] API Error: ${response.status} ${response.statusText}`,
+          errorDetails,
+        );
+      } catch {
+        Logger.error(`[ApiService] API Error: ${response.status} ${response.statusText}`);
+      }
+      throw new Error(
+        `API Error: ${response.status} ${response.statusText}${errorDetails ? " - " + errorDetails : ""}`,
+      );
     }
 
     return response.json();

@@ -1,0 +1,280 @@
+import React, { useRef, useEffect } from "react";
+import Map, { type MapRef } from "react-map-gl/mapbox";
+import "mapbox-gl/dist/mapbox-gl.css";
+import type { Map as MapboxMap } from "mapbox-gl";
+import { useMapInitialization } from "@/components/hooks/useMapInitialization";
+import { useMapPositioning } from "@/components/hooks/useMapPositioning";
+import { useMapConfiguration } from "@/components/providers/MapConfigurationProvider";
+import { useUserLocation } from "@/components/providers/UserLocationProvider";
+import { MapPopup, type PopupInfo as MapPopupInfo } from "@/components/ui/MapPopup";
+import { SunPositionIndicator } from "@/components/ui/SunPositionIndicator";
+import { Logger } from "@/lib/logger";
+import type { SupportedLanguage } from "@/lib/i18n";
+import type { Dispatch, SetStateAction } from "react";
+
+// Map configuration constants
+const MAP_PITCH = 30; // Default pitch angle for the map
+
+// Default Europe-centered view if user location unavailable
+const DEFAULT_VIEW_STATE = {
+  longitude: 10.5,
+  latitude: 51.2,
+  zoom: 4,
+  bearing: 0,
+  pitch: 0,
+};
+
+interface MapCanvasProps {
+  mapRef: React.RefObject<MapboxMap | null>;
+  mapboxToken: string;
+  width?: string | number;
+  height?: string | number;
+  initialCenter?: [number, number];
+  initialZoom?: number;
+  routeId?: string;
+  currentLanguage: SupportedLanguage;
+
+  // Route state management
+  setRouteDistance: Dispatch<SetStateAction<string>>;
+  setRouteDuration: Dispatch<SetStateAction<string>>;
+  setHasRoute: Dispatch<SetStateAction<boolean>>;
+  setIsRouteCoordsReady: Dispatch<SetStateAction<boolean>>;
+  hasRoute: boolean;
+
+  // Popup management
+  popup: MapPopupInfo | null;
+  setPopup: Dispatch<SetStateAction<MapPopupInfo | null>>;
+  onAddDirectWaypoint: () => void;
+  onRemoveWaypoint: () => void;
+  onAddWaypointOnRoute: () => void;
+
+  // Error handling
+  handleWaypointError: (message: string | null) => void;
+  handleRouteInfoError: (message: string) => void;
+
+  // Initial positioning data
+  lastKnownLocationFromStorage: [number, number] | null;
+  detectedRouteInLocalStorageOnInit: boolean;
+  lastSavedMapView: unknown;
+}
+
+export const MapCanvas: React.FC<MapCanvasProps> = ({
+  mapRef,
+  mapboxToken,
+  width = "100%",
+  height = "100%",
+  initialCenter,
+  initialZoom,
+  routeId,
+  currentLanguage,
+  setRouteDistance,
+  setRouteDuration,
+  setHasRoute,
+  setIsRouteCoordsReady,
+  hasRoute,
+  popup,
+  setPopup,
+  onAddDirectWaypoint,
+  onRemoveWaypoint,
+  onAddWaypointOnRoute,
+  handleWaypointError,
+  handleRouteInfoError,
+  lastKnownLocationFromStorage,
+  detectedRouteInLocalStorageOnInit,
+  lastSavedMapView,
+}) => {
+  const isMapLockedRef = useRef(false);
+  const internalMapRef = useRef<MapRef | null>(null);
+  const animationFrameIdRef = useRef<number | null>(null);
+
+  // Get configuration from providers
+  const {
+    currentMapStyle,
+    isMapLocked,
+    currentLightPreset,
+    currentBearing,
+    setCurrentBearing,
+    showSunDirection,
+    currentSunPosition,
+  } = useMapConfiguration();
+
+  const {
+    location: userLocation,
+    error: locationError,
+    isLoading: isUserLocationLoading,
+  } = useUserLocation();
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    isMapLockedRef.current = isMapLocked;
+  }, [isMapLocked]);
+
+  // Map initialization hook
+  const { handleMapLoad } = useMapInitialization({
+    mapboxToken,
+    setRouteDistance,
+    setRouteDuration,
+    setHasRoute,
+    setPopup,
+    handleWaypointError,
+    isMapLockedRef,
+    currentLightPreset,
+    routeId,
+    handleRouteInfoError,
+    setIsRouteCoordsReady,
+  });
+
+  // Determine effective initial view state
+  const getLastKnownLocation = () => lastKnownLocationFromStorage; // Simplified for this component
+  const lastKnownFromService = getLastKnownLocation();
+  const effectiveInitialViewState =
+    initialCenter && initialZoom
+      ? {
+          longitude: initialCenter[0],
+          latitude: initialCenter[1],
+          zoom: initialZoom,
+          bearing: currentBearing,
+          pitch: MAP_PITCH,
+        }
+      : lastSavedMapView
+        ? { ...DEFAULT_VIEW_STATE, ...(lastSavedMapView as any) }
+        : detectedRouteInLocalStorageOnInit
+          ? DEFAULT_VIEW_STATE
+          : userLocation
+            ? {
+                longitude: userLocation[0],
+                latitude: userLocation[1],
+                zoom: 15,
+                bearing: currentBearing,
+                pitch: MAP_PITCH,
+              }
+            : lastKnownFromService
+              ? {
+                  longitude: lastKnownFromService[0],
+                  latitude: lastKnownFromService[1],
+                  zoom: 14,
+                  bearing: currentBearing,
+                  pitch: MAP_PITCH,
+                }
+              : DEFAULT_VIEW_STATE;
+
+  // Map positioning hook
+  useMapPositioning({
+    mapRef,
+    isMapReady: mapRef.current !== null,
+    hasRoute,
+    isRouteCoordsReady: true, // This would come from route state
+    userLocation,
+    isUserLocationLoading,
+    locationError: locationError as any,
+    lastKnownLocationFromStorage,
+    detectedRouteInLocalStorageOnInit,
+    mapPitch: MAP_PITCH,
+  });
+
+  // Effect to set initial bearing from map instance if not set by prop
+  useEffect(() => {
+    if (mapRef.current && typeof (effectiveInitialViewState as any)?.bearing === "undefined") {
+      setCurrentBearing(mapRef.current.getBearing());
+    }
+  }, [setCurrentBearing, (effectiveInitialViewState as any)?.bearing]);
+
+  // Animate user location halo
+  useEffect(() => {
+    if (!mapRef.current) return;
+
+    const map = mapRef.current;
+    const MIN_HALO_RADIUS = 10;
+    const MAX_HALO_RADIUS = 14;
+    const PULSE_DURATION_MS = 2000;
+
+    let startTime: number | null = null;
+
+    const animateHalo = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const elapsedTime = timestamp - startTime;
+      const pulseProgress = (elapsedTime % PULSE_DURATION_MS) / PULSE_DURATION_MS;
+      const easedProgress = (Math.sin(pulseProgress * Math.PI * 2 - Math.PI / 2) + 1) / 2;
+      const currentRadius = MIN_HALO_RADIUS + easedProgress * (MAX_HALO_RADIUS - MIN_HALO_RADIUS);
+
+      try {
+        if (map.getLayer("user-location-halo") && map.getSource("user-location-point")) {
+          map.setPaintProperty("user-location-halo", "circle-radius", currentRadius);
+        }
+      } catch (e) {
+        if (typeof e === "undefined") Logger.info("Suppressed error");
+      }
+      animationFrameIdRef.current = requestAnimationFrame(animateHalo);
+    };
+
+    animationFrameIdRef.current = requestAnimationFrame(animateHalo);
+
+    return () => {
+      if (animationFrameIdRef.current) {
+        cancelAnimationFrame(animationFrameIdRef.current);
+      }
+    };
+  }, []);
+
+  return (
+    <>
+      <Map
+        ref={internalMapRef}
+        mapboxAccessToken={mapboxToken}
+        initialViewState={{
+          ...effectiveInitialViewState,
+          pitch: (effectiveInitialViewState as any)?.pitch ?? MAP_PITCH,
+          bearing: (effectiveInitialViewState as any)?.bearing ?? currentBearing,
+        }}
+        style={{ width, height }}
+        mapStyle={
+          currentMapStyle === "satellite"
+            ? "mapbox://styles/mapbox/satellite-streets-v12"
+            : "mapbox://styles/mapbox/standard"
+        }
+        reuseMaps
+        attributionControl={false}
+        projection="globe"
+        antialias={true}
+        minPitch={MAP_PITCH}
+        maxPitch={MAP_PITCH}
+        onLoad={(evt) => {
+          // Set the external mapRef to the map instance
+          if (internalMapRef.current) {
+            mapRef.current = internalMapRef.current.getMap();
+          }
+          handleMapLoad(evt);
+        }}
+        fog={{
+          color: "rgb(186, 210, 235)",
+          "high-color": "rgb(36, 92, 223)",
+          "horizon-blend": 0.02,
+          "space-color": "rgb(11, 11, 25)",
+          "star-intensity": 0.6,
+        }}
+      >
+        {popup && mapRef.current && (
+          <MapPopup
+            popupInfo={popup}
+            mapInstance={mapRef.current}
+            onAddDirectWaypoint={onAddDirectWaypoint}
+            onRemoveWaypoint={onRemoveWaypoint}
+            onAddWaypointOnRoute={onAddWaypointOnRoute}
+            currentLanguage={currentLanguage}
+          />
+        )}
+      </Map>
+
+      {/* Sun Position Indicator - Shows sun on map edges */}
+      {showSunDirection && currentSunPosition && userLocation && (
+        <SunPositionIndicator
+          azimuth={currentSunPosition.azimuth}
+          elevation={currentSunPosition.elevation}
+          isVisible={currentSunPosition.isUp}
+          timeOfDay={currentLightPreset}
+          mapBearing={currentBearing}
+        />
+      )}
+    </>
+  );
+};
