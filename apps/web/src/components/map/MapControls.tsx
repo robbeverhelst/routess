@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { RouteControls } from "@/components/ui/route-controls";
 import { LocationSearch } from "@/components/ui/location-search";
 import { Sidebar } from "@/components/ui/sidebar";
@@ -108,6 +108,11 @@ export const MapControls: React.FC<MapControlsProps> = ({
 
   const { openRouteGeneratorModal, openSaveRouteModal, openRouteLibraryModal } = useMapModals();
 
+  // Memoize location search handlers to prevent unnecessary re-renders
+  const handleToggleSearch = useCallback(() => {
+    setIsSearchOpen((prev) => !prev);
+  }, []);
+
   return (
     <>
       {/* Mobile Controls Layout */}
@@ -156,7 +161,7 @@ export const MapControls: React.FC<MapControlsProps> = ({
                 onSelectLocation={onSelectLocation}
                 isMobileContext={true}
                 isMobileSearchOpen={isSearchOpen}
-                onToggleMobileSearch={() => setIsSearchOpen(!isSearchOpen)}
+                onToggleMobileSearch={handleToggleSearch}
                 currentLanguage={currentLanguage}
               />
               <Sidebar

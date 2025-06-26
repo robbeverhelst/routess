@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -113,7 +113,7 @@ const getOrientationIconAndLabel = (
   return { Icon: ArrowLeft, label: "W", title: t("routeControls.orientation.west", lang) };
 };
 
-export function RouteControls({
+function RouteControlsComponent({
   onUndo,
   onRedo,
   onReverseRoute, // Destructure new prop
@@ -153,10 +153,13 @@ export function RouteControls({
   useCanRedo(); // Ensure store is accessed for reactivity
 
   const TimeOfDayIcon = getIconForTimeOfDay(currentTimeOfDay);
-  const { Icon: OrientationIcon, title: orientationTitle } = getOrientationIconAndLabel(
-    currentBearing,
-    currentLanguage,
-  );
+
+  // Memoize the orientation calculation to avoid repeated computations
+  const orientationData = useMemo(() => {
+    return getOrientationIconAndLabel(currentBearing, currentLanguage);
+  }, [currentBearing, currentLanguage]);
+
+  const { Icon: OrientationIcon, title: orientationTitle } = orientationData;
 
   let locateTooltipText = t("routeControls.locate.notAvailable", currentLanguage);
   let badgeType: "none" | "blue-pulse" | "orange" | "red" = "red"; // Default to red if no location
@@ -207,8 +210,10 @@ export function RouteControls({
     locateTooltipText = t("routeControls.locate.notAvailable", currentLanguage);
   }
 
-  // Get current map style display name for tooltip
-  const currentMapStyleName = t(`routeControls.mapStyle.${currentMapStyle}`, currentLanguage);
+  // Memoize the current map style display name for tooltip to avoid repeated translations
+  const currentMapStyleName = useMemo(() => {
+    return t(`routeControls.mapStyle.${currentMapStyle}`, currentLanguage);
+  }, [currentMapStyle, currentLanguage]);
 
   return (
     <TooltipProvider>
@@ -282,14 +287,14 @@ export function RouteControls({
             <Button
               variant="secondary"
               onClick={onOpenRouteGenerator}
-              disabled={isLocked}
-              className="bg-white/90 dark:bg-black/80 text-black dark:text-white hover:bg-white/70 dark:hover:bg-black/60 h-10 w-10"
+              disabled={true}
+              className="bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed h-10 w-10"
             >
               <Sparkles size={18} />
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>{t("routeControls.tooltip.generateRoute", currentLanguage)}</p>
+            <p>{t("routeControls.tooltip.generateRoute", currentLanguage)} - Coming Soon</p>
           </TooltipContent>
         </Tooltip>
 
@@ -511,3 +516,6 @@ export function RouteControls({
     </TooltipProvider>
   );
 }
+
+// Memoize the component to prevent unnecessary re-renders
+export const RouteControls = React.memo(RouteControlsComponent);

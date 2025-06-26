@@ -1,11 +1,8 @@
 import type { Coordinate } from "@/types/map";
 import { LngLatBounds, type Map as MapboxMap } from "mapbox-gl";
 import { LngLat } from "mapbox-gl";
-import type { LoopDirection } from "@/components/modals/RouteGeneratorModal"; // Assuming this type is exported
 import { Logger } from "@/lib/logger";
-import { haversineDistance, EARTH_RADIUS_KM } from "@/lib/utils/geospatial";
-
-export type LoopDirectionOrBearing = LoopDirection | number;
+import { haversineDistance } from "@/lib/utils/geospatial";
 
 /**
  * Checks if a coordinate is near a road by querying the Mapbox Matching API.
@@ -105,104 +102,7 @@ export const closestPointOnSegment = (p: Coordinate, v: Coordinate, w: Coordinat
   return [v[0] + t * (w[0] - v[0]), v[1] + t * (w[1] - v[1])];
 };
 
-/**
- * Calculates a destination coordinate given a starting point, distance, and bearing.
- * @param startPointLngLat Start coordinate as [longitude, latitude].
- * @param distanceKm Distance to travel in kilometers.
- * @param bearingInDegrees Bearing in degrees (0 is North, 90 is East, etc.).
- * @returns Destination coordinate as [longitude, latitude].
- */
-function destinationPoint(
-  startPointLngLat: Coordinate,
-  distanceKm: number,
-  bearingInDegrees: number,
-): Coordinate {
-  const R = EARTH_RADIUS_KM;
-  const d = distanceKm;
-
-  const lat1 = (startPointLngLat[1] * Math.PI) / 180; // φ1
-  const lon1 = (startPointLngLat[0] * Math.PI) / 180; // λ1
-  const bearingRad = (bearingInDegrees * Math.PI) / 180; // θ
-
-  const lat2 = Math.asin(
-    Math.sin(lat1) * Math.cos(d / R) + Math.cos(lat1) * Math.sin(d / R) * Math.cos(bearingRad),
-  );
-
-  let lon2 =
-    lon1 +
-    Math.atan2(
-      Math.sin(bearingRad) * Math.sin(d / R) * Math.cos(lat1),
-      Math.cos(d / R) - Math.sin(lat1) * Math.sin(lat2),
-    );
-
-  // Normalize lon2 to -180 to +180 degrees
-  lon2 = ((lon2 + 3 * Math.PI) % (2 * Math.PI)) - Math.PI;
-
-  return [(lon2 * 180) / Math.PI, (lat2 * 180) / Math.PI];
-}
-
-/**
- * Calculates a target coordinate for loop generation.
- * @param startPoint Start coordinate as [longitude, latitude].
- * @param distanceKm The distance to the target coordinate (e.g., half of the total loop length).
- * @param directionOrBearing The general direction or bearing for the loop.
- * @returns The calculated target coordinate as [longitude, latitude].
- */
-export function calculateTargetCoordinate(
-  startPoint: Coordinate,
-  distanceKm: number,
-  directionOrBearing: LoopDirectionOrBearing,
-): Coordinate {
-  let bearingInDegrees: number;
-
-  if (typeof directionOrBearing === "number") {
-    bearingInDegrees = directionOrBearing % 360;
-    if (bearingInDegrees < 0) {
-      bearingInDegrees += 360;
-    }
-    Logger.info(
-      `[RoutingUtils] Calculating target coordinate using direct bearing: start=${startPoint}, dist=${distanceKm}km, bearing=${bearingInDegrees}°`,
-    );
-  } else {
-    switch (directionOrBearing) {
-      case "N":
-        bearingInDegrees = 0;
-        break;
-      case "NE":
-        bearingInDegrees = 45;
-        break;
-      case "E":
-        bearingInDegrees = 90;
-        break;
-      case "SE":
-        bearingInDegrees = 135;
-        break;
-      case "S":
-        bearingInDegrees = 180;
-        break;
-      case "SW":
-        bearingInDegrees = 225;
-        break;
-      case "W":
-        bearingInDegrees = 270;
-        break;
-      case "NW":
-        bearingInDegrees = 315;
-        break;
-      case "ANY":
-      default:
-        bearingInDegrees = 0;
-        break;
-    }
-    Logger.info(
-      `[RoutingUtils] Calculating target coordinate using LoopDirection: start=${startPoint}, dist=${distanceKm}km, bearing=${bearingInDegrees}° (direction: ${directionOrBearing})`,
-    );
-  }
-
-  const geometricTarget = destinationPoint(startPoint, distanceKm, bearingInDegrees);
-  Logger.info(`[RoutingUtils] Calculated geometric target: ${geometricTarget}`);
-  return geometricTarget;
-}
+// Route generation functions removed - will be implemented in backend
 
 /**
  * Fits the map view to a given set of coordinates.

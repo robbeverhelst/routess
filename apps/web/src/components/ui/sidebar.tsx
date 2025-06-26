@@ -32,7 +32,7 @@ import {
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback, Suspense } from "react";
 import type { Map as MapboxMap } from "mapbox-gl";
 import { GB, NL, FR, DE } from "country-flag-icons/react/3x2";
 import { exportRouteToGPX, importRouteFromGPX } from "../../lib/routing";
@@ -103,7 +103,7 @@ export function Sidebar({
   displayedShareUrl,
   onCopySharedUrl,
   onClearShareDisplay,
-  onOpenRouteGenerator,
+  // onOpenRouteGenerator: _, // Disabled feature - removed to fix linting
   currentLanguage,
   onLanguageChange,
   showSunDirection,
@@ -162,12 +162,16 @@ export function Sidebar({
   const selectedLanguageDetails =
     languages.find((lang) => lang.code === currentLanguage) || languages[0];
 
-  const handleLanguageChange = (langCode: SupportedLanguage) => {
-    onLanguageChange(langCode);
-    setIsLangPopoverOpen(false);
-  };
+  // Memoize event handlers to prevent unnecessary re-renders
+  const handleLanguageChange = useCallback(
+    (langCode: SupportedLanguage) => {
+      onLanguageChange(langCode);
+      setIsLangPopoverOpen(false);
+    },
+    [onLanguageChange],
+  );
 
-  const handleExportGPX = () => {
+  const handleExportGPX = useCallback(() => {
     const result = exportRouteToGPX();
     if (!result.success && result.message) {
       onImportError(result.message); // Reusing onImportError for feedback
@@ -175,9 +179,9 @@ export function Sidebar({
       Logger.info("Route exported successfully."); // Placeholder for success feedback
       // onImportError("Route exported successfully."); // Or use the same feedback for success
     }
-  };
+  }, [onImportError]);
 
-  const handleImportGPX = () => {
+  const handleImportGPX = useCallback(() => {
     if (!map || !accessToken) {
       onImportError("Map or access token is not available for import.");
       Logger.error("Map instance or accessToken not available for GPX import.");
@@ -235,15 +239,15 @@ export function Sidebar({
         document.body.removeChild(fileInput);
       }
     }, 2000);
-  };
+  }, [map, accessToken, onImportError, setRouteDistance, setRouteDuration, setHasRoute]);
 
-  const handleLoginSuccess = () => {
+  const handleLoginSuccess = useCallback(() => {
     const authState = googleAuth.getAuthState();
     setIsLoggedIn(authState.isAuthenticated);
     setCurrentUser(authState.user);
-  };
+  }, []);
 
-  const handleSignOut = async () => {
+  const handleSignOut = useCallback(async () => {
     try {
       await googleAuth.signOut();
       setIsLoggedIn(false);
@@ -252,7 +256,7 @@ export function Sidebar({
     } catch (error) {
       Logger.error("Sign out failed:", error);
     }
-  };
+  }, []);
 
   return (
     <>
@@ -446,23 +450,11 @@ export function Sidebar({
 
                 <Button
                   onClick={() => {
-                    // First close the sidebar using the ref
-                    if (closeButtonRef.current) {
-                      closeButtonRef.current.click();
-                    }
-
-                    // Then open the modal after a small delay to ensure sidebar is closed
-                    setTimeout(() => {
-                      onOpenRouteGenerator();
-                    }, 50);
+                    // Feature coming soon - no action
                   }}
-                  disabled={isLocked}
-                  className={`w-full h-10 justify-center rounded-md mb-2 text-white 
-                             bg-gradient-to-r from-indigo-500 to-teal-400 
-                             hover:from-indigo-600 hover:to-teal-500 
-                             dark:from-indigo-600 dark:to-teal-500 
-                             dark:hover:from-indigo-700 dark:hover:to-teal-600 
-                             ${isLocked ? "opacity-50 cursor-not-allowed" : ""}`}
+                  disabled={true}
+                  className="w-full h-10 justify-center rounded-md mb-2 text-gray-500 bg-gray-200 cursor-not-allowed dark:bg-gray-800 dark:text-gray-400"
+                  title="Coming Soon"
                 >
                   <Wand2 className="w-4 h-4 mr-2" />
                   {t("sidebar.generateRoute", currentLanguage)}
@@ -772,16 +764,20 @@ export function Sidebar({
       />
 
       {/* Settings Modal */}
-      <SettingsModal
-        isOpen={isSettingsModalOpen}
-        onOpenChange={setIsSettingsModalOpen}
-        currentLanguage={currentLanguage}
-        onLanguageChange={onLanguageChange}
-        isLoggedIn={isLoggedIn}
-        currentUser={currentUser}
-        showSunDirection={showSunDirection}
-        onToggleSunDirection={onToggleSunDirection}
-      />
+      <Suspense
+        fallback={<div className="flex items-center justify-center p-4">Loading settings...</div>}
+      >
+        <SettingsModal
+          isOpen={isSettingsModalOpen}
+          onOpenChange={setIsSettingsModalOpen}
+          currentLanguage={currentLanguage}
+          onLanguageChange={onLanguageChange}
+          isLoggedIn={isLoggedIn}
+          currentUser={currentUser}
+          showSunDirection={showSunDirection}
+          onToggleSunDirection={onToggleSunDirection}
+        />
+      </Suspense>
     </>
   );
 }

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from "react";
+import React, { createContext, useContext, useState, useCallback, Suspense } from "react";
 import type { RouteGenerationParams } from "@/components/modals/RouteGeneratorModal";
 import { RouteGeneratorModal } from "@/components/modals/RouteGeneratorModal";
 import { SaveRouteModal } from "@/components/modals/SaveRouteModal";
@@ -86,7 +86,7 @@ export const MapModalsProvider: React.FC<MapModalsProviderProps> = ({
   const isMapLocked = useRoutingStore((state) => state.isMapLocked);
   // Modal states
   const [isRouteGeneratorModalOpen, setIsRouteGeneratorModalOpen] = useState(false);
-  const [isGeneratingRoute, setIsGeneratingRoute] = useState(false);
+  const [isGeneratingRoute] = useState(false); // Always false since feature is disabled
   const [isSaveRouteModalOpen, setIsSaveRouteModalOpen] = useState(false);
   const [isRouteLibraryModalOpen, setIsRouteLibraryModalOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -145,13 +145,10 @@ export const MapModalsProvider: React.FC<MapModalsProviderProps> = ({
     setIsSaveRouteModalOpen(true);
   }, []);
 
-  // Custom route generation handler (placeholder)
+  // Custom route generation handler (coming soon)
   const handleGenerateCustomRoute = useCallback(async (params: RouteGenerationParams) => {
-    setIsGeneratingRoute(true);
-    // TODO: Implement route generation
-    Logger.info("Generate route:", params);
-    setIsGeneratingRoute(false);
-    setIsRouteGeneratorModalOpen(false);
+    Logger.info("Route generation coming soon:", params);
+    // Feature coming soon - will be implemented in backend
   }, []);
 
   // Route loading handler
@@ -292,32 +289,38 @@ export const MapModalsProvider: React.FC<MapModalsProviderProps> = ({
       {children}
 
       {/* Route Generator Modal */}
-      <RouteGeneratorModal
-        isOpen={isRouteGeneratorModalOpen}
-        onClose={closeRouteGeneratorModal}
-        onGenerate={handleGenerateCustomRoute}
-        mapboxToken={mapboxToken}
-        isGenerating={isGeneratingRoute}
-        userLocation={userLocation}
-        isUserLocationLoading={isUserLocationLoading}
-        userLocationError={userLocationError?.message || null}
-        currentLanguage={currentLanguage}
-      />
+      <Suspense fallback={<div className="flex items-center justify-center p-4">Loading...</div>}>
+        <RouteGeneratorModal
+          isOpen={isRouteGeneratorModalOpen}
+          onClose={closeRouteGeneratorModal}
+          onGenerate={handleGenerateCustomRoute}
+          mapboxToken={mapboxToken}
+          isGenerating={isGeneratingRoute}
+          userLocation={userLocation}
+          isUserLocationLoading={isUserLocationLoading}
+          userLocationError={userLocationError?.message || null}
+          currentLanguage={currentLanguage}
+        />
+      </Suspense>
 
       {/* Save Route Modal */}
-      <SaveRouteModal
-        isOpen={isSaveRouteModalOpen}
-        onClose={closeSaveRouteModal}
-        currentLanguage={currentLanguage}
-      />
+      <Suspense fallback={<div className="flex items-center justify-center p-4">Loading...</div>}>
+        <SaveRouteModal
+          isOpen={isSaveRouteModalOpen}
+          onClose={closeSaveRouteModal}
+          currentLanguage={currentLanguage}
+        />
+      </Suspense>
 
       {/* Route Library Modal */}
-      <RouteLibraryModal
-        isOpen={isRouteLibraryModalOpen}
-        onClose={closeRouteLibraryModal}
-        onLoadRoute={handleLoadRoute}
-        currentLanguage={currentLanguage}
-      />
+      <Suspense fallback={<div className="flex items-center justify-center p-4">Loading...</div>}>
+        <RouteLibraryModal
+          isOpen={isRouteLibraryModalOpen}
+          onClose={closeRouteLibraryModal}
+          onLoadRoute={handleLoadRoute}
+          currentLanguage={currentLanguage}
+        />
+      </Suspense>
 
       {/* Login Modal */}
       <LoginModal

@@ -527,7 +527,8 @@ export const setCurrentRoutePath = (coordinates: Coordinate[]): void => {
   );
 };
 
-// --- New A-to-B Route Calculation Function ---
+// --- A-to-B Route Calculation Function (Disabled - Moving to Backend) ---
+/*
 export async function calculateAtoBRoute(
   startCoord: Coordinate,
   endCoord: Coordinate,
@@ -637,3 +638,4 @@ export async function calculateAtoBRoute(
     return { success: false, error: noRouteMessage };
   }
 }
+*/

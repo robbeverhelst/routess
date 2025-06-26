@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useMemo } from "react";
 import Map, { type MapRef } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
 import type { Map as MapboxMap } from "mapbox-gl";
@@ -58,7 +58,7 @@ interface MapCanvasProps {
   lastSavedMapView: unknown;
 }
 
-export const MapCanvas: React.FC<MapCanvasProps> = ({
+const MapCanvasComponent: React.FC<MapCanvasProps> = ({
   mapRef,
   mapboxToken,
   width = "100%",
@@ -136,39 +136,59 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
     handleRouteInfoError,
   });
 
-  // Determine effective initial view state
-  const getLastKnownLocation = () => lastKnownLocationFromStorage; // Simplified for this component
-  const lastKnownFromService = getLastKnownLocation();
-  const effectiveInitialViewState =
-    initialCenter && initialZoom
-      ? {
-          longitude: initialCenter[0],
-          latitude: initialCenter[1],
-          zoom: initialZoom,
-          bearing: currentBearing,
-          pitch: MAP_PITCH,
-        }
-      : lastSavedMapView
-        ? { ...DEFAULT_VIEW_STATE, ...(lastSavedMapView as any) }
-        : detectedRouteInLocalStorageOnInit
-          ? DEFAULT_VIEW_STATE
-          : userLocation
-            ? {
-                longitude: userLocation[0],
-                latitude: userLocation[1],
-                zoom: 15,
-                bearing: currentBearing,
-                pitch: MAP_PITCH,
-              }
-            : lastKnownFromService
-              ? {
-                  longitude: lastKnownFromService[0],
-                  latitude: lastKnownFromService[1],
-                  zoom: 14,
-                  bearing: currentBearing,
-                  pitch: MAP_PITCH,
-                }
-              : DEFAULT_VIEW_STATE;
+  // Memoize the complex initial view state calculation to avoid repeated computations
+  const effectiveInitialViewState = useMemo(() => {
+    const getLastKnownLocation = () => lastKnownLocationFromStorage; // Simplified for this component
+    const lastKnownFromService = getLastKnownLocation();
+
+    if (initialCenter && initialZoom) {
+      return {
+        longitude: initialCenter[0],
+        latitude: initialCenter[1],
+        zoom: initialZoom,
+        bearing: currentBearing,
+        pitch: MAP_PITCH,
+      };
+    }
+
+    if (lastSavedMapView) {
+      return { ...DEFAULT_VIEW_STATE, ...(lastSavedMapView as any) };
+    }
+
+    if (detectedRouteInLocalStorageOnInit) {
+      return DEFAULT_VIEW_STATE;
+    }
+
+    if (userLocation) {
+      return {
+        longitude: userLocation[0],
+        latitude: userLocation[1],
+        zoom: 15,
+        bearing: currentBearing,
+        pitch: MAP_PITCH,
+      };
+    }
+
+    if (lastKnownFromService) {
+      return {
+        longitude: lastKnownFromService[0],
+        latitude: lastKnownFromService[1],
+        zoom: 14,
+        bearing: currentBearing,
+        pitch: MAP_PITCH,
+      };
+    }
+
+    return DEFAULT_VIEW_STATE;
+  }, [
+    initialCenter,
+    initialZoom,
+    currentBearing,
+    lastSavedMapView,
+    detectedRouteInLocalStorageOnInit,
+    userLocation,
+    lastKnownLocationFromStorage,
+  ]);
 
   // Map positioning hook
   useMapPositioning({
@@ -271,7 +291,7 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
               "mapbox-auth",
             );
           } else {
-            handleMapError(error.error || new Error("Failed to load map"), "map-load");
+            handleMapError(new Error(error.error?.message || "Failed to load map"), "map-load");
           }
         }}
         fog={{
@@ -307,3 +327,6 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
     </>
   );
 };
+
+// Memoize MapCanvas to prevent unnecessary re-renders when props haven't changed
+export const MapCanvas = React.memo(MapCanvasComponent);

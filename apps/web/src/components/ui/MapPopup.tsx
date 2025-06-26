@@ -21,7 +21,7 @@ interface MapPopupProps {
   // onShowInfo: (message: string) => void; // If we want to handle info popups more actively
 }
 
-export const MapPopup: React.FC<MapPopupProps> = ({
+const MapPopupComponent: React.FC<MapPopupProps> = ({
   popupInfo,
   mapInstance,
   onAddDirectWaypoint,
@@ -87,3 +87,6 @@ export const MapPopup: React.FC<MapPopupProps> = ({
     </div>
   );
 };
+
+// Memoize MapPopup to prevent unnecessary re-renders when props haven't changed
+export const MapPopup = React.memo(MapPopupComponent);

@@ -124,15 +124,7 @@ export function RouteGeneratorModal({
     return null;
   }
 
-  // Determine if generate button should be disabled
-  let isGenerateDisabled = isGenerating;
-  if (!isGenerating) {
-    if (routeType === "a-to-b") {
-      isGenerateDisabled = !startPoint || !endPoint;
-    } else if (routeType === "loop") {
-      isGenerateDisabled = !startPoint || !loopLengthKm || loopLengthKm <= 0;
-    }
-  }
+  // Generate button is always disabled (feature coming soon)
 
   return (
     <Dialog open={isOpen} onOpenChange={(open: boolean) => !open && !isGenerating && onClose()}>
@@ -524,8 +516,9 @@ export function RouteGeneratorModal({
                 <Button
                   type="button"
                   onClick={handleGenerate}
-                  disabled={isGenerateDisabled}
-                  className="flex-1 h-10 bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/30"
+                  disabled={true}
+                  className="flex-1 h-10 bg-gray-100 text-gray-500 cursor-not-allowed dark:bg-gray-800 dark:text-gray-400"
+                  title="Coming Soon"
                 >
                   <ChevronRight className="w-4 h-4 mr-1" />
                   {t("routeGenerator.actions.generate", currentLanguage)}
