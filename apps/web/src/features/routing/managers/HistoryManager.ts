@@ -116,8 +116,8 @@ export const snapshot = () => {
     const lastState = undoStack[undoStack.length - 1];
     if (
       lastState && // Ensure lastState is not undefined
-      JSON.stringify(lastState.points) === JSON.stringify(currentWaypointsSnapshot) &&
-      JSON.stringify(lastState.flags) === JSON.stringify(currentFlagsSnapshot)
+      JSON.stringify(lastState.waypoints) === JSON.stringify(currentWaypointsSnapshot) &&
+      JSON.stringify(lastState.directFlags) === JSON.stringify(currentFlagsSnapshot)
     ) {
       Logger.info(
         "[HistoryManager snapshot] New state is identical to current top of undo stack. Skipping snapshot.",
@@ -128,7 +128,7 @@ export const snapshot = () => {
 
   if (import.meta.env.DEV) {
     Logger.info(
-      "[HistoryManager snapshot] Creating snapshot. Waypoints:",
+      "[HistoryManager snapshot] Creating snapshot. Waywaypoints:",
       JSON.stringify(currentWaypointsSnapshot),
       "Flags:",
       JSON.stringify(currentFlagsSnapshot),
@@ -140,8 +140,9 @@ export const snapshot = () => {
   }
 
   undoStack.push({
-    points: currentWaypointsSnapshot,
-    flags: currentFlagsSnapshot,
+    waypoints: currentWaypointsSnapshot,
+    directFlags: currentFlagsSnapshot,
+    timestamp: Date.now(),
   });
 
   if (import.meta.env.DEV) {
@@ -189,7 +190,7 @@ export const internalDoUndo = (): WaypointHistory | null => {
     // If undo stack is now empty, it means we've undone all actions.
     // The state to apply is an "empty" or "initial" state.
     Logger.info("[HistoryManager internalDoUndo] Undo stack depleted. Returning empty state.");
-    return { points: [], flags: [] };
+    return { waypoints: [], directFlags: [], timestamp: Date.now() };
   }
 
   // The state to apply is now the new top of the undo stack.
@@ -234,7 +235,7 @@ export const stepBack = async (): Promise<void> => {
     Logger.info("[HistoryManager.stepBack] No undo state available.");
     return;
   }
-  setWaypointsAndFlags(prevHistoryState.points, prevHistoryState.flags);
+  setWaypointsAndFlags(prevHistoryState.waypoints, prevHistoryState.directFlags);
   emitHistoryChange("historyApplied", prevHistoryState);
   Logger.info(
     "[HistoryManager.stepBack] Undo applied, event emitted. History saved by internalDoUndo.",
@@ -247,7 +248,7 @@ export const stepForward = async (): Promise<void> => {
     Logger.info("[HistoryManager.stepForward] No redo state available.");
     return;
   }
-  setWaypointsAndFlags(nextHistoryState.points, nextHistoryState.flags);
+  setWaypointsAndFlags(nextHistoryState.waypoints, nextHistoryState.directFlags);
   emitHistoryChange("historyApplied", nextHistoryState);
   Logger.info(
     "[HistoryManager.stepForward] Redo applied, event emitted. History saved by internalDoRedo.",

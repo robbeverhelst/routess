@@ -76,7 +76,6 @@ interface MapConfigurationContentProps {
   setRouteDistance: React.Dispatch<React.SetStateAction<string>>;
   setRouteDuration: React.Dispatch<React.SetStateAction<string>>;
   setHasRoute: React.Dispatch<React.SetStateAction<boolean>>;
-  setIsRouteCoordsReady: React.Dispatch<React.SetStateAction<boolean>>;
   popup: MapPopupInfo | null;
   setPopup: React.Dispatch<React.SetStateAction<MapPopupInfo | null>>;
   onAddDirectWaypoint: () => void;
@@ -121,7 +120,6 @@ const MapWithRoutingContent: React.FC<MapboxMapProps> = ({
   const mapRef = useRef<mapboxgl.Map | null>(null);
 
   // State management
-  const [, setIsRouteCoordsReady] = useState(false);
   const [popup, setPopup] = useState<MapPopupInfo | null>(null);
   const [currentLanguage, setCurrentLanguage] = useState<SupportedLanguage>(
     loadLanguageFromLocalStorage(),
@@ -245,7 +243,6 @@ const MapWithRoutingContent: React.FC<MapboxMapProps> = ({
         setRouteDistance={setRouteDistance}
         setRouteDuration={setRouteDuration}
         setHasRoute={setHasRoute}
-        setIsRouteCoordsReady={setIsRouteCoordsReady}
         popup={popup}
         setPopup={setPopup}
         onAddDirectWaypoint={handleAddDirectWaypoint}
@@ -301,7 +298,6 @@ const MapConfigurationContent: React.FC<MapConfigurationContentProps> = (props) 
       setRouteDistance={props.setRouteDistance}
       setRouteDuration={props.setRouteDuration}
       setHasRoute={props.setHasRoute}
-      setIsRouteCoordsReady={props.setIsRouteCoordsReady}
     >
       <MapConfigurationProvider
         mapRef={props.mapRef}
@@ -323,7 +319,6 @@ const MapConfigurationContent: React.FC<MapConfigurationContentProps> = (props) 
             setRouteDistance={props.setRouteDistance}
             setRouteDuration={props.setRouteDuration}
             setHasRoute={props.setHasRoute}
-            setIsRouteCoordsReady={props.setIsRouteCoordsReady}
             hasRoute={props.hasRoute}
             popup={props.popup}
             setPopup={props.setPopup}

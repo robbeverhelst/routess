@@ -8,13 +8,9 @@ import type { Coordinate } from "@/types/map";
 import type { Map as MapboxMap, MapMouseEvent, MapTouchEvent, MapLayerMouseEvent } from "mapbox-gl";
 // Removed MapboxPopup import as we're using React-based popups via callback
 
-// Functions from routing.ts or other managers will be imported here
-import {
-  getWaypoints,
-  addWaypoint,
-  updateWaypointPositionAndRecalculate,
-  insertWaypointAtLocation, // Added import
-} from "@/features/routing/managers/WaypointManager";
+import { addWaypoint, insertWaypointAtLocation, updateWaypointPosition } from "@/lib/routing";
+// Import routing store for direct access
+import { useRoutingStore } from "@/stores/routingStore";
 import { Logger } from "@/lib/logger";
 
 // Assuming updateDragLinesLayer will be moved to MapLayerManager or similar
@@ -77,7 +73,8 @@ const getPopupInfo = (
     const idx =
       typeof idxRaw === "string" ? parseInt(idxRaw, 10) : typeof idxRaw === "number" ? idxRaw : -1;
 
-    if (isNaN(idx) || idx < 0 || idx >= getWaypoints().length || idx === -1) {
+    const waypoints = useRoutingStore.getState().waypoints;
+    if (isNaN(idx) || idx < 0 || idx >= waypoints.length || idx === -1) {
       Logger.error("[MapInteractionManager] Invalid waypoint index on feature query:", idxRaw);
       return null;
     }
@@ -91,7 +88,8 @@ const getPopupInfo = (
     const routeFeatures = map.queryRenderedFeatures([point.x, point.y], {
       layers: [ROUTE_HOVER_LAYER_ID, ROUTE_LAYER_ID],
     });
-    if (routeFeatures && routeFeatures.length > 0 && getWaypoints().length >= 1) {
+    const waypoints = useRoutingStore.getState().waypoints;
+    if (routeFeatures && routeFeatures.length > 0 && waypoints.length >= 1) {
       return {
         longitude: lngLat.lng,
         latitude: lngLat.lat,
@@ -114,7 +112,7 @@ export const initializeMapInteractions = (
   setRouteDuration: Dispatch<SetStateAction<string>>,
   setHasRoute: Dispatch<SetStateAction<boolean>>,
   setPopup: Dispatch<SetStateAction<PopupInfo | null>>,
-  handleWaypointError: (message: string | null) => void,
+  _handleWaypointError: (message: string | null) => void, // TODO: Add error handling to clean functions
   isMapLockedRef: { current: boolean }, // Accept a ref for isMapLocked
 ): (() => void) => {
   // Return a disposer function
@@ -169,8 +167,6 @@ export const initializeMapInteractions = (
       setRouteDistance,
       setRouteDuration,
       setHasRoute,
-      handleWaypointError,
-      isMapLockedRef.current, // Pass isMapLocked status
     );
   };
 
@@ -240,7 +236,7 @@ export const initializeMapInteractions = (
             ? idxRaw
             : -1;
 
-      if (idx !== -1 && !isNaN(idx) && idx < getWaypoints().length) {
+      if (idx !== -1 && !isNaN(idx) && idx < useRoutingStore.getState().waypoints.length) {
         e.preventDefault(); // Prevent map drag, text selection, etc.
         map.dragPan.disable();
 
@@ -267,8 +263,6 @@ export const initializeMapInteractions = (
         setRouteDistance,
         setRouteDuration,
         setHasRoute,
-        handleWaypointError,
-        isMapLockedRef.current, // Pass isMapLocked status
         { skipRouteCalcAndSnapshot: true }, // Pass option to skip snapshot
       );
 
@@ -277,9 +271,9 @@ export const initializeMapInteractions = (
         isDragging = true;
         draggedWaypointIndex = result.newIndex;
         // For a new point, the visual feedback for drag lines starts from its actual (potentially snapped) position.
-        // insertWaypointAtLocation adds it. getWaypoints() will include it.
+        // insertWaypointAtLocation adds it. useRoutingStore.getState().waypoints will include it.
         // The currentLngLat should be the point to drag from.
-        const newWpCoords = getWaypoints()[result.newIndex];
+        const newWpCoords = useRoutingStore.getState().waypoints[result.newIndex];
         currentLngLat = newWpCoords
           ? ([...newWpCoords] as Coordinate)
           : [e.lngLat.lng, e.lngLat.lat];
@@ -355,7 +349,7 @@ export const initializeMapInteractions = (
             ? idxRaw
             : -1;
 
-      if (idx !== -1 && !isNaN(idx) && idx < getWaypoints().length) {
+      if (idx !== -1 && !isNaN(idx) && idx < useRoutingStore.getState().waypoints.length) {
         startInteractiveTouch();
         isDragging = true;
         draggedWaypointIndex = idx;
@@ -388,8 +382,6 @@ export const initializeMapInteractions = (
         setRouteDistance,
         setRouteDuration,
         setHasRoute,
-        handleWaypointError,
-        isMapLockedRef.current, // Pass isMapLocked status
         { skipRouteCalcAndSnapshot: true }, // Pass option to skip snapshot
       );
 
@@ -457,7 +449,7 @@ export const initializeMapInteractions = (
     mapCanvas.style.cursor = "grabbing";
 
     // Update the visual drag lines
-    const waypoints = getWaypoints();
+    const waypoints = useRoutingStore.getState().waypoints;
     const dragLineFeatures: GeoJSON.Feature<GeoJSON.LineString>[] = [];
     const prevWaypoint = waypoints[draggedWaypointIndex - 1];
     const nextWaypoint = waypoints[draggedWaypointIndex + 1];
@@ -494,7 +486,7 @@ export const initializeMapInteractions = (
     currentLngLat = [eMove.lngLat.lng, eMove.lngLat.lat];
     // mapCanvas.style.cursor = 'grabbing'; // Less relevant for touch
 
-    const waypoints = getWaypoints();
+    const waypoints = useRoutingStore.getState().waypoints;
     const dragLineFeatures: GeoJSON.Feature<GeoJSON.LineString>[] = [];
     const prevWaypoint = waypoints[draggedWaypointIndex - 1];
     const nextWaypoint = waypoints[draggedWaypointIndex + 1];
@@ -547,7 +539,7 @@ export const initializeMapInteractions = (
 
     // Snapshot before updating the waypoint position permanently
     // snapshot(); // REMOVED: WaypointManager now handles its own snapshots correctly
-    await updateWaypointPositionAndRecalculate(
+    await updateWaypointPosition(
       map,
       draggedWaypointIndex,
       currentLngLat,
@@ -555,8 +547,6 @@ export const initializeMapInteractions = (
       setRouteDistance,
       setRouteDuration,
       setHasRoute,
-      handleWaypointError,
-      isMapLockedRef.current, // Pass isMapLocked status
     );
 
     isDragging = false;
@@ -605,7 +595,7 @@ export const initializeMapInteractions = (
     );
 
     // snapshot(); // REMOVED: WaypointManager now handles its own snapshots correctly
-    await updateWaypointPositionAndRecalculate(
+    await updateWaypointPosition(
       map,
       draggedWaypointIndex,
       currentLngLat,
@@ -613,8 +603,6 @@ export const initializeMapInteractions = (
       setRouteDistance,
       setRouteDuration,
       setHasRoute,
-      handleWaypointError,
-      isMapLockedRef.current, // Pass isMapLocked status
     );
 
     isDragging = false;

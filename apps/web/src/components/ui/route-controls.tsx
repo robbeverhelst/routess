@@ -2,6 +2,14 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
+  useWaypoints,
+  useRouteDistance,
+  useHasRoute,
+  useCanUndo,
+  useCanRedo,
+} from "@/stores/routingStore";
+// Note: getWaypoints import removed as debug functionality was cleaned up
+import {
   ArrowLeftCircle,
   ArrowRightCircle,
   Locate,
@@ -137,6 +145,13 @@ export function RouteControls({
   locationAccuracy,
   userLocation,
 }: RouteControlsProps) {
+  // Store access for route controls
+  useWaypoints(); // Ensure store is accessed for reactivity
+  useRouteDistance(); // Ensure store is accessed for reactivity
+  useHasRoute(); // Ensure store is accessed for reactivity
+  useCanUndo(); // Ensure store is accessed for reactivity
+  useCanRedo(); // Ensure store is accessed for reactivity
+
   const TimeOfDayIcon = getIconForTimeOfDay(currentTimeOfDay);
   const { Icon: OrientationIcon, title: orientationTitle } = getOrientationIconAndLabel(
     currentBearing,

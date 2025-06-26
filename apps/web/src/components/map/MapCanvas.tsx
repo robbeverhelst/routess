@@ -38,7 +38,6 @@ interface MapCanvasProps {
   setRouteDistance: Dispatch<SetStateAction<string>>;
   setRouteDuration: Dispatch<SetStateAction<string>>;
   setHasRoute: Dispatch<SetStateAction<boolean>>;
-  setIsRouteCoordsReady: Dispatch<SetStateAction<boolean>>;
   hasRoute: boolean;
 
   // Popup management
@@ -70,7 +69,6 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
   setRouteDistance,
   setRouteDuration,
   setHasRoute,
-  setIsRouteCoordsReady,
   hasRoute,
   popup,
   setPopup,
@@ -121,7 +119,6 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
     currentLightPreset,
     routeId,
     handleRouteInfoError,
-    setIsRouteCoordsReady,
   });
 
   // Determine effective initial view state

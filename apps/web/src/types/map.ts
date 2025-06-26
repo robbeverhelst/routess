@@ -1,8 +1,9 @@
 export type Coordinate = [number, number];
 
 export interface WaypointHistory {
-  points: Coordinate[];
-  flags: boolean[];
+  waypoints: Coordinate[];
+  directFlags: boolean[];
+  timestamp: number;
 }
 
 export interface MapboxMapProps {

@@ -1,7 +1,25 @@
-import { useState, useCallback } from "react";
-import { getWaypoints, getDirectFlags } from "@/features/routing/managers/WaypointManager";
+import { useCallback } from "react";
 import { serializeAndCompress } from "@/lib/shareUtils";
 import { Logger } from "@/lib/logger";
+import {
+  useRouteDistance,
+  useRouteDuration,
+  useHasRoute,
+  useShareNotification,
+  useDisplayedShareUrl,
+  useShowRouteInfoError,
+  useRouteInfoErrorMessage,
+  useWaypoints,
+  useDirectFlags,
+  useSetRouteDistance,
+  useSetRouteDuration,
+  useSetHasRoute,
+  useSetShareNotification,
+  useSetDisplayedShareUrl,
+  useSetShowRouteInfoError,
+  useSetRouteInfoErrorMessage,
+  useClearShareState,
+} from "@/stores/routingStore";
 
 export interface RouteDataState {
   routeDistance: string;
@@ -25,27 +43,73 @@ export interface RouteDataHandlers {
 }
 
 export function useRouteData(): RouteDataState & RouteDataHandlers {
-  const [routeDistance, setRouteDistance] = useState<string>("");
-  const [routeDuration, setRouteDuration] = useState<string>("");
-  const [hasRoute, setHasRoute] = useState<boolean>(false);
-  const [shareNotification, setShareNotification] = useState("");
-  const [displayedShareUrl, setDisplayedShareUrl] = useState<string | null>(null);
-  const [showRouteInfoError, setShowRouteInfoError] = useState(false);
-  const [routeInfoErrorMessage, setRouteInfoErrorMessage] = useState("");
+  // Get state from Zustand store
+  const routeDistance = useRouteDistance();
+  const routeDuration = useRouteDuration();
+  const hasRoute = useHasRoute();
+  const shareNotification = useShareNotification();
+  const displayedShareUrl = useDisplayedShareUrl();
+  const showRouteInfoError = useShowRouteInfoError();
+  const routeInfoErrorMessage = useRouteInfoErrorMessage();
+  const waypoints = useWaypoints();
+  const directFlags = useDirectFlags();
 
-  const handleRouteInfoError = useCallback((message: string) => {
-    setShowRouteInfoError(true);
-    setRouteInfoErrorMessage(message);
-    setTimeout(() => {
-      setShowRouteInfoError(false);
-      setRouteInfoErrorMessage("");
-    }, 5000);
-  }, []);
+  // Get actions from Zustand store
+  const zustandSetRouteDistance = useSetRouteDistance();
+  const zustandSetRouteDuration = useSetRouteDuration();
+  const zustandSetHasRoute = useSetHasRoute();
+  const zustandSetShareNotification = useSetShareNotification();
+
+  // Create React-compatible state setters
+  const setRouteDistance = useCallback(
+    (value: React.SetStateAction<string>) => {
+      const newValue = typeof value === "function" ? value(routeDistance) : value;
+      zustandSetRouteDistance(newValue);
+    },
+    [zustandSetRouteDistance, routeDistance],
+  );
+
+  const setRouteDuration = useCallback(
+    (value: React.SetStateAction<string>) => {
+      const newValue = typeof value === "function" ? value(routeDuration) : value;
+      zustandSetRouteDuration(newValue);
+    },
+    [zustandSetRouteDuration, routeDuration],
+  );
+
+  const setHasRoute = useCallback(
+    (value: React.SetStateAction<boolean>) => {
+      const newValue = typeof value === "function" ? value(hasRoute) : value;
+      zustandSetHasRoute(newValue);
+    },
+    [zustandSetHasRoute, hasRoute],
+  );
+
+  const setShareNotification = useCallback(
+    (value: React.SetStateAction<string>) => {
+      const newValue = typeof value === "function" ? value(shareNotification) : value;
+      zustandSetShareNotification(newValue);
+    },
+    [zustandSetShareNotification, shareNotification],
+  );
+  const setDisplayedShareUrl = useSetDisplayedShareUrl();
+  const setShowRouteInfoError = useSetShowRouteInfoError();
+  const setRouteInfoErrorMessage = useSetRouteInfoErrorMessage();
+  const clearShareState = useClearShareState();
+
+  const handleRouteInfoError = useCallback(
+    (message: string) => {
+      setShowRouteInfoError(true);
+      setRouteInfoErrorMessage(message);
+      setTimeout(() => {
+        setShowRouteInfoError(false);
+        setRouteInfoErrorMessage("");
+      }, 5000);
+    },
+    [setShowRouteInfoError, setRouteInfoErrorMessage],
+  );
 
   const handleShareRoute = useCallback(() => {
-    const waypoints = getWaypoints();
-    const directFlags = getDirectFlags();
-
     if (waypoints.length === 0) {
       handleRouteInfoError("Cannot share an empty route.");
       return;
@@ -70,7 +134,7 @@ export function useRouteData(): RouteDataState & RouteDataHandlers {
       handleRouteInfoError("Could not generate shareable link.");
       setDisplayedShareUrl(null);
     }
-  }, [handleRouteInfoError]);
+  }, [waypoints, directFlags, handleRouteInfoError, setShareNotification, setDisplayedShareUrl]);
 
   const handleCopySharedUrl = useCallback(
     (urlToCopy: string) => {
@@ -85,15 +149,12 @@ export function useRouteData(): RouteDataState & RouteDataHandlers {
           handleRouteInfoError("Failed to copy. Please try again.");
         });
     },
-    [handleRouteInfoError],
+    [handleRouteInfoError, setShareNotification],
   );
 
-  const clearShareState = useCallback(() => {
-    setDisplayedShareUrl(null);
-    setShareNotification("");
-    setShowRouteInfoError(false);
-    setRouteInfoErrorMessage("");
-  }, []);
+  const handleClearShareState = useCallback(() => {
+    clearShareState();
+  }, [clearShareState]);
 
   return {
     routeDistance,
@@ -109,7 +170,7 @@ export function useRouteData(): RouteDataState & RouteDataHandlers {
     handleShareRoute,
     handleCopySharedUrl,
     handleRouteInfoError,
-    clearShareState,
+    clearShareState: handleClearShareState,
     setShareNotification,
   };
 }

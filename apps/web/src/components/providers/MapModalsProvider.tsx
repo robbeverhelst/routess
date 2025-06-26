@@ -4,15 +4,18 @@ import { RouteGeneratorModal } from "@/components/modals/RouteGeneratorModal";
 import { SaveRouteModal } from "@/components/modals/SaveRouteModal";
 import { RouteLibraryModal } from "@/components/modals/RouteLibraryModal";
 import { LoginModal } from "@/components/auth/LoginModal";
-// import { getWaypoints, getDirectFlags } from "@/features/routing/managers/WaypointManager"; // Kept for future use
 import { googleAuth } from "@/lib/google-auth";
 import { apiService, type ApiRoute } from "@/lib/api";
-import { getWaypoints } from "@/features/routing/managers/WaypointManager";
 import type { SupportedLanguage } from "@/lib/i18n";
-import { setRouteData } from "@/lib/routing";
-import type { Coordinate } from "@/types/map";
 import type { Map as MapboxMap } from "mapbox-gl";
 import { Logger } from "@/lib/logger";
+import { useRoutingStore } from "@/stores/routingStore";
+import type { Coordinate } from "@/types/map";
+import {
+  updateWaypointsLayer,
+  updateRouteLayer,
+  clearRouteLayer,
+} from "@/features/routing/managers/MapLayerManager";
 
 interface MapModalsContextType {
   // Route Generator Modal
@@ -65,7 +68,6 @@ interface MapModalsProviderProps {
   setRouteDistance: React.Dispatch<React.SetStateAction<string>>;
   setRouteDuration: React.Dispatch<React.SetStateAction<string>>;
   setHasRoute: React.Dispatch<React.SetStateAction<boolean>>;
-  setIsRouteCoordsReady: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 export const MapModalsProvider: React.FC<MapModalsProviderProps> = ({
@@ -79,8 +81,9 @@ export const MapModalsProvider: React.FC<MapModalsProviderProps> = ({
   setRouteDistance,
   setRouteDuration,
   setHasRoute,
-  setIsRouteCoordsReady,
 }) => {
+  // Get map lock state from Zustand store
+  const isMapLocked = useRoutingStore((state) => state.isMapLocked);
   // Modal states
   const [isRouteGeneratorModalOpen, setIsRouteGeneratorModalOpen] = useState(false);
   const [isGeneratingRoute, setIsGeneratingRoute] = useState(false);
@@ -164,29 +167,96 @@ export const MapModalsProvider: React.FC<MapModalsProviderProps> = ({
       }
 
       try {
-        // Convert API waypoints to internal format
+        setIsRouteLibraryModalOpen(false);
+
+        // Convert API waypoints to routing system format
         const waypoints: Coordinate[] = route.waypoints.map((wp) => [wp.lng, wp.lat]);
         const directFlags: boolean[] = route.waypoints.map((wp) => wp.type === "direct");
 
-        // Load the route data into the map
-        await setRouteData(
-          mapRef.current,
-          mapboxToken,
-          waypoints,
-          directFlags,
-          setRouteDistance,
-          setRouteDuration,
-          setHasRoute,
-          setIsRouteCoordsReady,
-        );
+        Logger.info("[MapModalsProvider] Converting waypoints:", waypoints.length);
 
-        setIsRouteLibraryModalOpen(false);
-        Logger.info(`[MapModalsProvider] Route "${route.name}" loaded successfully`);
+        // Clear any existing route first
+        useRoutingStore.getState().clearWaypoints();
+        clearRouteLayer(mapRef.current);
+
+        // Save snapshot before loading new route
+        useRoutingStore.getState().saveSnapshot();
+
+        // Load waypoints into the routing store
+        useRoutingStore.getState().setWaypoints(waypoints, directFlags);
+
+        // Update waypoints visualization on map
+        updateWaypointsLayer(mapRef.current, waypoints, isMapLocked);
+
+        // If we have at least 2 waypoints, calculate and display the route
+        if (waypoints.length >= 2 && mapboxToken) {
+          try {
+            // Use the same API call logic as in routing.ts
+            const waypointsString = waypoints.map((point) => `${point[0]},${point[1]}`).join(";");
+            const radiusesString = waypoints.map(() => "150").join(";");
+
+            const queryUrl =
+              `https://api.mapbox.com/directions/v5/mapbox/walking/${waypointsString}?` +
+              `steps=true&geometries=geojson&overview=full&continue_straight=true&` +
+              `access_token=${mapboxToken}&radiuses=${radiusesString}`;
+
+            const response = await fetch(queryUrl, { method: "GET" });
+            if (response.ok) {
+              const json = await response.json();
+              if (json?.routes?.[0]?.geometry) {
+                const data = json.routes[0];
+                const routeCoords = data.geometry.coordinates;
+                const totalDistance = data.distance / 1000; // Convert to km
+                const duration = Math.round(data.duration / 60); // Convert to minutes
+
+                // Update route visualization
+                updateRouteLayer(mapRef.current, routeCoords);
+
+                // Update UI state
+                setRouteDistance(`${totalDistance.toFixed(2)} km`);
+                setRouteDuration(`${duration} min`);
+                setHasRoute(true);
+
+                // Update store state
+                useRoutingStore.getState().setRouteDistance(`${totalDistance.toFixed(2)} km`);
+                useRoutingStore.getState().setRouteDuration(`${duration} min`);
+                useRoutingStore.getState().setHasRoute(true);
+
+                // Snap waypoints if API provided them
+                if (json.waypoints && json.waypoints.length > 0) {
+                  const snappedWaypoints = json.waypoints.map(
+                    (wp: any) => [wp.location[0], wp.location[1]] as Coordinate,
+                  );
+                  useRoutingStore.getState().updateWaypoints(snappedWaypoints);
+                  updateWaypointsLayer(mapRef.current, snappedWaypoints, isMapLocked);
+                }
+
+                Logger.info("[MapModalsProvider] Route loaded successfully");
+              }
+            }
+          } catch (routeError) {
+            Logger.warn(
+              "[MapModalsProvider] Route calculation failed, showing waypoints only:",
+              routeError,
+            );
+            // Even if route calculation fails, we still have the waypoints
+            setHasRoute(false);
+            setRouteDistance("");
+            setRouteDuration("");
+          }
+        } else {
+          // Just waypoints, no route calculation needed
+          setHasRoute(waypoints.length >= 2);
+          setRouteDistance("");
+          setRouteDuration("");
+        }
+
+        Logger.info("[MapModalsProvider] Route loaded onto map");
       } catch (error) {
         Logger.error("[MapModalsProvider] Failed to load route:", error);
       }
     },
-    [mapRef, mapboxToken, setRouteDistance, setRouteDuration, setHasRoute, setIsRouteCoordsReady],
+    [mapRef, mapboxToken, setRouteDistance, setRouteDuration, setHasRoute],
   );
 
   const contextValue: MapModalsContextType = {
@@ -238,7 +308,6 @@ export const MapModalsProvider: React.FC<MapModalsProviderProps> = ({
       <SaveRouteModal
         isOpen={isSaveRouteModalOpen}
         onClose={closeSaveRouteModal}
-        waypoints={getWaypoints()}
         currentLanguage={currentLanguage}
       />
 

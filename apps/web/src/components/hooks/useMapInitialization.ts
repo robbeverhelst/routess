@@ -1,13 +1,13 @@
 import { useCallback, useRef, useEffect } from "react";
 import type { Map as MapboxMap } from "mapbox-gl";
 import type { Dispatch, SetStateAction } from "react";
-import { setupRouting, setRouteData } from "@/lib/routing";
+import { setupRouting } from "@/lib/routing";
 import { decompressAndParse } from "@/lib/shareUtils";
 import { Logger } from "@/lib/logger";
-// import { zoomToRoute } from "@/features/routing/utils/RoutingUtils"; // Kept for future use
-// import { getCurrentRoutePath } from "@/features/routing/services/RouteCalculationService"; // Kept for future use
-// import { getWaypoints } from "@/features/routing/managers/WaypointManager"; // Kept for future use
 import type { PopupInfo as MIMPopupInfo } from "@/features/routing/managers/MapInteractionManager";
+import { initializeMapInteractions } from "@/features/routing/managers/MapInteractionManager";
+import { initializeSourcesAndLayers } from "@/features/routing/managers/MapLayerManager";
+import { useRoutingStore } from "@/stores/routingStore";
 
 interface UseMapInitializationProps {
   mapboxToken: string;
@@ -20,7 +20,6 @@ interface UseMapInitializationProps {
   currentLightPreset: string;
   routeId?: string;
   handleRouteInfoError: (message: string) => void;
-  setIsRouteCoordsReady: Dispatch<SetStateAction<boolean>>;
 }
 
 export const useMapInitialization = ({
@@ -34,7 +33,6 @@ export const useMapInitialization = ({
   currentLightPreset,
   routeId,
   handleRouteInfoError,
-  setIsRouteCoordsReady,
 }: UseMapInitializationProps) => {
   const routingDisposerRef = useRef<(() => void) | null>(null);
   const routeInitTimeoutRef = useRef<number | null>(null);
@@ -45,7 +43,13 @@ export const useMapInitialization = ({
       Logger.info("[useMapInitialization] Map loaded, setting up routing");
       const map = event.target;
 
-      const disposer = await setupRouting(
+      setupRouting(map, isMapLockedRef, mapboxToken);
+
+      // Initialize map sources and layers first
+      initializeSourcesAndLayers(map);
+
+      // Initialize map interactions (click handlers, etc.)
+      const disposer = initializeMapInteractions(
         map,
         mapboxToken,
         setRouteDistance,
@@ -55,12 +59,45 @@ export const useMapInitialization = ({
         handleWaypointError,
         isMapLockedRef,
       );
+
+      // Store the disposer for cleanup
       routingDisposerRef.current = disposer;
 
       // Apply light preset immediately
       map.setConfigProperty("basemap", "lightPreset", currentLightPreset);
 
       Logger.info("[useMapInitialization] Routing setup complete");
+
+      // Restore route from Zustand store if it exists (after page refresh)
+      const currentState = useRoutingStore.getState();
+
+      if (currentState.waypoints.length > 0) {
+        // Small delay to ensure map layers are fully initialized
+        setTimeout(() => {
+          // Restore waypoints and route visualization
+          import("@/features/routing/managers/MapLayerManager").then(
+            ({ updateWaypointsLayer, updateRouteLayer }) => {
+              updateWaypointsLayer(map, currentState.waypoints, currentState.isMapLocked);
+
+              if (currentState.routePath.length > 0) {
+                updateRouteLayer(map, currentState.routePath);
+
+                // Update the UI state from Zustand store
+                setRouteDistance(currentState.routeDistance);
+                setRouteDuration(currentState.routeDuration);
+                setHasRoute(currentState.hasRoute);
+
+                // Also update the RouteCalculationService module state
+                import("@/features/routing/services/RouteCalculationService").then(
+                  ({ setCurrentRoutePath }) => {
+                    setCurrentRoutePath(currentState.routePath);
+                  },
+                );
+              }
+            },
+          );
+        }, 100); // 100ms delay to ensure layers are ready
+      }
 
       // Check for shared route data in URL
       const urlParams = new URLSearchParams(window.location.search);
@@ -72,17 +109,7 @@ export const useMapInitialization = ({
         try {
           const loadedData = decompressAndParse(routeId);
           if (loadedData && map && mapboxToken) {
-            await setRouteData(
-              map,
-              mapboxToken,
-              loadedData.w, // waypoints
-              loadedData.f, // directFlags
-              setRouteDistance,
-              setRouteDuration,
-              setHasRoute,
-              setIsRouteCoordsReady,
-            );
-            Logger.info("[useMapInitialization] Route data loaded from routeId successfully.");
+            Logger.info("[useMapInitialization] Route loading from routeId not yet implemented.");
           }
         } catch (err) {
           Logger.error("[useMapInitialization] Could not parse routeId:", err);
@@ -104,17 +131,7 @@ export const useMapInitialization = ({
 
         if (loadedData && map && mapboxToken) {
           try {
-            await setRouteData(
-              map,
-              mapboxToken,
-              loadedData.w, // waypoints
-              loadedData.f, // directFlags
-              setRouteDistance,
-              setRouteDuration,
-              setHasRoute,
-              setIsRouteCoordsReady,
-            );
-            Logger.info("[useMapInitialization] Route data loaded from URL successfully.");
+            Logger.info("[useMapInitialization] Route loading from URL not yet implemented.");
             // Clean the URL
             window.history.replaceState({}, document.title, window.location.pathname);
           } catch (err) {
@@ -137,7 +154,6 @@ export const useMapInitialization = ({
       currentLightPreset,
       routeId,
       handleRouteInfoError,
-      setIsRouteCoordsReady,
     ],
   );
 

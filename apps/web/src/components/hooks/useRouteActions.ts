@@ -1,23 +1,13 @@
 import { useCallback } from "react";
 import type { Map } from "mapbox-gl";
-import {
-  resetRouting,
-  stepBack,
-  stepForward,
-  reverseRoute,
-  insertWaypointAtLocation,
-  addWaypoint,
-  removeWaypoint,
-  generateAndDisplayRouteAtoB,
-  generateAndDisplayRouteLoop,
-} from "@/lib/routing";
+import { addWaypoint, removeWaypoint, resetRouting, reverseRoute, undo, redo } from "@/lib/routing";
+import { insertWaypointAtLocation } from "@/lib/routing";
 import { zoomToRoute } from "@/features/routing/utils/RoutingUtils";
 import { serializeAndCompress } from "@/lib/shareUtils";
-import { getWaypoints, getDirectFlags } from "@/features/routing/managers/WaypointManager";
+import { useRoutingStore } from "@/stores/routingStore";
 import { getCurrentRoutePath } from "@/features/routing/services/RouteCalculationService";
 import { Logger } from "@/lib/logger";
 import type { PopupInfo as MapPopupInfo } from "@/features/routing/managers/MapInteractionManager";
-import type { RouteGenerationParams } from "@/components/modals/RouteGeneratorModal";
 
 interface UseRouteActionsProps {
   mapRef: React.RefObject<Map | null>;
@@ -51,13 +41,13 @@ export const useRouteActions = ({
 }: UseRouteActionsProps) => {
   // Undo handler
   const handleUndo = useCallback(() => {
-    stepBack();
-  }, []);
+    undo(setRouteDistance, setRouteDuration, setHasRoute);
+  }, [setRouteDistance, setRouteDuration, setHasRoute]);
 
   // Redo handler
   const handleRedo = useCallback(() => {
-    stepForward();
-  }, []);
+    redo(setRouteDistance, setRouteDuration, setHasRoute);
+  }, [setRouteDistance, setRouteDuration, setHasRoute]);
 
   // Reverse route handler
   const handleReverseRoute = useCallback(async () => {
@@ -68,15 +58,20 @@ export const useRouteActions = ({
       setRouteDistance,
       setRouteDuration,
       setHasRoute,
-      true,
     );
   }, [mapboxToken, setRouteDistance, setRouteDuration, setHasRoute]);
 
   // Reset handler
-  const handleReset = useCallback(() => {
-    if (!mapRef.current) return;
-    resetRouting(mapRef.current, setRouteDistance, setRouteDuration, setHasRoute);
-  }, [setRouteDistance, setRouteDuration, setHasRoute]);
+  const handleReset = useCallback(async () => {
+    if (!mapRef.current || !mapboxToken) return;
+    await resetRouting(
+      mapRef.current,
+      mapboxToken,
+      setRouteDistance,
+      setRouteDuration,
+      setHasRoute,
+    );
+  }, [mapboxToken, setRouteDistance, setRouteDuration, setHasRoute]);
 
   // Select location handler - moves camera to location instead of adding waypoint
   const handleSelectLocation = useCallback(
@@ -96,51 +91,20 @@ export const useRouteActions = ({
   );
 
   // Route generation handlers
-  const handleGenerateAtoB = useCallback(
-    async (params: RouteGenerationParams) => {
-      if (!mapRef.current || !mapboxToken || !params.startPoint || !params.endPoint) return;
-      await generateAndDisplayRouteAtoB(
-        mapRef.current,
-        mapboxToken,
-        [params.startPoint.lng, params.startPoint.lat],
-        [params.endPoint.lng, params.endPoint.lat],
-        params.surfaceType,
-        setRouteDistance,
-        setRouteDuration,
-        setHasRoute,
-        () => {}, // setIsRouteCoordsReady placeholder
-        handleWaypointError,
-      );
-    },
-    [mapboxToken, setRouteDistance, setRouteDuration, setHasRoute, handleWaypointError],
-  );
+  const handleGenerateAtoB = useCallback(async () => {
+    handleWaypointError("Route generation functionality is not yet implemented.");
+  }, [handleWaypointError]);
 
-  const handleGenerateLoop = useCallback(
-    async (params: RouteGenerationParams) => {
-      if (!mapRef.current || !mapboxToken || !params.startPoint || !params.loopLengthKm) return;
-      await generateAndDisplayRouteLoop(
-        mapRef.current,
-        mapboxToken,
-        params.startPoint,
-        params.loopLengthKm,
-        params.loopDirection || "ANY",
-        params.surfaceType,
-        setRouteDistance,
-        setRouteDuration,
-        setHasRoute,
-        () => {}, // setIsRouteCoordsReady placeholder
-        handleWaypointError,
-      );
-    },
-    [mapboxToken, setRouteDistance, setRouteDuration, setHasRoute, handleWaypointError],
-  );
+  const handleGenerateLoop = useCallback(async () => {
+    handleWaypointError("Route generation functionality is not yet implemented.");
+  }, [handleWaypointError]);
 
   // Add direct waypoint handler
-  const handleAddDirectWaypoint = useCallback(() => {
+  const handleAddDirectWaypoint = useCallback(async () => {
     if (!mapRef.current || !popup || popup.type !== "direct" || !mapboxToken) return;
 
     Logger.info("[useRouteActions] Adding direct waypoint at:", [popup.longitude, popup.latitude]);
-    addWaypoint(
+    await addWaypoint(
       mapRef.current,
       [popup.longitude, popup.latitude],
       true,
@@ -148,8 +112,6 @@ export const useRouteActions = ({
       setRouteDistance,
       setRouteDuration,
       setHasRoute,
-      handleWaypointError,
-      true,
     );
 
     setPopup(null);
@@ -164,7 +126,7 @@ export const useRouteActions = ({
   ]);
 
   // Remove waypoint handler
-  const handleRemoveWaypoint = useCallback(() => {
+  const handleRemoveWaypoint = useCallback(async () => {
     if (
       !mapRef.current ||
       !popup ||
@@ -175,15 +137,13 @@ export const useRouteActions = ({
       return;
 
     Logger.info("[useRouteActions] Removing waypoint at index:", popup.waypointIndex);
-    removeWaypoint(
+    await removeWaypoint(
       mapRef.current,
       popup.waypointIndex,
       mapboxToken,
       setRouteDistance,
       setRouteDuration,
       setHasRoute,
-      handleWaypointError,
-      true,
     );
 
     setPopup(null);
@@ -212,8 +172,6 @@ export const useRouteActions = ({
       setRouteDistance,
       setRouteDuration,
       setHasRoute,
-      handleWaypointError,
-      true,
     );
 
     setPopup(null);
@@ -241,8 +199,7 @@ export const useRouteActions = ({
 
   // Share link handler
   const handleCopyShareLinkToClipboard = useCallback(() => {
-    const waypoints = getWaypoints();
-    const directFlags = getDirectFlags();
+    const { waypoints, directFlags } = useRoutingStore.getState();
 
     if (waypoints.length === 0) {
       handleRouteInfoError("Cannot share an empty route.");

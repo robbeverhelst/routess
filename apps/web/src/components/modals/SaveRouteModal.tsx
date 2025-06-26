@@ -15,13 +15,11 @@ import {
 import { Save, Loader2 } from "lucide-react";
 import { type Waypoint } from "@/lib/api";
 import { t, type SupportedLanguage } from "@/lib/i18n";
-import { getDirectFlags } from "@/features/routing/managers/WaypointManager";
-import type { Coordinate } from "@/types/map";
+import { useRoutingStore } from "@/stores/routingStore";
 
 interface SaveRouteModalProps {
   isOpen: boolean;
   onClose: () => void;
-  waypoints: Coordinate[];
   distance?: number;
   elevation?: number;
   currentLanguage: SupportedLanguage;
@@ -31,7 +29,6 @@ interface SaveRouteModalProps {
 export function SaveRouteModal({
   isOpen,
   onClose,
-  waypoints,
   distance,
   elevation,
   currentLanguage,
@@ -41,6 +38,10 @@ export function SaveRouteModal({
   const [description, setDescription] = useState("");
   const [error, setError] = useState<string | null>(null);
 
+  // Get waypoints and directFlags from Zustand store
+  const waypoints = useRoutingStore((state) => state.waypoints);
+  const directFlags = useRoutingStore((state) => state.directFlags);
+
   const saveRouteMutation = useSaveRoute();
 
   const handleSave = () => {
@@ -49,10 +50,14 @@ export function SaveRouteModal({
       return;
     }
 
+    if (waypoints.length === 0) {
+      setError("No waypoints to save. Please create a route first.");
+      return;
+    }
+
     setError(null);
 
     // Transform Coordinate[] to Waypoint[] for API
-    const directFlags = getDirectFlags();
     const transformedWaypoints: Waypoint[] = waypoints.map((coord, index) => ({
       lng: coord[0],
       lat: coord[1],

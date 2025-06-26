@@ -1,7 +1,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import type { Coordinate } from "@/types/map";
 import type { Map as MapboxMap } from "mapbox-gl";
-import { getWaypoints, getDirectFlags } from "@/features/routing/managers/WaypointManager";
+import { useRoutingStore } from "@/stores/routingStore";
 import { haversine } from "@/features/routing/utils/RoutingUtils";
 import { Logger } from "@/lib/logger";
 
@@ -15,19 +15,31 @@ import {
 // Module-level state for the detailed path, similar to how it was in routing.ts
 let currentRoutePathCoordinates: Coordinate[] = [];
 
+// Helper function to update both module state and Zustand store
+// This ensures route path coordinates stay synchronized between both systems
+const setCurrentRoutePathCoordinates = (newCoordinates: Coordinate[]) => {
+  currentRoutePathCoordinates = newCoordinates;
+  // Keep Zustand store in sync for persistence across page refreshes
+  useRoutingStore.getState().setRoutePath(newCoordinates);
+};
+
 const reinitializeRouteCalcState = () => {
-  currentRoutePathCoordinates = [];
-  Logger.info("[RouteCalculationService.ts] Module state explicitly re-initialized.");
+  // On initialization, sync with Zustand store if it has data
+  const storedRoutePath = useRoutingStore.getState().routePath;
+  if (storedRoutePath && storedRoutePath.length > 0) {
+    currentRoutePathCoordinates = storedRoutePath;
+  } else {
+    setCurrentRoutePathCoordinates([]);
+  }
 };
 
 reinitializeRouteCalcState(); // Initial call
 
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {
-    Logger.info("[RouteCalculationService.ts] HMR disposing old instance.");
+    // HMR cleanup
   });
   import.meta.hot.accept(() => {
-    Logger.info("[RouteCalculationService.ts] HMR accept: Forcing state re-initialization.");
     reinitializeRouteCalcState();
   });
 }
@@ -103,8 +115,8 @@ async function buildMixedRoute(
   snappedWaypoints: Coordinate[] | null;
   snappedDirectFlags: boolean[] | null;
 }> {
-  const waypoints = getWaypoints();
-  const directFlags = getDirectFlags();
+  const waypoints = useRoutingStore.getState().waypoints;
+  const directFlags = useRoutingStore.getState().directFlags;
 
   const coordsAccum: Coordinate[] = [];
   let totalDist = 0;
@@ -273,15 +285,15 @@ export const getRoute = async (
 
   clearKilometerMarkers(map); // This now uses MapLayerManager
 
-  const waypoints = getWaypoints();
-  const directFlags = getDirectFlags();
+  const waypoints = useRoutingStore.getState().waypoints;
+  const directFlags = useRoutingStore.getState().directFlags;
   let waypointsUpdatedBySnapping = false;
   let finalSnappedWaypoints: Coordinate[] | null = null;
   let finalSnappedDirectFlags: boolean[] | null = null;
 
   if (waypoints.length < 2) {
     updateRouteLayer(map, []); // Clear existing route using MapLayerManager
-    currentRoutePathCoordinates = [];
+    setCurrentRoutePathCoordinates([]);
     setRouteDistance("");
     setRouteDuration("");
     setHasRoute(false);
@@ -313,19 +325,20 @@ export const getRoute = async (
 
   if (allSegmentsDirect) {
     Logger.info("[RCS/getRoute] All segments are direct. Calculating straight lines.");
-    currentRoutePathCoordinates = [];
+    const routeCoordinates: Coordinate[] = [];
     let cumulativeDistance = 0;
     for (let i = 0; i < waypoints.length - 1; i++) {
-      if (i === 0) currentRoutePathCoordinates.push(waypoints[i]);
-      currentRoutePathCoordinates.push(waypoints[i + 1]);
+      if (i === 0) routeCoordinates.push(waypoints[i]);
+      routeCoordinates.push(waypoints[i + 1]);
       cumulativeDistance += haversine(waypoints[i], waypoints[i + 1]);
     }
-    updateRouteLayer(map, currentRoutePathCoordinates);
+    setCurrentRoutePathCoordinates(routeCoordinates);
+    updateRouteLayer(map, routeCoordinates);
     const duration = Math.round((cumulativeDistance / 5) * 60); // Assume 5 km/h average
     setRouteDistance(`${cumulativeDistance.toFixed(2)} km`);
     setRouteDuration(`${duration} min`);
     setHasRoute(true);
-    addKilometerMarkers(map, currentRoutePathCoordinates);
+    addKilometerMarkers(map, routeCoordinates);
     return { success: true, waypointsSnapped: false };
   }
 
@@ -339,7 +352,7 @@ export const getRoute = async (
       snappedDirectFlags: mixedSnappedDirectFlags,
     } = await buildMixedRoute(accessToken);
     updateRouteLayer(map, coordsAccum);
-    currentRoutePathCoordinates = coordsAccum;
+    setCurrentRoutePathCoordinates(coordsAccum);
 
     if (waypointsUpdated && snappedWaypoints && mixedSnappedDirectFlags) {
       waypointsUpdatedBySnapping = true;
@@ -393,19 +406,19 @@ export const getRoute = async (
         Logger.error("[RCS/getRoute] Invalid API response or no route geometry. Response:", json);
         setHasRoute(false);
         updateRouteLayer(map, []); // Clear route on map
-        currentRoutePathCoordinates = [];
+        setCurrentRoutePathCoordinates([]);
         return { success: false, waypointsSnapped: false };
       }
       const data = json.routes[0];
-      currentRoutePathCoordinates = data.geometry.coordinates;
-      updateRouteLayer(map, currentRoutePathCoordinates); // Use MapLayerManager
+      setCurrentRoutePathCoordinates(data.geometry.coordinates);
+      updateRouteLayer(map, data.geometry.coordinates); // Use MapLayerManager
 
       if (json.waypoints && Array.isArray(json.waypoints)) {
         const apiSnappedWaypoints = json.waypoints.map(
           (wp: { location: Coordinate }) => wp.location,
         );
         if (apiSnappedWaypoints.length === currentWaypointsForAPI.length) {
-          const currentGlobalWaypoints = getWaypoints(); // Fetch fresh global waypoints
+          const currentGlobalWaypoints = useRoutingStore.getState().waypoints; // Fetch fresh global waypoints
           const isContextStillValid =
             currentGlobalWaypoints.length === currentWaypointsForAPI.length &&
             currentGlobalWaypoints.every(
@@ -495,21 +508,22 @@ export const getRoute = async (
 
       // Offline fallback: Convert all segments to direct routes
       Logger.info("[RCS/getRoute] Converting to direct routes for offline use");
-      currentRoutePathCoordinates = [];
+      const offlineRouteCoordinates: Coordinate[] = [];
       let cumulativeDistance = 0;
 
       for (let i = 0; i < waypoints.length - 1; i++) {
-        if (i === 0) currentRoutePathCoordinates.push(waypoints[i]);
-        currentRoutePathCoordinates.push(waypoints[i + 1]);
+        if (i === 0) offlineRouteCoordinates.push(waypoints[i]);
+        offlineRouteCoordinates.push(waypoints[i + 1]);
         cumulativeDistance += haversine(waypoints[i], waypoints[i + 1]);
       }
 
-      updateRouteLayer(map, currentRoutePathCoordinates);
+      setCurrentRoutePathCoordinates(offlineRouteCoordinates);
+      updateRouteLayer(map, offlineRouteCoordinates);
       const duration = Math.round((cumulativeDistance / 5) * 60); // Assume 5 km/h average
       setRouteDistance(`${cumulativeDistance.toFixed(2)} km (offline)`);
       setRouteDuration(`${duration} min (estimated)`);
       setHasRoute(true);
-      addKilometerMarkers(map, currentRoutePathCoordinates);
+      addKilometerMarkers(map, offlineRouteCoordinates);
 
       return { success: true, waypointsSnapped: false, error: "Using offline direct routes" };
     }
@@ -523,7 +537,7 @@ export const getRoute = async (
     JSON.stringify(directFlags),
   );
   updateRouteLayer(map, []);
-  currentRoutePathCoordinates = [];
+  setCurrentRoutePathCoordinates([]);
   setRouteDistance("");
   setRouteDuration("");
   setHasRoute(false);
@@ -537,13 +551,13 @@ export const getCurrentRoutePath = (): Coordinate[] => {
 
 // Function to clear the current route path (e.g. when route is cleared in routing.ts)
 export const clearCurrentRoutePath = (): void => {
-  currentRoutePathCoordinates = [];
+  setCurrentRoutePathCoordinates([]);
   Logger.info("[RouteCalculationService] Cleared currentRoutePathCoordinates.");
 };
 
 // Function to set the current route path directly (e.g. for GPX import)
 export const setCurrentRoutePath = (coordinates: Coordinate[]): void => {
-  currentRoutePathCoordinates = [...coordinates];
+  setCurrentRoutePathCoordinates([...coordinates]);
   Logger.info(
     `[RouteCalculationService] Set currentRoutePathCoordinates with ${coordinates.length} coordinates.`,
   );
@@ -606,7 +620,7 @@ export async function calculateAtoBRoute(
       Logger.info(
         `[RCS/calculateAtoBRoute] Route found: Distance=${(distance / 1000).toFixed(2)}km, Duration=${(duration / 60).toFixed(1)}min`,
       );
-      currentRoutePathCoordinates = [...geometry]; // Update module-level path
+      setCurrentRoutePathCoordinates([...geometry]); // Update module-level path
 
       // If this is a fresh online route (not from cache), precache it for offline use
       if (!isOfflineRoute && "serviceWorker" in navigator) {
@@ -657,7 +671,7 @@ export async function calculateAtoBRoute(
     Logger.info(
       `[RCS/calculateAtoBRoute] Using direct route: Distance=${(directDistance / 1000).toFixed(2)}km, Duration=${(directDuration / 60).toFixed(1)}min`,
     );
-    currentRoutePathCoordinates = [...directGeometry];
+    setCurrentRoutePathCoordinates([...directGeometry]);
 
     return {
       success: true,
