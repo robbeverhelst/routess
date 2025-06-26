@@ -15,7 +15,6 @@ import { useWaypointError } from "@/components/hooks/useWaypointError";
 import { useLocalStorageInit } from "@/components/hooks/useLocalStorageInit";
 import { useMapViewPersistence } from "@/components/hooks/useMapViewPersistence";
 
-// Import our new organized components and providers
 import { MapModalsProvider } from "@/components/providers/MapModalsProvider";
 import { UserLocationProvider, useUserLocation } from "@/components/providers/UserLocationProvider";
 import { MapConfigurationProvider } from "@/components/providers/MapConfigurationProvider";

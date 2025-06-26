@@ -27,7 +27,6 @@ export interface RouteState {
   canUndo: boolean;
   canRedo: boolean;
 
-  // Share and error state (from useRouteData)
   shareNotification: string;
   displayedShareUrl: string | null;
   showRouteInfoError: boolean;
@@ -61,7 +60,6 @@ export interface RouteActions {
   redo: () => void;
   clearHistory: () => void;
 
-  // Share and error actions (from useRouteData)
   setShareNotification: (message: string) => void;
   setDisplayedShareUrl: (url: string | null) => void;
   setShowRouteInfoError: (show: boolean) => void;

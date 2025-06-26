@@ -1,14 +1,10 @@
-// GPXService.ts - Handles GPX data parsing and generation.
-
 import type { Coordinate } from "@/types/map";
-// Import checkNearRoad from RoutingUtils
 import { checkNearRoad } from "@/features/routing/utils/RoutingUtils";
 import { Logger } from "@/lib/logger";
+import { haversineDistance } from "@/lib/utils/geospatial";
 
-// Import RouteCalculationService to set track points directly
 import { setCurrentRoutePath } from "@/features/routing/services/RouteCalculationService";
 
-// Helper function to calculate bearing between two coordinates
 function calculateBearing(coord1: Coordinate, coord2: Coordinate): number {
   const lat1 = (coord1[1] * Math.PI) / 180;
   const lat2 = (coord2[1] * Math.PI) / 180;
@@ -21,23 +17,10 @@ function calculateBearing(coord1: Coordinate, coord2: Coordinate): number {
   return (bearing + 360) % 360; // Normalize to 0-360
 }
 
-// Helper function to calculate distance between coordinates (Haversine formula)
 function calculateDistance(coord1: Coordinate, coord2: Coordinate): number {
-  const R = 6371; // Earth's radius in kilometers
-  const lat1 = (coord1[1] * Math.PI) / 180;
-  const lat2 = (coord2[1] * Math.PI) / 180;
-  const deltaLat = ((coord2[1] - coord1[1]) * Math.PI) / 180;
-  const deltaLon = ((coord2[0] - coord1[0]) * Math.PI) / 180;
-
-  const a =
-    Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
-    Math.cos(lat1) * Math.cos(lat2) * Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-  return R * c; // Distance in kilometers
+  return haversineDistance(coord1, coord2); // Distance in kilometers
 }
 
-// Helper function to calculate angle difference between two bearings
 function angleDifference(bearing1: number, bearing2: number): number {
   let diff = Math.abs(bearing1 - bearing2);
   if (diff > 180) {

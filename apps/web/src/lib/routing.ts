@@ -7,9 +7,10 @@ import type { Coordinate } from "@/types/map";
 import type { Map as MapboxMap } from "mapbox-gl";
 import { useRoutingStore } from "@/stores/routingStore";
 import { Logger } from "@/lib/logger";
+import { pointToSegmentDistance } from "@/lib/utils/geospatial";
+import { getRoute, getCurrentRoutePath } from "@/features/routing/services/RouteCalculationService";
 import {
   updateWaypointsLayer,
-  updateRouteLayer,
   clearRouteLayer,
   updateUserLocationLayer,
 } from "@/features/routing/managers/MapLayerManager";
@@ -19,107 +20,9 @@ let _mapInstance: MapboxMap | null = null;
 let _isMapLockedRef: { current: boolean } | null = null;
 let _accessToken: string | null = null;
 
-// Helper function for distance calculation
-function haversineDistance(coords1: Coordinate, coords2: Coordinate): number {
-  const R = 6371; // Earth's radius in kilometers
-  const lat1 = coords1[1];
-  const lon1 = coords1[0];
-  const lat2 = coords2[1];
-  const lon2 = coords2[0];
+// Note: haversineDistance is now imported from shared geospatial utils
 
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    0.5 -
-    Math.cos(dLat) / 2 +
-    (Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * (1 - Math.cos(dLon))) /
-      2;
-  return R * 2 * Math.asin(Math.sqrt(a));
-}
-
-// Simple direct route calculation (fallback)
-function calculateDirectRoute(waypoints: Coordinate[]): {
-  routeCoords: Coordinate[];
-  totalDistance: number;
-  duration: number;
-} {
-  if (waypoints.length < 2) {
-    return { routeCoords: [], totalDistance: 0, duration: 0 };
-  }
-
-  const routeCoords: Coordinate[] = [];
-  let totalDistance = 0;
-
-  for (let i = 0; i < waypoints.length - 1; i++) {
-    const from = waypoints[i];
-    const to = waypoints[i + 1];
-
-    if (i === 0) routeCoords.push(from);
-    routeCoords.push(to);
-
-    totalDistance += haversineDistance(from, to);
-  }
-
-  const duration = Math.round((totalDistance / 5) * 60); // 5 km/h walking speed
-  return { routeCoords, totalDistance, duration };
-}
-
-// Real route calculation using Mapbox Directions API
-async function calculateRoadRoute(
-  waypoints: Coordinate[],
-  accessToken: string,
-): Promise<{
-  routeCoords: Coordinate[];
-  totalDistance: number;
-  duration: number;
-  snappedWaypoints?: Coordinate[];
-}> {
-  if (waypoints.length < 2) {
-    return { routeCoords: [], totalDistance: 0, duration: 0 };
-  }
-
-  try {
-    const waypointsString = waypoints.map((point) => `${point[0]},${point[1]}`).join(";");
-    const radiusesString = waypoints.map(() => "150").join(";");
-
-    const queryUrl =
-      `https://api.mapbox.com/directions/v5/mapbox/walking/${waypointsString}?` +
-      `steps=true&geometries=geojson&overview=full&continue_straight=true&` +
-      `access_token=${accessToken}&radiuses=${radiusesString}`;
-
-    const response = await fetch(queryUrl, { method: "GET" });
-    if (!response.ok) {
-      throw new Error(`API request failed: ${response.statusText}`);
-    }
-
-    const json = await response.json();
-    if (!json || !json.routes || json.routes.length === 0 || !json.routes[0].geometry) {
-      throw new Error("Invalid API response or no route geometry");
-    }
-
-    const data = json.routes[0];
-    const routeCoords = data.geometry.coordinates;
-    const totalDistance = data.distance / 1000; // Convert to km
-    const duration = Math.round(data.duration / 60); // Convert to minutes
-
-    // Extract snapped waypoints from the response
-    let snappedWaypoints: Coordinate[] | undefined;
-    if (json.waypoints && json.waypoints.length > 0) {
-      snappedWaypoints = json.waypoints.map(
-        (wp: any) => [wp.location[0], wp.location[1]] as Coordinate,
-      );
-      Logger.debug("[Routing] Waypoints snapped by Directions API");
-    }
-
-    Logger.debug("[Routing] Road route calculated:", totalDistance.toFixed(2), "km");
-    return { routeCoords, totalDistance, duration, snappedWaypoints };
-  } catch (error) {
-    Logger.warn("[Routing] Road routing failed, falling back to direct route:", error);
-    return calculateDirectRoute(waypoints);
-  }
-}
-
-// Update map with current store state
+// Update map with current store state using RouteCalculationService
 async function updateMapFromStore(
   map: MapboxMap,
   accessToken: string,
@@ -133,33 +36,27 @@ async function updateMapFromStore(
   updateWaypointsLayer(map, waypoints, _isMapLockedRef?.current ?? false);
 
   if (waypoints.length >= 2 && accessToken) {
-    // Calculate and display road route
-    const { routeCoords, totalDistance, duration, snappedWaypoints } = await calculateRoadRoute(
-      waypoints,
+    // Use RouteCalculationService for comprehensive route calculation
+    const result = await getRoute(
+      map,
       accessToken,
+      setRouteDistance,
+      setRouteDuration,
+      setHasRoute,
     );
-    updateRouteLayer(map, routeCoords);
 
-    // Persist route path to Zustand store for page refresh persistence
-    useRoutingStore.getState().setRoutePath(routeCoords);
-
-    // Update waypoints with snapped coordinates if available
-    if (snappedWaypoints && snappedWaypoints.length === waypoints.length) {
+    // Handle waypoint snapping if available
+    if (result.waypointsSnapped && result.snappedWaypoints) {
       Logger.debug("[Routing] Updating stored waypoints with snapped coordinates");
-      useRoutingStore.getState().updateWaypoints(snappedWaypoints);
+      useRoutingStore.getState().updateWaypoints(result.snappedWaypoints);
+
+      if (result.snappedDirectFlags) {
+        useRoutingStore.getState().updateDirectFlags(result.snappedDirectFlags);
+      }
+
       // Update waypoints layer with snapped coordinates
-      updateWaypointsLayer(map, snappedWaypoints, _isMapLockedRef?.current ?? false);
+      updateWaypointsLayer(map, result.snappedWaypoints, _isMapLockedRef?.current ?? false);
     }
-
-    // Update UI
-    setRouteDistance(`${totalDistance.toFixed(2)} km`);
-    setRouteDuration(`${duration} min`);
-    setHasRoute(true);
-
-    // Update store route info
-    useRoutingStore.getState().setRouteDistance(`${totalDistance.toFixed(2)} km`);
-    useRoutingStore.getState().setRouteDuration(`${duration} min`);
-    useRoutingStore.getState().setHasRoute(true);
   } else {
     // Clear route
     clearRouteLayer(map);
@@ -470,6 +367,10 @@ export const updateUserLocationPoint = (map: MapboxMap, coordinates: Coordinate 
 // GPX Export function
 export const exportRouteToGPX = (): { success: boolean; message?: string } => {
   Logger.info("[Routing] GPX export requested");
+  const routePath = getCurrentRoutePath();
+  if (routePath.length === 0) {
+    return { success: false, message: "No route available to export." };
+  }
   return { success: false, message: "GPX export functionality is not yet implemented." };
 };
 
@@ -489,21 +390,4 @@ export const importRouteFromGPX = async (
   }
 };
 
-// Helper function to calculate distance from point to line segment
-function pointToSegmentDistance(point: Coordinate, start: Coordinate, end: Coordinate): number {
-  const dx = end[0] - start[0];
-  const dy = end[1] - start[1];
-
-  if (dx === 0 && dy === 0) {
-    // Start and end are the same point
-    return haversineDistance(point, start);
-  }
-
-  const t = Math.max(
-    0,
-    Math.min(1, ((point[0] - start[0]) * dx + (point[1] - start[1]) * dy) / (dx * dx + dy * dy)),
-  );
-  const projection: Coordinate = [start[0] + t * dx, start[1] + t * dy];
-
-  return haversineDistance(point, projection);
-}
+// Note: pointToSegmentDistance is now imported from shared geospatial utils

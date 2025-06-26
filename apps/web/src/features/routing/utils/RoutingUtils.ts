@@ -3,29 +3,9 @@ import { LngLatBounds, type Map as MapboxMap } from "mapbox-gl";
 import { LngLat } from "mapbox-gl";
 import type { LoopDirection } from "@/components/modals/RouteGeneratorModal"; // Assuming this type is exported
 import { Logger } from "@/lib/logger";
+import { haversineDistance, EARTH_RADIUS_KM } from "@/lib/utils/geospatial";
 
 export type LoopDirectionOrBearing = LoopDirection | number;
-
-const EARTH_RADIUS_KM = 6371;
-
-/**
- * Calculates the distance between two coordinates using the Haversine formula.
- * @param c1 - The first coordinate [lon, lat].
- * @param c2 - The second coordinate [lon, lat].
- * @returns The distance in kilometers.
- */
-export const haversine = (c1: Coordinate, c2: Coordinate): number => {
-  const toRad = (v: number) => (v * Math.PI) / 180;
-  const R = 6371; // Earth radius in kilometers
-  const dLat = toRad(c2[1] - c1[1]);
-  const dLon = toRad(c2[0] - c1[0]);
-  const lat1 = toRad(c1[1]);
-  const lat2 = toRad(c2[1]);
-
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-};
 
 /**
  * Checks if a coordinate is near a road by querying the Mapbox Matching API.
@@ -70,7 +50,7 @@ export const checkNearRoad = async (
         return { isValid: false };
       }
       const snappedCoords = snappedTracepoint.location as Coordinate;
-      const dist = haversine(coords, snappedCoords);
+      const dist = haversineDistance(coords, snappedCoords);
 
       // Use the effectiveRadius (converted to km) for the distance check
       if (dist > effectiveRadius / 1000 + 0.001) {

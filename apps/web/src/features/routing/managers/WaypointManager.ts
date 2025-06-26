@@ -14,8 +14,10 @@ import {
 } from "@/features/routing/managers/MapLayerManager";
 import { saveWaypointsToLocalStorage } from "@/features/routing/services/LocalStorageService";
 import { snapshot } from "@/features/routing/managers/HistoryManager";
-import { closestPointOnSegment, haversine } from "@/features/routing/utils/RoutingUtils";
+import { closestPointOnSegment } from "@/features/routing/utils/RoutingUtils";
+import { haversineDistance } from "@/lib/utils/geospatial";
 import { getCurrentRoutePath } from "@/features/routing/services/RouteCalculationService";
+import { useRoutingStore } from "@/stores/routingStore";
 import { Logger } from "@/lib/logger";
 
 // Store references and state outside of the setup function to persist across renders
@@ -54,6 +56,10 @@ export const _addWaypointInternal = async (
   if (isDirect || waypoints.length === 0) {
     waypoints.push(coords);
     directFlags.push(isDirect);
+
+    // Sync with Zustand store
+    useRoutingStore.getState().setWaypoints([...waypoints], [...directFlags]);
+
     Logger.info("[_addWaypointInternal] Added direct/initial waypoint (raw):", coords);
     return { success: true, snappedCoords: coords, checkNearRoadFailed: false };
   }
@@ -65,6 +71,10 @@ export const _addWaypointInternal = async (
     // checkNearRoad succeeded (within 49m)
     waypoints.push(roadCheck.snappedCoords);
     directFlags.push(false); // It's not direct if it went through roadCheck
+
+    // Sync with Zustand store
+    useRoutingStore.getState().setWaypoints([...waypoints], [...directFlags]);
+
     Logger.info(
       "[_addWaypointInternal] Added waypoint via checkNearRoad (49m snap):",
       roadCheck.snappedCoords,
@@ -75,6 +85,10 @@ export const _addWaypointInternal = async (
     // Add the raw coordinates for now. The main addWaypoint will try getRouteFromService.
     waypoints.push(coords);
     directFlags.push(false);
+
+    // Sync with Zustand store
+    useRoutingStore.getState().setWaypoints([...waypoints], [...directFlags]);
+
     Logger.info("[_addWaypointInternal] checkNearRoad failed. Added waypoint raw for now:", coords);
     return { success: true, snappedCoords: coords, checkNearRoadFailed: true };
   }
@@ -95,6 +109,10 @@ export const setWaypointsAndFlags = (newWaypoints: Coordinate[], newDirectFlags:
   }
   waypoints = newWaypoints;
   directFlags = newDirectFlags;
+
+  // Sync with Zustand store so RouteCalculationService can see the waypoints
+  useRoutingStore.getState().setWaypoints(newWaypoints, newDirectFlags);
+
   Logger.info("[WaypointManager] Waypoints and flags set. Count:", waypoints.length);
 };
 
@@ -105,6 +123,10 @@ export const _removeWaypointInternal = (index: number): void => {
   }
   waypoints.splice(index, 1);
   directFlags.splice(index, 1);
+
+  // Sync with Zustand store
+  useRoutingStore.getState().setWaypoints([...waypoints], [...directFlags]);
+
   Logger.info(
     "[_removeWaypointInternal] Waypoint removed at index:",
     index,
@@ -119,6 +141,10 @@ export const _updateWaypointPositionInternal = (index: number, newCoords: Coordi
     return;
   }
   waypoints[index] = newCoords;
+
+  // Sync with Zustand store
+  useRoutingStore.getState().setWaypoints([...waypoints], [...directFlags]);
+
   Logger.info(
     "[_updateWaypointPositionInternal] Waypoint updated at index:",
     index,
@@ -224,7 +250,7 @@ export const addWaypoint = async (
         );
         if (handleWaypointError)
           handleWaypointError(
-            routeResult.error || "Last added point is too far from any road for routing.",
+            "Point is too far from any road for routing. Please click closer to a road or path.",
           );
 
         _removeWaypointInternal(indexOfLastAddedPoint);
@@ -252,7 +278,7 @@ export const addWaypoint = async (
               retryRouteResult.snappedDirectFlags,
             );
             updateWaypointsLayer(map, getWaypoints(), isMapLocked);
-          } // If retry fails, route visuals are cleared by getRouteFromService, points remain.
+          }
         } else {
           clearCurrentRoutePath();
           clearRouteLayer(map);
@@ -595,7 +621,7 @@ export const insertWaypointAtLocation = async (
     const start = routePathToUse[i];
     const end = routePathToUse[i + 1];
     const pointOnSegment = closestPointOnSegment(clickedCoords, start, end);
-    const distanceToSegmentPoint = haversine(clickedCoords, pointOnSegment);
+    const distanceToSegmentPoint = haversineDistance(clickedCoords, pointOnSegment);
 
     if (distanceToSegmentPoint < minDistance) {
       minDistance = distanceToSegmentPoint;

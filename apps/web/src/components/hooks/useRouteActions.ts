@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import type { Map } from "mapbox-gl";
-import { addWaypoint, removeWaypoint, resetRouting, reverseRoute, undo, redo } from "@/lib/routing";
-import { insertWaypointAtLocation } from "@/lib/routing";
+import { removeWaypoint, resetRouting, reverseRoute, undo, redo } from "@/lib/routing";
+import { addWaypoint, insertWaypointAtLocation } from "@/features/routing/managers/WaypointManager";
 import { zoomToRoute } from "@/features/routing/utils/RoutingUtils";
 import { serializeAndCompress } from "@/lib/shareUtils";
 import { useRoutingStore } from "@/stores/routingStore";
@@ -99,12 +99,11 @@ export const useRouteActions = ({
     handleWaypointError("Route generation functionality is not yet implemented.");
   }, [handleWaypointError]);
 
-  // Add direct waypoint handler
   const handleAddDirectWaypoint = useCallback(async () => {
     if (!mapRef.current || !popup || popup.type !== "direct" || !mapboxToken) return;
 
     Logger.info("[useRouteActions] Adding direct waypoint at:", [popup.longitude, popup.latitude]);
-    await addWaypoint(
+    const success = await addWaypoint(
       mapRef.current,
       [popup.longitude, popup.latitude],
       true,
@@ -112,9 +111,15 @@ export const useRouteActions = ({
       setRouteDistance,
       setRouteDuration,
       setHasRoute,
+      handleWaypointError,
+      useRoutingStore.getState().isMapLocked,
     );
 
-    setPopup(null);
+    if (success) {
+      setPopup(null);
+    } else {
+      Logger.warn("[useRouteActions] Direct waypoint addition failed - popup remains open");
+    }
   }, [
     popup,
     mapboxToken,
@@ -125,7 +130,6 @@ export const useRouteActions = ({
     setPopup,
   ]);
 
-  // Remove waypoint handler
   const handleRemoveWaypoint = useCallback(async () => {
     if (
       !mapRef.current ||
@@ -157,7 +161,6 @@ export const useRouteActions = ({
     setPopup,
   ]);
 
-  // Add waypoint on route handler
   const handleAddWaypointOnRoute = useCallback(async () => {
     if (!mapRef.current || !popup || popup.type !== "add_on_route" || !mapboxToken) return;
 
@@ -165,14 +168,21 @@ export const useRouteActions = ({
       popup.longitude,
       popup.latitude,
     ]);
-    await insertWaypointAtLocation(
+    const result = await insertWaypointAtLocation(
       mapRef.current,
       [popup.longitude, popup.latitude],
       mapboxToken,
       setRouteDistance,
       setRouteDuration,
       setHasRoute,
+      handleWaypointError,
+      useRoutingStore.getState().isMapLocked,
     );
+
+    if (!result.success) {
+      Logger.warn("[useRouteActions] Waypoint insertion on route failed:", result.error);
+      return;
+    }
 
     setPopup(null);
   }, [

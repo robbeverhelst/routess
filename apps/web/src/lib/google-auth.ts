@@ -68,7 +68,6 @@ class GoogleAuthService {
   // Sign out
   async signOut(): Promise<void> {
     try {
-      // Call API logout and clear stored data
       await apiService.logout();
       localStorage.removeItem("access_token");
       localStorage.removeItem("user");
@@ -80,7 +79,6 @@ class GoogleAuthService {
     }
   }
 
-  // Get current authentication state
   getAuthState(): AuthState {
     try {
       const accessToken = localStorage.getItem("access_token");
@@ -105,22 +103,18 @@ class GoogleAuthService {
     };
   }
 
-  // Check if user is currently signed in
   isSignedIn(): boolean {
     return this.getAuthState().isAuthenticated;
   }
 
-  // Get current user
   getCurrentUser(): ApiUser | null {
     return this.getAuthState().user;
   }
 
-  // Get stored access token
   getAccessToken(): string | null {
     return localStorage.getItem("access_token");
   }
 
-  // Get Google Client ID
   getClientId(): string {
     if (!GOOGLE_CLIENT_ID) {
       throw new Error(

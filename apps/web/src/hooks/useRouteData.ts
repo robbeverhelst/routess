@@ -43,7 +43,6 @@ export interface RouteDataHandlers {
 }
 
 export function useRouteData(): RouteDataState & RouteDataHandlers {
-  // Get state from Zustand store
   const routeDistance = useRouteDistance();
   const routeDuration = useRouteDuration();
   const hasRoute = useHasRoute();
@@ -54,13 +53,11 @@ export function useRouteData(): RouteDataState & RouteDataHandlers {
   const waypoints = useWaypoints();
   const directFlags = useDirectFlags();
 
-  // Get actions from Zustand store
   const zustandSetRouteDistance = useSetRouteDistance();
   const zustandSetRouteDuration = useSetRouteDuration();
   const zustandSetHasRoute = useSetHasRoute();
   const zustandSetShareNotification = useSetShareNotification();
 
-  // Create React-compatible state setters
   const setRouteDistance = useCallback(
     (value: React.SetStateAction<string>) => {
       const newValue = typeof value === "function" ? value(routeDistance) : value;

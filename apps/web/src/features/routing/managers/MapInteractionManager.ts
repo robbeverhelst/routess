@@ -8,7 +8,11 @@ import type { Coordinate } from "@/types/map";
 import type { Map as MapboxMap, MapMouseEvent, MapTouchEvent, MapLayerMouseEvent } from "mapbox-gl";
 // Removed MapboxPopup import as we're using React-based popups via callback
 
-import { addWaypoint, insertWaypointAtLocation, updateWaypointPosition } from "@/lib/routing";
+import {
+  addWaypoint,
+  insertWaypointAtLocation,
+  updateWaypointPositionAndRecalculate as updateWaypointPosition,
+} from "@/features/routing/managers/WaypointManager";
 // Import routing store for direct access
 import { useRoutingStore } from "@/stores/routingStore";
 import { Logger } from "@/lib/logger";
@@ -119,7 +123,7 @@ export const initializeMapInteractions = (
   const mapCanvas = map.getCanvas();
 
   // --- ON MAP CLICK LOGIC ---
-  const handleMapClickInternal = (e: MapMouseEvent) => {
+  const handleMapClickInternal = async (e: MapMouseEvent) => {
     if (isMapLockedRef.current) return; // Exit if map is locked
     // If a click event is processed, it means it was a short press (not a long press or drag).
     // We should ensure any pending long press timer is cancelled.
@@ -159,7 +163,7 @@ export const initializeMapInteractions = (
     );
     setPopup(null);
 
-    addWaypoint(
+    const success = await addWaypoint(
       map,
       [e.lngLat.lng, e.lngLat.lat],
       false, // isDirect = false for left click
@@ -167,7 +171,14 @@ export const initializeMapInteractions = (
       setRouteDistance,
       setRouteDuration,
       setHasRoute,
+      _handleWaypointError,
+      isMapLockedRef.current,
     );
+
+    if (!success) {
+      Logger.warn("[MapInteractionManager] Waypoint addition failed - action cancelled");
+      return;
+    }
   };
 
   map.on("click", handleMapClickInternal);
@@ -263,6 +274,8 @@ export const initializeMapInteractions = (
         setRouteDistance,
         setRouteDuration,
         setHasRoute,
+        _handleWaypointError,
+        isMapLockedRef.current,
         { skipRouteCalcAndSnapshot: true }, // Pass option to skip snapshot
       );
 
@@ -382,6 +395,8 @@ export const initializeMapInteractions = (
         setRouteDistance,
         setRouteDuration,
         setHasRoute,
+        _handleWaypointError,
+        isMapLockedRef.current,
         { skipRouteCalcAndSnapshot: true }, // Pass option to skip snapshot
       );
 
@@ -547,6 +562,8 @@ export const initializeMapInteractions = (
       setRouteDistance,
       setRouteDuration,
       setHasRoute,
+      _handleWaypointError,
+      isMapLockedRef.current,
     );
 
     isDragging = false;
@@ -603,6 +620,8 @@ export const initializeMapInteractions = (
       setRouteDistance,
       setRouteDuration,
       setHasRoute,
+      _handleWaypointError,
+      isMapLockedRef.current,
     );
 
     isDragging = false;
