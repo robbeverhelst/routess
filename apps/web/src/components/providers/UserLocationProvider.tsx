@@ -3,6 +3,7 @@ import { useEnhancedLocation } from "@/hooks/useEnhancedLocation";
 import { updateUserLocationPoint } from "@/lib/routing";
 import type { Map as MapboxMap } from "mapbox-gl";
 import { Logger } from "@/lib/logger";
+import { useErrorHandler } from "@/lib/errors";
 
 interface UserLocationContextType {
   // Location state
@@ -53,6 +54,7 @@ export const UserLocationProvider: React.FC<UserLocationProviderProps> = ({
   hasRoute,
   isMapReady,
 }) => {
+  const { handleLocationError } = useErrorHandler();
   const {
     location: userLocation,
     error: locationError,
@@ -83,6 +85,13 @@ export const UserLocationProvider: React.FC<UserLocationProviderProps> = ({
       startLocationTracking();
     }
   }, [isMapReady, hasRoute, isLocationTracking, startLocationTracking]);
+
+  // Handle location errors with centralized error system
+  useEffect(() => {
+    if (locationError) {
+      handleLocationError(new Error(locationError), "location-tracking");
+    }
+  }, [locationError, handleLocationError]);
 
   // Auto-stop tracking display when there are persistent errors
   useEffect(() => {

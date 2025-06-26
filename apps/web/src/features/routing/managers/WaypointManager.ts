@@ -13,35 +13,13 @@ import {
   clearKilometerMarkersLayer,
 } from "@/features/routing/managers/MapLayerManager";
 import { saveWaypointsToLocalStorage } from "@/features/routing/services/LocalStorageService";
-import { snapshot } from "@/features/routing/managers/HistoryManager";
 import { closestPointOnSegment } from "@/features/routing/utils/RoutingUtils";
 import { haversineDistance } from "@/lib/utils/geospatial";
 import { getCurrentRoutePath } from "@/features/routing/services/RouteCalculationService";
 import { useRoutingStore } from "@/stores/routingStore";
 import { Logger } from "@/lib/logger";
 
-// Store references and state outside of the setup function to persist across renders
-let waypoints: Coordinate[] = [];
-let directFlags: boolean[] = []; // parallel to waypoints, true if waypoint is direct
-
-const reinitializeWaypointState = () => {
-  waypoints = [];
-  directFlags = [];
-  Logger.info("[WaypointManager.ts] Module state explicitly re-initialized.");
-};
-
-reinitializeWaypointState(); // Initial call
-
-if (import.meta.hot) {
-  import.meta.hot.dispose(() => {
-    Logger.info("[WaypointManager.ts] HMR disposing old instance.");
-    // State will be reset by the new instance's reinitializeWaypointState() via accept or top-level call
-  });
-  import.meta.hot.accept(() => {
-    Logger.info("[WaypointManager.ts] HMR accept: Forcing state re-initialization.");
-    reinitializeWaypointState();
-  });
-}
+// REMOVED: No more module-level state - Zustand store is the single source of truth
 
 export const _addWaypointInternal = async (
   coords: Coordinate,
@@ -53,12 +31,11 @@ export const _addWaypointInternal = async (
   error?: string;
   checkNearRoadFailed?: boolean;
 }> => {
-  if (isDirect || waypoints.length === 0) {
-    waypoints.push(coords);
-    directFlags.push(isDirect);
+  const store = useRoutingStore.getState();
 
-    // Sync with Zustand store
-    useRoutingStore.getState().setWaypoints([...waypoints], [...directFlags]);
+  if (isDirect || store.waypoints.length === 0) {
+    // Update Zustand store directly
+    store.addWaypoint(coords, isDirect);
 
     Logger.info("[_addWaypointInternal] Added direct/initial waypoint (raw):", coords);
     return { success: true, snappedCoords: coords, checkNearRoadFailed: false };
@@ -69,11 +46,7 @@ export const _addWaypointInternal = async (
 
   if (roadCheck.isValid && roadCheck.snappedCoords) {
     // checkNearRoad succeeded (within 49m)
-    waypoints.push(roadCheck.snappedCoords);
-    directFlags.push(false); // It's not direct if it went through roadCheck
-
-    // Sync with Zustand store
-    useRoutingStore.getState().setWaypoints([...waypoints], [...directFlags]);
+    store.addWaypoint(roadCheck.snappedCoords, false);
 
     Logger.info(
       "[_addWaypointInternal] Added waypoint via checkNearRoad (49m snap):",
@@ -83,11 +56,7 @@ export const _addWaypointInternal = async (
   } else {
     // checkNearRoad failed (e.g., >49m or other error from Matching API)
     // Add the raw coordinates for now. The main addWaypoint will try getRouteFromService.
-    waypoints.push(coords);
-    directFlags.push(false);
-
-    // Sync with Zustand store
-    useRoutingStore.getState().setWaypoints([...waypoints], [...directFlags]);
+    store.addWaypoint(coords, false);
 
     Logger.info("[_addWaypointInternal] checkNearRoad failed. Added waypoint raw for now:", coords);
     return { success: true, snappedCoords: coords, checkNearRoadFailed: true };
@@ -95,55 +64,54 @@ export const _addWaypointInternal = async (
 };
 
 // Export the waypoints and directFlags for external components to use
-export const getWaypoints = () => waypoints;
-export const getDirectFlags = () => directFlags; // Added export for directFlags
+export const getWaypoints = () => useRoutingStore.getState().waypoints;
+export const getDirectFlags = () => useRoutingStore.getState().directFlags;
 
 export const setWaypointsAndFlags = (newWaypoints: Coordinate[], newDirectFlags: boolean[]) => {
-  if (newWaypoints.length === 0 && waypoints.length > 0) {
+  const currentWaypoints = useRoutingStore.getState().waypoints;
+  if (newWaypoints.length === 0 && currentWaypoints.length > 0) {
     // Log only when clearing existing waypoints
     Logger.warn(
       "[WaypointManager.setWaypointsAndFlags] Clearing existing waypoints. Current count:",
-      waypoints.length,
-      "Call stack:",
+      currentWaypoints.length,
     );
   }
-  waypoints = newWaypoints;
-  directFlags = newDirectFlags;
 
-  // Sync with Zustand store so RouteCalculationService can see the waypoints
+  // Update Zustand store directly - it's the single source of truth
   useRoutingStore.getState().setWaypoints(newWaypoints, newDirectFlags);
 
-  Logger.info("[WaypointManager] Waypoints and flags set. Count:", waypoints.length);
+  Logger.info("[WaypointManager] Waypoints and flags set. Count:", newWaypoints.length);
 };
 
 export const _removeWaypointInternal = (index: number): void => {
-  if (index < 0 || index >= waypoints.length) {
+  const store = useRoutingStore.getState();
+  if (index < 0 || index >= store.waypoints.length) {
     Logger.warn("[_removeWaypointInternal] Invalid index:", index);
     return;
   }
-  waypoints.splice(index, 1);
-  directFlags.splice(index, 1);
 
-  // Sync with Zustand store
-  useRoutingStore.getState().setWaypoints([...waypoints], [...directFlags]);
+  // Remove from Zustand store directly
+  store.removeWaypoint(index);
 
   Logger.info(
     "[_removeWaypointInternal] Waypoint removed at index:",
     index,
     "New waypoints:",
-    waypoints,
+    store.waypoints,
   );
 };
 
 export const _updateWaypointPositionInternal = (index: number, newCoords: Coordinate): void => {
-  if (index < 0 || index >= waypoints.length) {
+  const store = useRoutingStore.getState();
+  if (index < 0 || index >= store.waypoints.length) {
     Logger.warn("[_updateWaypointPositionInternal] Invalid index:", index);
     return;
   }
-  waypoints[index] = newCoords;
 
-  // Sync with Zustand store
-  useRoutingStore.getState().setWaypoints([...waypoints], [...directFlags]);
+  // Update in Zustand store directly
+  const newWaypoints = [...store.waypoints];
+  newWaypoints[index] = newCoords;
+  store.setWaypoints(newWaypoints, store.directFlags);
 
   Logger.info(
     "[_updateWaypointPositionInternal] Waypoint updated at index:",
@@ -151,7 +119,7 @@ export const _updateWaypointPositionInternal = (index: number, newCoords: Coordi
     "to:",
     newCoords,
     "New waypoints:",
-    waypoints,
+    newWaypoints,
   );
 };
 
@@ -167,6 +135,10 @@ export const addWaypoint = async (
   isMapLocked: boolean,
 ): Promise<boolean> => {
   const initialWaypointCount = getWaypoints().length; // Waypoints before this add operation
+
+  // Save snapshot BEFORE adding waypoint (so we can undo to the state before this addition)
+  useRoutingStore.getState().saveSnapshot();
+
   const addResult = await _addWaypointInternal(coords, isDirect, accessToken);
   // addResult.snappedCoords contains the coordinate that _addWaypointInternal actually pushed.
   // addResult.checkNearRoadFailed is true if a *subsequent* point was added raw because checkNearRoad (49m) failed.
@@ -187,7 +159,6 @@ export const addWaypoint = async (
       setWaypointsAndFlags([singlePointRoadCheck.snappedCoords], [false]); // Update the single waypoint
       updateWaypointsLayer(map, getWaypoints(), isMapLocked);
       saveWaypointsToLocalStorage(getWaypoints(), getDirectFlags());
-      snapshot();
       return true;
     } else {
       Logger.warn(
@@ -198,7 +169,6 @@ export const addWaypoint = async (
       _removeWaypointInternal(0); // Remove the raw point that was provisionally added
       updateWaypointsLayer(map, getWaypoints(), isMapLocked); // Should be empty now
       saveWaypointsToLocalStorage(getWaypoints(), getDirectFlags()); // Save empty
-      snapshot(); // Snapshot the empty state (or state before this attempt)
       return false; // Indicate failure to add this point
     }
   }
@@ -230,7 +200,6 @@ export const addWaypoint = async (
         updateWaypointsLayer(map, getWaypoints(), isMapLocked);
       }
       saveWaypointsToLocalStorage(getWaypoints(), getDirectFlags()); // Final save
-      snapshot();
       return true;
     } else {
       // getRouteFromService FAILED for 2+ waypoints
@@ -288,7 +257,6 @@ export const addWaypoint = async (
           setHasRoute(false);
         }
         saveWaypointsToLocalStorage(getWaypoints(), getDirectFlags());
-        snapshot();
         return false;
       } else {
         Logger.warn(
@@ -299,7 +267,6 @@ export const addWaypoint = async (
         // Point added by _addWaypointInternal remains. If it was a first point that was raw, it stays raw.
         // If it was a subsequent point that passed checkNearRoad, it stays (49m-snapped).
         saveWaypointsToLocalStorage(getWaypoints(), getDirectFlags());
-        snapshot();
         return true;
       }
     }
@@ -316,7 +283,6 @@ export const addWaypoint = async (
     clearRouteLayer(map);
     clearKilometerMarkersLayer(map);
     saveWaypointsToLocalStorage(getWaypoints(), getDirectFlags());
-    snapshot();
     return true;
   }
 
@@ -362,7 +328,8 @@ export const removeWaypoint = async (
     return;
   }
 
-  // snapshot(); // REMOVED: Initial snapshot
+  // Save snapshot before removing waypoint (captures state before removal)
+  useRoutingStore.getState().saveSnapshot();
   _removeWaypointInternal(index); // Use the internal function
   updateWaypointsLayer(map, getWaypoints(), isMapLocked);
   saveWaypointsToLocalStorage(getWaypoints(), getDirectFlags());
@@ -392,7 +359,7 @@ export const removeWaypoint = async (
       // The snapshot below covers this state change.
     }
     // Snapshot after route calculation and potential snapping is complete.
-    snapshot();
+    useRoutingStore.getState().saveSnapshot();
   } else {
     // 0 or 1 waypoint remaining
     setRouteDistance("");
@@ -402,7 +369,7 @@ export const removeWaypoint = async (
     clearRouteLayer(map);
     clearKilometerMarkersLayer(map);
     // Snapshot because the removal leading to 0 or 1 waypoint is a completed, undoable action.
-    snapshot();
+    useRoutingStore.getState().saveSnapshot();
   }
   Logger.info("[WaypointManager.removeWaypoint] Waypoint removed and route updated.");
 };
@@ -483,7 +450,7 @@ export const updateWaypointPositionAndRecalculate = async (
       // The waypoints are already what they should be from _updateWaypointPositionInternal.
     }
     saveWaypointsToLocalStorage(getWaypoints(), getDirectFlags());
-    snapshot();
+    useRoutingStore.getState().saveSnapshot();
   } else {
     // Route recalculation by Directions API failed
     Logger.warn(
@@ -504,7 +471,7 @@ export const updateWaypointPositionAndRecalculate = async (
     updateWaypointsLayer(map, getWaypoints(), isMapLocked);
 
     saveWaypointsToLocalStorage(getWaypoints(), getDirectFlags());
-    snapshot();
+    useRoutingStore.getState().saveSnapshot();
   }
 };
 
@@ -558,7 +525,7 @@ export const reverseRoute = async (
     // The snapshot below covers this state change.
   }
   // Snapshot after route calculation and potential snapping is complete.
-  snapshot();
+  useRoutingStore.getState().saveSnapshot();
   Logger.info("[WaypointManager.reverseRoute] Reverse complete, route updated.");
 };
 
@@ -728,7 +695,7 @@ export const insertWaypointAtLocation = async (
       // The snapshot below covers this state change.
     }
     // Snapshot after route calculation and potential snapping is complete.
-    snapshot();
+    useRoutingStore.getState().saveSnapshot();
   } else {
     // This case (0 or 1 waypoint after insert) should ideally not happen if we start with >= 1 waypoint.
     // However, if it does, or if the logic changes, ensure a snapshot is taken for the completed action.
@@ -738,7 +705,7 @@ export const insertWaypointAtLocation = async (
     clearCurrentRoutePath();
     clearRouteLayer(map);
     clearKilometerMarkersLayer(map);
-    snapshot(); // Snapshot for completed action even if no route calculation
+    useRoutingStore.getState().saveSnapshot(); // Snapshot for completed action even if no route calculation
   }
   Logger.info(
     "[WaypointManager.insertWaypoint] Waypoint inserted and route recalculated (or skipped).",

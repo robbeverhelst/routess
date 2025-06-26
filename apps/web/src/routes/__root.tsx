@@ -5,17 +5,21 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { queryClient } from "@/lib/query-client";
 import { googleAuth } from "@/lib/google-auth";
+import { ErrorBoundary, ErrorToast } from "@/lib/errors";
 
 export const Route = createRootRoute({
   component: () => (
-    <QueryClientProvider client={queryClient}>
-      <GoogleOAuthProvider clientId={googleAuth.getClientId()}>
-        <div className="w-full h-svh">
-          <Outlet />
-        </div>
-        <ReactQueryDevtools initialIsOpen={false} />
-        <TanStackRouterDevtools />
-      </GoogleOAuthProvider>
-    </QueryClientProvider>
+    <ErrorBoundary context="root">
+      <QueryClientProvider client={queryClient}>
+        <GoogleOAuthProvider clientId={googleAuth.getClientId()}>
+          <div className="w-full h-svh">
+            <Outlet />
+          </div>
+          <ErrorToast position="bottom-left" />
+          <ReactQueryDevtools initialIsOpen={false} />
+          <TanStackRouterDevtools />
+        </GoogleOAuthProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   ),
 });

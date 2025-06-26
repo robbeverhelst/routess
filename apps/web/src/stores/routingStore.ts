@@ -194,26 +194,29 @@ export const useRoutingStore = create<RoutingStore>()(
             return state; // No change
           }
 
-          // Create current snapshot inline
+          const previousSnapshot = state.undoStack[state.undoStack.length - 1];
+
+          // Save current state to redo stack before undoing
           const currentSnapshot: WaypointHistory = {
             waypoints: [...state.waypoints],
             directFlags: [...state.directFlags],
             timestamp: Date.now(),
           };
 
-          const previousSnapshot = state.undoStack[state.undoStack.length - 1];
-
           Logger.info(
-            "[RoutingStore] Undoing to state from:",
-            new Date(previousSnapshot.timestamp),
+            "[RoutingStore] Undoing from:",
+            state.waypoints.length,
+            "waypoints to:",
+            previousSnapshot.waypoints.length,
+            "waypoints",
           );
 
           return {
             waypoints: previousSnapshot.waypoints,
             directFlags: previousSnapshot.directFlags,
-            undoStack: state.undoStack.slice(0, -1),
+            undoStack: state.undoStack.slice(0, -1), // Remove the state we just restored
             redoStack: [...state.redoStack, currentSnapshot],
-            canUndo: state.undoStack.length > 1,
+            canUndo: state.undoStack.length > 1, // Can undo if there are more states
             canRedo: true,
           };
         });

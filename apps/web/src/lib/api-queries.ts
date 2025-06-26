@@ -11,6 +11,8 @@ import { Logger } from "./logger";
  * Hook to fetch all routes for the current user
  */
 export function useUserRoutes() {
+  const hasToken = !!localStorage.getItem("access_token");
+
   return useQuery({
     queryKey: queryKeys.routes.list(),
     queryFn: async () => {
@@ -18,7 +20,9 @@ export function useUserRoutes() {
       Logger.info(`Fetched ${routes.length} routes from API`);
       return routes;
     },
+    enabled: hasToken, // Only fetch if authenticated
     staleTime: 2 * 60 * 1000, // Routes are fresh for 2 minutes
+    retry: hasToken ? 2 : false, // Only retry if we have a token
   });
 }
 
@@ -129,6 +133,8 @@ export function useUpdateRoute() {
  * Hook to fetch current user profile
  */
 export function useUserProfile() {
+  const hasToken = !!localStorage.getItem("access_token");
+
   return useQuery({
     queryKey: queryKeys.user.profile(),
     queryFn: async () => {
@@ -136,8 +142,9 @@ export function useUserProfile() {
       Logger.info("Fetched user profile:", profile.email);
       return profile;
     },
+    enabled: hasToken, // Only fetch if authenticated
     staleTime: 5 * 60 * 1000, // Profile is fresh for 5 minutes
-    retry: 1, // Only retry once for auth-related queries
+    retry: hasToken ? 1 : false, // Only retry once if we have a token
   });
 }
 
@@ -197,10 +204,13 @@ export function usePrefetchRoutes() {
   const queryClient = useQueryClient();
 
   return () => {
-    queryClient.prefetchQuery({
-      queryKey: queryKeys.routes.list(),
-      queryFn: apiService.getRoutes,
-      staleTime: 2 * 60 * 1000,
-    });
+    const hasToken = !!localStorage.getItem("access_token");
+    if (hasToken) {
+      queryClient.prefetchQuery({
+        queryKey: queryKeys.routes.list(),
+        queryFn: apiService.getRoutes,
+        staleTime: 2 * 60 * 1000,
+      });
+    }
   };
 }

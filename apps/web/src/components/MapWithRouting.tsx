@@ -14,6 +14,7 @@ import { useRouteActions } from "@/components/hooks/useRouteActions";
 import { useWaypointError } from "@/components/hooks/useWaypointError";
 import { useLocalStorageInit } from "@/components/hooks/useLocalStorageInit";
 import { useMapViewPersistence } from "@/components/hooks/useMapViewPersistence";
+import { ErrorBoundary } from "@/lib/errors";
 
 import { MapModalsProvider } from "@/components/providers/MapModalsProvider";
 import { UserLocationProvider, useUserLocation } from "@/components/providers/UserLocationProvider";
@@ -382,14 +383,16 @@ export default function MapWithRouting({
   routeId,
 }: MapboxMapProps) {
   return (
-    <MapInteractionProvider>
-      <MapWithRoutingContent
-        width={width}
-        height={height}
-        initialCenter={initialCenter}
-        initialZoom={initialZoom}
-        routeId={routeId}
-      />
-    </MapInteractionProvider>
+    <ErrorBoundary context="map-with-routing">
+      <MapInteractionProvider>
+        <MapWithRoutingContent
+          width={width}
+          height={height}
+          initialCenter={initialCenter}
+          initialZoom={initialZoom}
+          routeId={routeId}
+        />
+      </MapInteractionProvider>
+    </ErrorBoundary>
   );
 }

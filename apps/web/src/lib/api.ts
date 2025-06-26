@@ -1,4 +1,4 @@
-import { Logger } from "@/lib/logger";
+import { handleAPIError } from "@/lib/errors";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "__VITE_API_URL__";
 
@@ -92,16 +92,17 @@ class ApiService {
       try {
         const errorBody = await response.text();
         errorDetails = errorBody;
-        Logger.error(
-          `[ApiService] API Error: ${response.status} ${response.statusText}`,
-          errorDetails,
-        );
       } catch {
-        Logger.error(`[ApiService] API Error: ${response.status} ${response.statusText}`);
+        // Ignore parse errors
       }
-      throw new Error(
+
+      const error = new Error(
         `API Error: ${response.status} ${response.statusText}${errorDetails ? " - " + errorDetails : ""}`,
       );
+
+      // Use centralized error handling
+      handleAPIError(error, endpoint, () => this.request(endpoint, options));
+      throw error;
     }
 
     return response.json();

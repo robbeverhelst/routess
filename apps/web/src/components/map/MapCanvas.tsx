@@ -11,6 +11,7 @@ import { SunPositionIndicator } from "@/components/ui/SunPositionIndicator";
 import { Logger } from "@/lib/logger";
 import type { SupportedLanguage } from "@/lib/i18n";
 import type { Dispatch, SetStateAction } from "react";
+import { useErrorHandler } from "@/lib/errors";
 
 // Map configuration constants
 const MAP_PITCH = 30; // Default pitch angle for the map
@@ -101,6 +102,20 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
     error: locationError,
     isLoading: isUserLocationLoading,
   } = useUserLocation();
+
+  const { handleMapError } = useErrorHandler();
+
+  // Validate Mapbox token on mount
+  useEffect(() => {
+    if (!mapboxToken || mapboxToken.includes("__VITE_") || mapboxToken.length < 10) {
+      handleMapError(
+        new Error(
+          "Mapbox access token is missing or invalid. Please configure VITE_MAPBOX_ACCESS_TOKEN in your environment.",
+        ),
+        "mapbox-config",
+      );
+    }
+  }, [mapboxToken, handleMapError]);
 
   // Keep ref in sync with state
   useEffect(() => {
@@ -241,6 +256,23 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
             mapRef.current = internalMapRef.current.getMap();
           }
           handleMapLoad(evt);
+        }}
+        onError={(error) => {
+          Logger.error("[MapCanvas] Map error:", error);
+
+          // Check if it's a Mapbox token error
+          if (
+            error.error?.message?.includes("401") ||
+            error.error?.message?.includes("Invalid access token") ||
+            error.error?.message?.includes("Unauthorized")
+          ) {
+            handleMapError(
+              new Error("Invalid Mapbox access token. Please check your API key."),
+              "mapbox-auth",
+            );
+          } else {
+            handleMapError(error.error || new Error("Failed to load map"), "map-load");
+          }
         }}
         fog={{
           color: "rgb(186, 210, 235)",
