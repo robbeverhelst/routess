@@ -3,7 +3,7 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", ".next/**", "!.next/cache/**", "bin/**"]
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**", "bin/**", "build/**"]
     },
     "dev": {
       "cache": false,
@@ -26,6 +26,26 @@
     },
     "docker:build": {
       "dependsOn": ["^build"]
+    },
+    "prebuild": {
+      "dependsOn": ["^build"],
+      "outputs": ["android/**", "ios/**"],
+      "cache": false
+    },
+    "prebuild:clean": {
+      "dependsOn": ["^build"],
+      "outputs": ["android/**", "ios/**"],
+      "cache": false
+    },
+    "build:android": {
+      "dependsOn": ["prebuild"],
+      "outputs": ["android/app/build/**"],
+      "cache": false
+    },
+    "build:ios": {
+      "dependsOn": ["prebuild"],
+      "outputs": ["ios/build/**"],
+      "cache": false
     },
     "infra:preview": {
       "cache": false,

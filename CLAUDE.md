@@ -1,106 +1,528 @@
-- We always use bun!
-- Yes u can run bun run scripts, but never bun dev or infra deploy/destroy or refresh
-- bun run dev should always work, there should also only be one bun dev command. if something fails in the bun dev, the scripts need to be adjusted so bun dev succeeds again
-- stop running the dev server i do this
+# Maps Project Development Log
 
-# Maps Project Roadmap
+## ✅ Completed Work Summary
 
-## ✅ Completed Work
+### **Core Architecture & Infrastructure**
 
-- **Component Architecture**: Split 2,127-line component into focused providers/hooks
+- **Component Architecture**: Split 2,127-line monolithic component into focused providers/hooks
 - **State Management**: Full Zustand implementation with persistence and undo/redo
 - **Service Layer**: Clean architecture with proper separation of concerns
 - **Error Handling**: Comprehensive error system with toasts and boundaries
-- **Performance**: React.memo, lazy loading, bundle reduced to 937KB
-- **Testing**: 109 passing tests, CI/CD pipeline working
+- **Performance**: React.memo, lazy loading, bundle optimized to 937KB
+- **Testing**: 109 passing tests with CI/CD pipeline
 - **Authentication**: Google OAuth with reactive state management
 - **Route Persistence**: Routes survive page refreshes
 
-## 🚀 Next Phase: Mobile Package Extraction
+### **Workspace Packages Architecture**
 
-### Package Strategy for Web + React Native
+- **`@maps/core`**: Shared stores, types, utils, and business logic
+- **`@maps/api-client`**: HTTP client with web/mobile adapters
+- **`@maps/i18n`**: Internationalization with 4 languages (en, nl, fr, de)
+- **`@maps/design-tokens`**: Colors, typography, spacing, and design constants
+- **Monorepo**: Turborepo with proper dependency management and build optimization
 
-We'll use **[@rnmapbox/maps](https://github.com/rnmapbox/maps)** for React Native (same Mapbox as web!) to maximize code reuse.
+### **Design Tokens Implementation**
 
-#### 📦 Monorepo Structure
+- **Fixed dark mode issue**: Removed automatic theme switching that was overriding defaults
+- **Shared package**: All design values centralized in `@maps/design-tokens`
+- **Cross-platform ready**: Colors (OKLCH), typography, spacing, border radius, animations
+- **Web integration**: Utility functions for theme detection and color access
+- **Docker compatibility**: Updated build process to include design tokens
 
+---
+
+## 📊 Current Mobile App Status
+
+### **Phase 1: Foundation & Local Development** ✅ **COMPLETE**
+
+- ✅ Expo app created with TypeScript
+- ✅ All shared packages integrated (`@maps/core`, `@maps/api-client`, `@maps/i18n`, `@maps/design-tokens`)
+- ✅ Local development working (`bunx expo run:android/ios`)
+- ✅ Monorepo properly configured with Turborepo
+- ✅ Basic lint/test/type-check scripts working
+- ✅ Example component using design tokens
+
+### **Phase 2: Self-Hosted CI/CD** 🔴 **NOT STARTED - NEXT PRIORITY**
+
+**This is what EAS Build does, but we'll do it ourselves:**
+
+- ❌ GitHub Actions building actual APKs/IPAs
+- ❌ Automated signing with secrets management
+- ❌ Build artifacts uploaded to GitHub
+- ❌ Release builds on main branch
+- ❌ Distribution to testers
+- ❌ Store deployment automation
+
+### **Phase 3: Design System Consistency** 🟡 **PARTIALLY DONE**
+
+- ✅ Design tokens package working
+- ❌ Default Expo colors still in use
+- ❌ Components not using shared tokens consistently
+
+### **Phase 4: Mapbox Integration** 🟡 **CONFIGURED ONLY**
+
+- ✅ `@rnmapbox/maps` dependency added
+- ✅ Permissions configured
+- ❌ No actual map implementation yet
+- ❌ Missing Mapbox access token
+
+### **Phase 5+: Not Started**
+
+- Shared logic integration (stores, i18n, api)
+- Route management features
+- Production releases to stores
+
+---
+
+## 🚀 Expo Mobile App Implementation Plan (100% Free)
+
+**Goal**: Create a production-ready Android and iOS app using completely free, local development tools with zero ongoing costs.
+
+### **🎯 Core Principles**
+
+- **Zero payments**: No EAS, no cloud services, no subscriptions
+- **Local-first**: All builds happen on your machine
+- **Self-hosted CI**: Use existing GitHub Actions (free tier)
+- **Manual signing**: Handle certificates ourselves
+- **Incremental testing**: Each phase independently testable
+
+---
+
+## **Phase 1: Foundation & Local Development Setup**
+
+**Goal**: Get Expo working locally with our monorepo structure
+
+### **1.1 Prerequisites Setup**
+
+```bash
+# Install required tools (one-time setup)
+# Android Studio (free) - for Android builds
+# Xcode (free with Apple ID) - for iOS builds
+# No Expo account needed for local development
 ```
-maps/
-├── apps/
-│   ├── web/          # Current Vite web app
-│   ├── mobile/       # New Expo app with @rnmapbox/maps
-│   └── api/          # NestJS backend
-├── packages/
-│   ├── core/         # ~40% of current code (stores, types, utils)
-│   ├── api-client/   # API with platform adapters
-│   ├── map-core/     # Shared map logic (waypoints, routes)
-│   └── i18n/         # Translations
+
+### **1.2 Create Expo App**
+
+```bash
+# Create mobile app in our monorepo
+cd apps/
+bunx create-expo-app mobile --template blank-typescript
+cd mobile/
+
+# Install local development client (replaces Expo Go)
+bunx expo install expo-dev-client
+
+# Configure for local builds only
+bunx expo prebuild  # Generates android/ and ios/ directories
 ```
 
-#### 🟢 Easy to Extract (Direct Reuse)
+### **1.3 Monorepo Integration**
 
-- **Zustand stores** - Works identically in React Native
-- **Types & interfaces** - All TypeScript definitions
-- **Utils** - geospatial.ts, formatting.ts, validation
-- **i18n** - Translations work everywhere
-- **Core route logic** - Waypoint management, calculations
+- Add mobile app to workspace `package.json`
+- Configure Turborepo for mobile builds
+- Set up shared package dependencies
+- Update CI/CD to include mobile linting/testing
 
-#### 🟡 Needs Adaptation
+### **1.4 Local Build Testing**
 
-- **Storage**: localStorage → AsyncStorage adapter
-- **API client**: Add platform-specific storage
-- **Location services**: Abstract over platform APIs
-- **Map services**: Shared interface for Mapbox GL JS & @rnmapbox/maps
+```bash
+# Test local development builds (completely free)
+bunx expo run:android     # Android debug build
+bunx expo run:ios         # iOS debug build
 
-#### 🔴 Platform-Specific
+# No external services, no accounts needed
+```
 
-- **UI Components**: Web (Radix/Tailwind) vs Native (NativeBase/Tamagui)
-- **Navigation**: TanStack Router vs React Navigation
-- **Map Components**: Different but similar APIs thanks to @rnmapbox/maps
+**✅ Success Criteria**: Mobile app runs locally on Android emulator and iOS simulator
 
-### Implementation Plan
+---
 
-**Phase 1: Core Package Extraction** (2-3 days)
+## **Phase 2: Self-Hosted CI/CD (Like EAS, But Free)** 🚀 **CURRENT PRIORITY**
 
-1. Create `@maps/core` with stores, types, utils
-2. Create `@maps/api-client` with adapters
-3. Update web app to use packages
+### **2.1 Android CI Pipeline**
 
-**Phase 2: Mobile Setup** (1 week)
+```yaml
+# .github/workflows/native-android-build.yml
+name: Build Android App
+on:
+  push:
+    branches: [main]
+  pull_request:
 
-1. Init Expo app with @rnmapbox/maps
-2. Integrate shared packages
-3. Build native UI components
-4. Implement map with familiar Mapbox API
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "temurin"
+      - uses: android-actions/setup-android@v3
+      - uses: oven-sh/setup-bun@v1
 
-**Phase 3: Feature Parity** (2-3 weeks)
+      - name: Install & Prebuild
+        run: |
+          bun install
+          cd apps/native
+          bunx expo prebuild --platform android
 
-- Complete mobile UI
-- Test cross-platform functionality
-- Optimize for mobile performance
+      - name: Build Debug APK
+        working-directory: apps/native/android
+        run: ./gradlew assembleDebug
 
-## 🎯 Other Options
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-debug-apk
+          path: apps/native/android/app/build/outputs/apk/debug/*.apk
+```
 
-### Web App Polish
+### **2.2 Signing & Release Builds**
 
-- **Accessibility**: ARIA labels, keyboard navigation (4-5 hours)
-- **Loading States**: Skeleton screens, progress indicators (2-3 hours)
-- **More Testing**: Hooks, providers, services (4-6 hours)
+```bash
+# Generate keystore locally (one-time)
+keytool -genkey -v -keystore release.keystore \
+  -alias maps-app -keyalg RSA -keysize 2048 -validity 10000
 
-### Advanced Features
+# Convert for GitHub Secrets
+base64 release.keystore > keystore.base64
+# Add to repo secrets: ANDROID_KEYSTORE_BASE64, etc.
+```
 
-- **Route Optimization**: Algorithm improvements (8-12 hours)
-- **Weather Integration**: Show conditions on route (6-8 hours)
-- **Elevation Profiles**: Terrain visualization (8-10 hours)
-- **Real-time Collaboration**: Share live routes (12-16 hours)
+### **2.3 iOS CI Pipeline**
 
-### Production Readiness
+```yaml
+# .github/workflows/native-ios-build.yml
+name: Build iOS App
+on: [push, pull_request]
 
-- **SEO**: Meta tags, Open Graph, structured data
-- **Security**: Rate limiting, input validation
-- **Monitoring**: Sentry, analytics, performance tracking
-- **PWA**: Offline support, install prompt
+jobs:
+  build-ios:
+    runs-on: macos-latest
+    steps:
+      # Similar setup...
+      - name: Build iOS Simulator App
+        working-directory: apps/native/ios
+        run: |
+          xcodebuild -workspace Maps.xcworkspace \
+            -scheme Maps \
+            -configuration Debug \
+            -sdk iphonesimulator
+```
 
-## 💡 Recommendation
+### **2.4 Automated Distribution**
 
-**Start with Mobile Package Extraction** - The architecture is ready, @rnmapbox/maps makes it easier, and you'll have two apps sharing 40%+ code!
+```yaml
+# Option 1: GitHub Releases (free)
+- name: Create Release
+  if: startsWith(github.ref, 'refs/tags/')
+  uses: softprops/action-gh-release@v1
+  with:
+    files: apps/native/android/app/build/outputs/apk/release/*.apk
+# Option 2: Firebase App Distribution (free tier)
+# Option 3: Self-hosted server
+# Option 4: Direct to stores (Phase 7-8)
+```
+
+**✅ Success Criteria**:
+
+- PRs automatically build APKs
+- Main branch produces signed release APKs
+- Artifacts downloadable from GitHub Actions
+- No dependency on EAS or paid services
+
+---
+
+## **Phase 3: Design System Consistency** ⚡ **NEXT PRIORITY**
+
+### **3.1 Replace Default Expo Colors**
+
+```typescript
+// constants/Colors.ts - Replace with design tokens
+import { lightColors, darkColors } from "@maps/design-tokens";
+
+export const Colors = {
+  light: {
+    text: lightColors.foreground,
+    background: lightColors.background,
+    tint: lightColors.primary,
+    // ... etc
+  },
+  dark: {
+    text: darkColors.foreground,
+    background: darkColors.background,
+    tint: darkColors.primary,
+    // ... etc
+  },
+};
+```
+
+### **3.2 Create Design Token Helper Functions**
+
+```typescript
+// lib/design-tokens-native.ts
+import { spacing, fontSize } from "@maps/design-tokens";
+
+export const parsePixelValue = (value: string): number => {
+  return parseInt(value.replace("px", ""), 10);
+};
+
+export const nativeSpacing = {
+  xs: spacing.xs,
+  sm: spacing.sm,
+  md: spacing.md,
+  lg: spacing.lg,
+  xl: spacing.xl,
+};
+
+export const nativeFontSize = {
+  xs: parsePixelValue(fontSize.xs),
+  sm: parsePixelValue(fontSize.sm),
+  base: parsePixelValue(fontSize.base),
+  lg: parsePixelValue(fontSize.lg),
+  xl: parsePixelValue(fontSize.xl),
+};
+```
+
+### **3.3 Update All Components to Use Design Tokens**
+
+- Replace hardcoded colors in `ThemedText`, `ThemedView` components
+- Update tab bar styling to use design tokens
+- Ensure dark/light mode consistency with web app
+
+**✅ Success Criteria**: All UI uses shared design tokens, visual consistency with web
+
+---
+
+## **Phase 4: Mapbox Integration**
+
+### **4.1 Environment Setup**
+
+```bash
+# Add Mapbox token to environment
+echo "EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN=your_actual_token" >> .env.local
+```
+
+### **4.2 Basic Map Implementation**
+
+```typescript
+// components/MapView.tsx
+import Mapbox from '@rnmapbox/maps';
+import { lightColors } from '@maps/design-tokens';
+
+Mapbox.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN!);
+
+export function MapView() {
+  return (
+    <Mapbox.MapView
+      style={{ flex: 1 }}
+      styleURL="mapbox://styles/mapbox/streets-v11" // Same as web
+    >
+      <Mapbox.UserLocation
+        visible={true}
+        showsUserHeadingIndicator={true}
+      />
+    </Mapbox.MapView>
+  );
+}
+```
+
+### **4.3 Map Screen Creation**
+
+- Create new tab for Map view
+- Implement basic pan/zoom functionality
+- Add user location tracking
+- Test on both Android and iOS
+
+**✅ Success Criteria**: Interactive map working with user location
+
+---
+
+## **Phase 5: Shared Logic Integration** 🔗
+
+### **5.1 Internationalization Setup**
+
+```typescript
+// lib/i18n-native.ts
+import { createI18nService } from "@maps/i18n";
+import { logger } from "@maps/core";
+
+const i18nService = createI18nService(logger);
+
+// React Native hook
+export const useTranslation = () => {
+  const [language, setLanguage] = useState("en");
+  return {
+    t: (key: string) => i18nService.t(key, language),
+    setLanguage,
+    currentLanguage: language,
+  };
+};
+```
+
+### **5.2 State Management Integration**
+
+```typescript
+// stores/index.ts
+import { routingStore } from "@maps/core";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+// Configure persistence for React Native
+const mobileRoutingStore = routingStore.withPersist({
+  storage: {
+    getItem: AsyncStorage.getItem,
+    setItem: AsyncStorage.setItem,
+    removeItem: AsyncStorage.removeItem,
+  },
+});
+
+export { mobileRoutingStore as routingStore };
+```
+
+### **5.3 API Client Integration**
+
+```typescript
+// lib/api-client-native.ts
+import { ApiClient } from "@maps/api-client";
+
+const apiClient = new ApiClient({
+  platform: "mobile",
+  baseURL: process.env.EXPO_PUBLIC_API_URL,
+});
+
+export { apiClient };
+```
+
+**✅ Success Criteria**: All shared packages working, data persistence, translations displaying
+
+---
+
+## **Phase 6: Map Features & Route Management**
+
+### **6.1 Waypoint System**
+
+```typescript
+// components/MapWithRouting.tsx
+import { routingStore } from '@/stores';
+import { MapView } from './MapView';
+
+const MapWithRouting = () => {
+  const { waypoints, addWaypoint } = routingStore();
+
+  const handleMapPress = (coordinates: [number, number]) => {
+    addWaypoint(coordinates, false);
+  };
+
+  return (
+    <MapView
+      waypoints={waypoints}
+      onMapPress={handleMapPress}
+    />
+  );
+};
+```
+
+### **6.2 Route Calculation**
+
+- Integrate route calculation service from `@maps/core`
+- Display calculated routes on map
+- Handle offline route estimation
+- Show route distance and duration
+
+### **6.3 UI Controls**
+
+- Floating action buttons for map controls
+- Route controls (undo, reset, generate)
+- Location controls (center on user, toggle tracking)
+- Settings and menu access
+
+**✅ Success Criteria**: Full route creation and editing functionality
+
+---
+
+## **Phase 7: Android Production Release**
+
+### **7.1 Android App Bundle Creation**
+
+```bash
+# Create production Android App Bundle (free)
+cd apps/mobile/android
+./gradlew bundleRelease
+
+# Output: app-release.aab ready for Google Play
+```
+
+### **7.2 Google Play Store Setup**
+
+- Create Google Play Developer account ($25 one-time fee - unavoidable)
+- Upload app bundle manually
+- Configure store listing
+- Set up release management
+
+### **7.3 Release Pipeline**
+
+- Automated builds via GitHub Actions
+- Manual signing and upload process
+- Version management
+- Release notes automation
+
+**✅ Success Criteria**: Android app live on Google Play Store
+
+---
+
+## **Phase 8: iOS Production Release**
+
+### **8.1 iOS App Store Build**
+
+```bash
+# Create iOS production build (free with Apple ID)
+cd apps/mobile
+xcodebuild -workspace ios/mobile.xcworkspace \
+           -scheme mobile \
+           -configuration Release \
+           archive
+```
+
+### **8.2 App Store Connect**
+
+- Use free Apple Developer ID for development
+- Upgrade to paid account only when ready to publish ($99/year)
+- Manual app submission process
+- TestFlight beta testing
+
+### **8.3 iOS Release Pipeline**
+
+- Local build and archive process
+- Manual certificate management
+- App Store submission workflow
+- Version management consistency
+
+**✅ Success Criteria**: iOS app live on Apple App Store
+
+---
+
+## **💰 Total Cost Breakdown**
+
+- **Development**: $0 (all free tools)
+- **Building**: $0 (local builds only)
+- **CI/CD**: $0 (GitHub Actions free tier)
+- **Android Release**: $25 (one-time Google Play fee)
+- **iOS Release**: $99/year (Apple Developer Program)
+- **Total First Year**: $124 maximum
+
+## **🔧 Required Tools (All Free)**
+
+- **Android Studio**: Free Android development environment
+- **Xcode**: Free iOS development environment (macOS only)
+- **GitHub Actions**: Free CI/CD (2000 minutes/month)
+- **Expo CLI**: Free local development tools
+- **VS Code**: Free code editor with React Native extensions
+
+## **🎯 Key Advantages of This Approach**
+
+- **Complete control**: Your builds, your timeline
+- **No vendor lock-in**: Not dependent on EAS or other services
+- **Learning opportunity**: Understand the full mobile development process
+- **Cost predictable**: Only pay store fees, nothing else
+- **Scales with your needs**: Can add paid services later if desired

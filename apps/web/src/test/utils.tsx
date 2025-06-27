@@ -3,7 +3,11 @@ import { render, type RenderOptions } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 // Mock providers for testing
-const AllTheProviders = ({ children }: { children: React.ReactNode }) => {
+interface ProvidersProps {
+  children: React.ReactNode;
+}
+
+const AllTheProviders = ({ children }: ProvidersProps) => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
@@ -13,7 +17,7 @@ const AllTheProviders = ({ children }: { children: React.ReactNode }) => {
     },
   });
 
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+  return <QueryClientProvider client={queryClient}>{children as any}</QueryClientProvider>;
 };
 
 const customRender = (ui: ReactElement, options?: Omit<RenderOptions, "wrapper">) =>

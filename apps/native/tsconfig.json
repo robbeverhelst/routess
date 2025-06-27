@@ -1,0 +1,29 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./*"],
+      "@maps/core": ["../../packages/core/src"],
+      "@maps/api-client": ["../../packages/api-client/src"],
+      "@maps/i18n": ["../../packages/i18n/src"],
+      "@maps/design-tokens": ["../../packages/design-tokens/src"]
+    }
+  },
+  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"],
+  "references": [
+    {
+      "path": "../../packages/core"
+    },
+    {
+      "path": "../../packages/api-client"
+    },
+    {
+      "path": "../../packages/i18n"
+    },
+    {
+      "path": "../../packages/design-tokens"
+    }
+  ]
+}

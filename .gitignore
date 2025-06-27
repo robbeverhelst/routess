@@ -32,6 +32,9 @@ bin
 
 .turbo
 
+# TypeScript incremental build info
+*.tsbuildinfo
+
 coverage/
 **/coverage/
 
