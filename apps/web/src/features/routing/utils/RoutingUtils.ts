@@ -1,8 +1,8 @@
-import type { Coordinate } from "@/types/map";
+import type { Coordinate } from "@maps/core";
 import { LngLatBounds, type Map as MapboxMap } from "mapbox-gl";
 import { LngLat } from "mapbox-gl";
 import { Logger } from "@/lib/logger";
-import { haversineDistance } from "@/lib/utils/geospatial";
+import { haversineDistance } from "@maps/core";
 
 /**
  * Checks if a coordinate is near a road by querying the Mapbox Matching API.

@@ -1,7 +1,7 @@
 import type { Coordinate } from "@/types/map";
 import { checkNearRoad } from "@/features/routing/utils/RoutingUtils";
 import { Logger } from "@/lib/logger";
-import { haversineDistance } from "@/lib/utils/geospatial";
+import { haversineDistance } from "@maps/core";
 
 import { setCurrentRoutePath } from "@/features/routing/services/RouteCalculationService";
 

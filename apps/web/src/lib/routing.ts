@@ -3,11 +3,11 @@
  */
 
 import type { Dispatch, SetStateAction } from "react";
-import type { Coordinate } from "@/types/map";
+import type { Coordinate } from "@maps/core";
 import type { Map as MapboxMap } from "mapbox-gl";
 import { useRoutingStore } from "@/stores/routingStore";
 import { Logger } from "@/lib/logger";
-import { pointToSegmentDistance } from "@/lib/utils/geospatial";
+import { pointToSegmentDistance } from "@maps/core";
 import { getRoute, getCurrentRoutePath } from "@/features/routing/services/RouteCalculationService";
 import {
   updateWaypointsLayer,

@@ -44,8 +44,7 @@ class GoogleAuthService {
       localStorage.setItem("access_token", authResponse.accessToken);
       localStorage.setItem("user", JSON.stringify(authResponse.user));
 
-      // Ensure apiService refreshes its token from localStorage
-      apiService.refreshToken();
+      // The new API client automatically manages token state
 
       // Trigger auth state change event
       this.triggerAuthChange();
@@ -129,7 +128,8 @@ class GoogleAuthService {
   clearAuthState(): void {
     localStorage.removeItem("access_token");
     localStorage.removeItem("user");
-    apiService.clearToken();
+    // Use the new API client's logout method
+    apiService.logout();
 
     // Trigger auth state change event
     this.triggerAuthChange();

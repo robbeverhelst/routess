@@ -1,0 +1,43 @@
+{
+  "name": "@maps/design-tokens",
+  "version": "0.1.0",
+  "description": "Simple shared design tokens for Maps project - colors and basic typography",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./colors": {
+      "import": "./dist/colors.js",
+      "types": "./dist/colors.d.ts"
+    },
+    "./typography": {
+      "import": "./dist/typography.js",
+      "types": "./dist/typography.d.ts"
+    }
+  },
+  "files": [
+    "dist/**/*",
+    "css/**/*"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "type-check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  },
+  "keywords": [
+    "design-tokens",
+    "design-system",
+    "colors",
+    "typography",
+    "theming"
+  ]
+}

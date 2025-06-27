@@ -6,6 +6,7 @@
 # Maps Project Roadmap
 
 ## ✅ Completed Work
+
 - **Component Architecture**: Split 2,127-line component into focused providers/hooks
 - **State Management**: Full Zustand implementation with persistence and undo/redo
 - **Service Layer**: Clean architecture with proper separation of concerns
@@ -22,6 +23,7 @@
 We'll use **[@rnmapbox/maps](https://github.com/rnmapbox/maps)** for React Native (same Mapbox as web!) to maximize code reuse.
 
 #### 📦 Monorepo Structure
+
 ```
 maps/
 ├── apps/
@@ -36,6 +38,7 @@ maps/
 ```
 
 #### 🟢 Easy to Extract (Direct Reuse)
+
 - **Zustand stores** - Works identically in React Native
 - **Types & interfaces** - All TypeScript definitions
 - **Utils** - geospatial.ts, formatting.ts, validation
@@ -43,12 +46,14 @@ maps/
 - **Core route logic** - Waypoint management, calculations
 
 #### 🟡 Needs Adaptation
+
 - **Storage**: localStorage → AsyncStorage adapter
 - **API client**: Add platform-specific storage
 - **Location services**: Abstract over platform APIs
 - **Map services**: Shared interface for Mapbox GL JS & @rnmapbox/maps
 
 #### 🔴 Platform-Specific
+
 - **UI Components**: Web (Radix/Tailwind) vs Native (NativeBase/Tamagui)
 - **Navigation**: TanStack Router vs React Navigation
 - **Map Components**: Different but similar APIs thanks to @rnmapbox/maps
@@ -56,17 +61,20 @@ maps/
 ### Implementation Plan
 
 **Phase 1: Core Package Extraction** (2-3 days)
+
 1. Create `@maps/core` with stores, types, utils
 2. Create `@maps/api-client` with adapters
 3. Update web app to use packages
 
 **Phase 2: Mobile Setup** (1 week)
+
 1. Init Expo app with @rnmapbox/maps
 2. Integrate shared packages
 3. Build native UI components
 4. Implement map with familiar Mapbox API
 
 **Phase 3: Feature Parity** (2-3 weeks)
+
 - Complete mobile UI
 - Test cross-platform functionality
 - Optimize for mobile performance
@@ -74,17 +82,20 @@ maps/
 ## 🎯 Other Options
 
 ### Web App Polish
+
 - **Accessibility**: ARIA labels, keyboard navigation (4-5 hours)
 - **Loading States**: Skeleton screens, progress indicators (2-3 hours)
 - **More Testing**: Hooks, providers, services (4-6 hours)
 
 ### Advanced Features
+
 - **Route Optimization**: Algorithm improvements (8-12 hours)
 - **Weather Integration**: Show conditions on route (6-8 hours)
 - **Elevation Profiles**: Terrain visualization (8-10 hours)
 - **Real-time Collaboration**: Share live routes (12-16 hours)
 
 ### Production Readiness
+
 - **SEO**: Meta tags, Open Graph, structured data
 - **Security**: Rate limiting, input validation
 - **Monitoring**: Sentry, analytics, performance tracking

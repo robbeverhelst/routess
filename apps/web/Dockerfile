@@ -10,11 +10,18 @@ COPY package.json bun.lockb ./
 # Create the workspace directories that are referenced in package.json
 RUN mkdir -p apps packages
 
-# Copy ONLY the web app package.json (not infra)
+# Copy package.json files for workspace dependencies
 COPY apps/web/package.json ./apps/web/
+COPY packages/core/package.json ./packages/core/
+COPY packages/api-client/package.json ./packages/api-client/
+COPY packages/i18n/package.json ./packages/i18n/
+COPY packages/design-tokens/package.json ./packages/design-tokens/
 
 # Install dependencies from workspace root
 RUN bun install
+
+# Copy the workspace packages source code
+COPY packages/ ./packages/
 
 # Copy the web app source code
 COPY apps/web/ ./apps/web/
