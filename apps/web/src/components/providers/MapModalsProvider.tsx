@@ -23,7 +23,7 @@ const LoginModal = React.lazy(() =>
   })),
 );
 import { useIsAuthenticated } from "@/hooks/useAuthState";
-import { apiService, type ApiRoute } from "@/lib/api";
+import type { ApiRoute } from "@/lib/api";
 import type { SupportedLanguage } from "@/lib/i18n";
 import type { Map as MapboxMap } from "mapbox-gl";
 import { Logger } from "@/lib/logger";
@@ -159,8 +159,7 @@ export const MapModalsProvider: React.FC<MapModalsProviderProps> = ({
 
   const handleLoginSuccess = useCallback(() => {
     setIsLoginModalOpen(false);
-    // Refresh the API service token after login
-    apiService.refreshToken();
+    // The new API client automatically manages token state
     // After successful login, open the save route modal
     setIsSaveRouteModalOpen(true);
   }, []);

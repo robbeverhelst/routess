@@ -7,6 +7,7 @@ module.exports = {
     "/node_modules/",
     "/components/map/__tests__/", // Temporarily skip problematic component tests
   ],
+  transformIgnorePatterns: ["node_modules/(?!(@maps/.*))"],
   extensionsToTreatAsEsm: [".ts", ".tsx"],
   transform: {
     "^.+\\.(ts|tsx)$": [
@@ -37,6 +38,10 @@ module.exports = {
   setupFilesAfterEnv: ["<rootDir>/src/test/setup.ts"],
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/src/$1",
+    "^@maps/core$": "<rootDir>/../../packages/core/src/index.ts",
+    "^@maps/api-client$": "<rootDir>/../../packages/api-client/src/index.ts",
+    "^@maps/design-tokens$": "<rootDir>/../../packages/design-tokens/src/index.ts",
+    "^@maps/i18n$": "<rootDir>/../../packages/i18n/src/index.ts",
     "\\.(css|less|scss|sass)$": "identity-obj-proxy",
     "^(\\.{1,2}/.*)\\.js$": "$1",
   },

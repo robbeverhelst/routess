@@ -1,4 +1,4 @@
-import type { Coordinate } from "@/types/map";
+import type { Coordinate } from "@maps/core";
 import { checkNearRoad } from "@/features/routing/utils/RoutingUtils"; // RESTORED: For Option C
 import type { Map as MapboxMap, GeoJSONSource } from "mapbox-gl";
 import type { Dispatch, SetStateAction } from "react";
@@ -14,7 +14,7 @@ import {
 } from "@/features/routing/managers/MapLayerManager";
 import { saveWaypointsToLocalStorage } from "@/features/routing/services/LocalStorageService";
 import { closestPointOnSegment } from "@/features/routing/utils/RoutingUtils";
-import { haversineDistance } from "@/lib/utils/geospatial";
+import { haversineDistance } from "@maps/core";
 import { getCurrentRoutePath } from "@/features/routing/services/RouteCalculationService";
 import { useRoutingStore } from "@/stores/routingStore";
 import { Logger } from "@/lib/logger";

@@ -1,9 +1,9 @@
 import type { Dispatch, SetStateAction } from "react";
-import type { Coordinate } from "@/types/map";
+import type { Coordinate } from "@maps/core";
 import type { Map as MapboxMap } from "mapbox-gl";
 import { useRoutingStore } from "@/stores/routingStore";
-import { haversineDistance, estimateWalkingDuration } from "@/lib/utils/geospatial";
-import { formatDistance, formatDuration } from "@/lib/utils/formatting";
+import { haversineDistance, estimateWalkingDuration } from "@maps/core";
+import { formatDistance, formatDuration } from "@maps/core";
 import { getDirections } from "@/lib/utils/mapbox-api";
 import { Logger } from "@/lib/logger";
 
