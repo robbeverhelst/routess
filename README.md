@@ -40,6 +40,7 @@ maps/
 ## ✨ Features
 
 ### 🌐 Web Application (`apps/web`)
+
 - **Interactive Mapping** - Full-screen Mapbox-powered interface
 - **Advanced Routing** - Multiple waypoint types with real-time calculations
 - **Route Management** - Save, organize, and share custom routes
@@ -47,18 +48,21 @@ maps/
 - **Google OAuth** - Secure authentication with JWT tokens
 
 ### 📱 Mobile Application (`apps/native`)
+
 - **Cross-Platform** - iOS and Android with single codebase
 - **Native Performance** - Expo with native map components
 - **Shared Logic** - Reuses core business logic from web app
 - **Platform Integration** - Native location services and permissions
 
 ### 🔧 Backend API (`apps/api`)
+
 - **NestJS Framework** - Scalable, modular architecture
 - **PostgreSQL** - Robust data persistence with MikroORM
 - **OpenTelemetry** - Comprehensive observability and monitoring
 - **Rate Limiting** - Protection against abuse
 
 ### 🏗️ Infrastructure (`apps/infra`)
+
 - **Pulumi IaC** - Infrastructure as Code for cloud deployment
 - **Multi-Environment** - Development, staging, and production configs
 - **Cloud Agnostic** - Support for AWS, Azure, and GCP
@@ -77,6 +81,7 @@ maps/
 ### Development Setup
 
 1. **Clone and install dependencies**
+
    ```bash
    git clone https://github.com/robbeverhelst/maps.git
    cd maps
@@ -84,10 +89,11 @@ maps/
    ```
 
 2. **Environment configuration**
+
    ```bash
    # Copy environment template
    cp .env.example .env
-   
+
    # Add your API keys:
    VITE_MAPBOX_ACCESS_TOKEN=your_mapbox_token
    GOOGLE_CLIENT_ID=your_google_client_id
@@ -95,10 +101,11 @@ maps/
    ```
 
 3. **Start development**
+
    ```bash
    # Start all services (web, api, database)
    bun dev
-   
+
    # Or start individual apps:
    bun dev:web      # Web app at http://localhost:5173
    bun dev:api      # API at http://localhost:3000
@@ -108,6 +115,7 @@ maps/
 ### Platform-Specific Development
 
 #### 🌐 Web Development
+
 ```bash
 cd apps/web
 bun dev          # Development server
@@ -116,6 +124,7 @@ bun preview      # Preview production build
 ```
 
 #### 📱 Mobile Development
+
 ```bash
 cd apps/native
 
@@ -132,6 +141,7 @@ bun run emulator:devices # Check running devices
 ```
 
 #### 🔧 API Development
+
 ```bash
 cd apps/api
 bun dev          # Development with hot reload
@@ -140,6 +150,7 @@ bun test         # Run API tests
 ```
 
 #### 🏗️ Infrastructure Management
+
 ```bash
 cd apps/infra
 bun install      # Install Pulumi dependencies
@@ -151,28 +162,36 @@ pulumi destroy   # Tear down infrastructure
 ## 📦 Shared Packages
 
 ### `@maps/core`
+
 Core business logic and utilities shared across platforms:
+
 - Route calculation algorithms
 - Geospatial utilities
 - Data validation schemas
 - Common types and interfaces
 
 ### `@maps/api-client`
+
 Type-safe API client with platform-specific adapters:
+
 - Automatic TypeScript generation from OpenAPI specs
 - Web adapter using fetch
 - React Native adapter using expo-network
 - Built-in error handling and retry logic
 
 ### `@maps/i18n`
+
 Centralized internationalization system:
+
 - Type-safe translation keys
 - Support for 4 languages (EN, NL, FR, DE)
 - Platform-agnostic translation service
 - Automatic missing key detection
 
 ### `@maps/design-tokens`
+
 Shared design system for consistent UI:
+
 - Color palettes (light/dark themes)
 - Typography scales
 - Cross-platform compatibility (CSS + React Native)
@@ -238,6 +257,7 @@ bun reset              # Clean and reinstall dependencies
 ## 🚢 Deployment
 
 ### Production Build
+
 ```bash
 # Build all applications for production
 bun run build
@@ -250,6 +270,7 @@ cd apps/infra && pulumi up
 ```
 
 ### Mobile App Deployment
+
 ```bash
 cd apps/native
 
@@ -280,16 +301,17 @@ bun run build:android   # Build APK/AAB
 
 ## 📱 Platform Support
 
-| Platform | Status | Features |
-|----------|--------|----------|
-| **Web** | ✅ Production Ready | Full feature set, PWA support |
-| **iOS** | ✅ Development Ready | Native maps, location services |
-| **Android** | ✅ Development Ready | Native maps, permissions |
-| **Desktop** | 🔄 Planned | Electron wrapper |
+| Platform    | Status               | Features                       |
+| ----------- | -------------------- | ------------------------------ |
+| **Web**     | ✅ Production Ready  | Full feature set, PWA support  |
+| **iOS**     | ✅ Development Ready | Native maps, location services |
+| **Android** | ✅ Development Ready | Native maps, permissions       |
+| **Desktop** | 🔄 Planned           | Electron wrapper               |
 
 ## 🔧 Technical Stack
 
 ### Frontend
+
 - **React 19** - Latest React with concurrent features
 - **TypeScript 5.8** - Strict type checking
 - **Vite** - Fast development and building
@@ -297,18 +319,21 @@ bun run build:android   # Build APK/AAB
 - **Mapbox GL JS** - Interactive mapping
 
 ### Mobile
+
 - **Expo 53** - React Native platform with native modules
 - **@rnmapbox/maps** - Native map components
 - **Expo Router** - File-based navigation
 - **React Native 0.79** - Latest React Native
 
 ### Backend
+
 - **NestJS** - Scalable Node.js framework
 - **PostgreSQL** - Relational database
 - **MikroORM** - Type-safe ORM
 - **OpenTelemetry** - Observability stack
 
 ### DevOps
+
 - **Turborepo** - Monorepo build system
 - **Bun** - Fast package manager and runtime
 - **Docker** - Containerization
