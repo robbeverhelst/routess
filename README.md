@@ -1,79 +1,82 @@
-# 🗺️ Maps Routing Platform
+# 🗺️ Maps Platform
 
 [![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue?logo=typescript)](https://www.typescriptlang.org/)
 [![Bun](https://img.shields.io/badge/Bun-1.1.38-f9f1e1?logo=bun)](https://bun.sh/)
-[![Tests](https://img.shields.io/badge/Tests-96%20passing-brightgreen?logo=jest)](https://github.com/robbeverhelst/maps)
-[![PWA](https://img.shields.io/badge/PWA-Ready-purple?logo=pwa)](https://web.dev/progressive-web-apps/)
+[![Turborepo](https://img.shields.io/badge/Turborepo-2.0-00b894?logo=turborepo)](https://turbo.build/)
+[![React](https://img.shields.io/badge/React-19-61dafb?logo=react)](https://reactjs.org/)
+[![Expo](https://img.shields.io/badge/Expo-53-000020?logo=expo)](https://expo.dev/)
 
-A modern, full-stack mapping application with advanced routing capabilities, user management, and real-time analytics. Built with React, NestJS, and PostgreSQL in a scalable monorepo architecture.
-
-## ✨ Features
-
-### 🎯 Core Functionality
-
-- **Interactive Mapping** - Full-screen Mapbox-powered interface with smooth controls
-- **Advanced Routing** - Multiple waypoint types (routed & direct) with real-time calculations
-- **User Authentication** - Google OAuth integration with JWT tokens
-- **Route Management** - Save, organize, and share your custom routes
-- **Location Services** - GPS tracking with enhanced accuracy
-
-### 🔧 Technical Highlights
-
-- **Observability** - OpenTelemetry metrics, structured logging, health checks
-- **Performance** - Response compression, caching, rate limiting
-- **Security** - Helmet protection, CORS configuration, input validation
-- **Testing** - 96 test suite with 100% CI/CD coverage
-- **Infrastructure** - Docker deployment with Pulumi IaC
+A modern, cross-platform mapping application with advanced routing capabilities. Built as a scalable monorepo with shared packages for maximum code reuse between web and mobile platforms.
 
 ## 🏗️ Architecture
+
+This project is structured as a **Turborepo monorepo** with shared packages and multiple platform applications:
 
 ```
 maps/
 ├── apps/
-│   ├── web/          # React frontend with Mapbox GL
-│   ├── api/          # NestJS REST API with PostgreSQL
-│   └── infra/        # Pulumi infrastructure as code
-├── packages/         # Shared libraries and utilities
-└── docker-compose.yml
+│   ├── web/           # React web application (Vite + Mapbox)
+│   ├── native/        # React Native mobile app (Expo)
+│   ├── api/           # NestJS backend API
+│   └── infra/         # Pulumi infrastructure as code
+├── packages/
+│   ├── @maps/core               # Shared business logic & utilities
+│   ├── @maps/api-client         # Type-safe API client
+│   ├── @maps/i18n               # Internationalization system
+│   └── @maps/design-tokens      # Shared design system
+└── tooling/
+    ├── eslint-config/   # Shared ESLint configuration
+    └── typescript-config/ # Shared TypeScript settings
 ```
 
-### Technology Stack
+### 🎯 Cross-Platform Strategy
 
-**Frontend**
+- **Code Reuse**: Core business logic shared between web and mobile
+- **Consistent APIs**: Type-safe client with automatic TypeScript generation
+- **Unified Design**: Shared design tokens for consistent UI/UX
+- **Centralized i18n**: Single translation system across platforms
 
-- React 19 + TypeScript + Vite
-- Mapbox GL JS for interactive mapping
-- Tailwind CSS + shadcn/ui components
-- Progressive Web App (PWA) support
+## ✨ Features
 
-**Backend**
+### 🌐 Web Application (`apps/web`)
+- **Interactive Mapping** - Full-screen Mapbox-powered interface
+- **Advanced Routing** - Multiple waypoint types with real-time calculations
+- **Route Management** - Save, organize, and share custom routes
+- **PWA Support** - Offline functionality and app-like experience
+- **Google OAuth** - Secure authentication with JWT tokens
 
-- NestJS + TypeScript
-- PostgreSQL with MikroORM
-- Google OAuth2 authentication
-- OpenTelemetry observability
+### 📱 Mobile Application (`apps/native`)
+- **Cross-Platform** - iOS and Android with single codebase
+- **Native Performance** - Expo with native map components
+- **Shared Logic** - Reuses core business logic from web app
+- **Platform Integration** - Native location services and permissions
 
-**Infrastructure**
+### 🔧 Backend API (`apps/api`)
+- **NestJS Framework** - Scalable, modular architecture
+- **PostgreSQL** - Robust data persistence with MikroORM
+- **OpenTelemetry** - Comprehensive observability and monitoring
+- **Rate Limiting** - Protection against abuse
 
-- Docker containerization
-- Pulumi for cloud deployment
-- GitHub Actions CI/CD
-- Automated testing & quality gates
+### 🏗️ Infrastructure (`apps/infra`)
+- **Pulumi IaC** - Infrastructure as Code for cloud deployment
+- **Multi-Environment** - Development, staging, and production configs
+- **Cloud Agnostic** - Support for AWS, Azure, and GCP
+- **Automated Deployments** - CI/CD integration with GitHub Actions
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
-- **Bun** >= 1.1.38 (package manager)
+- **Bun** >= 1.1.38
+- **Node.js** >= 18
 - **Docker** & Docker Compose
-- **Mapbox** access token
-- **Google OAuth** client credentials
+- **Xcode** (for iOS development)
+- **Android Studio** (for Android development)
 
 ### Development Setup
 
-1. **Clone and install**
-
+1. **Clone and install dependencies**
    ```bash
    git clone https://github.com/robbeverhelst/maps.git
    cd maps
@@ -81,130 +84,237 @@ maps/
    ```
 
 2. **Environment configuration**
-
    ```bash
-   # Create .env file with required variables
+   # Copy environment template
    cp .env.example .env
-
+   
    # Add your API keys:
    VITE_MAPBOX_ACCESS_TOKEN=your_mapbox_token
    GOOGLE_CLIENT_ID=your_google_client_id
-   GOOGLE_CLIENT_SECRET=your_google_client_secret
    DATABASE_URL=postgresql://postgres:password@localhost:5432/maps_db
    ```
 
-3. **Start services**
-
+3. **Start development**
    ```bash
-   # Start database and development servers
+   # Start all services (web, api, database)
    bun dev
-
-   # Applications will be available at:
-   # Frontend: http://localhost:5173
-   # API: http://localhost:3000
-   # Database Admin: http://localhost:8080
+   
+   # Or start individual apps:
+   bun dev:web      # Web app at http://localhost:5173
+   bun dev:api      # API at http://localhost:3000
+   bun dev:native   # Mobile app with Expo
    ```
 
-### Production Deployment
+### Platform-Specific Development
 
+#### 🌐 Web Development
 ```bash
-# Build all applications
-bun run build
-
-# Deploy to cloud (requires Pulumi setup)
-cd apps/infra
-pulumi up
+cd apps/web
+bun dev          # Development server
+bun build        # Production build
+bun preview      # Preview production build
 ```
 
-## 📖 Usage Guide
+#### 📱 Mobile Development
+```bash
+cd apps/native
 
-### Basic Operations
+# iOS Development
+bun run ios              # Start iOS simulator
+bun run emulator:start   # Start Android emulator
+bun run android          # Build for Android
 
-- **🖱️ Click map** → Add waypoint
-- **🖱️ Right-click** → Context menu (direct waypoint, remove)
-- **⌨️ Ctrl+Z/Y** → Undo/Redo actions
-- **📍 Location button** → Center on your position
-- **💾 Save route** → Store route in your library
+# Emulator Management (CLI automation)
+bun run emulator:list    # List available emulators
+bun run emulator:start   # Start emulator
+bun run emulator:kill    # Stop emulator
+bun run emulator:devices # Check running devices
+```
 
-### Advanced Features
+#### 🔧 API Development
+```bash
+cd apps/api
+bun dev          # Development with hot reload
+bun build        # Production build
+bun test         # Run API tests
+```
 
-- **Route Sharing** → Export GPX or share links
-- **Solar Positioning** → Sun angle visualization
-- **Multi-language** → i18n support
-- **Offline Mode** → PWA caching
+#### 🏗️ Infrastructure Management
+```bash
+cd apps/infra
+bun install      # Install Pulumi dependencies
+pulumi stack ls  # List available stacks
+pulumi up        # Deploy infrastructure
+pulumi destroy   # Tear down infrastructure
+```
 
-## 🧪 Development
+## 📦 Shared Packages
+
+### `@maps/core`
+Core business logic and utilities shared across platforms:
+- Route calculation algorithms
+- Geospatial utilities
+- Data validation schemas
+- Common types and interfaces
+
+### `@maps/api-client`
+Type-safe API client with platform-specific adapters:
+- Automatic TypeScript generation from OpenAPI specs
+- Web adapter using fetch
+- React Native adapter using expo-network
+- Built-in error handling and retry logic
+
+### `@maps/i18n`
+Centralized internationalization system:
+- Type-safe translation keys
+- Support for 4 languages (EN, NL, FR, DE)
+- Platform-agnostic translation service
+- Automatic missing key detection
+
+### `@maps/design-tokens`
+Shared design system for consistent UI:
+- Color palettes (light/dark themes)
+- Typography scales
+- Cross-platform compatibility (CSS + React Native)
+
+## 🧪 Development Workflow
 
 ### Available Scripts
 
 ```bash
 # Development
-bun dev              # Start all services
-bun run format       # Code formatting
-bun run lint         # Linting
-bun run check-types  # TypeScript validation
+bun dev                 # Start all applications
+bun dev:web            # Web app only
+bun dev:native         # Mobile app only
+bun dev:api            # Backend API only
+
+# Code Quality
+bun format             # Format all code (Prettier)
+bun lint               # Lint all packages (ESLint)
+bun check-types        # TypeScript validation
+bun ci                 # Full CI pipeline (format, lint, build, test)
+
+# Building
+bun build              # Build all applications
+bun build:web          # Web app production build
+bun build:native       # Mobile app export
 
 # Testing
-bun test             # Run all tests
-bun run ci           # Full CI pipeline
+bun test               # Run all tests
+bun test:web           # Web app tests only
+bun test:api           # API tests only
 
-# Production
-bun run build        # Build all apps
-bun run docker:build # Docker images
+# Infrastructure
+cd apps/infra && pulumi up      # Deploy infrastructure
+cd apps/infra && pulumi destroy # Tear down infrastructure
+
+# Package Management
+bun clean              # Clean all build artifacts
+bun reset              # Clean and reinstall dependencies
 ```
 
-### Code Quality
+### Turborepo Benefits
 
-- **ESLint** + **Prettier** for code consistency
-- **TypeScript** strict mode enabled
-- **96 tests** covering critical paths
-- **OpenTelemetry** metrics for production monitoring
+- **Incremental Builds** - Only rebuilds changed packages
+- **Smart Caching** - Speeds up repeated operations
+- **Parallel Execution** - Runs tasks across packages simultaneously
+- **Dependency Awareness** - Builds packages in correct order
 
-### API Documentation
+## 🔒 Security & Best Practices
 
-- Health checks: `GET /health`
-- Metrics: `GET /metrics` (Prometheus format)
-- Authentication: `POST /api/v1/auth/google`
-- Routes CRUD: `/api/v1/routes`
-- User management: `/api/v1/users`
+- **Environment Variables** - Secure API key management
+- **Type Safety** - Full TypeScript coverage
+- **Code Quality** - ESLint + Prettier enforcement
+- **Git Hooks** - Pre-commit validation
+- **Dependency Updates** - Automated security patches
 
 ## 📊 Monitoring & Observability
 
-The application includes comprehensive monitoring:
+- **Health Checks** - `/health` endpoint with dependency status
+- **Metrics** - Prometheus-compatible metrics at `/metrics`
+- **Structured Logging** - JSON logs with correlation IDs
+- **OpenTelemetry** - Distributed tracing for request flows
 
-- **Health Checks** - Liveness, readiness, and dependency health
-- **Metrics** - HTTP requests, business KPIs, database performance
-- **Logging** - Structured JSON logs with request correlation
-- **Tracing** - Distributed tracing for request flows
+## 🚢 Deployment
 
-Access monitoring endpoints:
+### Production Build
+```bash
+# Build all applications for production
+bun run build
 
-- Health: `http://localhost:3000/health`
-- Metrics: `http://localhost:3000/metrics`
+# Build Docker images
+bun run docker:build
 
-## 🔒 Security
+# Deploy infrastructure (Pulumi)
+cd apps/infra && pulumi up
+```
 
-- **Authentication** via Google OAuth 2.0
-- **Authorization** with JWT tokens
-- **Input Validation** using class-validator
-- **Rate Limiting** to prevent abuse
-- **Security Headers** via Helmet
-- **CORS** properly configured
+### Mobile App Deployment
+```bash
+cd apps/native
+
+# iOS
+bun run build:ios       # Build for iOS
+# Submit to App Store via Xcode or CI/CD
+
+# Android
+bun run build:android   # Build APK/AAB
+# Submit to Google Play via CI/CD
+```
 
 ## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Make changes and add tests
-4. Ensure CI passes: `bun run ci`
+3. Make changes with tests: `bun test`
+4. Ensure quality: `bun ci`
 5. Submit a pull request
 
 ### Development Guidelines
 
-- Follow existing code style (enforced by ESLint/Prettier)
-- Add tests for new features
-- Update documentation as needed
-- Keep commits atomic and well-described
+- **Monorepo First** - Consider shared packages for reusable code
+- **Type Safety** - Maintain 100% TypeScript coverage
+- **Testing** - Add tests for new features
+- **Documentation** - Update relevant README files
+- **Code Style** - Follow ESLint/Prettier configuration
+
+## 📱 Platform Support
+
+| Platform | Status | Features |
+|----------|--------|----------|
+| **Web** | ✅ Production Ready | Full feature set, PWA support |
+| **iOS** | ✅ Development Ready | Native maps, location services |
+| **Android** | ✅ Development Ready | Native maps, permissions |
+| **Desktop** | 🔄 Planned | Electron wrapper |
+
+## 🔧 Technical Stack
+
+### Frontend
+- **React 19** - Latest React with concurrent features
+- **TypeScript 5.8** - Strict type checking
+- **Vite** - Fast development and building
+- **Tailwind CSS** - Utility-first styling
+- **Mapbox GL JS** - Interactive mapping
+
+### Mobile
+- **Expo 53** - React Native platform with native modules
+- **@rnmapbox/maps** - Native map components
+- **Expo Router** - File-based navigation
+- **React Native 0.79** - Latest React Native
+
+### Backend
+- **NestJS** - Scalable Node.js framework
+- **PostgreSQL** - Relational database
+- **MikroORM** - Type-safe ORM
+- **OpenTelemetry** - Observability stack
+
+### DevOps
+- **Turborepo** - Monorepo build system
+- **Bun** - Fast package manager and runtime
+- **Docker** - Containerization
+- **GitHub Actions** - CI/CD pipeline
+- **Pulumi** - Infrastructure as Code (IaC)
+- **Multi-Cloud** - AWS, Azure, GCP support
 
 ## 📄 License
 
@@ -214,8 +324,8 @@ This project is licensed under the [MIT License](LICENSE).
 
 - **Issues**: [GitHub Issues](https://github.com/robbeverhelst/maps/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/robbeverhelst/maps/discussions)
-- **Documentation**: See `/apps/*/README.md` for component-specific docs
+- **Documentation**: Check individual app READMEs in `/apps/*/README.md`
 
 ---
 
-**Built with ❤️ using modern web technologies**
+**Built with ❤️ for cross-platform excellence**
