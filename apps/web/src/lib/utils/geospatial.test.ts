@@ -7,7 +7,7 @@ import {
   estimateWalkingDuration,
   EARTH_RADIUS_KM,
 } from "@/lib/utils/geospatial";
-import { mockCoordinates } from "../../../test/utils";
+import { mockCoordinates } from "../../test/utils";
 
 describe("Geospatial Utils", () => {
   describe("haversineDistance", () => {

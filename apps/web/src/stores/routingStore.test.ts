@@ -1,5 +1,5 @@
 import { useRoutingStore } from "@/stores/routingStore";
-import { mockCoordinates } from "../../test/utils";
+import { mockCoordinates } from "../test/utils";
 
 // Mock localStorage for persistence
 const mockLocalStorage = {

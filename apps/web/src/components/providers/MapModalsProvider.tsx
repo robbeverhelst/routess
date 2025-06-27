@@ -1,10 +1,28 @@
 import React, { createContext, useContext, useState, useCallback, Suspense } from "react";
 import type { RouteGenerationParams } from "@/components/modals/RouteGeneratorModal";
-import { RouteGeneratorModal } from "@/components/modals/RouteGeneratorModal";
-import { SaveRouteModal } from "@/components/modals/SaveRouteModal";
-import { RouteLibraryModal } from "@/components/modals/RouteLibraryModal";
-import { LoginModal } from "@/components/auth/LoginModal";
-import { googleAuth } from "@/lib/google-auth";
+
+// Lazy load modals to reduce bundle size
+const RouteGeneratorModal = React.lazy(() =>
+  import("@/components/modals/RouteGeneratorModal").then((module) => ({
+    default: module.RouteGeneratorModal,
+  })),
+);
+const SaveRouteModal = React.lazy(() =>
+  import("@/components/modals/SaveRouteModal").then((module) => ({
+    default: module.SaveRouteModal,
+  })),
+);
+const RouteLibraryModal = React.lazy(() =>
+  import("@/components/modals/RouteLibraryModal").then((module) => ({
+    default: module.RouteLibraryModal,
+  })),
+);
+const LoginModal = React.lazy(() =>
+  import("@/components/auth/LoginModal").then((module) => ({
+    default: module.LoginModal,
+  })),
+);
+import { useIsAuthenticated } from "@/hooks/useAuthState";
 import { apiService, type ApiRoute } from "@/lib/api";
 import type { SupportedLanguage } from "@/lib/i18n";
 import type { Map as MapboxMap } from "mapbox-gl";
@@ -84,6 +102,8 @@ export const MapModalsProvider: React.FC<MapModalsProviderProps> = ({
 }) => {
   // Get map lock state from Zustand store
   const isMapLocked = useRoutingStore((state) => state.isMapLocked);
+  // Use reactive auth state
+  const isAuthenticated = useIsAuthenticated();
   // Modal states
   const [isRouteGeneratorModalOpen, setIsRouteGeneratorModalOpen] = useState(false);
   const [isGeneratingRoute] = useState(false); // Always false since feature is disabled
@@ -104,12 +124,12 @@ export const MapModalsProvider: React.FC<MapModalsProviderProps> = ({
 
   // Save Route Modal handlers
   const openSaveRouteModal = useCallback(() => {
-    if (googleAuth.isSignedIn()) {
+    if (isAuthenticated) {
       setIsSaveRouteModalOpen(true);
     } else {
       setIsLoginModalOpen(true);
     }
-  }, []);
+  }, [isAuthenticated]);
 
   const closeSaveRouteModal = useCallback(() => {
     setIsSaveRouteModalOpen(false);
@@ -117,12 +137,12 @@ export const MapModalsProvider: React.FC<MapModalsProviderProps> = ({
 
   // Route Library Modal handlers
   const openRouteLibraryModal = useCallback(() => {
-    if (googleAuth.isSignedIn()) {
+    if (isAuthenticated) {
       setIsRouteLibraryModalOpen(true);
     } else {
       setIsLoginModalOpen(true);
     }
-  }, []);
+  }, [isAuthenticated]);
 
   const closeRouteLibraryModal = useCallback(() => {
     setIsRouteLibraryModalOpen(false);
@@ -253,7 +273,7 @@ export const MapModalsProvider: React.FC<MapModalsProviderProps> = ({
         Logger.error("[MapModalsProvider] Failed to load route:", error);
       }
     },
-    [mapRef, mapboxToken, setRouteDistance, setRouteDuration, setHasRoute],
+    [mapRef, mapboxToken, setRouteDistance, setRouteDuration, setHasRoute, isMapLocked],
   );
 
   const contextValue: MapModalsContextType = {
@@ -289,46 +309,56 @@ export const MapModalsProvider: React.FC<MapModalsProviderProps> = ({
       {children}
 
       {/* Route Generator Modal */}
-      <Suspense fallback={<div className="flex items-center justify-center p-4">Loading...</div>}>
-        <RouteGeneratorModal
-          isOpen={isRouteGeneratorModalOpen}
-          onClose={closeRouteGeneratorModal}
-          onGenerate={handleGenerateCustomRoute}
-          mapboxToken={mapboxToken}
-          isGenerating={isGeneratingRoute}
-          userLocation={userLocation}
-          isUserLocationLoading={isUserLocationLoading}
-          userLocationError={userLocationError?.message || null}
-          currentLanguage={currentLanguage}
-        />
-      </Suspense>
+      {isRouteGeneratorModalOpen && (
+        <Suspense fallback={<div className="flex items-center justify-center p-4">Loading...</div>}>
+          <RouteGeneratorModal
+            isOpen={isRouteGeneratorModalOpen}
+            onClose={closeRouteGeneratorModal}
+            onGenerate={handleGenerateCustomRoute}
+            mapboxToken={mapboxToken}
+            isGenerating={isGeneratingRoute}
+            userLocation={userLocation}
+            isUserLocationLoading={isUserLocationLoading}
+            userLocationError={userLocationError?.message || null}
+            currentLanguage={currentLanguage}
+          />
+        </Suspense>
+      )}
 
       {/* Save Route Modal */}
-      <Suspense fallback={<div className="flex items-center justify-center p-4">Loading...</div>}>
-        <SaveRouteModal
-          isOpen={isSaveRouteModalOpen}
-          onClose={closeSaveRouteModal}
-          currentLanguage={currentLanguage}
-        />
-      </Suspense>
+      {isSaveRouteModalOpen && (
+        <Suspense fallback={<div className="flex items-center justify-center p-4">Loading...</div>}>
+          <SaveRouteModal
+            isOpen={isSaveRouteModalOpen}
+            onClose={closeSaveRouteModal}
+            currentLanguage={currentLanguage}
+          />
+        </Suspense>
+      )}
 
       {/* Route Library Modal */}
-      <Suspense fallback={<div className="flex items-center justify-center p-4">Loading...</div>}>
-        <RouteLibraryModal
-          isOpen={isRouteLibraryModalOpen}
-          onClose={closeRouteLibraryModal}
-          onLoadRoute={handleLoadRoute}
-          currentLanguage={currentLanguage}
-        />
-      </Suspense>
+      {isRouteLibraryModalOpen && (
+        <Suspense fallback={<div className="flex items-center justify-center p-4">Loading...</div>}>
+          <RouteLibraryModal
+            isOpen={isRouteLibraryModalOpen}
+            onClose={closeRouteLibraryModal}
+            onLoadRoute={handleLoadRoute}
+            currentLanguage={currentLanguage}
+          />
+        </Suspense>
+      )}
 
       {/* Login Modal */}
-      <LoginModal
-        isOpen={isLoginModalOpen}
-        onLoginSuccess={handleLoginSuccess}
-        onOpenChange={(open) => !open && setIsLoginModalOpen(false)}
-        currentLanguage={currentLanguage}
-      />
+      {isLoginModalOpen && (
+        <Suspense fallback={<div className="flex items-center justify-center p-4">Loading...</div>}>
+          <LoginModal
+            isOpen={isLoginModalOpen}
+            onLoginSuccess={handleLoginSuccess}
+            onOpenChange={(open) => !open && setIsLoginModalOpen(false)}
+            currentLanguage={currentLanguage}
+          />
+        </Suspense>
+      )}
     </MapModalsContext.Provider>
   );
 };

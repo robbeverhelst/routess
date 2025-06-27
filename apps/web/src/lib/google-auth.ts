@@ -47,6 +47,9 @@ class GoogleAuthService {
       // Ensure apiService refreshes its token from localStorage
       apiService.refreshToken();
 
+      // Trigger auth state change event
+      this.triggerAuthChange();
+
       Logger.info("Google Sign-In successful:", {
         email: authResponse.user.email,
         name: authResponse.user.name,
@@ -69,12 +72,13 @@ class GoogleAuthService {
   async signOut(): Promise<void> {
     try {
       await apiService.logout();
-      localStorage.removeItem("access_token");
-      localStorage.removeItem("user");
+      this.clearAuthState();
 
       Logger.info("Google Sign-Out successful");
     } catch (error) {
       Logger.error("Google Sign-Out failed:", error);
+      // Even if server logout fails, clear local state
+      this.clearAuthState();
       throw error;
     }
   }
@@ -101,6 +105,49 @@ class GoogleAuthService {
       user: null,
       accessToken: null,
     };
+  }
+
+  // Validate if current session is actually valid
+  async validateSession(): Promise<boolean> {
+    try {
+      const accessToken = localStorage.getItem("access_token");
+      if (!accessToken) {
+        return false;
+      }
+
+      // Try to get user profile to validate token
+      await apiService.getProfile();
+      return true;
+    } catch {
+      // If validation fails, clear auth state
+      this.clearAuthState();
+      return false;
+    }
+  }
+
+  // Clear all auth state
+  clearAuthState(): void {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("user");
+    apiService.clearToken();
+
+    // Trigger auth state change event
+    this.triggerAuthChange();
+  }
+
+  // Trigger auth state change event for reactive UI updates
+  private triggerAuthChange(): void {
+    // Trigger custom event for same-tab updates
+    window.dispatchEvent(new CustomEvent("auth-change"));
+
+    // Also trigger storage event for cross-tab compatibility
+    window.dispatchEvent(
+      new StorageEvent("storage", {
+        key: "access_token",
+        newValue: localStorage.getItem("access_token"),
+        oldValue: null,
+      }),
+    );
   }
 
   isSignedIn(): boolean {

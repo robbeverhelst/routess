@@ -17,6 +17,11 @@ class ErrorHandlerService {
   }
 
   private setupGlobalHandlers() {
+    // Only set up handlers in browser environment
+    if (typeof window === "undefined") {
+      return;
+    }
+
     // Catch unhandled promise rejections
     window.addEventListener("unhandledrejection", (event) => {
       this.handleError(new Error(event.reason?.message || "Unhandled promise rejection"), {

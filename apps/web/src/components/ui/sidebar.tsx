@@ -32,7 +32,7 @@ import {
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import React, { useState, useRef, useEffect, useCallback, Suspense } from "react";
+import React, { useState, useRef, useCallback, Suspense } from "react";
 import type { Map as MapboxMap } from "mapbox-gl";
 import { GB, NL, FR, DE } from "country-flag-icons/react/3x2";
 import { exportRouteToGPX, importRouteFromGPX } from "../../lib/routing";
@@ -42,7 +42,7 @@ import type { Dispatch, SetStateAction } from "react";
 import { Logger } from "../../lib/logger";
 import { LoginModal } from "../auth/LoginModal";
 import { googleAuth } from "../../lib/google-auth";
-import type { ApiUser } from "../../lib/api";
+import { useAuthState } from "@/hooks/useAuthState";
 import { SettingsModal } from "@/components/ui/settings-modal";
 
 interface SidebarProps {
@@ -111,19 +111,15 @@ export function Sidebar({
   onOpenRouteLibrary,
   onSaveRoute,
 }: SidebarProps) {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [currentUser, setCurrentUser] = useState<ApiUser | null>(null);
+  // Use reactive auth state hook
+  const authState = useAuthState();
+  const isLoggedIn = authState.isAuthenticated;
+  const currentUser = authState.user;
+
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [isLangPopoverOpen, setIsLangPopoverOpen] = useState(false);
-
-  // Check authentication state on mount
-  useEffect(() => {
-    const authState = googleAuth.getAuthState();
-    setIsLoggedIn(authState.isAuthenticated);
-    setCurrentUser(authState.user);
-  }, []);
 
   const baseLanguages: Array<{
     code: SupportedLanguage;
@@ -242,16 +238,14 @@ export function Sidebar({
   }, [map, accessToken, onImportError, setRouteDistance, setRouteDuration, setHasRoute]);
 
   const handleLoginSuccess = useCallback(() => {
-    const authState = googleAuth.getAuthState();
-    setIsLoggedIn(authState.isAuthenticated);
-    setCurrentUser(authState.user);
+    // Auth state will be automatically updated by the reactive hook
+    Logger.info("Login successful");
   }, []);
 
   const handleSignOut = useCallback(async () => {
     try {
       await googleAuth.signOut();
-      setIsLoggedIn(false);
-      setCurrentUser(null);
+      // Auth state will be automatically updated by the reactive hook
       Logger.info("User signed out successfully");
     } catch (error) {
       Logger.error("Sign out failed:", error);

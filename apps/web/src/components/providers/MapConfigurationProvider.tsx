@@ -107,7 +107,7 @@ export const MapConfigurationProvider: React.FC<MapConfigurationProviderProps> =
       saveMapLockStateToLocalStorage(true);
       Logger.info("[MapConfigurationProvider] Map automatically locked due to offline status");
     }
-  }, [isOnline, isMapLocked]);
+  }, [isOnline, isMapLocked, setIsMapLocked]);
 
   // Effect to calculate initial sun position when user location becomes available
   useEffect(() => {
