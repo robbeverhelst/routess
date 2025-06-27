@@ -289,7 +289,7 @@ export const useRoutingStore = create<RoutingStore>()(
     }),
     {
       name: "routing-store",
-      // SIMPLE partialize function - only persist essential data, no array operations
+      // Persist all essential data including undo/redo history
       partialize: (state) => ({
         waypoints: state.waypoints,
         directFlags: state.directFlags,
@@ -298,8 +298,11 @@ export const useRoutingStore = create<RoutingStore>()(
         routeDuration: state.routeDuration,
         hasRoute: state.hasRoute,
         isMapLocked: state.isMapLocked,
-        // NOTE: NOT persisting undoStack/redoStack to avoid large localStorage
-        // They will start empty on page reload, which is acceptable
+        // Now persisting undo/redo history for better UX
+        undoStack: state.undoStack,
+        redoStack: state.redoStack,
+        canUndo: state.canUndo,
+        canRedo: state.canRedo,
       }),
     },
   ),

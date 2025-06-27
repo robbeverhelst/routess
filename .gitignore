@@ -35,7 +35,7 @@ bin
 coverage/
 **/coverage/
 
-CLAUDE.md
-.claude/*
+# CLAUDE.md
+# .claude/*
 
 pgadmin

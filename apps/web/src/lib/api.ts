@@ -56,11 +56,11 @@ class ApiService {
 
   constructor() {
     this.baseUrl = API_BASE_URL;
-    this.token = localStorage.getItem("access_token");
+    this.token = typeof localStorage !== "undefined" ? localStorage.getItem("access_token") : null;
   }
 
   refreshToken() {
-    this.token = localStorage.getItem("access_token");
+    this.token = typeof localStorage !== "undefined" ? localStorage.getItem("access_token") : null;
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -87,6 +87,16 @@ class ApiService {
     });
 
     if (!response.ok) {
+      // Handle 401 Unauthorized - clear stale auth state
+      if (response.status === 401) {
+        this.clearToken();
+        localStorage.removeItem("user");
+        // Import googleAuth to trigger UI updates
+        import("@/lib/google-auth").then(({ googleAuth }) => {
+          googleAuth.clearAuthState();
+        });
+      }
+
       // Try to get more detailed error information
       let errorDetails = "";
       try {

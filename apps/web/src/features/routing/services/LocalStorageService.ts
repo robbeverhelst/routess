@@ -1,5 +1,6 @@
 import type { Coordinate } from "@/types/map";
 import { Logger } from "@/lib/logger";
+import { isDev } from "@/lib/utils/env";
 import type { TimeOfDay } from "@/components/ui/route-controls";
 import type { SupportedLanguage } from "@/lib/i18n";
 
@@ -83,7 +84,7 @@ const MAP_LOCK_STATE_KEY = "routingAppMapLockState";
 export const saveMapLockStateToLocalStorage = (isLocked: boolean): void => {
   try {
     localStorage.setItem(MAP_LOCK_STATE_KEY, JSON.stringify(isLocked));
-    if (import.meta.env.DEV) {
+    if (isDev()) {
       Logger.info(`[LocalStorageService] Saved map lock state: ${isLocked}`);
     }
   } catch (error) {
@@ -100,7 +101,7 @@ export const loadMapLockStateFromLocalStorage = (): boolean => {
       return false;
     }
     const isLocked = JSON.parse(storedState);
-    if (import.meta.env.DEV) {
+    if (isDev()) {
       Logger.info(`[LocalStorageService] Loaded map lock state: ${isLocked}`);
     }
     return typeof isLocked === "boolean" ? isLocked : false; // Ensure it's a boolean
@@ -249,7 +250,7 @@ export function loadLanguageFromLocalStorage(): SupportedLanguage {
 export function saveLanguageToLocalStorage(language: SupportedLanguage): void {
   try {
     localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
-    if (import.meta.env.DEV) {
+    if (isDev()) {
       Logger.info(`[LocalStorageService] Saved language: ${language}`);
     }
   } catch (error) {

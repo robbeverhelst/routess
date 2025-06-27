@@ -1,6 +1,17 @@
 import "@testing-library/jest-dom";
 import { cleanup } from "@testing-library/react";
 
+// Extend jest matchers with jest-dom
+import type { TestingLibraryMatchers } from "@testing-library/jest-dom/matchers";
+
+declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
+  namespace jest {
+    // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+    interface Matchers<R> extends TestingLibraryMatchers<typeof expect.stringContaining, R> {}
+  }
+}
+
 // Mock ResizeObserver
 global.ResizeObserver = class ResizeObserver {
   observe() {}
@@ -124,6 +135,33 @@ Object.defineProperty(URL, "createObjectURL", {
 
 // Mock fetch
 global.fetch = jest.fn();
+
+// Mock import.meta for Vite
+Object.defineProperty(global, "import", {
+  value: {
+    meta: {
+      env: {
+        DEV: false,
+        PROD: true,
+        MODE: "test",
+        VITE_MAPBOX_ACCESS_TOKEN: "test-token",
+      },
+      hot: undefined,
+    },
+  },
+  writable: true,
+});
+
+// Alternative approach - mock the import.meta directly
+(global as any).importMeta = {
+  env: {
+    DEV: false,
+    PROD: true,
+    MODE: "test",
+    VITE_MAPBOX_ACCESS_TOKEN: "test-token",
+  },
+  hot: undefined,
+};
 
 // Cleanup after each test
 afterEach(() => {

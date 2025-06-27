@@ -16,6 +16,11 @@ export function useUserRoutes() {
   return useQuery({
     queryKey: queryKeys.routes.list(),
     queryFn: async () => {
+      // Double-check authentication before making the call
+      if (!localStorage.getItem("access_token")) {
+        throw new Error("No authentication token available");
+      }
+
       const routes = await apiService.getRoutes();
       Logger.info(`Fetched ${routes.length} routes from API`);
       return routes;
@@ -23,6 +28,7 @@ export function useUserRoutes() {
     enabled: hasToken, // Only fetch if authenticated
     staleTime: 2 * 60 * 1000, // Routes are fresh for 2 minutes
     retry: hasToken ? 2 : false, // Only retry if we have a token
+    refetchOnWindowFocus: hasToken, // Only refetch on focus if authenticated
   });
 }
 
@@ -138,6 +144,11 @@ export function useUserProfile() {
   return useQuery({
     queryKey: queryKeys.user.profile(),
     queryFn: async () => {
+      // Double-check authentication before making the call
+      if (!localStorage.getItem("access_token")) {
+        throw new Error("No authentication token available");
+      }
+
       const profile = await apiService.getProfile();
       Logger.info("Fetched user profile:", profile.email);
       return profile;
@@ -145,6 +156,7 @@ export function useUserProfile() {
     enabled: hasToken, // Only fetch if authenticated
     staleTime: 5 * 60 * 1000, // Profile is fresh for 5 minutes
     retry: hasToken ? 1 : false, // Only retry once if we have a token
+    refetchOnWindowFocus: hasToken, // Only refetch on focus if authenticated
   });
 }
 
@@ -155,40 +167,63 @@ export function useUserProfile() {
 // ============================================================================
 
 /**
- * Hook to check authentication status
+ * Hook to check authentication status with proper token validation
  */
 export function useAuthStatus() {
+  const hasToken = !!localStorage.getItem("access_token");
+
   return useQuery({
     queryKey: queryKeys.auth.session(),
     queryFn: async () => {
       try {
-        const profile = await apiService.getProfile();
-        return { isAuthenticated: true, user: profile };
-      } catch {
+        // Import googleAuth to use session validation
+        const { googleAuth } = await import("@/lib/google-auth");
+        const isValid = await googleAuth.validateSession();
+
+        if (isValid) {
+          const profile = await apiService.getProfile();
+          return { isAuthenticated: true, user: profile };
+        } else {
+          return { isAuthenticated: false, user: null };
+        }
+      } catch (error) {
+        Logger.error("Auth status check failed:", error);
         return { isAuthenticated: false, user: null };
       }
     },
-    staleTime: 30 * 1000, // Check auth every 30 seconds
+    enabled: hasToken, // Only check if we have a token
+    staleTime: 2 * 60 * 1000, // Check auth every 2 minutes
     retry: false, // Don't retry auth checks
+    refetchOnWindowFocus: true, // Recheck when window gains focus
+    refetchOnMount: true, // Always check on mount
   });
 }
 
 /**
- * Hook to logout user
+ * Hook to logout user properly
  */
 export function useLogout() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async () => {
-      // Clear any auth tokens/session data
-      localStorage.removeItem("auth-token");
+      // Use googleAuth service for proper logout
+      const { googleAuth } = await import("@/lib/google-auth");
+      await googleAuth.signOut();
       Logger.info("User logged out");
     },
     onSuccess: () => {
       // Clear all cached data on logout
       queryClient.clear();
       Logger.info("Cache cleared after logout");
+    },
+    onError: (error) => {
+      Logger.error("Logout failed:", error);
+      // Even if logout fails, clear local state
+      import("@/lib/google-auth").then(({ googleAuth }) => {
+        googleAuth.clearAuthState();
+        queryClient.clear();
+      });
     },
   });
 }

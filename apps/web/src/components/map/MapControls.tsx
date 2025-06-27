@@ -52,7 +52,7 @@ interface MapControlsProps {
   isOnline: boolean;
 }
 
-export const MapControls: React.FC<MapControlsProps> = ({
+const MapControlsComponent: React.FC<MapControlsProps> = ({
   mapRef,
   mapboxToken,
   currentLanguage,
@@ -277,3 +277,6 @@ export const MapControls: React.FC<MapControlsProps> = ({
     </>
   );
 };
+
+// Memoize MapControls to prevent unnecessary re-renders when props haven't changed
+export const MapControls = React.memo(MapControlsComponent);

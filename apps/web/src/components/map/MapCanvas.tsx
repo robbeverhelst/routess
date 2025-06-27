@@ -209,9 +209,9 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
     if (mapRef.current && typeof (effectiveInitialViewState as any)?.bearing === "undefined") {
       setCurrentBearing(mapRef.current.getBearing());
     }
-  }, [setCurrentBearing, (effectiveInitialViewState as any)?.bearing]);
+  }, [mapRef, setCurrentBearing, effectiveInitialViewState]);
 
-  // Animate user location halo
+  // Animate user location halo with performance optimizations
   useEffect(() => {
     if (!mapRef.current) return;
 
@@ -219,10 +219,21 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
     const MIN_HALO_RADIUS = 10;
     const MAX_HALO_RADIUS = 14;
     const PULSE_DURATION_MS = 2000;
+    const TARGET_FPS = 30; // Throttle to 30fps instead of 60fps for better performance
+    const FRAME_INTERVAL = 1000 / TARGET_FPS;
 
     let startTime: number | null = null;
+    let lastFrameTime = 0;
 
     const animateHalo = (timestamp: number) => {
+      // Throttle to target FPS for better performance
+      if (timestamp - lastFrameTime < FRAME_INTERVAL) {
+        animationFrameIdRef.current = requestAnimationFrame(animateHalo);
+        return;
+      }
+
+      lastFrameTime = timestamp;
+
       if (!startTime) startTime = timestamp;
       const elapsedTime = timestamp - startTime;
       const pulseProgress = (elapsedTime % PULSE_DURATION_MS) / PULSE_DURATION_MS;
@@ -230,12 +241,15 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
       const currentRadius = MIN_HALO_RADIUS + easedProgress * (MAX_HALO_RADIUS - MIN_HALO_RADIUS);
 
       try {
+        // Check if layer exists before animation to avoid unnecessary updates
         if (map.getLayer("user-location-halo") && map.getSource("user-location-point")) {
           map.setPaintProperty("user-location-halo", "circle-radius", currentRadius);
         }
       } catch (e) {
-        if (typeof e === "undefined") Logger.info("Suppressed error");
+        // Suppress minor map errors during animation
+        if (typeof e === "undefined") Logger.info("Suppressed animation error");
       }
+
       animationFrameIdRef.current = requestAnimationFrame(animateHalo);
     };
 
@@ -246,7 +260,7 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
         cancelAnimationFrame(animationFrameIdRef.current);
       }
     };
-  }, []);
+  }, [mapRef]);
 
   return (
     <>

@@ -37,13 +37,19 @@ const reinitializeRouteCalcState = () => {
 
 reinitializeRouteCalcState(); // Initial call
 
-if (import.meta.hot) {
-  import.meta.hot.dispose(() => {
-    // HMR cleanup
-  });
-  import.meta.hot.accept(() => {
-    reinitializeRouteCalcState();
-  });
+// Hot Module Reloading support (development only)
+try {
+  const importMeta = (globalThis as any).import?.meta;
+  if (importMeta && importMeta.hot) {
+    importMeta.hot.dispose(() => {
+      // HMR cleanup
+    });
+    importMeta.hot.accept(() => {
+      reinitializeRouteCalcState();
+    });
+  }
+} catch {
+  // HMR not available (test/production environment)
 }
 
 // Helper function to calculate distance between coordinates using haversine formula
