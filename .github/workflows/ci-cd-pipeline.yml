@@ -322,3 +322,182 @@ jobs:
       - name: Clean up old resources (if any)
         run: |
           echo "Deployment completed successfully. Old resources will be garbage collected by Pulumi."
+
+  # Native mobile app builds running in parallel with Docker builds
+  native:
+    name: Build Native Apps
+    needs: release
+    runs-on: arc-runner-set-maps
+    # Only build native apps when native code changes
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[native]') || contains(github.event.pull_request.title, '[native]')
+    permissions:
+      contents: write
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: android
+            artifact_path: android/app/build/outputs/apk/**/*.apk
+            artifact_name: android-apk
+          - platform: ios
+            artifact_path: ios/build/Build/Products/Debug-iphonesimulator/*.app
+            artifact_name: ios-simulator-app
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Setup Java (Android only)
+        if: matrix.platform == 'android'
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "temurin"
+
+      - name: Setup Android SDK (Android only)
+        if: matrix.platform == 'android'
+        uses: android-actions/setup-android@v3
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.bun/install/cache
+            node_modules
+            apps/*/node_modules
+            packages/*/node_modules
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            ~/Library/Caches/CocoaPods
+            ~/Library/Developer/Xcode/DerivedData
+          key: ${{ runner.os }}-${{ matrix.platform }}-bun-${{ hashFiles('**/bun.lockb') }}-native-${{ hashFiles('apps/native/**') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.platform }}-bun-
+            ${{ runner.os }}-${{ matrix.platform }}-
+
+      - name: Install dependencies
+        run: |
+          bun install
+          bun pm cache rm --global || true
+
+      - name: Build shared packages
+        run: bunx turbo run build --filter='@maps/*'
+
+      - name: Prebuild native app
+        working-directory: apps/native
+        run: |
+          bunx expo prebuild --platform ${{ matrix.platform }} --clean
+
+      # Android Build Steps
+      - name: Build Android APKs
+        if: matrix.platform == 'android'
+        working-directory: apps/native/android
+        run: |
+          chmod +x gradlew
+          
+          # Always build debug APK
+          ./gradlew assembleDebug --no-daemon --console=plain
+          
+          # Build release APK on main branch
+          if [ "${{ github.ref }}" == "refs/heads/main" ] && [ "${{ github.event_name }}" != "pull_request" ]; then
+            ./gradlew assembleRelease --no-daemon --console=plain
+          fi
+          
+          # List all APKs
+          find app/build/outputs/apk -name "*.apk" -ls
+
+      # iOS Build Steps  
+      - name: Build iOS Simulator App
+        if: matrix.platform == 'ios'
+        working-directory: apps/native/ios
+        run: |
+          # Install CocoaPods dependencies
+          pod install --repo-update
+          
+          # Build for iOS Simulator
+          xcodebuild -workspace Maps.xcworkspace \
+            -scheme Maps \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -derivedDataPath ./build \
+            -destination 'platform=iOS Simulator,name=iPhone 15' \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            ONLY_ACTIVE_ARCH=NO
+
+      - name: Package iOS Simulator App
+        if: matrix.platform == 'ios'
+        working-directory: apps/native/ios
+        run: |
+          # Create .app bundle for simulator
+          cd build/Build/Products/Debug-iphonesimulator
+          zip -r Maps-Simulator.zip Maps.app
+          mv Maps-Simulator.zip ../../../../
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}-${{ needs.release.outputs.version }}-${{ github.sha }}
+          path: |
+            apps/native/${{ matrix.artifact_path }}
+            apps/native/ios/Maps-Simulator.zip
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Attach to GitHub Release
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Wait for release to be created by semantic-release
+          sleep 10
+          
+          # Find APKs or iOS builds
+          if [ "${{ matrix.platform }}" == "android" ]; then
+            ASSETS=$(find apps/native/android/app/build/outputs/apk -name "*.apk" -type f)
+          else
+            ASSETS="apps/native/ios/Maps-Simulator.zip"
+          fi
+          
+          # Upload each asset to the release
+          for asset in $ASSETS; do
+            if [ -f "$asset" ]; then
+              gh release upload "v${{ needs.release.outputs.version }}" "$asset" --clobber || true
+            fi
+          done
+
+      - name: Build summary
+        if: always()
+        run: |
+          echo "### Native Build Summary - ${{ matrix.platform }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Platform: ${{ matrix.platform }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Version: ${{ needs.release.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Branch: ${{ github.ref }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Commit: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ matrix.platform }}" == "android" ]; then
+            echo "#### APK Files:" >> $GITHUB_STEP_SUMMARY
+            find apps/native/android/app/build/outputs/apk -name "*.apk" -exec sh -c 'echo "- $(basename {}) ($(du -h {} | cut -f1))"' \; >> $GITHUB_STEP_SUMMARY || echo "No APKs found" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "#### iOS Build:" >> $GITHUB_STEP_SUMMARY
+            if [ -f "apps/native/ios/Maps-Simulator.zip" ]; then
+              echo "- Maps-Simulator.zip ($(du -h apps/native/ios/Maps-Simulator.zip | cut -f1))" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- No iOS build found" >> $GITHUB_STEP_SUMMARY
+            fi
+          fi
