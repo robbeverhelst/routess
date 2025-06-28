@@ -328,8 +328,8 @@ jobs:
     name: Build Native Apps
     needs: release
     runs-on: arc-runner-set-maps
-    # Only build native apps when native code changes
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[native]') || contains(github.event.pull_request.title, '[native]')
+    # Only run on main branch pushes, not PRs
+    if: github.event_name != 'pull_request'
     permissions:
       contents: write
       packages: write
