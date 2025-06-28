@@ -34,13 +34,20 @@ jobs:
       - name: Cache dependencies
         uses: actions/cache@v4
         with:
-          path: ~/.bun/install/cache
+          path: |
+            ~/.bun/install/cache
+            node_modules
+            apps/*/node_modules
+            packages/*/node_modules
           key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
           restore-keys: |
             ${{ runner.os }}-bun-
 
       - name: Install dependencies
-        run: bun install
+        run: |
+          bun install
+          # Clean up Bun cache to prevent bloat
+          bun pm cache rm --global || true
 
       - name: Run format check, lint, and type checks
         run: bunx turbo run format:check lint check-types
