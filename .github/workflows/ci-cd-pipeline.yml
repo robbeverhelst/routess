@@ -14,6 +14,7 @@ jobs:
   test-and-build:
     name: Test and Build Application
     runs-on: arc-runner-set-maps
+    timeout-minutes: 15
 
     steps:
       - name: Checkout code
@@ -33,6 +34,9 @@ jobs:
 
       - name: Cache dependencies
         uses: actions/cache@v4
+        id: cache-deps
+        continue-on-error: true
+        timeout-minutes: 3
         with:
           path: |
             ~/.bun/install/cache
@@ -42,6 +46,12 @@ jobs:
           key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
           restore-keys: |
             ${{ runner.os }}-bun-
+            
+      - name: Fallback if cache fails
+        if: steps.cache-deps.outcome == 'failure'
+        run: |
+          echo "Cache failed or timed out, proceeding without cache"
+          echo "This is normal and just means slower dependency install"
 
       - name: Install dependencies
         run: |
@@ -366,12 +376,7 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-            ~/.gradle/build-cache
-            apps/native/android/.gradle
-            apps/native/android/build
-            apps/native/android/app/build
-            apps/native/node_modules
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', 'apps/native/package.json') }}
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
 
