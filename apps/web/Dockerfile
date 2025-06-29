@@ -76,7 +76,7 @@ RUN rm -rf /tmp/* /var/tmp/* /usr/share/man/* /usr/share/doc/*
 USER nginx
 
 # Expose port
-EXPOSE 80
+EXPOSE 8080
 
 # Use dumb-init and entrypoint script for proper signal handling
 ENTRYPOINT ["dumb-init", "--", "/entrypoint.sh"] 

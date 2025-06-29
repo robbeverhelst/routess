@@ -87,7 +87,6 @@ export class WebAppResource extends ComponentResource {
                     runAsGroup: 101, // nginx group GID
                     capabilities: {
                       drop: ["ALL"],
-                      add: ["NET_BIND_SERVICE"], // Allow binding to port 80
                     },
                     readOnlyRootFilesystem: false, // nginx needs to write cache and temp files
                     seccompProfile: {

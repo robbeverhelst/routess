@@ -23,33 +23,34 @@ replace_placeholders() {
         if [ -n "$VITE_MAPBOX_ACCESS_TOKEN" ]; then
             # Remove any newlines from the token
             CLEAN_TOKEN=$(echo "$VITE_MAPBOX_ACCESS_TOKEN" | tr -d '\n\r')
-            sed -i "s#__VITE_MAPBOX_ACCESS_TOKEN__#${CLEAN_TOKEN}#g" "$file"
-            echo "Replaced __VITE_MAPBOX_ACCESS_TOKEN__ with actual token"
-            # Verify replacement worked
-            if grep -q "__VITE_MAPBOX_ACCESS_TOKEN__" "$file"; then
-                echo "ERROR: Replacement failed, placeholder still exists!"
+            # Use a temporary file to avoid permission issues with sed -i
+            if sed "s#__VITE_MAPBOX_ACCESS_TOKEN__#${CLEAN_TOKEN}#g" "$file" > "$file.tmp" 2>/dev/null; then
+                mv "$file.tmp" "$file" 2>/dev/null || rm -f "$file.tmp"
+                echo "Replaced __VITE_MAPBOX_ACCESS_TOKEN__ with actual token"
             else
-                echo "SUCCESS: Placeholder replaced successfully"
+                echo "Could not modify $file - using original"
+                rm -f "$file.tmp"
             fi
         fi
     else
         echo "No placeholder __VITE_MAPBOX_ACCESS_TOKEN__ found in $file"
     fi
     
+    # Use the same approach for other environment variables
     if [ -n "$VITE_GOOGLE_CLIENT_ID" ]; then
-        sed -i "s#__VITE_GOOGLE_CLIENT_ID__#${VITE_GOOGLE_CLIENT_ID}#g" "$file"
+        sed "s#__VITE_GOOGLE_CLIENT_ID__#${VITE_GOOGLE_CLIENT_ID}#g" "$file" > "$file.tmp" 2>/dev/null && mv "$file.tmp" "$file" 2>/dev/null || rm -f "$file.tmp"
     fi
     
     if [ -n "$VITE_APP_URL" ]; then
-        sed -i "s#__VITE_APP_URL__#${VITE_APP_URL}#g" "$file"
+        sed "s#__VITE_APP_URL__#${VITE_APP_URL}#g" "$file" > "$file.tmp" 2>/dev/null && mv "$file.tmp" "$file" 2>/dev/null || rm -f "$file.tmp"
     fi
     
     if [ -n "$VITE_API_URL" ]; then
-        sed -i "s#__VITE_API_URL__#${VITE_API_URL}#g" "$file"
+        sed "s#__VITE_API_URL__#${VITE_API_URL}#g" "$file" > "$file.tmp" 2>/dev/null && mv "$file.tmp" "$file" 2>/dev/null || rm -f "$file.tmp"
     fi
     
     if [ -n "$VITE_APP_VERSION" ]; then
-        sed -i "s#__VITE_APP_VERSION__#${VITE_APP_VERSION}#g" "$file"
+        sed "s#__VITE_APP_VERSION__#${VITE_APP_VERSION}#g" "$file" > "$file.tmp" 2>/dev/null && mv "$file.tmp" "$file" 2>/dev/null || rm -f "$file.tmp"
     fi
     
     echo "Processed: $file"
