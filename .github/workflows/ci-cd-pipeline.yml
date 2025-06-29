@@ -420,17 +420,16 @@ jobs:
           find app/build/outputs/apk -name "*.apk" -ls
 
       # iOS Build Steps
-      - name: Setup Ruby and CocoaPods (iOS only)
-        if: matrix.platform == 'ios'
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.1'
-          bundler-cache: false
-      
       - name: Install CocoaPods (iOS only)
         if: matrix.platform == 'ios'
         run: |
-          gem install cocoapods -v 1.15.2
+          # Check if CocoaPods is already installed
+          if ! command -v pod &> /dev/null; then
+            echo "Installing CocoaPods..."
+            sudo gem install cocoapods -v 1.15.2
+          else
+            echo "CocoaPods is already installed: $(pod --version)"
+          fi
           
       - name: Build iOS Simulator App
         if: matrix.platform == 'ios'
@@ -462,12 +461,13 @@ jobs:
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact_name }}-${{ needs.release.outputs.version }}-${{ github.sha }}
+          name: ${{ matrix.artifact_name }}-${{ needs.release.outputs.version }}
           path: |
             apps/native/${{ matrix.artifact_path }}
             apps/native/ios/Maps-Simulator.zip
-          retention-days: 30
+          retention-days: 7
           if-no-files-found: error
+          compression-level: 9
 
       - name: Attach to GitHub Release
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
