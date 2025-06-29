@@ -419,7 +419,19 @@ jobs:
           # List all APKs
           find app/build/outputs/apk -name "*.apk" -ls
 
-      # iOS Build Steps  
+      # iOS Build Steps
+      - name: Setup Ruby and CocoaPods (iOS only)
+        if: matrix.platform == 'ios'
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.1'
+          bundler-cache: false
+      
+      - name: Install CocoaPods (iOS only)
+        if: matrix.platform == 'ios'
+        run: |
+          gem install cocoapods -v 1.15.2
+          
       - name: Build iOS Simulator App
         if: matrix.platform == 'ios'
         working-directory: apps/native/ios
