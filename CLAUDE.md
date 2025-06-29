@@ -531,12 +531,14 @@ xcodebuild -workspace ios/mobile.xcworkspace \
 ## **🔒 Kubernetes Security Implementation**
 
 ### **Network Policies**
+
 - **Default deny-all**: Block all traffic by default in the maps namespace
 - **Web frontend**: Only allows ingress from Cloudflare tunnel and kube-system
 - **API backend**: Allows ingress from web frontend and Cloudflare tunnel, egress to database and external APIs
 - **Database**: Only allows ingress from API backend, minimal egress for DNS
 
 ### **Pod Security Standards**
+
 - **Non-root containers**: All containers run as non-root users (nginx:101, api:1000, postgres:999)
 - **Read-only filesystems**: Where possible (API has read-only, web allows nginx temp files)
 - **Dropped capabilities**: All containers drop ALL Linux capabilities
@@ -544,17 +546,20 @@ xcodebuild -workspace ios/mobile.xcworkspace \
 - **Seccomp profiles**: RuntimeDefault seccomp profile applied
 
 ### **Service Accounts & RBAC**
+
 - **Minimal permissions**: Each service has its own ServiceAccount with minimal required permissions
 - **API service account**: Only has access to read secrets it needs
 - **Web service account**: No API access (automountServiceAccountToken: false)
 - **Database service account**: No API access required
 
 ### **Secret Management**
+
 - **Centralized secrets**: API secrets stored in Kubernetes Secret objects
 - **Environment injection**: Secrets injected as environment variables from secretKeyRef
 - **No plain text**: All sensitive data (JWT, OAuth, DB passwords) stored securely
 
 ### **Container Security**
+
 - **Security contexts**: Both pod-level and container-level security contexts configured
 - **Resource limits**: CPU, memory, and ephemeral storage limits set
 - **Proper user IDs**: Each service runs as appropriate non-root user

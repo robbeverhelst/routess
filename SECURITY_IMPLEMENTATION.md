@@ -68,6 +68,7 @@ This document outlines the comprehensive security hardening implementation for t
 Security has been implemented directly in each resource file:
 
 **Network Policies** (`apps/infra/index.ts`):
+
 ```typescript
 import { NetworkPolicy } from "@pulumi/kubernetes/networking/v1";
 
@@ -84,6 +85,7 @@ new NetworkPolicy(`${appName}-default-deny`, {
 ```
 
 **Service Accounts & Security Contexts** (in each resource file):
+
 ```typescript
 // API Resource (apps/infra/resources/api.ts)
 this.serviceAccount = new ServiceAccount(`${config.appName}-api-sa`, {
