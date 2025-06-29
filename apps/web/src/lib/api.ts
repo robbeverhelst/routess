@@ -10,7 +10,10 @@ class WebAuthStateManagerWithGoogleAuth extends WebPlatformAdapter {
     const baseManager = super.createAuthStateManager();
 
     return {
-      ...baseManager,
+      getToken: () => baseManager.getToken(),
+      setToken: (token: string) => baseManager.setToken(token),
+      clearToken: () => baseManager.clearToken(),
+      refreshToken: () => baseManager.refreshToken(),
       async clearAuthState() {
         // Import googleAuth to trigger UI updates (web-specific)
         try {

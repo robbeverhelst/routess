@@ -87,6 +87,10 @@ export class WebAuthStateManager implements AuthStateManager {
   }
 
   getToken(): string | null {
+    // Always get fresh token from localStorage to ensure synchronization
+    if (typeof localStorage !== "undefined") {
+      this.token = localStorage.getItem("access_token");
+    }
     return this.token;
   }
 

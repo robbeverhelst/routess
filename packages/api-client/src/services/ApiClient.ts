@@ -100,6 +100,11 @@ export class ApiClient {
     return response;
   }
 
+  // Refresh the token from storage (useful after external auth state changes)
+  refreshToken(): void {
+    this.config.authStateManager.refreshToken();
+  }
+
   async getProfile(): Promise<ApiUser> {
     return this.request<ApiUser>("/auth/me");
   }
