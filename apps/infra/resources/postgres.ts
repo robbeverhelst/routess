@@ -83,10 +83,8 @@ export class PostgresResource extends ComponentResource {
             },
             podSecurityContext: {
               enabled: true,
-              runAsUser: 999, // postgres user
-              runAsGroup: 999,
               runAsNonRoot: true,
-              fsGroup: 999,
+              fsGroup: 999, // Let Helm chart handle user/group
               seccompProfile: {
                 type: "RuntimeDefault",
               },
@@ -95,8 +93,6 @@ export class PostgresResource extends ComponentResource {
               enabled: true,
               allowPrivilegeEscalation: false,
               runAsNonRoot: true,
-              runAsUser: 999,
-              runAsGroup: 999,
               capabilities: {
                 drop: ["ALL"],
               },
