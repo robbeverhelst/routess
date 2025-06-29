@@ -388,7 +388,7 @@ jobs:
           bun pm cache rm --global || true
 
       - name: Build shared packages
-        run: bunx turbo run build --filter='@maps/*' --parallel
+        run: bunx turbo run build --filter='@maps/*'
 
       - name: Prebuild Android  
         working-directory: apps/native

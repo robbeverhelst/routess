@@ -69,6 +69,18 @@ done
 
 echo "Environment variable replacement completed."
 
+# Create nginx cache directories with proper permissions
+echo "Setting up nginx cache directories..."
+mkdir -p /var/cache/nginx/client_temp
+mkdir -p /var/cache/nginx/proxy_temp  
+mkdir -p /var/cache/nginx/fastcgi_temp
+mkdir -p /var/cache/nginx/uwsgi_temp
+mkdir -p /var/cache/nginx/scgi_temp
+
+# Ensure nginx has write permissions to cache directories
+chmod 755 /var/cache/nginx
+chmod 755 /var/cache/nginx/*
+
 # Start nginx
 echo "Starting nginx..."
 exec nginx -g "daemon off;"
