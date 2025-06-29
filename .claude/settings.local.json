@@ -46,7 +46,8 @@
       "WebFetch(domain:tanstack.com)",
       "WebFetch(domain:ui.shadcn.com)",
       "Bash(cp:*)",
-      "Bash(npx vitest run:*)"
+      "Bash(npx vitest run:*)",
+      "Bash(sed:*)"
     ],
     "deny": []
   }
