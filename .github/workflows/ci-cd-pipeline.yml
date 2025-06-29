@@ -401,21 +401,16 @@ jobs:
           # List all APKs
           find app/build/outputs/apk -name "*.apk" -exec sh -c 'echo "$(basename {}) - $(du -h {} | cut -f1)"' \;
 
-      - name: Attach APKs to GitHub Release
+      - name: Upload Release APKs
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ needs.release.outputs.version }}
+          files: |
+            apps/native/android/app/build/outputs/apk/debug/*.apk
+            apps/native/android/app/build/outputs/apk/release/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # Wait for release to be created by semantic-release
-          sleep 10
-
-          # Find and upload APKs
-          for apk in apps/native/android/app/build/outputs/apk/**/*.apk; do
-            if [ -f "$apk" ]; then
-              echo "Uploading $(basename $apk) to release v${{ needs.release.outputs.version }}"
-              gh release upload "v${{ needs.release.outputs.version }}" "$apk" --clobber || true
-            fi
-          done
 
       - name: Build summary
         if: always()

@@ -42,14 +42,14 @@
 - ✅ Basic lint/test/type-check scripts working
 - ✅ Example component using design tokens
 
-### **Phase 2: Self-Hosted CI/CD** 🔴 **NOT STARTED - NEXT PRIORITY**
+### **Phase 2: Self-Hosted CI/CD** 🟡 **IN PROGRESS**
 
 **This is what EAS Build does, but we'll do it ourselves:**
 
-- ❌ GitHub Actions building actual APKs/IPAs
-- ❌ Automated signing with secrets management
-- ❌ Build artifacts uploaded to GitHub
-- ❌ Release builds on main branch
+- ✅ GitHub Actions building actual APKs/IPAs
+- 🔄 Automated signing with secrets management (pending keystore setup)
+- 🔄 Build artifacts uploaded to GitHub (fixed upload method)
+- ✅ Release builds on main branch
 - ❌ Distribution to testers
 - ❌ Store deployment automation
 
@@ -66,7 +66,16 @@
 - ❌ No actual map implementation yet
 - ❌ Missing Mapbox access token
 
-### **Phase 5+: Not Started**
+### **Phase 5: Kubernetes Security Hardening** ✅ **COMPLETE**
+
+- ✅ Network Policies implemented for traffic isolation
+- ✅ ServiceAccounts with minimal permissions
+- ✅ Pod Security Standards with non-root containers
+- ✅ Secret management with proper credential handling
+- ✅ Security contexts configured for all containers
+- ✅ Cloudflare tunnel compatibility maintained
+
+### **Phase 6+: Not Started**
 
 - Shared logic integration (stores, i18n, api)
 - Route management features
@@ -519,6 +528,41 @@ xcodebuild -workspace ios/mobile.xcworkspace \
 - **Expo CLI**: Free local development tools
 - **VS Code**: Free code editor with React Native extensions
 
+## **🔒 Kubernetes Security Implementation**
+
+### **Network Policies**
+- **Default deny-all**: Block all traffic by default in the maps namespace
+- **Web frontend**: Only allows ingress from Cloudflare tunnel and kube-system
+- **API backend**: Allows ingress from web frontend and Cloudflare tunnel, egress to database and external APIs
+- **Database**: Only allows ingress from API backend, minimal egress for DNS
+
+### **Pod Security Standards**
+- **Non-root containers**: All containers run as non-root users (nginx:101, api:1000, postgres:999)
+- **Read-only filesystems**: Where possible (API has read-only, web allows nginx temp files)
+- **Dropped capabilities**: All containers drop ALL Linux capabilities
+- **No privilege escalation**: `allowPrivilegeEscalation: false` on all containers
+- **Seccomp profiles**: RuntimeDefault seccomp profile applied
+
+### **Service Accounts & RBAC**
+- **Minimal permissions**: Each service has its own ServiceAccount with minimal required permissions
+- **API service account**: Only has access to read secrets it needs
+- **Web service account**: No API access (automountServiceAccountToken: false)
+- **Database service account**: No API access required
+
+### **Secret Management**
+- **Centralized secrets**: API secrets stored in Kubernetes Secret objects
+- **Environment injection**: Secrets injected as environment variables from secretKeyRef
+- **No plain text**: All sensitive data (JWT, OAuth, DB passwords) stored securely
+
+### **Container Security**
+- **Security contexts**: Both pod-level and container-level security contexts configured
+- **Resource limits**: CPU, memory, and ephemeral storage limits set
+- **Proper user IDs**: Each service runs as appropriate non-root user
+
+**✅ Result**: Production-ready security posture while maintaining Cloudflare tunnel connectivity
+
+---
+
 ## **🎯 Key Advantages of This Approach**
 
 - **Complete control**: Your builds, your timeline
@@ -526,3 +570,4 @@ xcodebuild -workspace ios/mobile.xcworkspace \
 - **Learning opportunity**: Understand the full mobile development process
 - **Cost predictable**: Only pay store fees, nothing else
 - **Scales with your needs**: Can add paid services later if desired
+- **Security hardened**: Production-ready Kubernetes security implementation

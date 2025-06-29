@@ -1,6 +1,7 @@
 import { Config, interpolate, output } from "@pulumi/pulumi";
 import { Provider } from "@pulumi/kubernetes";
 import { Namespace } from "@pulumi/kubernetes/core/v1";
+import { NetworkPolicy } from "@pulumi/kubernetes/networking/v1";
 import { WebAppResource, ApiResource, PostgresResource } from "./resources";
 // import { DockerRegistrySecret } from "./resources"; // Commented out for now
 
@@ -210,6 +211,192 @@ const api = new ApiResource("api", {
   },
   dependencies: [ns, postgres.chart], // dockerRegistry.secret commented out for now
 });
+
+// Network Policies for security
+new NetworkPolicy(
+  `${appName}-default-deny`,
+  {
+    metadata: {
+      name: `${appName}-default-deny`,
+      namespace,
+    },
+    spec: {
+      podSelector: {}, // Apply to all pods in namespace
+      policyTypes: ["Ingress", "Egress"],
+      // No ingress/egress rules = deny all
+    },
+  },
+  { provider, dependsOn: [ns] },
+);
+
+new NetworkPolicy(
+  `${appName}-web-policy`,
+  {
+    metadata: {
+      name: `${appName}-web-policy`,
+      namespace,
+    },
+    spec: {
+      podSelector: {
+        matchLabels: { app: `${appName}-web` },
+      },
+      policyTypes: ["Ingress", "Egress"],
+      ingress: [
+        {
+          // Allow Cloudflare tunnel ingress
+          from: [
+            {
+              namespaceSelector: {
+                matchLabels: { name: "cloudflare-tunnel" },
+              },
+            },
+            {
+              // Allow from kube-system for health checks
+              namespaceSelector: {
+                matchLabels: { name: "kube-system" },
+              },
+            },
+          ],
+          ports: [{ protocol: "TCP", port: 80 }],
+        },
+      ],
+      egress: [
+        {
+          // Allow DNS resolution
+          to: [
+            {
+              namespaceSelector: {
+                matchLabels: { name: "kube-system" },
+              },
+            },
+          ],
+          ports: [
+            { protocol: "UDP", port: 53 },
+            { protocol: "TCP", port: 53 },
+          ],
+        },
+      ],
+    },
+  },
+  { provider, dependsOn: [webApp.deployment] },
+);
+
+new NetworkPolicy(
+  `${appName}-api-policy`,
+  {
+    metadata: {
+      name: `${appName}-api-policy`,
+      namespace,
+    },
+    spec: {
+      podSelector: {
+        matchLabels: { app: `${appName}-api` },
+      },
+      policyTypes: ["Ingress", "Egress"],
+      ingress: [
+        {
+          // Allow from web frontend
+          from: [
+            {
+              podSelector: {
+                matchLabels: { app: `${appName}-web` },
+              },
+            },
+            {
+              // Allow Cloudflare tunnel for direct API access
+              namespaceSelector: {
+                matchLabels: { name: "cloudflare-tunnel" },
+              },
+            },
+          ],
+          ports: [{ protocol: "TCP", port: 3000 }],
+        },
+      ],
+      egress: [
+        {
+          // Allow DNS resolution
+          to: [
+            {
+              namespaceSelector: {
+                matchLabels: { name: "kube-system" },
+              },
+            },
+          ],
+          ports: [
+            { protocol: "UDP", port: 53 },
+            { protocol: "TCP", port: 53 },
+          ],
+        },
+        {
+          // Allow communication to database
+          to: [
+            {
+              podSelector: {
+                matchLabels: { "app.kubernetes.io/name": "postgresql" },
+              },
+            },
+          ],
+          ports: [{ protocol: "TCP", port: 5432 }],
+        },
+        {
+          // Allow HTTPS outbound for external APIs (Google OAuth, etc.)
+          to: [{}], // Any destination
+          ports: [
+            { protocol: "TCP", port: 443 },
+            { protocol: "TCP", port: 80 },
+          ],
+        },
+      ],
+    },
+  },
+  { provider, dependsOn: [api.deployment] },
+);
+
+new NetworkPolicy(
+  `${appName}-db-policy`,
+  {
+    metadata: {
+      name: `${appName}-db-policy`,
+      namespace,
+    },
+    spec: {
+      podSelector: {
+        matchLabels: { "app.kubernetes.io/name": "postgresql" },
+      },
+      policyTypes: ["Ingress", "Egress"],
+      ingress: [
+        {
+          // Only allow API to connect to database
+          from: [
+            {
+              podSelector: {
+                matchLabels: { app: `${appName}-api` },
+              },
+            },
+          ],
+          ports: [{ protocol: "TCP", port: 5432 }],
+        },
+      ],
+      egress: [
+        {
+          // Allow DNS resolution
+          to: [
+            {
+              namespaceSelector: {
+                matchLabels: { name: "kube-system" },
+              },
+            },
+          ],
+          ports: [
+            { protocol: "UDP", port: 53 },
+            { protocol: "TCP", port: 53 },
+          ],
+        },
+      ],
+    },
+  },
+  { provider, dependsOn: [postgres.chart] },
+);
 
 // Export the service names and namespace
 export const webServiceName = webApp.service.metadata.name;

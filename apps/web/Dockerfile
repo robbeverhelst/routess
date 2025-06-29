@@ -48,6 +48,17 @@ RUN bun run build
 # Production stage
 FROM nginx:alpine
 
+# Security: Install security updates and tools
+RUN apk update && apk upgrade && \
+    apk add --no-cache dumb-init && \
+    rm -rf /var/cache/apk/*
+
+# Security: Create non-root user (nginx user already exists with UID 101)
+# Ensure proper permissions for nginx directories
+RUN mkdir -p /var/cache/nginx /var/log/nginx /var/run && \
+    chown -R nginx:nginx /var/cache/nginx /var/log/nginx /var/run /usr/share/nginx/html && \
+    chmod -R 755 /usr/share/nginx/html
+
 # Copy built assets from the web app
 COPY --from=builder /app/apps/web/dist/ /usr/share/nginx/html/
 
@@ -56,10 +67,16 @@ COPY --from=builder /app/apps/web/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy entrypoint script for runtime environment variable replacement
 COPY --from=builder /app/apps/web/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN chmod +x /entrypoint.sh && chown nginx:nginx /entrypoint.sh
+
+# Security: Remove unnecessary files
+RUN rm -rf /tmp/* /var/tmp/* /usr/share/man/* /usr/share/doc/*
+
+# Security: Switch to non-root user
+USER nginx
 
 # Expose port
 EXPOSE 80
 
-# Use entrypoint script to replace environment variables at runtime
-ENTRYPOINT ["/entrypoint.sh"] 
+# Use dumb-init and entrypoint script for proper signal handling
+ENTRYPOINT ["dumb-init", "--", "/entrypoint.sh"] 
