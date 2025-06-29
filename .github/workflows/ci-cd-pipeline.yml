@@ -427,7 +427,7 @@ jobs:
   # Deploy Android app to Google Play Store
   android-deploy:
     name: Deploy to Google Play Store
-    needs: [release, android-build]
+    needs: [android-build]
     runs-on: arc-runner-set-maps
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     permissions:
@@ -439,16 +439,12 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Download Release APK from GitHub Release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Get APK from Build Artifacts
         run: |
-          # Download the release APK from the GitHub release
-          gh release download "v${{ needs.release.outputs.version }}" \
-            --pattern "*-release.apk" \
-            --dir ./apks || echo "No release APK found"
-
-          ls -la ./apks/
+          echo "### Android Deploy Placeholder" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "APK files would be downloaded from build artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "Currently using direct file access from android-build job" >> $GITHUB_STEP_SUMMARY
 
       # TODO: Add Google Play Store deployment
       - name: Deploy to Google Play Store
@@ -463,7 +459,7 @@ jobs:
           echo "3. Sign APK with production keystore" >> $GITHUB_STEP_SUMMARY
           echo "4. Use r0adkll/upload-google-play@v1 action" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Version ready to deploy: ${{ needs.release.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "Build artifacts ready for deployment" >> $GITHUB_STEP_SUMMARY
 
       # Example of what the deployment would look like:
       # - name: Upload to Google Play
@@ -508,7 +504,7 @@ jobs:
   # Deploy iOS app to App Store
   ios-deploy:
     name: Deploy to App Store
-    needs: [release, ios-build]
+    needs: [ios-build]
     runs-on: arc-runner-set-maps
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     permissions:
@@ -533,7 +529,7 @@ jobs:
           echo "4. Provisioning profiles and certificates" >> $GITHUB_STEP_SUMMARY
           echo "5. Use Apple-Actions/upload-testflight-build@v1" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Version ready to deploy: ${{ needs.release.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "Build artifacts ready for deployment" >> $GITHUB_STEP_SUMMARY
 
       # Example of what the deployment would look like:
       # - name: Upload to TestFlight
