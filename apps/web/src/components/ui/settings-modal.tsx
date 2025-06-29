@@ -17,6 +17,8 @@ import {
   formatVersion,
 } from "@/lib/version";
 import { Settings, Database, Palette, User, Info, ChevronDown, ChevronUp } from "lucide-react";
+import { useSettingsStore } from "@/stores/settingsStore";
+import { isDev } from "@/lib/utils/env";
 import React from "react";
 
 interface SettingsModalProps {
@@ -42,6 +44,7 @@ export function SettingsModal({
 }: SettingsModalProps) {
   const [activeSection, setActiveSection] = useState<string>("general");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const { showErrorToasts, setShowErrorToasts } = useSettingsStore();
 
   // Check for version changes when modal opens
   React.useEffect(() => {
@@ -153,6 +156,33 @@ export function SettingsModal({
                 />
                 <span className="text-sm text-gray-700 dark:text-gray-300">
                   Show sun direction indicator
+                </span>
+              </label>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+                Error Notifications
+              </h3>
+              <p className="text-xs text-gray-500 mb-3">
+                Show error toast notifications in the bottom-left corner for debugging and
+                development
+                {isDev() && (
+                  <span className="text-blue-600 dark:text-blue-400"> (Development mode)</span>
+                )}
+              </p>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showErrorToasts}
+                  onChange={(e) => setShowErrorToasts(e.target.checked)}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
+                />
+                <span className="text-sm text-gray-700 dark:text-gray-300">
+                  Show error toast notifications
+                  {isDev() && (
+                    <span className="text-xs text-gray-500 ml-1">(recommended for dev)</span>
+                  )}
                 </span>
               </label>
             </div>

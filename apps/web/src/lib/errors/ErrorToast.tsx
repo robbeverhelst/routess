@@ -4,6 +4,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useErrorHandler } from "./useErrorHandler";
+import { useSettingsStore } from "@/stores/settingsStore";
 import type { AppError } from "./types";
 
 interface ErrorToastProps {
@@ -16,15 +17,21 @@ interface ErrorToastProps {
     | "bottom-center";
   autoHideDuration?: number;
   maxVisible?: number;
+  enabled?: boolean;
 }
 
 export const ErrorToast: React.FC<ErrorToastProps> = ({
-  position = "top-right",
+  position = "bottom-left",
   autoHideDuration = 5000,
-  maxVisible = 3,
+  maxVisible = 2,
+  enabled,
 }) => {
   const { errors, clearError } = useErrorHandler();
+  const { showErrorToasts } = useSettingsStore();
   const [visibleErrors, setVisibleErrors] = useState<AppError[]>([]);
+
+  // Use store setting if enabled prop is not provided
+  const isEnabled = enabled !== undefined ? enabled : showErrorToasts;
 
   // Manage visible errors (limit and auto-hide)
   useEffect(() => {
@@ -52,7 +59,7 @@ export const ErrorToast: React.FC<ErrorToastProps> = ({
       case "bottom-right":
         return `${baseClasses} bottom-4 right-4`;
       case "bottom-left":
-        return `${baseClasses} bottom-8 left-8`;
+        return `${baseClasses} bottom-4 left-4`;
       case "top-center":
         return `${baseClasses} top-4 left-1/2 transform -translate-x-1/2`;
       case "bottom-center":
@@ -62,7 +69,8 @@ export const ErrorToast: React.FC<ErrorToastProps> = ({
     }
   };
 
-  if (visibleErrors.length === 0) return null;
+  // Don't render if disabled or no errors
+  if (!isEnabled || visibleErrors.length === 0) return null;
 
   return (
     <div className={getPositionClasses()}>
@@ -146,16 +154,16 @@ const ErrorToastItem: React.FC<ErrorToastItemProps> = ({ error, onClose, index }
   return (
     <div
       className={`
-        pointer-events-auto min-w-[400px] max-w-md w-full ${styles.bg} shadow-xl rounded-lg border-2
-        transform transition-all duration-300 ease-in-out
+        pointer-events-auto min-w-[280px] max-w-sm w-full ${styles.bg} shadow-lg rounded-md border
+        transform transition-all duration-200 ease-in-out
         ${isVisible && !isLeaving ? "translate-x-0 opacity-100" : "-translate-x-full opacity-0"}
       `}
     >
-      <div className="p-4">
+      <div className="p-3">
         <div className="flex items-start">
           <div className="flex-shrink-0">
             <svg
-              className={`h-6 w-6 ${styles.icon}`}
+              className={`h-4 w-4 ${styles.icon}`}
               fill="none"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -167,27 +175,27 @@ const ErrorToastItem: React.FC<ErrorToastItemProps> = ({ error, onClose, index }
             </svg>
           </div>
 
-          <div className="ml-3 w-0 flex-1 pt-0.5">
+          <div className="ml-2 w-0 flex-1">
             <div className="flex items-center justify-between">
-              <p className={`text-base font-semibold ${styles.text} capitalize`}>
-                {error.category} Error
-              </p>
+              <p className={`text-sm font-medium ${styles.text} capitalize`}>{error.category}</p>
               {error.severity === "critical" && (
-                <span className="text-sm bg-red-100 text-red-800 px-2 py-1 rounded-full font-medium">
+                <span className="text-xs bg-red-100 text-red-800 px-1.5 py-0.5 rounded font-medium">
                   Critical
                 </span>
               )}
             </div>
 
-            <p className={`mt-1 text-base ${styles.text}`}>{error.message}</p>
+            <p className={`mt-0.5 text-sm ${styles.text}`}>{error.message}</p>
 
-            {error.context && <p className="mt-1 text-sm text-gray-500">{error.context}</p>}
+            {error.context && (
+              <p className="mt-0.5 text-xs text-gray-500 truncate">{error.context}</p>
+            )}
 
             {error.retry && (
-              <div className="mt-3 flex space-x-2">
+              <div className="mt-2 flex space-x-2">
                 <button
                   type="button"
-                  className="text-xs bg-white text-gray-700 px-3 py-1 rounded-md border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                  className="text-xs bg-white text-gray-700 px-2 py-1 rounded border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-gray-500"
                   onClick={async () => {
                     try {
                       await error.retry!();
@@ -203,14 +211,14 @@ const ErrorToastItem: React.FC<ErrorToastItemProps> = ({ error, onClose, index }
             )}
           </div>
 
-          <div className="ml-4 flex-shrink-0 flex">
+          <div className="ml-2 flex-shrink-0 flex">
             <button
               type="button"
-              className={`rounded-md inline-flex ${styles.text} hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-500`}
+              className={`rounded inline-flex ${styles.text} hover:text-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-500`}
               onClick={handleClose}
             >
               <span className="sr-only">Close</span>
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"

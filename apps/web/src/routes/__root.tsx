@@ -15,7 +15,7 @@ export const Route = createRootRoute({
           <div className="w-full h-svh">
             <Outlet />
           </div>
-          <ErrorToast position="bottom-left" />
+          <ErrorToast position="bottom-left" maxVisible={2} autoHideDuration={4000} />
           <ReactQueryDevtools initialIsOpen={false} />
           <TanStackRouterDevtools />
         </GoogleOAuthProvider>

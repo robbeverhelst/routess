@@ -386,21 +386,20 @@ jobs:
         working-directory: apps/native/android
         run: |
           chmod +x gradlew
-          
+
           # Clean previous builds
           ./gradlew clean
-          
+
           # Always build debug APK
           ./gradlew assembleDebug --no-daemon --console=plain
-          
+
           # Build release APK on main branch
           if [ "${{ github.ref }}" == "refs/heads/main" ] && [ "${{ github.event_name }}" != "pull_request" ]; then
             ./gradlew assembleRelease --no-daemon --console=plain
           fi
-          
+
           # List all APKs
           find app/build/outputs/apk -name "*.apk" -exec sh -c 'echo "$(basename {}) - $(du -h {} | cut -f1)"' \;
-
 
       - name: Attach APKs to GitHub Release
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
@@ -409,7 +408,7 @@ jobs:
         run: |
           # Wait for release to be created by semantic-release
           sleep 10
-          
+
           # Find and upload APKs
           for apk in apps/native/android/app/build/outputs/apk/**/*.apk; do
             if [ -f "$apk" ]; then
@@ -453,7 +452,7 @@ jobs:
           gh release download "v${{ needs.release.outputs.version }}" \
             --pattern "*-release.apk" \
             --dir ./apks || echo "No release APK found"
-          
+
           ls -la ./apks/
 
       # TODO: Add Google Play Store deployment
@@ -481,7 +480,7 @@ jobs:
       #     track: internal
       #     status: draft
 
-  # iOS native build  
+  # iOS native build
   ios-build:
     name: Build iOS App
     needs: release
