@@ -543,22 +543,57 @@ jobs:
         working-directory: apps/native/ios
         run: |
           pod install --repo-update
+          
+          # List generated files to find correct workspace name
+          echo "Available workspace files:"
+          ls -la *.xcworkspace || echo "No workspace files found"
+          
+          echo "Available xcodeproj files:"
+          ls -la *.xcodeproj || echo "No xcodeproj files found"
 
       - name: Build iOS App (Simulator)
         working-directory: apps/native/ios
         run: |
+          # Find the workspace file
+          WORKSPACE=$(ls -1 *.xcworkspace | head -n 1)
+          if [ -z "$WORKSPACE" ]; then
+            echo "No workspace found, using xcodeproj"
+            PROJECT=$(ls -1 *.xcodeproj | head -n 1)
+            SCHEME="${PROJECT%.xcodeproj}"
+          else
+            SCHEME="${WORKSPACE%.xcworkspace}"
+          fi
+          
+          echo "Building with workspace/project: $WORKSPACE$PROJECT"
+          echo "Using scheme: $SCHEME"
+          
           # Build for iOS Simulator (fastest, no signing required)
-          xcodebuild \
-            -workspace mobile.xcworkspace \
-            -scheme mobile \
-            -configuration Release \
-            -sdk iphonesimulator \
-            -destination 'platform=iOS Simulator,name=iPhone 15,OS=latest' \
-            -archivePath build/mobile-simulator.xcarchive \
-            archive
+          if [ -n "$WORKSPACE" ]; then
+            xcodebuild \
+              -workspace "$WORKSPACE" \
+              -scheme "$SCHEME" \
+              -configuration Release \
+              -sdk iphonesimulator \
+              -destination 'platform=iOS Simulator,name=iPhone 15,OS=latest' \
+              -archivePath build/simulator.xcarchive \
+              archive
+          else
+            xcodebuild \
+              -project "$PROJECT" \
+              -scheme "$SCHEME" \
+              -configuration Release \
+              -sdk iphonesimulator \
+              -destination 'platform=iOS Simulator,name=iPhone 15,OS=latest' \
+              -archivePath build/simulator.xcarchive \
+              archive
+          fi
 
-          # Create .app bundle for distribution
-          cp -r build/mobile-simulator.xcarchive/Products/Applications/mobile.app build/
+          # Find and copy the .app bundle
+          APP_NAME=$(find build/simulator.xcarchive/Products/Applications -name "*.app" -type d | head -n 1)
+          if [ -n "$APP_NAME" ]; then
+            cp -r "$APP_NAME" build/
+            echo "Copied $(basename "$APP_NAME") to build/"
+          fi
 
           # List build outputs
           ls -la build/
@@ -569,12 +604,21 @@ jobs:
         run: |
           # Create release directory
           mkdir -p ../../release-ios
-
-          # Zip the .app bundle for distribution
+          
+          # Find the .app bundle
           cd build
-          zip -r ../../../release-ios/maps-ios-simulator.zip mobile.app
-
-          echo "Prepared maps-ios-simulator.zip"
+          APP_BUNDLE=$(ls -1 *.app 2>/dev/null | head -n 1)
+          
+          if [ -n "$APP_BUNDLE" ]; then
+            # Zip the .app bundle for distribution
+            zip -r ../../../release-ios/maps-ios-simulator.zip "$APP_BUNDLE"
+            echo "Prepared maps-ios-simulator.zip with $APP_BUNDLE"
+          else
+            echo "No .app bundle found in build directory"
+            ls -la
+            exit 1
+          fi
+          
           ls -la ../../../release-ios/
 
       - name: Upload iOS Build
