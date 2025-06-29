@@ -376,7 +376,9 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+            apps/native/android/.gradle
+            apps/native/android/app/build
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', 'apps/native/app.json') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
 
@@ -386,52 +388,40 @@ jobs:
           bun pm cache rm --global || true
 
       - name: Build shared packages
-        run: bunx turbo run build --filter='@maps/*'
+        run: bunx turbo run build --filter='@maps/*' --parallel
 
-      - name: Prebuild Android
+      - name: Prebuild Android  
         working-directory: apps/native
         run: |
-          bunx expo prebuild --platform android --clean
+          # Skip clean to reuse any existing android folder
+          bunx expo prebuild --platform android
 
       - name: Build Android APKs
         working-directory: apps/native/android
         run: |
           chmod +x gradlew
           
-          # Configure Gradle for faster builds
+          # Configure Gradle for faster builds (enable daemon for faster builds)
           mkdir -p ~/.gradle
-          echo "org.gradle.daemon=false" >> ~/.gradle/gradle.properties
-          echo "org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=512m -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8" >> ~/.gradle/gradle.properties
+          echo "org.gradle.daemon=true" >> ~/.gradle/gradle.properties
+          echo "org.gradle.jvmargs=-Xmx6g -XX:MaxMetaspaceSize=1g -XX:+UseG1GC" >> ~/.gradle/gradle.properties
           echo "org.gradle.parallel=true" >> ~/.gradle/gradle.properties
           echo "org.gradle.caching=true" >> ~/.gradle/gradle.properties
-          echo "org.gradle.configureondemand=true" >> ~/.gradle/gradle.properties
+          echo "org.gradle.configureondemand=false" >> ~/.gradle/gradle.properties
           echo "android.useAndroidX=true" >> ~/.gradle/gradle.properties
           echo "android.enableJetifier=true" >> ~/.gradle/gradle.properties
           
-          # Skip clean if cache is restored successfully
-          if [ ! -d "build" ]; then
-            ./gradlew clean --parallel
-          fi
+          # Never run clean - always use cache
+          echo "Skipping clean to use cached builds..."
 
-          # Always build debug APK with optimizations
-          ./gradlew assembleDebug \
+          # Build only release APK (debug is unnecessary for deployment)
+          ./gradlew assembleRelease \
             --parallel \
             --build-cache \
-            --configure-on-demand \
-            --max-workers=4 \
+            --max-workers=2 \
             -x lint \
-            -x test
-
-          # Build release APK on main branch
-          if [ "${{ github.ref }}" == "refs/heads/main" ] && [ "${{ github.event_name }}" != "pull_request" ]; then
-            ./gradlew assembleRelease \
-              --parallel \
-              --build-cache \
-              --configure-on-demand \
-              --max-workers=4 \
-              -x lint \
-              -x test
-          fi
+            -x test \
+            -x lintVitalRelease
 
           # List all APKs
           find app/build/outputs/apk -name "*.apk" -exec sh -c 'echo "$(basename {}) - $(du -h {} | cut -f1)"' \;
@@ -442,15 +432,14 @@ jobs:
           # Create release directory
           mkdir -p release-apks
 
-          # Copy and rename APKs with descriptive names
-          if [ -f "apps/native/android/app/build/outputs/apk/debug/app-debug.apk" ]; then
-            cp "apps/native/android/app/build/outputs/apk/debug/app-debug.apk" "release-apks/maps-debug.apk"
-            echo "Prepared maps-debug.apk"
-          fi
-
+          # Copy and rename release APK only
           if [ -f "apps/native/android/app/build/outputs/apk/release/app-release.apk" ]; then
             cp "apps/native/android/app/build/outputs/apk/release/app-release.apk" "release-apks/maps.apk"
             echo "Prepared maps.apk"
+          else
+            echo "ERROR: Release APK not found!"
+            find apps/native/android/app/build/outputs/apk -name "*.apk"
+            exit 1
           fi
 
           ls -la release-apks/
