@@ -366,7 +366,12 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+            ~/.gradle/build-cache
+            apps/native/android/.gradle
+            apps/native/android/build
+            apps/native/android/app/build
+            apps/native/node_modules
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', 'apps/native/package.json') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
 
@@ -387,16 +392,40 @@ jobs:
         working-directory: apps/native/android
         run: |
           chmod +x gradlew
+          
+          # Configure Gradle for faster builds
+          mkdir -p ~/.gradle
+          echo "org.gradle.daemon=false" >> ~/.gradle/gradle.properties
+          echo "org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=512m -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8" >> ~/.gradle/gradle.properties
+          echo "org.gradle.parallel=true" >> ~/.gradle/gradle.properties
+          echo "org.gradle.caching=true" >> ~/.gradle/gradle.properties
+          echo "org.gradle.configureondemand=true" >> ~/.gradle/gradle.properties
+          echo "android.useAndroidX=true" >> ~/.gradle/gradle.properties
+          echo "android.enableJetifier=true" >> ~/.gradle/gradle.properties
+          
+          # Skip clean if cache is restored successfully
+          if [ ! -d "build" ]; then
+            ./gradlew clean --parallel
+          fi
 
-          # Clean previous builds
-          ./gradlew clean
-
-          # Always build debug APK
-          ./gradlew assembleDebug --no-daemon --console=plain
+          # Always build debug APK with optimizations
+          ./gradlew assembleDebug \
+            --parallel \
+            --build-cache \
+            --configure-on-demand \
+            --max-workers=4 \
+            -x lint \
+            -x test
 
           # Build release APK on main branch
           if [ "${{ github.ref }}" == "refs/heads/main" ] && [ "${{ github.event_name }}" != "pull_request" ]; then
-            ./gradlew assembleRelease --no-daemon --console=plain
+            ./gradlew assembleRelease \
+              --parallel \
+              --build-cache \
+              --configure-on-demand \
+              --max-workers=4 \
+              -x lint \
+              -x test
           fi
 
           # List all APKs
@@ -545,26 +574,27 @@ jobs:
           pod install --repo-update
           
           # List generated files to find correct workspace name
-          echo "Available workspace files:"
-          ls -la *.xcworkspace || echo "No workspace files found"
+          echo "Available workspace directories:"
+          ls -la | grep -E "\.xcworkspace$" || echo "No workspace files found"
           
-          echo "Available xcodeproj files:"
-          ls -la *.xcodeproj || echo "No xcodeproj files found"
+          echo "Available xcodeproj directories:"
+          ls -la | grep -E "\.xcodeproj$" || echo "No xcodeproj files found"
 
       - name: Build iOS App (Simulator)
         working-directory: apps/native/ios
         run: |
-          # Find the workspace file
-          WORKSPACE=$(ls -1 *.xcworkspace | head -n 1)
+          # Find the workspace directory (not files inside it)
+          WORKSPACE=$(find . -maxdepth 1 -name "*.xcworkspace" -type d | head -n 1 | sed 's|^\./||')
+          
           if [ -z "$WORKSPACE" ]; then
             echo "No workspace found, using xcodeproj"
-            PROJECT=$(ls -1 *.xcodeproj | head -n 1)
+            PROJECT=$(find . -maxdepth 1 -name "*.xcodeproj" -type d | head -n 1 | sed 's|^\./||')
             SCHEME="${PROJECT%.xcodeproj}"
           else
             SCHEME="${WORKSPACE%.xcworkspace}"
           fi
           
-          echo "Building with workspace/project: $WORKSPACE$PROJECT"
+          echo "Building with workspace/project: ${WORKSPACE:-$PROJECT}"
           echo "Using scheme: $SCHEME"
           
           # Build for iOS Simulator (fastest, no signing required)
