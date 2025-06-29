@@ -66,9 +66,10 @@ export class WebAppResource extends ComponentResource {
               serviceAccountName: this.serviceAccount.metadata.name,
               automountServiceAccountToken: false,
               securityContext: {
-                runAsNonRoot: false, // nginx needs root to bind to port 80
-                runAsUser: 0, // Run as root for nginx
-                fsGroup: 0, // root group
+                runAsNonRoot: true, // Run as nginx user (not root)
+                runAsUser: 101, // nginx user UID
+                runAsGroup: 101, // nginx group GID
+                fsGroup: 101, // nginx group for volume permissions
                 seccompProfile: {
                   type: "RuntimeDefault",
                 },
@@ -81,12 +82,14 @@ export class WebAppResource extends ComponentResource {
                   env: config.env,
                   securityContext: {
                     allowPrivilegeEscalation: false,
-                    runAsUser: 0, // Run nginx as root to bind to port 80
+                    runAsNonRoot: true,
+                    runAsUser: 101, // nginx user UID
+                    runAsGroup: 101, // nginx group GID
                     capabilities: {
                       drop: ["ALL"],
                       add: ["NET_BIND_SERVICE"], // Allow binding to port 80
                     },
-                    readOnlyRootFilesystem: false, // nginx needs to write temp files
+                    readOnlyRootFilesystem: false, // nginx needs to write cache and temp files
                     seccompProfile: {
                       type: "RuntimeDefault",
                     },
