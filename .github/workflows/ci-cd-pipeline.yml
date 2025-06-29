@@ -458,16 +458,17 @@ jobs:
           zip -r Maps-Simulator.zip Maps.app
           mv Maps-Simulator.zip ../../../../
 
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.artifact_name }}-${{ needs.release.outputs.version }}
-          path: |
-            apps/native/${{ matrix.artifact_path }}
-            apps/native/ios/Maps-Simulator.zip
-          retention-days: 7
-          if-no-files-found: error
-          compression-level: 9
+      # Artifact upload disabled due to storage quota
+      # - name: Upload build artifacts
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: ${{ matrix.artifact_name }}-${{ needs.release.outputs.version }}
+      #     path: |
+      #       apps/native/${{ matrix.artifact_path }}
+      #       apps/native/ios/Maps-Simulator.zip
+      #     retention-days: 7
+      #     if-no-files-found: error
+      #     compression-level: 9
 
       - name: Attach to GitHub Release
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
