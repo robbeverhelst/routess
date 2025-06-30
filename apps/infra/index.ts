@@ -259,8 +259,9 @@ new NetworkPolicy(
           // Allow DNS resolution
           to: [
             {
-              namespaceSelector: {
-                matchLabels: { name: "kube-system" },
+              namespaceSelector: {},
+              podSelector: {
+                matchLabels: { "k8s-app": "kube-dns" },
               },
             },
           ],
@@ -311,8 +312,9 @@ new NetworkPolicy(
           // Allow DNS resolution
           to: [
             {
-              namespaceSelector: {
-                matchLabels: { name: "kube-system" },
+              namespaceSelector: {},
+              podSelector: {
+                matchLabels: { "k8s-app": "kube-dns" },
               },
             },
           ],
@@ -334,7 +336,6 @@ new NetworkPolicy(
         },
         {
           // Allow HTTPS outbound for external APIs (Google OAuth, etc.)
-          to: [{}], // Any destination
           ports: [
             { protocol: "TCP", port: 443 },
             { protocol: "TCP", port: 80 },
@@ -376,8 +377,9 @@ new NetworkPolicy(
           // Allow DNS resolution
           to: [
             {
-              namespaceSelector: {
-                matchLabels: { name: "kube-system" },
+              namespaceSelector: {},
+              podSelector: {
+                matchLabels: { "k8s-app": "kube-dns" },
               },
             },
           ],

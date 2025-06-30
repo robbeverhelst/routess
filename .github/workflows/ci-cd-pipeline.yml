@@ -3,6 +3,15 @@ name: CI/CD Pipeline
 on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
+    inputs:
+      skip_ios_build:
+        description: 'Skip iOS builds to save GitHub Actions minutes'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
   # Runs on push events to the main branch
   push:
     branches: [main]
@@ -518,7 +527,8 @@ jobs:
     needs: release
     runs-on: macos-latest
     # Only run on main branch pushes, not PRs
-    if: github.event_name != 'pull_request'
+    # Skip iOS builds by setting SKIP_IOS_BUILD repository variable to 'true'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.SKIP_IOS_BUILD != 'true'
     permissions:
       contents: write
       packages: write
@@ -679,7 +689,8 @@ jobs:
     name: Deploy to App Store
     needs: [ios-build]
     runs-on: arc-runner-set-maps
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    # Skip if iOS build was skipped
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.SKIP_IOS_BUILD != 'true'
     permissions:
       contents: read
     steps:
