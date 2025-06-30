@@ -343,7 +343,7 @@ new NetworkPolicy(
       ],
     },
   },
-  { provider, dependsOn: [api.deployment] },
+  { provider },
 );
 
 new NetworkPolicy(
