@@ -63,7 +63,8 @@ RUN mkdir -p /var/cache/nginx /var/log/nginx /var/run && \
 # Copy built assets from the web app with proper ownership
 COPY --from=builder --chown=nginx:nginx /app/apps/web/dist/ /usr/share/nginx/html/
 
-# Copy nginx config
+# Copy nginx configs
+COPY --from=builder /app/apps/web/nginx-main.conf /etc/nginx/nginx.conf
 COPY --from=builder /app/apps/web/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy entrypoint script for runtime environment variable replacement

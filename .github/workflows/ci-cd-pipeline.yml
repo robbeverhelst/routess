@@ -528,7 +528,7 @@ jobs:
     runs-on: macos-latest
     # Only run on main branch pushes, not PRs
     # Skip iOS builds by setting SKIP_IOS_BUILD repository variable to 'true'
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.SKIP_IOS_BUILD != 'true'
+    if: false  # Temporarily skip iOS builds to save minutes
     permissions:
       contents: write
       packages: write
@@ -690,7 +690,7 @@ jobs:
     needs: [ios-build]
     runs-on: arc-runner-set-maps
     # Skip if iOS build was skipped
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.SKIP_IOS_BUILD != 'true'
+    if: false  # Temporarily skip iOS builds to save minutes
     permissions:
       contents: read
     steps:
