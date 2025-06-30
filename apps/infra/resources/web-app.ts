@@ -66,34 +66,12 @@ export class WebAppResource extends ComponentResource {
             spec: {
               serviceAccountName: this.serviceAccount.metadata.name,
               automountServiceAccountToken: false,
-              securityContext: {
-                runAsNonRoot: true,
-                runAsUser: 101,
-                runAsGroup: 101,
-                fsGroup: 101,
-                seccompProfile: {
-                  type: "RuntimeDefault",
-                },
-              },
               containers: [
                 {
                   name: `${config.appName}-web`,
                   image: config.image,
                   ports: [{ containerPort: config.port }],
                   env: config.env,
-                  securityContext: {
-                    allowPrivilegeEscalation: false,
-                    runAsNonRoot: true,
-                    runAsUser: 101,
-                    runAsGroup: 101,
-                    capabilities: {
-                      drop: ["ALL"],
-                    },
-                    readOnlyRootFilesystem: false,
-                    seccompProfile: {
-                      type: "RuntimeDefault",
-                    },
-                  },
                   resources: config.resources || {
                     limits: {
                       cpu: "200m",
