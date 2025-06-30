@@ -241,7 +241,7 @@ new NetworkPolicy(
           from: [
             {
               namespaceSelector: {
-                matchLabels: { name: "cloudflare-tunnel" },
+                matchLabels: { name: "network" },
               },
             },
             {
@@ -300,7 +300,7 @@ new NetworkPolicy(
             {
               // Allow Cloudflare tunnel for direct API access
               namespaceSelector: {
-                matchLabels: { name: "cloudflare-tunnel" },
+                matchLabels: { name: "network" },
               },
             },
           ],
