@@ -46,7 +46,7 @@ jobs:
           key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
           restore-keys: |
             ${{ runner.os }}-bun-
-            
+
       - name: Fallback if cache fails
         if: steps.cache-deps.outcome == 'failure'
         run: |
@@ -390,7 +390,7 @@ jobs:
       - name: Build shared packages
         run: bunx turbo run build --filter='@maps/*'
 
-      - name: Prebuild Android  
+      - name: Prebuild Android
         working-directory: apps/native
         run: |
           # Skip clean to reuse any existing android folder
@@ -400,7 +400,7 @@ jobs:
         working-directory: apps/native/android
         run: |
           chmod +x gradlew
-          
+
           # Configure Gradle for faster builds (enable daemon for faster builds)
           mkdir -p ~/.gradle
           echo "org.gradle.daemon=true" >> ~/.gradle/gradle.properties
@@ -410,7 +410,7 @@ jobs:
           echo "org.gradle.configureondemand=false" >> ~/.gradle/gradle.properties
           echo "android.useAndroidX=true" >> ~/.gradle/gradle.properties
           echo "android.enableJetifier=true" >> ~/.gradle/gradle.properties
-          
+
           # Never run clean - always use cache
           echo "Skipping clean to use cached builds..."
 
@@ -566,11 +566,11 @@ jobs:
         working-directory: apps/native/ios
         run: |
           pod install --repo-update
-          
+
           # List generated files to find correct workspace name
           echo "Available workspace directories:"
           ls -la | grep -E "\.xcworkspace$" || echo "No workspace files found"
-          
+
           echo "Available xcodeproj directories:"
           ls -la | grep -E "\.xcodeproj$" || echo "No xcodeproj files found"
 
@@ -579,7 +579,7 @@ jobs:
         run: |
           # Find the workspace directory (not files inside it)
           WORKSPACE=$(find . -maxdepth 1 -name "*.xcworkspace" -type d | head -n 1 | sed 's|^\./||')
-          
+
           if [ -z "$WORKSPACE" ]; then
             echo "No workspace found, using xcodeproj"
             PROJECT=$(find . -maxdepth 1 -name "*.xcodeproj" -type d | head -n 1 | sed 's|^\./||')
@@ -587,13 +587,13 @@ jobs:
           else
             SCHEME="${WORKSPACE%.xcworkspace}"
           fi
-          
+
           echo "Building with workspace/project: ${WORKSPACE:-$PROJECT}"
           echo "Using scheme: $SCHEME"
-          
+
           # Build for iOS Simulator (no signing required)
           mkdir -p build
-          
+
           if [ -n "$WORKSPACE" ]; then
             xcodebuild \
               -workspace "$WORKSPACE" \
@@ -633,11 +633,11 @@ jobs:
         run: |
           # Create release directory
           mkdir -p ../../release-ios
-          
+
           # Find the .app bundle
           cd build
           APP_BUNDLE=$(ls -1 *.app 2>/dev/null | head -n 1)
-          
+
           if [ -n "$APP_BUNDLE" ]; then
             # Zip the .app bundle for distribution
             zip -r ../../../release-ios/maps-ios-simulator.zip "$APP_BUNDLE"
@@ -647,7 +647,7 @@ jobs:
             ls -la
             exit 1
           fi
-          
+
           ls -la ../../../release-ios/
 
       - name: Upload iOS Build

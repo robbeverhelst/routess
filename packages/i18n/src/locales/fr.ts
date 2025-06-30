@@ -32,6 +32,22 @@ export const fr: Record<string, string> = {
   "sidebar.signOut": "Déconnexion",
   "sidebar.signIn": "Connexion",
   "sidebar.signInToSave": "Connectez-vous pour enregistrer les itinéraires (Bientôt disponible)",
+  "sidebar.settings": "Paramètres",
+  "sidebar.proTip": "Astuce Pro",
+  "sidebar.save": "Enregistrer",
+  "sidebar.library": "Bibliothèque",
+  "sidebar.proTip.routePlanning.title": "Planification d'Itinéraire",
+  "sidebar.proTip.routePlanning.description":
+    "Cliquez sur la carte pour ajouter des points de passage et construire votre itinéraire étape par étape",
+  "sidebar.proTip.importGpx.title": "Importer des Fichiers GPX",
+  "sidebar.proTip.importGpx.description":
+    "Utilisez le bouton Importer GPX pour charger des itinéraires existants depuis votre appareil",
+  "sidebar.proTip.lockRoute.title": "Verrouiller Votre Itinéraire",
+  "sidebar.proTip.lockRoute.description":
+    "Utilisez le bouton de verrouillage pour empêcher les modifications accidentelles pendant la navigation",
+  "sidebar.proTip.quickActions.title": "Actions Rapides",
+  "sidebar.proTip.quickActions.description":
+    "Utilisez les boutons annuler/refaire pour modifier facilement votre itinéraire",
 
   // RouteControls translations
   "routeControls.orientation.north": "Nord en Haut",

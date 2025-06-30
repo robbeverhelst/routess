@@ -50,7 +50,6 @@ export function SettingsModal({
     }
   }, [isOpen]);
 
-
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] sm:max-h-[80vh] p-0 w-[95vw] sm:w-full">
@@ -71,7 +70,7 @@ export function SettingsModal({
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
                 {t("settings.general", currentLanguage)}
               </h2>
-              
+
               <div className="space-y-6">
                 {/* Language */}
                 <div>
@@ -131,12 +130,16 @@ export function SettingsModal({
                       <div className="text-sm font-medium text-gray-900 dark:text-white">
                         Error Notifications
                         {isDev() && (
-                          <span className="text-xs text-blue-600 dark:text-blue-400 ml-2">(Dev mode)</span>
+                          <span className="text-xs text-blue-600 dark:text-blue-400 ml-2">
+                            (Dev mode)
+                          </span>
                         )}
                       </div>
                       <div className="text-xs text-gray-500 mt-1">
                         Show error notifications for debugging
-                        {isDev() && <span className="text-gray-400"> (recommended for development)</span>}
+                        {isDev() && (
+                          <span className="text-gray-400"> (recommended for development)</span>
+                        )}
                       </div>
                     </div>
                   </label>
@@ -149,7 +152,7 @@ export function SettingsModal({
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
                 {t("settings.storage", currentLanguage)}
               </h2>
-              
+
               <div>
                 <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
                   {t("settings.offlineStorage", currentLanguage)}
@@ -164,31 +167,37 @@ export function SettingsModal({
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
                   {t("settings.account", currentLanguage)}
                 </h2>
-                
+
                 <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 space-y-3">
                   <div>
-                    <div className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Name</div>
+                    <div className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">
+                      Name
+                    </div>
                     <div className="text-sm font-medium text-gray-900 dark:text-white">
                       {currentUser.name || "User"}
                     </div>
                   </div>
-                  
+
                   <div>
-                    <div className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Email</div>
+                    <div className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">
+                      Email
+                    </div>
                     <div className="text-sm text-gray-700 dark:text-gray-300">
                       {currentUser.email || "No email"}
                     </div>
                   </div>
-                  
+
                   <div>
-                    <div className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Account Type</div>
-                    <div className="text-sm text-gray-700 dark:text-gray-300">
-                      Google Account
+                    <div className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">
+                      Account Type
                     </div>
+                    <div className="text-sm text-gray-700 dark:text-gray-300">Google Account</div>
                   </div>
-                  
+
                   <div>
-                    <div className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Status</div>
+                    <div className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">
+                      Status
+                    </div>
                     <div className="inline-flex items-center px-2 py-1 text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full">
                       ● Connected
                     </div>
@@ -202,7 +211,7 @@ export function SettingsModal({
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
                 {t("settings.about", currentLanguage)}
               </h2>
-              
+
               <div className="space-y-6">
                 {/* Version */}
                 <div>
@@ -236,9 +245,7 @@ export function SettingsModal({
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                     A modern route planning and navigation tool
                   </p>
-                  <p className="text-xs text-gray-500">
-                    Built with React, TypeScript, and Mapbox
-                  </p>
+                  <p className="text-xs text-gray-500">Built with React, TypeScript, and Mapbox</p>
                 </div>
 
                 {/* Developer */}
@@ -248,7 +255,10 @@ export function SettingsModal({
                   </h3>
                   <div className="space-y-3">
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Created by <span className="font-medium text-gray-900 dark:text-white">Robbe Verhelst</span>
+                      Created by{" "}
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        Robbe Verhelst
+                      </span>
                     </p>
                     <div className="flex flex-wrap gap-3">
                       <a

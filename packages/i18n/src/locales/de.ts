@@ -32,6 +32,22 @@ export const de: Record<string, string> = {
   "sidebar.signOut": "Abmelden",
   "sidebar.signIn": "Anmelden",
   "sidebar.signInToSave": "Melden Sie sich an, um Routen zu speichern (Demnächst verfügbar)",
+  "sidebar.settings": "Einstellungen",
+  "sidebar.proTip": "Profi-Tipp",
+  "sidebar.save": "Speichern",
+  "sidebar.library": "Bibliothek",
+  "sidebar.proTip.routePlanning.title": "Routenplanung",
+  "sidebar.proTip.routePlanning.description":
+    "Klicken Sie auf die Karte, um Wegpunkte hinzuzufügen und Ihre Route Schritt für Schritt zu erstellen",
+  "sidebar.proTip.importGpx.title": "GPX-Dateien Importieren",
+  "sidebar.proTip.importGpx.description":
+    "Verwenden Sie die Import GPX-Schaltfläche, um vorhandene Routen von Ihrem Gerät zu laden",
+  "sidebar.proTip.lockRoute.title": "Route Sperren",
+  "sidebar.proTip.lockRoute.description":
+    "Verwenden Sie die Sperrschaltfläche, um versehentliche Änderungen während der Navigation zu verhindern",
+  "sidebar.proTip.quickActions.title": "Schnelle Aktionen",
+  "sidebar.proTip.quickActions.description":
+    "Verwenden Sie die Rückgängig/Wiederholen-Schaltflächen, um Ihre Route einfach zu ändern",
 
   // RouteControls translations
   "routeControls.orientation.north": "Norden oben",

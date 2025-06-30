@@ -32,6 +32,22 @@ export const en: Record<string, string> = {
   "sidebar.signOut": "Sign Out",
   "sidebar.signIn": "Sign In",
   "sidebar.signInToSave": "Sign in to save routes (Coming soon)",
+  "sidebar.settings": "Settings",
+  "sidebar.proTip": "Pro Tip",
+  "sidebar.save": "Save",
+  "sidebar.library": "Library",
+  "sidebar.proTip.routePlanning.title": "Route Planning",
+  "sidebar.proTip.routePlanning.description":
+    "Click on the map to add waypoints and build your route step by step",
+  "sidebar.proTip.importGpx.title": "Import GPX Files",
+  "sidebar.proTip.importGpx.description":
+    "Use the Import GPX button to load existing routes from your device",
+  "sidebar.proTip.lockRoute.title": "Lock Your Route",
+  "sidebar.proTip.lockRoute.description":
+    "Use the lock button to prevent accidental changes while navigating",
+  "sidebar.proTip.quickActions.title": "Quick Actions",
+  "sidebar.proTip.quickActions.description":
+    "Use undo/redo buttons to easily modify your route as you plan",
 
   // RouteControls translations
   "routeControls.orientation.north": "North Up",

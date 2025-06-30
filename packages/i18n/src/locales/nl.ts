@@ -32,6 +32,22 @@ export const nl: Record<string, string> = {
   "sidebar.signOut": "Uitloggen",
   "sidebar.signIn": "Inloggen",
   "sidebar.signInToSave": "Log in om routes op te slaan (Binnenkort beschikbaar)",
+  "sidebar.settings": "Instellingen",
+  "sidebar.proTip": "Pro Tip",
+  "sidebar.save": "Opslaan",
+  "sidebar.library": "Bibliotheek",
+  "sidebar.proTip.routePlanning.title": "Route Plannen",
+  "sidebar.proTip.routePlanning.description":
+    "Klik op de kaart om waypoints toe te voegen en je route stap voor stap op te bouwen",
+  "sidebar.proTip.importGpx.title": "GPX Bestanden Importeren",
+  "sidebar.proTip.importGpx.description":
+    "Gebruik de Import GPX knop om bestaande routes van je apparaat te laden",
+  "sidebar.proTip.lockRoute.title": "Route Vergrendelen",
+  "sidebar.proTip.lockRoute.description":
+    "Gebruik de vergrendelknop om ongewenste wijzigingen tijdens navigatie te voorkomen",
+  "sidebar.proTip.quickActions.title": "Snelle Acties",
+  "sidebar.proTip.quickActions.description":
+    "Gebruik ongedaan maken/opnieuw knoppen om je route eenvoudig te wijzigen",
 
   // RouteControls translations
   "routeControls.orientation.north": "Noord Boven",
