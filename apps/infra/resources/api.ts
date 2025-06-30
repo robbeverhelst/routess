@@ -57,7 +57,10 @@ export class ApiResource extends ComponentResource {
           "google-client-id": process.env.GOOGLE_CLIENT_ID || "",
           "google-client-secret": process.env.GOOGLE_CLIENT_SECRET || "",
           "mapbox-access-token": process.env.VITE_MAPBOX_ACCESS_TOKEN || "",
-          "database-url": `postgresql://postgres:${process.env.DB_PASSWORD || "changeme"}@${config.appName}-postgres:5432/maps_db`,
+          "database-url": config.postgres
+            ? interpolate`postgresql://${config.postgres.username}:${config.postgres.password}@${config.postgres.serviceName}.${config.namespace}.svc.cluster.local:5432/${config.postgres.database}`
+            : process.env.DATABASE_URL ||
+              `postgresql://maps_user:maps_password_change_me@${config.appName}-postgres-postgresql.${config.namespace}.svc.cluster.local:5432/maps`,
         },
       },
       { parent: this, provider: config.provider },

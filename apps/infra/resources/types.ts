@@ -44,6 +44,12 @@ export interface AppResourceConfig extends BaseResourceConfig {
     initialDelaySeconds?: Input<number>;
     periodSeconds?: Input<number>;
   }>;
+  postgres?: {
+    serviceName: Output<string>;
+    database: string;
+    username: string;
+    password: Output<string> | string;
+  };
   dependencies?: Resource[];
 }
 

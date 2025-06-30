@@ -147,10 +147,6 @@ const apiEnv = [
     value: "3000",
   },
   {
-    name: "DATABASE_URL",
-    value: interpolate`postgresql://${postgresConfig.username}:${postgresConfig.password}@${postgres.serviceName}.${namespace}.svc.cluster.local:5432/${postgresConfig.database}`,
-  },
-  {
     name: "DB_HOST",
     value: interpolate`${postgres.serviceName}.${namespace}.svc.cluster.local`,
   },
@@ -171,14 +167,6 @@ const apiEnv = [
     value: postgresConfig.password,
   },
   {
-    name: "JWT_SECRET",
-    value: process.env.JWT_SECRET || "change-me-in-production",
-  },
-  {
-    name: "GOOGLE_CLIENT_ID",
-    value: process.env.GOOGLE_CLIENT_ID || "",
-  },
-  {
     name: "FRONTEND_URL",
     value: process.env.FRONTEND_URL || "https://maps.robbeverhelst.com",
   },
@@ -193,6 +181,12 @@ const api = new ApiResource("api", {
   port: 3000,
   labels: { app: `${appName}-api` },
   env: apiEnv,
+  postgres: {
+    serviceName: postgres.serviceName,
+    database: postgresConfig.database,
+    username: postgresConfig.username,
+    password: postgresConfig.password,
+  },
   livenessProbe: {
     httpGet: {
       path: "/health/live",
