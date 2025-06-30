@@ -45,11 +45,8 @@ ENV DOCKER_BUILD=true
 WORKDIR /app/apps/web
 RUN bun run build
 
-# Production stage - use standard nginx alpine
+# Production stage
 FROM nginx:alpine
-
-# Remove default nginx config
-RUN rm /etc/nginx/conf.d/default.conf
 
 # Copy built assets from the web app
 COPY --from=builder /app/apps/web/dist/ /usr/share/nginx/html/
@@ -57,8 +54,12 @@ COPY --from=builder /app/apps/web/dist/ /usr/share/nginx/html/
 # Copy nginx config
 COPY --from=builder /app/apps/web/nginx.conf /etc/nginx/conf.d/default.conf
 
+# Copy entrypoint script for runtime environment variable replacement
+COPY --from=builder /app/apps/web/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 # Expose port
 EXPOSE 80
 
-# Start nginx
-CMD ["nginx", "-g", "daemon off;"] 
+# Use entrypoint script to replace environment variables at runtime
+ENTRYPOINT ["/entrypoint.sh"]

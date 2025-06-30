@@ -79,7 +79,7 @@ export class WebAppResource extends ComponentResource {
                 {
                   name: `${config.appName}-web`,
                   image: config.image,
-                  ports: [{ containerPort: 80 }],
+                  ports: [{ containerPort: config.port }],
                   env: config.env,
                   securityContext: {
                     allowPrivilegeEscalation: false,
@@ -130,7 +130,7 @@ export class WebAppResource extends ComponentResource {
         },
         spec: {
           type: "ClusterIP",
-          ports: [{ port: 80, targetPort: 80 }],
+          ports: [{ port: config.port, targetPort: config.port }],
           selector: config.labels,
         },
       },
