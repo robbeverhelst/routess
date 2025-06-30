@@ -41,6 +41,7 @@ export class WebAppResource extends ComponentResource {
           labels: config.labels,
           annotations: {
             "app.kubernetes.io/version": appVersion,
+            "pulumi.com/patchForce": "true",
           },
         },
         spec: {
