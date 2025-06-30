@@ -59,12 +59,8 @@ COPY --from=builder /app/apps/web/dist/ /usr/share/nginx/html/
 # Copy nginx config
 COPY --from=builder /app/apps/web/nginx.conf /etc/nginx/conf.d/default.conf
 
-# Copy entrypoint script for runtime environment variable replacement
-COPY --from=builder /app/apps/web/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-
 # Expose port
 EXPOSE 8080
 
-# Use dumb-init and entrypoint script for proper signal handling
-ENTRYPOINT ["dumb-init", "--", "/entrypoint.sh"] 
+# Start nginx directly
+CMD ["nginx", "-g", "daemon off;"] 
