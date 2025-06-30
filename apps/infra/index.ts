@@ -130,7 +130,7 @@ const webApp = new WebAppResource("web", {
   namespace,
   provider,
   image: webImage,
-  port: 8080,
+  port: 80,
   labels: { app: `${appName}-web` },
   env: webEnv,
   dependencies: [ns, postgres.chart], // dockerRegistry.secret commented out for now

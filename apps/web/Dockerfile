@@ -45,13 +45,11 @@ ENV DOCKER_BUILD=true
 WORKDIR /app/apps/web
 RUN bun run build
 
-# Production stage
+# Production stage - use standard nginx alpine
 FROM nginx:alpine
 
-# Security: Install security updates and tools
-RUN apk update && apk upgrade && \
-    apk add --no-cache dumb-init && \
-    rm -rf /var/cache/apk/*
+# Remove default nginx config
+RUN rm /etc/nginx/conf.d/default.conf
 
 # Copy built assets from the web app
 COPY --from=builder /app/apps/web/dist/ /usr/share/nginx/html/
@@ -60,7 +58,7 @@ COPY --from=builder /app/apps/web/dist/ /usr/share/nginx/html/
 COPY --from=builder /app/apps/web/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Expose port
-EXPOSE 8080
+EXPOSE 80
 
-# Start nginx directly
+# Start nginx
 CMD ["nginx", "-g", "daemon off;"] 

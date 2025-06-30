@@ -67,10 +67,10 @@ export class WebAppResource extends ComponentResource {
               serviceAccountName: this.serviceAccount.metadata.name,
               automountServiceAccountToken: false,
               securityContext: {
-                runAsNonRoot: true, // Run as nginx user (not root)
-                runAsUser: 101, // nginx user UID
-                runAsGroup: 101, // nginx group GID
-                fsGroup: 101, // nginx group for volume permissions
+                runAsNonRoot: true,
+                runAsUser: 101,
+                runAsGroup: 101,
+                fsGroup: 101,
                 seccompProfile: {
                   type: "RuntimeDefault",
                 },
@@ -79,17 +79,17 @@ export class WebAppResource extends ComponentResource {
                 {
                   name: `${config.appName}-web`,
                   image: config.image,
-                  ports: [{ containerPort: config.port }],
+                  ports: [{ containerPort: 80 }],
                   env: config.env,
                   securityContext: {
                     allowPrivilegeEscalation: false,
                     runAsNonRoot: true,
-                    runAsUser: 101, // nginx user UID
-                    runAsGroup: 101, // nginx group GID
+                    runAsUser: 101,
+                    runAsGroup: 101,
                     capabilities: {
                       drop: ["ALL"],
                     },
-                    readOnlyRootFilesystem: false, // nginx needs to write cache and temp files
+                    readOnlyRootFilesystem: false,
                     seccompProfile: {
                       type: "RuntimeDefault",
                     },
@@ -130,7 +130,7 @@ export class WebAppResource extends ComponentResource {
         },
         spec: {
           type: "ClusterIP",
-          ports: [{ port: config.port, targetPort: config.port }],
+          ports: [{ port: 80, targetPort: 80 }],
           selector: config.labels,
         },
       },
