@@ -53,29 +53,15 @@ RUN apk update && apk upgrade && \
     apk add --no-cache dumb-init && \
     rm -rf /var/cache/apk/*
 
-# Security: Create non-root user (nginx user already exists with UID 101)
-# Ensure proper permissions for nginx directories
-RUN mkdir -p /var/cache/nginx /var/log/nginx /var/run && \
-    chown -R nginx:nginx /var/cache/nginx /var/log/nginx /var/run /usr/share/nginx/html /tmp && \
-    chmod -R 755 /usr/share/nginx/html && \
-    chmod 755 /tmp
+# Copy built assets from the web app
+COPY --from=builder /app/apps/web/dist/ /usr/share/nginx/html/
 
-# Copy built assets from the web app with proper ownership
-COPY --from=builder --chown=nginx:nginx /app/apps/web/dist/ /usr/share/nginx/html/
-
-# Copy nginx configs
-COPY --from=builder /app/apps/web/nginx-main.conf /etc/nginx/nginx.conf
+# Copy nginx config
 COPY --from=builder /app/apps/web/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy entrypoint script for runtime environment variable replacement
 COPY --from=builder /app/apps/web/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh && chown nginx:nginx /entrypoint.sh
-
-# Security: Remove unnecessary files
-RUN rm -rf /tmp/* /var/tmp/* /usr/share/man/* /usr/share/doc/*
-
-# Security: Switch to non-root user
-USER nginx
+RUN chmod +x /entrypoint.sh
 
 # Expose port
 EXPOSE 8080
