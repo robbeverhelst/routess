@@ -455,7 +455,7 @@ jobs:
 
       - name: Upload Release APKs
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ needs.release.outputs.version }}
           files: release-apks/*
@@ -540,7 +540,7 @@ jobs:
           fetch-depth: 0
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
+        uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
 
@@ -662,7 +662,7 @@ jobs:
 
       - name: Upload iOS Build
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ needs.release.outputs.version }}
           files: release-ios/*
