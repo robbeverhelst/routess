@@ -257,7 +257,7 @@ export function SettingsModal({
                     <p className="text-sm text-gray-600 dark:text-gray-400">
                       Created by{" "}
                       <span className="font-medium text-gray-900 dark:text-white">
-                        Robbe Verhelst
+                        robbeverhelst
                       </span>
                     </p>
                     <div className="flex flex-wrap gap-3">
