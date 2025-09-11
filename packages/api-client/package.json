@@ -17,7 +17,7 @@
     "@maps/core": "workspace:*"
   },
   "devDependencies": {
-    "typescript": "~5.8.3"
+    "typescript": "~5.9.2"
   },
   "exports": {
     ".": {
