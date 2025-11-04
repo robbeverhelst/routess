@@ -22,7 +22,7 @@ on:
 jobs:
   test-and-build:
     name: Test and Build Application
-    runs-on: arc-runner-set-maps
+    runs-on: arc-maps
     timeout-minutes: 15
 
     steps:
@@ -111,7 +111,7 @@ jobs:
   release:
     name: Create Release
     needs: test-and-build
-    runs-on: arc-runner-set-maps
+    runs-on: arc-maps
     # Only run on main branch pushes, not PRs
     if: github.event_name != 'pull_request'
     permissions:
@@ -266,7 +266,7 @@ jobs:
   deploy:
     name: Deploy Infrastructure
     needs: [docker, release]
-    runs-on: arc-runner-set-maps
+    runs-on: arc-maps
     # Only run on main branch pushes, not PRs
     if: github.event_name != 'pull_request'
     steps:
@@ -347,7 +347,7 @@ jobs:
   android-build:
     name: Build Android App
     needs: release
-    runs-on: arc-runner-set-maps
+    runs-on: arc-maps
     # Only run on main branch pushes, not PRs
     if: github.event_name != 'pull_request'
     permissions:
@@ -478,7 +478,7 @@ jobs:
   android-deploy:
     name: Deploy to Google Play Store
     needs: [android-build]
-    runs-on: arc-runner-set-maps
+    runs-on: arc-maps
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     permissions:
       contents: read
@@ -688,7 +688,7 @@ jobs:
   ios-deploy:
     name: Deploy to App Store
     needs: [ios-build]
-    runs-on: arc-runner-set-maps
+    runs-on: arc-maps
     # Skip if iOS build was skipped
     if: false  # Temporarily skip iOS builds to save minutes
     permissions:
