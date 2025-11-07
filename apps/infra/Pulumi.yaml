@@ -1,11 +1,6 @@
-name: infra
+name: maps
 runtime:
   name: nodejs
   options:
-    packagemanager: auto
-main: bin/index.js
-description: A minimal Kubernetes TypeScript Pulumi program
-config:
-  pulumi:tags:
-    value:
-      pulumi:template: kubernetes-typescript
+    packagemanager: bun
+description: Maps application infrastructure deployment to Kubernetes

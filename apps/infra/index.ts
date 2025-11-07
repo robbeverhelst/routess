@@ -1,410 +1,477 @@
-import { Config, interpolate, output } from "@pulumi/pulumi";
-import { Provider } from "@pulumi/kubernetes";
-import { Namespace } from "@pulumi/kubernetes/core/v1";
-import { NetworkPolicy } from "@pulumi/kubernetes/networking/v1";
-import { WebAppResource, ApiResource, PostgresResource } from "./resources";
-// import { DockerRegistrySecret } from "./resources"; // Commented out for now
+import { Config, getStack } from "@pulumi/pulumi";
+import { Namespace, Secret, Service } from "@pulumi/kubernetes/core/v1";
+import { Deployment } from "@pulumi/kubernetes/apps/v1";
+import { Ingress } from "@pulumi/kubernetes/networking/v1";
 
-// Get configuration
 const config = new Config();
+const stack = getStack();
 const appName = "maps";
-const namespace = "maps";
+const namespace = config.get("namespace") || "maps";
+const webImageRepository = "ghcr.io/robbeverhelst/maps-web";
+const apiImageRepository = "ghcr.io/robbeverhelst/maps-api";
+const imageTag = config.get("imageTag") || "latest";
+const replicas = config.getNumber("replicas") || 2;
+const ingressClassName = config.get("ingressClassName") || "cloudflare-tunnel";
+const ghcrToken = config.requireSecret("ghcrToken");
 
-// Get app version from environment variable or use "latest" as fallback
-const appVersion = process.env.APP_VERSION || "latest";
-console.log(`Deploying version: ${appVersion}`);
+// PostgreSQL configuration from 1Password (external database)
+const dbHost = config.require("dbHost"); // op://Homelab/TrueNAS PostgreSQL/hostname
+const dbPort = config.get("dbPort") || "5432";
+const dbUser = config.require("dbUser"); // op://Homelab/TrueNAS PostgreSQL/username
+const dbPassword = config.requireSecret("dbPassword"); // op://Homelab/TrueNAS PostgreSQL/password
+const dbName = config.get("dbName") || "maps";
 
-// Get image names from environment variables with lowercase repository owner
-const webImage = process.env.WEB_IMAGE || `ghcr.io/robbeverhelst/maps-web:${appVersion}`;
-const apiImage = process.env.API_IMAGE || `ghcr.io/robbeverhelst/maps-api:${appVersion}`;
-console.log(`Web image: ${webImage}`);
-console.log(`API image: ${apiImage}`);
+// API secrets
+const jwtSecret = config.requireSecret("jwtSecret"); // op://Homelab/Maps API/JWT Secret
+const googleClientId = config.require("googleClientId");
 
-// PostgreSQL configuration
-const postgresConfig = {
-  database: "maps",
-  username: "maps_user",
-  password: config.get("postgresPassword") || "maps_password_change_me",
+// Web hosts
+const hosts = config.getObject<string[]>("hosts") ?? ["maps.robbeverhelst.com"];
+
+const labels = {
+  app: appName,
+  stack,
 };
 
-// Create a Kubernetes provider instance that uses kubeconfig from Pulumi configuration
-const provider = new Provider("k8s-provider", {
-  kubeconfig: config.requireSecret("kubeconfig"),
+// Create namespace
+const ns = new Namespace(`${appName}-namespace`, {
+  metadata: {
+    name: namespace,
+  },
 });
 
-// Create a Kubernetes namespace
-const ns = new Namespace(
-  namespace,
+// Create GHCR pull secret
+const ghcrSecret = new Secret(
+  `${appName}-ghcr-secret`,
   {
     metadata: {
-      name: namespace,
-    },
-  },
-  { provider },
-);
-
-// Get GitHub credentials: Prefer GHA environment variables, fallback to Pulumi config
-const githubUsername = process.env.GHCR_USERNAME || config.require("githubUsername");
-const githubTokenInput = process.env.GHCR_TOKEN || config.requireSecret("githubToken");
-const githubToken = output(githubTokenInput);
-
-// Validate GitHub credentials
-if (!githubUsername || githubUsername.trim() === "") {
-  throw new Error(
-    "GitHub username for GHCR is required (from GHCR_USERNAME env or Pulumi config 'githubUsername').",
-  );
-}
-
-githubToken.apply((token) => {
-  if (!token || token.trim() === "") {
-    throw new Error(
-      "GitHub token for GHCR is required (from GHCR_TOKEN env or Pulumi config 'githubToken').",
-    );
-  }
-  // Basic check for PAT format if not using GITHUB_TOKEN (which has a different format)
-  if (!process.env.GHCR_TOKEN && (!token.startsWith("ghp_") || token.length < 40)) {
-    console.warn(
-      `Warning: Configured 'githubToken' (from Pulumi config) does not look like a standard GitHub PAT (ghp_...). Please verify it's correct. Length: ${token.length}`,
-    );
-  }
-});
-
-console.log(`Using GitHub username for GHCR: ${githubUsername}`);
-if (process.env.GHCR_TOKEN) {
-  console.log("Using GHCR_TOKEN from GitHub Actions environment for GHCR authentication.");
-} else {
-  console.log(
-    "GHCR_TOKEN not found in environment, using 'githubToken' from Pulumi config for GHCR authentication (secret will not be displayed).",
-  );
-}
-
-// Create Docker registry secret (commented out for now)
-// const dockerRegistry = new DockerRegistrySecret("ghcr", {
-//   appName,
-//   namespace,
-//   provider,
-//   username: githubUsername,
-//   token: githubToken,
-//   registryUrl: "ghcr.io",
-//   dependencies: [ns],
-// });
-
-// Deploy PostgreSQL
-const postgres = new PostgresResource("postgres", {
-  appName,
-  namespace,
-  provider,
-  database: postgresConfig.database,
-  username: postgresConfig.username,
-  password: postgresConfig.password,
-  dependencies: [ns],
-});
-
-// Create web application environment variables
-const webEnv = [
-  {
-    name: "VITE_MAPBOX_ACCESS_TOKEN",
-    value: process.env.VITE_MAPBOX_ACCESS_TOKEN || "",
-  },
-  {
-    name: "VITE_GOOGLE_CLIENT_ID",
-    value: process.env.VITE_GOOGLE_CLIENT_ID || "",
-  },
-  {
-    name: "VITE_APP_URL",
-    value: process.env.VITE_APP_URL || "https://maps.robbeverhelst.com",
-  },
-  {
-    name: "VITE_APP_VERSION",
-    value: process.env.VITE_APP_VERSION || appVersion,
-  },
-  {
-    name: "NODE_ENV",
-    value: "production",
-  },
-];
-
-// Deploy web application
-const webApp = new WebAppResource("web", {
-  appName,
-  namespace,
-  provider,
-  image: webImage,
-  port: 80,
-  labels: { app: `${appName}-web` },
-  env: webEnv,
-  dependencies: [ns, postgres.chart], // dockerRegistry.secret commented out for now
-});
-
-// Create API environment variables
-const apiEnv = [
-  {
-    name: "NODE_ENV",
-    value: "production",
-  },
-  {
-    name: "PORT",
-    value: "3000",
-  },
-  {
-    name: "DB_HOST",
-    value: interpolate`${postgres.serviceName}.${namespace}.svc.cluster.local`,
-  },
-  {
-    name: "DB_PORT",
-    value: "5432",
-  },
-  {
-    name: "DB_NAME",
-    value: postgresConfig.database,
-  },
-  {
-    name: "DB_USER",
-    value: postgresConfig.username,
-  },
-  {
-    name: "DB_PASSWORD",
-    value: postgresConfig.password,
-  },
-  {
-    name: "FRONTEND_URL",
-    value: process.env.FRONTEND_URL || "https://maps.robbeverhelst.com",
-  },
-];
-
-// Deploy API
-const api = new ApiResource("api", {
-  appName,
-  namespace,
-  provider,
-  image: apiImage,
-  port: 3000,
-  labels: { app: `${appName}-api` },
-  env: apiEnv,
-  postgres: {
-    serviceName: postgres.serviceName,
-    database: postgresConfig.database,
-    username: postgresConfig.username,
-    password: postgresConfig.password,
-  },
-  livenessProbe: {
-    httpGet: {
-      path: "/health/live",
-      port: 3000,
-    },
-    initialDelaySeconds: 30,
-    periodSeconds: 10,
-  },
-  readinessProbe: {
-    httpGet: {
-      path: "/health/ready",
-      port: 3000,
-    },
-    initialDelaySeconds: 5,
-    periodSeconds: 5,
-  },
-  dependencies: [ns, postgres.chart], // dockerRegistry.secret commented out for now
-});
-
-// Network Policies for security
-new NetworkPolicy(
-  `${appName}-default-deny`,
-  {
-    metadata: {
-      name: `${appName}-default-deny`,
+      name: "ghcr-secret",
       namespace,
     },
-    spec: {
-      podSelector: {}, // Apply to all pods in namespace
-      policyTypes: ["Ingress", "Egress"],
-      // No ingress/egress rules = deny all
+    type: "kubernetes.io/dockerconfigjson",
+    data: {
+      ".dockerconfigjson": ghcrToken.apply((token: string) =>
+        Buffer.from(
+          JSON.stringify({
+            auths: {
+              "ghcr.io": {
+                username: "robbeverhelst",
+                password: token,
+                auth: Buffer.from(`robbeverhelst:${token}`).toString("base64"),
+              },
+            },
+          }),
+        ).toString("base64"),
+      ),
     },
   },
-  { provider, dependsOn: [ns] },
+  { dependsOn: [ns] },
 );
 
-new NetworkPolicy(
-  `${appName}-web-policy`,
+// API secrets
+const apiSecrets = new Secret(
+  `${appName}-api-secrets`,
   {
     metadata: {
-      name: `${appName}-web-policy`,
+      name: `${appName}-api-secrets`,
       namespace,
     },
+    type: "Opaque",
+    stringData: {
+      "jwt-secret": jwtSecret.apply((s) => s),
+      "google-client-id": googleClientId,
+      "db-host": dbHost,
+      "db-port": dbPort,
+      "db-user": dbUser,
+      "db-password": dbPassword.apply((p) => p),
+      "db-name": dbName,
+    },
+  },
+  { dependsOn: [ns] },
+);
+
+// ============================================
+// WEB APPLICATION
+// ============================================
+
+const webResourceName = `${appName}-web-${stack}`;
+const webDeploymentLabels = {
+  ...labels,
+  component: "web",
+  version: imageTag,
+};
+
+const webDeployment = new Deployment(
+  `${appName}-web-deployment`,
+  {
+    metadata: {
+      name: webResourceName,
+      namespace,
+      labels: webDeploymentLabels,
+    },
     spec: {
-      podSelector: {
-        matchLabels: { app: `${appName}-web` },
+      replicas,
+      selector: {
+        matchLabels: { ...labels, component: "web" },
       },
-      policyTypes: ["Ingress", "Egress"],
-      ingress: [
-        {
-          // Allow Cloudflare tunnel ingress
-          from: [
-            {
-              namespaceSelector: {
-                matchLabels: { name: "network" },
-              },
-            },
-            {
-              // Allow from kube-system for health checks
-              namespaceSelector: {
-                matchLabels: { name: "kube-system" },
-              },
-            },
-          ],
-          ports: [{ protocol: "TCP", port: 80 }],
+      template: {
+        metadata: {
+          labels: webDeploymentLabels,
         },
-      ],
-      egress: [
-        {
-          // Allow DNS resolution
-          to: [
+        spec: {
+          containers: [
             {
-              namespaceSelector: {},
-              podSelector: {
-                matchLabels: { "k8s-app": "kube-dns" },
+              name: `${appName}-web`,
+              image: `${webImageRepository}:${imageTag}`,
+              imagePullPolicy: "Always",
+              ports: [
+                {
+                  name: "http",
+                  containerPort: 80,
+                },
+              ],
+              resources: {
+                requests: {
+                  cpu: "100m",
+                  memory: "128Mi",
+                },
+                limits: {
+                  cpu: "200m",
+                  memory: "256Mi",
+                },
+              },
+              livenessProbe: {
+                httpGet: {
+                  path: "/",
+                  port: 80,
+                },
+                initialDelaySeconds: 10,
+                periodSeconds: 10,
+                timeoutSeconds: 5,
+                failureThreshold: 3,
+              },
+              readinessProbe: {
+                httpGet: {
+                  path: "/",
+                  port: 80,
+                },
+                initialDelaySeconds: 5,
+                periodSeconds: 5,
+                timeoutSeconds: 3,
+                failureThreshold: 3,
               },
             },
           ],
-          ports: [
-            { protocol: "UDP", port: 53 },
-            { protocol: "TCP", port: 53 },
+          imagePullSecrets: [
+            {
+              name: ghcrSecret.metadata.name,
+            },
           ],
         },
-      ],
+      },
     },
   },
-  { provider, dependsOn: [webApp.deployment] },
+  { dependsOn: [ghcrSecret] },
 );
 
-new NetworkPolicy(
-  `${appName}-api-policy`,
+const webService = new Service(
+  `${appName}-web-service`,
   {
     metadata: {
-      name: `${appName}-api-policy`,
+      name: webResourceName,
       namespace,
+      labels: { ...labels, component: "web" },
+      annotations: {
+        "pulumi.com/skipAwait": "true",
+      },
     },
     spec: {
-      podSelector: {
-        matchLabels: { app: `${appName}-api` },
-      },
-      policyTypes: ["Ingress", "Egress"],
-      ingress: [
+      selector: { ...labels, component: "web" },
+      ports: [
         {
-          // Allow from web frontend
-          from: [
-            {
-              podSelector: {
-                matchLabels: { app: `${appName}-web` },
-              },
-            },
-            {
-              // Allow Cloudflare tunnel for direct API access
-              namespaceSelector: {
-                matchLabels: { name: "network" },
-              },
-            },
-          ],
-          ports: [{ protocol: "TCP", port: 3000 }],
+          name: "http",
+          port: 80,
+          targetPort: 80,
+          protocol: "TCP",
         },
       ],
-      egress: [
-        {
-          // Allow DNS resolution
-          to: [
-            {
-              namespaceSelector: {},
-              podSelector: {
-                matchLabels: { "k8s-app": "kube-dns" },
-              },
-            },
-          ],
-          ports: [
-            { protocol: "UDP", port: 53 },
-            { protocol: "TCP", port: 53 },
-          ],
-        },
-        {
-          // Allow communication to database
-          to: [
-            {
-              podSelector: {
-                matchLabels: { "app.kubernetes.io/name": "postgresql" },
-              },
-            },
-          ],
-          ports: [{ protocol: "TCP", port: 5432 }],
-        },
-        {
-          // Allow HTTPS outbound for external APIs (Google OAuth, etc.)
-          ports: [
-            { protocol: "TCP", port: 443 },
-            { protocol: "TCP", port: 80 },
-          ],
-        },
-      ],
+      type: "ClusterIP",
     },
   },
-  { provider },
+  { dependsOn: [webDeployment] },
 );
 
-new NetworkPolicy(
-  `${appName}-db-policy`,
+const webIngress = new Ingress(
+  `${appName}-web-ingress`,
   {
     metadata: {
-      name: `${appName}-db-policy`,
+      name: webResourceName,
       namespace,
+      labels: { ...labels, component: "web" },
+      annotations: {
+        "pulumi.com/patchForce": "true",
+      },
     },
     spec: {
-      podSelector: {
-        matchLabels: { "app.kubernetes.io/name": "postgresql" },
-      },
-      policyTypes: ["Ingress", "Egress"],
-      ingress: [
-        {
-          // Only allow API to connect to database
-          from: [
+      ingressClassName,
+      rules: hosts.map((host: string) => ({
+        host,
+        http: {
+          paths: [
             {
-              podSelector: {
-                matchLabels: { app: `${appName}-api` },
+              path: "/",
+              pathType: "Prefix",
+              backend: {
+                service: {
+                  name: webResourceName,
+                  port: {
+                    number: 80,
+                  },
+                },
               },
             },
           ],
-          ports: [{ protocol: "TCP", port: 5432 }],
+        },
+      })),
+    },
+  },
+  { dependsOn: [webService] },
+);
+
+// ============================================
+// API APPLICATION
+// ============================================
+
+const apiResourceName = `${appName}-api-${stack}`;
+const apiDeploymentLabels = {
+  ...labels,
+  component: "api",
+  version: imageTag,
+};
+
+const apiDeployment = new Deployment(
+  `${appName}-api-deployment`,
+  {
+    metadata: {
+      name: apiResourceName,
+      namespace,
+      labels: apiDeploymentLabels,
+    },
+    spec: {
+      replicas,
+      selector: {
+        matchLabels: { ...labels, component: "api" },
+      },
+      template: {
+        metadata: {
+          labels: apiDeploymentLabels,
+        },
+        spec: {
+          containers: [
+            {
+              name: `${appName}-api`,
+              image: `${apiImageRepository}:${imageTag}`,
+              imagePullPolicy: "Always",
+              ports: [
+                {
+                  name: "http",
+                  containerPort: 3000,
+                },
+              ],
+              env: [
+                {
+                  name: "NODE_ENV",
+                  value: "production",
+                },
+                {
+                  name: "PORT",
+                  value: "3000",
+                },
+                {
+                  name: "FRONTEND_URL",
+                  value: hosts[0] ? `https://${hosts[0]}` : "https://maps.robbeverhelst.com",
+                },
+                {
+                  name: "JWT_SECRET",
+                  valueFrom: {
+                    secretKeyRef: {
+                      name: apiSecrets.metadata.name,
+                      key: "jwt-secret",
+                    },
+                  },
+                },
+                {
+                  name: "GOOGLE_CLIENT_ID",
+                  valueFrom: {
+                    secretKeyRef: {
+                      name: apiSecrets.metadata.name,
+                      key: "google-client-id",
+                    },
+                  },
+                },
+                {
+                  name: "DB_HOST",
+                  valueFrom: {
+                    secretKeyRef: {
+                      name: apiSecrets.metadata.name,
+                      key: "db-host",
+                    },
+                  },
+                },
+                {
+                  name: "DB_PORT",
+                  valueFrom: {
+                    secretKeyRef: {
+                      name: apiSecrets.metadata.name,
+                      key: "db-port",
+                    },
+                  },
+                },
+                {
+                  name: "DB_USER",
+                  valueFrom: {
+                    secretKeyRef: {
+                      name: apiSecrets.metadata.name,
+                      key: "db-user",
+                    },
+                  },
+                },
+                {
+                  name: "DB_PASSWORD",
+                  valueFrom: {
+                    secretKeyRef: {
+                      name: apiSecrets.metadata.name,
+                      key: "db-password",
+                    },
+                  },
+                },
+                {
+                  name: "DB_NAME",
+                  valueFrom: {
+                    secretKeyRef: {
+                      name: apiSecrets.metadata.name,
+                      key: "db-name",
+                    },
+                  },
+                },
+              ],
+              resources: {
+                requests: {
+                  cpu: "250m",
+                  memory: "256Mi",
+                },
+                limits: {
+                  cpu: "500m",
+                  memory: "512Mi",
+                },
+              },
+              livenessProbe: {
+                httpGet: {
+                  path: "/health/live",
+                  port: 3000,
+                },
+                initialDelaySeconds: 30,
+                periodSeconds: 10,
+                timeoutSeconds: 5,
+                failureThreshold: 3,
+              },
+              readinessProbe: {
+                httpGet: {
+                  path: "/health/ready",
+                  port: 3000,
+                },
+                initialDelaySeconds: 10,
+                periodSeconds: 5,
+                timeoutSeconds: 3,
+                failureThreshold: 3,
+              },
+            },
+          ],
+          imagePullSecrets: [
+            {
+              name: ghcrSecret.metadata.name,
+            },
+          ],
+        },
+      },
+    },
+  },
+  { dependsOn: [ghcrSecret, apiSecrets] },
+);
+
+const apiService = new Service(
+  `${appName}-api-service`,
+  {
+    metadata: {
+      name: apiResourceName,
+      namespace,
+      labels: { ...labels, component: "api" },
+      annotations: {
+        "pulumi.com/skipAwait": "true",
+      },
+    },
+    spec: {
+      selector: { ...labels, component: "api" },
+      ports: [
+        {
+          name: "http",
+          port: 3000,
+          targetPort: 3000,
+          protocol: "TCP",
         },
       ],
-      egress: [
+      type: "ClusterIP",
+    },
+  },
+  { dependsOn: [apiDeployment] },
+);
+
+const apiIngress = new Ingress(
+  `${appName}-api-ingress`,
+  {
+    metadata: {
+      name: apiResourceName,
+      namespace,
+      labels: { ...labels, component: "api" },
+      annotations: {
+        "pulumi.com/patchForce": "true",
+      },
+    },
+    spec: {
+      ingressClassName,
+      rules: [
         {
-          // Allow DNS resolution
-          to: [
-            {
-              namespaceSelector: {},
-              podSelector: {
-                matchLabels: { "k8s-app": "kube-dns" },
+          host: "maps-api.robbeverhelst.com",
+          http: {
+            paths: [
+              {
+                path: "/",
+                pathType: "Prefix",
+                backend: {
+                  service: {
+                    name: apiResourceName,
+                    port: {
+                      number: 3000,
+                    },
+                  },
+                },
               },
-            },
-          ],
-          ports: [
-            { protocol: "UDP", port: 53 },
-            { protocol: "TCP", port: 53 },
-          ],
+            ],
+          },
         },
       ],
     },
   },
-  { provider, dependsOn: [postgres.chart] },
+  { dependsOn: [apiService] },
 );
 
-// Export the service names and namespace
-export const webServiceName = webApp.service.metadata.name;
-export const apiServiceName = api.service.metadata.name;
-export const serviceNamespace = namespace;
-export const kubernetesCluster = config.require("clusterName");
-export const webServiceUrl = webApp.serviceUrl;
-export const apiServiceUrl = api.serviceUrl;
-export const deployedVersion = appVersion;
-
-// Export PostgreSQL connection details
-export const postgresServiceName = postgres.serviceName;
-export const postgresServiceUrl = postgres.serviceUrl;
-export const postgresDatabase = postgresConfig.database;
-export const postgresUsername = postgresConfig.username;
+// Exports
+export const namespaceName = ns.metadata.name;
+export const webDeploymentName = webDeployment.metadata.name;
+export const webServiceName = webService.metadata.name;
+export const webIngressName = webIngress.metadata.name;
+export const apiDeploymentName = apiDeployment.metadata.name;
+export const apiServiceName = apiService.metadata.name;
+export const apiIngressName = apiIngress.metadata.name;
+export const currentImageTag = imageTag;
+export const configuredHosts = hosts;

@@ -5,13 +5,13 @@ on:
   workflow_dispatch:
     inputs:
       skip_ios_build:
-        description: 'Skip iOS builds to save GitHub Actions minutes'
+        description: "Skip iOS builds to save GitHub Actions minutes"
         required: false
-        default: 'false'
+        default: "false"
         type: choice
         options:
-          - 'true'
-          - 'false'
+          - "true"
+          - "false"
   # Runs on push events to the main branch
   push:
     branches: [main]
@@ -237,6 +237,16 @@ jobs:
             type=semver,pattern={{major}},value=${{ needs.release.outputs.version }}
             type=raw,value=latest,enable={{is_default_branch}}
 
+      - name: Load build-time secrets from 1Password
+        if: matrix.needs_artifacts
+        uses: 1password/load-secrets-action@v3
+        with:
+          export-env: true
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          VITE_MAPBOX_ACCESS_TOKEN: op://Homelab/Maps API/Mapbox Access Token
+          VITE_GOOGLE_CLIENT_ID: op://Homelab/Maps API/Google Client ID
+
       - name: Convert repository owner to lowercase
         id: repo-name
         run: |
@@ -256,92 +266,107 @@ jobs:
           cache-from: type=registry,ref=ghcr.io/${{ env.REPO_OWNER_LOWER }}/maps-${{ matrix.app }}:buildcache
           cache-to: type=registry,ref=ghcr.io/${{ env.REPO_OWNER_LOWER }}/maps-${{ matrix.app }}:buildcache,mode=max
           build-args: |
-            VITE_MAPBOX_ACCESS_TOKEN=${{ secrets.VITE_MAPBOX_ACCESS_TOKEN }}
-            VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+            VITE_MAPBOX_ACCESS_TOKEN=${{ env.VITE_MAPBOX_ACCESS_TOKEN }}
+            VITE_GOOGLE_CLIENT_ID=${{ env.VITE_GOOGLE_CLIENT_ID }}
             VITE_APP_URL=https://maps.robbeverhelst.com
             VITE_API_URL=https://maps-api.robbeverhelst.com
             VITE_APP_VERSION=${{ needs.release.outputs.version }}
 
-  # Updated job for deploying infrastructure with Pulumi using Turborepo
-  deploy:
-    name: Deploy Infrastructure
-    needs: [docker, release]
+  # Deploy to production
+  deploy-prod:
     runs-on: arc-maps
-    # Only run on main branch pushes, not PRs
-    if: github.event_name != 'pull_request'
+    needs: [docker, release]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          ref: main # Ensure we're using the latest main branch with the version update
-          fetch-depth: 1
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - name: Set AWS region
+        run: echo "AWS_REGION=eu-west-1" >> $GITHUB_ENV
+
+      - name: Load secrets from 1Password
+        uses: 1password/load-secrets-action@v3
         with:
-          bun-version: latest
+          export-env: true
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          PULUMI_CONFIG_PASSPHRASE: op://Homelab/Pulumi/passphrase
+          AWS_ACCESS_KEY_ID: op://Homelab/TrueNAS Minio/username
+          AWS_SECRET_ACCESS_KEY: op://Homelab/TrueNAS Minio/password
+          DB_HOST: op://Homelab/TrueNAS PostgreSQL/hostname
+          DB_USER: op://Homelab/TrueNAS PostgreSQL/username
+          DB_PASSWORD: op://Homelab/TrueNAS PostgreSQL/password
+          JWT_SECRET: op://Homelab/Maps API/JWT Secret
+          GOOGLE_CLIENT_ID: op://Homelab/Maps API/Google Client ID
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
 
-      - name: Install dependencies
-        run: bun install
-
-      - name: Build infrastructure
-        run: bunx turbo run build --filter=@maps/infra
-
-      - name: Use version from release job
-        run: |
-          echo "VERSION=${{ needs.release.outputs.version }}" >> $GITHUB_ENV
-          echo "Using version: ${{ needs.release.outputs.version }}"
-          REPO_OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          echo "WEB_IMAGE=ghcr.io/${REPO_OWNER_LOWER}/maps-web:${{ needs.release.outputs.version }}" >> $GITHUB_ENV
-          echo "API_IMAGE=ghcr.io/${REPO_OWNER_LOWER}/maps-api:${{ needs.release.outputs.version }}" >> $GITHUB_ENV
-
-      - name: Pulumi Refresh
-        uses: pulumi/actions@v6
-        timeout-minutes: 5
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          command: refresh
-          stack-name: prod
-          work-dir: ./apps/infra
-        env:
-          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
-          PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
+          bun-version: latest
 
-      - name: Pulumi Update
-        uses: pulumi/actions@v6
-        timeout-minutes: 5
-        with:
-          command: up
-          stack-name: prod
-          work-dir: ./apps/infra
-          upsert: true
-        env:
-          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
-          PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
-          APP_VERSION: ${{ needs.release.outputs.version }}
-          WEB_IMAGE: ${{ env.WEB_IMAGE }}
-          API_IMAGE: ${{ env.API_IMAGE }}
-          GHCR_USERNAME: ${{ github.actor }}
-          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Web App Environment Variables
-          VITE_MAPBOX_ACCESS_TOKEN: ${{ secrets.VITE_MAPBOX_ACCESS_TOKEN }}
-          VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
-          VITE_APP_URL: "https://maps.robbeverhelst.com"
-          VITE_API_URL: "https://maps-api.robbeverhelst.com"
-          VITE_APP_VERSION: ${{ needs.release.outputs.version }}
-          # API Environment Variables
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
-          FRONTEND_URL: "https://maps.robbeverhelst.com"
-          NODE_ENV: "production"
+      - name: Install Pulumi CLI
+        uses: pulumi/actions@v5
 
-      - name: Clean up old resources (if any)
+      - name: Install infrastructure dependencies
         run: |
-          echo "Deployment completed successfully. Old resources will be garbage collected by Pulumi."
+          cd apps/infra
+          bun install
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: "latest"
+
+      - name: Load kubeconfig from 1Password
+        uses: 1password/load-secrets-action@v3
+        with:
+          export-env: true
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          KUBECONFIG_CONTENT: op://Homelab/Kubernetes/kubeconfig
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "$KUBECONFIG_CONTENT" > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Extract image tag
+        id: image
+        run: |
+          IMAGE_TAG="${{ needs.release.outputs.version }}"
+          if [ -z "$IMAGE_TAG" ]; then
+            SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+            IMAGE_TAG="main-${SHORT_SHA}"
+          fi
+          echo "tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Deploy production stack
+        run: |
+          cd apps/infra
+          pulumi login "s3://pulumi-state?endpoint=http://192.168.1.195:9000&disableSSL=true&s3ForcePathStyle=true&region=eu-west-1"
+          pulumi stack select production --create
+          pulumi config set imageTag ${{ steps.image.outputs.tag }}
+          pulumi config set --secret ghcrToken ${{ secrets.GITHUB_TOKEN }}
+          pulumi config set dbHost "$DB_HOST"
+          pulumi config set dbUser "$DB_USER"
+          pulumi config set --secret dbPassword "$DB_PASSWORD"
+          pulumi config set dbName "maps"
+          pulumi config set --secret jwtSecret "$JWT_SECRET"
+          pulumi config set googleClientId "$GOOGLE_CLIENT_ID"
+          pulumi up --yes
+        env:
+          PULUMI_CONFIG_PASSPHRASE: ${{ env.PULUMI_CONFIG_PASSPHRASE }}
+
+      - name: Verify production deployment
+        run: |
+          kubectl get pods -n maps -l app=maps,stack=production
+          kubectl get ingress -n maps -l app=maps,stack=production
 
   # Android native build
   android-build:
@@ -528,7 +553,7 @@ jobs:
     runs-on: macos-latest
     # Only run on main branch pushes, not PRs
     # Skip iOS builds by setting SKIP_IOS_BUILD repository variable to 'true'
-    if: false  # Temporarily skip iOS builds to save minutes
+    if: false # Temporarily skip iOS builds to save minutes
     permissions:
       contents: write
       packages: write
@@ -690,7 +715,7 @@ jobs:
     needs: [ios-build]
     runs-on: arc-maps
     # Skip if iOS build was skipped
-    if: false  # Temporarily skip iOS builds to save minutes
+    if: false # Temporarily skip iOS builds to save minutes
     permissions:
       contents: read
     steps:
