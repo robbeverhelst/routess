@@ -263,8 +263,7 @@ jobs:
           push: true
           tags: ${{ steps.metadata.outputs.tags }}
           labels: ${{ steps.metadata.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          no-cache: true
           build-args: |
             VITE_MAPBOX_ACCESS_TOKEN=${{ env.VITE_MAPBOX_ACCESS_TOKEN }}
             VITE_GOOGLE_CLIENT_ID=${{ env.VITE_GOOGLE_CLIENT_ID }}
@@ -374,7 +373,7 @@ jobs:
     needs: release
     runs-on: arc-maps
     # Only run on main branch pushes, not PRs
-    if: github.event_name != 'pull_request'
+    if: false # Disabled for now - testing web deployment only
     permissions:
       contents: write
       packages: write
@@ -504,7 +503,7 @@ jobs:
     name: Deploy to Google Play Store
     needs: [android-build]
     runs-on: arc-maps
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    if: false # Disabled - Android build disabled
     permissions:
       contents: read
     steps:
