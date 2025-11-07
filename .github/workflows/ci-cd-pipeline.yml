@@ -263,8 +263,8 @@ jobs:
           push: true
           tags: ${{ steps.metadata.outputs.tags }}
           labels: ${{ steps.metadata.outputs.labels }}
-          cache-from: type=registry,ref=ghcr.io/${{ env.REPO_OWNER_LOWER }}/maps-${{ matrix.app }}:buildcache
-          cache-to: type=registry,ref=ghcr.io/${{ env.REPO_OWNER_LOWER }}/maps-${{ matrix.app }}:buildcache,mode=max
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           build-args: |
             VITE_MAPBOX_ACCESS_TOKEN=${{ env.VITE_MAPBOX_ACCESS_TOKEN }}
             VITE_GOOGLE_CLIENT_ID=${{ env.VITE_GOOGLE_CLIENT_ID }}
