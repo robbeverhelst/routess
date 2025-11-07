@@ -4,16 +4,11 @@ FROM oven/bun:1.1.38-alpine AS builder
 # Set working directory
 WORKDIR /app
 
-# Copy package files (without lockfile to avoid conflicts)
-COPY package.json ./
-COPY apps/api/package.json ./apps/api/
+# Copy everything to avoid overlay issues
+COPY . .
 
 # Install dependencies
-RUN bun install
-
-# Copy source code
-COPY apps/api/ ./apps/api/
-COPY turbo.json ./
+RUN bun install --frozen-lockfile
 
 # Build the application
 RUN bun run build --filter=api

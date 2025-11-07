@@ -4,27 +4,11 @@ FROM oven/bun:1.1.38 AS builder
 # Set working directory
 WORKDIR /app
 
-# Copy workspace root package.json and bun.lockb
-COPY package.json bun.lockb ./
-
-# Create the workspace directories that are referenced in package.json
-RUN mkdir -p apps packages
-
-# Copy package.json files for workspace dependencies
-COPY apps/web/package.json ./apps/web/
-COPY packages/core/package.json ./packages/core/
-COPY packages/api-client/package.json ./packages/api-client/
-COPY packages/i18n/package.json ./packages/i18n/
-COPY packages/design-tokens/package.json ./packages/design-tokens/
+# Copy everything first to avoid overlay issues
+COPY . .
 
 # Install dependencies from workspace root
-RUN bun install
-
-# Copy the workspace packages source code
-COPY packages/ ./packages/
-
-# Copy the web app source code
-COPY apps/web/ ./apps/web/
+RUN bun install --frozen-lockfile
 
 # Build arguments for environment variables
 ARG VITE_MAPBOX_ACCESS_TOKEN
