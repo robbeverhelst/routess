@@ -23,11 +23,12 @@
     "emulator:devices": "~/Library/Android/sdk/platform-tools/adb devices"
   },
   "dependencies": {
+    "@expo/metro-runtime": "~5.0.5",
     "@expo/vector-icons": "^14.1.0",
-    "@maps/core": "workspace:*",
     "@maps/api-client": "workspace:*",
-    "@maps/i18n": "workspace:*",
+    "@maps/core": "workspace:*",
     "@maps/design-tokens": "workspace:*",
+    "@maps/i18n": "workspace:*",
     "@react-navigation/bottom-tabs": "^7.3.10",
     "@react-navigation/elements": "^2.3.8",
     "@react-navigation/native": "^7.1.6",
