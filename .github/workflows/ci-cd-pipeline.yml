@@ -27,7 +27,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -37,12 +37,12 @@ jobs:
           bun-version: latest
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "20"
 
       - name: Cache dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         id: cache-deps
         continue-on-error: true
         timeout-minutes: 3
@@ -123,7 +123,7 @@ jobs:
       version: ${{ steps.semantic.outputs.version }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -133,7 +133,7 @@ jobs:
           bun-version: latest
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "20"
 
@@ -192,7 +192,7 @@ jobs:
             needs_artifacts: false
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: main
           fetch-depth: 0
@@ -208,7 +208,7 @@ jobs:
 
       - name: Setup Node.js (for web build)
         if: matrix.needs_artifacts
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "20"
 
@@ -278,7 +278,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set AWS region
         run: echo "AWS_REGION=eu-west-1" >> $GITHUB_ENV
@@ -299,7 +299,7 @@ jobs:
           GOOGLE_CLIENT_ID: op://Homelab/Maps API/Google Client ID
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "20"
 
@@ -309,7 +309,7 @@ jobs:
           bun-version: latest
 
       - name: Install Pulumi CLI
-        uses: pulumi/actions@v5
+        uses: pulumi/actions@v6
 
       - name: Install infrastructure dependencies
         run: |
@@ -379,7 +379,7 @@ jobs:
       packages: write
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: main
           fetch-depth: 0
@@ -390,12 +390,12 @@ jobs:
           bun-version: latest
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "20"
 
       - name: Setup Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: "17"
           distribution: "temurin"
@@ -404,7 +404,7 @@ jobs:
         uses: android-actions/setup-android@v3
 
       - name: Cache Gradle dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.gradle/caches
@@ -508,7 +508,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: main
           fetch-depth: 0
@@ -558,7 +558,7 @@ jobs:
       packages: write
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: main
           fetch-depth: 0
@@ -569,12 +569,12 @@ jobs:
           bun-version: latest
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "20"
 
       - name: Cache CocoaPods
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cocoapods/repos
@@ -719,7 +719,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: main
           fetch-depth: 0
