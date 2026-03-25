@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import React from "react";
+import { type Mock, vi } from "vitest";
 import { useMapConfiguration } from "@/components/providers/MapConfigurationProvider";
 import { useMapModals } from "@/components/providers/MapModalsProvider";
 import { useUserLocation } from "@/components/providers/UserLocationProvider";
@@ -7,10 +8,10 @@ import type { SupportedLanguage } from "@/lib/i18n";
 import { MapControls } from "../MapControls";
 
 // Mock dependencies
-jest.mock("@/components/providers/MapConfigurationProvider");
-jest.mock("@/components/providers/UserLocationProvider");
-jest.mock("@/components/providers/MapModalsProvider");
-jest.mock("@/components/ui/route-controls", () => ({
+vi.mock("@/components/providers/MapConfigurationProvider");
+vi.mock("@/components/providers/UserLocationProvider");
+vi.mock("@/components/providers/MapModalsProvider");
+vi.mock("@/components/ui/route-controls", () => ({
 	RouteControls: ({ onUndo, onRedo, onReset, canUndo, canRedo, hasRoute }: Record<string, unknown>) => (
 		<div data-testid="route-controls">
 			<button type="button" onClick={onUndo as React.MouseEventHandler} disabled={!canUndo}>
@@ -25,7 +26,7 @@ jest.mock("@/components/ui/route-controls", () => ({
 		</div>
 	),
 }));
-jest.mock("@/components/ui/location-search", () => ({
+vi.mock("@/components/ui/location-search", () => ({
 	LocationSearch: ({ isMobileSearchOpen, onToggleMobileSearch }: Record<string, unknown>) => (
 		<div data-testid="location-search">
 			{isMobileSearchOpen && <input data-testid="search-input" />}
@@ -35,7 +36,7 @@ jest.mock("@/components/ui/location-search", () => ({
 		</div>
 	),
 }));
-jest.mock("@/components/ui/sidebar", () => ({
+vi.mock("@/components/ui/sidebar", () => ({
 	Sidebar: ({ onShare, hasRoute, routeDistance, routeDuration }: Record<string, unknown>) => (
 		<div data-testid="sidebar">
 			<button type="button" onClick={onShare as React.MouseEventHandler} disabled={!hasRoute}>
@@ -48,32 +49,32 @@ jest.mock("@/components/ui/sidebar", () => ({
 }));
 
 describe("MapControls", () => {
-	const mockSetRouteDistance = jest.fn();
-	const mockSetRouteDuration = jest.fn();
-	const mockSetHasRoute = jest.fn();
-	const mockOnUndo = jest.fn();
-	const mockOnRedo = jest.fn();
-	const mockOnReverseRoute = jest.fn();
-	const mockOnReset = jest.fn();
-	const mockOnZoomToRoute = jest.fn();
-	const mockOnShare = jest.fn();
-	const mockOnCopySharedUrl = jest.fn();
-	const mockOnClearShareDisplay = jest.fn();
-	const mockOnCopyShareLink = jest.fn();
-	const mockOnSelectLocation = jest.fn();
-	const mockOnImportError = jest.fn();
-	const mockOnLanguageChange = jest.fn();
-	const mockHandleLocateButtonClick = jest.fn();
-	const mockOpenRouteGeneratorModal = jest.fn();
-	const mockOpenSaveRouteModal = jest.fn();
-	const mockOpenRouteLibraryModal = jest.fn();
-	const mockOnToggleLock = jest.fn();
-	const mockOnCycleTimeOfDay = jest.fn();
-	const mockOnCycleBearing = jest.fn();
-	const mockOnZoomIn = jest.fn();
-	const mockOnZoomOut = jest.fn();
-	const mockOnToggleMapStyle = jest.fn();
-	const mockOnToggleSunDirection = jest.fn();
+	const mockSetRouteDistance = vi.fn();
+	const mockSetRouteDuration = vi.fn();
+	const mockSetHasRoute = vi.fn();
+	const mockOnUndo = vi.fn();
+	const mockOnRedo = vi.fn();
+	const mockOnReverseRoute = vi.fn();
+	const mockOnReset = vi.fn();
+	const mockOnZoomToRoute = vi.fn();
+	const mockOnShare = vi.fn();
+	const mockOnCopySharedUrl = vi.fn();
+	const mockOnClearShareDisplay = vi.fn();
+	const mockOnCopyShareLink = vi.fn();
+	const mockOnSelectLocation = vi.fn();
+	const mockOnImportError = vi.fn();
+	const mockOnLanguageChange = vi.fn();
+	const mockHandleLocateButtonClick = vi.fn();
+	const mockOpenRouteGeneratorModal = vi.fn();
+	const mockOpenSaveRouteModal = vi.fn();
+	const mockOpenRouteLibraryModal = vi.fn();
+	const mockOnToggleLock = vi.fn();
+	const mockOnCycleTimeOfDay = vi.fn();
+	const mockOnCycleBearing = vi.fn();
+	const mockOnZoomIn = vi.fn();
+	const mockOnZoomOut = vi.fn();
+	const mockOnToggleMapStyle = vi.fn();
+	const mockOnToggleSunDirection = vi.fn();
 
 	const defaultProps = {
 		mapRef: React.createRef<unknown>(),
@@ -104,10 +105,10 @@ describe("MapControls", () => {
 	};
 
 	beforeEach(() => {
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 
 		// Mock provider values
-		(useMapConfiguration as jest.Mock).mockReturnValue({
+		(useMapConfiguration as Mock).mockReturnValue({
 			currentMapStyle: "standard",
 			isMapLocked: false,
 			currentLightPreset: "day",
@@ -122,7 +123,7 @@ describe("MapControls", () => {
 			onToggleSunDirection: mockOnToggleSunDirection,
 		});
 
-		(useUserLocation as jest.Mock).mockReturnValue({
+		(useUserLocation as Mock).mockReturnValue({
 			location: null,
 			accuracy: null,
 			isTracking: false,
@@ -131,7 +132,7 @@ describe("MapControls", () => {
 			handleLocateButtonClick: mockHandleLocateButtonClick,
 		});
 
-		(useMapModals as jest.Mock).mockReturnValue({
+		(useMapModals as Mock).mockReturnValue({
 			openRouteGeneratorModal: mockOpenRouteGeneratorModal,
 			openSaveRouteModal: mockOpenSaveRouteModal,
 			openRouteLibraryModal: mockOpenRouteLibraryModal,
@@ -140,15 +141,15 @@ describe("MapControls", () => {
 		// Mock window.matchMedia for responsive design
 		Object.defineProperty(window, "matchMedia", {
 			writable: true,
-			value: jest.fn().mockImplementation((query) => ({
+			value: vi.fn().mockImplementation((query) => ({
 				matches: query !== "(min-width: 1024px)", // Default to mobile
 				media: query,
 				onchange: null,
-				addListener: jest.fn(),
-				removeListener: jest.fn(),
-				addEventListener: jest.fn(),
-				removeEventListener: jest.fn(),
-				dispatchEvent: jest.fn(),
+				addListener: vi.fn(),
+				removeListener: vi.fn(),
+				addEventListener: vi.fn(),
+				removeEventListener: vi.fn(),
+				dispatchEvent: vi.fn(),
 			})),
 		});
 	});
@@ -278,7 +279,7 @@ describe("MapControls", () => {
 
 	describe("Provider Integration", () => {
 		it("should use location provider data", () => {
-			(useUserLocation as jest.Mock).mockReturnValue({
+			(useUserLocation as Mock).mockReturnValue({
 				location: [13.405, 52.52],
 				accuracy: 10,
 				isTracking: true,
@@ -294,7 +295,7 @@ describe("MapControls", () => {
 		});
 
 		it("should use map configuration data", () => {
-			(useMapConfiguration as jest.Mock).mockReturnValue({
+			(useMapConfiguration as Mock).mockReturnValue({
 				currentMapStyle: "satellite",
 				isMapLocked: true,
 				currentLightPreset: "sunset",
@@ -338,15 +339,15 @@ describe("MapControls", () => {
 			// Mock desktop media query
 			Object.defineProperty(window, "matchMedia", {
 				writable: true,
-				value: jest.fn().mockImplementation((query) => ({
+				value: vi.fn().mockImplementation((query) => ({
 					matches: query === "(min-width: 1024px)",
 					media: query,
 					onchange: null,
-					addListener: jest.fn(),
-					removeListener: jest.fn(),
-					addEventListener: jest.fn(),
-					removeEventListener: jest.fn(),
-					dispatchEvent: jest.fn(),
+					addListener: vi.fn(),
+					removeListener: vi.fn(),
+					addEventListener: vi.fn(),
+					removeEventListener: vi.fn(),
+					dispatchEvent: vi.fn(),
 				})),
 			});
 

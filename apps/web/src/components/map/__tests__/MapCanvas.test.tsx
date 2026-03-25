@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import React from "react";
+import { type Mock, vi } from "vitest";
 import { useMapInitialization } from "@/components/hooks/useMapInitialization";
 import { useMapPositioning } from "@/components/hooks/useMapPositioning";
 import { useMapConfiguration } from "@/components/providers/MapConfigurationProvider";
@@ -9,7 +10,7 @@ import type { SupportedLanguage } from "@/lib/i18n";
 import { MapCanvas } from "../MapCanvas";
 
 // Mock all dependencies
-jest.mock("react-map-gl/mapbox", () => ({
+vi.mock("react-map-gl/mapbox", () => ({
 	__esModule: true,
 	default: React.forwardRef(({ children, onLoad, ...props }: any, ref: any) => {
 		React.useImperativeHandle(ref, () => ({
@@ -31,59 +32,59 @@ jest.mock("react-map-gl/mapbox", () => ({
 	}),
 }));
 
-jest.mock("@/components/providers/MapConfigurationProvider");
-jest.mock("@/components/providers/UserLocationProvider");
-jest.mock("@/components/hooks/useMapInitialization");
-jest.mock("@/components/hooks/useMapPositioning");
-jest.mock("@/lib/errors");
-jest.mock("@/components/ui/MapPopup", () => ({
+vi.mock("@/components/providers/MapConfigurationProvider");
+vi.mock("@/components/providers/UserLocationProvider");
+vi.mock("@/components/hooks/useMapInitialization");
+vi.mock("@/components/hooks/useMapPositioning");
+vi.mock("@/lib/errors");
+vi.mock("@/components/ui/MapPopup", () => ({
 	MapPopup: ({ popupInfo }: any) => (
 		<div data-testid="map-popup">
 			{popupInfo.longitude},{popupInfo.latitude}
 		</div>
 	),
 }));
-jest.mock("@/components/ui/SunPositionIndicator", () => ({
+vi.mock("@/components/ui/SunPositionIndicator", () => ({
 	SunPositionIndicator: ({ azimuth }: any) => <div data-testid="sun-indicator">Azimuth: {azimuth}</div>,
 }));
 
 // Mock Mapbox instance
 const mockMapInstance = {
-	on: jest.fn(),
-	off: jest.fn(),
-	remove: jest.fn(),
-	getCanvas: jest.fn(() => ({ style: { cursor: "" } })),
-	getSource: jest.fn(),
-	addSource: jest.fn(),
-	removeSource: jest.fn(),
-	addLayer: jest.fn(),
-	removeLayer: jest.fn(),
-	setLayoutProperty: jest.fn(),
-	setPaintProperty: jest.fn(),
-	flyTo: jest.fn(),
-	fitBounds: jest.fn(),
-	getBounds: jest.fn(),
-	getCenter: jest.fn(),
-	getZoom: jest.fn(),
-	getBearing: jest.fn(() => 0),
-	project: jest.fn(),
-	unproject: jest.fn(),
-	getLayer: jest.fn(() => true),
+	on: vi.fn(),
+	off: vi.fn(),
+	remove: vi.fn(),
+	getCanvas: vi.fn(() => ({ style: { cursor: "" } })),
+	getSource: vi.fn(),
+	addSource: vi.fn(),
+	removeSource: vi.fn(),
+	addLayer: vi.fn(),
+	removeLayer: vi.fn(),
+	setLayoutProperty: vi.fn(),
+	setPaintProperty: vi.fn(),
+	flyTo: vi.fn(),
+	fitBounds: vi.fn(),
+	getBounds: vi.fn(),
+	getCenter: vi.fn(),
+	getZoom: vi.fn(),
+	getBearing: vi.fn(() => 0),
+	project: vi.fn(),
+	unproject: vi.fn(),
+	getLayer: vi.fn(() => true),
 };
 
 describe("MapCanvas", () => {
-	const mockSetRouteDistance = jest.fn();
-	const mockSetRouteDuration = jest.fn();
-	const mockSetHasRoute = jest.fn();
-	const mockSetPopup = jest.fn();
-	const mockHandleWaypointError = jest.fn();
-	const mockHandleRouteInfoError = jest.fn();
-	const mockOnAddDirectWaypoint = jest.fn();
-	const mockOnRemoveWaypoint = jest.fn();
-	const mockOnAddWaypointOnRoute = jest.fn();
-	const mockHandleMapError = jest.fn();
-	const mockHandleMapLoad = jest.fn();
-	const mockSetCurrentBearing = jest.fn();
+	const mockSetRouteDistance = vi.fn();
+	const mockSetRouteDuration = vi.fn();
+	const mockSetHasRoute = vi.fn();
+	const mockSetPopup = vi.fn();
+	const mockHandleWaypointError = vi.fn();
+	const mockHandleRouteInfoError = vi.fn();
+	const mockOnAddDirectWaypoint = vi.fn();
+	const mockOnRemoveWaypoint = vi.fn();
+	const mockOnAddWaypointOnRoute = vi.fn();
+	const mockHandleMapError = vi.fn();
+	const mockHandleMapLoad = vi.fn();
+	const mockSetCurrentBearing = vi.fn();
 
 	const defaultProps = {
 		mapRef: React.createRef<any>(),
@@ -106,10 +107,10 @@ describe("MapCanvas", () => {
 	};
 
 	beforeEach(() => {
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 
 		// Mock provider values
-		(useMapConfiguration as jest.Mock).mockReturnValue({
+		(useMapConfiguration as Mock).mockReturnValue({
 			currentMapStyle: "standard",
 			isMapLocked: false,
 			currentLightPreset: "day",
@@ -119,21 +120,21 @@ describe("MapCanvas", () => {
 			currentSunPosition: null,
 		});
 
-		(useUserLocation as jest.Mock).mockReturnValue({
+		(useUserLocation as Mock).mockReturnValue({
 			location: null,
 			error: null,
 			isLoading: false,
 		});
 
-		(useErrorHandler as jest.Mock).mockReturnValue({
+		(useErrorHandler as Mock).mockReturnValue({
 			handleMapError: mockHandleMapError,
 		});
 
-		(useMapInitialization as jest.Mock).mockReturnValue({
+		(useMapInitialization as Mock).mockReturnValue({
 			handleMapLoad: mockHandleMapLoad,
 		});
 
-		(useMapPositioning as jest.Mock).mockReturnValue({});
+		(useMapPositioning as Mock).mockReturnValue({});
 	});
 
 	describe("Rendering", () => {
@@ -149,7 +150,7 @@ describe("MapCanvas", () => {
 		});
 
 		it("should use satellite style when configured", () => {
-			(useMapConfiguration as jest.Mock).mockReturnValue({
+			(useMapConfiguration as Mock).mockReturnValue({
 				currentMapStyle: "satellite",
 				isMapLocked: false,
 				currentLightPreset: "day",
@@ -211,7 +212,7 @@ describe("MapCanvas", () => {
 		});
 
 		it("should use user location when available", () => {
-			(useUserLocation as jest.Mock).mockReturnValue({
+			(useUserLocation as Mock).mockReturnValue({
 				location: [2.3522, 48.8566],
 				error: null,
 				isLoading: false,
@@ -301,7 +302,7 @@ describe("MapCanvas", () => {
 		});
 
 		it("should render sun indicator when all conditions are met", () => {
-			(useMapConfiguration as jest.Mock).mockReturnValue({
+			(useMapConfiguration as Mock).mockReturnValue({
 				currentMapStyle: "standard",
 				isMapLocked: false,
 				currentLightPreset: "day",
@@ -315,7 +316,7 @@ describe("MapCanvas", () => {
 				},
 			});
 
-			(useUserLocation as jest.Mock).mockReturnValue({
+			(useUserLocation as Mock).mockReturnValue({
 				location: [2.3522, 48.8566],
 				error: null,
 				isLoading: false,
@@ -354,7 +355,7 @@ describe("MapCanvas", () => {
 			const mapRef = React.createRef<any>();
 			const userLocation: [number, number] = [2.3522, 48.8566];
 
-			(useUserLocation as jest.Mock).mockReturnValue({
+			(useUserLocation as Mock).mockReturnValue({
 				location: userLocation,
 				error: null,
 				isLoading: true,

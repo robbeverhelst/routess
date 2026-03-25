@@ -25,7 +25,7 @@ vi.mock("@/lib/errors/ErrorToast", () => ({
 
 describe("Error Handler", () => {
 	beforeEach(() => {
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 		mockShowToast.mockClear();
 	});
 
@@ -71,7 +71,7 @@ describe("Error Handler", () => {
 		it("should handle API errors with retry function", () => {
 			const error = new Error("Temporary API failure");
 			const context = "UserService";
-			const retryFn = jest.fn();
+			const retryFn = vi.fn();
 
 			handleAPIError(error, context, retryFn);
 
@@ -81,7 +81,7 @@ describe("Error Handler", () => {
 		it("should handle network errors with retry function", () => {
 			const error = new Error("Connection timeout");
 			const context = "MapboxAPI";
-			const retryFn = jest.fn();
+			const retryFn = vi.fn();
 
 			handleNetworkError(error, context, retryFn);
 
@@ -91,7 +91,7 @@ describe("Error Handler", () => {
 		it("should handle routing errors with retry function", () => {
 			const error = new Error("Route service unavailable");
 			const context = "RouteCalculationService";
-			const retryFn = jest.fn();
+			const retryFn = vi.fn();
 
 			handleRoutingError(error, context, retryFn);
 

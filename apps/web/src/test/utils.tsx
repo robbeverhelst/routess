@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { type RenderOptions, render } from "@testing-library/react";
 import type React from "react";
 import type { ReactElement } from "react";
+import { vi } from "vitest";
 
 // Mock providers for testing
 interface ProvidersProps {
@@ -44,26 +45,26 @@ export const mockRouteData = {
 
 // Helper to create mock Mapbox map
 export const createMockMap = () => ({
-	on: jest.fn(),
-	off: jest.fn(),
-	remove: jest.fn(),
-	getCanvas: jest.fn(() => ({ style: { cursor: "" } })),
-	getSource: jest.fn(),
-	addSource: jest.fn(),
-	removeSource: jest.fn(),
-	addLayer: jest.fn(),
-	removeLayer: jest.fn(),
-	setLayoutProperty: jest.fn(),
-	flyTo: jest.fn(),
-	fitBounds: jest.fn(),
-	getBounds: jest.fn(() => ({
+	on: vi.fn(),
+	off: vi.fn(),
+	remove: vi.fn(),
+	getCanvas: vi.fn(() => ({ style: { cursor: "" } })),
+	getSource: vi.fn(),
+	addSource: vi.fn(),
+	removeSource: vi.fn(),
+	addLayer: vi.fn(),
+	removeLayer: vi.fn(),
+	setLayoutProperty: vi.fn(),
+	flyTo: vi.fn(),
+	fitBounds: vi.fn(),
+	getBounds: vi.fn(() => ({
 		getNorthEast: () => ({ lng: 13.5, lat: 52.6 }),
 		getSouthWest: () => ({ lng: 13.3, lat: 52.4 }),
 	})),
-	getCenter: jest.fn(() => ({ lng: 13.405, lat: 52.52 })),
-	getZoom: jest.fn(() => 10),
-	project: jest.fn(() => ({ x: 100, y: 100 })),
-	unproject: jest.fn(() => ({ lng: 13.405, lat: 52.52 })),
+	getCenter: vi.fn(() => ({ lng: 13.405, lat: 52.52 })),
+	getZoom: vi.fn(() => 10),
+	project: vi.fn(() => ({ x: 100, y: 100 })),
+	unproject: vi.fn(() => ({ lng: 13.405, lat: 52.52 })),
 });
 
 // Helper to wait for async operations
