@@ -1,14 +1,14 @@
-import { useCanUndo, useCanRedo } from "@/stores/routingStore";
+import { useCanRedo, useCanUndo } from "@/stores/routingStore";
 
 export interface UndoRedoState {
-  canUndo: boolean;
-  canRedo: boolean;
+	canUndo: boolean;
+	canRedo: boolean;
 }
 
 export function useUndoRedoState(): UndoRedoState {
-  // Get state directly from Zustand store - no polling needed!
-  const canUndo = useCanUndo();
-  const canRedo = useCanRedo();
+	// Get state directly from Zustand store - no polling needed!
+	const canUndo = useCanUndo();
+	const canRedo = useCanRedo();
 
-  return { canUndo, canRedo };
+	return { canUndo, canRedo };
 }

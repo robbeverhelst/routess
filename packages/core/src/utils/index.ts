@@ -1,2 +1,2 @@
-export * from "./geospatial";
 export * from "./formatting";
+export * from "./geospatial";

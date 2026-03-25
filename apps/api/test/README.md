@@ -81,4 +81,4 @@ npm test user-flows.e2e.spec.ts
 - **Sequential execution** (`--runInBand`) to avoid database conflicts
 - **Global mocks** for external services (Google OAuth)
 - **Test isolation** with database cleanup between tests
-- **Comprehensive coverage** reporting with Codecov integration
+- **Comprehensive coverage** reporting

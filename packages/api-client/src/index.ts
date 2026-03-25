@@ -1,4 +1,4 @@
-export * from "./types";
-export * from "./services";
+export { createMobilePlatformAdapter, MobilePlatformAdapter } from "./adapters/mobile";
 export { WebPlatformAdapter } from "./adapters/web";
-export { MobilePlatformAdapter, createMobilePlatformAdapter } from "./adapters/mobile";
+export * from "./services";
+export * from "./types";

@@ -10,25 +10,25 @@
  * @returns Formatted distance string
  */
 export const formatDistance = (
-  distanceKm: number,
-  options: {
-    precision?: number;
-    unit?: "km" | "auto";
-    showUnit?: boolean;
-  } = {},
+	distanceKm: number,
+	options: {
+		precision?: number;
+		unit?: "km" | "auto";
+		showUnit?: boolean;
+	} = {},
 ): string => {
-  const { precision = 2, unit = "auto", showUnit = true } = options;
+	const { precision = 2, unit = "auto", showUnit = true } = options;
 
-  if (unit === "auto") {
-    // Use meters for very short distances
-    if (distanceKm < 1) {
-      const meters = Math.round(distanceKm * 1000);
-      return showUnit ? `${meters} m` : meters.toString();
-    }
-  }
+	if (unit === "auto") {
+		// Use meters for very short distances
+		if (distanceKm < 1) {
+			const meters = Math.round(distanceKm * 1000);
+			return showUnit ? `${meters} m` : meters.toString();
+		}
+	}
 
-  const formatted = distanceKm.toFixed(precision);
-  return showUnit ? `${formatted} km` : formatted;
+	const formatted = distanceKm.toFixed(precision);
+	return showUnit ? `${formatted} km` : formatted;
 };
 
 /**
@@ -39,48 +39,46 @@ export const formatDistance = (
  * @returns Formatted duration string
  */
 export const formatDuration = (
-  durationMinutes: number,
-  options: {
-    format?: "auto" | "minutes" | "hours" | "full";
-    showUnit?: boolean;
-  } = {},
+	durationMinutes: number,
+	options: {
+		format?: "auto" | "minutes" | "hours" | "full";
+		showUnit?: boolean;
+	} = {},
 ): string => {
-  const { format = "auto", showUnit = true } = options;
+	const { format = "auto", showUnit = true } = options;
 
-  if (format === "minutes" || (format === "auto" && durationMinutes < 60)) {
-    const minutes = Math.round(durationMinutes);
-    return showUnit ? `${minutes} min` : minutes.toString();
-  }
+	if (format === "minutes" || (format === "auto" && durationMinutes < 60)) {
+		const minutes = Math.round(durationMinutes);
+		return showUnit ? `${minutes} min` : minutes.toString();
+	}
 
-  if (format === "hours" || (format === "auto" && durationMinutes >= 60)) {
-    const hours = Math.floor(durationMinutes / 60);
-    const minutes = Math.round(durationMinutes % 60);
+	if (format === "hours" || (format === "auto" && durationMinutes >= 60)) {
+		const hours = Math.floor(durationMinutes / 60);
+		const minutes = Math.round(durationMinutes % 60);
 
-    if (minutes === 0) {
-      return showUnit ? `${hours} h` : hours.toString();
-    }
+		if (minutes === 0) {
+			return showUnit ? `${hours} h` : hours.toString();
+		}
 
-    // Auto format: show decimal hours for longer durations
-    const decimalHours = (durationMinutes / 60).toFixed(1);
-    return showUnit ? `${decimalHours} h` : decimalHours;
-  }
+		// Auto format: show decimal hours for longer durations
+		const decimalHours = (durationMinutes / 60).toFixed(1);
+		return showUnit ? `${decimalHours} h` : decimalHours;
+	}
 
-  if (format === "full") {
-    const hours = Math.floor(durationMinutes / 60);
-    const minutes = Math.round(durationMinutes % 60);
+	if (format === "full") {
+		const hours = Math.floor(durationMinutes / 60);
+		const minutes = Math.round(durationMinutes % 60);
 
-    if (durationMinutes >= 60) {
-      return showUnit
-        ? `${hours} h ${minutes} min`
-        : `${hours}:${minutes.toString().padStart(2, "0")}`;
-    } else {
-      return showUnit ? `${minutes} min` : minutes.toString();
-    }
-  }
+		if (durationMinutes >= 60) {
+			return showUnit ? `${hours} h ${minutes} min` : `${hours}:${minutes.toString().padStart(2, "0")}`;
+		} else {
+			return showUnit ? `${minutes} min` : minutes.toString();
+		}
+	}
 
-  // Fallback
-  const minutes = Math.round(durationMinutes);
-  return showUnit ? `${minutes} min` : minutes.toString();
+	// Fallback
+	const minutes = Math.round(durationMinutes);
+	return showUnit ? `${minutes} min` : minutes.toString();
 };
 
 /**
@@ -92,26 +90,26 @@ export const formatDuration = (
  * @returns Formatted route stats
  */
 export const formatRouteStats = (
-  distanceKm: number,
-  durationMinutes: number,
-  options: {
-    separator?: string;
-    includeSpeed?: boolean;
-  } = {},
+	distanceKm: number,
+	durationMinutes: number,
+	options: {
+		separator?: string;
+		includeSpeed?: boolean;
+	} = {},
 ): string => {
-  const { separator = " • ", includeSpeed = false } = options;
+	const { separator = " • ", includeSpeed = false } = options;
 
-  const distance = formatDistance(distanceKm);
-  const duration = formatDuration(durationMinutes);
+	const distance = formatDistance(distanceKm);
+	const duration = formatDuration(durationMinutes);
 
-  let result = `${distance}${separator}${duration}`;
+	let result = `${distance}${separator}${duration}`;
 
-  if (includeSpeed && durationMinutes > 0) {
-    const speedKmh = (distanceKm / (durationMinutes / 60)).toFixed(1);
-    result += `${separator}${speedKmh} km/h`;
-  }
+	if (includeSpeed && durationMinutes > 0) {
+		const speedKmh = (distanceKm / (durationMinutes / 60)).toFixed(1);
+		result += `${separator}${speedKmh} km/h`;
+	}
 
-  return result;
+	return result;
 };
 
 /**
@@ -122,8 +120,8 @@ export const formatRouteStats = (
  * @returns Formatted coordinate string
  */
 export const formatCoordinate = (coordinate: [number, number], precision: number = 6): string => {
-  const [lon, lat] = coordinate;
-  return `${lat.toFixed(precision)}, ${lon.toFixed(precision)}`;
+	const [lon, lat] = coordinate;
+	return `${lat.toFixed(precision)}, ${lon.toFixed(precision)}`;
 };
 
 /**
@@ -133,46 +131,43 @@ export const formatCoordinate = (coordinate: [number, number], precision: number
  * @param format - Format type
  * @returns Formatted bearing string
  */
-export const formatBearing = (
-  bearing: number,
-  format: "degrees" | "cardinal" | "both" = "degrees",
-): string => {
-  const normalizedBearing = ((bearing % 360) + 360) % 360;
+export const formatBearing = (bearing: number, format: "degrees" | "cardinal" | "both" = "degrees"): string => {
+	const normalizedBearing = ((bearing % 360) + 360) % 360;
 
-  if (format === "degrees") {
-    return `${normalizedBearing.toFixed(0)}°`;
-  }
+	if (format === "degrees") {
+		return `${normalizedBearing.toFixed(0)}°`;
+	}
 
-  if (format === "cardinal") {
-    const cardinals = [
-      "N",
-      "NNE",
-      "NE",
-      "ENE",
-      "E",
-      "ESE",
-      "SE",
-      "SSE",
-      "S",
-      "SSW",
-      "SW",
-      "WSW",
-      "W",
-      "WNW",
-      "NW",
-      "NNW",
-    ];
-    const index = Math.round(normalizedBearing / 22.5) % 16;
-    return cardinals[index];
-  }
+	if (format === "cardinal") {
+		const cardinals = [
+			"N",
+			"NNE",
+			"NE",
+			"ENE",
+			"E",
+			"ESE",
+			"SE",
+			"SSE",
+			"S",
+			"SSW",
+			"SW",
+			"WSW",
+			"W",
+			"WNW",
+			"NW",
+			"NNW",
+		];
+		const index = Math.round(normalizedBearing / 22.5) % 16;
+		return cardinals[index];
+	}
 
-  if (format === "both") {
-    const degrees = formatBearing(bearing, "degrees");
-    const cardinal = formatBearing(bearing, "cardinal");
-    return `${degrees} (${cardinal})`;
-  }
+	if (format === "both") {
+		const degrees = formatBearing(bearing, "degrees");
+		const cardinal = formatBearing(bearing, "cardinal");
+		return `${degrees} (${cardinal})`;
+	}
 
-  return normalizedBearing.toString();
+	return normalizedBearing.toString();
 };
 
 /**
@@ -182,21 +177,18 @@ export const formatBearing = (
  * @param type - Type of elevation change
  * @returns Formatted elevation string
  */
-export const formatElevation = (
-  elevationMeters: number,
-  type: "gain" | "loss" | "absolute" = "absolute",
-): string => {
-  const rounded = Math.round(elevationMeters);
+export const formatElevation = (elevationMeters: number, type: "gain" | "loss" | "absolute" = "absolute"): string => {
+	const rounded = Math.round(elevationMeters);
 
-  if (type === "gain") {
-    return `↗ ${rounded} m`;
-  }
+	if (type === "gain") {
+		return `↗ ${rounded} m`;
+	}
 
-  if (type === "loss") {
-    return `↘ ${Math.abs(rounded)} m`;
-  }
+	if (type === "loss") {
+		return `↘ ${Math.abs(rounded)} m`;
+	}
 
-  return `${rounded} m`;
+	return `${rounded} m`;
 };
 
 /**
@@ -206,15 +198,15 @@ export const formatElevation = (
  * @returns Formatted file size string
  */
 export const formatFileSize = (bytes: number): string => {
-  const units = ["B", "KB", "MB", "GB"];
-  let size = bytes;
-  let unitIndex = 0;
+	const units = ["B", "KB", "MB", "GB"];
+	let size = bytes;
+	let unitIndex = 0;
 
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024;
-    unitIndex++;
-  }
+	while (size >= 1024 && unitIndex < units.length - 1) {
+		size /= 1024;
+		unitIndex++;
+	}
 
-  const precision = unitIndex === 0 ? 0 : 1;
-  return `${size.toFixed(precision)} ${units[unitIndex]}`;
+	const precision = unitIndex === 0 ? 0 : 1;
+	return `${size.toFixed(precision)} ${units[unitIndex]}`;
 };

@@ -1,17 +1,17 @@
 {
-  "files": [],
-  "references": [
-    {
-      "path": "./apps/api"
-    },
-    {
-      "path": "./apps/web"
-    },
-    {
-      "path": "./apps/infra"
-    },
-    {
-      "path": "./apps/native"
-    }
-  ]
+	"files": [],
+	"references": [
+		{
+			"path": "./apps/api"
+		},
+		{
+			"path": "./apps/web"
+		},
+		{
+			"path": "./apps/infra"
+		},
+		{
+			"path": "./apps/native"
+		}
+	]
 }

@@ -1,0 +1,67 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "plotarr.fullname" . }}-web
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "plotarr.web.labels" . | nindent 4 }}
+  annotations:
+    {{- with .Values.ingress.web.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  {{- if .Values.ingress.className }}
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- end }}
+  {{- if .Values.ingress.web.tls }}
+  tls:
+    {{- toYaml .Values.ingress.web.tls | nindent 4 }}
+  {{- end }}
+  rules:
+    {{- range .Values.ingress.web.hosts }}
+    - host: {{ . | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "plotarr.fullname" $ }}-web
+                port:
+                  number: {{ $.Values.web.service.port }}
+    {{- end }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "plotarr.fullname" . }}-api
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "plotarr.api.labels" . | nindent 4 }}
+  annotations:
+    {{- with .Values.ingress.api.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  {{- if .Values.ingress.className }}
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- end }}
+  {{- if .Values.ingress.api.tls }}
+  tls:
+    {{- toYaml .Values.ingress.api.tls | nindent 4 }}
+  {{- end }}
+  rules:
+    {{- range .Values.ingress.api.hosts }}
+    - host: {{ . | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "plotarr.fullname" $ }}-api
+                port:
+                  number: {{ $.Values.api.service.port }}
+    {{- end }}
+{{- end }}

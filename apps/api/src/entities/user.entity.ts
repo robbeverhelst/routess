@@ -1,28 +1,28 @@
-import { Entity, PrimaryKey, Property, Index } from "@mikro-orm/core";
+import { Entity, Index, PrimaryKey, Property } from "@mikro-orm/core";
 import { BaseEntity } from "./base.entity";
 
 @Entity()
 @Index({ properties: ["email"] }) // Index for email lookups
 @Index({ properties: ["googleId"] }) // Index for Google authentication
 export class User extends BaseEntity {
-  @PrimaryKey({ type: "number" })
-  id!: number;
+	@PrimaryKey({ type: "number" })
+	id!: number;
 
-  @Property({ unique: true })
-  email!: string;
+	@Property({ unique: true })
+	email!: string;
 
-  @Property()
-  name!: string;
+	@Property()
+	name!: string;
 
-  @Property({ hidden: true, nullable: true })
-  password?: string;
+	@Property({ hidden: true, nullable: true })
+	password?: string;
 
-  @Property({ hidden: true, nullable: true })
-  googleId?: string;
+	@Property({ hidden: true, nullable: true })
+	googleId?: string;
 
-  @Property({ nullable: true })
-  avatar?: string;
+	@Property({ nullable: true })
+	avatar?: string;
 
-  @Property({ default: false })
-  isEmailVerified = false;
+	@Property({ default: false })
+	isEmailVerified = false;
 }

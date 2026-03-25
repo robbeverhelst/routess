@@ -1,0 +1,130 @@
+name: Helm Chart
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+    paths:
+      - "charts/**"
+      - ".github/workflows/helm.yml"
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  CHART_NAME: plotarr
+
+jobs:
+  lint-test:
+    runs-on: arc-maps
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.16.0
+
+      - name: Lint Helm chart
+        run: helm lint ./charts/plotarr
+
+      - name: Template Helm chart
+        run: |
+          helm template test-release ./charts/plotarr \
+            --set api.secrets.jwtSecret=test \
+            --set api.secrets.googleClientId=test \
+            --set api.secrets.dbHost=10.0.0.1 \
+            --set api.secrets.dbUser=test \
+            --set api.secrets.dbPassword=test > /dev/null
+          echo "Helm template rendering successful"
+
+  publish:
+    needs: lint-test
+    runs-on: arc-maps
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch' ||
+       (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.head_branch == 'main'))
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.16.0
+
+      - name: Get latest version
+        id: version
+        run: |
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.1.0")
+          VERSION=${LATEST_TAG#v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Update Chart version
+        run: |
+          sed -i "s/^version:.*/version: ${{ steps.version.outputs.version }}/" charts/plotarr/Chart.yaml
+          sed -i "s/^appVersion:.*/appVersion: \"${{ steps.version.outputs.version }}\"/" charts/plotarr/Chart.yaml
+
+      - name: Package Helm chart
+        run: helm package charts/plotarr
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push chart to GHCR
+        run: |
+          helm push ${{ env.CHART_NAME }}-${{ steps.version.outputs.version }}.tgz \
+            oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/charts
+
+      - name: Attach chart to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: Release v${{ steps.version.outputs.version }}
+          draft: false
+          prerelease: false
+          files: |
+            ${{ env.CHART_NAME }}-${{ steps.version.outputs.version }}.tgz
+          body: |
+            ## Plotarr v${{ steps.version.outputs.version }}
+
+            ### Helm Chart
+
+            ```bash
+            helm install plotarr \
+              oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/charts/${{ env.CHART_NAME }} \
+              --version ${{ steps.version.outputs.version }} \
+              --namespace plotarr --create-namespace \
+              -f values.yaml
+            ```
+
+            ### Docker Images
+
+            ```bash
+            docker pull ${{ env.REGISTRY }}/${{ github.repository_owner }}/plotarr-web:${{ steps.version.outputs.version }}
+            docker pull ${{ env.REGISTRY }}/${{ github.repository_owner }}/plotarr-api:${{ steps.version.outputs.version }}
+            ```

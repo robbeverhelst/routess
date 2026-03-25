@@ -1,24 +1,24 @@
-import { INestApplication } from "@nestjs/common";
+import type { INestApplication } from "@nestjs/common";
 import request from "supertest";
-import { createTestApp, closeTestApp } from "../utils/test-utils";
-import { setupMocks } from "../utils/setup-mocks";
 import { MetricsService } from "../../src/telemetry/metrics.service";
+import { setupMocks } from "../utils/setup-mocks";
+import { closeTestApp, createTestApp } from "../utils/test-utils";
 
 describe("Observability Features Integration", () => {
-  let app: INestApplication;
-  let metricsService: MetricsService;
-  let originalFetch: typeof fetch;
+	let app: INestApplication;
+	let metricsService: MetricsService;
+	let originalFetch: typeof fetch;
 
-  beforeAll(async () => {
-    setupMocks();
+	beforeAll(async () => {
+		setupMocks();
 
-    // Mock fetch for metrics endpoint
-    originalFetch = global.fetch;
-    global.fetch = (() => {
-      return Promise.resolve({
-        ok: true,
-        text: () =>
-          Promise.resolve(`# HELP http_server_duration_ms HTTP server duration in milliseconds
+		// Mock fetch for metrics endpoint
+		originalFetch = global.fetch;
+		global.fetch = (() => {
+			return Promise.resolve({
+				ok: true,
+				text: () =>
+					Promise.resolve(`# HELP http_server_duration_ms HTTP server duration in milliseconds
 # TYPE http_server_duration_ms histogram
 http_server_duration_ms_bucket{method="GET",route="/health",status_code="200",le="1"} 1
 http_server_duration_ms_bucket{method="GET",route="/health",status_code="200",le="5"} 1
@@ -55,125 +55,125 @@ http_server_duration_count{method="GET",route="/health",status_code="200"} 1
 # HELP target_info Target metadata
 # TYPE target_info gauge
 target_info{service_name="maps-api",service_version="1.0.0"} 1`),
-      } as Response);
-    }) as typeof fetch;
+			} as Response);
+		}) as typeof fetch;
 
-    app = await createTestApp();
-    metricsService = app.get<MetricsService>(MetricsService);
-  });
+		app = await createTestApp();
+		metricsService = app.get<MetricsService>(MetricsService);
+	});
 
-  afterAll(async () => {
-    global.fetch = originalFetch;
-    await closeTestApp(app);
-  });
+	afterAll(async () => {
+		global.fetch = originalFetch;
+		await closeTestApp(app);
+	});
 
-  describe("Health Checks", () => {
-    it("should return health status", async () => {
-      const response = await request(app.getHttpServer()).get("/health").expect(200);
+	describe("Health Checks", () => {
+		it("should return health status", async () => {
+			const response = await request(app.getHttpServer()).get("/health").expect(200);
 
-      expect(response.body).toMatchObject({
-        status: "ok",
-        info: expect.any(Object),
-        error: expect.any(Object),
-        details: expect.any(Object),
-      });
-    });
+			expect(response.body).toMatchObject({
+				status: "ok",
+				info: expect.any(Object),
+				error: expect.any(Object),
+				details: expect.any(Object),
+			});
+		});
 
-    it("should return readiness status", async () => {
-      const response = await request(app.getHttpServer()).get("/health/ready").expect(200);
+		it("should return readiness status", async () => {
+			const response = await request(app.getHttpServer()).get("/health/ready").expect(200);
 
-      expect(response.body).toMatchObject({
-        status: "ok",
-        info: expect.any(Object),
-        error: expect.any(Object),
-        details: expect.any(Object),
-      });
-    });
+			expect(response.body).toMatchObject({
+				status: "ok",
+				info: expect.any(Object),
+				error: expect.any(Object),
+				details: expect.any(Object),
+			});
+		});
 
-    it("should return liveness status", async () => {
-      const response = await request(app.getHttpServer()).get("/health/live").expect(200);
+		it("should return liveness status", async () => {
+			const response = await request(app.getHttpServer()).get("/health/live").expect(200);
 
-      expect(response.body).toMatchObject({
-        status: "ok",
-        timestamp: expect.any(String),
-      });
-    });
-  });
+			expect(response.body).toMatchObject({
+				status: "ok",
+				timestamp: expect.any(String),
+			});
+		});
+	});
 
-  describe("Metrics Endpoint", () => {
-    it("should expose Prometheus metrics", async () => {
-      const response = await request(app.getHttpServer()).get("/metrics").expect(200);
+	describe("Metrics Endpoint", () => {
+		it("should expose Prometheus metrics", async () => {
+			const response = await request(app.getHttpServer()).get("/metrics").expect(200);
 
-      expect(response.headers["content-type"]).toContain("text/plain");
-      expect(response.text).toContain("# HELP");
-      expect(response.text).toContain("# TYPE");
-    });
+			expect(response.headers["content-type"]).toContain("text/plain");
+			expect(response.text).toContain("# HELP");
+			expect(response.text).toContain("# TYPE");
+		});
 
-    it("should include custom business metrics", async () => {
-      // Generate some metrics
-      metricsService.recordUserRegistration("google");
-      metricsService.recordRouteCreated(1);
+		it("should include custom business metrics", async () => {
+			// Generate some metrics
+			metricsService.recordUserRegistration("google");
+			metricsService.recordRouteCreated(1);
 
-      // Wait a bit for metrics to be processed
-      await new Promise((resolve) => setTimeout(resolve, 100));
+			// Wait a bit for metrics to be processed
+			await new Promise((resolve) => setTimeout(resolve, 100));
 
-      const response = await request(app.getHttpServer()).get("/metrics").expect(200);
+			const response = await request(app.getHttpServer()).get("/metrics").expect(200);
 
-      // Check that metrics service is available and endpoint works
-      expect(response.text).toContain("# HELP");
-      expect(response.text).toContain("# TYPE");
-      // Verify that system metrics are being collected
-      expect(response.text.length).toBeGreaterThan(100);
-    });
-  });
+			// Check that metrics service is available and endpoint works
+			expect(response.text).toContain("# HELP");
+			expect(response.text).toContain("# TYPE");
+			// Verify that system metrics are being collected
+			expect(response.text.length).toBeGreaterThan(100);
+		});
+	});
 
-  describe("Request ID Tracking", () => {
-    it("should generate request ID when not provided", async () => {
-      const response = await request(app.getHttpServer()).get("/health/live").expect(200);
+	describe("Request ID Tracking", () => {
+		it("should generate request ID when not provided", async () => {
+			const response = await request(app.getHttpServer()).get("/health/live").expect(200);
 
-      expect(response.headers["x-request-id"]).toBeDefined();
-      expect(response.headers["x-request-id"]).toMatch(/^[0-9a-f-]{36}$/); // UUID format
-    });
+			expect(response.headers["x-request-id"]).toBeDefined();
+			expect(response.headers["x-request-id"]).toMatch(/^[0-9a-f-]{36}$/); // UUID format
+		});
 
-    it("should use provided request ID", async () => {
-      const requestId = "test-request-id-123";
+		it("should use provided request ID", async () => {
+			const requestId = "test-request-id-123";
 
-      const response = await request(app.getHttpServer())
-        .get("/health/live")
-        .set("X-Request-ID", requestId)
-        .expect(200);
+			const response = await request(app.getHttpServer())
+				.get("/health/live")
+				.set("X-Request-ID", requestId)
+				.expect(200);
 
-      expect(response.headers["x-request-id"]).toBe(requestId);
-    });
-  });
+			expect(response.headers["x-request-id"]).toBe(requestId);
+		});
+	});
 
-  describe("Metrics Collection", () => {
-    it("should record HTTP request metrics", async () => {
-      // Make a request to generate metrics
-      await request(app.getHttpServer()).get("/health/live").expect(200);
+	describe("Metrics Collection", () => {
+		it("should record HTTP request metrics", async () => {
+			// Make a request to generate metrics
+			await request(app.getHttpServer()).get("/health/live").expect(200);
 
-      // Wait a bit for metrics to be processed
-      await new Promise((resolve) => setTimeout(resolve, 100));
+			// Wait a bit for metrics to be processed
+			await new Promise((resolve) => setTimeout(resolve, 100));
 
-      const metricsResponse = await request(app.getHttpServer()).get("/metrics").expect(200);
+			const metricsResponse = await request(app.getHttpServer()).get("/metrics").expect(200);
 
-      // Check for HTTP metrics (use OpenTelemetry metric names)
-      expect(metricsResponse.text).toContain("http_server_duration");
-      expect(metricsResponse.text).toContain("target_info");
-    });
-  });
+			// Check for HTTP metrics (use OpenTelemetry metric names)
+			expect(metricsResponse.text).toContain("http_server_duration");
+			expect(metricsResponse.text).toContain("target_info");
+		});
+	});
 
-  describe("Structured Logging", () => {
-    it("should include request context in logs", async () => {
-      // This test verifies that the logging setup is working
-      // In a real scenario, you'd capture and verify log output
-      const response = await request(app.getHttpServer())
-        .get("/health/live")
-        .set("X-Request-ID", "test-log-id")
-        .expect(200);
+	describe("Structured Logging", () => {
+		it("should include request context in logs", async () => {
+			// This test verifies that the logging setup is working
+			// In a real scenario, you'd capture and verify log output
+			const response = await request(app.getHttpServer())
+				.get("/health/live")
+				.set("X-Request-ID", "test-log-id")
+				.expect(200);
 
-      expect(response.headers["x-request-id"]).toBe("test-log-id");
-      // Note: In practice, you'd need to capture console output or use a test logger
-    });
-  });
+			expect(response.headers["x-request-id"]).toBe("test-log-id");
+			// Note: In practice, you'd need to capture console output or use a test logger
+		});
+	});
 });
