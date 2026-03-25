@@ -1,8 +1,8 @@
-import type { EntityManager, EntityRepository } from "@mikro-orm/core";
+import { EntityManager, EntityRepository } from "@mikro-orm/core";
 import { InjectRepository } from "@mikro-orm/nestjs";
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { Route } from "../entities/route.entity";
-import type { MetricsService } from "../telemetry/metrics.service";
+import { MetricsService } from "../telemetry/metrics.service";
 import type { CreateRouteDto } from "./dto/create-route.dto";
 import type { UpdateRouteDto } from "./dto/update-route.dto";
 

@@ -1,5 +1,6 @@
 global:
   namespace: plotarr
+  createNamespace: true
 
 web:
   replicaCount: 2
@@ -39,7 +40,6 @@ web:
     runAsGroup: 101
     capabilities:
       drop: [ALL]
-    readOnlyRootFilesystem: false
   automountServiceAccountToken: false
   livenessProbe:
     httpGet:

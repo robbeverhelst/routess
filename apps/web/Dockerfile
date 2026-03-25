@@ -22,7 +22,10 @@ FROM nginx:alpine
 COPY --from=builder /app/apps/web/dist/ /usr/share/nginx/html/
 COPY --from=builder /app/apps/web/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=builder /app/apps/web/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN chmod +x /entrypoint.sh \
+    && sed -i '/^user[[:space:]]\+/d' /etc/nginx/nginx.conf \
+    && chown 101:101 /entrypoint.sh \
+    && chown -R 101:101 /usr/share/nginx/html
 
 EXPOSE 80
 

@@ -1,3 +1,4 @@
+{{- if .Values.global.createNamespace }}
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -7,3 +8,4 @@ metadata:
     pod-security.kubernetes.io/enforce: baseline
     pod-security.kubernetes.io/audit: baseline
     pod-security.kubernetes.io/warn: baseline
+{{- end }}

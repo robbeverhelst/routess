@@ -2,7 +2,7 @@ import { type CallHandler, type ExecutionContext, Injectable, type NestIntercept
 import type { Request, Response } from "express";
 import type { Observable } from "rxjs";
 import { tap } from "rxjs/operators";
-import type { MetricsService } from "./metrics.service";
+import { MetricsService } from "./metrics.service";
 
 @Injectable()
 export class MetricsInterceptor implements NestInterceptor {

@@ -1,12 +1,12 @@
-import type { EntityManager, EntityRepository } from "@mikro-orm/core";
+import { EntityManager, EntityRepository } from "@mikro-orm/core";
 import { InjectRepository } from "@mikro-orm/nestjs";
 import { Injectable, UnauthorizedException } from "@nestjs/common";
-import type { JwtService } from "@nestjs/jwt";
+import { JwtService } from "@nestjs/jwt";
 import { OAuth2Client } from "google-auth-library";
 import { User } from "../entities/user.entity";
-import type { MetricsService } from "../telemetry/metrics.service";
+import { MetricsService } from "../telemetry/metrics.service";
 import type { AuthResponseDto, GoogleAuthDto } from "./dto";
-import type { SessionService } from "./session.service";
+import { SessionService } from "./session.service";
 
 @Injectable()
 export class AuthService {

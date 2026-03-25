@@ -1,4 +1,4 @@
-import type { EntityManager, EntityRepository } from "@mikro-orm/core";
+import { EntityManager, EntityRepository } from "@mikro-orm/core";
 import { InjectRepository } from "@mikro-orm/nestjs";
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { User } from "../entities/user.entity";

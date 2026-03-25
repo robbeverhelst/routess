@@ -15,7 +15,7 @@ import {
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { ThrottleModerate, ThrottlePublic, ThrottleStrict } from "../common/decorators/throttle.decorator";
 import type { CreateUserDto, UpdateUserDto } from "./dto/user.dto";
-import type { UsersService } from "./users.service";
+import { UsersService } from "./users.service";
 
 interface AuthenticatedRequest extends Request {
 	user: {

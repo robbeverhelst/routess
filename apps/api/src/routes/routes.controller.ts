@@ -4,7 +4,7 @@ import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { ThrottleModerate, ThrottleStrict } from "../common/decorators/throttle.decorator";
 import { CreateRouteDto } from "./dto/create-route.dto";
 import { UpdateRouteDto } from "./dto/update-route.dto";
-import type { RoutesService } from "./routes.service";
+import { RoutesService } from "./routes.service";
 
 interface AuthenticatedRequest extends Request {
 	user: {

@@ -2,7 +2,7 @@ import { Body, Controller, Get, Post, Request, UseGuards } from "@nestjs/common"
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { ThrottleAuth, ThrottleModerate } from "../common/decorators/throttle.decorator";
 import type { User } from "../entities/user.entity";
-import type { AuthService } from "./auth.service";
+import { AuthService } from "./auth.service";
 import { AuthResponseDto, GoogleAuthDto } from "./dto";
 import { JwtAuthGuard } from "./guards/jwt-auth.guard";
 

@@ -1,5 +1,5 @@
 import { Controller, Get, VERSION_NEUTRAL } from "@nestjs/common";
-import { HealthCheck, type HealthCheckService, type MikroOrmHealthIndicator } from "@nestjs/terminus";
+import { HealthCheck, HealthCheckService, MikroOrmHealthIndicator } from "@nestjs/terminus";
 
 @Controller({ path: "health", version: VERSION_NEUTRAL })
 export class HealthController {

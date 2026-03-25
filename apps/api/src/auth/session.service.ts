@@ -1,11 +1,11 @@
-import type { EntityManager, EntityRepository } from "@mikro-orm/core";
+import { EntityManager, EntityRepository } from "@mikro-orm/core";
 import { InjectRepository } from "@mikro-orm/nestjs";
 import { Injectable } from "@nestjs/common";
-import type { JwtService } from "@nestjs/jwt";
+import { JwtService } from "@nestjs/jwt";
 import { v4 as uuidv4 } from "uuid";
 import { Session } from "../entities/session.entity";
 import { User } from "../entities/user.entity";
-import type { MetricsService } from "../telemetry/metrics.service";
+import { MetricsService } from "../telemetry/metrics.service";
 
 @Injectable()
 export class SessionService {
