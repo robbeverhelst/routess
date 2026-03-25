@@ -2,17 +2,12 @@ name: Helm Chart
 
 on:
   push:
-    branches: [main]
-    tags: ["v*"]
+    tags: ["*.*.*"]
   pull_request:
     branches: [main]
     paths:
       - "charts/**"
       - ".github/workflows/helm.yml"
-  workflow_run:
-    workflows: ["CI"]
-    types:
-      - completed
   workflow_dispatch:
 
 permissions:
@@ -26,10 +21,6 @@ env:
 jobs:
   lint-test:
     runs-on: arc-maps
-    if: >-
-      github.event_name != 'workflow_run' ||
-      (github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.head_branch == 'main')
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -57,11 +48,7 @@ jobs:
   publish:
     needs: lint-test
     runs-on: arc-maps
-    if: >-
-      github.ref == 'refs/heads/main' &&
-      (github.event_name == 'push' || github.event_name == 'workflow_dispatch' ||
-       (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' &&
-        github.event.workflow_run.head_branch == 'main'))
+    if: startsWith(github.ref, 'refs/tags/')
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -76,8 +63,7 @@ jobs:
       - name: Get latest version
         id: version
         run: |
-          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.1.0")
-          VERSION=${LATEST_TAG#v}
+          VERSION=${GITHUB_REF_NAME}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Update Chart version
@@ -103,14 +89,14 @@ jobs:
       - name: Attach chart to release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.version.outputs.version }}
-          name: Release v${{ steps.version.outputs.version }}
+          tag_name: ${{ steps.version.outputs.version }}
+          name: Release ${{ steps.version.outputs.version }}
           draft: false
           prerelease: false
           files: |
             ${{ env.CHART_NAME }}-${{ steps.version.outputs.version }}.tgz
           body: |
-            ## Plotarr v${{ steps.version.outputs.version }}
+            ## Plotarr ${{ steps.version.outputs.version }}
 
             ### Helm Chart
 
