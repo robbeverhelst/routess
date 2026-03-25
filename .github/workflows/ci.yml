@@ -12,6 +12,10 @@ on:
       - "**/*.md"
       - "charts/**"
 
+env:
+  REGISTRY: ghcr.io
+  CHART_NAME: plotarr
+
 jobs:
   test:
     runs-on: arc-maps
@@ -57,11 +61,13 @@ jobs:
     needs: test
     runs-on: arc-maps
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    outputs:
+      released: ${{ steps.release-meta.outputs.released }}
+      version: ${{ steps.release-meta.outputs.version }}
     permissions:
       contents: write
       issues: write
       pull-requests: write
-      packages: write
     steps:
       - uses: actions/checkout@v6
         with:
@@ -78,6 +84,12 @@ jobs:
 
       - run: bun install
 
+      - name: Capture current release tag
+        id: previous-tag
+        run: |
+          TAG=$(git tag --list '[0-9]*.[0-9]*.[0-9]*' --sort=-version:refname | head -n 1)
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -85,3 +97,126 @@ jobs:
           git config --global --add safe.directory /home/runner/_work/maps/maps
           git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
           bunx semantic-release
+
+      - name: Detect released version
+        id: release-meta
+        run: |
+          git fetch --force --tags origin
+          LATEST_TAG=$(git tag --list '[0-9]*.[0-9]*.[0-9]*' --sort=-version:refname | head -n 1)
+          PREVIOUS_TAG='${{ steps.previous-tag.outputs.tag }}'
+
+          if [ -n "$LATEST_TAG" ] && [ "$LATEST_TAG" != "$PREVIOUS_TAG" ]; then
+            echo "released=true" >> "$GITHUB_OUTPUT"
+            echo "version=$LATEST_TAG" >> "$GITHUB_OUTPUT"
+          else
+            echo "released=false" >> "$GITHUB_OUTPUT"
+            echo "version=" >> "$GITHUB_OUTPUT"
+          fi
+
+  publish-images:
+    needs: release
+    runs-on: arc-maps
+    if: needs.release.outputs.released == 'true'
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        include:
+          - app: web
+            dockerfile: apps/web/Dockerfile
+          - app: api
+            dockerfile: apps/api/Dockerfile
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Derive image tags
+        id: version
+        run: |
+          VERSION='${{ needs.release.outputs.version }}'
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "minor=${VERSION%.*}" >> "$GITHUB_OUTPUT"
+          echo "major=${VERSION%%.*}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/plotarr-${{ matrix.app }}
+          tags: |
+            type=raw,value=${{ steps.version.outputs.version }}
+            type=raw,value=${{ steps.version.outputs.minor }}
+            type=raw,value=${{ steps.version.outputs.major }}
+            type=sha
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  publish-helm:
+    needs:
+      - release
+      - publish-images
+    runs-on: arc-maps
+    if: needs.release.outputs.released == 'true'
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.16.0
+
+      - name: Update Chart version
+        run: |
+          VERSION='${{ needs.release.outputs.version }}'
+          sed -i "s/^version:.*/version: $VERSION/" charts/plotarr/Chart.yaml
+          sed -i "s/^appVersion:.*/appVersion: \"$VERSION\"/" charts/plotarr/Chart.yaml
+
+      - name: Package Helm chart
+        run: helm package charts/plotarr
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push chart to GHCR
+        run: |
+          helm push ${{ env.CHART_NAME }}-${{ needs.release.outputs.version }}.tgz \
+            oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/charts
+
+      - name: Attach chart to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.release.outputs.version }}
+          files: |
+            ${{ env.CHART_NAME }}-${{ needs.release.outputs.version }}.tgz
+          fail_on_unmatched_files: true

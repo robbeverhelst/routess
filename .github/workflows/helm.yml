@@ -1,14 +1,17 @@
 name: Helm Chart
 
 on:
-  push:
-    tags: ["*.*.*"]
   pull_request:
     branches: [main]
     paths:
       - "charts/**"
       - ".github/workflows/helm.yml"
   workflow_dispatch:
+    inputs:
+      version:
+        description: Release version to publish, for example 1.96.0
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -48,7 +51,7 @@ jobs:
   publish:
     needs: lint-test
     runs-on: arc-maps
-    if: startsWith(github.ref, 'refs/tags/')
+    if: github.event_name == 'workflow_dispatch'
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -63,7 +66,7 @@ jobs:
       - name: Get latest version
         id: version
         run: |
-          VERSION=${GITHUB_REF_NAME}
+          VERSION='${{ github.event.inputs.version }}'
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Update Chart version
@@ -90,27 +93,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.version }}
-          name: Release ${{ steps.version.outputs.version }}
-          draft: false
-          prerelease: false
           files: |
             ${{ env.CHART_NAME }}-${{ steps.version.outputs.version }}.tgz
-          body: |
-            ## Plotarr ${{ steps.version.outputs.version }}
-
-            ### Helm Chart
-
-            ```bash
-            helm install plotarr \
-              oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/charts/${{ env.CHART_NAME }} \
-              --version ${{ steps.version.outputs.version }} \
-              --namespace plotarr --create-namespace \
-              -f values.yaml
-            ```
-
-            ### Docker Images
-
-            ```bash
-            docker pull ${{ env.REGISTRY }}/${{ github.repository_owner }}/plotarr-web:${{ steps.version.outputs.version }}
-            docker pull ${{ env.REGISTRY }}/${{ github.repository_owner }}/plotarr-api:${{ steps.version.outputs.version }}
-            ```
+          fail_on_unmatched_files: true
