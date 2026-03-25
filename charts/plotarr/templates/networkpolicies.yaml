@@ -1,0 +1,128 @@
+{{- if .Values.networkPolicies.enabled }}
+# Default deny all ingress and egress
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "plotarr.fullname" . }}-default-deny-ingress
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "plotarr.labels" . | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "plotarr.fullname" . }}-default-deny-egress
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "plotarr.labels" . | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+---
+# Allow intra-namespace traffic
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "plotarr.fullname" . }}-allow-intra-namespace
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "plotarr.labels" . | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector: {}
+  egress:
+    - to:
+        - podSelector: {}
+---
+# Allow DNS egress
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "plotarr.fullname" . }}-allow-dns
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "plotarr.labels" . | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+---
+# Allow ingress from Cloudflare tunnel
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "plotarr.fullname" . }}-allow-cloudflare
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "plotarr.labels" . | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Values.networkPolicies.cloudflareNamespace }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.web.service.targetPort }}
+        - protocol: TCP
+          port: {{ .Values.api.service.targetPort }}
+{{- if .Values.networkPolicies.postgresEgress.enabled }}
+---
+# Allow egress to PostgreSQL
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "plotarr.fullname" . }}-allow-postgres
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "plotarr.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "plotarr.api.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Egress
+  egress:
+    - ports:
+        - protocol: TCP
+          port: {{ .Values.networkPolicies.postgresEgress.port }}
+{{- end }}
+---
+# Allow all egress for API (external APIs like Google OAuth)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "plotarr.fullname" . }}-allow-api-egress
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "plotarr.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "plotarr.api.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Egress
+  egress:
+    - {}
+{{- end }}

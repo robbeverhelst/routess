@@ -11,7 +11,7 @@ COPY . .
 RUN bun install --frozen-lockfile
 
 # Build the application
-RUN bun run build --filter=api
+RUN bun run --filter './packages/*' build && bun run --filter './apps/api' build
 
 # Production stage
 FROM oven/bun:alpine AS production

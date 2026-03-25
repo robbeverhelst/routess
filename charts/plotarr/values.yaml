@@ -1,0 +1,192 @@
+global:
+  namespace: plotarr
+  createNamespace: true
+
+web:
+  replicaCount: 2
+  image:
+    repository: ghcr.io/robbeverhelst/plotarr-web
+    tag: latest
+    pullPolicy: IfNotPresent
+  env:
+    VITE_MAPBOX_ACCESS_TOKEN: ""
+    VITE_GOOGLE_CLIENT_ID: ""
+    VITE_APP_URL: ""
+    VITE_API_URL: ""
+    VITE_APP_VERSION: ""
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 80
+    # nodePort: 30080  # only used when type is NodePort
+    # annotations: {}
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 101
+    runAsGroup: 101
+    seccompProfile:
+      type: RuntimeDefault
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    runAsNonRoot: true
+    runAsUser: 101
+    runAsGroup: 101
+    capabilities:
+      drop: [ALL]
+  automountServiceAccountToken: false
+  livenessProbe:
+    httpGet:
+      path: /
+      port: http
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    httpGet:
+      path: /
+      port: http
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+  startupProbe: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  podAnnotations: {}
+  podLabels: {}
+  topologySpreadConstraints: []
+  autoscaling:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 80
+    # targetMemoryUtilizationPercentage: 80
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+    # maxUnavailable: 1
+
+api:
+  replicaCount: 2
+  image:
+    repository: ghcr.io/robbeverhelst/plotarr-api
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 3000
+    targetPort: 3000
+    # nodePort: 30300  # only used when type is NodePort
+    # annotations: {}
+  env:
+    nodeEnv: production
+    port: "3000"
+    dbPort: "5432"
+    dbName: plotarr
+  secrets:
+    # These are set via --set in CI from 1Password
+    jwtSecret: ""
+    googleClientId: ""
+    dbHost: ""
+    dbUser: ""
+    dbPassword: ""
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    seccompProfile:
+      type: RuntimeDefault
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    capabilities:
+      drop: [ALL]
+    readOnlyRootFilesystem: true
+  automountServiceAccountToken: false
+  livenessProbe:
+    httpGet:
+      path: /health/live
+      port: http
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    httpGet:
+      path: /health/ready
+      port: http
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+  startupProbe: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  podAnnotations: {}
+  podLabels: {}
+  topologySpreadConstraints: []
+  autoscaling:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 80
+    # targetMemoryUtilizationPercentage: 80
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+    # maxUnavailable: 1
+
+ingress:
+  enabled: true
+  className: cloudflare-tunnel
+  web:
+    hosts:
+      - plotarr.robbeverhelst.com
+    tls: []
+    #  - secretName: plotarr-tls
+    #    hosts:
+    #      - plotarr.robbeverhelst.com
+    annotations: {}
+  api:
+    hosts:
+      - plotarr-api.robbeverhelst.com
+    tls: []
+    annotations: {}
+
+networkPolicies:
+  enabled: true
+  cloudflareNamespace: cloudflare
+  postgresEgress:
+    enabled: true
+    host: ""  # set via --set from 1Password
+    port: 5432
+
+imagePullSecrets: []
+# - name: ghcr-secret
+
+serviceAccount:
+  web:
+    create: true
+    annotations: {}
+  api:
+    create: true
+    annotations: {}

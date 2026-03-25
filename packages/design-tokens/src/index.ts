@@ -6,10 +6,8 @@
  */
 
 // Export colors
-export { lightColors, darkColors, type ColorTokens } from "./colors";
-
-// Export typography
-export { fontSize, fontWeight, fontFamily } from "./typography";
-
+export { type ColorTokens, darkColors, lightColors } from "./colors";
 // Export design constants
-export { spacing, borderRadius, animationDuration, breakpoints, zIndex } from "./constants";
+export { animationDuration, borderRadius, breakpoints, spacing, zIndex } from "./constants";
+// Export typography
+export { fontFamily, fontSize, fontWeight } from "./typography";

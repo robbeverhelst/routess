@@ -1,43 +1,43 @@
 {
-  "name": "@maps/core",
-  "version": "0.1.0",
-  "description": "Core business logic, types, and utilities for Maps app",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "files": [
-    "dist",
-    "src"
-  ],
-  "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch",
-    "clean": "rm -rf dist",
-    "lint": "eslint .",
-    "check-types": "tsc --noEmit"
-  },
-  "dependencies": {
-    "zustand": "^5.0.2"
-  },
-  "devDependencies": {
-    "@types/node": "^22.11.9",
-    "typescript": "^5.7.3"
-  },
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
-    },
-    "./stores": {
-      "types": "./dist/stores/index.d.ts",
-      "default": "./dist/stores/index.js"
-    },
-    "./types": {
-      "types": "./dist/types/index.d.ts",
-      "default": "./dist/types/index.js"
-    },
-    "./utils": {
-      "types": "./dist/utils/index.d.ts",
-      "default": "./dist/utils/index.js"
-    }
-  }
+	"name": "@maps/core",
+	"version": "0.1.0",
+	"description": "Core business logic, types, and utilities for Maps app",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"files": [
+		"dist",
+		"src"
+	],
+	"scripts": {
+		"build": "tsc",
+		"dev": "tsc --watch",
+		"clean": "rm -rf dist",
+		"lint": "biome check .",
+		"check-types": "tsc --noEmit"
+	},
+	"dependencies": {
+		"zustand": "^5.0.2"
+	},
+	"devDependencies": {
+		"@types/node": "^22.11.9",
+		"typescript": "^5.7.3"
+	},
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"default": "./dist/index.js"
+		},
+		"./stores": {
+			"types": "./dist/stores/index.d.ts",
+			"default": "./dist/stores/index.js"
+		},
+		"./types": {
+			"types": "./dist/types/index.d.ts",
+			"default": "./dist/types/index.js"
+		},
+		"./utils": {
+			"types": "./dist/utils/index.d.ts",
+			"default": "./dist/utils/index.js"
+		}
+	}
 }

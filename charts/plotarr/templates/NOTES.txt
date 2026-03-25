@@ -1,0 +1,22 @@
+Plotarr has been deployed!
+
+{{- if .Values.ingress.enabled }}
+
+Access the application at:
+{{- range .Values.ingress.web.hosts }}
+  - https://{{ . }}
+{{- end }}
+
+API available at:
+{{- range .Values.ingress.api.hosts }}
+  - https://{{ . }}
+{{- end }}
+{{- end }}
+
+To check the deployment status:
+  kubectl get pods -n {{ .Values.global.namespace }}
+  kubectl get svc -n {{ .Values.global.namespace }}
+
+To view logs:
+  kubectl logs -n {{ .Values.global.namespace }} -l app.kubernetes.io/component=web
+  kubectl logs -n {{ .Values.global.namespace }} -l app.kubernetes.io/component=api

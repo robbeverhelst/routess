@@ -9,48 +9,42 @@ echo "Starting entrypoint script for runtime configuration..."
 HTML_FILE="/usr/share/nginx/html/index.html"
 JS_FILES="/usr/share/nginx/html/assets/*.js"
 
+replace_token() {
+    local file="$1"
+    local placeholder="$2"
+    local value="$3"
+
+    sed -i "s#${placeholder}#${value}#g" "$file"
+}
+
 # Function to replace placeholders in files
 replace_placeholders() {
     local file="$1"
     
     echo "Processing file: $file"
-    echo "VITE_MAPBOX_ACCESS_TOKEN value: $VITE_MAPBOX_ACCESS_TOKEN"
     
     # Check if placeholder exists in file
     if grep -q "__VITE_MAPBOX_ACCESS_TOKEN__" "$file"; then
         echo "Found placeholder __VITE_MAPBOX_ACCESS_TOKEN__ in $file"
         # Replace environment variable placeholders with actual values
-        if [ -n "$VITE_MAPBOX_ACCESS_TOKEN" ]; then
-            # Remove any newlines from the token
-            CLEAN_TOKEN=$(echo "$VITE_MAPBOX_ACCESS_TOKEN" | tr -d '\n\r')
-            sed -i "s#__VITE_MAPBOX_ACCESS_TOKEN__#${CLEAN_TOKEN}#g" "$file"
-            echo "Replaced __VITE_MAPBOX_ACCESS_TOKEN__ with actual token"
-            # Verify replacement worked
-            if grep -q "__VITE_MAPBOX_ACCESS_TOKEN__" "$file"; then
-                echo "ERROR: Replacement failed, placeholder still exists!"
-            else
-                echo "SUCCESS: Placeholder replaced successfully"
-            fi
+        # Remove any newlines from the token
+        CLEAN_TOKEN=$(printf '%s' "${VITE_MAPBOX_ACCESS_TOKEN:-}" | tr -d '\n\r')
+        replace_token "$file" "__VITE_MAPBOX_ACCESS_TOKEN__" "$CLEAN_TOKEN"
+        echo "Replaced __VITE_MAPBOX_ACCESS_TOKEN__"
+        # Verify replacement worked
+        if grep -q "__VITE_MAPBOX_ACCESS_TOKEN__" "$file"; then
+            echo "ERROR: Replacement failed, placeholder still exists!"
+        else
+            echo "SUCCESS: Placeholder replaced successfully"
         fi
     else
         echo "No placeholder __VITE_MAPBOX_ACCESS_TOKEN__ found in $file"
     fi
     
-    if [ -n "$VITE_GOOGLE_CLIENT_ID" ]; then
-        sed -i "s#__VITE_GOOGLE_CLIENT_ID__#${VITE_GOOGLE_CLIENT_ID}#g" "$file"
-    fi
-    
-    if [ -n "$VITE_APP_URL" ]; then
-        sed -i "s#__VITE_APP_URL__#${VITE_APP_URL}#g" "$file"
-    fi
-    
-    if [ -n "$VITE_API_URL" ]; then
-        sed -i "s#__VITE_API_URL__#${VITE_API_URL}#g" "$file"
-    fi
-    
-    if [ -n "$VITE_APP_VERSION" ]; then
-        sed -i "s#__VITE_APP_VERSION__#${VITE_APP_VERSION}#g" "$file"
-    fi
+    replace_token "$file" "__VITE_GOOGLE_CLIENT_ID__" "${VITE_GOOGLE_CLIENT_ID:-}"
+    replace_token "$file" "__VITE_APP_URL__" "${VITE_APP_URL:-}"
+    replace_token "$file" "__VITE_API_URL__" "${VITE_API_URL:-}"
+    replace_token "$file" "__VITE_APP_VERSION__" "${VITE_APP_VERSION:-}"
     
     echo "Processed: $file"
 }

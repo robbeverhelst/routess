@@ -1,36 +1,36 @@
 {
-  "name": "@maps/api-client",
-  "version": "0.1.0",
-  "description": "Platform-agnostic API client for Maps app with web and mobile adapters",
-  "main": "dist/index.js",
-  "module": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "files": [
-    "dist"
-  ],
-  "scripts": {
-    "build": "tsc",
-    "clean": "rm -rf dist",
-    "lint": "echo 'No linting configured for api-client package'"
-  },
-  "dependencies": {
-    "@maps/core": "workspace:*"
-  },
-  "devDependencies": {
-    "typescript": "~5.8.3"
-  },
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
-    },
-    "./web": {
-      "types": "./dist/adapters/web.d.ts",
-      "default": "./dist/adapters/web.js"
-    },
-    "./mobile": {
-      "types": "./dist/adapters/mobile.d.ts",
-      "default": "./dist/adapters/mobile.js"
-    }
-  }
+	"name": "@maps/api-client",
+	"version": "0.1.0",
+	"description": "Platform-agnostic API client for Maps app with web and mobile adapters",
+	"main": "dist/index.js",
+	"module": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"files": [
+		"dist"
+	],
+	"scripts": {
+		"build": "tsc",
+		"clean": "rm -rf dist",
+		"lint": "biome check ."
+	},
+	"dependencies": {
+		"@maps/core": "workspace:*"
+	},
+	"devDependencies": {
+		"typescript": "~5.8.3"
+	},
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"default": "./dist/index.js"
+		},
+		"./web": {
+			"types": "./dist/adapters/web.d.ts",
+			"default": "./dist/adapters/web.js"
+		},
+		"./mobile": {
+			"types": "./dist/adapters/mobile.d.ts",
+			"default": "./dist/adapters/mobile.js"
+		}
+	}
 }

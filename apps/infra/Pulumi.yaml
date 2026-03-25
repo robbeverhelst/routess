@@ -1,6 +1,0 @@
-name: maps
-runtime:
-  name: nodejs
-  options:
-    packagemanager: bun
-description: Maps application infrastructure deployment to Kubernetes

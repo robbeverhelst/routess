@@ -21,20 +21,19 @@ const toRadians = (degrees: number): number => (degrees * Math.PI) / 180;
  * @returns The distance in kilometers
  */
 export const haversineDistance = (coord1: Coordinate, coord2: Coordinate): number => {
-  const [lon1, lat1] = coord1;
-  const [lon2, lat2] = coord2;
+	const [lon1, lat1] = coord1;
+	const [lon2, lat2] = coord2;
 
-  const dLat = toRadians(lat2 - lat1);
-  const dLon = toRadians(lon2 - lon1);
-  const lat1Rad = toRadians(lat1);
-  const lat2Rad = toRadians(lat2);
+	const dLat = toRadians(lat2 - lat1);
+	const dLon = toRadians(lon2 - lon1);
+	const lat1Rad = toRadians(lat1);
+	const lat2Rad = toRadians(lat2);
 
-  const a =
-    Math.sin(dLat / 2) ** 2 + Math.cos(lat1Rad) * Math.cos(lat2Rad) * Math.sin(dLon / 2) ** 2;
+	const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1Rad) * Math.cos(lat2Rad) * Math.sin(dLon / 2) ** 2;
 
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+	const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-  return EARTH_RADIUS_KM * c;
+	return EARTH_RADIUS_KM * c;
 };
 
 /**
@@ -44,14 +43,14 @@ export const haversineDistance = (coord1: Coordinate, coord2: Coordinate): numbe
  * @returns The total distance in kilometers
  */
 export const calculatePathDistance = (coordinates: Coordinate[]): number => {
-  if (coordinates.length < 2) return 0;
+	if (coordinates.length < 2) return 0;
 
-  let totalDistance = 0;
-  for (let i = 0; i < coordinates.length - 1; i++) {
-    totalDistance += haversineDistance(coordinates[i], coordinates[i + 1]);
-  }
+	let totalDistance = 0;
+	for (let i = 0; i < coordinates.length - 1; i++) {
+		totalDistance += haversineDistance(coordinates[i], coordinates[i + 1]);
+	}
 
-  return totalDistance;
+	return totalDistance;
 };
 
 /**
@@ -63,30 +62,26 @@ export const calculatePathDistance = (coordinates: Coordinate[]): number => {
  * @param lineEnd - End of the line segment
  * @returns The distance in kilometers
  */
-export const pointToSegmentDistance = (
-  point: Coordinate,
-  lineStart: Coordinate,
-  lineEnd: Coordinate,
-): number => {
-  const [px, py] = point;
-  const [x1, y1] = lineStart;
-  const [x2, y2] = lineEnd;
+export const pointToSegmentDistance = (point: Coordinate, lineStart: Coordinate, lineEnd: Coordinate): number => {
+	const [px, py] = point;
+	const [x1, y1] = lineStart;
+	const [x2, y2] = lineEnd;
 
-  const dx = x2 - x1;
-  const dy = y2 - y1;
+	const dx = x2 - x1;
+	const dy = y2 - y1;
 
-  if (dx === 0 && dy === 0) {
-    // Start and end are the same point
-    return haversineDistance(point, lineStart);
-  }
+	if (dx === 0 && dy === 0) {
+		// Start and end are the same point
+		return haversineDistance(point, lineStart);
+	}
 
-  // Calculate the projection parameter t
-  const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy)));
+	// Calculate the projection parameter t
+	const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy)));
 
-  // Find the closest point on the line segment
-  const closestPoint: Coordinate = [x1 + t * dx, y1 + t * dy];
+	// Find the closest point on the line segment
+	const closestPoint: Coordinate = [x1 + t * dx, y1 + t * dy];
 
-  return haversineDistance(point, closestPoint);
+	return haversineDistance(point, closestPoint);
 };
 
 /**
@@ -96,17 +91,17 @@ export const pointToSegmentDistance = (
  * @returns True if the coordinate is valid
  */
 export const isValidCoordinate = (coordinate: Coordinate): boolean => {
-  const [lon, lat] = coordinate;
-  return (
-    typeof lon === "number" &&
-    typeof lat === "number" &&
-    lon >= -180 &&
-    lon <= 180 &&
-    lat >= -90 &&
-    lat <= 90 &&
-    !isNaN(lon) &&
-    !isNaN(lat)
-  );
+	const [lon, lat] = coordinate;
+	return (
+		typeof lon === "number" &&
+		typeof lat === "number" &&
+		lon >= -180 &&
+		lon <= 180 &&
+		lat >= -90 &&
+		lat <= 90 &&
+		!Number.isNaN(lon) &&
+		!Number.isNaN(lat)
+	);
 };
 
 /**
@@ -117,8 +112,8 @@ export const isValidCoordinate = (coordinate: Coordinate): boolean => {
  * @returns Duration in minutes
  */
 export const estimateWalkingDuration = (distanceKm: number): number => {
-  const WALKING_SPEED_KMH = 5;
-  return Math.round((distanceKm / WALKING_SPEED_KMH) * 60);
+	const WALKING_SPEED_KMH = 5;
+	return Math.round((distanceKm / WALKING_SPEED_KMH) * 60);
 };
 
 /**
@@ -129,17 +124,16 @@ export const estimateWalkingDuration = (distanceKm: number): number => {
  * @returns Bearing in degrees (0-360)
  */
 export const calculateBearing = (coord1: Coordinate, coord2: Coordinate): number => {
-  const [lon1, lat1] = coord1;
-  const [lon2, lat2] = coord2;
+	const [lon1, lat1] = coord1;
+	const [lon2, lat2] = coord2;
 
-  const lat1Rad = toRadians(lat1);
-  const lat2Rad = toRadians(lat2);
-  const dLon = toRadians(lon2 - lon1);
+	const lat1Rad = toRadians(lat1);
+	const lat2Rad = toRadians(lat2);
+	const dLon = toRadians(lon2 - lon1);
 
-  const x = Math.sin(dLon) * Math.cos(lat2Rad);
-  const y =
-    Math.cos(lat1Rad) * Math.sin(lat2Rad) - Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLon);
+	const x = Math.sin(dLon) * Math.cos(lat2Rad);
+	const y = Math.cos(lat1Rad) * Math.sin(lat2Rad) - Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLon);
 
-  const bearing = Math.atan2(x, y);
-  return ((bearing * 180) / Math.PI + 360) % 360;
+	const bearing = Math.atan2(x, y);
+	return ((bearing * 180) / Math.PI + 360) % 360;
 };
