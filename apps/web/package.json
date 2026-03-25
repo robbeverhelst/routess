@@ -11,10 +11,10 @@
 		"preview": "vite preview",
 		"clean": "rm -rf dist && rm -rf node_modules/.vite",
 		"docker:build": "docker build -f Dockerfile -t maps-web ../..",
-		"test": "jest --ci --passWithNoTests",
-		"test:watch": "jest --watch",
-		"test:coverage": "jest --coverage",
-		"test:ci": "jest --ci --coverage --watchAll=false"
+		"test": "vitest run --passWithNoTests",
+		"test:watch": "vitest",
+		"test:coverage": "vitest run --coverage",
+		"test:ci": "vitest run --coverage --passWithNoTests"
 	},
 	"dependencies": {
 		"@maps/api-client": "workspace:*",
@@ -53,19 +53,17 @@
 		"@testing-library/jest-dom": "^6.6.3",
 		"@testing-library/react": "^16.3.0",
 		"@testing-library/user-event": "^14.6.1",
-		"@types/jest": "^30.0.0",
 		"@types/pako": "^2.0.3",
 		"@types/react": "^19.1.8",
 		"@types/react-dom": "^19.1.6",
+		"@vitest/coverage-v8": "^3.2.4",
 		"@vitejs/plugin-react": "^4.6.0",
 		"identity-obj-proxy": "^3.0.0",
 		"import-local": "^3.2.0",
-		"jest": "^30.0.3",
-		"jest-environment-jsdom": "^30.0.2",
 		"jsdom": "^26.1.0",
 		"msw": "^2.10.2",
-		"ts-jest": "^29.4.0",
 		"typescript": "~5.8.3",
-		"vite": "^6.3.5"
+		"vite": "^6.3.5",
+		"vitest": "^3.2.4"
 	}
 }

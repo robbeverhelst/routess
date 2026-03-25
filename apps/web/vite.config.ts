@@ -2,7 +2,7 @@ import path from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import { TanStackRouterVite } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -53,5 +53,18 @@ export default defineConfig({
 			},
 		},
 		chunkSizeWarningLimit: 1000, // Increase limit to 1000kb to reduce warnings for necessary large chunks
+	},
+	test: {
+		globals: true,
+		environment: "jsdom",
+		setupFiles: "./src/test/setup.ts",
+		include: ["src/**/*.test.{ts,tsx}", "src/**/*.spec.{ts,tsx}"],
+		exclude: ["src/components/map/__tests__/**", "node_modules", "dist"],
+		passWithNoTests: true,
+		coverage: {
+			provider: "v8",
+			reporter: ["text", "lcov", "html"],
+			reportsDirectory: "./coverage",
+		},
 	},
 });

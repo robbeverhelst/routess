@@ -1,16 +1,8 @@
-import "@testing-library/jest-dom";
-
-// Extend jest matchers with jest-dom
-import type { TestingLibraryMatchers } from "@testing-library/jest-dom/matchers";
+import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
+import { afterEach, vi } from "vitest";
 
-declare global {
-	// eslint-disable-next-line @typescript-eslint/no-namespace
-	namespace jest {
-		// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-		interface Matchers<R> extends TestingLibraryMatchers<typeof expect.stringContaining, R> {}
-	}
-}
+globalThis.jest = vi;
 
 // Mock ResizeObserver
 global.ResizeObserver = class ResizeObserver {
@@ -51,47 +43,47 @@ Object.defineProperty(window, "matchMedia", {
 });
 
 // Mock mapbox-gl
-jest.mock("mapbox-gl", () => ({
+vi.mock("mapbox-gl", () => ({
 	default: {
-		Map: jest.fn(() => ({
-			on: jest.fn(),
-			off: jest.fn(),
-			remove: jest.fn(),
-			getCanvas: jest.fn(() => ({
+		Map: vi.fn(() => ({
+			on: vi.fn(),
+			off: vi.fn(),
+			remove: vi.fn(),
+			getCanvas: vi.fn(() => ({
 				style: { cursor: "" },
 			})),
-			getSource: jest.fn(),
-			addSource: jest.fn(),
-			removeSource: jest.fn(),
-			addLayer: jest.fn(),
-			removeLayer: jest.fn(),
-			setLayoutProperty: jest.fn(),
-			flyTo: jest.fn(),
-			fitBounds: jest.fn(),
-			getBounds: jest.fn(),
-			getCenter: jest.fn(),
-			getZoom: jest.fn(),
-			project: jest.fn(),
-			unproject: jest.fn(),
+			getSource: vi.fn(),
+			addSource: vi.fn(),
+			removeSource: vi.fn(),
+			addLayer: vi.fn(),
+			removeLayer: vi.fn(),
+			setLayoutProperty: vi.fn(),
+			flyTo: vi.fn(),
+			fitBounds: vi.fn(),
+			getBounds: vi.fn(),
+			getCenter: vi.fn(),
+			getZoom: vi.fn(),
+			project: vi.fn(),
+			unproject: vi.fn(),
 		})),
-		Marker: jest.fn(() => ({
-			setLngLat: jest.fn().mockReturnThis(),
-			addTo: jest.fn().mockReturnThis(),
-			remove: jest.fn(),
+		Marker: vi.fn(() => ({
+			setLngLat: vi.fn().mockReturnThis(),
+			addTo: vi.fn().mockReturnThis(),
+			remove: vi.fn(),
 		})),
-		Popup: jest.fn(() => ({
-			setLngLat: jest.fn().mockReturnThis(),
-			setHTML: jest.fn().mockReturnThis(),
-			addTo: jest.fn().mockReturnThis(),
-			remove: jest.fn(),
+		Popup: vi.fn(() => ({
+			setLngLat: vi.fn().mockReturnThis(),
+			setHTML: vi.fn().mockReturnThis(),
+			addTo: vi.fn().mockReturnThis(),
+			remove: vi.fn(),
 		})),
-		NavigationControl: jest.fn(),
-		GeolocateControl: jest.fn(),
-		ScaleControl: jest.fn(),
+		NavigationControl: vi.fn(),
+		GeolocateControl: vi.fn(),
+		ScaleControl: vi.fn(),
 	},
-	GeoJSONSource: jest.fn(),
-	LngLat: jest.fn(),
-	LngLatBounds: jest.fn(),
+	GeoJSONSource: vi.fn(),
+	LngLat: vi.fn(),
+	LngLatBounds: vi.fn(),
 }));
 
 // Mock localStorage
@@ -118,9 +110,9 @@ Object.defineProperty(window, "localStorage", {
 
 // Mock navigator.geolocation
 const mockGeolocation = {
-	getCurrentPosition: jest.fn(),
-	watchPosition: jest.fn(),
-	clearWatch: jest.fn(),
+	getCurrentPosition: vi.fn(),
+	watchPosition: vi.fn(),
+	clearWatch: vi.fn(),
 };
 
 Object.defineProperty(navigator, "geolocation", {
@@ -129,11 +121,11 @@ Object.defineProperty(navigator, "geolocation", {
 
 // Mock URL.createObjectURL
 Object.defineProperty(URL, "createObjectURL", {
-	value: jest.fn(() => "mocked-url"),
+	value: vi.fn(() => "mocked-url"),
 });
 
 // Mock fetch
-global.fetch = jest.fn();
+global.fetch = vi.fn();
 
 // Mock import.meta for Vite
 Object.defineProperty(global, "import", {
@@ -165,6 +157,6 @@ Object.defineProperty(global, "import", {
 // Cleanup after each test
 afterEach(() => {
 	cleanup();
-	jest.clearAllMocks();
+	vi.clearAllMocks();
 	localStorageMock.clear();
 });

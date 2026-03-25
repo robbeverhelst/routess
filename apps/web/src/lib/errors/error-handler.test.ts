@@ -1,3 +1,4 @@
+import { vi } from "vitest";
 import {
 	handleAPIError,
 	handleLocationError,
@@ -7,18 +8,18 @@ import {
 import { ErrorCategory, ErrorSeverity } from "@/lib/errors/types";
 
 // Mock the logger
-jest.mock("@/lib/logger", () => ({
+vi.mock("@/lib/logger", () => ({
 	Logger: {
-		error: jest.fn(),
-		warn: jest.fn(),
-		info: jest.fn(),
-		debug: jest.fn(),
+		error: vi.fn(),
+		warn: vi.fn(),
+		info: vi.fn(),
+		debug: vi.fn(),
 	},
 }));
 
 // Mock the toast system
-const mockShowToast = jest.fn();
-jest.mock("@/lib/errors/ErrorToast", () => ({
+const mockShowToast = vi.fn();
+vi.mock("@/lib/errors/ErrorToast", () => ({
 	showErrorToast: mockShowToast,
 }));
 
