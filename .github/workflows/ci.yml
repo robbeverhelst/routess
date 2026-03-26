@@ -5,12 +5,10 @@ on:
     branches: [main]
     paths-ignore:
       - "**/*.md"
-      - "charts/**"
   pull_request:
     branches: [main]
     paths-ignore:
       - "**/*.md"
-      - "charts/**"
 
 env:
   REGISTRY: ghcr.io
@@ -57,8 +55,35 @@ jobs:
       - name: Build
         run: bun run --filter './packages/*' build && bun run --filter './apps/*' build
 
+  helm-validate:
+    runs-on: arc-maps
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.16.0
+
+      - name: Lint Helm chart
+        run: helm lint ./charts/plotarr
+
+      - name: Template Helm chart
+        run: |
+          helm template test-release ./charts/plotarr \
+            --set api.secrets.jwtSecret=test \
+            --set api.secrets.googleClientId=test \
+            --set api.secrets.dbHost=10.0.0.1 \
+            --set api.secrets.dbUser=test \
+            --set api.secrets.dbPassword=test > /dev/null
+          echo "Helm template rendering successful"
+
   release:
-    needs: test
+    needs:
+      - test
+      - helm-validate
     runs-on: arc-maps
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     outputs:
