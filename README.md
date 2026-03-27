@@ -17,10 +17,10 @@ routess/
 ├── charts/
 │   └── routess/         # Helm chart for Kubernetes deployment
 └── packages/
-    ├── @maps/core               # Shared business logic & utilities
-    ├── @maps/api-client         # Type-safe API client
-    ├── @maps/i18n               # Internationalization (EN, NL, FR, DE)
-    └── @maps/design-tokens      # Shared design system
+    ├── @routess/core            # Shared business logic & utilities
+    ├── @routess/api-client      # Type-safe API client
+    ├── @routess/i18n            # Internationalization (EN, NL, FR, DE)
+    └── @routess/design-tokens   # Shared design system
 ```
 
 ## Features

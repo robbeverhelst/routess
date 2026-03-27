@@ -1,5 +1,5 @@
-import type { Coordinate } from "@maps/core";
-import { estimateWalkingDuration, formatDistance, formatDuration, haversineDistance } from "@maps/core";
+import type { Coordinate } from "@routess/core";
+import { estimateWalkingDuration, formatDistance, formatDuration, haversineDistance } from "@routess/core";
 import type { Map as MapboxMap } from "mapbox-gl";
 import type { Dispatch, SetStateAction } from "react";
 // Import from MapLayerManager

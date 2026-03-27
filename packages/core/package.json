@@ -1,5 +1,5 @@
 {
-	"name": "@maps/core",
+	"name": "@routess/core",
 	"version": "0.1.0",
 	"description": "Core business logic, types, and utilities for Routess",
 	"main": "dist/index.js",

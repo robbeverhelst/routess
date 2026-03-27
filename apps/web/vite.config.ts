@@ -24,15 +24,15 @@ export default defineConfig({
 		alias: {
 			"@": path.resolve(__dirname, "./src"),
 			// Resolve workspace packages to their source files during development
-			"@maps/core": path.resolve(__dirname, "../../packages/core/src/index.ts"),
-			"@maps/api-client": path.resolve(__dirname, "../../packages/api-client/src/index.ts"),
-			"@maps/design-tokens": path.resolve(__dirname, "../../packages/design-tokens/src/index.ts"),
-			"@maps/i18n": path.resolve(__dirname, "../../packages/i18n/src/index.ts"),
+			"@routess/core": path.resolve(__dirname, "../../packages/core/src/index.ts"),
+			"@routess/api-client": path.resolve(__dirname, "../../packages/api-client/src/index.ts"),
+			"@routess/design-tokens": path.resolve(__dirname, "../../packages/design-tokens/src/index.ts"),
+			"@routess/i18n": path.resolve(__dirname, "../../packages/i18n/src/index.ts"),
 		},
 	},
 	optimizeDeps: {
 		// Include workspace packages in dependency optimization to prevent dev mode issues
-		include: ["@maps/core", "@maps/api-client", "@maps/design-tokens", "@maps/i18n"],
+		include: ["@routess/core", "@routess/api-client", "@routess/design-tokens", "@routess/i18n"],
 	},
 	build: {
 		rollupOptions: {

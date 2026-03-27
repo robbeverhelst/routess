@@ -1,5 +1,5 @@
 {
-	"name": "@maps/design-tokens",
+	"name": "@routess/design-tokens",
 	"version": "0.1.0",
 	"description": "Simple shared design tokens for Routess - colors and basic typography",
 	"type": "module",

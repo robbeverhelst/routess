@@ -1,5 +1,5 @@
 {
-	"name": "@maps/api-client",
+	"name": "@routess/api-client",
 	"version": "0.1.0",
 	"description": "Platform-agnostic API client for Routess with web and mobile adapters",
 	"main": "dist/index.js",
@@ -14,7 +14,7 @@
 		"lint": "biome check ."
 	},
 	"dependencies": {
-		"@maps/core": "workspace:*"
+		"@routess/core": "workspace:*"
 	},
 	"devDependencies": {
 		"typescript": "~5.8.3"

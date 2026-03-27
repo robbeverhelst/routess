@@ -1,7 +1,7 @@
-import type { Logger } from "@maps/core";
+import type { Logger } from "@routess/core";
 
 // Re-export for convenience
-export type { StorageAdapter } from "@maps/core";
+export type { StorageAdapter } from "@routess/core";
 
 // API Response Types
 export interface ApiUser {

@@ -2,8 +2,8 @@
  * Main routing system
  */
 
-import type { Coordinate } from "@maps/core";
-import { pointToSegmentDistance } from "@maps/core";
+import type { Coordinate } from "@routess/core";
+import { pointToSegmentDistance } from "@routess/core";
 import type { Map as MapboxMap } from "mapbox-gl";
 import type { Dispatch, SetStateAction } from "react";
 import {

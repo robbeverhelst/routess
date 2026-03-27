@@ -1,4 +1,4 @@
-import { createRoutingSelectors, createRoutingStore } from "@maps/core";
+import { createRoutingSelectors, createRoutingStore } from "@routess/core";
 import { Logger } from "@/lib/logger";
 
 // Create the routing store with web-specific logger
@@ -43,4 +43,4 @@ export const {
 } = createRoutingSelectors(useRoutingStore);
 
 // Export types for compatibility
-export type { RouteActions, RouteState, RoutingStore } from "@maps/core";
+export type { RouteActions, RouteState, RoutingStore } from "@routess/core";

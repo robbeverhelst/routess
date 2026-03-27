@@ -13,7 +13,7 @@ import {
 	fontWeight,
 	lightColors,
 	spacing,
-} from "@maps/design-tokens";
+} from "@routess/design-tokens";
 
 export type { ColorTokens };
 /**

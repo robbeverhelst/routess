@@ -15,16 +15,16 @@
 
 ### **Workspace Packages Architecture**
 
-- **`@maps/core`**: Shared stores, types, utils, and business logic
-- **`@maps/api-client`**: HTTP client with web/mobile adapters
-- **`@maps/i18n`**: Internationalization with 4 languages (en, nl, fr, de)
-- **`@maps/design-tokens`**: Colors, typography, spacing, and design constants
+- **`@routess/core`**: Shared stores, types, utils, and business logic
+- **`@routess/api-client`**: HTTP client with web/mobile adapters
+- **`@routess/i18n`**: Internationalization with 4 languages (en, nl, fr, de)
+- **`@routess/design-tokens`**: Colors, typography, spacing, and design constants
 - **Monorepo**: Turborepo with proper dependency management and build optimization
 
 ### **Design Tokens Implementation**
 
 - **Fixed dark mode issue**: Removed automatic theme switching that was overriding defaults
-- **Shared package**: All design values centralized in `@maps/design-tokens`
+- **Shared package**: All design values centralized in `@routess/design-tokens`
 - **Cross-platform ready**: Colors (OKLCH), typography, spacing, border radius, animations
 - **Web integration**: Utility functions for theme detection and color access
 - **Docker compatibility**: Updated build process to include design tokens
@@ -36,7 +36,7 @@
 ### **Phase 1: Foundation & Local Development** ✅ **COMPLETE**
 
 - ✅ Expo app created with TypeScript
-- ✅ All shared packages integrated (`@maps/core`, `@maps/api-client`, `@maps/i18n`, `@maps/design-tokens`)
+- ✅ All shared packages integrated (`@routess/core`, `@routess/api-client`, `@routess/i18n`, `@routess/design-tokens`)
 - ✅ Local development working (`bunx expo run:android/ios`)
 - ✅ Monorepo properly configured with Turborepo
 - ✅ Basic lint/test/type-check scripts working
@@ -249,7 +249,7 @@ jobs:
 
 ```typescript
 // constants/Colors.ts - Replace with design tokens
-import { lightColors, darkColors } from "@maps/design-tokens";
+import { lightColors, darkColors } from "@routess/design-tokens";
 
 export const Colors = {
   light: {
@@ -271,7 +271,7 @@ export const Colors = {
 
 ```typescript
 // lib/design-tokens-native.ts
-import { spacing, fontSize } from "@maps/design-tokens";
+import { spacing, fontSize } from "@routess/design-tokens";
 
 export const parsePixelValue = (value: string): number => {
   return parseInt(value.replace("px", ""), 10);
@@ -318,7 +318,7 @@ echo "EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN=your_actual_token" >> .env.local
 ```typescript
 // components/MapView.tsx
 import Mapbox from '@rnmapbox/maps';
-import { lightColors } from '@maps/design-tokens';
+import { lightColors } from '@routess/design-tokens';
 
 Mapbox.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN!);
 
@@ -354,8 +354,8 @@ export function MapView() {
 
 ```typescript
 // lib/i18n-native.ts
-import { createI18nService } from "@maps/i18n";
-import { logger } from "@maps/core";
+import { createI18nService } from "@routess/i18n";
+import { logger } from "@routess/core";
 
 const i18nService = createI18nService(logger);
 
@@ -374,7 +374,7 @@ export const useTranslation = () => {
 
 ```typescript
 // stores/index.ts
-import { routingStore } from "@maps/core";
+import { routingStore } from "@routess/core";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // Configure persistence for React Native
@@ -393,7 +393,7 @@ export { mobileRoutingStore as routingStore };
 
 ```typescript
 // lib/api-client-native.ts
-import { ApiClient } from "@maps/api-client";
+import { ApiClient } from "@routess/api-client";
 
 const apiClient = new ApiClient({
   platform: "mobile",
@@ -434,7 +434,7 @@ const MapWithRouting = () => {
 
 ### **6.2 Route Calculation**
 
-- Integrate route calculation service from `@maps/core`
+- Integrate route calculation service from `@routess/core`
 - Display calculated routes on map
 - Handle offline route estimation
 - Show route distance and duration
