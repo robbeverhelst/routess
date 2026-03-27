@@ -17,6 +17,6 @@
 		"@routess/core": "workspace:*"
 	},
 	"devDependencies": {
-		"typescript": "~5.8.3"
+		"typescript": "~5.9.0"
 	}
 }
