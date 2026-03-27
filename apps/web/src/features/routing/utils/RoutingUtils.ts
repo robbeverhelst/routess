@@ -1,5 +1,5 @@
-import type { Coordinate } from "@maps/core";
-import { haversineDistance } from "@maps/core";
+import type { Coordinate } from "@routess/core";
+import { haversineDistance } from "@routess/core";
 import { LngLat, LngLatBounds, type Map as MapboxMap } from "mapbox-gl";
 import { Logger } from "@/lib/logger";
 

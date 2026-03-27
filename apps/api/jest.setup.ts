@@ -7,7 +7,7 @@ jest.mock("google-auth-library");
 process.env.NODE_ENV = "test";
 process.env.JWT_SECRET = "test-secret";
 process.env.GOOGLE_CLIENT_ID = "test-google-client-id";
-process.env.DB_NAME = "maps_db_test";
+process.env.DB_NAME = "routess_db_test";
 
 // In CI, the database connection variables are passed from GitHub secrets
 // but jest.setup.ts runs early, so we need to ensure they're available

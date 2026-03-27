@@ -1,4 +1,4 @@
-import { haversineDistance } from "@maps/core";
+import { haversineDistance } from "@routess/core";
 import { setCurrentRoutePath } from "@/features/routing/services/RouteCalculationService";
 import { checkNearRoad } from "@/features/routing/utils/RoutingUtils";
 import { Logger } from "@/lib/logger";

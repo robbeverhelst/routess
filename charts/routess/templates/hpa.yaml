@@ -2,15 +2,15 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ include "plotarr.fullname" . }}-web
+  name: {{ include "routess.fullname" . }}-web
   namespace: {{ .Values.global.namespace }}
   labels:
-    {{- include "plotarr.web.labels" . | nindent 4 }}
+    {{- include "routess.web.labels" . | nindent 4 }}
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ include "plotarr.fullname" . }}-web
+    name: {{ include "routess.fullname" . }}-web
   minReplicas: {{ .Values.web.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.web.autoscaling.maxReplicas }}
   metrics:
@@ -36,15 +36,15 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ include "plotarr.fullname" . }}-api
+  name: {{ include "routess.fullname" . }}-api
   namespace: {{ .Values.global.namespace }}
   labels:
-    {{- include "plotarr.api.labels" . | nindent 4 }}
+    {{- include "routess.api.labels" . | nindent 4 }}
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ include "plotarr.fullname" . }}-api
+    name: {{ include "routess.fullname" . }}-api
   minReplicas: {{ .Values.api.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.api.autoscaling.maxReplicas }}
   metrics:

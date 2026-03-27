@@ -2,7 +2,7 @@ export { I18nService } from "./I18nService";
 export * from "./locales";
 export * from "./types";
 
-import type { Logger } from "@maps/core";
+import type { Logger } from "@routess/core";
 // Convenience export for creating i18n service
 import { I18nService } from "./I18nService";
 import { translations } from "./locales";

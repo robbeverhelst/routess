@@ -1,6 +1,6 @@
 {
-	"name": "Maps - Route Planning & Navigation",
-	"short_name": "Maps",
+	"name": "Routess - Route Planning & Navigation",
+	"short_name": "Routess",
 	"description": "Plan cycling and walking routes with waypoints, import/export GPX files, and navigate offline",
 	"start_url": "/",
 	"scope": "/",

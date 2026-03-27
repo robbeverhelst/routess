@@ -1,7 +1,7 @@
-// Maps PWA Service Worker
+// Routess PWA Service Worker
 // Version 1.0.0
 
-const CACHE_VERSION = "maps-v1.0.0";
+const CACHE_VERSION = "routess-v1.0.0";
 const CACHE_NAMES = {
 	APP_SHELL: `${CACHE_VERSION}-app-shell`,
 	API_CACHE: `${CACHE_VERSION}-api-cache`,

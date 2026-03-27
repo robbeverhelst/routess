@@ -1,4 +1,4 @@
-// Service Worker Manager for Maps PWA
+// Service Worker Manager for Routess PWA
 import { Logger } from "./logger";
 
 export interface CacheStatus {

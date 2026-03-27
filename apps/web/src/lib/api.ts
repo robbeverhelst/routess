@@ -1,4 +1,4 @@
-import { ApiClient, WebPlatformAdapter } from "@maps/api-client";
+import { ApiClient, WebPlatformAdapter } from "@routess/api-client";
 import { handleAPIError } from "@/lib/errors";
 import { Logger } from "@/lib/logger";
 
@@ -56,4 +56,4 @@ export type {
 	GoogleAuthRequest,
 	UpdateRouteRequest,
 	Waypoint,
-} from "@maps/api-client";
+} from "@routess/api-client";

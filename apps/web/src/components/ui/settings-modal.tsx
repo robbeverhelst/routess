@@ -207,7 +207,7 @@ export function SettingsModal({
 
 								{/* App Info */}
 								<div>
-									<h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">Maps Application</h3>
+									<h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">Routess Application</h3>
 									<p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
 										A modern route planning and navigation tool
 									</p>

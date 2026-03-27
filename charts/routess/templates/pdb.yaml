@@ -2,10 +2,10 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: {{ include "plotarr.fullname" . }}-web
+  name: {{ include "routess.fullname" . }}-web
   namespace: {{ .Values.global.namespace }}
   labels:
-    {{- include "plotarr.web.labels" . | nindent 4 }}
+    {{- include "routess.web.labels" . | nindent 4 }}
 spec:
   {{- if .Values.web.podDisruptionBudget.minAvailable }}
   minAvailable: {{ .Values.web.podDisruptionBudget.minAvailable }}
@@ -15,17 +15,17 @@ spec:
   {{- end }}
   selector:
     matchLabels:
-      {{- include "plotarr.web.selectorLabels" . | nindent 6 }}
+      {{- include "routess.web.selectorLabels" . | nindent 6 }}
 {{- end }}
 ---
 {{- if .Values.api.podDisruptionBudget.enabled }}
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: {{ include "plotarr.fullname" . }}-api
+  name: {{ include "routess.fullname" . }}-api
   namespace: {{ .Values.global.namespace }}
   labels:
-    {{- include "plotarr.api.labels" . | nindent 4 }}
+    {{- include "routess.api.labels" . | nindent 4 }}
 spec:
   {{- if .Values.api.podDisruptionBudget.minAvailable }}
   minAvailable: {{ .Values.api.podDisruptionBudget.minAvailable }}
@@ -35,5 +35,5 @@ spec:
   {{- end }}
   selector:
     matchLabels:
-      {{- include "plotarr.api.selectorLabels" . | nindent 6 }}
+      {{- include "routess.api.selectorLabels" . | nindent 6 }}
 {{- end }}

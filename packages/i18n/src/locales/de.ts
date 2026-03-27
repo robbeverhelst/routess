@@ -198,7 +198,7 @@ export const de: Record<string, string> = {
 
 	// Settings translations
 	"settings.title": "Einstellungen",
-	"settings.description": "Passen Sie Ihre Maps-Erfahrung an und verwalten Sie Ihre Einstellungen",
+	"settings.description": "Passen Sie Ihre Routess-Erfahrung an und verwalten Sie Ihre Einstellungen",
 	"settings.general": "Allgemein",
 	"settings.generalDesc": "Sprache und Grundeinstellungen",
 	"settings.storage": "Speicher",

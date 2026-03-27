@@ -26,7 +26,7 @@
 		"check-types": "tsc --noEmit",
 		"ci": "bun run check-types && bun run lint:check && bun run build && bun run test",
 		"clean": "rimraf dist coverage .nest node_modules/.cache",
-		"docker:build": "docker build -f Dockerfile -t maps-api ../..",
+		"docker:build": "docker build -f Dockerfile -t routess-api ../..",
 		"db:up": "cd ../.. && docker-compose up -d postgres",
 		"db:down": "cd ../.. && docker-compose down",
 		"db:migration:create": "mikro-orm migration:create",

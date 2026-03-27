@@ -1,17 +1,17 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "plotarr.fullname" . }}-api
+  name: {{ include "routess.fullname" . }}-api
   namespace: {{ .Values.global.namespace }}
   labels:
-    {{- include "plotarr.api.labels" . | nindent 4 }}
+    {{- include "routess.api.labels" . | nindent 4 }}
 spec:
   {{- if not .Values.api.autoscaling.enabled }}
   replicas: {{ .Values.api.replicaCount }}
   {{- end }}
   selector:
     matchLabels:
-      {{- include "plotarr.api.selectorLabels" . | nindent 6 }}
+      {{- include "routess.api.selectorLabels" . | nindent 6 }}
   strategy:
     type: RollingUpdate
     rollingUpdate:
@@ -20,7 +20,7 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "plotarr.api.selectorLabels" . | nindent 8 }}
+        {{- include "routess.api.selectorLabels" . | nindent 8 }}
         {{- with .Values.api.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -30,7 +30,7 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
-      serviceAccountName: {{ include "plotarr.api.serviceAccountName" . }}
+      serviceAccountName: {{ include "routess.api.serviceAccountName" . }}
       automountServiceAccountToken: {{ .Values.api.automountServiceAccountToken | default false }}
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -52,41 +52,41 @@ spec:
             - name: PORT
               value: {{ .Values.api.env.port | quote }}
             - name: FRONTEND_URL
-              value: {{ include "plotarr.frontendUrl" . | quote }}
+              value: {{ include "routess.frontendUrl" . | quote }}
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "plotarr.fullname" . }}-api
+                  name: {{ include "routess.fullname" . }}-api
                   key: jwt-secret
             - name: GOOGLE_CLIENT_ID
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "plotarr.fullname" . }}-api
+                  name: {{ include "routess.fullname" . }}-api
                   key: google-client-id
             - name: DB_HOST
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "plotarr.fullname" . }}-api
+                  name: {{ include "routess.fullname" . }}-api
                   key: db-host
             - name: DB_PORT
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "plotarr.fullname" . }}-api
+                  name: {{ include "routess.fullname" . }}-api
                   key: db-port
             - name: DB_USER
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "plotarr.fullname" . }}-api
+                  name: {{ include "routess.fullname" . }}-api
                   key: db-user
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "plotarr.fullname" . }}-api
+                  name: {{ include "routess.fullname" . }}-api
                   key: db-password
             - name: DB_NAME
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "plotarr.fullname" . }}-api
+                  name: {{ include "routess.fullname" . }}-api
                   key: db-name
           securityContext:
             {{- toYaml .Values.api.containerSecurityContext | nindent 12 }}

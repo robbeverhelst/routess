@@ -12,7 +12,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  CHART_NAME: plotarr
+  CHART_NAME: routess
 
 jobs:
   test:
@@ -68,11 +68,11 @@ jobs:
           version: v3.16.0
 
       - name: Lint Helm chart
-        run: helm lint ./charts/plotarr
+        run: helm lint ./charts/routess
 
       - name: Template Helm chart
         run: |
-          helm template test-release ./charts/plotarr \
+          helm template test-release ./charts/routess \
             --set api.secrets.jwtSecret=test \
             --set api.secrets.googleClientId=test \
             --set api.secrets.dbHost=10.0.0.1 \
@@ -182,7 +182,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/plotarr-${{ matrix.app }}
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/routess-${{ matrix.app }}
           tags: |
             type=raw,value=${{ steps.version.outputs.version }}
             type=raw,value=${{ steps.version.outputs.minor }}
@@ -223,11 +223,11 @@ jobs:
       - name: Update Chart version
         run: |
           VERSION='${{ needs.release.outputs.version }}'
-          sed -i "s/^version:.*/version: $VERSION/" charts/plotarr/Chart.yaml
-          sed -i "s/^appVersion:.*/appVersion: \"$VERSION\"/" charts/plotarr/Chart.yaml
+          sed -i "s/^version:.*/version: $VERSION/" charts/routess/Chart.yaml
+          sed -i "s/^appVersion:.*/appVersion: \"$VERSION\"/" charts/routess/Chart.yaml
 
       - name: Package Helm chart
-        run: helm package charts/plotarr
+        run: helm package charts/routess
 
       - name: Log in to GHCR
         uses: docker/login-action@v3

@@ -2,10 +2,10 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ include "plotarr.fullname" . }}-web
+  name: {{ include "routess.fullname" . }}-web
   namespace: {{ .Values.global.namespace }}
   labels:
-    {{- include "plotarr.web.labels" . | nindent 4 }}
+    {{- include "routess.web.labels" . | nindent 4 }}
   annotations:
     {{- with .Values.ingress.web.annotations }}
     {{- toYaml . | nindent 4 }}
@@ -27,7 +27,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: {{ include "plotarr.fullname" $ }}-web
+                name: {{ include "routess.fullname" $ }}-web
                 port:
                   number: {{ $.Values.web.service.port }}
     {{- end }}
@@ -35,10 +35,10 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ include "plotarr.fullname" . }}-api
+  name: {{ include "routess.fullname" . }}-api
   namespace: {{ .Values.global.namespace }}
   labels:
-    {{- include "plotarr.api.labels" . | nindent 4 }}
+    {{- include "routess.api.labels" . | nindent 4 }}
   annotations:
     {{- with .Values.ingress.api.annotations }}
     {{- toYaml . | nindent 4 }}
@@ -60,7 +60,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: {{ include "plotarr.fullname" $ }}-api
+                name: {{ include "routess.fullname" $ }}-api
                 port:
                   number: {{ $.Values.api.service.port }}
     {{- end }}

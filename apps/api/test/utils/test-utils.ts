@@ -10,7 +10,7 @@ import { User } from "../../src/entities/user.entity";
 
 export async function createTestApp(): Promise<INestApplication> {
 	process.env.NODE_ENV = "test";
-	process.env.DB_NAME = "maps_db_test"; // Use test database
+	process.env.DB_NAME = "routess_db_test"; // Use test database
 	process.env.GOOGLE_CLIENT_ID = "test-google-client-id"; // Mock Google Client ID
 	process.env.JWT_SECRET = "test-secret-key"; // Ensure JWT secret is set
 

@@ -1,4 +1,4 @@
-import type { Logger } from "@maps/core";
+import type { Logger } from "@routess/core";
 
 // Type for supported language codes
 export type SupportedLanguage = "en" | "nl" | "fr" | "de";

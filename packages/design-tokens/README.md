@@ -1,11 +1,11 @@
-# @maps/design-tokens
+# @routess/design-tokens
 
-Simple shared design tokens for the Maps project - colors and basic typography only.
+Simple shared design tokens for Routess - colors and basic typography only.
 
 ## Usage
 
 ```typescript
-import { lightColors, darkColors, fontSize, fontWeight } from "@maps/design-tokens";
+import { lightColors, darkColors, fontSize, fontWeight } from "@routess/design-tokens";
 
 // Colors for theming
 const bgColor = lightColors.background;

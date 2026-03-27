@@ -1,11 +1,11 @@
 global:
-  namespace: plotarr
+  namespace: routess
   createNamespace: true
 
 web:
   replicaCount: 2
   image:
-    repository: ghcr.io/robbeverhelst/plotarr-web
+    repository: ghcr.io/robbeverhelst/routess-web
     tag: latest
     pullPolicy: IfNotPresent
   env:
@@ -78,7 +78,7 @@ web:
 api:
   replicaCount: 2
   image:
-    repository: ghcr.io/robbeverhelst/plotarr-api
+    repository: ghcr.io/robbeverhelst/routess-api
     tag: latest
     pullPolicy: IfNotPresent
   service:
@@ -91,7 +91,7 @@ api:
     nodeEnv: production
     port: "3000"
     dbPort: "5432"
-    dbName: plotarr
+    dbName: routess
   secrets:
     # These are set via --set in CI from 1Password
     jwtSecret: ""
@@ -160,15 +160,15 @@ ingress:
   className: cloudflare-tunnel
   web:
     hosts:
-      - plotarr.robbeverhelst.com
+      - routess.robbeverhelst.com
     tls: []
-    #  - secretName: plotarr-tls
+    #  - secretName: routess-tls
     #    hosts:
-    #      - plotarr.robbeverhelst.com
+    #      - routess.robbeverhelst.com
     annotations: {}
   api:
     hosts:
-      - plotarr-api.robbeverhelst.com
+      - routess-api.robbeverhelst.com
     tls: []
     annotations: {}
 
