@@ -1,5 +1,5 @@
 /**
- * Standardized error types and interfaces for the Maps application
+ * Standardized error types and interfaces for the Routess application
  */
 
 export enum ErrorSeverity {

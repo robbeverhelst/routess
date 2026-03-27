@@ -1,7 +1,7 @@
 /**
  * @maps/design-tokens
  *
- * Simple shared design tokens for the Maps project
+ * Simple shared design tokens for Routess
  * Provides only colors and basic font values for cross-platform use
  */
 

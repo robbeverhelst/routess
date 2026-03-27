@@ -3,10 +3,10 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: {{ include "plotarr.fullname" . }}-default-deny-ingress
+  name: {{ include "routess.fullname" . }}-default-deny-ingress
   namespace: {{ .Values.global.namespace }}
   labels:
-    {{- include "plotarr.labels" . | nindent 4 }}
+    {{- include "routess.labels" . | nindent 4 }}
 spec:
   podSelector: {}
   policyTypes:
@@ -15,10 +15,10 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: {{ include "plotarr.fullname" . }}-default-deny-egress
+  name: {{ include "routess.fullname" . }}-default-deny-egress
   namespace: {{ .Values.global.namespace }}
   labels:
-    {{- include "plotarr.labels" . | nindent 4 }}
+    {{- include "routess.labels" . | nindent 4 }}
 spec:
   podSelector: {}
   policyTypes:
@@ -28,10 +28,10 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: {{ include "plotarr.fullname" . }}-allow-intra-namespace
+  name: {{ include "routess.fullname" . }}-allow-intra-namespace
   namespace: {{ .Values.global.namespace }}
   labels:
-    {{- include "plotarr.labels" . | nindent 4 }}
+    {{- include "routess.labels" . | nindent 4 }}
 spec:
   podSelector: {}
   policyTypes:
@@ -48,10 +48,10 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: {{ include "plotarr.fullname" . }}-allow-dns
+  name: {{ include "routess.fullname" . }}-allow-dns
   namespace: {{ .Values.global.namespace }}
   labels:
-    {{- include "plotarr.labels" . | nindent 4 }}
+    {{- include "routess.labels" . | nindent 4 }}
 spec:
   podSelector: {}
   policyTypes:
@@ -69,10 +69,10 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: {{ include "plotarr.fullname" . }}-allow-cloudflare
+  name: {{ include "routess.fullname" . }}-allow-cloudflare
   namespace: {{ .Values.global.namespace }}
   labels:
-    {{- include "plotarr.labels" . | nindent 4 }}
+    {{- include "routess.labels" . | nindent 4 }}
 spec:
   podSelector: {}
   policyTypes:
@@ -93,14 +93,14 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: {{ include "plotarr.fullname" . }}-allow-postgres
+  name: {{ include "routess.fullname" . }}-allow-postgres
   namespace: {{ .Values.global.namespace }}
   labels:
-    {{- include "plotarr.labels" . | nindent 4 }}
+    {{- include "routess.labels" . | nindent 4 }}
 spec:
   podSelector:
     matchLabels:
-      {{- include "plotarr.api.selectorLabels" . | nindent 6 }}
+      {{- include "routess.api.selectorLabels" . | nindent 6 }}
   policyTypes:
     - Egress
   egress:
@@ -113,14 +113,14 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: {{ include "plotarr.fullname" . }}-allow-api-egress
+  name: {{ include "routess.fullname" . }}-allow-api-egress
   namespace: {{ .Values.global.namespace }}
   labels:
-    {{- include "plotarr.labels" . | nindent 4 }}
+    {{- include "routess.labels" . | nindent 4 }}
 spec:
   podSelector:
     matchLabels:
-      {{- include "plotarr.api.selectorLabels" . | nindent 6 }}
+      {{- include "routess.api.selectorLabels" . | nindent 6 }}
   policyTypes:
     - Egress
   egress:

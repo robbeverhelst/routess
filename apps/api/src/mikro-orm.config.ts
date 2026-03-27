@@ -23,7 +23,7 @@ const config: Options = {
 	port: parseInt(process.env.DB_PORT || "5432", 10),
 	user: process.env.DB_USER || "postgres",
 	password: process.env.DB_PASSWORD || "postgres",
-	dbName: process.env.DB_NAME || "maps_db",
+	dbName: process.env.DB_NAME || "routess_db",
 	entities,
 	migrations: {
 		path: "./src/migrations",

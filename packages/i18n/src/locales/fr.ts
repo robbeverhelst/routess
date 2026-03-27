@@ -203,7 +203,7 @@ export const fr: Record<string, string> = {
 
 	// Settings translations
 	"settings.title": "Paramètres",
-	"settings.description": "Personnalisez votre expérience Maps et gérez vos préférences",
+	"settings.description": "Personnalisez votre expérience Routess et gérez vos préférences",
 	"settings.general": "Général",
 	"settings.generalDesc": "Langue et préférences de base",
 	"settings.storage": "Stockage",

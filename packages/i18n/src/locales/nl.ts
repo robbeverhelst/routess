@@ -196,7 +196,7 @@ export const nl: Record<string, string> = {
 
 	// Settings translations
 	"settings.title": "Instellingen",
-	"settings.description": "Pas je Maps-ervaring aan en beheer je voorkeuren",
+	"settings.description": "Pas je Routess-ervaring aan en beheer je voorkeuren",
 	"settings.general": "Algemeen",
 	"settings.generalDesc": "Taal en basisvoorkeuren",
 	"settings.storage": "Opslag",

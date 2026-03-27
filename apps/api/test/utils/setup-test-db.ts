@@ -27,11 +27,11 @@ async function setupTestDatabase() {
 		await client.connect();
 
 		// Check if test database exists
-		const result = await client.query("SELECT 1 FROM pg_database WHERE datname = 'maps_db_test'");
+		const result = await client.query("SELECT 1 FROM pg_database WHERE datname = 'routess_db_test'");
 
 		if (result.rows.length === 0) {
 			// Create test database
-			await client.query("CREATE DATABASE maps_db_test");
+			await client.query("CREATE DATABASE routess_db_test");
 			console.log("Test database created successfully");
 		} else {
 			console.log("Test database already exists");

@@ -84,7 +84,7 @@ async function bootstrap() {
 
 	// Swagger/OpenAPI Documentation
 	const config = new DocumentBuilder()
-		.setTitle("Maps Routing API")
+		.setTitle("Routess Routing API")
 		.setDescription("A comprehensive API for route management and mapping functionality")
 		.setVersion("1.0")
 		.addBearerAuth(
@@ -114,7 +114,7 @@ async function bootstrap() {
 			operationsSorter: "alpha",
 		},
 		customfavIcon: "/favicon.ico",
-		customSiteTitle: "Maps API Documentation",
+		customSiteTitle: "Routess API Documentation",
 	});
 
 	await app.listen(3000);

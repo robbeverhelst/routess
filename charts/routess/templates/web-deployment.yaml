@@ -1,17 +1,17 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "plotarr.fullname" . }}-web
+  name: {{ include "routess.fullname" . }}-web
   namespace: {{ .Values.global.namespace }}
   labels:
-    {{- include "plotarr.web.labels" . | nindent 4 }}
+    {{- include "routess.web.labels" . | nindent 4 }}
 spec:
   {{- if not .Values.web.autoscaling.enabled }}
   replicas: {{ .Values.web.replicaCount }}
   {{- end }}
   selector:
     matchLabels:
-      {{- include "plotarr.web.selectorLabels" . | nindent 6 }}
+      {{- include "routess.web.selectorLabels" . | nindent 6 }}
   strategy:
     type: RollingUpdate
     rollingUpdate:
@@ -20,7 +20,7 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "plotarr.web.selectorLabels" . | nindent 8 }}
+        {{- include "routess.web.selectorLabels" . | nindent 8 }}
         {{- with .Values.web.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -29,7 +29,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
     spec:
-      serviceAccountName: {{ include "plotarr.web.serviceAccountName" . }}
+      serviceAccountName: {{ include "routess.web.serviceAccountName" . }}
       automountServiceAccountToken: {{ .Values.web.automountServiceAccountToken | default false }}
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:

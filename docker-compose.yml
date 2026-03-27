@@ -3,9 +3,9 @@ version: "3.8"
 services:
   postgres:
     image: postgres:15
-    container_name: maps-postgres
+    container_name: routess-postgres
     environment:
-      POSTGRES_DB: maps_db
+      POSTGRES_DB: routess_db
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       PGDATA: /var/lib/postgresql/data/pgdata
@@ -14,7 +14,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d maps_db"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d routess_db"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -26,7 +26,7 @@ services:
     container_name: maps-pgadmin
     network_mode: host
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@maps.dev
+      PGADMIN_DEFAULT_EMAIL: admin@routess.dev
       PGADMIN_DEFAULT_PASSWORD: admin123
       PGADMIN_CONFIG_SERVER_MODE: "False"
       PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"

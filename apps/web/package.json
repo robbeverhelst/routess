@@ -10,7 +10,7 @@
 		"check-types": "tsc --noEmit",
 		"preview": "vite preview",
 		"clean": "rm -rf dist && rm -rf node_modules/.vite",
-		"docker:build": "docker build -f Dockerfile -t maps-web ../..",
+		"docker:build": "docker build -f Dockerfile -t routess-web ../..",
 		"test": "vitest run --passWithNoTests",
 		"test:watch": "vitest",
 		"test:coverage": "vitest run --coverage",

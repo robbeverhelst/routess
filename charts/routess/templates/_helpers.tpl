@@ -1,14 +1,14 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "plotarr.name" -}}
+{{- define "routess.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Create a default fully qualified app name.
 */}}
-{{- define "plotarr.fullname" -}}
+{{- define "routess.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -24,32 +24,32 @@ Create a default fully qualified app name.
 {{/*
 Common labels
 */}}
-{{- define "plotarr.labels" -}}
-helm.sh/chart: {{ include "plotarr.chart" . }}
+{{- define "routess.labels" -}}
+helm.sh/chart: {{ include "routess.chart" . }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
-app.kubernetes.io/part-of: plotarr
+app.kubernetes.io/part-of: routess
 {{- end }}
 
 {{/*
 Chart label
 */}}
-{{- define "plotarr.chart" -}}
+{{- define "routess.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Web labels
 */}}
-{{- define "plotarr.web.labels" -}}
-{{ include "plotarr.labels" . }}
-{{ include "plotarr.web.selectorLabels" . }}
+{{- define "routess.web.labels" -}}
+{{ include "routess.labels" . }}
+{{ include "routess.web.selectorLabels" . }}
 {{- end }}
 
 {{/*
 Web selector labels
 */}}
-{{- define "plotarr.web.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "plotarr.name" . }}-web
+{{- define "routess.web.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "routess.name" . }}-web
 app.kubernetes.io/instance: {{ .Release.Name }}
 app.kubernetes.io/component: web
 {{- end }}
@@ -57,16 +57,16 @@ app.kubernetes.io/component: web
 {{/*
 API labels
 */}}
-{{- define "plotarr.api.labels" -}}
-{{ include "plotarr.labels" . }}
-{{ include "plotarr.api.selectorLabels" . }}
+{{- define "routess.api.labels" -}}
+{{ include "routess.labels" . }}
+{{ include "routess.api.selectorLabels" . }}
 {{- end }}
 
 {{/*
 API selector labels
 */}}
-{{- define "plotarr.api.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "plotarr.name" . }}-api
+{{- define "routess.api.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "routess.name" . }}-api
 app.kubernetes.io/instance: {{ .Release.Name }}
 app.kubernetes.io/component: api
 {{- end }}
@@ -74,9 +74,9 @@ app.kubernetes.io/component: api
 {{/*
 Web service account name
 */}}
-{{- define "plotarr.web.serviceAccountName" -}}
+{{- define "routess.web.serviceAccountName" -}}
 {{- if .Values.serviceAccount.web.create }}
-{{- default (printf "%s-web" (include "plotarr.fullname" .)) .Values.serviceAccount.web.name }}
+{{- default (printf "%s-web" (include "routess.fullname" .)) .Values.serviceAccount.web.name }}
 {{- else }}
 {{- default "default" .Values.serviceAccount.web.name }}
 {{- end }}
@@ -85,9 +85,9 @@ Web service account name
 {{/*
 API service account name
 */}}
-{{- define "plotarr.api.serviceAccountName" -}}
+{{- define "routess.api.serviceAccountName" -}}
 {{- if .Values.serviceAccount.api.create }}
-{{- default (printf "%s-api" (include "plotarr.fullname" .)) .Values.serviceAccount.api.name }}
+{{- default (printf "%s-api" (include "routess.fullname" .)) .Values.serviceAccount.api.name }}
 {{- else }}
 {{- default "default" .Values.serviceAccount.api.name }}
 {{- end }}
@@ -96,7 +96,7 @@ API service account name
 {{/*
 Frontend URL from first web ingress host
 */}}
-{{- define "plotarr.frontendUrl" -}}
+{{- define "routess.frontendUrl" -}}
 {{- $host := first .Values.ingress.web.hosts }}
 {{- printf "https://%s" $host }}
 {{- end }}

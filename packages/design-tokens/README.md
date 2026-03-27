@@ -1,6 +1,6 @@
 # @maps/design-tokens
 
-Simple shared design tokens for the Maps project - colors and basic typography only.
+Simple shared design tokens for Routess - colors and basic typography only.
 
 ## Usage
 

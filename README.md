@@ -1,4 +1,4 @@
-# Plotarr
+# Routess
 
 [![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue?logo=typescript)](https://www.typescriptlang.org/)
@@ -10,12 +10,12 @@ A modern route planning application with interactive mapping and advanced routin
 ## Architecture
 
 ```
-plotarr/
+routess/
 ├── apps/
 │   ├── web/             # React web application (Vite + Mapbox)
 │   └── api/             # NestJS backend API
 ├── charts/
-│   └── plotarr/         # Helm chart for Kubernetes deployment
+│   └── routess/         # Helm chart for Kubernetes deployment
 └── packages/
     ├── @maps/core               # Shared business logic & utilities
     ├── @maps/api-client         # Type-safe API client
@@ -51,8 +51,8 @@ plotarr/
 ### Development Setup
 
 ```bash
-git clone https://github.com/robbeverhelst/plotarr.git
-cd plotarr
+git clone https://github.com/robbeverhelst/routess.git
+cd routess
 bun install
 
 # Copy environment template and add your API keys
@@ -87,7 +87,7 @@ bun run docker:build:api   # Build API Docker image
 
 ## Deployment
 
-Plotarr deploys to Kubernetes via a Helm chart. The CI pipeline (GitHub Actions) handles:
+Routess deploys to Kubernetes via a Helm chart. The CI pipeline (GitHub Actions) handles:
 
 1. **CI** — lint, type-check, test, build
 2. **Release** — semantic versioning
@@ -96,8 +96,8 @@ Plotarr deploys to Kubernetes via a Helm chart. The CI pipeline (GitHub Actions)
 
 ```bash
 # Manual deployment
-helm upgrade --install plotarr ./charts/plotarr \
-  --namespace plotarr \
+helm upgrade --install routess ./charts/routess \
+  --namespace routess \
   --create-namespace \
   --set web.image.tag=1.0.0 \
   --set api.image.tag=1.0.0 \
@@ -108,7 +108,7 @@ helm upgrade --install plotarr ./charts/plotarr \
   --set api.secrets.dbPassword="$DB_PASSWORD"
 ```
 
-See [`charts/plotarr/values.yaml`](charts/plotarr/values.yaml) for all configuration options.
+See [`charts/routess/values.yaml`](charts/routess/values.yaml) for all configuration options.
 
 ## Tech Stack
 
