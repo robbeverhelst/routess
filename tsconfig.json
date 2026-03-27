@@ -6,12 +6,6 @@
 		},
 		{
 			"path": "./apps/web"
-		},
-		{
-			"path": "./apps/infra"
-		},
-		{
-			"path": "./apps/native"
 		}
 	]
 }

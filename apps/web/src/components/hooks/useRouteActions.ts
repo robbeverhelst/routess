@@ -189,7 +189,7 @@ export const useRouteActions = ({
 			return;
 		}
 
-		const encodedData = serializeAndCompress(waypoints, directFlags, true);
+		const encodedData = serializeAndCompress(waypoints, directFlags, useRoutingStore.getState().isMapLocked);
 
 		if (encodedData) {
 			const shareUrl = `${window.location.origin}${window.location.pathname}?route=${encodedData}`;

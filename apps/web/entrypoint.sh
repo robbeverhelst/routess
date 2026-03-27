@@ -13,8 +13,10 @@ replace_token() {
     local file="$1"
     local placeholder="$2"
     local value="$3"
+    local escaped_value
 
-    sed -i "s#${placeholder}#${value}#g" "$file"
+    escaped_value=$(printf '%s' "$value" | sed 's/[&|]/\\&/g')
+    sed -i "s|${placeholder}|${escaped_value}|g" "$file"
 }
 
 # Function to replace placeholders in files

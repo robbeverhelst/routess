@@ -117,6 +117,16 @@ Object.defineProperty(navigator, "geolocation", {
 	value: mockGeolocation,
 });
 
+Object.defineProperty(navigator, "permissions", {
+	value: {
+		query: vi.fn().mockResolvedValue({
+			state: "granted",
+			addEventListener: vi.fn(),
+			removeEventListener: vi.fn(),
+		}),
+	},
+});
+
 // Mock URL.createObjectURL
 Object.defineProperty(URL, "createObjectURL", {
 	value: vi.fn(() => "mocked-url"),

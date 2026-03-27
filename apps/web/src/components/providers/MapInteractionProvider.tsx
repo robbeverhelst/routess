@@ -4,10 +4,10 @@ import { Logger } from "@/lib/logger";
 
 interface MapInteractionContextType {
 	// Keyboard shortcuts
-	handleKeyboardShortcuts: (canUndo: boolean, canRedo: boolean, onUndo: () => void, onRedo: () => void) => void;
+	handleKeyboardShortcuts: (canUndo: boolean, canRedo: boolean, onUndo: () => void, onRedo: () => void) => () => void;
 
 	// PWA shortcuts
-	handlePWAShortcuts: (onOpenRouteGenerator: () => void, onLocate: () => void, onImportGPX: () => void) => void;
+	handlePWAShortcuts: (onOpenRouteGenerator: () => void, onLocate: () => void, onImportGPX: () => void) => () => void;
 }
 
 const MapInteractionContext = createContext<MapInteractionContextType | null>(null);

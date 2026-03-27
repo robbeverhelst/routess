@@ -1,4 +1,5 @@
 import { type ApiUser, type AuthResponse, apiService } from "./api";
+import { authStorageKeys, clearStoredAuthState, notifyAuthStateChange } from "./auth-state";
 import { Logger } from "./logger";
 
 // Google OAuth Configuration
@@ -41,13 +42,13 @@ class GoogleAuthService {
 			const authResponse: AuthResponse = await apiService.googleAuth(credentialResponse.credential);
 
 			// Store access token and user data
-			localStorage.setItem("access_token", authResponse.accessToken);
-			localStorage.setItem("user", JSON.stringify(authResponse.user));
+			localStorage.setItem(authStorageKeys.accessToken, authResponse.accessToken);
+			localStorage.setItem(authStorageKeys.user, JSON.stringify(authResponse.user));
 
 			// The new API client automatically manages token state
 
 			// Trigger auth state change event
-			this.triggerAuthChange();
+			notifyAuthStateChange();
 
 			Logger.info("Google Sign-In successful:", {
 				email: authResponse.user.email,
@@ -84,8 +85,8 @@ class GoogleAuthService {
 
 	getAuthState(): AuthState {
 		try {
-			const accessToken = localStorage.getItem("access_token");
-			const userJson = localStorage.getItem("user");
+			const accessToken = localStorage.getItem(authStorageKeys.accessToken);
+			const userJson = localStorage.getItem(authStorageKeys.user);
 
 			if (accessToken && userJson) {
 				const user = JSON.parse(userJson) as ApiUser;
@@ -109,7 +110,7 @@ class GoogleAuthService {
 	// Validate if current session is actually valid
 	async validateSession(): Promise<boolean> {
 		try {
-			const accessToken = localStorage.getItem("access_token");
+			const accessToken = localStorage.getItem(authStorageKeys.accessToken);
 			if (!accessToken) {
 				return false;
 			}
@@ -126,28 +127,12 @@ class GoogleAuthService {
 
 	// Clear all auth state
 	clearAuthState(): void {
-		localStorage.removeItem("access_token");
-		localStorage.removeItem("user");
+		clearStoredAuthState();
 		// Use the new API client's logout method
 		apiService.logout();
 
 		// Trigger auth state change event
-		this.triggerAuthChange();
-	}
-
-	// Trigger auth state change event for reactive UI updates
-	private triggerAuthChange(): void {
-		// Trigger custom event for same-tab updates
-		window.dispatchEvent(new CustomEvent("auth-change"));
-
-		// Also trigger storage event for cross-tab compatibility
-		window.dispatchEvent(
-			new StorageEvent("storage", {
-				key: "access_token",
-				newValue: localStorage.getItem("access_token"),
-				oldValue: null,
-			}),
-		);
+		notifyAuthStateChange();
 	}
 
 	isSignedIn(): boolean {
@@ -159,7 +144,7 @@ class GoogleAuthService {
 	}
 
 	getAccessToken(): string | null {
-		return localStorage.getItem("access_token");
+		return localStorage.getItem(authStorageKeys.accessToken);
 	}
 
 	getClientId(): string {

@@ -24,13 +24,12 @@ const LoginModal = React.lazy(() =>
 );
 
 import type { Map as MapboxMap } from "mapbox-gl";
-import { clearRouteLayer, updateRouteLayer, updateWaypointsLayer } from "@/features/routing/managers/MapLayerManager";
+import { loadApiRouteIntoMap } from "@/features/routing/services/RouteIOService";
 import { useIsAuthenticated } from "@/hooks/useAuthState";
 import type { ApiRoute } from "@/lib/api";
 import type { SupportedLanguage } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
 import { useRoutingStore } from "@/stores/routingStore";
-import type { Coordinate } from "@/types/map";
 
 interface MapModalsContextType {
 	// Route Generator Modal
@@ -179,87 +178,18 @@ export const MapModalsProvider: React.FC<MapModalsProviderProps> = ({
 
 			try {
 				setIsRouteLibraryModalOpen(false);
+				const result = await loadApiRouteIntoMap(route, {
+					map: mapRef.current,
+					accessToken: mapboxToken,
+					setRouteDistance,
+					setRouteDuration,
+					setHasRoute,
+					isMapLocked,
+				});
 
-				// Convert API waypoints to routing system format
-				const waypoints: Coordinate[] = route.waypoints.map((wp) => [wp.lng, wp.lat]);
-				const directFlags: boolean[] = route.waypoints.map((wp) => wp.type === "direct");
-
-				Logger.info("[MapModalsProvider] Converting waypoints:", waypoints.length);
-
-				// Clear any existing route first
-				useRoutingStore.getState().clearWaypoints();
-				clearRouteLayer(mapRef.current);
-
-				// Save snapshot before loading new route
-				useRoutingStore.getState().saveSnapshot();
-
-				// Load waypoints into the routing store
-				useRoutingStore.getState().setWaypoints(waypoints, directFlags);
-
-				// Update waypoints visualization on map
-				updateWaypointsLayer(mapRef.current, waypoints, isMapLocked);
-
-				// If we have at least 2 waypoints, calculate and display the route
-				if (waypoints.length >= 2 && mapboxToken) {
-					try {
-						// Use the same API call logic as in routing.ts
-						const waypointsString = waypoints.map((point) => `${point[0]},${point[1]}`).join(";");
-						const radiusesString = waypoints.map(() => "150").join(";");
-
-						const queryUrl =
-							`https://api.mapbox.com/directions/v5/mapbox/walking/${waypointsString}?` +
-							`steps=true&geometries=geojson&overview=full&continue_straight=true&` +
-							`access_token=${mapboxToken}&radiuses=${radiusesString}`;
-
-						const response = await fetch(queryUrl, { method: "GET" });
-						if (response.ok) {
-							const json = await response.json();
-							if (json?.routes?.[0]?.geometry) {
-								const data = json.routes[0];
-								const routeCoords = data.geometry.coordinates;
-								const totalDistance = data.distance / 1000; // Convert to km
-								const duration = Math.round(data.duration / 60); // Convert to minutes
-
-								// Update route visualization
-								updateRouteLayer(mapRef.current, routeCoords);
-
-								// Update UI state
-								setRouteDistance(`${totalDistance.toFixed(2)} km`);
-								setRouteDuration(`${duration} min`);
-								setHasRoute(true);
-
-								// Update store state
-								useRoutingStore.getState().setRouteDistance(`${totalDistance.toFixed(2)} km`);
-								useRoutingStore.getState().setRouteDuration(`${duration} min`);
-								useRoutingStore.getState().setHasRoute(true);
-
-								// Snap waypoints if API provided them
-								if (json.waypoints && json.waypoints.length > 0) {
-									const snappedWaypoints = json.waypoints.map(
-										(wp: { location: [number, number] }) => [wp.location[0], wp.location[1]] as Coordinate,
-									);
-									useRoutingStore.getState().updateWaypoints(snappedWaypoints);
-									updateWaypointsLayer(mapRef.current, snappedWaypoints, isMapLocked);
-								}
-
-								Logger.info("[MapModalsProvider] Route loaded successfully");
-							}
-						}
-					} catch (routeError) {
-						Logger.warn("[MapModalsProvider] Route calculation failed, showing waypoints only:", routeError);
-						// Even if route calculation fails, we still have the waypoints
-						setHasRoute(false);
-						setRouteDistance("");
-						setRouteDuration("");
-					}
-				} else {
-					// Just waypoints, no route calculation needed
-					setHasRoute(waypoints.length >= 2);
-					setRouteDistance("");
-					setRouteDuration("");
+				if (!result.success) {
+					Logger.warn("[MapModalsProvider] Route loading failed:", result.message);
 				}
-
-				Logger.info("[MapModalsProvider] Route loaded onto map");
 			} catch (error) {
 				Logger.error("[MapModalsProvider] Failed to load route:", error);
 			}

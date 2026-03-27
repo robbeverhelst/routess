@@ -17,7 +17,7 @@
 		"format": "biome format --write .",
 		"format:check": "biome format .",
 		"ci": "(docker-compose up -d postgres || docker start routess-postgres || true) && bun run format && bun run lint && bun run build && bun run check-types && bun run test",
-		"clean": "pkill -f 'esbuild' || true && killall -9 node || true && rm -rf node_modules apps/*/node_modules packages/*/node_modules /tmp/esbuild* && bun install",
+		"clean": "rm -rf node_modules apps/*/node_modules packages/*/node_modules apps/*/dist packages/*/dist coverage apps/*/coverage /tmp/esbuild* && bun install",
 		"docker:build:web": "docker build -f apps/web/Dockerfile -t routess-web .",
 		"docker:build:api": "docker build -f apps/api/Dockerfile -t routess-api .",
 		"ls": "node -e \"const pkg = require('./package.json'); console.log('\\n📋 Available Scripts:\\n'); Object.entries(pkg.scripts).forEach(([name, cmd]) => console.log('  ' + name.padEnd(25) + ' ' + cmd)); console.log('\\n💡 Usage: bun run <script-name>\\n');\""
