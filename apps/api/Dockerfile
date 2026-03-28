@@ -29,11 +29,11 @@ RUN bun install --production
 # Copy built application from builder stage
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 
-# Copy mikro-orm config from the built dist folder (correct path)
+# Copy the compiled MikroORM runtime files to the paths used by `mikro-orm migration:up`
 COPY --from=builder /app/apps/api/dist/src/mikro-orm.config.js ./apps/api/mikro-orm.config.js
-
-# Copy migrations folder (needed for mikro-orm)
-COPY --from=builder /app/apps/api/src/migrations ./apps/api/src/migrations
+COPY --from=builder /app/apps/api/dist/src/config ./apps/api/config
+COPY --from=builder /app/apps/api/dist/src/entities ./apps/api/entities
+COPY --from=builder /app/apps/api/dist/src/migrations ./apps/api/src/migrations
 
 # Expose port
 EXPOSE 3000
