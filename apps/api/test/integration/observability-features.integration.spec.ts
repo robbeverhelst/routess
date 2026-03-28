@@ -9,6 +9,25 @@ describe("Observability Features Integration", () => {
 	let metricsService: MetricsService;
 	let originalFetch: typeof fetch;
 
+	async function waitForMetrics(predicate: (text: string) => boolean, attempts = 10, delayMs = 100): Promise<string> {
+		let lastText = "";
+
+		for (let attempt = 0; attempt < attempts; attempt++) {
+			const response = await request(app.getHttpServer()).get("/metrics").expect(200);
+			lastText = response.text;
+
+			if (predicate(lastText)) {
+				return lastText;
+			}
+
+			if (attempt < attempts - 1) {
+				await new Promise((resolve) => setTimeout(resolve, delayMs));
+			}
+		}
+
+		return lastText;
+	}
+
 	beforeAll(async () => {
 		setupMocks();
 
@@ -152,14 +171,13 @@ target_info{service_name="maps-api",service_version="1.0.0"} 1`),
 			// Make a request to generate metrics
 			await request(app.getHttpServer()).get("/health/live").expect(200);
 
-			// Wait a bit for metrics to be processed
-			await new Promise((resolve) => setTimeout(resolve, 100));
+			const metricsText = await waitForMetrics(
+				(text) => text.includes("http_request_duration_ms") && text.includes("http_requests_total"),
+			);
 
-			const metricsResponse = await request(app.getHttpServer()).get("/metrics").expect(200);
-
-			expect(metricsResponse.text).toContain("http_request_duration_ms");
-			expect(metricsResponse.text).toContain("http_requests_total");
-			expect(metricsResponse.text).toContain("target_info");
+			expect(metricsText).toContain("http_request_duration_ms");
+			expect(metricsText).toContain("http_requests_total");
+			expect(metricsText).toContain("target_info");
 		});
 	});
 
