@@ -16,7 +16,7 @@ env:
 
 jobs:
   test:
-    runs-on: arc-maps
+    runs-on: arc-routess
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
@@ -56,7 +56,7 @@ jobs:
         run: bun run --filter './packages/*' build && bun run --filter './apps/*' build
 
   helm-validate:
-    runs-on: arc-maps
+    runs-on: arc-routess
     steps:
       - uses: actions/checkout@v6
         with:
@@ -84,7 +84,7 @@ jobs:
     needs:
       - test
       - helm-validate
-    runs-on: arc-maps
+    runs-on: arc-routess
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     outputs:
       released: ${{ steps.release-meta.outputs.released }}
@@ -140,7 +140,7 @@ jobs:
 
   publish-images:
     needs: release
-    runs-on: arc-maps
+    runs-on: arc-routess
     if: needs.release.outputs.released == 'true'
     permissions:
       contents: read
@@ -205,7 +205,7 @@ jobs:
     needs:
       - release
       - publish-images
-    runs-on: arc-maps
+    runs-on: arc-routess
     if: needs.release.outputs.released == 'true'
     permissions:
       contents: write
