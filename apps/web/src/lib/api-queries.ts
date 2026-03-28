@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ApiRoute, apiService, type Waypoint } from "./api";
+import { googleAuth } from "./google-auth";
 import { Logger } from "./logger";
 import { queryKeys } from "./query-client";
 
@@ -176,8 +177,6 @@ export function useAuthStatus() {
 		queryKey: queryKeys.auth.session(),
 		queryFn: async () => {
 			try {
-				// Import googleAuth to use session validation
-				const { googleAuth } = await import("@/lib/google-auth");
 				const isValid = await googleAuth.validateSession();
 
 				if (isValid) {
@@ -207,8 +206,6 @@ export function useLogout() {
 
 	return useMutation({
 		mutationFn: async () => {
-			// Use googleAuth service for proper logout
-			const { googleAuth } = await import("@/lib/google-auth");
 			await googleAuth.signOut();
 			Logger.info("User logged out");
 		},
@@ -220,10 +217,8 @@ export function useLogout() {
 		onError: (error) => {
 			Logger.error("Logout failed:", error);
 			// Even if logout fails, clear local state
-			import("@/lib/google-auth").then(({ googleAuth }) => {
-				googleAuth.clearAuthState();
-				queryClient.clear();
-			});
+			googleAuth.clearAuthState();
+			queryClient.clear();
 		},
 	});
 }

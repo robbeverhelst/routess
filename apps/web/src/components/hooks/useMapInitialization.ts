@@ -3,10 +3,15 @@ import type { Dispatch, SetStateAction } from "react";
 import { useCallback, useEffect, useRef } from "react";
 import type { PopupInfo as MIMPopupInfo } from "@/features/routing/managers/MapInteractionManager";
 import { initializeMapInteractions } from "@/features/routing/managers/MapInteractionManager";
-import { initializeSourcesAndLayers } from "@/features/routing/managers/MapLayerManager";
+import {
+	initializeSourcesAndLayers,
+	updateRouteLayer,
+	updateWaypointsLayer,
+} from "@/features/routing/managers/MapLayerManager";
+import { setCurrentRoutePath } from "@/features/routing/services/RouteCalculationService";
+import { loadSharedRouteIntoMap } from "@/features/routing/services/RouteIOService";
 import { Logger } from "@/lib/logger";
 import { setupRouting } from "@/lib/routing";
-import { decompressAndParse } from "@/lib/shareUtils";
 import { useRoutingStore } from "@/stores/routingStore";
 
 interface UseMapInitializationProps {
@@ -74,64 +79,41 @@ export const useMapInitialization = ({
 			if (currentState.waypoints.length > 0) {
 				// Small delay to ensure map layers are fully initialized
 				setTimeout(() => {
-					// Restore waypoints and route visualization
-					import("@/features/routing/managers/MapLayerManager").then(({ updateWaypointsLayer, updateRouteLayer }) => {
-						updateWaypointsLayer(map, currentState.waypoints, currentState.isMapLocked);
+					updateWaypointsLayer(map, currentState.waypoints, currentState.isMapLocked);
 
-						if (currentState.routePath.length > 0) {
-							updateRouteLayer(map, currentState.routePath);
+					if (currentState.routePath.length > 0) {
+						updateRouteLayer(map, currentState.routePath);
 
-							// Update the UI state from Zustand store
-							setRouteDistance(currentState.routeDistance);
-							setRouteDuration(currentState.routeDuration);
-							setHasRoute(currentState.hasRoute);
+						// Update the UI state from Zustand store
+						setRouteDistance(currentState.routeDistance);
+						setRouteDuration(currentState.routeDuration);
+						setHasRoute(currentState.hasRoute);
 
-							// Also update the RouteCalculationService module state
-							import("@/features/routing/services/RouteCalculationService").then(({ setCurrentRoutePath }) => {
-								setCurrentRoutePath(currentState.routePath);
-							});
-						}
-					});
+						// Keep the route calculation service in sync with persisted state.
+						setCurrentRoutePath(currentState.routePath);
+					}
 				}, 100); // 100ms delay to ensure layers are ready
 			}
 
-			// Check for shared route data in URL
 			const urlParams = new URLSearchParams(window.location.search);
-			const routeDataParam = urlParams.get("route");
+			const encodedRoute = urlParams.get("route") || routeId;
 
-			// Check for routeId from router props
-			if (routeId && !routeDataParam) {
-				Logger.info("[useMapInitialization] Loading route from routeId:", routeId);
-				try {
-					const loadedData = decompressAndParse(routeId);
-					if (loadedData && map && mapboxToken) {
-						Logger.info("[useMapInitialization] Route loading from routeId not yet implemented.");
-					}
-				} catch (err) {
-					Logger.error("[useMapInitialization] Could not parse routeId:", err);
-					handleRouteInfoError("Failed to read route data. The route may be corrupted or invalid.");
-				}
-			}
+			if (encodedRoute) {
+				Logger.info("[useMapInitialization] Found shared route data, attempting to load...");
 
-			if (routeDataParam) {
-				Logger.info("[useMapInitialization] Found route data in URL, attempting to load...");
-				let loadedData: ReturnType<typeof decompressAndParse> | null = null;
-				try {
-					loadedData = decompressAndParse(routeDataParam);
-				} catch (err) {
-					Logger.error("[useMapInitialization] Could not decompress or parse route param:", err);
-					handleRouteInfoError("Failed to read shared route data. The link may be corrupted or invalid.");
-				}
+				const result = await loadSharedRouteIntoMap({
+					map,
+					accessToken: mapboxToken,
+					encodedRoute,
+					setRouteDistance,
+					setRouteDuration,
+					setHasRoute,
+				});
 
-				if (loadedData && map && mapboxToken) {
-					try {
-						Logger.info("[useMapInitialization] Route loading from URL not yet implemented.");
-						// Clean the URL
-						window.history.replaceState({}, document.title, window.location.pathname);
-					} catch (err) {
-						Logger.error("[useMapInitialization] Error setting route data from URL:", err);
-						handleRouteInfoError("Failed to load shared route. The link may be invalid or corrupted.");
-					}
+				if (!result.success) {
+					handleRouteInfoError(result.message || "Failed to load shared route.");
+				} else if (urlParams.get("route")) {
+					window.history.replaceState({}, document.title, window.location.pathname);
 				}
 			}
 		},

@@ -12,24 +12,33 @@ import { MapCanvas } from "../MapCanvas";
 // Mock all dependencies
 vi.mock("react-map-gl/mapbox", () => ({
 	__esModule: true,
-	default: React.forwardRef(({ children, onLoad, ...props }: any, ref: any) => {
-		React.useImperativeHandle(ref, () => ({
-			getMap: () => mockMapInstance,
-		}));
+	default: React.forwardRef(
+		({ children, onLoad, style, mapStyle, initialViewState, minPitch, maxPitch }: any, ref: any) => {
+			React.useImperativeHandle(ref, () => ({
+				getMap: () => mockMapInstance,
+			}));
 
-		// Simulate map load
-		React.useEffect(() => {
-			if (onLoad) {
-				onLoad({ target: mockMapInstance });
-			}
-		}, [onLoad]);
+			// Simulate map load
+			React.useEffect(() => {
+				if (onLoad) {
+					onLoad({ target: mockMapInstance });
+				}
+			}, [onLoad]);
 
-		return (
-			<div data-testid="mock-map" {...props}>
-				{children}
-			</div>
-		);
-	}),
+			return (
+				<div
+					data-testid="mock-map"
+					data-map-style={mapStyle}
+					data-initial-view-state={JSON.stringify(initialViewState)}
+					data-min-pitch={String(minPitch)}
+					data-max-pitch={String(maxPitch)}
+					style={style}
+				>
+					{children}
+				</div>
+			);
+		},
+	),
 }));
 
 vi.mock("@/components/providers/MapConfigurationProvider");
@@ -146,7 +155,7 @@ describe("MapCanvas", () => {
 		it("should apply correct dimensions", () => {
 			render(<MapCanvas {...defaultProps} width="800px" height="600px" />);
 			const map = screen.getByTestId("mock-map");
-			expect(map).toHaveStyle({ width: "800px", height: "600px" });
+			expect(map.parentElement).toHaveStyle({ width: "800px", height: "600px" });
 		});
 
 		it("should use satellite style when configured", () => {
@@ -162,7 +171,7 @@ describe("MapCanvas", () => {
 
 			render(<MapCanvas {...defaultProps} />);
 			const map = screen.getByTestId("mock-map");
-			expect(map).toHaveAttribute("mapStyle", "mapbox://styles/mapbox/satellite-streets-v12");
+			expect(map).toHaveAttribute("data-map-style", "mapbox://styles/mapbox/satellite-streets-v12");
 		});
 	});
 
@@ -205,9 +214,12 @@ describe("MapCanvas", () => {
 			render(<MapCanvas {...defaultProps} initialCenter={[13.405, 52.52]} initialZoom={12} />);
 
 			const map = screen.getByTestId("mock-map");
-			// Check that the initial view state includes the expected coordinates
-			expect(map).toHaveAttribute("initialViewState");
-			// We can't directly parse the object, but we can verify it was passed
+			const initialViewState = JSON.parse(map.getAttribute("data-initial-view-state") || "{}");
+			expect(initialViewState).toMatchObject({
+				longitude: 13.405,
+				latitude: 52.52,
+				zoom: 12,
+			});
 			expect(useMapInitialization).toHaveBeenCalled();
 		});
 
@@ -248,6 +260,12 @@ describe("MapCanvas", () => {
 			expect(useMapInitialization).toHaveBeenCalled();
 		});
 
+		it("should use standard style by default", () => {
+			render(<MapCanvas {...defaultProps} />);
+			const map = screen.getByTestId("mock-map");
+			expect(map).toHaveAttribute("data-map-style", "mapbox://styles/mapbox/standard");
+		});
+
 		it("should use saved map view when available", () => {
 			const savedView = {
 				longitude: 8.5,
@@ -280,7 +298,7 @@ describe("MapCanvas", () => {
 			};
 
 			const mapRef = React.createRef<any>();
-			render(<MapCanvas {...defaultProps} mapRef={mapRef} popup={popupInfo} />);
+			const { rerender } = render(<MapCanvas {...defaultProps} mapRef={mapRef} popup={popupInfo} />);
 
 			// Wait for map to load and set ref
 			await waitFor(() => {
@@ -288,7 +306,7 @@ describe("MapCanvas", () => {
 			});
 
 			// Re-render with ref set
-			render(<MapCanvas {...defaultProps} mapRef={mapRef} popup={popupInfo} />);
+			rerender(<MapCanvas {...defaultProps} mapRef={mapRef} popup={popupInfo} />);
 
 			expect(screen.getByTestId("map-popup")).toBeInTheDocument();
 			expect(screen.getByText("13.405,52.52")).toBeInTheDocument();
@@ -391,8 +409,8 @@ describe("MapCanvas", () => {
 			render(<MapCanvas {...defaultProps} />);
 
 			const map = screen.getByTestId("mock-map");
-			expect(map).toHaveAttribute("minPitch", "30");
-			expect(map).toHaveAttribute("maxPitch", "30");
+			expect(map).toHaveAttribute("data-min-pitch", "30");
+			expect(map).toHaveAttribute("data-max-pitch", "30");
 		});
 
 		it("should set bearing from initial view state", async () => {

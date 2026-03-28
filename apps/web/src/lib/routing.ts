@@ -11,7 +11,8 @@ import {
 	updateUserLocationLayer,
 	updateWaypointsLayer,
 } from "@/features/routing/managers/MapLayerManager";
-import { getCurrentRoutePath, getRoute } from "@/features/routing/services/RouteCalculationService";
+import { getRoute } from "@/features/routing/services/RouteCalculationService";
+import { exportCurrentRouteToGPXFile, importRouteFromGPXString } from "@/features/routing/services/RouteIOService";
 import { Logger } from "@/lib/logger";
 import { useRoutingStore } from "@/stores/routingStore";
 
@@ -342,11 +343,7 @@ export const updateUserLocationPoint = (map: MapboxMap, coordinates: Coordinate 
 // GPX Export function
 export const exportRouteToGPX = (): { success: boolean; message?: string } => {
 	Logger.info("[Routing] GPX export requested");
-	const routePath = getCurrentRoutePath();
-	if (routePath.length === 0) {
-		return { success: false, message: "No route available to export." };
-	}
-	return { success: false, message: "GPX export functionality is not yet implemented." };
+	return exportCurrentRouteToGPXFile();
 };
 
 // GPX Import function
@@ -360,8 +357,17 @@ export const importRouteFromGPX = async (
 	onError?: (message: string) => void,
 ) => {
 	Logger.info("[Routing] GPX import requested");
-	if (onError) {
-		onError("GPX import functionality is not yet implemented.");
+	const result = await importRouteFromGPXString({
+		map: _map,
+		accessToken: _accessToken,
+		gpxString: _gpxString,
+		setRouteDistance: _setRouteDistance,
+		setRouteDuration: _setRouteDuration,
+		setHasRoute: _setHasRoute,
+	});
+
+	if (!result.success && onError && result.message) {
+		onError(result.message);
 	}
 };
 

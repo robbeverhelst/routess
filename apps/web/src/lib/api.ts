@@ -1,4 +1,5 @@
 import { ApiClient, WebPlatformAdapter } from "@routess/api-client";
+import { clearStoredAuthState, notifyAuthStateChange } from "@/lib/auth-state";
 import { handleAPIError } from "@/lib/errors";
 import { Logger } from "@/lib/logger";
 
@@ -14,14 +15,9 @@ class WebAuthStateManagerWithGoogleAuth extends WebPlatformAdapter {
 			setToken: (token: string) => baseManager.setToken(token),
 			clearToken: () => baseManager.clearToken(),
 			refreshToken: () => baseManager.refreshToken(),
-			async clearAuthState() {
-				// Import googleAuth to trigger UI updates (web-specific)
-				try {
-					const { googleAuth } = await import("@/lib/google-auth");
-					googleAuth.clearAuthState();
-				} catch {
-					// Ignore if not available
-				}
+			clearAuthState() {
+				clearStoredAuthState();
+				notifyAuthStateChange();
 			},
 		};
 	}

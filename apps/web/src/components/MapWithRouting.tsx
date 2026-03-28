@@ -1,27 +1,17 @@
-import { useEffect, useRef, useState } from "react";
 import { useLocalStorageInit } from "@/components/hooks/useLocalStorageInit";
-import { useMapViewPersistence } from "@/components/hooks/useMapViewPersistence";
-import { useRouteActions } from "@/components/hooks/useRouteActions";
-import { useWaypointError } from "@/components/hooks/useWaypointError";
+import { useMapWithRoutingState } from "@/components/hooks/useMapWithRoutingState";
 import { MapCanvas } from "@/components/map/MapCanvas";
 import { MapControls } from "@/components/map/MapControls";
 import { MapNotifications } from "@/components/map/MapNotifications";
+import { MapShortcutBindings } from "@/components/map/MapShortcutBindings";
 import { MapConfigurationProvider } from "@/components/providers/MapConfigurationProvider";
-import { MapInteractionProvider, useMapInteraction } from "@/components/providers/MapInteractionProvider";
+import { MapInteractionProvider } from "@/components/providers/MapInteractionProvider";
 import { MapModalsProvider } from "@/components/providers/MapModalsProvider";
 import { UserLocationProvider, useUserLocation } from "@/components/providers/UserLocationProvider";
 import type { PopupInfo as MapPopupInfo } from "@/features/routing/managers/MapInteractionManager";
-import {
-	loadLanguageFromLocalStorage,
-	saveLanguageToLocalStorage,
-} from "@/features/routing/services/LocalStorageService";
-import { useRouteData } from "@/hooks/useRouteData";
-import { useServiceWorker } from "@/hooks/useServiceWorker";
-import { useUndoRedoState } from "@/hooks/useUndoRedoState";
 import { ErrorBoundary } from "@/lib/errors";
 import type { SupportedLanguage } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
-import { teardownRouting } from "@/lib/routing";
 
 // Get Mapbox access token from environment variables
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN || "__VITE_MAPBOX_ACCESS_TOKEN__";
@@ -113,20 +103,16 @@ const MapWithRoutingContent: React.FC<MapboxMapProps> = ({
 	initialZoom,
 	routeId,
 }) => {
-	const mapRef = useRef<mapboxgl.Map | null>(null);
-
-	// State management
-	const [popup, setPopup] = useState<MapPopupInfo | null>(null);
-	const [currentLanguage, setCurrentLanguage] = useState<SupportedLanguage>(loadLanguageFromLocalStorage());
-
 	// Initialize localStorage data
 	const { detectedRouteInLocalStorageOnInit, lastKnownLocationFromStorage, lastSavedMapView } = useLocalStorageInit();
-
-	// Custom hooks
-	const { waypointError, handleWaypointError } = useWaypointError();
-
-	// Route data hook
 	const {
+		mapRef,
+		popup,
+		setPopup,
+		currentLanguage,
+		setCurrentLanguage,
+		waypointError,
+		handleWaypointError,
 		routeDistance,
 		routeDuration,
 		hasRoute,
@@ -138,36 +124,9 @@ const MapWithRoutingContent: React.FC<MapboxMapProps> = ({
 		setRouteDuration,
 		setHasRoute,
 		handleShareRoute,
-		handleCopySharedUrl: handleCopySharedUrlFromHook,
-		handleRouteInfoError: handleRouteInfoErrorFromHook,
+		handleCopySharedUrl,
+		handleRouteInfoError,
 		clearShareState,
-		setShareNotification,
-	} = useRouteData();
-
-	// Undo/redo state
-	const { canUndo, canRedo } = useUndoRedoState();
-
-	// Service worker state
-	const { isOnline } = useServiceWorker();
-
-	// Map interaction provider
-	const { handleKeyboardShortcuts, handlePWAShortcuts } = useMapInteraction();
-
-	// Effects for language management
-	useEffect(() => {
-		saveLanguageToLocalStorage(currentLanguage);
-	}, [currentLanguage]);
-
-	// Cleanup on unmount
-	useEffect(() => {
-		return () => {
-			Logger.info("[MapWithRouting] Tearing down routing module subscriptions and refs.");
-			teardownRouting();
-		};
-	}, []);
-
-	// Use route actions hook
-	const {
 		handleUndo,
 		handleRedo,
 		handleReverseRoute,
@@ -179,44 +138,12 @@ const MapWithRoutingContent: React.FC<MapboxMapProps> = ({
 		handleZoomToRoute,
 		handleCopyShareLinkToClipboard,
 		handleImportError,
-	} = useRouteActions({
-		mapRef,
+		canUndo,
+		canRedo,
+		isOnline,
+	} = useMapWithRoutingState({
 		mapboxToken: MAPBOX_TOKEN,
-		hasRoute,
-		popup,
-		setPopup,
-		setRouteDistance,
-		setRouteDuration,
-		setHasRoute,
-		handleWaypointError,
-		handleRouteInfoError: handleRouteInfoErrorFromHook,
-		clearShareState,
-		setShareNotification,
 	});
-
-	// Use map view persistence
-	useMapViewPersistence(mapRef);
-
-	// Setup keyboard shortcuts
-	useEffect(() => {
-		const cleanup = handleKeyboardShortcuts(canUndo, canRedo, handleUndo, handleRedo);
-		return cleanup;
-	}, [canUndo, canRedo, handleUndo, handleRedo, handleKeyboardShortcuts]);
-
-	// Setup PWA shortcuts
-	useEffect(() => {
-		const cleanup = handlePWAShortcuts(
-			() => {}, // openRouteGeneratorModal - would come from provider
-			() => {}, // handleLocate - would come from provider
-			() => {
-				const fileInput = document.querySelector('input[type="file"][accept=".gpx"]') as HTMLInputElement;
-				if (fileInput) {
-					fileInput.click();
-				}
-			},
-		);
-		return cleanup;
-	}, [handlePWAShortcuts]);
 
 	return (
 		<UserLocationProvider mapRef={mapRef} hasRoute={hasRoute} isMapReady={mapRef.current !== null}>
@@ -240,7 +167,7 @@ const MapWithRoutingContent: React.FC<MapboxMapProps> = ({
 				onRemoveWaypoint={handleRemoveWaypoint}
 				onAddWaypointOnRoute={handleAddWaypointOnRoute}
 				handleWaypointError={handleWaypointError}
-				handleRouteInfoError={handleRouteInfoErrorFromHook}
+				handleRouteInfoError={handleRouteInfoError}
 				lastKnownLocationFromStorage={lastKnownLocationFromStorage}
 				detectedRouteInLocalStorageOnInit={detectedRouteInLocalStorageOnInit}
 				lastSavedMapView={lastSavedMapView}
@@ -255,7 +182,7 @@ const MapWithRoutingContent: React.FC<MapboxMapProps> = ({
 				onZoomToRoute={handleZoomToRoute}
 				onShare={handleShareRoute}
 				displayedShareUrl={displayedShareUrl}
-				onCopySharedUrl={handleCopySharedUrlFromHook}
+				onCopySharedUrl={handleCopySharedUrl}
 				onClearShareDisplay={clearShareState}
 				onCopyShareLink={handleCopyShareLinkToClipboard}
 				onSelectLocation={handleSelectLocation}
@@ -286,6 +213,14 @@ const MapConfigurationContent: React.FC<MapConfigurationContentProps> = (props) 
 			setRouteDuration={props.setRouteDuration}
 			setHasRoute={props.setHasRoute}
 		>
+			<MapShortcutBindings
+				mapRef={props.mapRef}
+				mapboxToken={MAPBOX_TOKEN}
+				setRouteDistance={props.setRouteDistance}
+				setRouteDuration={props.setRouteDuration}
+				setHasRoute={props.setHasRoute}
+				onImportError={props.onImportError}
+			/>
 			<MapConfigurationProvider
 				mapRef={props.mapRef}
 				userLocation={userLocation}

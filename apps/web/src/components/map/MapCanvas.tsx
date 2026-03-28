@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import MapGL, { type MapRef } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
 import type { Map as MapboxMap } from "mapbox-gl";
@@ -24,6 +24,33 @@ const DEFAULT_VIEW_STATE = {
 	bearing: 0,
 	pitch: 0,
 };
+
+const STANDARD_MAP_STYLE = "mapbox://styles/mapbox/standard";
+const SATELLITE_MAP_STYLE = "mapbox://styles/mapbox/satellite-streets-v12";
+
+function MapLoadingShell({ isSatellite }: { isSatellite: boolean }) {
+	return (
+		<div
+			data-testid="map-loading-shell"
+			aria-hidden="true"
+			className={`absolute inset-0 overflow-hidden transition-opacity duration-300 ${
+				isSatellite ? "bg-[#203024]" : "bg-slate-950"
+			}`}
+		>
+			<div
+				className={`absolute inset-0 ${
+					isSatellite
+						? "bg-[radial-gradient(circle_at_top,#6b8a5a,transparent_45%),radial-gradient(circle_at_bottom,#314b2f,transparent_35%),linear-gradient(135deg,#243b2e,#101c14)]"
+						: "bg-[radial-gradient(circle_at_top,#1e3a8a,transparent_45%),radial-gradient(circle_at_bottom,#1e293b,transparent_40%),linear-gradient(180deg,#020617,#0f172a)]"
+				}`}
+			/>
+			<div className="absolute left-4 top-4 h-10 w-10 rounded-xl bg-white/15 backdrop-blur-sm" />
+			<div className="absolute right-4 top-4 h-10 w-10 rounded-xl bg-white/15 backdrop-blur-sm" />
+			<div className="absolute left-1/2 top-8 h-12 w-64 -translate-x-1/2 rounded-2xl bg-white/12 backdrop-blur-sm" />
+			<div className="absolute bottom-8 right-8 h-16 w-28 rounded-2xl bg-white/12 backdrop-blur-sm" />
+		</div>
+	);
+}
 
 interface MapCanvasProps {
 	mapRef: React.RefObject<MapboxMap | null>;
@@ -85,6 +112,7 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
 	const isMapLockedRef = useRef(false);
 	const internalMapRef = useRef<MapRef | null>(null);
 	const animationFrameIdRef = useRef<number | null>(null);
+	const [isMapLoaded, setIsMapLoaded] = useState(false);
 
 	// Get configuration from providers
 	const {
@@ -100,6 +128,8 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
 	const { location: userLocation, error: locationError, isLoading: isUserLocationLoading } = useUserLocation();
 
 	const { handleMapError } = useErrorHandler();
+	const isSatelliteStyle = currentMapStyle === "satellite";
+	const mapStyleUrl = isSatelliteStyle ? SATELLITE_MAP_STYLE : STANDARD_MAP_STYLE;
 
 	// Validate Mapbox token on mount
 	useEffect(() => {
@@ -261,66 +291,67 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
 
 	return (
 		<>
-			<MapGL
-				ref={internalMapRef}
-				mapboxAccessToken={mapboxToken}
-				initialViewState={{
-					...effectiveInitialViewState,
-					pitch: ((effectiveInitialViewState as Record<string, unknown>)?.pitch as number) ?? MAP_PITCH,
-					bearing: ((effectiveInitialViewState as Record<string, unknown>)?.bearing as number) ?? currentBearing,
-				}}
-				style={{ width, height }}
-				mapStyle={
-					currentMapStyle === "satellite"
-						? "mapbox://styles/mapbox/satellite-streets-v12"
-						: "mapbox://styles/mapbox/standard"
-				}
-				reuseMaps
-				attributionControl={false}
-				projection="globe"
-				antialias={true}
-				minPitch={MAP_PITCH}
-				maxPitch={MAP_PITCH}
-				onLoad={(evt) => {
-					// Set the external mapRef to the map instance
-					if (internalMapRef.current) {
-						mapRef.current = internalMapRef.current.getMap();
-					}
-					handleMapLoad(evt);
-				}}
-				onError={(error) => {
-					Logger.error("[MapCanvas] Map error:", error);
+			<div className="relative" style={{ width, height }}>
+				<MapGL
+					ref={internalMapRef}
+					mapboxAccessToken={mapboxToken}
+					initialViewState={{
+						...effectiveInitialViewState,
+						pitch: ((effectiveInitialViewState as Record<string, unknown>)?.pitch as number) ?? MAP_PITCH,
+						bearing: ((effectiveInitialViewState as Record<string, unknown>)?.bearing as number) ?? currentBearing,
+					}}
+					style={{ width: "100%", height: "100%", opacity: isMapLoaded ? 1 : 0, transition: "opacity 200ms ease" }}
+					mapStyle={mapStyleUrl}
+					reuseMaps
+					attributionControl={false}
+					projection="globe"
+					antialias={true}
+					minPitch={MAP_PITCH}
+					maxPitch={MAP_PITCH}
+					onLoad={(evt) => {
+						// Set the external mapRef to the map instance
+						if (internalMapRef.current) {
+							mapRef.current = internalMapRef.current.getMap();
+						}
+						setIsMapLoaded(true);
+						handleMapLoad(evt);
+					}}
+					onError={(error) => {
+						Logger.error("[MapCanvas] Map error:", error);
 
-					// Check if it's a Mapbox token error
-					if (
-						error.error?.message?.includes("401") ||
-						error.error?.message?.includes("Invalid access token") ||
-						error.error?.message?.includes("Unauthorized")
-					) {
-						handleMapError(new Error("Invalid Mapbox access token. Please check your API key."), "mapbox-auth");
-					} else {
-						handleMapError(new Error(error.error?.message || "Failed to load map"), "map-load");
-					}
-				}}
-				fog={{
-					color: "rgb(186, 210, 235)",
-					"high-color": "rgb(36, 92, 223)",
-					"horizon-blend": 0.02,
-					"space-color": "rgb(11, 11, 25)",
-					"star-intensity": 0.6,
-				}}
-			>
-				{popup && mapRef.current && (
-					<MapPopup
-						popupInfo={popup}
-						mapInstance={mapRef.current}
-						onAddDirectWaypoint={onAddDirectWaypoint}
-						onRemoveWaypoint={onRemoveWaypoint}
-						onAddWaypointOnRoute={onAddWaypointOnRoute}
-						currentLanguage={currentLanguage}
-					/>
-				)}
-			</MapGL>
+						// Check if it's a Mapbox token error
+						if (
+							error.error?.message?.includes("401") ||
+							error.error?.message?.includes("Invalid access token") ||
+							error.error?.message?.includes("Unauthorized")
+						) {
+							handleMapError(new Error("Invalid Mapbox access token. Please check your API key."), "mapbox-auth");
+						} else {
+							handleMapError(new Error(error.error?.message || "Failed to load map"), "map-load");
+						}
+					}}
+					fog={{
+						color: "rgb(186, 210, 235)",
+						"high-color": "rgb(36, 92, 223)",
+						"horizon-blend": 0.02,
+						"space-color": "rgb(11, 11, 25)",
+						"star-intensity": 0.6,
+					}}
+				>
+					{popup && mapRef.current && (
+						<MapPopup
+							popupInfo={popup}
+							mapInstance={mapRef.current}
+							onAddDirectWaypoint={onAddDirectWaypoint}
+							onRemoveWaypoint={onRemoveWaypoint}
+							onAddWaypointOnRoute={onAddWaypointOnRoute}
+							currentLanguage={currentLanguage}
+						/>
+					)}
+				</MapGL>
+
+				{!isMapLoaded && <MapLoadingShell isSatellite={isSatelliteStyle} />}
+			</div>
 
 			{/* Sun Position Indicator - Shows sun on map edges */}
 			{showSunDirection && currentSunPosition && userLocation && (

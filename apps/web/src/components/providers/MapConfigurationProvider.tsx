@@ -3,6 +3,11 @@ import type React from "react";
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import type { TimeOfDay } from "@/components/ui/route-controls";
 import {
+	initializeSourcesAndLayers,
+	updateRouteLayer,
+	updateWaypointsLayer,
+} from "@/features/routing/managers/MapLayerManager";
+import {
 	loadLightPresetFromLocalStorage,
 	loadMapLockStateFromLocalStorage,
 	loadMapStyleFromLocalStorage,
@@ -215,32 +220,26 @@ export const MapConfigurationProvider: React.FC<MapConfigurationProviderProps> =
 					}
 
 					// Re-initialize all map layers (route, waypoints, etc.)
-					import("@/features/routing/managers/MapLayerManager").then(
-						({ initializeSourcesAndLayers, updateWaypointsLayer, updateRouteLayer }) => {
-							Logger.info("[MapConfigurationProvider] Re-initializing map layers after style change");
+					Logger.info("[MapConfigurationProvider] Re-initializing map layers after style change");
 
-							// 1. Initialize the layer structure
-							if (mapRef.current) {
-								initializeSourcesAndLayers(mapRef.current);
-							}
+					// 1. Initialize the layer structure
+					initializeSourcesAndLayers(mapRef.current);
 
-							// 2. Restore current route data from Zustand store
-							if (waypoints.length > 0 && mapRef.current) {
-								Logger.info(
-									"[MapConfigurationProvider] Restoring waypoints to map:",
-									waypoints.length,
-									"locked:",
-									isMapLocked,
-								);
-								updateWaypointsLayer(mapRef.current, waypoints, isMapLocked);
-							}
+					// 2. Restore current route data from Zustand store
+					if (waypoints.length > 0) {
+						Logger.info(
+							"[MapConfigurationProvider] Restoring waypoints to map:",
+							waypoints.length,
+							"locked:",
+							isMapLocked,
+						);
+						updateWaypointsLayer(mapRef.current, waypoints, isMapLocked);
+					}
 
-							if (routePath && routePath.length > 0 && mapRef.current) {
-								Logger.info("[MapConfigurationProvider] Restoring route path to map:", routePath.length, "points");
-								updateRouteLayer(mapRef.current, routePath);
-							}
-						},
-					);
+					if (routePath && routePath.length > 0) {
+						Logger.info("[MapConfigurationProvider] Restoring route path to map:", routePath.length, "points");
+						updateRouteLayer(mapRef.current, routePath);
+					}
 				}
 			});
 
@@ -251,18 +250,13 @@ export const MapConfigurationProvider: React.FC<MapConfigurationProviderProps> =
 	// Effect to update waypoint visibility when lock state changes
 	useEffect(() => {
 		if (mapRef.current && hasRoute && waypoints.length > 0) {
-			// Import required functions and update waypoint visibility
-			import("@/features/routing/managers/MapLayerManager").then(({ updateWaypointsLayer }) => {
-				if (mapRef.current) {
-					Logger.info(
-						"[MapConfigurationProvider] Map lock toggled, updating waypoint visibility. Locked:",
-						isMapLocked,
-						"waypoints:",
-						waypoints.length,
-					);
-					updateWaypointsLayer(mapRef.current, waypoints, isMapLocked);
-				}
-			});
+			Logger.info(
+				"[MapConfigurationProvider] Map lock toggled, updating waypoint visibility. Locked:",
+				isMapLocked,
+				"waypoints:",
+				waypoints.length,
+			);
+			updateWaypointsLayer(mapRef.current, waypoints, isMapLocked);
 		}
 	}, [isMapLocked, hasRoute, mapRef, waypoints]);
 

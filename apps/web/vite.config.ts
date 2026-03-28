@@ -7,15 +7,10 @@ import { defineConfig } from "vitest/config";
 // https://vite.dev/config/
 export default defineConfig({
 	plugins: [
-		// Disable TanStack Router plugin in Docker builds to prevent conflicts
-		...(process.env.DOCKER_BUILD
-			? []
-			: [
-					TanStackRouterVite({
-						routeFileIgnorePrefix: "-",
-						generatedRouteTree: "./src/routeTree.gen.ts",
-					}),
-				]),
+		TanStackRouterVite({
+			routeFileIgnorePrefix: "-",
+			generatedRouteTree: "./src/routeTree.gen.ts",
+		}),
 		react(),
 		tailwindcss(),
 	],
@@ -59,7 +54,7 @@ export default defineConfig({
 		environment: "jsdom",
 		setupFiles: "./src/test/setup.ts",
 		include: ["src/**/*.test.{ts,tsx}", "src/**/*.spec.{ts,tsx}"],
-		exclude: ["src/components/map/__tests__/**", "node_modules", "dist"],
+		exclude: ["node_modules", "dist"],
 		passWithNoTests: true,
 		coverage: {
 			provider: "v8",

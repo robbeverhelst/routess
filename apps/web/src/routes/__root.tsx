@@ -6,6 +6,7 @@ import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { ErrorBoundary, ErrorToast } from "@/lib/errors";
 import { googleAuth } from "@/lib/google-auth";
 import { queryClient } from "@/lib/query-client";
+import { isDev } from "@/lib/utils/env";
 
 export const Route = createRootRoute({
 	component: () => (
@@ -16,8 +17,12 @@ export const Route = createRootRoute({
 						<Outlet />
 					</div>
 					<ErrorToast position="bottom-left" maxVisible={2} autoHideDuration={4000} />
-					<ReactQueryDevtools initialIsOpen={false} />
-					<TanStackRouterDevtools />
+					{isDev() && (
+						<>
+							<ReactQueryDevtools initialIsOpen={false} />
+							<TanStackRouterDevtools />
+						</>
+					)}
 				</GoogleOAuthProvider>
 			</QueryClientProvider>
 		</ErrorBoundary>

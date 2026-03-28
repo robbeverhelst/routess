@@ -198,12 +198,28 @@ export function useServiceWorker(): UseServiceWorkerReturn {
 		};
 	}, [updateSwState, updateNetworkStatus, refreshCacheStatus]);
 
-	// Register service worker in development
+	// Development should never keep a stale PWA worker around.
 	useEffect(() => {
 		if (import.meta.env.DEV && serviceWorkerManager.isSupported()) {
-			serviceWorkerManager.register().catch((error) => {
-				Logger.error("[useServiceWorker] Development registration failed:", error);
-			});
+			void navigator.serviceWorker
+				.getRegistrations()
+				.then(async (registrations) => {
+					await Promise.all(registrations.map((registration) => registration.unregister()));
+
+					if ("caches" in window) {
+						const cacheNames = await caches.keys();
+						await Promise.all(
+							cacheNames
+								.filter((cacheName) => cacheName.startsWith("routess-"))
+								.map((cacheName) => caches.delete(cacheName)),
+						);
+					}
+
+					Logger.info("[useServiceWorker] Disabled service workers and cleared Routess caches in development.");
+				})
+				.catch((error) => {
+					Logger.error("[useServiceWorker] Development cleanup failed:", error);
+				});
 		}
 	}, []);
 

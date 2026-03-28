@@ -6,6 +6,7 @@ import {
 	useDirectFlags,
 	useDisplayedShareUrl,
 	useHasRoute,
+	useIsMapLocked,
 	useRouteDistance,
 	useRouteDuration,
 	useRouteInfoErrorMessage,
@@ -52,6 +53,7 @@ export function useRouteData(): RouteDataState & RouteDataHandlers {
 	const routeInfoErrorMessage = useRouteInfoErrorMessage();
 	const waypoints = useWaypoints();
 	const directFlags = useDirectFlags();
+	const isMapLocked = useIsMapLocked();
 
 	const zustandSetRouteDistance = useSetRouteDistance();
 	const zustandSetRouteDuration = useSetRouteDuration();
@@ -112,7 +114,7 @@ export function useRouteData(): RouteDataState & RouteDataHandlers {
 			return;
 		}
 
-		const encodedData = serializeAndCompress(waypoints, directFlags, true);
+		const encodedData = serializeAndCompress(waypoints, directFlags, isMapLocked);
 		if (encodedData) {
 			const shareUrl = `${window.location.origin}${window.location.pathname}?route=${encodedData}`;
 			navigator.clipboard
@@ -131,7 +133,7 @@ export function useRouteData(): RouteDataState & RouteDataHandlers {
 			handleRouteInfoError("Could not generate shareable link.");
 			setDisplayedShareUrl(null);
 		}
-	}, [waypoints, directFlags, handleRouteInfoError, setShareNotification, setDisplayedShareUrl]);
+	}, [waypoints, directFlags, handleRouteInfoError, isMapLocked, setShareNotification, setDisplayedShareUrl]);
 
 	const handleCopySharedUrl = useCallback(
 		(urlToCopy: string) => {
