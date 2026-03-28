@@ -4,7 +4,7 @@ import { configureApplication } from "./app/app-setup";
 import { getAppConfig, loadEnvironment } from "./config/app-config";
 import { initializeOpenTelemetry } from "./telemetry/tracing";
 
-async function bootstrap() {
+export async function bootstrap() {
 	loadEnvironment();
 	const config = getAppConfig();
 	initializeOpenTelemetry(config);
@@ -16,4 +16,7 @@ async function bootstrap() {
 
 	await app.listen(config.app.port);
 }
-bootstrap();
+
+if (require.main === module) {
+	void bootstrap();
+}
