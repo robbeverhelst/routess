@@ -19,12 +19,10 @@ FROM oven/bun:1.3.11-alpine AS production
 # Create app directory
 WORKDIR /app
 
-# Copy package files for production dependencies (without lockfile)
+# Copy package metadata and lockfile-consistent dependencies from the builder stage
 COPY package.json ./
 COPY apps/api/package.json ./apps/api/
-
-# Install production dependencies
-RUN bun install --production
+COPY --from=builder /app/node_modules ./node_modules
 
 # Copy built application from builder stage
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
