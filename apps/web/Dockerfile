@@ -1,10 +1,16 @@
-FROM oven/bun:latest AS builder
+FROM oven/bun:1.3.11-alpine AS deps
 
 WORKDIR /app
 
 COPY . .
 
 RUN bun install --frozen-lockfile
+
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+COPY --from=deps /app /app
 
 # Build with placeholders — real values are injected at runtime by entrypoint.sh
 ENV VITE_MAPBOX_ACCESS_TOKEN=__VITE_MAPBOX_ACCESS_TOKEN__
@@ -15,7 +21,7 @@ ENV VITE_APP_VERSION=__VITE_APP_VERSION__
 ENV DOCKER_BUILD=true
 
 WORKDIR /app/apps/web
-RUN bun run build
+RUN node /app/node_modules/vite/bin/vite.js build
 
 FROM nginx:alpine
 
