@@ -27,10 +27,9 @@ export class MetricsService implements OnModuleInit {
 	private routesCreated: Counter;
 	private routesDeleted: Counter;
 	private activeUsers: UpDownCounter;
+	private activeUsersCount = 0;
 
-	// Database metrics
 	private dbQueryDuration: Histogram;
-	private dbConnectionPool: UpDownCounter;
 
 	async onModuleInit() {
 		await this.initializeMetrics();
@@ -68,14 +67,9 @@ export class MetricsService implements OnModuleInit {
 			description: "Number of currently active users",
 		});
 
-		// Database metrics
 		this.dbQueryDuration = this.meter.createHistogram("db_query_duration_ms", {
 			description: "Duration of database queries in milliseconds",
 			unit: "ms",
-		});
-
-		this.dbConnectionPool = this.meter.createUpDownCounter("db_connection_pool_size", {
-			description: "Current size of database connection pool",
 		});
 
 		// Initialize counters with historical data
@@ -96,12 +90,9 @@ export class MetricsService implements OnModuleInit {
 			const deletedRoutes = await this.routeRepository.count({ deletedAt: { $ne: null } });
 			this.routesDeleted.add(deletedRoutes);
 
-			// Set active users to 0 initially (will be updated as users log in)
-			this.activeUsers.add(0);
-
-			console.log(`Metrics initialized: ${totalRoutes} routes, ${totalUsers} users, ${deletedRoutes} deleted routes`);
-		} catch (error) {
-			console.error("Failed to initialize business metrics:", error);
+			this.setActiveUsers(0);
+		} catch (_error) {
+			// Metrics should never block app startup.
 		}
 	}
 
@@ -130,20 +121,15 @@ export class MetricsService implements OnModuleInit {
 		this.routesDeleted.add(1, { user_id: userId.toString() });
 	}
 
-	incrementActiveUsers() {
-		this.activeUsers.add(1);
+	setActiveUsers(count: number) {
+		const delta = count - this.activeUsersCount;
+		if (delta !== 0) {
+			this.activeUsers.add(delta);
+			this.activeUsersCount = count;
+		}
 	}
 
-	decrementActiveUsers() {
-		this.activeUsers.add(-1);
-	}
-
-	// Database metrics methods
 	recordDbQuery(operation: string, duration: number) {
 		this.dbQueryDuration.record(duration, { operation });
-	}
-
-	updateConnectionPoolSize(delta: number) {
-		this.dbConnectionPool.add(delta);
 	}
 }

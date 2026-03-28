@@ -10,6 +10,10 @@ export interface ApiUser {
 	name: string;
 	avatar?: string;
 	isEmailVerified: boolean;
+	statistics?: {
+		totalRoutes: number;
+		totalDistance: number;
+	};
 }
 
 export interface AuthResponse {
@@ -33,6 +37,11 @@ export interface ApiRoute {
 	description?: string;
 	waypoints: Waypoint[];
 	distance?: number;
+	duration?: number;
+	elevationGain?: number;
+	startAddress?: string;
+	endAddress?: string;
+	user: ApiUser;
 	createdAt: string;
 	updatedAt: string;
 }
@@ -42,7 +51,10 @@ export interface CreateRouteRequest {
 	description?: string;
 	waypoints: Waypoint[];
 	distance?: number;
+	duration?: number;
 	elevationGain?: number;
+	startAddress?: string;
+	endAddress?: string;
 }
 
 export interface UpdateRouteRequest {
@@ -50,6 +62,10 @@ export interface UpdateRouteRequest {
 	description?: string;
 	waypoints?: Waypoint[];
 	distance?: number;
+	duration?: number;
+	elevationGain?: number;
+	startAddress?: string;
+	endAddress?: string;
 }
 
 // HTTP Client Interface

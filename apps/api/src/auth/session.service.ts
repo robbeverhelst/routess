@@ -1,8 +1,11 @@
+import { randomUUID } from "node:crypto";
 import { EntityManager, EntityRepository } from "@mikro-orm/core";
 import { InjectRepository } from "@mikro-orm/nestjs";
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
-import { v4 as uuidv4 } from "uuid";
+import type { AppConfig } from "../config/app-config";
+import { APP_CONFIG } from "../config/config.module";
+import { Route } from "../entities/route.entity";
 import { Session } from "../entities/session.entity";
 import { User } from "../entities/user.entity";
 import { MetricsService } from "../telemetry/metrics.service";
@@ -14,29 +17,37 @@ export class SessionService {
 		private readonly sessionRepository: EntityRepository<Session>,
 		@InjectRepository(User)
 		private readonly userRepository: EntityRepository<User>,
+		@InjectRepository(Route)
+		private readonly routeRepository: EntityRepository<Route>,
 		private readonly em: EntityManager,
 		private readonly jwtService: JwtService,
-		readonly _metricsService: MetricsService,
+		@Inject(APP_CONFIG)
+		private readonly config: AppConfig,
+		private readonly metricsService: MetricsService,
 	) {}
 
-	async createSession(userId: number, userAgent?: string, ipAddress?: string): Promise<string> {
+	async createSession(
+		userId: number,
+		context?: {
+			userAgent?: string;
+			ipAddress?: string;
+		},
+	): Promise<string> {
 		const user = await this.userRepository.findOneOrFail({ id: userId });
-		const jti = uuidv4();
-		const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+		const jti = randomUUID();
+		const expiresAt = new Date(Date.now() + this.config.auth.sessionTtlMs);
 
 		const session = this.sessionRepository.create({
 			jti,
 			user: user.id,
 			expiresAt,
 			lastActivity: new Date(),
-			userAgent,
-			ipAddress,
+			userAgent: context?.userAgent,
+			ipAddress: context?.ipAddress,
 		});
 
 		await this.em.persistAndFlush(session);
-
-		// Update active users count
-		await this.updateActiveUsersMetric();
+		await this.syncActiveUsersMetric();
 
 		return this.jwtService.sign({ sub: userId, email: user.email, jti });
 	}
@@ -62,9 +73,7 @@ export class SessionService {
 		if (session) {
 			session.deletedAt = new Date();
 			await this.em.persistAndFlush(session);
-
-			// Update active users count
-			await this.updateActiveUsersMetric();
+			await this.syncActiveUsersMetric();
 		}
 	}
 
@@ -79,9 +88,7 @@ export class SessionService {
 		}
 
 		await this.em.flush();
-
-		// Update active users count after cleanup
-		await this.updateActiveUsersMetric();
+		await this.syncActiveUsersMetric();
 
 		return expiredSessions.length;
 	}
@@ -101,22 +108,34 @@ export class SessionService {
 		});
 	}
 
-	private async updateActiveUsersMetric(): Promise<void> {
-		try {
-			// Get unique active users count
-			const uniqueActiveUsers = await this.sessionRepository.count(
-				{
-					expiresAt: { $gt: new Date() },
-					deletedAt: null,
-				},
-				{ groupBy: ["user"] },
-			);
+	async invalidateUserSessions(userId: number): Promise<void> {
+		const sessions = await this.sessionRepository.find({ user: userId, deletedAt: null });
+		const deletedAt = new Date();
 
-			// For simplicity, we'll let the metrics initialization handle the initial count
-			// and this will be called when sessions are created/invalidated
-			console.log(`Active sessions updated: ${uniqueActiveUsers} active sessions`);
-		} catch (error) {
-			console.error("Failed to update active users metric:", error);
+		for (const session of sessions) {
+			session.deletedAt = deletedAt;
 		}
+
+		await this.em.flush();
+		await this.syncActiveUsersMetric();
+	}
+
+	async getUserStatistics(userId: number): Promise<{ totalRoutes: number; totalDistance: number }> {
+		const routes = await this.routeRepository.find({ user: userId, deletedAt: null });
+
+		return {
+			totalRoutes: routes.length,
+			totalDistance: routes.reduce((total, route) => total + (route.distance || 0), 0),
+		};
+	}
+
+	private async syncActiveUsersMetric(): Promise<void> {
+		const result = (await this.em.getConnection().execute<{ count: number }[]>(
+			`select count(distinct("user_id"))::int as count
+			 from "session"
+			 where "expires_at" > now() and "deleted_at" is null`,
+		)) as Array<{ count: number | string }>;
+
+		this.metricsService.setActiveUsers(Number(result[0]?.count || 0));
 	}
 }

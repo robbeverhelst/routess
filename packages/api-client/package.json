@@ -9,7 +9,7 @@
 		"dist"
 	],
 	"scripts": {
-		"build": "tsc",
+		"build": "tsc -b ../core tsconfig.json",
 		"clean": "rm -rf dist",
 		"lint": "biome check ."
 	},

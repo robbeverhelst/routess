@@ -27,7 +27,19 @@ export class Route extends BaseEntity {
 	waypoints!: Waypoint[];
 
 	@Property({ type: "float", nullable: true })
-	distance?: number; // in kilometers
+	distance?: number; // in meters
+
+	@Property({ type: "integer", nullable: true })
+	duration?: number; // in seconds
+
+	@Property({ type: "float", nullable: true })
+	elevationGain?: number; // in meters
+
+	@Property({ nullable: true })
+	startAddress?: string;
+
+	@Property({ nullable: true })
+	endAddress?: string;
 
 	@ManyToOne(() => User)
 	user!: Ref<User>;

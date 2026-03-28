@@ -14,6 +14,14 @@ describe("AppController (e2e)", () => {
 	});
 
 	it("/ (GET)", () => {
-		return supertest(app.getHttpServer()).get("/").expect(200).expect("Hello World!");
+		return supertest(app.getHttpServer())
+			.get("/")
+			.expect(200)
+			.expect(({ body }) => {
+				expect(body).toMatchObject({
+					name: "Routess API",
+					status: "ok",
+				});
+			});
 	});
 });

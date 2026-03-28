@@ -1,10 +1,12 @@
 import { EntityManager, EntityRepository } from "@mikro-orm/core";
 import { InjectRepository } from "@mikro-orm/nestjs";
-import { Injectable, UnauthorizedException } from "@nestjs/common";
-import { JwtService } from "@nestjs/jwt";
+import { Inject, Injectable, UnauthorizedException } from "@nestjs/common";
 import { OAuth2Client } from "google-auth-library";
+import { type AppConfig } from "../config/app-config";
+import { APP_CONFIG } from "../config/config.module";
 import { User } from "../entities/user.entity";
 import { MetricsService } from "../telemetry/metrics.service";
+import { toUserProfileDto, toUserResponseDto } from "../users/user.mapper";
 import type { AuthResponseDto, GoogleAuthDto } from "./dto";
 import { SessionService } from "./session.service";
 
@@ -16,18 +18,25 @@ export class AuthService {
 		@InjectRepository(User)
 		private userRepository: EntityRepository<User>,
 		private entityManager: EntityManager,
-		_jwtService: JwtService,
+		@Inject(APP_CONFIG)
+		private readonly config: AppConfig,
 		private metricsService: MetricsService,
 		private sessionService: SessionService,
 	) {
-		this.googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+		this.googleClient = new OAuth2Client(this.config.auth.googleClientId);
 	}
 
-	async googleAuth(googleAuthDto: GoogleAuthDto): Promise<AuthResponseDto> {
+	async googleAuth(
+		googleAuthDto: GoogleAuthDto,
+		sessionContext?: {
+			userAgent?: string | string[];
+			ipAddress?: string;
+		},
+	): Promise<AuthResponseDto> {
 		try {
 			const ticket = await this.googleClient.verifyIdToken({
 				idToken: googleAuthDto.credential,
-				audience: process.env.GOOGLE_CLIENT_ID,
+				audience: this.config.auth.googleClientId,
 			});
 
 			const payload = ticket.getPayload();
@@ -68,17 +77,17 @@ export class AuthService {
 			}
 
 			// Create session and get JWT with session tracking
-			const accessToken = await this.sessionService.createSession(user.id);
+			const accessToken = await this.sessionService.createSession(user.id, {
+				userAgent:
+					typeof sessionContext?.userAgent === "string"
+						? sessionContext.userAgent
+						: sessionContext?.userAgent?.join(", "),
+				ipAddress: sessionContext?.ipAddress,
+			});
 
 			return {
 				accessToken,
-				user: {
-					id: user.id,
-					email: user.email,
-					name: user.name,
-					avatar: user.avatar,
-					isEmailVerified: user.isEmailVerified,
-				},
+				user: toUserResponseDto(user),
 			};
 		} catch {
 			throw new UnauthorizedException("Failed to authenticate with Google");
@@ -89,12 +98,14 @@ export class AuthService {
 		return this.userRepository.findOne({ id: userId, deletedAt: null });
 	}
 
-	async getProfile(userId: number): Promise<User> {
+	async getProfile(userId: number) {
 		const user = await this.userRepository.findOne({ id: userId, deletedAt: null });
 		if (!user) {
 			throw new UnauthorizedException("User not found");
 		}
-		return user;
+
+		const statistics = await this.sessionService.getUserStatistics(userId);
+		return toUserProfileDto(user, statistics);
 	}
 
 	async logout(jti: string): Promise<void> {

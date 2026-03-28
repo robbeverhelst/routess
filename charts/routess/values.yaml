@@ -17,7 +17,7 @@ web:
   service:
     type: ClusterIP
     port: 80
-    targetPort: 80
+    targetPort: 8080
     # nodePort: 30080  # only used when type is NodePort
     # annotations: {}
   resources:

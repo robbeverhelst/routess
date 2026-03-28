@@ -16,10 +16,10 @@
 		"start:prod": "mikro-orm migration:up && node dist/src/main",
 		"lint": "biome check --fix src/ test/",
 		"lint:check": "biome check src/ test/",
-		"test": "bun test",
+		"test": "bun test --timeout 30000 --max-concurrency 1",
 		"test:unit": "bun test test/unit/ src/",
-		"test:integration": "bun test test/integration/",
-		"test:e2e": "bun test test/e2e/",
+		"test:integration": "bun test --timeout 30000 --max-concurrency 1 test/integration/",
+		"test:e2e": "bun test --timeout 30000 --max-concurrency 1 test/e2e/",
 		"test:watch": "jest --watch",
 		"test:cov": "jest --coverage",
 		"test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
@@ -70,8 +70,7 @@
 		"pino-http": "^10.5.0",
 		"reflect-metadata": "^0.2.2",
 		"rimraf": "^6.0.1",
-		"rxjs": "^7.2.0",
-		"uuid": "^11.1.0"
+		"rxjs": "^7.2.0"
 	},
 	"devDependencies": {
 		"@nestjs/cli": "^11.0.7",

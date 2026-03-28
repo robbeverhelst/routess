@@ -1,36 +1,27 @@
 import type { Options } from "@mikro-orm/core";
 import { PostgreSqlDriver } from "@mikro-orm/postgresql";
+import { getAppConfig } from "./config/app-config";
+import { Route } from "./entities/route.entity";
+import { Session } from "./entities/session.entity";
+import { User } from "./entities/user.entity";
 
-// Import entities only in development/test
-let entities: Options["entities"];
-if (process.env.NODE_ENV === "production") {
-	// In production, use entity discovery with JS files
-	entities = ["./dist/src/entities/*.entity.js"];
-} else {
-	// In development/test, import entities directly
-	// eslint-disable-next-line @typescript-eslint/no-require-imports
-	const { User } = require("./entities/user.entity");
-	// eslint-disable-next-line @typescript-eslint/no-require-imports
-	const { Route } = require("./entities/route.entity");
-	// eslint-disable-next-line @typescript-eslint/no-require-imports
-	const { Session } = require("./entities/session.entity");
-	entities = [User, Route, Session];
-}
+const appConfig = getAppConfig();
 
 const config: Options = {
 	driver: PostgreSqlDriver,
-	host: process.env.DB_HOST || "localhost",
-	port: parseInt(process.env.DB_PORT || "5432", 10),
-	user: process.env.DB_USER || "postgres",
-	password: process.env.DB_PASSWORD || "postgres",
-	dbName: process.env.DB_NAME || "routess_db",
-	entities,
+	host: appConfig.database.host,
+	port: appConfig.database.port,
+	user: appConfig.database.user,
+	password: appConfig.database.password,
+	dbName: appConfig.database.name,
+	entities: [User, Route, Session],
+	entitiesTs: ["./src/entities/*.entity.ts"],
 	migrations: {
 		path: "./src/migrations",
 		pathTs: "./src/migrations",
 	},
-	debug: process.env.NODE_ENV !== "production",
-	allowGlobalContext: true, // Required for tests and simplified operations
+	debug: appConfig.database.debug,
+	allowGlobalContext: appConfig.app.isTest,
 };
 
 export default config;

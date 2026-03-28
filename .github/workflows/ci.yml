@@ -18,6 +18,26 @@ jobs:
   test:
     runs-on: arc-routess
     timeout-minutes: 15
+    env:
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: routess_db_test
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v6
         with:
@@ -50,7 +70,7 @@ jobs:
         run: bun run --filter '*' check-types
 
       - name: Test
-        run: bun run --filter './apps/web' --filter './packages/*' test
+        run: bun run --filter './apps/api' --filter './apps/web' --filter './packages/*' test
 
       - name: Build
         run: bun run --filter './packages/*' build && bun run --filter './apps/*' build

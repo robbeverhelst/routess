@@ -1,26 +1,21 @@
 import { EntityManager, EntityRepository } from "@mikro-orm/core";
 import { InjectRepository } from "@mikro-orm/nestjs";
 import { Injectable, NotFoundException } from "@nestjs/common";
+import { SessionService } from "../auth/session.service";
+import { Route } from "../entities/route.entity";
 import { User } from "../entities/user.entity";
-import type { CreateUserDto, UpdateUserDto } from "./dto/user.dto";
+import type { UpdateCurrentUserDto } from "./dto/update-current-user.dto";
 
 @Injectable()
 export class UsersService {
 	constructor(
 		@InjectRepository(User)
 		private readonly userRepository: EntityRepository<User>,
+		@InjectRepository(Route)
+		private readonly routeRepository: EntityRepository<Route>,
 		private readonly em: EntityManager,
+		private readonly sessionService: SessionService,
 	) {}
-
-	async create(createUserDto: CreateUserDto): Promise<User> {
-		const user = this.userRepository.create(createUserDto);
-		await this.em.persistAndFlush(user);
-		return user;
-	}
-
-	async findAll(): Promise<User[]> {
-		return this.userRepository.find({ deletedAt: null });
-	}
 
 	async findOne(id: number): Promise<User> {
 		const user = await this.userRepository.findOne({ id, deletedAt: null });
@@ -30,33 +25,36 @@ export class UsersService {
 		return user;
 	}
 
-	async update(id: number, updateUserDto: UpdateUserDto): Promise<User> {
+	async update(id: number, updateUserDto: UpdateCurrentUserDto): Promise<User> {
 		const user = await this.findOne(id);
 
-		// Only allow updating certain fields
 		if (updateUserDto.name !== undefined) {
 			user.name = updateUserDto.name;
 		}
 		if (updateUserDto.avatar !== undefined) {
 			user.avatar = updateUserDto.avatar;
 		}
-		// Note: email and googleId updates are not allowed
 
 		await this.em.persistAndFlush(user);
 		return user;
 	}
 
-	async remove(id: number): Promise<void> {
-		const user = await this.findOne(id);
-		user.deletedAt = new Date();
-		await this.em.persistAndFlush(user);
+	async getStatistics(userId: number): Promise<{ totalRoutes: number; totalDistance: number }> {
+		return this.sessionService.getUserStatistics(userId);
 	}
 
-	async hardDelete(id: number): Promise<void> {
-		const user = await this.userRepository.findOne(id);
-		if (!user) {
-			throw new NotFoundException(`User with ID ${id} not found`);
+	async remove(id: number): Promise<void> {
+		const user = await this.findOne(id);
+		const deletedAt = new Date();
+		user.deletedAt = deletedAt;
+
+		const routes = await this.routeRepository.find({ user: id, deletedAt: null });
+		for (const route of routes) {
+			route.deletedAt = deletedAt;
 		}
-		await this.em.removeAndFlush(user);
+
+		await this.em.persistAndFlush(user);
+		await this.em.flush();
+		await this.sessionService.invalidateUserSessions(id);
 	}
 }

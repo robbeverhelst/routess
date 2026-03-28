@@ -3,6 +3,9 @@ import { Module } from "@nestjs/common";
 import { JwtModule } from "@nestjs/jwt";
 import { PassportModule } from "@nestjs/passport";
 import { ScheduleModule } from "@nestjs/schedule";
+import type { AppConfig } from "../config/app-config";
+import { APP_CONFIG, ConfigModule } from "../config/config.module";
+import { Route } from "../entities/route.entity";
 import { Session } from "../entities/session.entity";
 import { User } from "../entities/user.entity";
 import { AuthController } from "./auth.controller";
@@ -13,15 +16,17 @@ import { JwtStrategy } from "./strategies/jwt.strategy";
 
 @Module({
 	imports: [
-		MikroOrmModule.forFeature([User, Session]),
+		ConfigModule,
+		MikroOrmModule.forFeature([User, Session, Route]),
 		PassportModule.register({ defaultStrategy: "jwt" }),
 		ScheduleModule.forRoot(),
 		JwtModule.registerAsync({
-			useFactory: () => {
-				const secret = process.env.JWT_SECRET || "your-secret-key";
+			imports: [ConfigModule],
+			inject: [APP_CONFIG],
+			useFactory: (config: AppConfig) => {
 				return {
-					secret: secret,
-					signOptions: { expiresIn: "7d" },
+					secret: config.auth.jwtSecret,
+					signOptions: { expiresIn: config.auth.jwtExpiresIn },
 				};
 			},
 		}),

@@ -31,7 +31,7 @@ describe("Performance Features Integration", () => {
 			}
 
 			// Generate JWT directly without going through auth flow
-			accessToken = generateTestJWT(user.id, user.email, app);
+			accessToken = await generateTestJWT(user.id, user.email, app);
 		});
 	});
 
