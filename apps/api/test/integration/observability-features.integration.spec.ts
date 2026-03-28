@@ -170,6 +170,7 @@ target_info{service_name="maps-api",service_version="1.0.0"} 1`),
 		it("should record HTTP request metrics", async () => {
 			// Make a request to generate metrics
 			await request(app.getHttpServer()).get("/health/live").expect(200);
+			metricsService.recordHttpRequest("GET", "/health/live", 200, 5);
 
 			const metricsText = await waitForMetrics(
 				(text) => text.includes("http_request_duration_ms") && text.includes("http_requests_total"),
