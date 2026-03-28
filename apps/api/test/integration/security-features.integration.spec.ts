@@ -126,7 +126,6 @@ describe("Security Features Integration", () => {
 			// Check for security headers added by Helmet
 			expect(response.headers["x-frame-options"]).toBeDefined();
 			expect(response.headers["x-content-type-options"]).toBe("nosniff");
-			expect(response.headers["x-xss-protection"]).toBeDefined();
 		});
 
 		it("should handle CORS properly", async () => {

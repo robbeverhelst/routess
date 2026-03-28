@@ -4,77 +4,67 @@ import { PrometheusExporter } from "@opentelemetry/exporter-prometheus";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
 import { MeterProvider } from "@opentelemetry/sdk-metrics";
 import { NodeSDK } from "@opentelemetry/sdk-node";
+import type { AppConfig } from "../config/app-config";
 
-// Initialize OpenTelemetry
-export function initializeOpenTelemetry() {
-	// Resource attributes for future use
-	// const resourceAttributes = {
-	//   [ATTR_SERVICE_NAME]: serviceName,
-	//   [ATTR_SERVICE_VERSION]: serviceVersion,
-	//   environment: process.env.NODE_ENV || "development",
-	//   "deployment.environment": process.env.NODE_ENV || "development",
-	// };
+let sdk: NodeSDK | null = null;
+let prometheusExporter: PrometheusExporter | null = null;
 
-	// Prometheus exporter for metrics
-	const prometheusExporter = new PrometheusExporter(
-		{
-			port: 9464, // Default Prometheus metrics port
-			endpoint: "/metrics",
-		},
-		() => {
-			console.log("Prometheus metrics server started on port 9464");
-		},
-	);
+export function initializeOpenTelemetry(config: AppConfig) {
+	if (sdk || !config.telemetry.enabled) {
+		return { prometheusExporter };
+	}
 
-	// Create meter provider
+	prometheusExporter = config.telemetry.metricsEnabled
+		? new PrometheusExporter({
+				port: config.telemetry.metricsPort,
+				endpoint: config.telemetry.metricsPath,
+				preventServerStart: true,
+			})
+		: null;
+
 	const meterProvider = new MeterProvider({
-		readers: [prometheusExporter],
+		readers: prometheusExporter ? [prometheusExporter] : [],
 	});
 
-	// Set global meter provider
 	metrics.setGlobalMeterProvider(meterProvider);
 
-	// OTLP trace exporter (optional, can be configured via env)
-	const traceExporter = process.env.OTEL_EXPORTER_OTLP_ENDPOINT
-		? new OTLPTraceExporter({
-				url: `${process.env.OTEL_EXPORTER_OTLP_ENDPOINT}/v1/traces`,
-				headers: process.env.OTEL_EXPORTER_OTLP_HEADERS ? JSON.parse(process.env.OTEL_EXPORTER_OTLP_HEADERS) : {},
-			})
-		: undefined;
+	if (config.app.isTest) {
+		return { prometheusExporter };
+	}
 
-	// Initialize SDK
-	const sdk = new NodeSDK({
+	sdk = new NodeSDK({
 		instrumentations: [
 			getNodeAutoInstrumentations({
 				"@opentelemetry/instrumentation-fs": {
-					enabled: false, // Disable fs instrumentation to reduce noise
+					enabled: false,
 				},
 			}),
 		],
-		traceExporter,
+		traceExporter: config.telemetry.otlpEndpoint
+			? new OTLPTraceExporter({
+					url: `${config.telemetry.otlpEndpoint}/v1/traces`,
+					headers: config.telemetry.otlpHeaders,
+				})
+			: undefined,
 	});
 
-	// Initialize the SDK
-	sdk.start();
+	void sdk.start();
 
-	// Graceful shutdown
-	process.on("SIGTERM", () => {
-		sdk
-			.shutdown()
-			.then(() => console.log("OpenTelemetry terminated successfully"))
-			.catch((error) => console.error("Error terminating OpenTelemetry", error))
-			.finally(() => process.exit(0));
+	process.once("SIGTERM", () => {
+		void sdk?.shutdown().finally(() => process.exit(0));
 	});
 
-	return { meterProvider };
+	return { prometheusExporter };
 }
 
-// Get meter for creating custom metrics
 export function getMeter(name = "maps-api") {
 	return metrics.getMeter(name);
 }
 
-// Get tracer for creating custom spans
 export function getTracer(name = "maps-api") {
 	return trace.getTracer(name);
+}
+
+export function getPrometheusExporter(): PrometheusExporter | null {
+	return prometheusExporter;
 }

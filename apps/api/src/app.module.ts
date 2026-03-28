@@ -6,6 +6,8 @@ import { LoggerModule } from "nestjs-pino";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { AuthModule } from "./auth/auth.module";
+import type { AppConfig } from "./config/app-config";
+import { APP_CONFIG, ConfigModule } from "./config/config.module";
 import { HealthModule } from "./health/health.module";
 import config from "./mikro-orm.config";
 import { RoutesModule } from "./routes/routes.module";
@@ -17,44 +19,42 @@ import { UsersModule } from "./users/users.module";
 
 @Module({
 	imports: [
+		ConfigModule,
 		MikroOrmModule.forRoot(config),
-		LoggerModule.forRoot({
-			pinoHttp: {
-				level: process.env.LOG_LEVEL || "info",
-				transport:
-					process.env.NODE_ENV !== "production"
-						? {
-								target: "pino-pretty",
-								options: {
-									colorize: true,
-									singleLine: true,
-								},
-							}
-						: undefined,
-				redact: ["req.headers.authorization", "req.body.password"],
-				serializers: {
-					req: (req) => ({
-						id: req.id || req.headers["x-request-id"],
-						method: req.method,
-						url: req.url,
-						headers: req.headers,
-					}),
-					res: (res) => ({
-						statusCode: res.statusCode,
+		LoggerModule.forRootAsync({
+			imports: [ConfigModule],
+			inject: [APP_CONFIG],
+			useFactory: (appConfig: AppConfig) => ({
+				pinoHttp: {
+					level: process.env.LOG_LEVEL || (appConfig.app.isTest ? "silent" : "info"),
+					redact: ["req.headers.authorization", "req.body.password"],
+					serializers: {
+						req: (req) => ({
+							id: req.id || req.headers["x-request-id"],
+							method: req.method,
+							url: req.url,
+						}),
+						res: (res) => ({
+							statusCode: res.statusCode,
+						}),
+					},
+					customProps: (req) => ({
+						requestId: req.id || req.headers["x-request-id"],
 					}),
 				},
-				customProps: (req) => ({
-					requestId: req.id || req.headers["x-request-id"],
-				}),
-			},
+			}),
 		}),
-		ThrottlerModule.forRoot([
-			{
-				name: "short",
-				ttl: 60000, // 1 minute
-				limit: 1000, // Very generous global limit
-			},
-		]),
+		ThrottlerModule.forRootAsync({
+			imports: [ConfigModule],
+			inject: [APP_CONFIG],
+			useFactory: (appConfig: AppConfig) => [
+				{
+					name: "global",
+					ttl: 60000,
+					limit: appConfig.app.isTest ? 1000 : 300,
+				},
+			],
+		}),
 		UsersModule,
 		AuthModule,
 		RoutesModule,

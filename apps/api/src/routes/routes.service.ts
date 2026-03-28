@@ -56,6 +56,7 @@ export class RoutesService {
 
 		this.routeRepository.assign(route, updateRouteDto);
 		await this.em.persistAndFlush(route);
+		await this.em.populate(route, ["user"]);
 
 		return route;
 	}

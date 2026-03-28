@@ -1,0 +1,95 @@
+import type { INestApplication } from "@nestjs/common";
+import { ValidationPipe, VersioningType } from "@nestjs/common";
+import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
+import helmet from "helmet";
+import { GlobalExceptionFilter } from "../common/filters/global-exception.filter";
+import type { AppConfig } from "../config/app-config";
+import { getAppConfig } from "../config/app-config";
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const compression = require("compression");
+
+export function configureApplication(app: INestApplication, config: AppConfig = getAppConfig()): void {
+	app.use(
+		compression({
+			filter: (req, res) => {
+				if (req.headers["x-no-compression"]) {
+					return false;
+				}
+
+				return compression.filter(req, res);
+			},
+			threshold: 1024,
+		}),
+	);
+
+	app.use(
+		helmet({
+			contentSecurityPolicy: false,
+			crossOriginEmbedderPolicy: false,
+		}),
+	);
+
+	app.enableVersioning({
+		type: VersioningType.URI,
+		defaultVersion: "1",
+		prefix: "api/v",
+	});
+
+	app.useGlobalFilters(new GlobalExceptionFilter());
+
+	app.useGlobalPipes(
+		new ValidationPipe({
+			whitelist: true,
+			forbidNonWhitelisted: true,
+			transform: true,
+			transformOptions: {
+				enableImplicitConversion: true,
+			},
+			disableErrorMessages: config.app.isProduction,
+		}),
+	);
+
+	app.enableCors({
+		origin: config.app.frontendUrl,
+		credentials: true,
+		methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+		allowedHeaders: ["Content-Type", "Authorization", "X-Request-ID"],
+	});
+
+	if (!config.docs.enabled) {
+		return;
+	}
+
+	const document = SwaggerModule.createDocument(
+		app,
+		new DocumentBuilder()
+			.setTitle(config.app.name)
+			.setDescription(config.app.description)
+			.setVersion(config.app.version)
+			.addBearerAuth(
+				{
+					type: "http",
+					scheme: "bearer",
+					bearerFormat: "JWT",
+					in: "header",
+				},
+				"JWT-auth",
+			)
+			.addServer(`http://localhost:${config.app.port}`, "Local development")
+			.addTag("auth", "Authentication endpoints")
+			.addTag("routes", "Route management")
+			.addTag("users", "User profile management")
+			.addTag("health", "Health and monitoring")
+			.build(),
+	);
+
+	SwaggerModule.setup(config.docs.path.replace(/^\//, ""), app, document, {
+		swaggerOptions: {
+			persistAuthorization: true,
+			tagsSorter: "alpha",
+			operationsSorter: "alpha",
+		},
+		customSiteTitle: `${config.app.name} Docs`,
+	});
+}

@@ -15,8 +15,11 @@ describe("AppController", () => {
 	});
 
 	describe("root", () => {
-		it('should return "Hello World!"', () => {
-			expect(appController.getHello()).toBe("Hello World!");
+		it("should return app metadata", () => {
+			expect(appController.getRoot()).toMatchObject({
+				name: "Routess API",
+				status: "ok",
+			});
 		});
 	});
 });

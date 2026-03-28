@@ -1,75 +1,30 @@
 import { MikroORM, RequestContext } from "@mikro-orm/core";
-import { type INestApplication, ValidationPipe, VersioningType } from "@nestjs/common";
-import { JwtService } from "@nestjs/jwt";
+import type { INestApplication } from "@nestjs/common";
 import { Test, type TestingModule } from "@nestjs/testing";
-import compression from "compression";
-import helmet from "helmet";
-import { AppModule } from "src/app.module";
-import { GlobalExceptionFilter } from "../../src/common/filters/global-exception.filter";
+import { configureApplication } from "../../src/app/app-setup";
+import { SessionService } from "../../src/auth/session.service";
+import { getAppConfig, loadEnvironment } from "../../src/config/app-config";
 import { User } from "../../src/entities/user.entity";
+import { initializeOpenTelemetry } from "../../src/telemetry/tracing";
 
 export async function createTestApp(): Promise<INestApplication> {
 	process.env.NODE_ENV = "test";
 	process.env.DB_NAME = "routess_db_test"; // Use test database
 	process.env.GOOGLE_CLIENT_ID = "test-google-client-id"; // Mock Google Client ID
 	process.env.JWT_SECRET = "test-secret-key"; // Ensure JWT secret is set
+	process.env.SWAGGER_ENABLED = "false";
+	process.env.METRICS_ENABLED = "true";
+
+	loadEnvironment();
+	initializeOpenTelemetry(getAppConfig());
+	const { AppModule } = await import("../../src/app.module");
 
 	const moduleFixture: TestingModule = await Test.createTestingModule({
 		imports: [AppModule],
 	}).compile();
 
 	const app = moduleFixture.createNestApplication();
-
-	// Apply middleware like in main.ts
-	app.use(
-		compression({
-			filter: (req, res) => {
-				if (req.headers["x-no-compression"]) {
-					return false;
-				}
-				return compression.filter(req, res);
-			},
-			threshold: 1024,
-		}),
-	);
-
-	app.use(
-		helmet({
-			contentSecurityPolicy: {
-				directives: {
-					defaultSrc: ["'self'"],
-					styleSrc: ["'self'", "'unsafe-inline'"],
-					scriptSrc: ["'self'"],
-					imgSrc: ["'self'", "data:", "https:"],
-				},
-			},
-			crossOriginEmbedderPolicy: false,
-		}),
-	);
-
-	// Enable API versioning
-	app.enableVersioning({
-		type: VersioningType.URI,
-		defaultVersion: "1",
-		prefix: "api/v",
-	});
-
-	app.useGlobalFilters(new GlobalExceptionFilter());
-
-	app.useGlobalPipes(
-		new ValidationPipe({
-			whitelist: true,
-			transform: true,
-			forbidNonWhitelisted: true,
-			transformOptions: {
-				enableImplicitConversion: true,
-			},
-		}),
-	);
-
-	app.enableCors({
-		origin: process.env.FRONTEND_URL || "http://localhost:3001",
-	});
+	configureApplication(app, getAppConfig());
 
 	await app.init();
 	return app;
@@ -87,9 +42,12 @@ export async function closeTestApp(app: INestApplication) {
 	await app.close();
 }
 
-export function generateTestJWT(userId: number, email: string, app: INestApplication): string {
-	const jwtService = app.get(JwtService);
-	return jwtService.sign({ sub: userId, email });
+export async function generateTestJWT(userId: number, _email: string, app: INestApplication): Promise<string> {
+	const sessionService = app.get(SessionService);
+	return sessionService.createSession(userId, {
+		userAgent: "bun-test",
+		ipAddress: "127.0.0.1",
+	});
 }
 
 export async function createTestUserWithAuth(
@@ -121,7 +79,7 @@ export async function createTestUserWithAuth(
 		user = userRepo.create(defaultUserData);
 		await orm.em.persistAndFlush(user);
 
-		accessToken = generateTestJWT(user.id, user.email, app);
+		accessToken = await generateTestJWT(user.id, user.email, app);
 	});
 
 	if (!user || !accessToken) {

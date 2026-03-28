@@ -88,8 +88,6 @@ describe("MetricsService", () => {
 		(service as any).activeUsers = mockUpDownCounter;
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		(service as any).dbQueryDuration = mockHistogram;
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		(service as any).dbConnectionPool = mockUpDownCounter;
 	});
 
 	it("should be defined", () => {
@@ -203,7 +201,7 @@ describe("MetricsService", () => {
 			expect(callArgs[0]).toEqual([1, { user_id: "123" }]);
 		});
 
-		it("should track active users", () => {
+		it("should update active users by delta", () => {
 			let callCount = 0;
 			const callArgs: any[] = [];
 
@@ -214,14 +212,18 @@ describe("MetricsService", () => {
 				},
 			};
 			(service as any).activeUsers = mockActiveUsersCounter;
+			(service as any).activeUsersCount = 0;
 
-			service.incrementActiveUsers();
+			service.setActiveUsers(3);
 			expect(callCount).toBe(1);
-			expect(callArgs[0]).toEqual([1]);
+			expect(callArgs[0]).toEqual([3]);
 
-			service.decrementActiveUsers();
+			service.setActiveUsers(5);
 			expect(callCount).toBe(2);
-			expect(callArgs[1]).toEqual([-1]);
+			expect(callArgs[1]).toEqual([2]);
+
+			service.setActiveUsers(5);
+			expect(callCount).toBe(2);
 		});
 	});
 
@@ -242,24 +244,6 @@ describe("MetricsService", () => {
 
 			expect(callCount).toBe(1);
 			expect(callArgs[0]).toEqual([25, { operation: "select" }]);
-		});
-
-		it("should update connection pool size", () => {
-			let callCount = 0;
-			const callArgs: any[] = [];
-
-			const mockDbPoolCounter = {
-				add: (...args: any[]) => {
-					callCount++;
-					callArgs.push(args);
-				},
-			};
-			(service as any).dbConnectionPool = mockDbPoolCounter;
-
-			service.updateConnectionPoolSize(5);
-
-			expect(callCount).toBe(1);
-			expect(callArgs[0]).toEqual([5]);
 		});
 	});
 });

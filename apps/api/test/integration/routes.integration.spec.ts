@@ -39,8 +39,8 @@ describe("Routes Integration Tests", () => {
 		await orm.em.persistAndFlush([testUser, otherUser]);
 
 		// Generate auth tokens
-		authToken = generateTestJWT(testUser.id, testUser.email, app);
-		otherAuthToken = generateTestJWT(otherUser.id, otherUser.email, app);
+		authToken = await generateTestJWT(testUser.id, testUser.email, app);
+		otherAuthToken = await generateTestJWT(otherUser.id, otherUser.email, app);
 	});
 
 	afterAll(async () => {

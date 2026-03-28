@@ -100,7 +100,14 @@ export class ApiClient {
 	}
 
 	async logout(): Promise<void> {
-		this.config.authStateManager.clearToken();
+		try {
+			await this.request<{ success: boolean }>("/auth/logout", {
+				method: "POST",
+			});
+		} finally {
+			this.config.authStateManager.clearToken();
+			this.config.authStateManager.clearAuthState?.();
+		}
 	}
 
 	// Route management methods

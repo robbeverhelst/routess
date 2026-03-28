@@ -157,8 +157,8 @@ target_info{service_name="maps-api",service_version="1.0.0"} 1`),
 
 			const metricsResponse = await request(app.getHttpServer()).get("/metrics").expect(200);
 
-			// Check for HTTP metrics (use OpenTelemetry metric names)
-			expect(metricsResponse.text).toContain("http_server_duration");
+			expect(metricsResponse.text).toContain("http_request_duration_ms");
+			expect(metricsResponse.text).toContain("http_requests_total");
 			expect(metricsResponse.text).toContain("target_info");
 		});
 	});

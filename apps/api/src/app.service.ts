@@ -1,8 +1,14 @@
 import { Injectable } from "@nestjs/common";
+import { getAppConfig } from "./config/app-config";
 
 @Injectable()
 export class AppService {
-	getHello(): string {
-		return "Hello World!";
+	getRoot() {
+		const config = getAppConfig();
+		return {
+			name: config.app.name,
+			version: config.app.version,
+			status: "ok",
+		};
 	}
 }
