@@ -27,6 +27,6 @@ RUN chmod +x /entrypoint.sh \
     && chown 101:101 /entrypoint.sh \
     && chown -R 101:101 /usr/share/nginx/html
 
-EXPOSE 80
+EXPOSE 8080
 
 ENTRYPOINT ["/entrypoint.sh"]
