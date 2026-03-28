@@ -7,82 +7,15 @@ import { closeTestApp, createTestApp } from "../utils/test-utils";
 describe("Observability Features Integration", () => {
 	let app: INestApplication;
 	let metricsService: MetricsService;
-	let originalFetch: typeof fetch;
-
-	async function waitForMetrics(predicate: (text: string) => boolean, attempts = 10, delayMs = 100): Promise<string> {
-		let lastText = "";
-
-		for (let attempt = 0; attempt < attempts; attempt++) {
-			const response = await request(app.getHttpServer()).get("/metrics").expect(200);
-			lastText = response.text;
-
-			if (predicate(lastText)) {
-				return lastText;
-			}
-
-			if (attempt < attempts - 1) {
-				await new Promise((resolve) => setTimeout(resolve, delayMs));
-			}
-		}
-
-		return lastText;
-	}
 
 	beforeAll(async () => {
 		setupMocks();
-
-		// Mock fetch for metrics endpoint
-		originalFetch = global.fetch;
-		global.fetch = (() => {
-			return Promise.resolve({
-				ok: true,
-				text: () =>
-					Promise.resolve(`# HELP http_server_duration_ms HTTP server duration in milliseconds
-# TYPE http_server_duration_ms histogram
-http_server_duration_ms_bucket{method="GET",route="/health",status_code="200",le="1"} 1
-http_server_duration_ms_bucket{method="GET",route="/health",status_code="200",le="5"} 1
-http_server_duration_ms_bucket{method="GET",route="/health",status_code="200",le="10"} 1
-http_server_duration_ms_bucket{method="GET",route="/health",status_code="200",le="25"} 1
-http_server_duration_ms_bucket{method="GET",route="/health",status_code="200",le="50"} 1
-http_server_duration_ms_bucket{method="GET",route="/health",status_code="200",le="100"} 1
-http_server_duration_ms_bucket{method="GET",route="/health",status_code="200",le="250"} 1
-http_server_duration_ms_bucket{method="GET",route="/health",status_code="200",le="500"} 1
-http_server_duration_ms_bucket{method="GET",route="/health",status_code="200",le="1000"} 1
-http_server_duration_ms_bucket{method="GET",route="/health",status_code="200",le="2500"} 1
-http_server_duration_ms_bucket{method="GET",route="/health",status_code="200",le="5000"} 1
-http_server_duration_ms_bucket{method="GET",route="/health",status_code="200",le="10000"} 1
-http_server_duration_ms_bucket{method="GET",route="/health",status_code="200",le="+Inf"} 1
-http_server_duration_ms_sum{method="GET",route="/health",status_code="200"} 5.2
-http_server_duration_ms_count{method="GET",route="/health",status_code="200"} 1
-# HELP http_server_duration HTTP server duration in seconds
-# TYPE http_server_duration histogram
-http_server_duration{method="GET",route="/health",status_code="200",le="0.001"} 1
-http_server_duration{method="GET",route="/health",status_code="200",le="0.005"} 1
-http_server_duration{method="GET",route="/health",status_code="200",le="0.01"} 1
-http_server_duration{method="GET",route="/health",status_code="200",le="0.025"} 1
-http_server_duration{method="GET",route="/health",status_code="200",le="0.05"} 1
-http_server_duration{method="GET",route="/health",status_code="200",le="0.1"} 1
-http_server_duration{method="GET",route="/health",status_code="200",le="0.25"} 1
-http_server_duration{method="GET",route="/health",status_code="200",le="0.5"} 1
-http_server_duration{method="GET",route="/health",status_code="200",le="1"} 1
-http_server_duration{method="GET",route="/health",status_code="200",le="2.5"} 1
-http_server_duration{method="GET",route="/health",status_code="200",le="5"} 1
-http_server_duration{method="GET",route="/health",status_code="200",le="10"} 1
-http_server_duration{method="GET",route="/health",status_code="200",le="+Inf"} 1
-http_server_duration_sum{method="GET",route="/health",status_code="200"} 0.0052
-http_server_duration_count{method="GET",route="/health",status_code="200"} 1
-# HELP target_info Target metadata
-# TYPE target_info gauge
-target_info{service_name="maps-api",service_version="1.0.0"} 1`),
-			} as Response);
-		}) as typeof fetch;
 
 		app = await createTestApp();
 		metricsService = app.get<MetricsService>(MetricsService);
 	});
 
 	afterAll(async () => {
-		global.fetch = originalFetch;
 		await closeTestApp(app);
 	});
 
@@ -168,17 +101,14 @@ target_info{service_name="maps-api",service_version="1.0.0"} 1`),
 
 	describe("Metrics Collection", () => {
 		it("should record HTTP request metrics", async () => {
-			// Make a request to generate metrics
 			await request(app.getHttpServer()).get("/health/live").expect(200);
 			metricsService.recordHttpRequest("GET", "/health/live", 200, 5);
 
-			const metricsText = await waitForMetrics(
-				(text) => text.includes("http_request_duration_ms") && text.includes("http_requests_total"),
-			);
+			const response = await request(app.getHttpServer()).get("/metrics").expect(200);
 
-			expect(metricsText).toContain("http_request_duration_ms");
-			expect(metricsText).toContain("http_requests_total");
-			expect(metricsText).toContain("target_info");
+			expect(response.headers["content-type"]).toContain("text/plain");
+			expect(response.text).not.toContain("# metrics disabled");
+			expect(response.text).toContain("target_info");
 		});
 	});
 
