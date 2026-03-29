@@ -5,8 +5,9 @@
 
 echo "Starting entrypoint script for runtime configuration..."
 
-# Define the HTML and JS files to process
+# Define the files to process
 HTML_FILE="/usr/share/nginx/html/index.html"
+SW_FILE="/usr/share/nginx/html/sw.js"
 JS_FILES="/usr/share/nginx/html/assets/*.js"
 
 replace_token() {
@@ -62,6 +63,11 @@ for js_file in $JS_FILES; do
         replace_placeholders "$js_file"
     fi
 done
+
+# Process service worker file
+if [ -f "$SW_FILE" ]; then
+    replace_placeholders "$SW_FILE"
+fi
 
 echo "Environment variable replacement completed."
 

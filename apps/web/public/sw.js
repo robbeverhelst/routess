@@ -1,7 +1,6 @@
 // Routess PWA Service Worker
-// Version 1.0.0
-
-const CACHE_VERSION = "routess-v1.0.0";
+// Version is injected at container startup.
+const CACHE_VERSION = "routess-__VITE_APP_VERSION__";
 const CACHE_NAMES = {
 	APP_SHELL: `${CACHE_VERSION}-app-shell`,
 	API_CACHE: `${CACHE_VERSION}-api-cache`,
@@ -122,7 +121,7 @@ self.addEventListener("activate", (event) => {
 				// Clean up old caches
 				const cacheNames = await caches.keys();
 				const oldCaches = cacheNames.filter(
-					(name) => name.startsWith("maps-v") && !Object.values(CACHE_NAMES).includes(name),
+					(name) => name.startsWith("routess-") && !Object.values(CACHE_NAMES).includes(name),
 				);
 
 				await Promise.all(
@@ -438,7 +437,7 @@ async function getCacheStatus() {
 	const status = {};
 
 	for (const cacheName of cacheNames) {
-		if (cacheName.startsWith("maps-v")) {
+		if (cacheName.startsWith("routess-")) {
 			const cache = await caches.open(cacheName);
 			const keys = await cache.keys();
 			status[cacheName] = {
@@ -467,7 +466,7 @@ async function getCacheSize(cache) {
 }
 
 async function clearSpecificCache(cacheName) {
-	if (cacheName?.startsWith("maps-v")) {
+	if (cacheName?.startsWith("routess-")) {
 		await caches.delete(cacheName);
 		console.log("[SW] Cleared cache:", cacheName);
 	}
