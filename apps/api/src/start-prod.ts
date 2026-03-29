@@ -4,6 +4,7 @@ import { bootstrap } from "./main";
 import config from "./mikro-orm.config";
 
 async function startProductionApp() {
+	// Run migrations in-process so production startup does not depend on the CLI runtime.
 	const orm = await MikroORM.init(config);
 
 	try {
