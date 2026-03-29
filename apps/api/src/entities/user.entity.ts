@@ -15,9 +15,6 @@ export class User extends BaseEntity {
 	name!: string;
 
 	@Property({ hidden: true, nullable: true })
-	password?: string;
-
-	@Property({ hidden: true, nullable: true })
 	googleId?: string;
 
 	@Property({ nullable: true })
