@@ -40,8 +40,12 @@ export class ApiClient {
 		try {
 			let response: T;
 
-			if (method === "GET" || method === "DELETE") {
+			if (method === "GET") {
 				response = await this.config.httpClient.get<T>(`${this.config.baseUrl}/api/v1${endpoint}`, {
+					headers: requestHeaders,
+				});
+			} else if (method === "DELETE") {
+				response = await this.config.httpClient.delete<T>(`${this.config.baseUrl}/api/v1${endpoint}`, {
 					headers: requestHeaders,
 				});
 			} else if (method === "POST") {
