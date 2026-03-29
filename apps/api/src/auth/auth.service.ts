@@ -1,6 +1,6 @@
 import { EntityManager, EntityRepository } from "@mikro-orm/core";
 import { InjectRepository } from "@mikro-orm/nestjs";
-import { Inject, Injectable, UnauthorizedException } from "@nestjs/common";
+import { Inject, Injectable, Logger, UnauthorizedException } from "@nestjs/common";
 import { OAuth2Client } from "google-auth-library";
 import { type AppConfig } from "../config/app-config";
 import { APP_CONFIG } from "../config/config.module";
@@ -12,6 +12,7 @@ import { SessionService } from "./session.service";
 
 @Injectable()
 export class AuthService {
+	private readonly logger = new Logger(AuthService.name);
 	private googleClient: OAuth2Client;
 
 	constructor(
@@ -89,7 +90,10 @@ export class AuthService {
 				accessToken,
 				user: toUserResponseDto(user),
 			};
-		} catch {
+		} catch (error) {
+			this.logger.warn(
+				`Google authentication failed: ${error instanceof Error ? error.message : String(error)}`,
+			);
 			throw new UnauthorizedException("Failed to authenticate with Google");
 		}
 	}
