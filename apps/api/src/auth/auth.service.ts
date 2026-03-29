@@ -91,9 +91,7 @@ export class AuthService {
 				user: toUserResponseDto(user),
 			};
 		} catch (error) {
-			this.logger.warn(
-				`Google authentication failed: ${error instanceof Error ? error.message : String(error)}`,
-			);
+			this.logger.warn(`Google authentication failed: ${error instanceof Error ? error.message : String(error)}`);
 			throw new UnauthorizedException("Failed to authenticate with Google");
 		}
 	}
