@@ -35,6 +35,22 @@ const reinitializeRouteCalcState = () => {
 
 reinitializeRouteCalcState(); // Initial call
 
+const routeInputsMatch = (waypoints: Coordinate[], directFlags: boolean[]) => {
+	const state = useRoutingStore.getState();
+	return (
+		state.waypoints.length === waypoints.length &&
+		state.directFlags.length === directFlags.length &&
+		state.waypoints.every((wp, index) => wp[0] === waypoints[index][0] && wp[1] === waypoints[index][1]) &&
+		state.directFlags.every((flag, index) => flag === directFlags[index])
+	);
+};
+
+const staleRouteResult = (): RouteResult => ({
+	success: true,
+	waypointsSnapped: false,
+	error: "Route inputs changed during calculation.",
+});
+
 // Hot Module Reloading support (development only)
 try {
 	const importMeta = (globalThis as Record<string, Record<string, unknown>>).import?.meta as
@@ -328,6 +344,10 @@ export const getRoute = async (
 			snappedWaypoints,
 			snappedDirectFlags: mixedSnappedDirectFlags,
 		} = await buildMixedRoute(accessToken);
+		if (!routeInputsMatch(waypoints, directFlags)) {
+			Logger.info("[RCS/getRoute] Route inputs changed during mixed route calculation. Discarding stale result.");
+			return staleRouteResult();
+		}
 		updateRouteLayer(map, coordsAccum);
 		setCurrentRoutePathCoordinates(coordsAccum);
 
@@ -361,6 +381,10 @@ export const getRoute = async (
 				radius: 150, // Keep generous radius for snapping
 				continueStraight: true,
 			});
+			if (!routeInputsMatch(currentWaypointsForAPI, directFlags)) {
+				Logger.info("[RCS/getRoute] Route inputs changed during Directions request. Discarding stale result.");
+				return staleRouteResult();
+			}
 
 			if (!result.success || !result.data?.routes || result.data.routes.length === 0) {
 				Logger.error("[RCS/getRoute] API request failed or no routes found:", result.error);
@@ -460,6 +484,10 @@ export const getRoute = async (
 				snappedDirectFlags: finalSnappedDirectFlags ?? undefined,
 			};
 		} catch (error) {
+			if (!routeInputsMatch(waypoints, directFlags)) {
+				Logger.info("[RCS/getRoute] Route inputs changed during failed Directions request. Discarding stale fallback.");
+				return staleRouteResult();
+			}
 			Logger.warn("[RCS/getRoute] Network error fetching route, falling back to direct routes:", error);
 
 			// Offline fallback: Convert all segments to direct routes

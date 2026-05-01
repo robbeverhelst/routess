@@ -15,8 +15,6 @@ const config: Options = {
 	password: appConfig.database.password,
 	dbName: appConfig.database.name,
 	entities: [User, Route, Session],
-	entitiesTs: ["./src/entities/*.entity.ts"],
-	preferTs: !appConfig.app.isProduction,
 	migrations: {
 		path: "./src/migrations",
 		pathTs: "./src/migrations",

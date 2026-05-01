@@ -5,6 +5,15 @@ import { Logger } from "./logger";
 // Google OAuth Configuration
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "__VITE_GOOGLE_CLIENT_ID__";
 
+// Detect missing / placeholder client IDs so we can fail loudly with a clear
+// message instead of letting Google's "Access blocked" page swallow the error.
+export function hasValidGoogleClientId(): boolean {
+	if (!GOOGLE_CLIENT_ID) return false;
+	if (GOOGLE_CLIENT_ID.includes("__VITE_")) return false;
+	if (GOOGLE_CLIENT_ID.startsWith("your-google-client-id")) return false;
+	return GOOGLE_CLIENT_ID.endsWith(".apps.googleusercontent.com");
+}
+
 // User profile interface
 export interface GoogleUser {
 	id: string;

@@ -125,3 +125,156 @@
 	width: 100%;
 	height: 100vh;
 }
+
+/* ====================================================================
+ * REDESIGN TOKENS — scoped under [data-redesign]
+ * Active when the new shell is mounted. The legacy app uses the
+ * tokens above; the redesign reads these.
+ * ==================================================================== */
+[data-redesign] {
+	/* Surfaces */
+	--rds-bg-canvas: oklch(0.985 0.003 250);
+	--rds-bg-app: oklch(1 0 0);
+	--rds-bg-rail: oklch(0.975 0.004 250);
+	--rds-bg-panel: oklch(1 0 0);
+	--rds-bg-panel-elev: oklch(0.985 0.003 250);
+	--rds-bg-input: oklch(0.97 0.004 250);
+	--rds-bg-hover: oklch(0.955 0.005 250);
+	--rds-bg-active: oklch(0.93 0.006 250);
+
+	/* Foreground */
+	--rds-fg: oklch(0.205 0.01 270);
+	--rds-fg-muted: oklch(0.5 0.012 270);
+	--rds-fg-subtle: oklch(0.65 0.01 270);
+
+	/* Borders */
+	--rds-border: oklch(0.92 0.005 250);
+	--rds-border-strong: oklch(0.86 0.006 250);
+
+	/* Accent (violet by default, swappable) */
+	--rds-accent: oklch(0.5 0.17 282);
+	--rds-accent-soft: oklch(0.96 0.03 282);
+	--rds-accent-fg: oklch(0.99 0 0);
+	--rds-accent-line: oklch(0.5 0.17 282);
+
+	/* Status colors */
+	--rds-success: oklch(0.62 0.14 155);
+	--rds-warn: oklch(0.7 0.14 70);
+	--rds-danger: oklch(0.58 0.21 27);
+
+	/* Radius */
+	--rds-radius-xs: 6px;
+	--rds-radius-sm: 8px;
+	--rds-radius-md: 10px;
+	--rds-radius-lg: 14px;
+	--rds-radius-xl: 18px;
+
+	/* Shadows */
+	--rds-shadow-sm: 0 1px 0 oklch(0 0 0 / 0.04), 0 1px 2px oklch(0 0 0 / 0.04);
+	--rds-shadow-md: 0 1px 0 oklch(0 0 0 / 0.05), 0 4px 12px oklch(0 0 0 / 0.06), 0 12px 32px -8px oklch(0 0 0 / 0.08);
+	--rds-shadow-lg: 0 1px 0 oklch(0 0 0 / 0.06), 0 8px 24px oklch(0 0 0 / 0.08), 0 24px 64px -12px oklch(0 0 0 / 0.14);
+
+	/* Layout */
+	--rds-rail-w: 56px;
+	--rds-panel-w: 360px;
+
+	font-family: "Inter", system-ui, -apple-system, sans-serif;
+	font-feature-settings: "ss01", "cv11";
+	-webkit-font-smoothing: antialiased;
+	color: var(--rds-fg);
+}
+
+[data-redesign].dark,
+.dark [data-redesign] {
+	--rds-bg-canvas: oklch(0.16 0.012 270);
+	--rds-bg-app: oklch(0.18 0.012 270);
+	--rds-bg-rail: oklch(0.155 0.012 270);
+	--rds-bg-panel: oklch(0.205 0.013 270);
+	--rds-bg-panel-elev: oklch(0.235 0.014 270);
+	--rds-bg-input: oklch(0.235 0.014 270);
+	--rds-bg-hover: oklch(0.245 0.014 270);
+	--rds-bg-active: oklch(0.28 0.015 270);
+	--rds-fg: oklch(0.97 0.005 270);
+	--rds-fg-muted: oklch(0.7 0.015 270);
+	--rds-fg-subtle: oklch(0.55 0.013 270);
+	--rds-border: oklch(1 0 0 / 0.08);
+	--rds-border-strong: oklch(1 0 0 / 0.14);
+	--rds-accent: oklch(0.7 0.18 282);
+	--rds-accent-soft: oklch(0.32 0.09 282);
+	--rds-accent-fg: oklch(0.15 0.01 270);
+	--rds-accent-line: oklch(0.72 0.18 282);
+	--rds-shadow-sm: 0 1px 0 oklch(0 0 0 / 0.4), 0 1px 2px oklch(0 0 0 / 0.4);
+	--rds-shadow-md: 0 1px 0 oklch(0 0 0 / 0.4), 0 6px 16px oklch(0 0 0 / 0.4), 0 16px 40px -8px oklch(0 0 0 / 0.5);
+	--rds-shadow-lg: 0 1px 0 oklch(0 0 0 / 0.5), 0 12px 32px oklch(0 0 0 / 0.5), 0 32px 80px -16px oklch(0 0 0 / 0.7);
+}
+
+/* Accent variants */
+[data-redesign][data-accent="cobalt"] {
+	--rds-accent: oklch(0.5 0.17 250);
+	--rds-accent-soft: oklch(0.96 0.03 250);
+	--rds-accent-line: oklch(0.5 0.17 250);
+}
+[data-redesign][data-accent="cobalt"].dark,
+.dark [data-redesign][data-accent="cobalt"] {
+	--rds-accent: oklch(0.7 0.16 245);
+	--rds-accent-soft: oklch(0.3 0.09 245);
+	--rds-accent-line: oklch(0.7 0.16 245);
+}
+[data-redesign][data-accent="forest"] {
+	--rds-accent: oklch(0.48 0.13 155);
+	--rds-accent-soft: oklch(0.95 0.04 155);
+	--rds-accent-line: oklch(0.48 0.13 155);
+}
+[data-redesign][data-accent="forest"].dark,
+.dark [data-redesign][data-accent="forest"] {
+	--rds-accent: oklch(0.72 0.16 155);
+	--rds-accent-soft: oklch(0.3 0.08 155);
+	--rds-accent-line: oklch(0.72 0.16 155);
+}
+[data-redesign][data-accent="ember"] {
+	--rds-accent: oklch(0.55 0.18 30);
+	--rds-accent-soft: oklch(0.95 0.04 30);
+	--rds-accent-line: oklch(0.55 0.18 30);
+}
+[data-redesign][data-accent="ember"].dark,
+.dark [data-redesign][data-accent="ember"] {
+	--rds-accent: oklch(0.72 0.18 30);
+	--rds-accent-soft: oklch(0.32 0.09 30);
+	--rds-accent-line: oklch(0.72 0.18 30);
+}
+
+/* Density */
+[data-redesign][data-density="compact"] {
+	--rds-density: 0.85;
+}
+[data-redesign][data-density="comfy"] {
+	--rds-density: 1.15;
+}
+
+/* Helpers used by the redesign */
+[data-redesign] .rds-mono {
+	font-family: "JetBrains Mono", ui-monospace, monospace;
+	font-feature-settings: "ss02", "zero";
+}
+[data-redesign] .rds-serif {
+	font-family: "Instrument Serif", "Times New Roman", serif;
+	font-style: italic;
+}
+
+@keyframes rds-pulse {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.55;
+	}
+}
+
+/* Glass effect — used by floating + bottom layout surfaces */
+[data-redesign] .rds-glass {
+	background: color-mix(in oklch, var(--rds-bg-panel) 78%, transparent);
+	backdrop-filter: blur(16px) saturate(140%);
+	-webkit-backdrop-filter: blur(16px) saturate(140%);
+	border: 1px solid var(--rds-border);
+}

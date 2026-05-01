@@ -7,6 +7,7 @@ import { formatVersion } from "@/lib/version";
 import { Route as IndexRoute } from "./index";
 
 const MapWithRouting = lazy(() => import("@/components/MapWithRouting"));
+const AppShell = lazy(() => import("@/redesign/AppShell").then((m) => ({ default: m.AppShell })));
 
 export const Route = createLazyFileRoute("/")({
 	component: Index,
@@ -17,6 +18,7 @@ function Index() {
 	const [showVersionNotification, setShowVersionNotification] = useState(false);
 	const { center, zoom, route } = IndexRoute.useSearch();
 	const currentLanguage: SupportedLanguage = loadLanguageFromLocalStorage();
+	const useLegacyShell = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("legacy");
 
 	useEffect(() => {
 		const urlParams = new URLSearchParams(window.location.search);
@@ -55,7 +57,11 @@ function Index() {
 	return (
 		<>
 			<Suspense fallback={<MapShellFallback />}>
-				<MapWithRouting height="100%" width="100%" initialCenter={center} initialZoom={zoom} routeId={route} />
+				{useLegacyShell ? (
+					<MapWithRouting height="100%" width="100%" initialCenter={center} initialZoom={zoom} routeId={route} />
+				) : (
+					<AppShell initialCenter={center} initialZoom={zoom} routeId={route} />
+				)}
 			</Suspense>
 
 			{showVersionNotification && (
