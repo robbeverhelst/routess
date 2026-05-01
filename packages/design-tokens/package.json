@@ -32,7 +32,7 @@
 		"type-check": "tsc --noEmit"
 	},
 	"devDependencies": {
-		"typescript": "^5.7.3"
+		"typescript": "^6.0.0"
 	},
 	"keywords": [
 		"design-tokens",
