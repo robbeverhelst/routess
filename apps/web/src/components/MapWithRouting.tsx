@@ -46,6 +46,9 @@ interface MapboxMapProps {
 	initialCenter?: [number, number];
 	initialZoom?: number;
 	routeId?: string;
+	// Redesign opts the new shell into hiding the legacy overlays so it can
+	// render its own toolbar/notifications without visual conflict.
+	hideOverlays?: boolean;
 }
 
 interface MapConfigurationContentProps {
@@ -58,6 +61,7 @@ interface MapConfigurationContentProps {
 	initialCenter?: [number, number];
 	initialZoom?: number;
 	routeId?: string;
+	hideOverlays?: boolean;
 	currentLanguage: SupportedLanguage;
 	setRouteDistance: React.Dispatch<React.SetStateAction<string>>;
 	setRouteDuration: React.Dispatch<React.SetStateAction<string>>;
@@ -102,6 +106,7 @@ const MapWithRoutingContent: React.FC<MapboxMapProps> = ({
 	initialCenter,
 	initialZoom,
 	routeId,
+	hideOverlays,
 }) => {
 	// Initialize localStorage data
 	const { detectedRouteInLocalStorageOnInit, lastKnownLocationFromStorage, lastSavedMapView } = useLocalStorageInit();
@@ -157,6 +162,7 @@ const MapWithRoutingContent: React.FC<MapboxMapProps> = ({
 				initialCenter={initialCenter}
 				initialZoom={initialZoom}
 				routeId={routeId}
+				hideOverlays={hideOverlays}
 				currentLanguage={currentLanguage}
 				setRouteDistance={setRouteDistance}
 				setRouteDuration={setRouteDuration}
@@ -254,42 +260,46 @@ const MapConfigurationContent: React.FC<MapConfigurationContentProps> = (props) 
 						lastSavedMapView={props.lastSavedMapView}
 					/>
 
-					<MapControls
-						mapRef={props.mapRef}
-						mapboxToken={MAPBOX_TOKEN}
-						currentLanguage={props.currentLanguage}
-						onLanguageChange={props.onLanguageChange}
-						hasRoute={props.hasRoute}
-						routeDistance={props.routeDistance}
-						routeDuration={props.routeDuration}
-						setRouteDistance={props.setRouteDistance}
-						setRouteDuration={props.setRouteDuration}
-						setHasRoute={props.setHasRoute}
-						onUndo={props.onUndo}
-						onRedo={props.onRedo}
-						onReverseRoute={props.onReverseRoute}
-						onReset={props.onReset}
-						onZoomToRoute={props.onZoomToRoute}
-						canUndo={props.canUndo}
-						canRedo={props.canRedo}
-						onShare={props.onShare}
-						displayedShareUrl={props.displayedShareUrl}
-						onCopySharedUrl={props.onCopySharedUrl}
-						onClearShareDisplay={props.onClearShareDisplay}
-						onCopyShareLink={props.onCopyShareLink}
-						onSelectLocation={props.onSelectLocation}
-						onImportError={props.onImportError}
-						isOnline={props.isOnline}
-					/>
+					{!props.hideOverlays && (
+						<MapControls
+							mapRef={props.mapRef}
+							mapboxToken={MAPBOX_TOKEN}
+							currentLanguage={props.currentLanguage}
+							onLanguageChange={props.onLanguageChange}
+							hasRoute={props.hasRoute}
+							routeDistance={props.routeDistance}
+							routeDuration={props.routeDuration}
+							setRouteDistance={props.setRouteDistance}
+							setRouteDuration={props.setRouteDuration}
+							setHasRoute={props.setHasRoute}
+							onUndo={props.onUndo}
+							onRedo={props.onRedo}
+							onReverseRoute={props.onReverseRoute}
+							onReset={props.onReset}
+							onZoomToRoute={props.onZoomToRoute}
+							canUndo={props.canUndo}
+							canRedo={props.canRedo}
+							onShare={props.onShare}
+							displayedShareUrl={props.displayedShareUrl}
+							onCopySharedUrl={props.onCopySharedUrl}
+							onClearShareDisplay={props.onClearShareDisplay}
+							onCopyShareLink={props.onCopyShareLink}
+							onSelectLocation={props.onSelectLocation}
+							onImportError={props.onImportError}
+							isOnline={props.isOnline}
+						/>
+					)}
 
-					<MapNotifications
-						hasRoute={props.hasRoute}
-						routeDistance={props.routeDistance}
-						shareNotification={props.shareNotification}
-						showRouteInfoError={props.showRouteInfoError}
-						routeInfoErrorMessage={props.routeInfoErrorMessage}
-						waypointError={props.waypointError}
-					/>
+					{!props.hideOverlays && (
+						<MapNotifications
+							hasRoute={props.hasRoute}
+							routeDistance={props.routeDistance}
+							shareNotification={props.shareNotification}
+							showRouteInfoError={props.showRouteInfoError}
+							routeInfoErrorMessage={props.routeInfoErrorMessage}
+							waypointError={props.waypointError}
+						/>
+					)}
 				</div>
 			</MapConfigurationProvider>
 		</MapModalsProvider>
@@ -303,6 +313,7 @@ export default function MapWithRouting({
 	initialCenter,
 	initialZoom,
 	routeId,
+	hideOverlays,
 }: MapboxMapProps) {
 	return (
 		<ErrorBoundary context="map-with-routing">
@@ -313,6 +324,7 @@ export default function MapWithRouting({
 					initialCenter={initialCenter}
 					initialZoom={initialZoom}
 					routeId={routeId}
+					hideOverlays={hideOverlays}
 				/>
 			</MapInteractionProvider>
 		</ErrorBoundary>
