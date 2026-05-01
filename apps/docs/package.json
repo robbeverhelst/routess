@@ -1,0 +1,38 @@
+{
+	"name": "docs",
+	"private": true,
+	"version": "0.1.0",
+	"type": "module",
+	"scripts": {
+		"dev": "next dev --turbopack",
+		"build": "next build",
+		"start": "next start",
+		"lint": "biome check .",
+		"check-types": "tsc --noEmit",
+		"clean": "rm -rf .next .source",
+		"postinstall": "fumadocs-mdx",
+		"openapi:generate": "bun scripts/generate-openapi-docs.ts",
+		"guide:sync-translations": "bun scripts/sync-guide-translations.ts",
+		"test": "echo \"no tests\" && exit 0"
+	},
+	"dependencies": {
+		"@routess/design-tokens": "workspace:*",
+		"@tailwindcss/postcss": "^4.1.7",
+		"tailwindcss": "^4.1.7",
+		"postcss": "^8.4.47",
+		"fumadocs-core": "^16.8.5",
+		"fumadocs-mdx": "^14.3.2",
+		"fumadocs-openapi": "^10.0.0",
+		"fumadocs-ui": "^16.8.5",
+		"next": "^16.0.0",
+		"react": "^19.2.0",
+		"react-dom": "^19.2.0"
+	},
+	"devDependencies": {
+		"@types/mdx": "^2.0.13",
+		"@types/node": "^24.0.1",
+		"@types/react": "^19.1.0",
+		"@types/react-dom": "^19.1.0",
+		"typescript": "~5.9.0"
+	}
+}

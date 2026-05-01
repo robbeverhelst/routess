@@ -1,5 +1,6 @@
 import { MikroOrmModule } from "@mikro-orm/nestjs";
 import { Module } from "@nestjs/common";
+import type { JwtModuleOptions } from "@nestjs/jwt";
 import { JwtModule } from "@nestjs/jwt";
 import { PassportModule } from "@nestjs/passport";
 import { ScheduleModule } from "@nestjs/schedule";
@@ -23,10 +24,12 @@ import { JwtStrategy } from "./strategies/jwt.strategy";
 		JwtModule.registerAsync({
 			imports: [ConfigModule],
 			inject: [APP_CONFIG],
-			useFactory: (config: AppConfig) => {
+			useFactory: (config: AppConfig): JwtModuleOptions => {
 				return {
 					secret: config.auth.jwtSecret,
-					signOptions: { expiresIn: config.auth.jwtExpiresIn },
+					signOptions: {
+						expiresIn: config.auth.jwtExpiresIn as NonNullable<JwtModuleOptions["signOptions"]>["expiresIn"],
+					},
 				};
 			},
 		}),

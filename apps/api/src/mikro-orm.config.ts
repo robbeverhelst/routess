@@ -23,6 +23,7 @@ const config: Options = {
 	},
 	debug: appConfig.database.debug,
 	allowGlobalContext: appConfig.app.isTest,
+	connect: process.env.OPENAPI_GENERATE !== "true",
 };
 
 export default config;

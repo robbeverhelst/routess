@@ -1,6 +1,6 @@
 import type { INestApplication } from "@nestjs/common";
 import { ValidationPipe, VersioningType } from "@nestjs/common";
-import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
+import { DocumentBuilder, type OpenAPIObject, SwaggerModule } from "@nestjs/swagger";
 import helmet from "helmet";
 import { GlobalExceptionFilter } from "../common/filters/global-exception.filter";
 import type { AppConfig } from "../config/app-config";
@@ -61,7 +61,20 @@ export function configureApplication(app: INestApplication, config: AppConfig = 
 		return;
 	}
 
-	const document = SwaggerModule.createDocument(
+	const document = createOpenApiDocument(app, config);
+
+	SwaggerModule.setup(config.docs.path.replace(/^\//, ""), app, document, {
+		swaggerOptions: {
+			persistAuthorization: true,
+			tagsSorter: "alpha",
+			operationsSorter: "alpha",
+		},
+		customSiteTitle: `${config.app.name} Docs`,
+	});
+}
+
+export function createOpenApiDocument(app: INestApplication, config: AppConfig = getAppConfig()): OpenAPIObject {
+	return SwaggerModule.createDocument(
 		app,
 		new DocumentBuilder()
 			.setTitle(config.app.name)
@@ -77,19 +90,14 @@ export function configureApplication(app: INestApplication, config: AppConfig = 
 				"JWT-auth",
 			)
 			.addServer(`http://localhost:${config.app.port}`, "Local development")
+			.addServer("https://routess-api.robbeverhelst.com", "Production")
+			.addServer("https://api.routess.com", "Future canonical domain")
 			.addTag("auth", "Authentication endpoints")
 			.addTag("routes", "Route management")
 			.addTag("users", "User profile management")
+			.addTag("app", "API root metadata")
 			.addTag("health", "Health and monitoring")
+			.addTag("metrics", "Prometheus metrics")
 			.build(),
 	);
-
-	SwaggerModule.setup(config.docs.path.replace(/^\//, ""), app, document, {
-		swaggerOptions: {
-			persistAuthorization: true,
-			tagsSorter: "alpha",
-			operationsSorter: "alpha",
-		},
-		customSiteTitle: `${config.app.name} Docs`,
-	});
 }

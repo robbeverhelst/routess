@@ -1,0 +1,32 @@
+---
+title: "@routess/core"
+description: Shared types, Zustand stores, and platform-agnostic utilities.
+---
+
+The foundation package. Everything safe for both web and React Native lives here.
+
+## Exports
+
+| Subpath | Contents |
+| --- | --- |
+| `@routess/core` | Re-exports of stores, types, utils, logger |
+| `@routess/core/stores` | Zustand stores: routing, auth, ui |
+| `@routess/core/types` | Shared TypeScript types |
+| `@routess/core/utils` | Geospatial helpers, formatters, validators |
+
+## Notable types
+
+- `Waypoint` — `{ id, lng, lat, label?, kind: 'start' | 'stop' | 'end' }`
+- `Route` — `{ id, ownerId, waypoints: Waypoint[], name?, createdAt, updatedAt }`
+- `User` — `{ id, email, displayName?, avatarUrl?, locale }`
+
+## Adding a new util
+
+1. Add the function in `src/utils/`
+2. Re-export from `src/utils/index.ts`
+3. Add a unit test alongside it
+4. Bump nothing — the package is `workspace:*` and not published
+
+## Adding a store
+
+Stores live under `src/stores/`. Keep them framework-free — no React imports, no DOM. Use `subscribeWithSelector` if you need targeted subscribers.

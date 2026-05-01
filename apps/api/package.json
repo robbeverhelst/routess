@@ -31,7 +31,8 @@
 		"db:down": "cd ../.. && docker-compose down",
 		"db:migration:create": "mikro-orm migration:create",
 		"db:migration:up": "mikro-orm migration:up",
-		"db:schema:create": "mikro-orm schema:create"
+		"db:schema:create": "mikro-orm schema:create",
+		"openapi:generate": "bun src/openapi.ts"
 	},
 	"dependencies": {
 		"@mikro-orm/cli": "^6.4.16",

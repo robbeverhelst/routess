@@ -1,0 +1,5 @@
+{
+	"title": "Routes",
+	"description": "Route management",
+	"pages": ["get-routes", "post-routes", "get-routes-id", "patch-routes-id", "delete-routes-id"]
+}

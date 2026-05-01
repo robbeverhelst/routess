@@ -1,5 +1,8 @@
 node_modules
+**/node_modules
+**/.old_modules-*
 dist
+**/dist
 .git
 .github
 *.log
@@ -7,8 +10,11 @@ dist
 !.env.example
 .DS_Store
 coverage
+**/coverage
 .turbo
 .next
+**/.next
+**/.source
 .expo
 *.tsbuildinfo
 android

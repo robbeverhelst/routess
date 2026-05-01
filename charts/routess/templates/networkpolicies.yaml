@@ -87,6 +87,8 @@ spec:
           port: {{ .Values.web.service.targetPort }}
         - protocol: TCP
           port: {{ .Values.api.service.targetPort }}
+        - protocol: TCP
+          port: {{ .Values.docs.service.targetPort }}
 {{- if .Values.networkPolicies.postgresEgress.enabled }}
 ---
 # Allow egress to PostgreSQL

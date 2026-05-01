@@ -64,4 +64,37 @@ spec:
                 port:
                   number: {{ $.Values.api.service.port }}
     {{- end }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "routess.fullname" . }}-docs
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "routess.docs.labels" . | nindent 4 }}
+  annotations:
+    {{- with .Values.ingress.docs.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  {{- if .Values.ingress.className }}
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- end }}
+  {{- if .Values.ingress.docs.tls }}
+  tls:
+    {{- toYaml .Values.ingress.docs.tls | nindent 4 }}
+  {{- end }}
+  rules:
+    {{- range .Values.ingress.docs.hosts }}
+    - host: {{ . | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "routess.fullname" $ }}-docs
+                port:
+                  number: {{ $.Values.docs.service.port }}
+    {{- end }}
 {{- end }}

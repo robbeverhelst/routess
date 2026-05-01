@@ -1,0 +1,30 @@
+---
+title: Release process
+description: How a green main produces a versioned release.
+---
+
+Releases are fully automated — you don't run `npm version` or push tags.
+
+## Trigger
+
+Every push to `main` triggers the `release` job. If there are no release-worthy commits since the last tag, nothing happens.
+
+## What runs
+
+1. `semantic-release` analyzes commits, decides the next version (or skips)
+2. Creates a git tag (e.g. `2.3.4`) and a GitHub Release with auto-generated notes
+3. Updates `package.json` versions in each app/package
+4. Pushes a `chore(release): X.Y.Z [skip ci]` commit back to main
+
+Then, in parallel:
+
+- `publish-images` builds and pushes Docker images to GHCR with tags `X.Y.Z`, `X.Y`, `X`, and `sha-…`
+- `publish-helm` updates the chart's `version` and `appVersion`, packages it, pushes to GHCR OCI, attaches it to the GitHub Release
+
+## Hotfixes
+
+Use `fix:` commits — they cut a patch release. There's no separate hotfix branch — `main` is always shippable.
+
+## Reverting a release
+
+Don't delete the tag or the release. Cut a new `revert: ...` or `fix: ...` commit that undoes the change. The next pipeline run produces a new patch release.

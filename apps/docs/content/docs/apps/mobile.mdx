@@ -1,0 +1,30 @@
+---
+title: Mobile app
+description: The Expo-based mobile app — planned, not yet in the monorepo.
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+<Callout type="warn" title="Not yet built">
+	The mobile app is on the roadmap but not yet present in `apps/`. This page documents the plan.
+</Callout>
+
+## Goals
+
+- 100% free to build and ship (no EAS, no paid services beyond store fees)
+- Reuse `@routess/core`, `@routess/api-client`, `@routess/i18n`, `@routess/design-tokens`
+- Mapbox via `@rnmapbox/maps`
+- Self-hosted CI for APK and IPA builds
+
+## Phases
+
+1. **Foundation** — Expo app + monorepo wiring + local builds
+2. **Self-hosted CI** — GitHub Actions producing signed APKs/IPAs
+3. **Design tokens** — Replace defaults with `@routess/design-tokens`
+4. **Mapbox** — `@rnmapbox/maps` with shared style
+5. **Shared logic** — wire the four packages
+6. **Routing features** — waypoint UI, undo/redo
+7. **Android release** — Google Play
+8. **iOS release** — App Store
+
+The full plan with rationale lives in the repo's `CLAUDE.md`.

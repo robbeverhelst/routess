@@ -20,6 +20,9 @@
 		"clean": "rm -rf node_modules apps/*/node_modules packages/*/node_modules apps/*/dist packages/*/dist coverage apps/*/coverage /tmp/esbuild* && bun install",
 		"docker:build:web": "docker build -f apps/web/Dockerfile -t routess-web .",
 		"docker:build:api": "docker build -f apps/api/Dockerfile -t routess-api .",
+		"docker:build:docs": "docker build -f apps/docs/Dockerfile -t routess-docs .",
+		"docs:generate-api": "bun run --filter './apps/api' openapi:generate && bun run --filter './apps/docs' openapi:generate",
+		"docs:sync-translations": "bun run --filter './apps/docs' guide:sync-translations",
 		"ls": "node -e \"const pkg = require('./package.json'); console.log('\\n📋 Available Scripts:\\n'); Object.entries(pkg.scripts).forEach(([name, cmd]) => console.log('  ' + name.padEnd(25) + ' ' + cmd)); console.log('\\n💡 Usage: bun run <script-name>\\n');\""
 	},
 	"devDependencies": {

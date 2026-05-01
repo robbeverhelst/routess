@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "routess.fullname" . }}-docs
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "routess.docs.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.docs.autoscaling.enabled }}
+  replicas: {{ .Values.docs.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "routess.docs.selectorLabels" . | nindent 6 }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        {{- include "routess.docs.selectorLabels" . | nindent 8 }}
+        {{- with .Values.docs.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.docs.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ include "routess.docs.serviceAccountName" . }}
+      automountServiceAccountToken: {{ .Values.docs.automountServiceAccountToken | default false }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.docs.securityContext | nindent 8 }}
+      containers:
+        - name: docs
+          image: "{{ .Values.docs.image.repository }}:{{ .Values.docs.image.tag }}"
+          imagePullPolicy: {{ .Values.docs.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.docs.service.targetPort }}
+              protocol: TCP
+          securityContext:
+            {{- toYaml .Values.docs.containerSecurityContext | nindent 12 }}
+          resources:
+            {{- toYaml .Values.docs.resources | nindent 12 }}
+          {{- with .Values.docs.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.docs.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.docs.startupProbe }}
+          startupProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.docs.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.docs.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.docs.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.docs.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

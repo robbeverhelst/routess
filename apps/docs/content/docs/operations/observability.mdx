@@ -1,0 +1,31 @@
+---
+title: Observability
+description: Metrics, traces, and logs.
+---
+
+The API ships with **OpenTelemetry** wired up.
+
+## Metrics
+
+`GET /metrics` exposes Prometheus-format metrics. The endpoint is reachable only from inside the namespace by default — scrape it from your Prometheus deployment using a `ServiceMonitor` or equivalent.
+
+## Traces
+
+The API instruments inbound HTTP, outbound HTTP, and database queries via `@opentelemetry/auto-instrumentations-node`. Configure the exporter via standard `OTEL_*` env vars:
+
+```sh
+OTEL_EXPORTER_OTLP_ENDPOINT=https://otel-collector:4318
+OTEL_SERVICE_NAME=routess-api
+OTEL_RESOURCE_ATTRIBUTES=deployment.environment=prod
+```
+
+## Logs
+
+The API logs structured JSON to stdout. Anything collecting Kubernetes pod logs (Loki, Datadog, CloudWatch) will pick them up. Each log line includes `traceId` and `spanId` so you can pivot from a slow log line to its trace.
+
+## Health endpoints
+
+- `GET /health/live` — process is alive
+- `GET /health/ready` — DB reachable, ready to serve
+
+These back the Kubernetes liveness and readiness probes.

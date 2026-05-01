@@ -1,0 +1,32 @@
+---
+title: Testing
+description: How tests are organized and run.
+---
+
+The repo has a **109-test suite** that runs on every PR.
+
+## Frameworks
+
+| Surface | Framework |
+| --- | --- |
+| Web (`apps/web`) | Vitest + React Testing Library + MSW |
+| API (`apps/api`) | Vitest + Postgres test container |
+| Packages | Vitest |
+
+## Run them
+
+```sh
+bun run test                    # All tests across the workspace
+bun run --filter './apps/web' test
+bun run --filter './packages/*' test
+```
+
+## Conventions
+
+- Test files live next to source: `foo.ts` + `foo.test.ts`
+- Web tests use **MSW** to mock the API at the network layer (no jest mocks of the api-client)
+- API tests run against a real Postgres in CI (Docker service container) — no mocked DB
+
+## Coverage
+
+Web has `vitest --coverage` wired up. CI doesn't gate on coverage — it's a guideline, not a rule.

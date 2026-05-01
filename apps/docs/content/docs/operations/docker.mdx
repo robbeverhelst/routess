@@ -1,0 +1,40 @@
+---
+title: Docker
+description: Building and running Routess images.
+---
+
+Each app has its own Dockerfile. Builds run from the **monorepo root** so `bun install` can resolve `workspace:*` deps.
+
+## Images published
+
+| Image | Source | Base | Notes |
+| --- | --- | --- | --- |
+| `ghcr.io/robbeverhelst/routess-web` | `apps/web/Dockerfile` | `nginx:alpine` | Static SPA, runtime env injection |
+| `ghcr.io/robbeverhelst/routess-api` | `apps/api/Dockerfile` | `node:20-alpine` | Read-only root filesystem |
+| `ghcr.io/robbeverhelst/routess-docs` | `apps/docs/Dockerfile` | `node:20-alpine` | Next.js standalone |
+
+## Build locally
+
+```sh
+# Web
+bun run docker:build:web
+
+# API
+bun run docker:build:api
+
+# Docs
+docker build -f apps/docs/Dockerfile -t routess-docs .
+```
+
+## Run locally
+
+```sh
+docker run --rm -p 8080:8080 \
+	-e VITE_API_URL=http://localhost:3000 \
+	-e VITE_MAPBOX_ACCESS_TOKEN=pk.xxx \
+	ghcr.io/robbeverhelst/routess-web:latest
+```
+
+## Multi-arch
+
+CI builds both `linux/amd64` and `linux/arm64` via `docker buildx`. The same image works on Apple Silicon and Intel/AMD servers.

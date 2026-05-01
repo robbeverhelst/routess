@@ -1,0 +1,49 @@
+---
+title: Local setup
+description: Get the full stack running on your machine.
+---
+
+```sh
+git clone https://github.com/robbeverhelst/maps
+cd maps
+bun install
+bun run dev
+```
+
+`bun run dev` does three things:
+
+1. Starts a Postgres container via `docker-compose up -d postgres`
+2. Builds all `packages/*` (so the apps can import them)
+3. Runs every `apps/*` in dev mode in parallel
+
+You should see:
+
+- **Web** — http://localhost:5173
+- **API** — http://localhost:3000
+- **Docs** — http://localhost:3001 _(this site)_
+- **pgAdmin** — http://localhost:5050 _(if Docker started it)_
+
+## Environment variables
+
+Each app has its own `.env.example`. Copy and fill in:
+
+```sh
+cp apps/web/.env.example apps/web/.env.local
+cp apps/api/.env.example apps/api/.env.local
+```
+
+Required values:
+
+- `VITE_MAPBOX_ACCESS_TOKEN` — get one from [mapbox.com](https://mapbox.com)
+- `VITE_GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_ID` — from Google Cloud Console
+- `JWT_SECRET` — any random string for local dev
+
+## Useful scripts
+
+```sh
+bun run lint            # Biome check across the repo
+bun run check-types     # TypeScript across all workspaces
+bun run test            # Run the test suite (109 tests)
+bun run build           # Build everything (packages first, then apps)
+bun run ci              # Run the full CI pipeline locally
+```

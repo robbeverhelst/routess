@@ -18,7 +18,8 @@
 		"./typography": {
 			"import": "./dist/typography.js",
 			"types": "./dist/typography.d.ts"
-		}
+		},
+		"./css/tokens.css": "./css/tokens.css"
 	},
 	"files": [
 		"dist/**/*",
