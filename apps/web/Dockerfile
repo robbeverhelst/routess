@@ -21,7 +21,7 @@ ENV VITE_APP_VERSION=__VITE_APP_VERSION__
 ENV DOCKER_BUILD=true
 
 WORKDIR /app/apps/web
-RUN node /app/node_modules/vite/bin/vite.js build
+RUN node node_modules/vite/bin/vite.js build
 
 FROM nginx:alpine
 
