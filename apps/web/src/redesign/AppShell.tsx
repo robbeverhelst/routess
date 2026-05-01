@@ -1,5 +1,7 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { lazy, type ReactNode, Suspense, useEffect, useState } from "react";
 import { useAuthStatus } from "@/lib/api-queries";
+import { queryKeys } from "@/lib/query-client";
 import { useModalsStore } from "@/redesign/stores/modalsStore";
 import { type RedesignContext, useUiStore } from "@/redesign/stores/uiStore";
 import {
@@ -7,17 +9,16 @@ import {
 	useCanUndo,
 	useHasRoute,
 	useIsMapLocked,
-	useRedo,
 	useRouteDistance,
 	useRouteDuration,
 	useSetIsMapLocked,
-	useUndo,
 } from "@/stores/routingStore";
 import { I, RoutessMark } from "./components/icons";
 import { MapToolbar } from "./components/MapToolbar";
 import { Badge, IconBtn, RDS_COLORS } from "./components/primitives";
 import { RailNav } from "./components/RailNav";
 import { RouteChip } from "./components/RouteChip";
+import { UserAvatar } from "./components/UserAvatar";
 import { useOnlineStatus } from "./hooks/useOnlineStatus";
 import { CommandPalette } from "./modals/CommandPalette";
 import { ConfirmDeleteModal } from "./modals/ConfirmDeleteModal";
@@ -47,6 +48,7 @@ import { ProfileScreen } from "./screens/ProfileScreen";
 import { RecordingScreen } from "./screens/RecordingScreen";
 import { SignUpScreen } from "./screens/SignUpScreen";
 import { WelcomeScreen } from "./screens/WelcomeScreen";
+import { useToastStore } from "./stores/toastStore";
 
 const MapWithRouting = lazy(() => import("@/components/MapWithRouting"));
 
@@ -127,12 +129,11 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 	const duration = useRouteDuration();
 	const canUndo = useCanUndo();
 	const canRedo = useCanRedo();
-	const undo = useUndo();
-	const redo = useRedo();
 	const isLocked = useIsMapLocked();
 	const setIsLocked = useSetIsMapLocked();
 
-	const [authView, setAuthView] = useState<AuthView>("app");
+	const queryClient = useQueryClient();
+	const [authView, setAuthView] = useState<AuthView>("login");
 	const [skippedAuth, setSkippedAuth] = useState(false);
 	const [offlineDismissed, setOfflineDismissed] = useState(false);
 	const [devScreen, setDevScreen] = useState<DevScreen | null>(getDevScreen);
@@ -156,6 +157,83 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 		window.addEventListener("keydown", onKey);
 		return () => window.removeEventListener("keydown", onKey);
 	}, [openModal]);
+
+	useEffect(() => {
+		const onAuthChange = () => {
+			// Invalidate the auth-status cache so useAuthStatus re-evaluates after
+			// sign-in/sign-out. Without this, the cached { isAuthenticated: true }
+			// lingers and the UI never reflects a sign-out.
+			queryClient.invalidateQueries({ queryKey: queryKeys.auth.session() });
+			const stillSignedIn = !!localStorage.getItem("access_token");
+			if (!stillSignedIn) {
+				setSkippedAuth(false);
+				setAuthView("login");
+				setDevScreen(null);
+			}
+		};
+		window.addEventListener("auth-change", onAuthChange);
+		return () => window.removeEventListener("auth-change", onAuthChange);
+	}, [queryClient]);
+
+	useEffect(() => {
+		const pushToast = useToastStore.getState().push;
+		const onOpenAccount = () => {
+			setDevScreen("account");
+		};
+		const onOpenLogin = () => {
+			setSkippedAuth(false);
+			setAuthView("login");
+		};
+		const onOpenActivity = () => {
+			setContext("activity");
+		};
+		const onExportAll = () => {
+			pushToast({
+				kind: "info",
+				title: "Export coming soon",
+				body: "Bulk data export will be available once the backend lands.",
+			});
+		};
+		const onDuplicate = () => {
+			pushToast({
+				kind: "info",
+				title: "Duplicate coming soon",
+				body: "Route duplication will be wired up with the route library backend.",
+			});
+		};
+		const onDelete = () => {
+			pushToast({
+				kind: "info",
+				title: "Delete coming soon",
+				body: "Route deletion will be wired up with the route library backend.",
+			});
+		};
+		const onToggleFavorite = () => {
+			pushToast({
+				kind: "info",
+				title: "Favourite saved locally",
+				body: "Favourite syncing will arrive with the backend.",
+				durationMs: 2500,
+			});
+		};
+
+		window.addEventListener("routess:open-account", onOpenAccount);
+		window.addEventListener("routess:open-login", onOpenLogin);
+		window.addEventListener("routess:open-activity", onOpenActivity);
+		window.addEventListener("routess:export-all-data", onExportAll);
+		window.addEventListener("routess:duplicate-route", onDuplicate);
+		window.addEventListener("routess:delete-route", onDelete);
+		window.addEventListener("routess:toggle-favorite", onToggleFavorite);
+		return () => {
+			window.removeEventListener("routess:open-account", onOpenAccount);
+			window.removeEventListener("routess:open-login", onOpenLogin);
+			window.removeEventListener("routess:open-activity", onOpenActivity);
+			window.removeEventListener("routess:export-all-data", onExportAll);
+			window.removeEventListener("routess:duplicate-route", onDuplicate);
+			window.removeEventListener("routess:delete-route", onDelete);
+			window.removeEventListener("routess:toggle-favorite", onToggleFavorite);
+		};
+	}, [setContext]);
 
 	const isAuthenticated = !!auth?.isAuthenticated;
 	const showLogin = !isAuthenticated && !skippedAuth && authView === "login";
@@ -223,7 +301,7 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 			>
 				{devScreen === "livenav" && <LiveNavScreen onClose={close} />}
 				{devScreen === "recording" && <RecordingScreen onStop={close} />}
-				{devScreen === "postactivity" && <PostActivityScreen />}
+				{devScreen === "postactivity" && <PostActivityScreen onClose={close} />}
 				{devScreen === "profile" && <ProfileScreen />}
 				{devScreen === "account" && <AccountScreen />}
 				{devScreen === "compare" && <CompareScreen onClose={close} />}
@@ -349,6 +427,7 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 				initialCenter={initialCenter}
 				initialZoom={initialZoom}
 				routeId={routeId}
+				mapTheme={theme}
 				hideOverlays
 			/>
 		</Suspense>
@@ -358,12 +437,18 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 		<MapToolbar
 			canUndo={canUndo}
 			canRedo={canRedo}
-			onUndo={undo}
-			onRedo={redo}
+			onUndo={() => window.dispatchEvent(new CustomEvent("routess:undo"))}
+			onRedo={() => window.dispatchEvent(new CustomEvent("routess:redo"))}
+			onRemoveRoute={() => window.dispatchEvent(new CustomEvent("routess:reset-route"))}
+			hasRoute={hasRoute}
 			isLocked={isLocked}
 			onLock={() => setIsLocked(!isLocked)}
 			onSearch={() => openModal("search")}
+			onLocate={() => window.dispatchEvent(new CustomEvent("routess:locate"))}
 			onLayers={() => (overlay === "layers" ? closeOverlay() : openOverlay("layers"))}
+			onFocusRoute={() => window.dispatchEvent(new CustomEvent("routess:focus-route"))}
+			onZoomIn={() => window.dispatchEvent(new CustomEvent("routess:zoom-in"))}
+			onZoomOut={() => window.dispatchEvent(new CustomEvent("routess:zoom-out"))}
 		/>
 	);
 
@@ -399,16 +484,19 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 	// ===== Layout: SIDEBAR (default) =====
 	if (layout === "sidebar") {
 		return sharedRoot(
-			<div style={{ position: "absolute", inset: 0, display: "flex" }}>
+			<div style={{ position: "absolute", inset: 0 }}>
 				<RailNav />
 				<aside
 					style={{
+						position: "absolute",
+						top: 0,
+						bottom: 0,
+						left: "var(--rds-rail-w)",
 						width: panelCollapsed ? 0 : "var(--rds-panel-w)",
 						background: RDS_COLORS.bgPanel,
 						borderRight: panelCollapsed ? "none" : `1px solid ${RDS_COLORS.border}`,
 						display: "flex",
 						flexDirection: "column",
-						flexShrink: 0,
 						zIndex: 4,
 						overflow: "hidden",
 						transition: "width 200ms ease, border-color 200ms ease",
@@ -419,7 +507,18 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 						{renderPanelContent()}
 					</div>
 				</aside>
-				<main style={{ flex: 1, position: "relative" }}>
+				<main
+					style={{
+						position: "absolute",
+						top: 0,
+						right: 0,
+						bottom: 0,
+						left: panelCollapsed ? "var(--rds-rail-w)" : "calc(var(--rds-rail-w) + var(--rds-panel-w))",
+						overflow: "hidden",
+						background: RDS_COLORS.bgCanvas,
+						transition: "left 200ms ease",
+					}}
+				>
 					{MapNode}
 					{Toolbar}
 					{Chip}
@@ -543,23 +642,10 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 						zIndex: 5,
 					}}
 				>
-					<div
-						style={{
-							width: 28,
-							height: 28,
-							borderRadius: 999,
-							background: `linear-gradient(135deg, ${RDS_COLORS.accent}, oklch(0.65 0.15 200))`,
-							color: "white",
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "center",
-							fontSize: 11,
-							fontWeight: 600,
-						}}
-					>
-						RV
-					</div>
-					<span style={{ fontSize: 13, fontWeight: 500 }}>Robbe</span>
+					<UserAvatar size={28} compact />
+					{auth?.user?.name ? (
+						<span style={{ fontSize: 13, fontWeight: 500 }}>{auth.user.name.split(" ")[0]}</span>
+					) : null}
 					<IconBtn title="Toggle theme" onClick={toggleTheme}>
 						{theme === "dark" ? <I.sun size={14} /> : <I.moon size={14} />}
 					</IconBtn>
@@ -663,22 +749,7 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 				<IconBtn title="Toggle theme" onClick={toggleTheme}>
 					{theme === "dark" ? <I.sun size={16} /> : <I.moon size={16} />}
 				</IconBtn>
-				<div
-					style={{
-						width: 30,
-						height: 30,
-						borderRadius: 999,
-						background: `linear-gradient(135deg, ${RDS_COLORS.accent}, oklch(0.65 0.15 200))`,
-						color: "white",
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "center",
-						fontSize: 11,
-						fontWeight: 600,
-					}}
-				>
-					RV
-				</div>
+				<UserAvatar size={30} compact />
 			</div>
 
 			{/* Right zoom stack */}
@@ -697,15 +768,15 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 					zIndex: 5,
 				}}
 			>
-				<IconBtn title="Zoom in">
+				<IconBtn title="Zoom in" onClick={() => window.dispatchEvent(new CustomEvent("routess:zoom-in"))}>
 					<I.plus size={14} />
 				</IconBtn>
 				<div style={{ height: 1, background: RDS_COLORS.border }} />
-				<IconBtn title="Zoom out">
+				<IconBtn title="Zoom out" onClick={() => window.dispatchEvent(new CustomEvent("routess:zoom-out"))}>
 					<I.minus size={14} />
 				</IconBtn>
 				<div style={{ height: 1, background: RDS_COLORS.border }} />
-				<IconBtn title="Locate">
+				<IconBtn title="Locate" onClick={() => window.dispatchEvent(new CustomEvent("routess:locate"))}>
 					<I.target size={14} />
 				</IconBtn>
 			</div>

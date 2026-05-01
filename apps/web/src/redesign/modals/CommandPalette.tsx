@@ -38,8 +38,14 @@ export function CommandPalette() {
 				title: "Actions",
 				items: [
 					{ id: "act-save", icon: I.save, label: "Save current route", kbd: "S", run: () => openModal("save") },
-					{ id: "act-loop", icon: I.refresh, label: "Generate loop", kbd: "L", run: () => openModal("loop") },
-					{ id: "act-routing", icon: I.zap, label: "Routing preferences", kbd: "R", run: () => openModal("routing") },
+					{ id: "act-loop", icon: I.compass, label: "Generate loop", kbd: "L", run: () => openModal("loop") },
+					{
+						id: "act-routing",
+						icon: I.sliders,
+						label: "Routing preferences",
+						kbd: "R",
+						run: () => openModal("routing"),
+					},
 					{ id: "act-import", icon: I.upload, label: "Import GPX", kbd: "I", run: () => openModal("import") },
 					{ id: "act-share", icon: I.share, label: "Share current route", kbd: "⇧ S", run: () => openModal("share") },
 					{ id: "act-theme", icon: I.moon, label: "Toggle dark mode", kbd: "⌘ D", run: toggleTheme },

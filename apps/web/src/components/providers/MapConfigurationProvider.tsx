@@ -28,6 +28,17 @@ const BEARING_PRESETS = [0, 90, 180, 270]; // N, E, S, W
 // Order of presets for cycling
 const lightPresetsOrder: TimeOfDay[] = ["dawn", "day", "dusk", "night"];
 
+type RedesignMapStyleKey = "streets" | "outdoors" | "satellite" | "terrain" | "dark" | "minimal";
+
+const REDESIGN_STYLE_URLS: Record<RedesignMapStyleKey, string> = {
+	streets: "mapbox://styles/mapbox/streets-v12",
+	outdoors: "mapbox://styles/mapbox/outdoors-v12",
+	satellite: "mapbox://styles/mapbox/satellite-streets-v12",
+	terrain: "mapbox://styles/mapbox/outdoors-v12",
+	dark: "mapbox://styles/mapbox/dark-v11",
+	minimal: "mapbox://styles/mapbox/light-v11",
+};
+
 interface MapConfigurationContextType {
 	// Map style state
 	currentMapStyle: MapStyle;
@@ -101,6 +112,55 @@ export const MapConfigurationProvider: React.FC<MapConfigurationProviderProps> =
 	const [currentMapStyle, setCurrentMapStyle] = useState<MapStyle>(loadMapStyleFromLocalStorage());
 	const [showSunDirection, setShowSunDirection] = useState<boolean>(loadSunDirectionSettingFromLocalStorage());
 	const [currentSunPosition, setCurrentSunPosition] = useState<SolarPosition | null>(null);
+
+	const restoreRouteLayers = useCallback(
+		(styleKey?: RedesignMapStyleKey) => {
+			if (!mapRef.current) return;
+
+			if (styleKey === "satellite") {
+				mapRef.current.setProjection("globe");
+				mapRef.current.setFog({
+					color: "rgb(186, 210, 235)",
+					"high-color": "rgb(36, 92, 223)",
+					"horizon-blend": 0.02,
+					"space-color": "rgb(11, 11, 25)",
+					"star-intensity": 0.6,
+				});
+			}
+
+			Logger.info("[MapConfigurationProvider] Re-initializing map layers after style change");
+			initializeSourcesAndLayers(mapRef.current);
+
+			if (waypoints.length > 0) {
+				updateWaypointsLayer(mapRef.current, waypoints, isMapLocked);
+			}
+
+			if (routePath && routePath.length > 0) {
+				updateRouteLayer(mapRef.current, routePath);
+			}
+		},
+		[isMapLocked, mapRef, routePath, waypoints],
+	);
+
+	const applyMapStyle = useCallback(
+		(styleKey: RedesignMapStyleKey) => {
+			if (!mapRef.current) return;
+
+			const nextMapStyle: MapStyle = styleKey === "satellite" ? "satellite" : "standard";
+			const styleUrl = REDESIGN_STYLE_URLS[styleKey];
+
+			mapRef.current.setStyle(styleUrl);
+			setCurrentMapStyle(nextMapStyle);
+
+			if (styleKey === "dark") {
+				setCurrentLightPreset("night");
+			}
+
+			mapRef.current.once("style.load", () => restoreRouteLayers(styleKey));
+			Logger.info(`[MapConfigurationProvider] Map style changed to: ${styleKey}`);
+		},
+		[mapRef, restoreRouteLayers],
+	);
 
 	// Effect to automatically lock map when offline
 	useEffect(() => {
@@ -196,56 +256,29 @@ export const MapConfigurationProvider: React.FC<MapConfigurationProviderProps> =
 
 	// Map style toggle handler
 	const handleToggleMapStyle = useCallback(() => {
-		if (mapRef.current) {
-			const newStyle: MapStyle = currentMapStyle === "standard" ? "satellite" : "standard";
-			const mapStyleUrl =
-				newStyle === "satellite" ? "mapbox://styles/mapbox/satellite-streets-v12" : "mapbox://styles/mapbox/standard";
+		applyMapStyle(currentMapStyle === "standard" ? "satellite" : "streets");
+	}, [applyMapStyle, currentMapStyle]);
 
-			mapRef.current.setStyle(mapStyleUrl);
-			setCurrentMapStyle(newStyle);
+	useEffect(() => {
+		const onZoomIn = () => mapRef.current?.zoomIn();
+		const onZoomOut = () => mapRef.current?.zoomOut();
+		const onSetStyle = (event: Event) => {
+			const styleKey = (event as CustomEvent<{ styleKey?: RedesignMapStyleKey }>).detail?.styleKey;
+			if (styleKey && styleKey in REDESIGN_STYLE_URLS) {
+				applyMapStyle(styleKey);
+			}
+		};
 
-			// Re-initialize all layers after style change (style.load removes all custom layers)
-			mapRef.current.once("style.load", () => {
-				if (mapRef.current) {
-					// For satellite view, ensure we maintain the space background
-					if (newStyle === "satellite") {
-						mapRef.current.setProjection("globe");
-						mapRef.current.setFog({
-							color: "rgb(186, 210, 235)",
-							"high-color": "rgb(36, 92, 223)",
-							"horizon-blend": 0.02,
-							"space-color": "rgb(11, 11, 25)",
-							"star-intensity": 0.6,
-						});
-					}
+		window.addEventListener("routess:zoom-in", onZoomIn);
+		window.addEventListener("routess:zoom-out", onZoomOut);
+		window.addEventListener("routess:set-map-style", onSetStyle);
 
-					// Re-initialize all map layers (route, waypoints, etc.)
-					Logger.info("[MapConfigurationProvider] Re-initializing map layers after style change");
-
-					// 1. Initialize the layer structure
-					initializeSourcesAndLayers(mapRef.current);
-
-					// 2. Restore current route data from Zustand store
-					if (waypoints.length > 0) {
-						Logger.info(
-							"[MapConfigurationProvider] Restoring waypoints to map:",
-							waypoints.length,
-							"locked:",
-							isMapLocked,
-						);
-						updateWaypointsLayer(mapRef.current, waypoints, isMapLocked);
-					}
-
-					if (routePath && routePath.length > 0) {
-						Logger.info("[MapConfigurationProvider] Restoring route path to map:", routePath.length, "points");
-						updateRouteLayer(mapRef.current, routePath);
-					}
-				}
-			});
-
-			Logger.info(`[MapConfigurationProvider] Map style changed to: ${newStyle}`);
-		}
-	}, [currentMapStyle, mapRef, waypoints, routePath, isMapLocked]);
+		return () => {
+			window.removeEventListener("routess:zoom-in", onZoomIn);
+			window.removeEventListener("routess:zoom-out", onZoomOut);
+			window.removeEventListener("routess:set-map-style", onSetStyle);
+		};
+	}, [applyMapStyle, mapRef]);
 
 	// Effect to update waypoint visibility when lock state changes
 	useEffect(() => {

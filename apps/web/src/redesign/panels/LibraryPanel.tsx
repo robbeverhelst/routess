@@ -134,7 +134,7 @@ function EmptyLibrary({
 						<I.plus size={14} /> Plan a route
 					</Btn>
 					<Btn style={{ width: "100%" }} onClick={onLoop}>
-						<I.refresh size={14} /> Generate a loop
+						<I.compass size={14} /> Generate a loop
 					</Btn>
 					<Btn variant="ghost" style={{ width: "100%", color: RDS_COLORS.fgMuted }} onClick={onImport}>
 						<I.upload size={14} /> Import GPX
@@ -380,7 +380,23 @@ export function LibraryPanel() {
 								onClick={(e) => e.stopPropagation()}
 								onKeyDown={(e) => e.stopPropagation()}
 							>
-								<Btn variant="ghost">
+								<Btn
+									variant="ghost"
+									onClick={() => {
+										const directFlags = (r.waypoints ?? []).map((w) => w.type === "direct");
+										window.dispatchEvent(
+											new CustomEvent("routess:load-route", {
+												detail: {
+													routeId: r.id,
+													name: r.name,
+													waypoints: r.waypoints,
+													directFlags,
+												},
+											}),
+										);
+										setContext("plan");
+									}}
+								>
 									<I.play size={12} /> Load
 								</Btn>
 								<IconBtn title={fav ? "Remove favourite" : "Mark favourite"} onClick={() => toggleFavourite(r.id)}>

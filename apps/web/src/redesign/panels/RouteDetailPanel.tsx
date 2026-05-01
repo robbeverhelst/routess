@@ -1,7 +1,9 @@
+import { useEffect, useRef, useState } from "react";
 import type { ApiRoute } from "@/lib/api";
 import { I } from "../components/icons";
 import { Badge, Btn, IconBtn, RDS_COLORS, SecTitle } from "../components/primitives";
 
+// TODO: replace SEGMENTS and HISTORY with real data once route-detail backend lands
 const SEGMENTS = [
 	{ name: "Schelde dijkpad", km: "0.0 – 2.1", elev: "+12 m", surface: "Asphalt" },
 	{ name: "Bornem stretch", km: "2.1 – 4.6", elev: "+34 m", surface: "Mixed" },
@@ -20,6 +22,62 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 	const distanceKm = route.distance ? (route.distance / 1000).toFixed(1) : "—";
 	const durationStr = route.duration ? `${Math.round(route.duration / 60)} min` : "—";
 	const elevStr = route.elevationGain ? `${Math.round(route.elevationGain)}` : "—";
+
+	const [favorited, setFavorited] = useState(false);
+	const [moreOpen, setMoreOpen] = useState(false);
+	const moreRef = useRef<HTMLDivElement | null>(null);
+
+	useEffect(() => {
+		if (!moreOpen) return;
+		const onDocClick = (e: MouseEvent) => {
+			if (moreRef.current && !moreRef.current.contains(e.target as Node)) {
+				setMoreOpen(false);
+			}
+		};
+		document.addEventListener("mousedown", onDocClick);
+		return () => document.removeEventListener("mousedown", onDocClick);
+	}, [moreOpen]);
+
+	const dispatchLoadRoute = () => {
+		const directFlags = (route.waypoints ?? []).map((w) => w.type === "direct");
+		window.dispatchEvent(
+			new CustomEvent("routess:load-route", {
+				detail: {
+					routeId: route.id,
+					name: route.name,
+					waypoints: route.waypoints,
+					directFlags,
+				},
+			}),
+		);
+	};
+
+	const dispatchShare = () => {
+		window.dispatchEvent(new CustomEvent("routess:share-route"));
+	};
+
+	const dispatchFavorite = () => {
+		setFavorited((v) => !v);
+		window.dispatchEvent(new CustomEvent("routess:toggle-favorite", { detail: { routeId: route.id } }));
+	};
+
+	const dispatchDuplicate = () => {
+		window.dispatchEvent(new CustomEvent("routess:duplicate-route", { detail: { routeId: route.id } }));
+		setMoreOpen(false);
+	};
+
+	const dispatchDelete = () => {
+		window.dispatchEvent(new CustomEvent("routess:delete-route", { detail: { routeId: route.id } }));
+		setMoreOpen(false);
+	};
+
+	const dispatchExport = () => {
+		window.dispatchEvent(new CustomEvent("routess:export-gpx", { detail: { routeId: route.id } }));
+	};
+
+	const dispatchOpenActivity = (activityId: string) => {
+		window.dispatchEvent(new CustomEvent("routess:open-activity", { detail: { activityId } }));
+	};
 
 	const stats = [
 		{ label: "Distance", value: distanceKm, unit: "km" },
@@ -56,15 +114,86 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 					{route.name}
 				</span>
 				<div style={{ flex: 1 }} />
-				<IconBtn title="Favourite">
-					<I.heart size={14} />
+				<IconBtn title={favorited ? "Remove favourite" : "Favourite"} onClick={dispatchFavorite}>
+					<I.heart size={14} style={favorited ? { color: RDS_COLORS.danger, fill: "currentColor" } : undefined} />
 				</IconBtn>
-				<IconBtn title="Share">
+				<IconBtn title="Share" onClick={dispatchShare}>
 					<I.share size={14} />
 				</IconBtn>
-				<IconBtn title="More">
-					<I.more size={14} />
-				</IconBtn>
+				<div ref={moreRef} style={{ position: "relative" }}>
+					<IconBtn title="More" onClick={() => setMoreOpen((v) => !v)} pressed={moreOpen}>
+						<I.more size={14} />
+					</IconBtn>
+					{moreOpen && (
+						<div
+							style={{
+								position: "absolute",
+								top: "calc(100% + 4px)",
+								right: 0,
+								minWidth: 160,
+								background: RDS_COLORS.bgPanel,
+								border: `1px solid ${RDS_COLORS.border}`,
+								borderRadius: 8,
+								padding: 4,
+								boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
+								zIndex: 10,
+							}}
+						>
+							<button
+								type="button"
+								onClick={dispatchDuplicate}
+								style={{
+									display: "flex",
+									alignItems: "center",
+									gap: 8,
+									width: "100%",
+									padding: "8px 10px",
+									background: "transparent",
+									border: 0,
+									borderRadius: 6,
+									cursor: "pointer",
+									fontSize: 13,
+									color: RDS_COLORS.fg,
+									textAlign: "left",
+								}}
+								onMouseEnter={(e) => {
+									e.currentTarget.style.background = RDS_COLORS.bgHover;
+								}}
+								onMouseLeave={(e) => {
+									e.currentTarget.style.background = "transparent";
+								}}
+							>
+								<I.copy size={14} /> Duplicate
+							</button>
+							<button
+								type="button"
+								onClick={dispatchDelete}
+								style={{
+									display: "flex",
+									alignItems: "center",
+									gap: 8,
+									width: "100%",
+									padding: "8px 10px",
+									background: "transparent",
+									border: 0,
+									borderRadius: 6,
+									cursor: "pointer",
+									fontSize: 13,
+									color: RDS_COLORS.danger,
+									textAlign: "left",
+								}}
+								onMouseEnter={(e) => {
+									e.currentTarget.style.background = RDS_COLORS.bgHover;
+								}}
+								onMouseLeave={(e) => {
+									e.currentTarget.style.background = "transparent";
+								}}
+							>
+								<I.trash size={14} /> Delete
+							</button>
+						</div>
+					)}
+				</div>
 			</div>
 
 			<div style={{ flex: 1, overflow: "auto", padding: 20 }}>
@@ -224,7 +353,7 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 								</div>
 								<div style={{ flex: 1 }} />
 								{r.note && <Badge variant="accent">{r.note}</Badge>}
-								<IconBtn title="Open">
+								<IconBtn title="Open" onClick={() => dispatchOpenActivity(r.date)}>
 									<I.chevronR size={14} />
 								</IconBtn>
 							</div>
@@ -241,13 +370,13 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 					borderTop: `1px solid ${RDS_COLORS.border}`,
 				}}
 			>
-				<Btn variant="primary" style={{ flex: 1 }}>
+				<Btn variant="primary" style={{ flex: 1 }} onClick={dispatchLoadRoute}>
 					<I.play size={12} /> Load on map
 				</Btn>
-				<Btn>
+				<Btn onClick={dispatchExport} title="Download GPX">
 					<I.download size={14} />
 				</Btn>
-				<Btn>
+				<Btn onClick={dispatchShare} title="Share">
 					<I.share size={14} />
 				</Btn>
 			</div>

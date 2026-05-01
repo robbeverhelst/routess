@@ -1,11 +1,15 @@
+import { useEffect, useRef, useState } from "react";
 import { useModalsStore } from "@/redesign/stores/modalsStore";
 import { type RedesignActivity, useUiStore } from "@/redesign/stores/uiStore";
 import {
 	useClearWaypoints,
+	useDirectFlags,
 	useHasRoute,
+	useRemoveWaypoint,
 	useRouteDistance,
 	useRouteDuration,
 	useRoutePath,
+	useRoutingStore,
 	useWaypoints,
 } from "@/stores/routingStore";
 import { I } from "../components/icons";
@@ -55,11 +59,15 @@ function ElevationSparkline() {
 
 export function PlanPanel() {
 	const waypoints = useWaypoints();
+	const directFlags = useDirectFlags();
 	const routePath = useRoutePath();
 	const distance = useRouteDistance();
 	const duration = useRouteDuration();
 	const hasRoute = useHasRoute();
 	const clear = useClearWaypoints();
+	const removeWaypoint = useRemoveWaypoint();
+	const updateDirectFlags = useRoutingStore((s) => s.updateDirectFlags);
+	const [openMenuIdx, setOpenMenuIdx] = useState<number | null>(null);
 
 	const { activityType, setActivityType } = useUiStore();
 	const openModal = useModalsStore((s) => s.openModal);
@@ -88,9 +96,6 @@ export function PlanPanel() {
 				}}
 			>
 				<div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-					{/* Activity tabs + reverse/loop affordances on the right.
-					    Reverse opens the loop modal as the closest available action since
-					    the in-place reverse-route handler isn't lifted into the redesign yet. */}
 					{ACTIVITIES.map((a) => {
 						const Icon = a.icon;
 						const on = activityType === a.key;
@@ -120,10 +125,10 @@ export function PlanPanel() {
 					})}
 					<div style={{ flex: 1 }} />
 					<IconBtn title="Routing preferences" onClick={() => openModal("routing")}>
-						<I.swap size={16} />
+						<I.sliders size={16} />
 					</IconBtn>
 					<IconBtn title="Generate loop" onClick={() => openModal("loop")}>
-						<I.refresh size={16} />
+						<I.compass size={16} />
 					</IconBtn>
 				</div>
 
@@ -257,9 +262,23 @@ export function PlanPanel() {
 											{formatCoord(w)}
 										</div>
 									</div>
-									<IconBtn title="More options">
-										<I.more size={14} />
-									</IconBtn>
+									<WaypointMenu
+										open={openMenuIdx === i}
+										onToggle={() => setOpenMenuIdx(openMenuIdx === i ? null : i)}
+										onClose={() => setOpenMenuIdx(null)}
+										isDirect={directFlags[i] ?? false}
+										onRemove={() => {
+											removeWaypoint(i);
+											setOpenMenuIdx(null);
+										}}
+										onToggleDirect={() => {
+											const next =
+												directFlags.length === waypoints.length ? [...directFlags] : waypoints.map(() => false);
+											next[i] = !(next[i] ?? false);
+											updateDirectFlags(next);
+											setOpenMenuIdx(null);
+										}}
+									/>
 								</div>
 							);
 						})}
@@ -331,4 +350,98 @@ function EndpointInput({ dotColor, label }: { dotColor: string; label: string })
 
 function formatCoord(c: [number, number]) {
 	return `${c[1].toFixed(4)}, ${c[0].toFixed(4)}`;
+}
+
+interface WaypointMenuProps {
+	open: boolean;
+	onToggle: () => void;
+	onClose: () => void;
+	isDirect: boolean;
+	onRemove: () => void;
+	onToggleDirect: () => void;
+}
+
+function WaypointMenu({ open, onToggle, onClose, isDirect, onRemove, onToggleDirect }: WaypointMenuProps) {
+	const wrapRef = useRef<HTMLDivElement>(null);
+
+	useEffect(() => {
+		if (!open) return;
+		const handleClick = (e: MouseEvent) => {
+			if (!wrapRef.current) return;
+			if (!wrapRef.current.contains(e.target as Node)) onClose();
+		};
+		const handleKey = (e: KeyboardEvent) => {
+			if (e.key === "Escape") onClose();
+		};
+		document.addEventListener("mousedown", handleClick);
+		document.addEventListener("keydown", handleKey);
+		return () => {
+			document.removeEventListener("mousedown", handleClick);
+			document.removeEventListener("keydown", handleKey);
+		};
+	}, [open, onClose]);
+
+	return (
+		<div ref={wrapRef} style={{ position: "relative" }}>
+			<IconBtn title="More options" onClick={onToggle} pressed={open}>
+				<I.more size={14} />
+			</IconBtn>
+			{open && (
+				<div
+					role="menu"
+					style={{
+						position: "absolute",
+						top: "calc(100% + 4px)",
+						right: 0,
+						minWidth: 160,
+						background: RDS_COLORS.bgPanelElev,
+						border: `1px solid ${RDS_COLORS.border}`,
+						borderRadius: 8,
+						boxShadow: "var(--rds-shadow-lg)",
+						zIndex: 30,
+						padding: 4,
+						display: "flex",
+						flexDirection: "column",
+					}}
+				>
+					<MenuItem onClick={onToggleDirect}>{isDirect ? "Make routed" : "Make direct"}</MenuItem>
+					<MenuItem onClick={onRemove} danger>
+						Remove
+					</MenuItem>
+				</div>
+			)}
+		</div>
+	);
+}
+
+function MenuItem({ children, onClick, danger }: { children: React.ReactNode; onClick: () => void; danger?: boolean }) {
+	return (
+		<button
+			type="button"
+			onClick={onClick}
+			role="menuitem"
+			style={{
+				display: "flex",
+				alignItems: "center",
+				gap: 8,
+				height: 30,
+				padding: "0 10px",
+				border: 0,
+				background: "transparent",
+				color: danger ? RDS_COLORS.danger : RDS_COLORS.fg,
+				fontSize: 12.5,
+				textAlign: "left",
+				borderRadius: 6,
+				cursor: "pointer",
+			}}
+			onMouseEnter={(e) => {
+				e.currentTarget.style.background = RDS_COLORS.bgHover;
+			}}
+			onMouseLeave={(e) => {
+				e.currentTarget.style.background = "transparent";
+			}}
+		>
+			{children}
+		</button>
+	);
 }

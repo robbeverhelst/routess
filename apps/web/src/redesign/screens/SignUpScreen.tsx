@@ -1,6 +1,6 @@
 import { GoogleLogin } from "@react-oauth/google";
 import { useState } from "react";
-import { type CredentialResponse, googleAuth } from "@/lib/google-auth";
+import { type CredentialResponse, googleAuth, hasValidGoogleClientId } from "@/lib/google-auth";
 import { Logger } from "@/lib/logger";
 import { RoutessMark } from "../components/icons";
 import { Btn, RDS_COLORS, SecTitle } from "../components/primitives";
@@ -20,6 +20,7 @@ export function SignUpScreen({ onSwitchToLogin }: { onSwitchToLogin?: () => void
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const pushToast = useToastStore((s) => s.push);
+	const oauthConfigured = hasValidGoogleClientId();
 
 	const strength = passwordStrength(password);
 	const strengthLabel = ["Weak", "Weak", "OK", "Strong", "Very strong"][strength];
@@ -172,14 +173,30 @@ export function SignUpScreen({ onSwitchToLogin }: { onSwitchToLogin?: () => void
 				</Btn>
 
 				<div style={{ marginTop: 8 }}>
-					<GoogleLogin
-						onSuccess={handleGoogle}
-						onError={() => pushToast({ kind: "danger", title: "Sign up cancelled" })}
-						theme="outline"
-						size="large"
-						width="100%"
-						text="signup_with"
-					/>
+					{oauthConfigured ? (
+						<GoogleLogin
+							onSuccess={handleGoogle}
+							onError={() => pushToast({ kind: "danger", title: "Sign up cancelled" })}
+							theme="outline"
+							size="large"
+							width="100%"
+							text="signup_with"
+						/>
+					) : (
+						<div
+							style={{
+								padding: 12,
+								borderRadius: 8,
+								background: "color-mix(in oklch, var(--rds-warn) 12%, transparent)",
+								border: `1px solid color-mix(in oklch, ${RDS_COLORS.warn} 35%, ${RDS_COLORS.border})`,
+								fontSize: 12,
+								color: RDS_COLORS.fgMuted,
+							}}
+						>
+							<span style={{ fontWeight: 600, color: RDS_COLORS.warn }}>Google sign-up disabled.</span> Set{" "}
+							<code className="rds-mono">VITE_GOOGLE_CLIENT_ID</code> in <code className="rds-mono">.env</code>.
+						</div>
+					)}
 				</div>
 
 				<div

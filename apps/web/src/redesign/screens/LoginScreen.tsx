@@ -1,6 +1,6 @@
 import { GoogleLogin } from "@react-oauth/google";
 import { useState } from "react";
-import { type CredentialResponse, googleAuth } from "@/lib/google-auth";
+import { type CredentialResponse, googleAuth, hasValidGoogleClientId } from "@/lib/google-auth";
 import { Logger } from "@/lib/logger";
 import { I, RoutessMark } from "../components/icons";
 import { Btn, RDS_COLORS } from "../components/primitives";
@@ -9,6 +9,7 @@ import { useToastStore } from "../stores/toastStore";
 export function LoginScreen({ onSuccess }: { onSuccess?: () => void }) {
 	const [isLoading, setIsLoading] = useState(false);
 	const pushToast = useToastStore((s) => s.push);
+	const oauthConfigured = hasValidGoogleClientId();
 
 	const handleSuccess = async (cred: CredentialResponse) => {
 		setIsLoading(true);
@@ -117,19 +118,42 @@ export function LoginScreen({ onSuccess }: { onSuccess?: () => void }) {
 				</p>
 
 				<div style={{ marginTop: 24, minHeight: 42 }}>
-					<GoogleLogin
-						onSuccess={handleSuccess}
-						onError={() => {
-							googleAuth.handleGoogleError();
-							pushToast({ kind: "danger", title: "Sign in cancelled" });
-						}}
-						useOneTap
-						auto_select={false}
-						theme="outline"
-						size="large"
-						width="100%"
-						text="continue_with"
-					/>
+					{oauthConfigured ? (
+						<GoogleLogin
+							onSuccess={handleSuccess}
+							onError={() => {
+								googleAuth.handleGoogleError();
+								pushToast({ kind: "danger", title: "Sign in cancelled" });
+							}}
+							useOneTap
+							auto_select={false}
+							theme="outline"
+							size="large"
+							width="100%"
+							text="continue_with"
+						/>
+					) : (
+						<div
+							style={{
+								padding: 14,
+								borderRadius: 10,
+								background: "color-mix(in oklch, var(--rds-warn) 12%, transparent)",
+								border: `1px solid color-mix(in oklch, ${RDS_COLORS.warn} 35%, ${RDS_COLORS.border})`,
+								color: RDS_COLORS.fg,
+								fontSize: 12.5,
+								lineHeight: 1.5,
+							}}
+						>
+							<div style={{ fontWeight: 600, color: RDS_COLORS.warn, marginBottom: 6 }}>
+								Google sign-in not configured
+							</div>
+							<div style={{ color: RDS_COLORS.fgMuted }}>
+								Set <code className="rds-mono">VITE_GOOGLE_CLIENT_ID</code> in <code className="rds-mono">.env</code> to
+								a real OAuth Web Client ID, then restart <code className="rds-mono">bun dev</code>. Use “Continue
+								without an account” for now.
+							</div>
+						</div>
+					)}
 				</div>
 
 				<Btn disabled style={{ width: "100%", height: 42, marginTop: 8 }}>

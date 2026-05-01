@@ -1,17 +1,65 @@
+import { useAuthStatus } from "@/lib/api-queries";
 import { I } from "../components/icons";
 import { MapBackdrop } from "../components/MapBackdrop";
 import { Badge, Btn, IconBtn, RDS_COLORS } from "../components/primitives";
+import { UserAvatar } from "../components/UserAvatar";
+import { useModalsStore } from "../stores/modalsStore";
+import { useToastStore } from "../stores/toastStore";
+import { type RedesignContext, useUiStore } from "../stores/uiStore";
 
-const NAV = [
-	{ icon: I.route, label: "Plan", badge: "Active route" },
-	{ icon: I.library, label: "Library", badge: "24" },
-	{ icon: I.activity, label: "Activity" },
-	{ icon: I.trophy, label: "Achievements", badge: "+2 new", accent: true },
-	{ icon: I.user, label: "Profile" },
-	{ icon: I.settings, label: "Settings" },
+type NavItem = {
+	icon: (typeof I)[keyof typeof I];
+	label: string;
+	badge?: string;
+	accent?: boolean;
+	context?: RedesignContext;
+	action?: "profile" | "achievements";
+};
+
+const NAV: NavItem[] = [
+	{ icon: I.route, label: "Plan", badge: "Active route", context: "plan" },
+	{ icon: I.library, label: "Library", badge: "24", context: "library" },
+	{ icon: I.activity, label: "Activity", context: "activity" },
+	{ icon: I.trophy, label: "Achievements", badge: "+2 new", accent: true, action: "achievements" },
+	{ icon: I.user, label: "Profile", action: "profile" },
+	{ icon: I.settings, label: "Settings", context: "settings" },
 ];
 
 export function MobileDrawer({ onClose }: { onClose?: () => void }) {
+	const theme = useUiStore((s) => s.theme);
+	const toggleTheme = useUiStore((s) => s.toggleTheme);
+	const setContext = useUiStore((s) => s.setContext);
+	const activeContext = useUiStore((s) => s.context);
+	const openOverlay = useModalsStore((s) => s.openOverlay);
+	const pushToast = useToastStore((s) => s.push);
+	const { data: auth } = useAuthStatus();
+	const user = auth?.user ?? null;
+
+	const handleAlerts = () => {
+		openOverlay("notifications");
+		onClose?.();
+	};
+
+	const handleNav = (item: NavItem) => {
+		if (item.context) {
+			setContext(item.context);
+			onClose?.();
+			return;
+		}
+		if (item.action === "profile") {
+			window.dispatchEvent(new CustomEvent("routess:open-account"));
+			onClose?.();
+			return;
+		}
+		if (item.action === "achievements") {
+			pushToast({
+				kind: "info",
+				title: "Achievements coming soon",
+				body: "Trophies and milestones land with the activity backend.",
+			});
+		}
+	};
+
 	return (
 		<div
 			style={{
@@ -64,37 +112,24 @@ export function MobileDrawer({ onClose }: { onClose?: () => void }) {
 						borderBottom: `1px solid ${RDS_COLORS.border}`,
 					}}
 				>
-					<div
-						style={{
-							width: 44,
-							height: 44,
-							borderRadius: 999,
-							background: `linear-gradient(135deg, ${RDS_COLORS.accent}, oklch(0.65 0.15 200))`,
-							color: "white",
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "center",
-							fontSize: 14,
-							fontWeight: 600,
-						}}
-					>
-						RV
-					</div>
+					<UserAvatar size={44} />
 					<div style={{ display: "flex", flexDirection: "column" }}>
-						<div style={{ fontSize: 14, fontWeight: 600 }}>Robbe Verhelst</div>
-						<div style={{ fontSize: 12, color: RDS_COLORS.fgSubtle }}>robbe@example.com</div>
+						<div style={{ fontSize: 14, fontWeight: 600 }}>{user?.name ?? "Guest"}</div>
+						<div style={{ fontSize: 12, color: RDS_COLORS.fgSubtle }}>{user?.email ?? "Not signed in"}</div>
 					</div>
 					<div style={{ flex: 1 }} />
 					<IconBtn title="Close" onClick={onClose}>
 						<I.close size={14} />
 					</IconBtn>
 				</div>
-				{NAV.map((r, i) => {
+				{NAV.map((r) => {
 					const Icon = r.icon;
+					const isActive = r.context !== undefined && r.context === activeContext;
 					return (
 						<button
 							key={r.label}
 							type="button"
+							onClick={() => handleNav(r)}
 							style={{
 								display: "flex",
 								alignItems: "center",
@@ -102,8 +137,8 @@ export function MobileDrawer({ onClose }: { onClose?: () => void }) {
 								padding: "14px 18px",
 								textAlign: "left",
 								border: 0,
-								background: i === 0 ? RDS_COLORS.bgActive : "transparent",
-								borderLeft: i === 0 ? `3px solid ${RDS_COLORS.accent}` : "3px solid transparent",
+								background: isActive ? RDS_COLORS.bgActive : "transparent",
+								borderLeft: isActive ? `3px solid ${RDS_COLORS.accent}` : "3px solid transparent",
 								cursor: "pointer",
 								color: "inherit",
 							}}
@@ -123,10 +158,10 @@ export function MobileDrawer({ onClose }: { onClose?: () => void }) {
 						borderTop: `1px solid ${RDS_COLORS.border}`,
 					}}
 				>
-					<Btn style={{ flex: 1 }}>
-						<I.moon size={14} /> Dark
+					<Btn style={{ flex: 1 }} onClick={toggleTheme}>
+						{theme === "dark" ? <I.sun size={14} /> : <I.moon size={14} />} {theme === "dark" ? "Light" : "Dark"}
 					</Btn>
-					<Btn style={{ flex: 1 }}>
+					<Btn style={{ flex: 1 }} onClick={handleAlerts}>
 						<I.bell size={14} /> Alerts
 					</Btn>
 				</div>

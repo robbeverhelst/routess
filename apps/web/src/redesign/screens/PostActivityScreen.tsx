@@ -1,3 +1,4 @@
+import { useRef, useState } from "react";
 import { I } from "../components/icons";
 import { Badge, Btn, RDS_COLORS, SecTitle } from "../components/primitives";
 
@@ -22,7 +23,49 @@ const PRS = [
 	{ label: "Top 8%", value: "this segment" },
 ];
 
-export function PostActivityScreen() {
+interface PhotoEntry {
+	id: string;
+	name: string;
+	url: string;
+}
+
+export function PostActivityScreen({ onClose }: { onClose?: () => void } = {}) {
+	const fileInputRef = useRef<HTMLInputElement | null>(null);
+	const [photos, setPhotos] = useState<PhotoEntry[]>([]);
+	const [notes, setNotes] = useState("Headwind on the way out, tailwind back. Legs felt fresh.");
+
+	const handleShare = () => {
+		window.dispatchEvent(new CustomEvent("routess:share-route"));
+	};
+
+	const handleExportGpx = () => {
+		window.dispatchEvent(new CustomEvent("routess:export-gpx"));
+	};
+
+	const handleDiscard = () => {
+		if (window.confirm("Discard this activity? This cannot be undone.")) {
+			for (const p of photos) URL.revokeObjectURL(p.url);
+			onClose?.();
+		}
+	};
+
+	const handleAddPhotosClick = () => {
+		fileInputRef.current?.click();
+	};
+
+	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const files = Array.from(e.target.files ?? []);
+		if (files.length === 0) return;
+		const next = files.map((file) => ({
+			id: `${file.name}-${file.lastModified}-${Math.random().toString(36).slice(2, 8)}`,
+			name: file.name,
+			url: URL.createObjectURL(file),
+		}));
+		setPhotos((prev) => [...prev, ...next]);
+		// reset so the same file can be re-selected later
+		e.target.value = "";
+	};
+
 	return (
 		<div style={{ position: "absolute", inset: 0, background: RDS_COLORS.bgCanvas, overflow: "auto" }}>
 			<div style={{ maxWidth: 720, margin: "0 auto", padding: "32px 24px 80px" }}>
@@ -195,7 +238,8 @@ export function PostActivityScreen() {
 				<div style={{ marginTop: 24 }}>
 					<SecTitle style={{ marginBottom: 8 }}>Notes</SecTitle>
 					<textarea
-						defaultValue="Headwind on the way out, tailwind back. Legs felt fresh."
+						value={notes}
+						onChange={(e) => setNotes(e.target.value)}
 						style={{
 							width: "100%",
 							height: 80,
@@ -213,19 +257,60 @@ export function PostActivityScreen() {
 					/>
 				</div>
 
+				{/* Photos */}
+				{photos.length > 0 && (
+					<div style={{ marginTop: 24 }}>
+						<SecTitle style={{ marginBottom: 10 }}>Photos ({photos.length})</SecTitle>
+						<div
+							style={{
+								display: "grid",
+								gridTemplateColumns: "repeat(auto-fill, minmax(96px, 1fr))",
+								gap: 8,
+							}}
+						>
+							{photos.map((p) => (
+								<div
+									key={p.id}
+									style={{
+										aspectRatio: "1 / 1",
+										borderRadius: 8,
+										overflow: "hidden",
+										border: `1px solid ${RDS_COLORS.border}`,
+										background: RDS_COLORS.bgInput,
+									}}
+								>
+									<img
+										src={p.url}
+										alt={p.name}
+										style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+									/>
+								</div>
+							))}
+						</div>
+					</div>
+				)}
+
 				{/* Actions */}
 				<div style={{ display: "flex", gap: 8, marginTop: 24, flexWrap: "wrap" }}>
-					<Btn variant="primary">
+					<Btn variant="primary" onClick={handleShare}>
 						<I.share size={14} /> Share
 					</Btn>
-					<Btn>
+					<Btn onClick={handleExportGpx}>
 						<I.download size={14} /> Export GPX
 					</Btn>
-					<Btn>
+					<Btn onClick={handleAddPhotosClick}>
 						<I.zap size={14} /> Add photos
 					</Btn>
+					<input
+						ref={fileInputRef}
+						type="file"
+						accept="image/*"
+						multiple
+						onChange={handleFileChange}
+						style={{ display: "none" }}
+					/>
 					<div style={{ flex: 1 }} />
-					<Btn variant="ghost" style={{ color: RDS_COLORS.danger }}>
+					<Btn variant="ghost" onClick={handleDiscard} style={{ color: RDS_COLORS.danger }}>
 						<I.trash size={14} /> Discard
 					</Btn>
 				</div>

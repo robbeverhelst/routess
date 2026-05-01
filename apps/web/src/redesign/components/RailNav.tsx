@@ -2,6 +2,7 @@ import { useModalsStore } from "@/redesign/stores/modalsStore";
 import { type RedesignContext, useUiStore } from "@/redesign/stores/uiStore";
 import { I, RoutessMark } from "./icons";
 import { IconBtn, RDS_COLORS } from "./primitives";
+import { UserAvatar } from "./UserAvatar";
 
 const NAV: { key: RedesignContext; icon: React.ComponentType<{ size?: number }>; label: string }[] = [
 	{ key: "plan", icon: I.route, label: "Plan" },
@@ -21,6 +22,10 @@ export function RailNav() {
 	return (
 		<div
 			style={{
+				position: "absolute",
+				top: 0,
+				bottom: 0,
+				left: 0,
 				width: "var(--rds-rail-w)",
 				background: RDS_COLORS.bgRail,
 				borderRight: `1px solid ${RDS_COLORS.border}`,
@@ -109,22 +114,8 @@ export function RailNav() {
 			<IconBtn title="Toggle theme" onClick={toggleTheme}>
 				{theme === "dark" ? <I.sun size={18} /> : <I.moon size={18} />}
 			</IconBtn>
-			<div
-				style={{
-					width: 30,
-					height: 30,
-					borderRadius: 999,
-					background: `linear-gradient(135deg, ${RDS_COLORS.accent}, oklch(0.65 0.15 200))`,
-					color: "white",
-					display: "flex",
-					alignItems: "center",
-					justifyContent: "center",
-					fontSize: 11,
-					fontWeight: 600,
-					marginTop: 6,
-				}}
-			>
-				RV
+			<div style={{ marginTop: 6 }}>
+				<UserAvatar size={30} compact />
 			</div>
 		</div>
 	);

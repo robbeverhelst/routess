@@ -2,6 +2,7 @@ import { useState } from "react";
 import { I } from "../components/icons";
 import { IconBtn, RDS_COLORS, SecTitle, Toggle } from "../components/primitives";
 import { useModalsStore } from "../stores/modalsStore";
+import { type OverlayKey, useRedesignSettingsStore } from "../stores/settingsStore";
 
 const STYLES = [
 	{ key: "streets", label: "Streets", bg: "linear-gradient(135deg, oklch(0.93 0.02 240), oklch(0.95 0.03 220))" },
@@ -12,23 +13,26 @@ const STYLES = [
 	{ key: "minimal", label: "Minimal", bg: "linear-gradient(135deg, oklch(0.97 0.003 270), oklch(0.94 0.005 250))" },
 ] as const;
 
+type MapStyleKey = (typeof STYLES)[number]["key"];
+
 export function LayerPicker() {
 	const close = useModalsStore((s) => s.closeOverlay);
-	const [styleKey, setStyleKey] = useState<(typeof STYLES)[number]["key"]>("outdoors");
-	const [overlays, setOverlays] = useState({
-		heatmap: true,
-		contour: false,
-		bike: true,
-		surface: false,
-		wind: false,
-	});
+	const [styleKey, setStyleKey] = useState<MapStyleKey>("outdoors");
+	const overlays = useRedesignSettingsStore((s) => s.overlays);
+	const setOverlay = useRedesignSettingsStore((s) => s.setOverlay);
 
-	const overlayItems = [
-		{ key: "heatmap" as const, icon: I.trend, label: "Heatmap", sub: "Your activity history" },
-		{ key: "contour" as const, icon: I.mountain, label: "Contour lines", sub: "Show elevation" },
-		{ key: "bike" as const, icon: I.bike, label: "Cycling lanes", sub: "Highlight bike infra" },
-		{ key: "surface" as const, icon: I.flag, label: "Surface type", sub: "Color by paved/gravel" },
-		{ key: "wind" as const, icon: I.zap, label: "Wind", sub: "Live wind direction", pro: true },
+	const overlayItems: {
+		key: OverlayKey;
+		icon: (typeof I)[keyof typeof I];
+		label: string;
+		sub: string;
+		pro?: boolean;
+	}[] = [
+		{ key: "heatmap", icon: I.trend, label: "Heatmap", sub: "Your activity history" },
+		{ key: "contour", icon: I.mountain, label: "Contour lines", sub: "Show elevation" },
+		{ key: "bike", icon: I.bike, label: "Cycling lanes", sub: "Highlight bike infra" },
+		{ key: "surface", icon: I.flag, label: "Surface type", sub: "Color by paved/gravel" },
+		{ key: "wind", icon: I.zap, label: "Wind", sub: "Live wind direction", pro: true },
 	];
 
 	return (
@@ -70,7 +74,10 @@ export function LayerPicker() {
 							<button
 								key={s.key}
 								type="button"
-								onClick={() => setStyleKey(s.key)}
+								onClick={() => {
+									setStyleKey(s.key);
+									window.dispatchEvent(new CustomEvent("routess:set-map-style", { detail: { styleKey: s.key } }));
+								}}
 								style={{
 									padding: 0,
 									border: on ? `2px solid ${RDS_COLORS.accent}` : `1.5px solid ${RDS_COLORS.border}`,
@@ -151,10 +158,20 @@ export function LayerPicker() {
 								</div>
 								<div style={{ fontSize: 10.5, color: RDS_COLORS.fgSubtle, marginTop: 1 }}>{o.sub}</div>
 							</div>
-							<Toggle on={on} disabled={o.pro} onChange={(v) => setOverlays({ ...overlays, [o.key]: v })} />
+							<Toggle on={on} disabled={o.pro} onChange={(v) => setOverlay(o.key, v)} />
 						</div>
 					);
 				})}
+				<div
+					style={{
+						padding: "10px 14px 12px",
+						fontSize: 10.5,
+						color: RDS_COLORS.fgSubtle,
+						lineHeight: 1.4,
+					}}
+				>
+					Overlay rendering is in progress — your selections are saved and will activate when each layer ships.
+				</div>
 			</div>
 		</div>
 	);

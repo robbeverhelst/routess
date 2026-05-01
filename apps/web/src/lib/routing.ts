@@ -7,10 +7,13 @@ import { pointToSegmentDistance } from "@routess/core";
 import type { Map as MapboxMap } from "mapbox-gl";
 import type { Dispatch, SetStateAction } from "react";
 import {
+	clearKilometerMarkersLayer,
 	clearRouteLayer,
+	updateDragLinesLayer,
 	updateUserLocationLayer,
 	updateWaypointsLayer,
 } from "@/features/routing/managers/MapLayerManager";
+import { saveWaypointsToLocalStorage } from "@/features/routing/services/LocalStorageService";
 import { getRoute } from "@/features/routing/services/RouteCalculationService";
 import { exportCurrentRouteToGPXFile, importRouteFromGPXString } from "@/features/routing/services/RouteIOService";
 import { Logger } from "@/lib/logger";
@@ -33,8 +36,13 @@ async function updateMapFromStore(
 ) {
 	const { waypoints } = useRoutingStore.getState();
 
+	clearRouteLayer(map);
+	clearKilometerMarkersLayer(map);
+	updateDragLinesLayer(map, []);
+
 	// Update waypoints on map
 	updateWaypointsLayer(map, waypoints, _isMapLockedRef?.current ?? false);
+	saveWaypointsToLocalStorage(waypoints, useRoutingStore.getState().directFlags);
 
 	if (waypoints.length >= 2 && accessToken) {
 		// Use RouteCalculationService for comprehensive route calculation
@@ -53,8 +61,6 @@ async function updateMapFromStore(
 			updateWaypointsLayer(map, result.snappedWaypoints, _isMapLockedRef?.current ?? false);
 		}
 	} else {
-		// Clear route
-		clearRouteLayer(map);
 		setRouteDistance("");
 		setRouteDuration("");
 		setHasRoute(false);
@@ -131,6 +137,7 @@ export const resetRouting = async (
 
 	// Clear waypoints
 	useRoutingStore.getState().clearWaypoints();
+	saveWaypointsToLocalStorage([], []);
 
 	// Update map
 	await updateMapFromStore(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);

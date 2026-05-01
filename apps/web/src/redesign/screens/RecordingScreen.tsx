@@ -24,6 +24,7 @@ const STATS = [
 export function RecordingScreen({ onStop }: { onStop?: () => void }) {
 	const [running, setRunning] = useState(true);
 	const [elapsed, setElapsed] = useState(42.18); // seconds
+	const [lap, setLap] = useState(3);
 	const startedAt = useRef<number | null>(null);
 	const baseline = useRef(elapsed);
 
@@ -119,7 +120,7 @@ export function RecordingScreen({ onStop }: { onStop?: () => void }) {
 						</div>
 						<div style={{ flex: 1 }} />
 						<div style={{ display: "flex", flexDirection: "column", textAlign: "right" }}>
-							<SecTitle>Lap 3 of 4</SecTitle>
+							<SecTitle>Lap {lap} of 4</SecTitle>
 							<div className="rds-mono" style={{ fontSize: 18, fontWeight: 600, marginTop: 4 }}>
 								2:14 <span style={{ fontSize: 11, color: RDS_COLORS.fgSubtle }}>/ km</span>
 							</div>
@@ -163,7 +164,7 @@ export function RecordingScreen({ onStop }: { onStop?: () => void }) {
 					</div>
 
 					<div style={{ display: "flex", gap: 8, marginTop: 16 }}>
-						<Btn style={{ flex: 1, height: 48, fontSize: 14 }}>
+						<Btn style={{ flex: 1, height: 48, fontSize: 14 }} onClick={() => setLap((l) => l + 1)}>
 							<I.flag size={14} /> Lap
 						</Btn>
 						<Btn

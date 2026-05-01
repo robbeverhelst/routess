@@ -75,8 +75,18 @@ export function SearchModal() {
 		};
 	}, [query]);
 
+	const handleSelect = (r: Suggestion) => {
+		if (!r.coords) return;
+		const [lng, lat] = r.coords;
+		window.dispatchEvent(new CustomEvent("routess:fly-to", { detail: { coordinates: [lng, lat], zoom: 14 } }));
+		close();
+	};
+
 	const Row = ({ r, hot }: { r: Suggestion; hot?: boolean }) => (
-		<div
+		<button
+			type="button"
+			onClick={() => handleSelect(r)}
+			disabled={!r.coords}
 			style={{
 				display: "flex",
 				alignItems: "center",
@@ -84,7 +94,12 @@ export function SearchModal() {
 				padding: "10px 12px",
 				borderRadius: 8,
 				background: hot ? RDS_COLORS.bgHover : "transparent",
-				cursor: "pointer",
+				cursor: r.coords ? "pointer" : "default",
+				border: 0,
+				width: "100%",
+				textAlign: "left",
+				color: "inherit",
+				font: "inherit",
 			}}
 		>
 			<div
@@ -132,7 +147,7 @@ export function SearchModal() {
 				{r.tag}
 			</span>
 			{hot && <Kbd>↵</Kbd>}
-		</div>
+		</button>
 	);
 
 	const showEmpty = !loading && query.trim().length > 0 && results.length === 0;

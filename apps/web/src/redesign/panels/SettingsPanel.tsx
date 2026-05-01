@@ -1,8 +1,10 @@
-import { type ReactNode, useState } from "react";
-import { useUserProfile } from "@/lib/api-queries";
+import type { ReactNode } from "react";
+import { useLogout, useUserProfile } from "@/lib/api-queries";
+import { useRedesignSettingsStore } from "@/redesign/stores/settingsStore";
 import { type RedesignAccent, useUiStore } from "@/redesign/stores/uiStore";
 import { I } from "../components/icons";
 import { Btn, RDS_COLORS, SecTitle, Toggle } from "../components/primitives";
+import { useToastStore } from "../stores/toastStore";
 
 function Group({ title, children }: { title: string; children: ReactNode }) {
 	return (
@@ -96,23 +98,63 @@ const ACCENT_OPTIONS: { key: RedesignAccent; label: string; swatch: string }[] =
 
 export function SettingsPanel() {
 	const { data: profile } = useUserProfile();
+	const logout = useLogout();
+	const pushToast = useToastStore((s) => s.push);
 	const { accent, setAccent, density, setDensity, theme, setTheme, layout, setLayout } = useUiStore();
-	const [units, setUnits] = useState<"metric" | "imperial">("metric");
-	const [showPois, setShowPois] = useState(true);
-	const [terrain3d, setTerrain3d] = useState(false);
-	const [autoSnap, setAutoSnap] = useState(true);
-	const [publicProfile, setPublicProfile] = useState(false);
-	const [hidePrivacy, setHidePrivacy] = useState(true);
-	const [defaultActivity, setDefaultActivity] = useState("Cycling");
-	const [mapStyle, setMapStyle] = useState("Streets");
+	const {
+		units,
+		setUnits,
+		showPois,
+		setShowPois,
+		terrain3d,
+		setTerrain3d,
+		autoSnap,
+		setAutoSnap,
+		publicProfile,
+		setPublicProfile,
+		hidePrivacy,
+		setHidePrivacy,
+		defaultActivity,
+		setDefaultActivity,
+		mapStyle,
+		setMapStyle,
+	} = useRedesignSettingsStore();
 
 	const userName = profile?.name ?? "Your account";
 	const userEmail = profile?.email ?? "Sign in to sync";
 
+	const handleEditProfile = () => {
+		window.dispatchEvent(new CustomEvent("routess:open-account"));
+	};
+
+	const handleExportData = () => {
+		window.dispatchEvent(new CustomEvent("routess:export-all-data"));
+	};
+
+	const handleSignOut = () => {
+		if (!profile) {
+			window.dispatchEvent(new CustomEvent("routess:open-login"));
+			return;
+		}
+		logout.mutate(undefined, {
+			onSuccess: () => {
+				pushToast({ kind: "success", title: "Signed out" });
+			},
+		});
+	};
+
 	return (
 		<div style={{ padding: "20px 20px", overflow: "auto", height: "100%" }}>
 			<Group title="Profile">
-				<Row label={userName} sub={userEmail} control={<Btn variant="ghost">Edit</Btn>} />
+				<Row
+					label={userName}
+					sub={userEmail}
+					control={
+						<Btn variant="ghost" onClick={handleEditProfile}>
+							Edit
+						</Btn>
+					}
+				/>
 				<Row
 					label="Default activity"
 					sub="Used for new routes"
@@ -141,10 +183,10 @@ export function SettingsPanel() {
 					control={
 						<Segmented
 							value={units}
-							onChange={(v) => setUnits(v as "metric" | "imperial")}
+							onChange={(v) => setUnits(v as "km" | "mi")}
 							options={[
-								{ value: "metric", label: "Metric" },
-								{ value: "imperial", label: "Imperial" },
+								{ value: "km", label: "Metric" },
+								{ value: "mi", label: "Imperial" },
 							]}
 						/>
 					}
@@ -279,16 +321,21 @@ export function SettingsPanel() {
 				<Row
 					label="Export all data"
 					control={
-						<Btn variant="ghost">
+						<Btn variant="ghost" onClick={handleExportData}>
 							<I.download size={14} />
 						</Btn>
 					}
 				/>
 				<Row
-					label="Sign out"
+					label={profile ? "Sign out" : "Sign in"}
 					control={
-						<Btn variant="ghost" style={{ color: RDS_COLORS.danger }}>
-							Sign out
+						<Btn
+							variant={profile ? "ghost" : "primary"}
+							onClick={handleSignOut}
+							disabled={logout.isPending}
+							style={profile ? { color: RDS_COLORS.danger } : undefined}
+						>
+							{logout.isPending ? "Signing out…" : profile ? "Sign out" : "Sign in"}
 						</Btn>
 					}
 					last

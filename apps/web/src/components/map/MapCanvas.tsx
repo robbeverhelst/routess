@@ -52,6 +52,89 @@ function MapLoadingShell({ isSatellite }: { isSatellite: boolean }) {
 	);
 }
 
+function isInvalidMapboxToken(token: string) {
+	const trimmed = token.trim();
+	return !trimmed || trimmed.includes("__VITE_") || trimmed === "your-mapbox-access-token-here" || trimmed.length < 10;
+}
+
+function MapUnavailablePanel({
+	title,
+	message,
+	actionLabel,
+	onAction,
+}: {
+	title: string;
+	message: string;
+	actionLabel?: string;
+	onAction?: () => void;
+}) {
+	return (
+		<div
+			style={{
+				position: "absolute",
+				inset: 0,
+				display: "flex",
+				alignItems: "center",
+				justifyContent: "center",
+				padding: 24,
+				background: "linear-gradient(180deg, rgba(15,23,42,.16), rgba(15,23,42,.32))",
+				zIndex: 8,
+			}}
+		>
+			<div
+				style={{
+					width: 380,
+					maxWidth: "100%",
+					borderRadius: 14,
+					border: "1px solid rgba(255,255,255,.22)",
+					background: "rgba(15,23,42,.84)",
+					color: "white",
+					padding: 18,
+					boxShadow: "0 18px 60px rgba(15,23,42,.32)",
+					backdropFilter: "blur(14px)",
+				}}
+			>
+				<div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>{title}</div>
+				<div style={{ fontSize: 13, lineHeight: 1.55, color: "rgba(255,255,255,.74)" }}>{message}</div>
+				<div
+					style={{
+						marginTop: 12,
+						padding: "9px 10px",
+						borderRadius: 8,
+						background: "rgba(255,255,255,.09)",
+						fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+						fontSize: 11,
+						color: "rgba(255,255,255,.76)",
+						overflowWrap: "anywhere",
+					}}
+				>
+					VITE_MAPBOX_ACCESS_TOKEN=pk...
+				</div>
+				{actionLabel && onAction && (
+					<button
+						type="button"
+						onClick={onAction}
+						style={{
+							marginTop: 14,
+							height: 34,
+							padding: "0 13px",
+							borderRadius: 8,
+							border: "1px solid rgba(255,255,255,.22)",
+							background: "rgba(255,255,255,.12)",
+							color: "white",
+							fontSize: 13,
+							fontWeight: 600,
+							cursor: "pointer",
+						}}
+					>
+						{actionLabel}
+					</button>
+				)}
+			</div>
+		</div>
+	);
+}
+
 interface MapCanvasProps {
 	mapRef: React.RefObject<MapboxMap | null>;
 	mapboxToken: string;
@@ -60,6 +143,7 @@ interface MapCanvasProps {
 	initialCenter?: [number, number];
 	initialZoom?: number;
 	routeId?: string;
+	mapTheme?: "light" | "dark";
 	currentLanguage: SupportedLanguage;
 
 	// Route state management
@@ -93,6 +177,7 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
 	initialCenter,
 	initialZoom,
 	routeId,
+	mapTheme = "light",
 	currentLanguage,
 	setRouteDistance,
 	setRouteDuration,
@@ -111,8 +196,10 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
 }) => {
 	const isMapLockedRef = useRef(false);
 	const internalMapRef = useRef<MapRef | null>(null);
+	const containerRef = useRef<HTMLDivElement | null>(null);
 	const animationFrameIdRef = useRef<number | null>(null);
 	const [isMapLoaded, setIsMapLoaded] = useState(false);
+	const [loadTimedOut, setLoadTimedOut] = useState(false);
 
 	// Get configuration from providers
 	const {
@@ -130,10 +217,12 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
 	const { handleMapError } = useErrorHandler();
 	const isSatelliteStyle = currentMapStyle === "satellite";
 	const mapStyleUrl = isSatelliteStyle ? SATELLITE_MAP_STYLE : STANDARD_MAP_STYLE;
+	const hasInvalidMapboxToken = isInvalidMapboxToken(mapboxToken);
+	const effectiveLightPreset = mapTheme === "dark" ? "night" : currentLightPreset;
 
 	// Validate Mapbox token on mount
 	useEffect(() => {
-		if (!mapboxToken || mapboxToken.includes("__VITE_") || mapboxToken.length < 10) {
+		if (hasInvalidMapboxToken) {
 			handleMapError(
 				new Error(
 					"Mapbox access token is missing or invalid. Please configure VITE_MAPBOX_ACCESS_TOKEN in your environment.",
@@ -141,7 +230,54 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
 				"mapbox-config",
 			);
 		}
-	}, [mapboxToken, handleMapError]);
+	}, [hasInvalidMapboxToken, handleMapError]);
+
+	useEffect(() => {
+		if (hasInvalidMapboxToken || isMapLoaded) return;
+
+		const timeout = window.setTimeout(() => {
+			setLoadTimedOut(true);
+			handleMapError(
+				new Error("Mapbox did not finish loading. Check the access token and network connection."),
+				"map-load",
+			);
+		}, 12000);
+
+		return () => window.clearTimeout(timeout);
+	}, [hasInvalidMapboxToken, isMapLoaded, handleMapError]);
+
+	useEffect(() => {
+		if (!isMapLoaded || !mapRef.current || currentMapStyle !== "standard") return;
+
+		try {
+			mapRef.current.setConfigProperty("basemap", "lightPreset", effectiveLightPreset);
+		} catch (err) {
+			Logger.error("[MapCanvas] Failed to sync basemap light preset:", err);
+		}
+	}, [currentMapStyle, effectiveLightPreset, isMapLoaded, mapRef]);
+
+	useEffect(() => {
+		const container = containerRef.current;
+		if (!container || typeof ResizeObserver === "undefined") return;
+
+		let frameId: number | null = null;
+		const resizeMap = () => {
+			if (frameId !== null) cancelAnimationFrame(frameId);
+			frameId = requestAnimationFrame(() => {
+				internalMapRef.current?.getMap().resize();
+				mapRef.current?.resize();
+			});
+		};
+		const observer = new ResizeObserver(resizeMap);
+
+		observer.observe(container);
+		resizeMap();
+
+		return () => {
+			observer.disconnect();
+			if (frameId !== null) cancelAnimationFrame(frameId);
+		};
+	}, [mapRef]);
 
 	// Keep ref in sync with state
 	useEffect(() => {
@@ -289,9 +425,21 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
 		};
 	}, [mapRef]);
 
+	if (hasInvalidMapboxToken) {
+		return (
+			<div ref={containerRef} className="relative" style={{ width, height }}>
+				<MapLoadingShell isSatellite={isSatelliteStyle} />
+				<MapUnavailablePanel
+					title="Mapbox token required"
+					message="The map cannot load because VITE_MAPBOX_ACCESS_TOKEN is missing or still set to the example value. Put a real public Mapbox token in the repo root .env file and restart bun dev."
+				/>
+			</div>
+		);
+	}
+
 	return (
 		<>
-			<div className="relative" style={{ width, height }}>
+			<div ref={containerRef} className="relative" style={{ width, height }}>
 				<MapGL
 					ref={internalMapRef}
 					mapboxAccessToken={mapboxToken}
@@ -314,6 +462,11 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
 							mapRef.current = internalMapRef.current.getMap();
 						}
 						setIsMapLoaded(true);
+						try {
+							evt.target.setConfigProperty("basemap", "lightPreset", effectiveLightPreset);
+						} catch (err) {
+							Logger.error("[MapCanvas] Failed to set initial basemap light preset:", err);
+						}
 						handleMapLoad(evt);
 					}}
 					onError={(error) => {
@@ -351,6 +504,17 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
 				</MapGL>
 
 				{!isMapLoaded && <MapLoadingShell isSatellite={isSatelliteStyle} />}
+				{loadTimedOut && (
+					<MapUnavailablePanel
+						title="Map is still loading"
+						message="Mapbox has not responded yet. This is usually an invalid token, blocked network request, or a temporary Mapbox error."
+						actionLabel="Retry"
+						onAction={() => {
+							setLoadTimedOut(false);
+							window.location.reload();
+						}}
+					/>
+				)}
 			</div>
 
 			{/* Sun Position Indicator - Shows sun on map edges */}

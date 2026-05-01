@@ -1,0 +1,142 @@
+import { useAuthStatus } from "@/lib/api-queries";
+import { I } from "./icons";
+import { RDS_COLORS } from "./primitives";
+
+interface UserAvatarProps {
+	size?: number;
+	onClick?: () => void;
+	title?: string;
+	/**
+	 * When true, the signed-out state renders as a compact circular icon button
+	 * (no "Sign in" label). Use in narrow contexts like the rail nav.
+	 */
+	compact?: boolean;
+}
+
+function getInitials(name: string | null | undefined, email: string | null | undefined): string {
+	if (name) {
+		const parts = name.trim().split(/\s+/);
+		if (parts.length >= 2 && parts[0] && parts[1]) {
+			return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
+		}
+		return (parts[0]?.slice(0, 2) ?? "??").toUpperCase();
+	}
+	if (email) return email.slice(0, 2).toUpperCase();
+	return "??";
+}
+
+/**
+ * Renders the current user's avatar (Google picture or initials), or a "sign in"
+ * affordance when no user is signed in. Click opens the account screen for signed-in
+ * users, or the login screen for guests.
+ */
+export function UserAvatar({ size = 30, onClick, title, compact = false }: UserAvatarProps) {
+	const { data: auth } = useAuthStatus();
+	const user = auth?.user ?? null;
+	const isAuthenticated = !!auth?.isAuthenticated;
+
+	const handleClick = () => {
+		if (onClick) {
+			onClick();
+			return;
+		}
+		if (isAuthenticated) {
+			window.dispatchEvent(new CustomEvent("routess:open-account"));
+		} else {
+			window.dispatchEvent(new CustomEvent("routess:open-login"));
+		}
+	};
+
+	const fontSize = Math.max(10, Math.round(size * 0.36));
+
+	if (!isAuthenticated) {
+		if (compact) {
+			return (
+				<button
+					type="button"
+					onClick={handleClick}
+					title={title ?? "Sign in"}
+					aria-label="Sign in"
+					style={{
+						width: size,
+						height: size,
+						borderRadius: 999,
+						border: `1px solid ${RDS_COLORS.accent}`,
+						background: RDS_COLORS.accentSoft,
+						color: RDS_COLORS.accent,
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "center",
+						cursor: "pointer",
+						padding: 0,
+					}}
+				>
+					<I.user size={Math.round(size * 0.5)} />
+				</button>
+			);
+		}
+		return (
+			<button
+				type="button"
+				onClick={handleClick}
+				title={title ?? "Sign in"}
+				style={{
+					height: size,
+					padding: `0 ${Math.max(10, Math.round(size * 0.4))}px`,
+					borderRadius: 999,
+					border: `1px solid ${RDS_COLORS.accent}`,
+					background: RDS_COLORS.accentSoft,
+					color: RDS_COLORS.accent,
+					fontSize,
+					fontWeight: 600,
+					cursor: "pointer",
+					display: "inline-flex",
+					alignItems: "center",
+					gap: 6,
+				}}
+			>
+				<I.user size={Math.round(size * 0.45)} />
+				Sign in
+			</button>
+		);
+	}
+
+	const initials = getInitials(user?.name, user?.email);
+
+	return (
+		<button
+			type="button"
+			onClick={handleClick}
+			title={title ?? user?.name ?? user?.email ?? "Account"}
+			aria-label={user?.name ?? user?.email ?? "Account"}
+			style={{
+				width: size,
+				height: size,
+				borderRadius: 999,
+				background: user?.picture
+					? "transparent"
+					: `linear-gradient(135deg, ${RDS_COLORS.accent}, oklch(0.65 0.15 200))`,
+				color: "white",
+				border: 0,
+				padding: 0,
+				display: "flex",
+				alignItems: "center",
+				justifyContent: "center",
+				fontSize,
+				fontWeight: 600,
+				cursor: "pointer",
+				overflow: "hidden",
+			}}
+		>
+			{user?.picture ? (
+				<img
+					src={user.picture}
+					alt={user.name ?? "avatar"}
+					style={{ width: "100%", height: "100%", objectFit: "cover" }}
+				/>
+			) : (
+				initials
+			)}
+		</button>
+	);
+}

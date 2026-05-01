@@ -41,6 +41,7 @@ export function ShareModal() {
 	}, [waypoints, directFlags, isMapLocked]);
 
 	const copy = async () => {
+		window.dispatchEvent(new CustomEvent("routess:share-route"));
 		try {
 			await navigator.clipboard.writeText(url);
 			setCopied(true);
@@ -48,6 +49,16 @@ export function ShareModal() {
 		} catch {
 			/* noop */
 		}
+	};
+
+	const handleShare = () => {
+		window.dispatchEvent(new CustomEvent("routess:share-route"));
+		closeModal();
+	};
+
+	const handleDownload = () => {
+		window.dispatchEvent(new CustomEvent("routess:export-gpx"));
+		closeModal();
 	};
 
 	return (
@@ -200,19 +211,12 @@ export function ShareModal() {
 
 				{/* Channel buttons */}
 				<div style={{ display: "flex", gap: 8 }}>
-					{[
-						{ icon: I.share, label: "Share" },
-						{ icon: I.heart, label: "Like" },
-						{ icon: I.download, label: "Download" },
-						{ icon: I.upload, label: "Upload" },
-					].map((c) => {
-						const Icon = c.icon;
-						return (
-							<Btn key={c.label} title={c.label} style={{ flex: 1, height: 44 }}>
-								<Icon size={16} />
-							</Btn>
-						);
-					})}
+					<Btn title="Share" onClick={handleShare} style={{ flex: 1, height: 44 }}>
+						<I.share size={16} />
+					</Btn>
+					<Btn title="Download" onClick={handleDownload} style={{ flex: 1, height: 44 }}>
+						<I.download size={16} />
+					</Btn>
 				</div>
 			</div>
 		</ModalShell>

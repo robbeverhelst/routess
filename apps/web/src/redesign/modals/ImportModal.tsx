@@ -3,22 +3,61 @@ import { I } from "../components/icons";
 import { ModalShell } from "../components/ModalShell";
 import { Btn, RDS_COLORS, SecTitle } from "../components/primitives";
 import { useModalsStore } from "../stores/modalsStore";
+import { useToastStore } from "../stores/toastStore";
 
 const EXTENSIONS = [".gpx", ".tcx", ".fit", ".kml"] as const;
 const ACTIVITIES = ["Auto-detect", "Run", "Cycle", "Walk"] as const;
 
 export function ImportModal() {
 	const closeModal = useModalsStore((s) => s.closeModal);
+	const pushToast = useToastStore((s) => s.push);
 	const inputRef = useRef<HTMLInputElement>(null);
 	const [file, setFile] = useState<File | null>(null);
 	const [activity, setActivity] = useState<(typeof ACTIVITIES)[number]>("Auto-detect");
 	const [isDragging, setIsDragging] = useState(false);
+	const [isImporting, setIsImporting] = useState(false);
 
 	const onPick = () => inputRef.current?.click();
 
 	const onFile = (f: File | null | undefined) => {
 		if (!f) return;
 		setFile(f);
+	};
+
+	const onImport = async () => {
+		if (!file || isImporting) return;
+		const ext = file.name.toLowerCase().split(".").pop();
+		if (ext !== "gpx") {
+			pushToast({
+				kind: "warn",
+				title: "Only GPX is supported right now",
+				body: "TCX, FIT, and KML imports are coming in a follow-up.",
+			});
+			return;
+		}
+		setIsImporting(true);
+		try {
+			const gpxString = await file.text();
+			window.dispatchEvent(
+				new CustomEvent("routess:import-gpx", {
+					detail: { gpxString, fileName: file.name },
+				}),
+			);
+			pushToast({
+				kind: "success",
+				title: "Route imported",
+				body: file.name,
+			});
+			closeModal();
+		} catch (err) {
+			pushToast({
+				kind: "danger",
+				title: "Import failed",
+				body: err instanceof Error ? err.message : "Could not read the file.",
+			});
+		} finally {
+			setIsImporting(false);
+		}
 	};
 
 	return (
@@ -37,8 +76,8 @@ export function ImportModal() {
 						</Btn>
 					)}
 					{file && (
-						<Btn variant="primary">
-							<I.zap size={14} /> Import 1 route
+						<Btn variant="primary" onClick={onImport} disabled={isImporting}>
+							<I.zap size={14} /> {isImporting ? "Importing…" : "Import 1 route"}
 						</Btn>
 					)}
 				</>
@@ -201,21 +240,23 @@ export function ImportModal() {
 						</div>
 					</div>
 
-					<div
-						style={{
-							display: "flex",
-							alignItems: "center",
-							gap: 10,
-							padding: 12,
-							background: RDS_COLORS.bgInput,
-							borderRadius: 8,
-						}}
-					>
-						<I.zap size={14} style={{ color: RDS_COLORS.warn }} />
-						<div style={{ fontSize: 12, color: RDS_COLORS.fgMuted }}>
-							Full GPX/TCX parsing lands in a follow-up. The file is staged but won't be imported yet.
+					{file.name.toLowerCase().endsWith(".gpx") ? null : (
+						<div
+							style={{
+								display: "flex",
+								alignItems: "center",
+								gap: 10,
+								padding: 12,
+								background: RDS_COLORS.bgInput,
+								borderRadius: 8,
+							}}
+						>
+							<I.zap size={14} style={{ color: RDS_COLORS.warn }} />
+							<div style={{ fontSize: 12, color: RDS_COLORS.fgMuted }}>
+								Only GPX is supported right now. TCX, FIT, and KML imports are coming in a follow-up.
+							</div>
 						</div>
-					</div>
+					)}
 				</div>
 			)}
 		</ModalShell>

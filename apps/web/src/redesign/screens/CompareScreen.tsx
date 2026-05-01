@@ -1,17 +1,37 @@
+import { useState } from "react";
 import { I } from "../components/icons";
 import { Btn, IconBtn, RDS_COLORS } from "../components/primitives";
 
-const A = { name: "Schelde loop — long", distance: "12.4", time: "1:04", elev: "186", pace: "27.3" };
-const B = { name: "Hingene castle ride", distance: "18.6", time: "1:32", elev: "242", pace: "26.1" };
+interface Route {
+	name: string;
+	distance: string;
+	time: string;
+	elev: string;
+	pace: string;
+}
 
-const ROWS: { label: string; av: string; bv: string; unit: string; better: "a" | "b" }[] = [
-	{ label: "Distance", av: A.distance, bv: B.distance, unit: "km", better: "b" },
-	{ label: "Time", av: A.time, bv: B.time, unit: "h", better: "a" },
-	{ label: "Elev gain", av: A.elev, bv: B.elev, unit: "m", better: "a" },
-	{ label: "Avg speed", av: A.pace, bv: B.pace, unit: "km/h", better: "a" },
-];
+const ROUTE_A: Route = { name: "Schelde loop — long", distance: "12.4", time: "1:04", elev: "186", pace: "27.3" };
+const ROUTE_B: Route = { name: "Hingene castle ride", distance: "18.6", time: "1:32", elev: "242", pace: "26.1" };
 
 export function CompareScreen({ onClose }: { onClose?: () => void }) {
+	const [routes, setRoutes] = useState<{ a: Route; b: Route }>({ a: ROUTE_A, b: ROUTE_B });
+	const { a, b } = routes;
+
+	const handleSwap = () => {
+		setRoutes((prev) => ({ a: prev.b, b: prev.a }));
+	};
+
+	const handleShare = () => {
+		window.dispatchEvent(new CustomEvent("routess:share-route"));
+	};
+
+	const ROWS: { label: string; av: string; bv: string; unit: string; better: "a" | "b" }[] = [
+		{ label: "Distance", av: a.distance, bv: b.distance, unit: "km", better: "b" },
+		{ label: "Time", av: a.time, bv: b.time, unit: "h", better: "a" },
+		{ label: "Elev gain", av: a.elev, bv: b.elev, unit: "m", better: "a" },
+		{ label: "Avg speed", av: a.pace, bv: b.pace, unit: "km/h", better: "a" },
+	];
+
 	return (
 		<div
 			style={{
@@ -28,10 +48,10 @@ export function CompareScreen({ onClose }: { onClose?: () => void }) {
 					</IconBtn>
 					<h1 style={{ margin: 0, fontSize: 22, fontWeight: 600, letterSpacing: -0.3 }}>Compare routes</h1>
 					<div style={{ flex: 1 }} />
-					<Btn>
+					<Btn onClick={handleSwap}>
 						<I.swap size={14} /> Swap
 					</Btn>
-					<Btn>
+					<Btn onClick={handleShare}>
 						<I.share size={14} /> Share comparison
 					</Btn>
 				</div>
@@ -93,7 +113,7 @@ export function CompareScreen({ onClose }: { onClose?: () => void }) {
 								fontSize: 12,
 							}}
 						>
-							<div style={{ width: 12, height: 2, background: "var(--rds-accent)" }} /> A · {A.name}
+							<div style={{ width: 12, height: 2, background: "var(--rds-accent)" }} /> A · {a.name}
 						</div>
 						<div
 							style={{
@@ -115,7 +135,7 @@ export function CompareScreen({ onClose }: { onClose?: () => void }) {
 									backgroundSize: "4px 2px",
 								}}
 							/>{" "}
-							B · {B.name}
+							B · {b.name}
 						</div>
 					</div>
 				</div>
@@ -139,8 +159,8 @@ export function CompareScreen({ onClose }: { onClose?: () => void }) {
 						}}
 					>
 						<div style={{ width: 100 }} />
-						<div style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{A.name}</div>
-						<div style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{B.name}</div>
+						<div style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{a.name}</div>
+						<div style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{b.name}</div>
 					</div>
 					{ROWS.map((r) => (
 						<div

@@ -32,7 +32,7 @@ export function LoopModal() {
 					<div style={{ flex: 1 }} />
 					<Btn onClick={closeModal}>Cancel</Btn>
 					<Btn variant="primary">
-						<I.refresh size={14} /> Generate
+						<I.compass size={14} /> Generate
 					</Btn>
 				</>
 			}

@@ -1,3 +1,7 @@
+// TODO: persist + apply preferences to RouteCalculationService.
+// These preferences are currently held in local component state only.
+// When a routing-preferences store is introduced, swap useState for the store
+// and feed the values into RouteCalculationService so they actually shape routes.
 import { useState } from "react";
 import { I } from "../components/icons";
 import { ModalShell } from "../components/ModalShell";
@@ -32,23 +36,44 @@ const PREFS: PrefRow[] = [
 		key: "climbs",
 		icon: I.mountain,
 		label: "Avoid steep climbs",
-		sub: "Max gradient 6%",
+		sub: "Max gradient",
 		defaultOn: true,
 		slider: true,
 	},
 	{ key: "unpaved", icon: I.flag, label: "Avoid unpaved", sub: "Stay on asphalt where possible", defaultOn: false },
 	{ key: "highways", icon: I.trend, label: "Avoid highways", sub: "Always", defaultOn: true },
-	{ key: "snap", icon: I.refresh, label: "Auto-snap waypoints", sub: "Drag onto nearest road", defaultOn: true },
+	{ key: "snap", icon: I.target, label: "Auto-snap waypoints", sub: "Drag onto nearest road", defaultOn: true },
 ];
+
+const DEFAULT_PROFILE: (typeof PROFILES)[number]["key"] = "scenic";
+const DEFAULT_CLIMB_GRADIENT = 6;
+const MIN_CLIMB_GRADIENT = 2;
+const MAX_CLIMB_GRADIENT = 15;
+
+function buildDefaultPrefs(): Record<string, boolean> {
+	const out: Record<string, boolean> = {};
+	for (const p of PREFS) out[p.key] = p.defaultOn;
+	return out;
+}
 
 export function RoutingModal() {
 	const close = useModalsStore((s) => s.closeModal);
-	const [profile, setProfile] = useState<(typeof PROFILES)[number]["key"]>("scenic");
-	const [prefs, setPrefs] = useState<Record<string, boolean>>(() => {
-		const out: Record<string, boolean> = {};
-		for (const p of PREFS) out[p.key] = p.defaultOn;
-		return out;
-	});
+	const [profile, setProfile] = useState<(typeof PROFILES)[number]["key"]>(DEFAULT_PROFILE);
+	const [prefs, setPrefs] = useState<Record<string, boolean>>(() => buildDefaultPrefs());
+	const [climbGradient, setClimbGradient] = useState<number>(DEFAULT_CLIMB_GRADIENT);
+
+	const reset = () => {
+		setProfile(DEFAULT_PROFILE);
+		setPrefs(buildDefaultPrefs());
+		setClimbGradient(DEFAULT_CLIMB_GRADIENT);
+	};
+
+	const apply = () => {
+		// TODO: persist + apply preferences to RouteCalculationService.
+		// For now we close the modal — values live in local state until a
+		// routing-preferences store wires them into route calculation.
+		close();
+	};
 
 	return (
 		<ModalShell
@@ -58,10 +83,12 @@ export function RoutingModal() {
 			onClose={close}
 			footer={
 				<>
-					<Btn variant="ghost">Reset</Btn>
+					<Btn variant="ghost" onClick={reset}>
+						Reset
+					</Btn>
 					<div style={{ flex: 1 }} />
 					<Btn onClick={close}>Cancel</Btn>
-					<Btn variant="primary" onClick={close}>
+					<Btn variant="primary" onClick={apply}>
 						Apply
 					</Btn>
 				</>
@@ -138,42 +165,26 @@ export function RoutingModal() {
 						</div>
 						<div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
 							<div style={{ fontSize: 13, fontWeight: 500 }}>{row.label}</div>
-							<div style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle, marginTop: 2 }}>{row.sub}</div>
+							<div style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle, marginTop: 2 }}>
+								{row.sub}
+								{row.slider && on ? <span className="rds-mono"> · {climbGradient}%</span> : null}
+							</div>
 							{row.slider && on && (
-								<div
+								<input
+									type="range"
+									min={MIN_CLIMB_GRADIENT}
+									max={MAX_CLIMB_GRADIENT}
+									step={1}
+									value={climbGradient}
+									onChange={(e) => setClimbGradient(Number(e.target.value))}
+									aria-label="Max climb gradient (%)"
 									style={{
 										marginTop: 8,
-										height: 4,
-										background: RDS_COLORS.bgInput,
-										borderRadius: 999,
-										position: "relative",
+										width: "100%",
+										accentColor: RDS_COLORS.accent,
+										cursor: "pointer",
 									}}
-								>
-									<div
-										style={{
-											position: "absolute",
-											left: 0,
-											top: 0,
-											height: "100%",
-											width: "60%",
-											background: RDS_COLORS.accent,
-											borderRadius: 999,
-										}}
-									/>
-									<div
-										style={{
-											position: "absolute",
-											left: "60%",
-											top: -4,
-											width: 12,
-											height: 12,
-											borderRadius: 999,
-											background: RDS_COLORS.bgPanel,
-											border: `2px solid ${RDS_COLORS.accent}`,
-											transform: "translateX(-6px)",
-										}}
-									/>
-								</div>
+								/>
 							)}
 						</div>
 						<Toggle on={on} onChange={(v) => setPrefs({ ...prefs, [row.key]: v })} />

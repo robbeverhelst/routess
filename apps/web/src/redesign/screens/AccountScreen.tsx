@@ -1,20 +1,79 @@
+import { useMemo, useState } from "react";
+import { useAuthStatus } from "@/lib/api-queries";
 import { Badge, Btn, RDS_COLORS, SecTitle } from "../components/primitives";
+import { useToastStore } from "../stores/toastStore";
 
+// TODO: replace USAGE with real per-account counters once the backend lands.
 const USAGE = [
 	{ label: "Saved routes", current: 38, max: 50 },
 	{ label: "GPX exports", current: 6, max: 10 },
 	{ label: "Offline regions", current: 0, max: 0, locked: true },
 ];
 
-const ACCOUNT_FIELDS = [
-	{ label: "Email", value: "robbe@example.com" },
-	{ label: "Username", value: "robbe" },
-	{ label: "Password", value: "Last changed 14 days ago" },
-	{ label: "Two-factor", value: "Enabled" },
-	{ label: "Connected", value: "Strava, Garmin Connect" },
-];
+interface Field {
+	label: string;
+	value: string;
+	editable?: boolean;
+	managed?: string;
+}
 
 export function AccountScreen() {
+	const { data: auth } = useAuthStatus();
+	const user = auth?.user ?? null;
+	const pushToast = useToastStore((s) => s.push);
+
+	const initialFields = useMemo<Field[]>(() => {
+		const username = user?.email?.split("@")[0] ?? "guest";
+		return [
+			{ label: "Name", value: user?.name ?? "—", managed: "Google account" },
+			{ label: "Email", value: user?.email ?? "—", managed: "Google account" },
+			{ label: "Username", value: username, editable: true },
+			// Below fields require backend support — left as TODO mocks.
+			{ label: "Password", value: "Managed by Google", managed: "Google account" },
+			{ label: "Two-factor", value: "Managed by Google", managed: "Google account" },
+			{ label: "Connected", value: "None", editable: true },
+		];
+	}, [user]);
+
+	const [fields, setFields] = useState<Field[]>(initialFields);
+
+	// Resync when auth user changes (e.g. after sign-in).
+	if (fields.length > 0 && fields[0]?.value !== initialFields[0]?.value) {
+		setFields(initialFields);
+	}
+
+	const handleEdit = (index: number) => {
+		const field = fields[index];
+		if (!field) return;
+		if (!field.editable) {
+			pushToast({
+				kind: "info",
+				title: `${field.label} is read-only`,
+				body: field.managed ? `This field is managed via your ${field.managed}.` : undefined,
+			});
+			return;
+		}
+		const next = window.prompt(`Edit ${field.label}`, field.value);
+		if (next == null) return;
+		const trimmed = next.trim();
+		if (!trimmed) return;
+		setFields((prev) => prev.map((f, i) => (i === index ? { ...f, value: trimmed } : f)));
+		// TODO: persist edited field to backend once the user-profile endpoint lands.
+	};
+
+	const handleDeleteAccount = () => {
+		const confirmed = window.confirm(
+			"Are you sure you want to permanently delete your account? All routes, activities, and data will be lost. This cannot be undone.",
+		);
+		if (!confirmed) return;
+		pushToast({
+			kind: "info",
+			title: "Account deletion coming soon",
+			body: "We'll wire this to the backend deletion endpoint when it lands.",
+		});
+		// TODO: wire to backend deletion endpoint
+	};
+
 	return (
 		<div
 			style={{
@@ -125,7 +184,7 @@ export function AccountScreen() {
 					}}
 				>
 					<SecTitle style={{ marginBottom: 14 }}>Account</SecTitle>
-					{ACCOUNT_FIELDS.map((f, i) => (
+					{fields.map((f, i) => (
 						<div
 							key={f.label}
 							style={{
@@ -133,12 +192,16 @@ export function AccountScreen() {
 								alignItems: "center",
 								gap: 12,
 								padding: "10px 0",
-								borderBottom: i < ACCOUNT_FIELDS.length - 1 ? `1px solid ${RDS_COLORS.border}` : "none",
+								borderBottom: i < fields.length - 1 ? `1px solid ${RDS_COLORS.border}` : "none",
 							}}
 						>
 							<div style={{ fontSize: 13, color: RDS_COLORS.fgMuted, width: 110 }}>{f.label}</div>
 							<div style={{ flex: 1, fontSize: 13 }}>{f.value}</div>
-							<Btn variant="ghost" style={{ height: 28, padding: "0 10px", fontSize: 12 }}>
+							<Btn
+								variant="ghost"
+								style={{ height: 28, padding: "0 10px", fontSize: 12 }}
+								onClick={() => handleEdit(i)}
+							>
 								Edit
 							</Btn>
 						</div>
@@ -163,6 +226,7 @@ export function AccountScreen() {
 							</div>
 						</div>
 						<Btn
+							onClick={handleDeleteAccount}
 							style={{
 								background: "transparent",
 								color: RDS_COLORS.danger,

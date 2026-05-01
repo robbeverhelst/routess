@@ -7,15 +7,15 @@ interface MapToolbarProps {
 	canRedo?: boolean;
 	onUndo?: () => void;
 	onRedo?: () => void;
-	onReverse?: () => void;
-	onLoop?: () => void;
+	onRemoveRoute?: () => void;
 	onSearch?: () => void;
 	onLocate?: () => void;
 	onLayers?: () => void;
 	onLock?: () => void;
-	onFullscreen?: () => void;
+	onFocusRoute?: () => void;
 	onZoomIn?: () => void;
 	onZoomOut?: () => void;
+	hasRoute?: boolean;
 	isLocked?: boolean;
 }
 
@@ -65,11 +65,8 @@ export function MapToolbar(props: MapToolbarProps) {
 				<IconBtn title="Redo" onClick={props.onRedo} disabled={!props.canRedo}>
 					<I.redo size={16} />
 				</IconBtn>
-				<IconBtn title="Reverse" onClick={props.onReverse}>
-					<I.swap size={16} />
-				</IconBtn>
-				<IconBtn title="Loop back" onClick={props.onLoop}>
-					<I.refresh size={16} />
+				<IconBtn title="Remove route" onClick={props.onRemoveRoute} disabled={!props.hasRoute}>
+					<I.trash size={16} />
 				</IconBtn>
 			</Group>
 			<Group>
@@ -79,8 +76,8 @@ export function MapToolbar(props: MapToolbarProps) {
 				<IconBtn title={props.isLocked ? "Unlock map" : "Lock map"} onClick={props.onLock} pressed={props.isLocked}>
 					<I.lock size={16} />
 				</IconBtn>
-				<IconBtn title="Fullscreen" onClick={props.onFullscreen}>
-					<I.expand size={16} />
+				<IconBtn title="Focus on route" onClick={props.onFocusRoute} disabled={!props.hasRoute}>
+					<I.maximize size={16} />
 				</IconBtn>
 			</Group>
 			<Group>
