@@ -1,0 +1,40 @@
+---
+title: CI/CD
+description: How code gets from a PR to a running cluster.
+---
+
+Routess uses **GitHub Actions** running on a self-hosted runner labelled `arc-routess`.
+
+## Pipeline (`.github/workflows/ci.yml`)
+
+```
+PR / push  ──▶  test  ──┐
+                        ├──▶  release (semantic-release)  ──▶  publish-images
+PR / push  ──▶  helm-validate  ┘                                          │
+                                                                          │
+                                                              publish-helm  ──▶  GHCR (chart)
+```
+
+## Stages
+
+| Stage | What it does |
+| --- | --- |
+| **test** | `bun install` → Biome → type-check → run tests with a Postgres service container → build everything |
+| **helm-validate** | `helm lint` + `helm template` to catch chart errors |
+| **release** | Runs only on `main` push. `semantic-release` reads conventional commits, decides version, creates tag + release notes |
+| **publish-images** | Matrix builds web/api/docs Docker images, pushes to GHCR with `version`, `minor`, `major`, and `sha` tags |
+| **publish-helm** | Updates Chart.yaml version, `helm package`, `helm push` to GHCR OCI registry |
+
+## Versioning
+
+`semantic-release` reads commits since the last tag:
+
+- `feat:` → minor bump
+- `fix:` → patch bump
+- `feat!:` or `BREAKING CHANGE:` → major bump
+
+The same version flows into Docker tags and the Helm chart. Run `bun run release` locally only if you know what you're doing — the pipeline does it for you.
+
+## Self-hosted runner
+
+`arc-routess` is an Actions Runner Controller deployment in the same cluster. Builds happen close to the registry, which keeps cache hits high.

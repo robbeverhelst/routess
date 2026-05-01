@@ -1,0 +1,54 @@
+---
+title: Kubernetes
+description: Deploying Routess with the bundled Helm chart.
+---
+
+The chart at `charts/routess` deploys all three apps (web, api, docs) plus their services, ingresses, and security policies.
+
+## Quick install
+
+```sh
+helm install routess oci://ghcr.io/robbeverhelst/charts/routess \
+	--version <VERSION> \
+	--namespace routess \
+	--create-namespace \
+	--set api.secrets.jwtSecret=<random> \
+	--set api.secrets.googleClientId=<from-google> \
+	--set api.secrets.dbHost=<db-host> \
+	--set api.secrets.dbUser=<db-user> \
+	--set api.secrets.dbPassword=<db-password> \
+	--set networkPolicies.postgresEgress.host=<db-host>
+```
+
+## Values structure
+
+Top-level keys:
+
+- `global` — namespace, etc.
+- `web`, `api`, `docs` — per-app deployment config (replicas, resources, probes, security)
+- `ingress` — Cloudflare tunnel hostnames per service
+- `networkPolicies` — default-deny + app-specific allows
+- `serviceAccount` — minimal RBAC per service
+
+See `charts/routess/values.yaml` for the full reference.
+
+## Hostnames
+
+Default ingress hosts:
+
+- `routess.com` → web
+- `api.routess.com` → api
+- `docs.routess.com` → docs
+
+Override via `ingress.<service>.hosts`.
+
+## Render locally
+
+```sh
+helm template test ./charts/routess \
+	--set api.secrets.jwtSecret=test \
+	--set api.secrets.googleClientId=test \
+	--set api.secrets.dbHost=10.0.0.1 \
+	--set api.secrets.dbUser=test \
+	--set api.secrets.dbPassword=test
+```

@@ -1,0 +1,38 @@
+---
+title: Security
+description: Security hardening built into the Helm chart.
+---
+
+Routess ships with production-ready Kubernetes security defaults.
+
+## Network Policies
+
+A default-deny policy blocks all ingress and egress in the `routess` namespace. Allows are explicit:
+
+- **Web** — ingress from Cloudflare tunnel namespace only
+- **API** — ingress from Cloudflare tunnel + intra-namespace; egress to Postgres + DNS + external (for Google OAuth)
+- **Docs** — ingress from Cloudflare tunnel only
+
+DNS egress is allowed namespace-wide on UDP/TCP 53.
+
+## Pod Security Standards
+
+Every pod runs:
+
+- **Non-root** — web as UID 101 (nginx), api as 1000, docs as 1000
+- **No privilege escalation** — `allowPrivilegeEscalation: false`
+- **Dropped capabilities** — `capabilities.drop: [ALL]`
+- **Seccomp** — `RuntimeDefault` profile
+- **Read-only root filesystem** — api only (web needs nginx temp dirs)
+
+## ServiceAccounts
+
+Each service has a dedicated ServiceAccount with `automountServiceAccountToken: false`. None of the workloads need to call the Kubernetes API.
+
+## Secrets
+
+API secrets (JWT, Google client ID, DB credentials) are stored in Kubernetes `Secret` objects and injected as env vars via `secretKeyRef`. CI pulls values from 1Password and injects them via `helm install --set`.
+
+## Resource limits
+
+CPU, memory, and ephemeral storage limits are set on every container to prevent resource exhaustion.

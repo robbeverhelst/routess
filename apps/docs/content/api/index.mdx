@@ -1,0 +1,37 @@
+---
+title: API Reference
+description: REST endpoints, auth, and data models.
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+<Callout type="info" title="Generated from OpenAPI">
+	The endpoint pages under [Endpoints](/api-reference/endpoints) are generated from `apps/docs/openapi/routess.openapi.json`. Regenerate them with `bun run docs:generate-api`.
+</Callout>
+
+## Base URL
+
+- Production: `https://routess-api.robbeverhelst.com`
+- Future canonical API domain: `https://api.routess.com`
+- Local: `http://localhost:3000`
+
+All paths below are prefixed with `/api/v1` unless noted.
+
+## Authentication
+
+Most endpoints require a session cookie issued by `POST /api/v1/auth/google`. See [Developer Docs → Architecture → Auth](/docs/architecture/auth) for the full flow.
+
+## Endpoints (overview)
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| POST | `/auth/google` | Exchange Google ID token for a session |
+| GET | `/auth/me` | Get the current user |
+| POST | `/auth/logout` | Clear the session |
+| GET / PATCH / DELETE | `/users/me` | Manage the current user |
+| GET | `/routes` | List the current user's routes |
+| POST | `/routes` | Create a route |
+| GET / PATCH / DELETE | `/routes/:id` | Read / update / delete a route |
+| GET | `/health/live` | Liveness probe |
+| GET | `/health/ready` | Readiness probe |
+| GET | `/metrics` | Prometheus metrics (internal) |

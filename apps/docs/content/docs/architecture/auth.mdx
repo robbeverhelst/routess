@@ -1,0 +1,29 @@
+---
+title: Authentication
+description: Google OAuth sign-in and session management.
+---
+
+Routess uses **Google OAuth (one-tap)** on the web and a **JWT session cookie** on the API.
+
+## Flow
+
+1. The web app loads the Google Identity Services SDK and renders the sign-in button.
+2. On success, Google returns an **ID token** to the browser.
+3. Web posts the ID token to `POST /api/v1/auth/google`.
+4. The API verifies the token's signature and audience against Google's JWKS.
+5. The API upserts the user (by Google `sub`), issues its own JWT, and sets it as an `HttpOnly`, `Secure`, `SameSite=Lax` cookie.
+6. Subsequent API calls include the cookie automatically.
+
+## Why a server-issued JWT?
+
+- Lets us add app-specific claims (user role, default unit)
+- Decouples session lifetime from Google's token
+- We don't need to call Google on every request
+
+## Sign-out
+
+`POST /api/v1/auth/logout` clears the cookie. The web app also clears Zustand auth state.
+
+## Session refresh
+
+JWTs are short-lived (15 minutes). The API refreshes silently on each authenticated request, returning a fresh cookie. If the user is gone for too long, the cookie expires and they re-sign-in via Google's silent re-auth (no user interaction in most cases).

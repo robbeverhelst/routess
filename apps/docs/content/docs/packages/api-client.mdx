@@ -1,0 +1,46 @@
+---
+title: "@routess/api-client"
+description: HTTP client with web and mobile adapters.
+---
+
+A thin wrapper over `fetch` that abstracts the differences between browser cookies and React Native auth headers.
+
+## Exports
+
+| Subpath | Use it from |
+| --- | --- |
+| `@routess/api-client` | Common types and base client |
+| `@routess/api-client/web` | Browser — uses cookies for auth |
+| `@routess/api-client/mobile` | React Native — uses Bearer tokens from secure storage |
+
+## Usage (web)
+
+```ts
+import { createApiClient } from "@routess/api-client/web";
+
+const api = createApiClient({ baseURL: import.meta.env.VITE_API_URL });
+
+const me = await api.auth.me();
+const routes = await api.routes.list();
+```
+
+## Usage (mobile)
+
+```ts
+import { createApiClient } from "@routess/api-client/mobile";
+import * as SecureStore from "expo-secure-store";
+
+const api = createApiClient({
+	baseURL: process.env.EXPO_PUBLIC_API_URL!,
+	getToken: () => SecureStore.getItemAsync("authToken"),
+});
+```
+
+## Error handling
+
+All client methods throw `ApiError` on non-2xx responses. The error includes:
+
+- `status` — HTTP status code
+- `code` — machine-readable error code from the API
+- `message` — human-readable
+- `fieldErrors?` — for 422 validation errors

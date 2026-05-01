@@ -94,6 +94,34 @@ API service account name
 {{- end }}
 
 {{/*
+Docs labels
+*/}}
+{{- define "routess.docs.labels" -}}
+{{ include "routess.labels" . }}
+{{ include "routess.docs.selectorLabels" . }}
+{{- end }}
+
+{{/*
+Docs selector labels
+*/}}
+{{- define "routess.docs.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "routess.name" . }}-docs
+app.kubernetes.io/instance: {{ .Release.Name }}
+app.kubernetes.io/component: docs
+{{- end }}
+
+{{/*
+Docs service account name
+*/}}
+{{- define "routess.docs.serviceAccountName" -}}
+{{- if .Values.serviceAccount.docs.create }}
+{{- default (printf "%s-docs" (include "routess.fullname" .)) .Values.serviceAccount.docs.name }}
+{{- else }}
+{{- default "default" .Values.serviceAccount.docs.name }}
+{{- end }}
+{{- end }}
+
+{{/*
 Frontend URL from first web ingress host
 */}}
 {{- define "routess.frontendUrl" -}}

@@ -92,6 +92,8 @@ api:
     port: "3000"
     dbPort: "5432"
     dbName: routess
+    swaggerEnabled: "true"
+    swaggerPath: "/api"
   secrets:
     # These are set via --set in CI from 1Password
     jwtSecret: ""
@@ -155,6 +157,69 @@ api:
     minAvailable: 1
     # maxUnavailable: 1
 
+docs:
+  replicaCount: 1
+  image:
+    repository: ghcr.io/robbeverhelst/routess-docs
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 8080
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1001
+    runAsGroup: 1001
+    seccompProfile:
+      type: RuntimeDefault
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    runAsNonRoot: true
+    runAsUser: 1001
+    runAsGroup: 1001
+    capabilities:
+      drop: [ALL]
+  automountServiceAccountToken: false
+  livenessProbe:
+    httpGet:
+      path: /
+      port: http
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    httpGet:
+      path: /
+      port: http
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+  startupProbe: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  podAnnotations: {}
+  podLabels: {}
+  topologySpreadConstraints: []
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 3
+    targetCPUUtilizationPercentage: 80
+  podDisruptionBudget:
+    enabled: false
+    minAvailable: 1
+
 ingress:
   enabled: true
   className: cloudflare-tunnel
@@ -169,6 +234,11 @@ ingress:
   api:
     hosts:
       - routess-api.robbeverhelst.com
+    tls: []
+    annotations: {}
+  docs:
+    hosts:
+      - docs.routess.robbeverhelst.com
     tls: []
     annotations: {}
 
@@ -188,5 +258,8 @@ serviceAccount:
     create: true
     annotations: {}
   api:
+    create: true
+    annotations: {}
+  docs:
     create: true
     annotations: {}

@@ -1,0 +1,34 @@
+---
+title: Overview
+description: How Routess is structured at a high level.
+---
+
+Routess is a classic three-tier app:
+
+```
+┌──────────────┐      ┌──────────────┐      ┌──────────────┐
+│   Web (SPA)  │ ───▶ │   API (Nest) │ ───▶ │  PostgreSQL  │
+│  Vite/React  │      │   NestJS 11  │      │      15      │
+└──────────────┘      └──────────────┘      └──────────────┘
+       │                     │
+       │                     ├──▶  Google OAuth (token verification)
+       │                     └──▶  OpenTelemetry exporter
+       │
+       └──▶  Mapbox tiles + geocoding
+```
+
+Shared code lives in `packages/*` and is consumed by both apps via Bun workspaces.
+
+## Boundaries
+
+- **Web** owns rendering and client state. It calls the API for persistence.
+- **API** owns auth, validation, and storage. No business logic in the web app where possible.
+- **Packages** are platform-agnostic where they can be (`core`, `i18n`) and have explicit web/mobile adapters where they can't (`api-client`).
+
+## Out-of-process dependencies
+
+| Service | Used by | Why |
+| --- | --- | --- |
+| Mapbox | Web | Tiles, styles, geocoding |
+| Google OAuth | API | Sign-in token verification |
+| PostgreSQL | API | Users + routes persistence |

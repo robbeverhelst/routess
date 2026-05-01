@@ -1,0 +1,1161 @@
+{
+	"openapi": "3.0.0",
+	"paths": {
+		"/": {
+			"get": {
+				"operationId": "AppController_getRoot",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"description": ""
+					}
+				},
+				"tags": ["app"]
+			}
+		},
+		"/users/me": {
+			"get": {
+				"operationId": "UsersController_getProfile[0]",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"description": "",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/UserProfileDto"
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Get current user profile",
+				"tags": ["users"]
+			},
+			"patch": {
+				"operationId": "UsersController_update",
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/UpdateCurrentUserDto"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/UserProfileDto"
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Update current user profile",
+				"tags": ["users"]
+			},
+			"delete": {
+				"operationId": "UsersController_remove",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"description": "",
+						"content": {
+							"application/json": {
+								"schema": {
+									"example": {
+										"success": true
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Delete current user account",
+				"tags": ["users"]
+			}
+		},
+		"/users/profile": {
+			"get": {
+				"operationId": "UsersController_getProfile[1]",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"description": "",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/UserProfileDto"
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Get current user profile",
+				"tags": ["users"]
+			}
+		},
+		"/auth/google": {
+			"post": {
+				"description": "Authenticates user using Google OAuth2 credential token",
+				"operationId": "AuthController_googleAuth",
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/GoogleAuthDto"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Authentication successful",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/AuthResponseDto"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Invalid Google credential"
+					},
+					"401": {
+						"description": "Authentication failed"
+					}
+				},
+				"summary": "Google OAuth authentication",
+				"tags": ["auth"]
+			}
+		},
+		"/auth/me": {
+			"get": {
+				"description": "Retrieves the profile of the currently authenticated user",
+				"operationId": "AuthController_getProfile",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"description": "Profile retrieved successfully",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/UserProfileDto"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Unauthorized"
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Get current user profile",
+				"tags": ["auth"]
+			}
+		},
+		"/auth/logout": {
+			"post": {
+				"description": "Revokes the current JWT session",
+				"operationId": "AuthController_logout",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"description": "Session revoked",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/LogoutResponseDto"
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Logout current session",
+				"tags": ["auth"]
+			}
+		},
+		"/routes": {
+			"post": {
+				"description": "Creates a new route for the authenticated user",
+				"operationId": "RoutesController_create",
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/CreateRouteDto"
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Route created successfully",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/RouteResponseDto"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Invalid route data"
+					},
+					"401": {
+						"description": "Unauthorized"
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Create a new route",
+				"tags": ["routes"]
+			},
+			"get": {
+				"description": "Retrieves all routes belonging to the authenticated user",
+				"operationId": "RoutesController_findAll",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"description": "Routes retrieved successfully",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"$ref": "#/components/schemas/RouteResponseDto"
+									}
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Unauthorized"
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Get all user routes",
+				"tags": ["routes"]
+			}
+		},
+		"/routes/{id}": {
+			"get": {
+				"description": "Retrieves a specific route by ID for the authenticated user",
+				"operationId": "RoutesController_findOne",
+				"parameters": [
+					{
+						"name": "id",
+						"required": true,
+						"in": "path",
+						"description": "Route ID",
+						"schema": {
+							"type": "number"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Route retrieved successfully",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/RouteResponseDto"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Unauthorized"
+					},
+					"404": {
+						"description": "Route not found"
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Get route by ID",
+				"tags": ["routes"]
+			},
+			"patch": {
+				"description": "Updates a specific route for the authenticated user",
+				"operationId": "RoutesController_update",
+				"parameters": [
+					{
+						"name": "id",
+						"required": true,
+						"in": "path",
+						"description": "Route ID",
+						"schema": {
+							"type": "number"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/UpdateRouteDto"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Route updated successfully",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/RouteResponseDto"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Invalid route data"
+					},
+					"401": {
+						"description": "Unauthorized"
+					},
+					"404": {
+						"description": "Route not found"
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Update route",
+				"tags": ["routes"]
+			},
+			"delete": {
+				"description": "Deletes a specific route for the authenticated user",
+				"operationId": "RoutesController_remove",
+				"parameters": [
+					{
+						"name": "id",
+						"required": true,
+						"in": "path",
+						"description": "Route ID",
+						"schema": {
+							"type": "number"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Route deleted successfully",
+						"content": {
+							"application/json": {
+								"schema": {
+									"example": {
+										"success": true,
+										"message": "Route deleted successfully"
+									}
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Unauthorized"
+					},
+					"404": {
+						"description": "Route not found"
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Delete route",
+				"tags": ["routes"]
+			}
+		},
+		"/health": {
+			"get": {
+				"operationId": "HealthController_check",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"description": "The Health Check is successful",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"status": {
+											"type": "string",
+											"example": "ok"
+										},
+										"info": {
+											"type": "object",
+											"example": {
+												"database": {
+													"status": "up"
+												}
+											},
+											"additionalProperties": {
+												"type": "object",
+												"required": ["status"],
+												"properties": {
+													"status": {
+														"type": "string"
+													}
+												},
+												"additionalProperties": true
+											},
+											"nullable": true
+										},
+										"error": {
+											"type": "object",
+											"example": {},
+											"additionalProperties": {
+												"type": "object",
+												"required": ["status"],
+												"properties": {
+													"status": {
+														"type": "string"
+													}
+												},
+												"additionalProperties": true
+											},
+											"nullable": true
+										},
+										"details": {
+											"type": "object",
+											"example": {
+												"database": {
+													"status": "up"
+												}
+											},
+											"additionalProperties": {
+												"type": "object",
+												"required": ["status"],
+												"properties": {
+													"status": {
+														"type": "string"
+													}
+												},
+												"additionalProperties": true
+											}
+										}
+									}
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "The Health Check is not successful",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"status": {
+											"type": "string",
+											"example": "error"
+										},
+										"info": {
+											"type": "object",
+											"example": {
+												"database": {
+													"status": "up"
+												}
+											},
+											"additionalProperties": {
+												"type": "object",
+												"required": ["status"],
+												"properties": {
+													"status": {
+														"type": "string"
+													}
+												},
+												"additionalProperties": true
+											},
+											"nullable": true
+										},
+										"error": {
+											"type": "object",
+											"example": {
+												"redis": {
+													"status": "down",
+													"message": "Could not connect"
+												}
+											},
+											"additionalProperties": {
+												"type": "object",
+												"required": ["status"],
+												"properties": {
+													"status": {
+														"type": "string"
+													}
+												},
+												"additionalProperties": true
+											},
+											"nullable": true
+										},
+										"details": {
+											"type": "object",
+											"example": {
+												"database": {
+													"status": "up"
+												},
+												"redis": {
+													"status": "down",
+													"message": "Could not connect"
+												}
+											},
+											"additionalProperties": {
+												"type": "object",
+												"required": ["status"],
+												"properties": {
+													"status": {
+														"type": "string"
+													}
+												},
+												"additionalProperties": true
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"tags": ["health"]
+			}
+		},
+		"/health/ready": {
+			"get": {
+				"operationId": "HealthController_readiness",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"description": "The Health Check is successful",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"status": {
+											"type": "string",
+											"example": "ok"
+										},
+										"info": {
+											"type": "object",
+											"example": {
+												"database": {
+													"status": "up"
+												}
+											},
+											"additionalProperties": {
+												"type": "object",
+												"required": ["status"],
+												"properties": {
+													"status": {
+														"type": "string"
+													}
+												},
+												"additionalProperties": true
+											},
+											"nullable": true
+										},
+										"error": {
+											"type": "object",
+											"example": {},
+											"additionalProperties": {
+												"type": "object",
+												"required": ["status"],
+												"properties": {
+													"status": {
+														"type": "string"
+													}
+												},
+												"additionalProperties": true
+											},
+											"nullable": true
+										},
+										"details": {
+											"type": "object",
+											"example": {
+												"database": {
+													"status": "up"
+												}
+											},
+											"additionalProperties": {
+												"type": "object",
+												"required": ["status"],
+												"properties": {
+													"status": {
+														"type": "string"
+													}
+												},
+												"additionalProperties": true
+											}
+										}
+									}
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "The Health Check is not successful",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"status": {
+											"type": "string",
+											"example": "error"
+										},
+										"info": {
+											"type": "object",
+											"example": {
+												"database": {
+													"status": "up"
+												}
+											},
+											"additionalProperties": {
+												"type": "object",
+												"required": ["status"],
+												"properties": {
+													"status": {
+														"type": "string"
+													}
+												},
+												"additionalProperties": true
+											},
+											"nullable": true
+										},
+										"error": {
+											"type": "object",
+											"example": {
+												"redis": {
+													"status": "down",
+													"message": "Could not connect"
+												}
+											},
+											"additionalProperties": {
+												"type": "object",
+												"required": ["status"],
+												"properties": {
+													"status": {
+														"type": "string"
+													}
+												},
+												"additionalProperties": true
+											},
+											"nullable": true
+										},
+										"details": {
+											"type": "object",
+											"example": {
+												"database": {
+													"status": "up"
+												},
+												"redis": {
+													"status": "down",
+													"message": "Could not connect"
+												}
+											},
+											"additionalProperties": {
+												"type": "object",
+												"required": ["status"],
+												"properties": {
+													"status": {
+														"type": "string"
+													}
+												},
+												"additionalProperties": true
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"tags": ["health"]
+			}
+		},
+		"/health/live": {
+			"get": {
+				"operationId": "HealthController_liveness",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"description": ""
+					}
+				},
+				"tags": ["health"]
+			}
+		},
+		"/metrics": {
+			"get": {
+				"operationId": "MetricsController_getMetrics",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"description": ""
+					}
+				},
+				"tags": ["metrics"]
+			}
+		}
+	},
+	"info": {
+		"title": "Routess API",
+		"description": "API for route management and mapping functionality",
+		"version": "dev",
+		"contact": {}
+	},
+	"tags": [
+		{
+			"name": "auth",
+			"description": "Authentication endpoints"
+		},
+		{
+			"name": "routes",
+			"description": "Route management"
+		},
+		{
+			"name": "users",
+			"description": "User profile management"
+		},
+		{
+			"name": "app",
+			"description": "API root metadata"
+		},
+		{
+			"name": "health",
+			"description": "Health and monitoring"
+		},
+		{
+			"name": "metrics",
+			"description": "Prometheus metrics"
+		}
+	],
+	"servers": [
+		{
+			"url": "http://localhost:3000",
+			"description": "Local development"
+		},
+		{
+			"url": "https://routess-api.robbeverhelst.com",
+			"description": "Production"
+		},
+		{
+			"url": "https://api.routess.com",
+			"description": "Future canonical domain"
+		}
+	],
+	"components": {
+		"securitySchemes": {
+			"JWT-auth": {
+				"scheme": "bearer",
+				"bearerFormat": "JWT",
+				"type": "http",
+				"in": "header"
+			}
+		},
+		"schemas": {
+			"UserStatisticsDto": {
+				"type": "object",
+				"properties": {
+					"totalRoutes": {
+						"type": "number",
+						"example": 12
+					},
+					"totalDistance": {
+						"type": "number",
+						"example": 42350,
+						"description": "Total distance in meters"
+					}
+				},
+				"required": ["totalRoutes", "totalDistance"]
+			},
+			"UserProfileDto": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "number",
+						"example": 1
+					},
+					"email": {
+						"type": "string",
+						"example": "user@example.com"
+					},
+					"name": {
+						"type": "string",
+						"example": "Jane Doe"
+					},
+					"avatar": {
+						"type": "string",
+						"example": "https://example.com/avatar.jpg"
+					},
+					"isEmailVerified": {
+						"type": "boolean",
+						"example": true
+					},
+					"statistics": {
+						"$ref": "#/components/schemas/UserStatisticsDto"
+					}
+				},
+				"required": ["id", "email", "name", "isEmailVerified", "statistics"]
+			},
+			"UpdateCurrentUserDto": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string",
+						"example": "Jane Doe"
+					},
+					"avatar": {
+						"type": "string",
+						"example": "https://example.com/avatar.jpg"
+					}
+				}
+			},
+			"GoogleAuthDto": {
+				"type": "object",
+				"properties": {
+					"credential": {
+						"type": "string",
+						"description": "Google OAuth2 credential token",
+						"example": "eyJhbGciOiJSUzI1NiIsImtpZCI6IjdkYzAyYjg5..."
+					}
+				},
+				"required": ["credential"]
+			},
+			"UserResponseDto": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "number",
+						"example": 1
+					},
+					"email": {
+						"type": "string",
+						"example": "user@example.com"
+					},
+					"name": {
+						"type": "string",
+						"example": "Jane Doe"
+					},
+					"avatar": {
+						"type": "string",
+						"example": "https://example.com/avatar.jpg"
+					},
+					"isEmailVerified": {
+						"type": "boolean",
+						"example": true
+					}
+				},
+				"required": ["id", "email", "name", "isEmailVerified"]
+			},
+			"AuthResponseDto": {
+				"type": "object",
+				"properties": {
+					"accessToken": {
+						"type": "string",
+						"description": "JWT access token for authentication",
+						"example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+					},
+					"user": {
+						"description": "Authenticated user",
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/UserResponseDto"
+							}
+						]
+					}
+				},
+				"required": ["accessToken", "user"]
+			},
+			"LogoutResponseDto": {
+				"type": "object",
+				"properties": {
+					"success": {
+						"type": "boolean",
+						"example": true
+					}
+				},
+				"required": ["success"]
+			},
+			"WaypointDto": {
+				"type": "object",
+				"properties": {
+					"lat": {
+						"type": "number",
+						"description": "Latitude coordinate of the waypoint",
+						"example": 40.7128
+					},
+					"lng": {
+						"type": "number",
+						"description": "Longitude coordinate of the waypoint",
+						"example": -74.006
+					},
+					"timestamp": {
+						"type": "string",
+						"description": "Timestamp when the waypoint was recorded",
+						"example": "2024-01-15T10:30:00Z"
+					},
+					"type": {
+						"type": "string",
+						"description": "Type of waypoint routing",
+						"enum": ["routed", "direct"],
+						"example": "routed"
+					}
+				},
+				"required": ["lat", "lng", "type"]
+			},
+			"CreateRouteDto": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string",
+						"description": "Name of the route",
+						"example": "Morning Jog Route",
+						"minLength": 1
+					},
+					"description": {
+						"type": "string",
+						"description": "Optional description of the route",
+						"example": "A scenic route through Central Park"
+					},
+					"waypoints": {
+						"description": "Array of waypoints that define the route",
+						"minItems": 1,
+						"example": [
+							{
+								"lat": 40.7128,
+								"lng": -74.006,
+								"timestamp": "2024-01-15T10:00:00Z",
+								"type": "routed"
+							},
+							{
+								"lat": 40.7589,
+								"lng": -73.9851,
+								"timestamp": "2024-01-15T10:30:00Z",
+								"type": "direct"
+							}
+						],
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/WaypointDto"
+						}
+					},
+					"distance": {
+						"type": "number",
+						"description": "Total distance of the route in meters",
+						"example": 5280
+					},
+					"duration": {
+						"type": "number",
+						"description": "Estimated duration of the route in seconds",
+						"example": 1200
+					},
+					"elevationGain": {
+						"type": "number",
+						"description": "Total elevation gain of the route in meters",
+						"example": 150
+					},
+					"startAddress": {
+						"type": "string",
+						"description": "Human-readable starting address",
+						"example": "Central Park, New York, NY"
+					},
+					"endAddress": {
+						"type": "string",
+						"description": "Human-readable ending address",
+						"example": "Times Square, New York, NY"
+					}
+				},
+				"required": ["name", "waypoints"]
+			},
+			"WaypointResponseDto": {
+				"type": "object",
+				"properties": {
+					"lat": {
+						"type": "number"
+					},
+					"lng": {
+						"type": "number"
+					},
+					"type": {
+						"type": "string",
+						"enum": ["routed", "direct"]
+					},
+					"timestamp": {
+						"type": "string"
+					}
+				},
+				"required": ["lat", "lng"]
+			},
+			"RouteResponseDto": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "number"
+					},
+					"name": {
+						"type": "string"
+					},
+					"description": {
+						"type": "string"
+					},
+					"waypoints": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/WaypointResponseDto"
+						}
+					},
+					"distance": {
+						"type": "number",
+						"description": "Distance in meters"
+					},
+					"duration": {
+						"type": "number",
+						"description": "Duration in seconds"
+					},
+					"elevationGain": {
+						"type": "number",
+						"description": "Elevation gain in meters"
+					},
+					"startAddress": {
+						"type": "string"
+					},
+					"endAddress": {
+						"type": "string"
+					},
+					"user": {
+						"$ref": "#/components/schemas/UserResponseDto"
+					},
+					"createdAt": {
+						"type": "string"
+					},
+					"updatedAt": {
+						"type": "string"
+					}
+				},
+				"required": ["id", "name", "waypoints", "user", "createdAt", "updatedAt"]
+			},
+			"UpdateRouteDto": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string",
+						"description": "Name of the route",
+						"example": "Morning Jog Route",
+						"minLength": 1
+					},
+					"description": {
+						"type": "string",
+						"description": "Optional description of the route",
+						"example": "A scenic route through Central Park"
+					},
+					"waypoints": {
+						"description": "Array of waypoints that define the route",
+						"minItems": 1,
+						"example": [
+							{
+								"lat": 40.7128,
+								"lng": -74.006,
+								"timestamp": "2024-01-15T10:00:00Z",
+								"type": "routed"
+							},
+							{
+								"lat": 40.7589,
+								"lng": -73.9851,
+								"timestamp": "2024-01-15T10:30:00Z",
+								"type": "direct"
+							}
+						],
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/WaypointDto"
+						}
+					},
+					"distance": {
+						"type": "number",
+						"description": "Total distance of the route in meters",
+						"example": 5280
+					},
+					"duration": {
+						"type": "number",
+						"description": "Estimated duration of the route in seconds",
+						"example": 1200
+					},
+					"elevationGain": {
+						"type": "number",
+						"description": "Total elevation gain of the route in meters",
+						"example": 150
+					},
+					"startAddress": {
+						"type": "string",
+						"description": "Human-readable starting address",
+						"example": "Central Park, New York, NY"
+					},
+					"endAddress": {
+						"type": "string",
+						"description": "Human-readable ending address",
+						"example": "Times Square, New York, NY"
+					}
+				}
+			}
+		}
+	}
+}

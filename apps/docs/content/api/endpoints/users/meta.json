@@ -1,0 +1,5 @@
+{
+	"title": "Users",
+	"description": "User profile management",
+	"pages": ["get-users-me", "patch-users-me", "delete-users-me", "get-users-profile"]
+}

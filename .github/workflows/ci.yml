@@ -54,7 +54,7 @@ jobs:
       - uses: actions/cache@v5
         with:
           path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
           restore-keys: ${{ runner.os }}-bun-
 
       - run: bun install
@@ -168,6 +168,8 @@ jobs:
             dockerfile: apps/web/Dockerfile
           - app: api
             dockerfile: apps/api/Dockerfile
+          - app: docs
+            dockerfile: apps/docs/Dockerfile
     steps:
       - uses: actions/checkout@v6
         with:
