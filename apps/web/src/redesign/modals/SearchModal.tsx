@@ -183,6 +183,7 @@ export function SearchModal() {
 
 	const showEmpty = !loading && query.trim().length > 0 && results.length === 0;
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: reset active row when the query/results change
 	useEffect(() => {
 		setActiveIndex(0);
 	}, [query, results]);
