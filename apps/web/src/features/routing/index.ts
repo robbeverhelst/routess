@@ -3,7 +3,6 @@
  */
 
 // Managers
-export * from "./managers/HistoryManager";
 export * from "./managers/MapInteractionManager";
 export * from "./managers/MapLayerManager";
 export * from "./managers/WaypointManager";

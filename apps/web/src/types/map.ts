@@ -1,11 +1,5 @@
 export type Coordinate = [number, number];
 
-export interface WaypointHistory {
-	waypoints: Coordinate[];
-	directFlags: boolean[];
-	timestamp: number;
-}
-
 export interface MapboxMapProps {
 	initialViewState?: {
 		longitude: number;
