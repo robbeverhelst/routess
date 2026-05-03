@@ -29,6 +29,7 @@ Optional variables:
 
 - `PORT`
 - `FRONTEND_URL`
+- `FRONTEND_URLS` (comma-separated allowlist, preferred when multiple frontend domains are active)
 - `JWT_EXPIRES_IN`
 - `SESSION_TTL_DAYS`
 - `SWAGGER_ENABLED`

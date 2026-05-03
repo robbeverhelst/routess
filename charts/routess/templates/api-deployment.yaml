@@ -51,8 +51,8 @@ spec:
               value: {{ .Values.api.env.nodeEnv | quote }}
             - name: PORT
               value: {{ .Values.api.env.port | quote }}
-            - name: FRONTEND_URL
-              value: {{ include "routess.frontendUrl" . | quote }}
+            - name: FRONTEND_URLS
+              value: {{ include "routess.frontendUrls" . | quote }}
             - name: SWAGGER_ENABLED
               value: {{ .Values.api.env.swaggerEnabled | quote }}
             - name: SWAGGER_PATH

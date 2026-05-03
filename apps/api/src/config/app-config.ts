@@ -13,6 +13,7 @@ export interface AppConfig {
 		isProduction: boolean;
 		isTest: boolean;
 		frontendUrl: string;
+		frontendUrls: string[];
 	};
 	auth: {
 		jwtSecret: string;
@@ -91,6 +92,10 @@ function parseJsonObject(value: string | undefined): Record<string, string> | un
 	}
 }
 
+function parseStringList(...values: Array<string | undefined>): string[] {
+	return [...new Set(values.flatMap((value) => value?.split(/[\n,]/).map((entry) => entry.trim()) ?? []).filter(Boolean))];
+}
+
 export function loadEnvironment(): void {
 	if (isEnvironmentLoaded) {
 		return;
@@ -120,6 +125,14 @@ export function getAppConfig(): AppConfig {
 	const isTest = nodeEnv === "test";
 	const isDevelopment = !isProduction && !isTest;
 	const sessionTtlMs = parseInteger(process.env.SESSION_TTL_DAYS, DEFAULTS.sessionTtlDays) * 24 * 60 * 60 * 1000;
+	const explicitFrontendUrls = parseStringList(process.env.FRONTEND_URLS);
+	const fallbackFrontendUrls = parseStringList(process.env.FRONTEND_URL);
+	const allowedFrontendUrls =
+		explicitFrontendUrls.length > 0
+			? explicitFrontendUrls
+			: fallbackFrontendUrls.length > 0
+				? fallbackFrontendUrls
+				: [DEFAULTS.frontendUrl];
 
 	return {
 		app: {
@@ -131,7 +144,8 @@ export function getAppConfig(): AppConfig {
 			isDevelopment,
 			isProduction,
 			isTest,
-			frontendUrl: process.env.FRONTEND_URL || DEFAULTS.frontendUrl,
+			frontendUrl: allowedFrontendUrls[0],
+			frontendUrls: allowedFrontendUrls,
 		},
 		auth: {
 			jwtSecret: process.env.JWT_SECRET || "development-only-secret-change-me",

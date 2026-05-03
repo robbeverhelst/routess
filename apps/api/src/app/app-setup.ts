@@ -50,8 +50,17 @@ export function configureApplication(app: INestApplication, config: AppConfig = 
 		}),
 	);
 
+	const allowedOrigins = new Set(config.app.frontendUrls);
+
 	app.enableCors({
-		origin: config.app.frontendUrl,
+		origin: (origin, callback) => {
+			if (!origin || allowedOrigins.has(origin)) {
+				callback(null, true);
+				return;
+			}
+
+			callback(new Error(`Origin ${origin} not allowed by CORS`), false);
+		},
 		credentials: true,
 		methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
 		allowedHeaders: ["Content-Type", "Authorization", "X-Request-ID"],
