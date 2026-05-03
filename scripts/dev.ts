@@ -113,15 +113,18 @@ async function main(): Promise<void> {
 	const dbPort = await resolvePort("DB_PORT", DEFAULT_DB_PORT, reservedPorts);
 	const pgadminPort = await resolvePort("PGADMIN_PORT", DEFAULT_PGADMIN_PORT, reservedPorts);
 	const composeCommand = await resolveComposeCommand();
-	const frontendUrl = process.env.FRONTEND_URL === "http://localhost:5173" || !process.env.FRONTEND_URL
-		? `http://localhost:${webPort}`
-		: process.env.FRONTEND_URL;
-	const appUrl = process.env.VITE_APP_URL === "http://localhost:5173" || !process.env.VITE_APP_URL
-		? `http://localhost:${webPort}`
-		: process.env.VITE_APP_URL;
-	const apiUrl = process.env.VITE_API_URL === "http://localhost:3000" || !process.env.VITE_API_URL
-		? `http://localhost:${apiPort}`
-		: process.env.VITE_API_URL;
+	const frontendUrl =
+		process.env.FRONTEND_URL === "http://localhost:5173" || !process.env.FRONTEND_URL
+			? `http://localhost:${webPort}`
+			: process.env.FRONTEND_URL;
+	const appUrl =
+		process.env.VITE_APP_URL === "http://localhost:5173" || !process.env.VITE_APP_URL
+			? `http://localhost:${webPort}`
+			: process.env.VITE_APP_URL;
+	const apiUrl =
+		process.env.VITE_API_URL === "http://localhost:3000" || !process.env.VITE_API_URL
+			? `http://localhost:${apiPort}`
+			: process.env.VITE_API_URL;
 	const env = {
 		...process.env,
 		DB_PORT: `${dbPort}`,
