@@ -189,6 +189,10 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 			setSkippedAuth(false);
 			setAuthView("login");
 		};
+		const onOpenSignup = () => {
+			setSkippedAuth(false);
+			setAuthView("signup");
+		};
 		const onOpenActivity = () => {
 			setContext("activity");
 		};
@@ -256,6 +260,7 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 
 		window.addEventListener("routess:open-account", onOpenAccount);
 		window.addEventListener("routess:open-login", onOpenLogin);
+		window.addEventListener("routess:open-signup", onOpenSignup);
 		window.addEventListener("routess:open-activity", onOpenActivity);
 		window.addEventListener("routess:export-all-data", onExportAll);
 		window.addEventListener("routess:duplicate-route", onDuplicate);
@@ -264,6 +269,7 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 		return () => {
 			window.removeEventListener("routess:open-account", onOpenAccount);
 			window.removeEventListener("routess:open-login", onOpenLogin);
+			window.removeEventListener("routess:open-signup", onOpenSignup);
 			window.removeEventListener("routess:open-activity", onOpenActivity);
 			window.removeEventListener("routess:export-all-data", onExportAll);
 			window.removeEventListener("routess:duplicate-route", onDuplicate);
