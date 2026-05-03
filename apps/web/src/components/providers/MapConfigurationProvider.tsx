@@ -259,6 +259,32 @@ export const MapConfigurationProvider: React.FC<MapConfigurationProviderProps> =
 		applyMapStyle(currentMapStyle === "standard" ? "satellite" : "streets");
 	}, [applyMapStyle, currentMapStyle]);
 
+	const applyPoiVisibility = useCallback(
+		(visible: boolean) => {
+			const map = mapRef.current;
+			if (!map) return;
+			// Mapbox Standard style exposes a config property; older v11/v12 styles
+			// expose discrete POI label layers. Try both so the toggle works across
+			// the styles the redesign exposes (streets, outdoors, satellite, dark…).
+			try {
+				map.setConfigProperty?.("basemap", "showPointOfInterestLabels", visible);
+			} catch (err) {
+				Logger.debug("[MapConfigurationProvider] setConfigProperty for POI labels not supported on this style", err);
+			}
+			try {
+				const layers = map.getStyle()?.layers ?? [];
+				for (const layer of layers) {
+					if (layer.id.includes("poi-label") || layer.id.startsWith("poi")) {
+						map.setLayoutProperty(layer.id, "visibility", visible ? "visible" : "none");
+					}
+				}
+			} catch (err) {
+				Logger.debug("[MapConfigurationProvider] Could not toggle POI layers via setLayoutProperty", err);
+			}
+		},
+		[mapRef],
+	);
+
 	useEffect(() => {
 		const onZoomIn = () => mapRef.current?.zoomIn();
 		const onZoomOut = () => mapRef.current?.zoomOut();
@@ -268,17 +294,23 @@ export const MapConfigurationProvider: React.FC<MapConfigurationProviderProps> =
 				applyMapStyle(styleKey);
 			}
 		};
+		const onSetPois = (event: Event) => {
+			const visible = (event as CustomEvent<{ visible?: boolean }>).detail?.visible;
+			if (typeof visible === "boolean") applyPoiVisibility(visible);
+		};
 
 		window.addEventListener("routess:zoom-in", onZoomIn);
 		window.addEventListener("routess:zoom-out", onZoomOut);
 		window.addEventListener("routess:set-map-style", onSetStyle);
+		window.addEventListener("routess:set-pois", onSetPois);
 
 		return () => {
 			window.removeEventListener("routess:zoom-in", onZoomIn);
 			window.removeEventListener("routess:zoom-out", onZoomOut);
 			window.removeEventListener("routess:set-map-style", onSetStyle);
+			window.removeEventListener("routess:set-pois", onSetPois);
 		};
-	}, [applyMapStyle, mapRef]);
+	}, [applyMapStyle, applyPoiVisibility, mapRef]);
 
 	// Effect to update waypoint visibility when lock state changes
 	useEffect(() => {

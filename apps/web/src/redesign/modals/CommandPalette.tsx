@@ -1,8 +1,10 @@
 import { useMemo, useState } from "react";
+import type { ApiRoute } from "@/lib/api";
 import { useUserRoutes } from "@/lib/api-queries";
 import { I } from "../components/icons";
 import { Kbd, RDS_COLORS, SecTitle } from "../components/primitives";
 import { useModalsStore } from "../stores/modalsStore";
+import type { RedesignContext } from "../stores/uiStore";
 import { useUiStore } from "../stores/uiStore";
 
 interface CmdItem {
@@ -12,6 +14,21 @@ interface CmdItem {
 	hint?: string;
 	kbd?: string;
 	run: () => void;
+}
+
+function loadRouteIntoPlan(route: ApiRoute, setContext: (value: RedesignContext) => void) {
+	const directFlags = (route.waypoints ?? []).map((w) => w.type === "direct");
+	window.dispatchEvent(
+		new CustomEvent("routess:load-route", {
+			detail: {
+				routeId: route.id,
+				name: route.name,
+				waypoints: route.waypoints,
+				directFlags,
+			},
+		}),
+	);
+	setContext("plan");
 }
 
 export function CommandPalette() {
@@ -58,9 +75,7 @@ export function CommandPalette() {
 					icon: I.pin,
 					label: r.name,
 					hint: r.distance ? `${(r.distance / 1000).toFixed(1)} km` : undefined,
-					run: () => {
-						setContext("library");
-					},
+					run: () => loadRouteIntoPlan(r, setContext),
 				})),
 			},
 		],

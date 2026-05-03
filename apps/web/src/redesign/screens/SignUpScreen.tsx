@@ -3,7 +3,7 @@ import { useState } from "react";
 import { type CredentialResponse, googleAuth, hasValidGoogleClientId } from "@/lib/google-auth";
 import { Logger } from "@/lib/logger";
 import { RoutessMark } from "../components/icons";
-import { Btn, RDS_COLORS, SecTitle } from "../components/primitives";
+import { Btn, PreviewBanner, RDS_COLORS, SecTitle } from "../components/primitives";
 import { useToastStore } from "../stores/toastStore";
 
 function passwordStrength(p: string): number {
@@ -82,7 +82,13 @@ export function SignUpScreen({ onSwitchToLogin }: { onSwitchToLogin?: () => void
 				<h1 style={{ fontSize: 22, fontWeight: 600, margin: 0, letterSpacing: -0.4 }}>Create account</h1>
 				<p style={{ fontSize: 13, color: RDS_COLORS.fgMuted, marginTop: 8 }}>Free forever. Up to 50 saved routes.</p>
 
-				<div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 24 }}>
+				<PreviewBanner
+					style={{ marginTop: 16 }}
+					title="Email signup not live yet"
+					body="Use Google for now. Email/password signup ships with the auth backend."
+				/>
+
+				<div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 16 }}>
 					<div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
 						<SecTitle>Name</SecTitle>
 						<input
@@ -168,8 +174,9 @@ export function SignUpScreen({ onSwitchToLogin }: { onSwitchToLogin?: () => void
 					onClick={handleEmailSignup}
 					disabled={!name || !email || strength < 2}
 					style={{ width: "100%", marginTop: 24, height: 42 }}
+					title="Email signup arrives once the auth backend is live"
 				>
-					Create account
+					Create account · soon
 				</Btn>
 
 				<div style={{ marginTop: 8 }}>

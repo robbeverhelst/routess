@@ -5,7 +5,7 @@ import { addWaypoint, insertWaypointAtLocation } from "@/features/routing/manage
 import { getCurrentRoutePath } from "@/features/routing/services/RouteCalculationService";
 import { zoomToRoute } from "@/features/routing/utils/RoutingUtils";
 import { Logger } from "@/lib/logger";
-import { redo, removeWaypoint, resetRouting, reverseRoute, undo } from "@/lib/routing";
+import { recalculateRoute, redo, removeWaypoint, resetRouting, reverseRoute, undo } from "@/lib/routing";
 import { serializeAndCompress } from "@/lib/shareUtils";
 import { useRoutingStore } from "@/stores/routingStore";
 
@@ -59,6 +59,13 @@ export const useRouteActions = ({
 	const handleReset = useCallback(async () => {
 		if (!mapRef.current || !mapboxToken) return;
 		await resetRouting(mapRef.current, mapboxToken, setRouteDistance, setRouteDuration, setHasRoute);
+	}, [mapboxToken, setRouteDistance, setRouteDuration, setHasRoute, mapRef.current]);
+
+	// Recalculate handler — re-runs current waypoints through the routing service
+	// after preferences (profile, exclude, snap, etc.) have changed.
+	const handleRecalculateRoute = useCallback(async () => {
+		if (!mapRef.current || !mapboxToken) return;
+		await recalculateRoute(mapRef.current, mapboxToken, setRouteDistance, setRouteDuration, setHasRoute);
 	}, [mapboxToken, setRouteDistance, setRouteDuration, setHasRoute, mapRef.current]);
 
 	// Select location handler - moves camera to location instead of adding waypoint
@@ -222,6 +229,7 @@ export const useRouteActions = ({
 		handleRedo,
 		handleReverseRoute,
 		handleReset,
+		handleRecalculateRoute,
 		handleSelectLocation,
 		handleGenerateAtoB,
 		handleGenerateLoop,

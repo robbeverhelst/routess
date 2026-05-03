@@ -1,3 +1,4 @@
+import { haversineDistance } from "@routess/core";
 import { useMemo, useState } from "react";
 import { serializeAndCompress } from "@/lib/shareUtils";
 import {
@@ -7,10 +8,48 @@ import {
 	useRouteDuration,
 	useWaypoints,
 } from "@/stores/routingStore";
+import type { Coordinate } from "@/types/map";
 import { I } from "../components/icons";
 import { ModalShell } from "../components/ModalShell";
 import { Btn, RDS_COLORS, SecTitle, Toggle } from "../components/primitives";
 import { useModalsStore } from "../stores/modalsStore";
+import { useRedesignSettingsStore } from "../stores/settingsStore";
+
+const PRIVACY_KM = 1;
+
+function trimPrivacyEdges(
+	waypoints: Coordinate[],
+	directFlags: boolean[],
+): { waypoints: Coordinate[]; directFlags: boolean[] } {
+	if (waypoints.length < 4) return { waypoints, directFlags };
+
+	let startIdx = 0;
+	let cum = 0;
+	for (let i = 1; i < waypoints.length; i++) {
+		cum += haversineDistance(waypoints[i - 1], waypoints[i]);
+		if (cum > PRIVACY_KM) {
+			startIdx = i;
+			break;
+		}
+	}
+
+	let endIdx = waypoints.length - 1;
+	cum = 0;
+	for (let i = waypoints.length - 1; i > 0; i--) {
+		cum += haversineDistance(waypoints[i], waypoints[i - 1]);
+		if (cum > PRIVACY_KM) {
+			endIdx = i - 1;
+			break;
+		}
+	}
+
+	if (endIdx - startIdx < 1) return { waypoints, directFlags };
+
+	return {
+		waypoints: waypoints.slice(startIdx, endIdx + 1),
+		directFlags: directFlags.slice(startIdx, endIdx + 1),
+	};
+}
 
 const VISIBILITY = [
 	{ key: "link", label: "Anyone with link" },
@@ -27,18 +66,20 @@ export function ShareModal() {
 	const duration = useRouteDuration();
 
 	const [visibility, setVisibility] = useState<(typeof VISIBILITY)[number]["key"]>("link");
-	const [hideEdges, setHideEdges] = useState(true);
+	const hideEdges = useRedesignSettingsStore((s) => s.hidePrivacy);
+	const setHideEdges = useRedesignSettingsStore((s) => s.setHidePrivacy);
 	const [copied, setCopied] = useState(false);
 
 	const url = useMemo(() => {
 		try {
-			const encoded = serializeAndCompress(waypoints, directFlags, isMapLocked);
+			const trimmed = hideEdges ? trimPrivacyEdges(waypoints, directFlags) : { waypoints, directFlags };
+			const encoded = serializeAndCompress(trimmed.waypoints, trimmed.directFlags, isMapLocked);
 			if (!encoded) return window.location.origin;
 			return `${window.location.origin}?route=${encoded}`;
 		} catch {
 			return window.location.origin;
 		}
-	}, [waypoints, directFlags, isMapLocked]);
+	}, [waypoints, directFlags, isMapLocked, hideEdges]);
 
 	const copy = async () => {
 		window.dispatchEvent(new CustomEvent("routess:share-route"));

@@ -116,6 +116,7 @@ export const buildDirectionsUrl = (
 		geometries?: "geojson" | "polyline" | "polyline6";
 		overview?: "full" | "simplified" | "false";
 		continueStraight?: boolean;
+		exclude?: string[];
 	} = {},
 ): string => {
 	if (waypoints.length < 2) {
@@ -129,6 +130,7 @@ export const buildDirectionsUrl = (
 		geometries = "geojson",
 		overview = "full",
 		continueStraight = true,
+		exclude,
 	} = options;
 
 	const waypointsString = waypoints.map((point) => `${point[0]},${point[1]}`).join(";");
@@ -142,6 +144,10 @@ export const buildDirectionsUrl = (
 		access_token: accessToken,
 		radiuses: radiusesString,
 	});
+
+	if (exclude && exclude.length > 0) {
+		params.set("exclude", exclude.join(","));
+	}
 
 	return `${MAPBOX_CONFIG.DIRECTIONS_BASE_URL}/${profile}/${waypointsString}?${params}`;
 };

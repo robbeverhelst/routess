@@ -146,6 +146,7 @@ const MapWithRoutingContent: React.FC<MapboxMapProps> = ({
 		handleUndo,
 		handleRedo,
 		handleReverseRoute,
+		handleRecalculateRoute,
 		handleReset,
 		handleSelectLocation,
 		handleAddDirectWaypoint,
@@ -212,6 +213,9 @@ const MapWithRoutingContent: React.FC<MapboxMapProps> = ({
 		const onReroute = () => {
 			void handleReverseRoute();
 		};
+		const onRecalculate = () => {
+			void handleRecalculateRoute();
+		};
 		const onImportGpx = (event: Event) => {
 			const detail = (event as CustomEvent<{ gpxString?: string; fileName?: string }>).detail;
 			if (!detail?.gpxString) {
@@ -246,6 +250,7 @@ const MapWithRoutingContent: React.FC<MapboxMapProps> = ({
 		window.addEventListener("routess:export-gpx", onExportGpx);
 		window.addEventListener("routess:import-gpx", onImportGpx);
 		window.addEventListener("routess:reroute", onReroute);
+		window.addEventListener("routess:recalculate-route", onRecalculate);
 		return () => {
 			window.removeEventListener("routess:undo", onUndo);
 			window.removeEventListener("routess:redo", onRedo);
@@ -257,6 +262,7 @@ const MapWithRoutingContent: React.FC<MapboxMapProps> = ({
 			window.removeEventListener("routess:export-gpx", onExportGpx);
 			window.removeEventListener("routess:import-gpx", onImportGpx);
 			window.removeEventListener("routess:reroute", onReroute);
+			window.removeEventListener("routess:recalculate-route", onRecalculate);
 		};
 	}, [
 		handleRedo,
@@ -267,6 +273,7 @@ const MapWithRoutingContent: React.FC<MapboxMapProps> = ({
 		handleRouteInfoError,
 		handleImportError,
 		handleReverseRoute,
+		handleRecalculateRoute,
 		setRouteDistance,
 		setRouteDuration,
 		setHasRoute,

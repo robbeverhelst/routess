@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { I } from "../components/icons";
-import { Btn, IconBtn, RDS_COLORS } from "../components/primitives";
+import { Btn, IconBtn, PreviewBanner, RDS_COLORS } from "../components/primitives";
 
 interface Route {
 	name: string;
@@ -55,6 +55,11 @@ export function CompareScreen({ onClose }: { onClose?: () => void }) {
 						<I.share size={14} /> Share comparison
 					</Btn>
 				</div>
+
+				<PreviewBanner
+					style={{ marginBottom: 18 }}
+					body="Comparison uses two example routes. A route picker and side-by-side from your library will land alongside the activities backend."
+				/>
 
 				{/* Map overlay */}
 				<div
