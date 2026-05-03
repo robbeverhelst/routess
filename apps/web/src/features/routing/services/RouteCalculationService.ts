@@ -23,12 +23,18 @@ function resolveMapboxProfile(prefs: RoutingPreferences): string {
 
 function buildComputeOptions(): ComputeRouteOptions {
 	const prefs = getRoutingPreferences();
+	const profile = resolveMapboxProfile(prefs);
 	const directions: DirectionsOptions = {
-		profile: resolveMapboxProfile(prefs),
+		profile,
 		radius: 150,
 		continueStraight: true,
 	};
-	if (prefs.highways) directions.exclude = ["motorway"];
+	// Mapbox only accepts `exclude=motorway` on the driving profile. Cycling
+	// and walking return 422 InvalidInput if it's set, so the param is gated
+	// on profile here even if the "avoid highways" preference is enabled.
+	if (prefs.highways && profile === "mapbox/driving") {
+		directions.exclude = ["motorway"];
+	}
 	return { directions, snap: prefs.snap };
 }
 
