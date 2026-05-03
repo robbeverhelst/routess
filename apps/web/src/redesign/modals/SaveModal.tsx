@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useIsAuthenticated } from "@/hooks/useAuthState";
 import { useSaveRoute } from "@/lib/api-queries";
-import { useRouteDistance, useRouteDuration, useWaypoints } from "@/stores/routingStore";
+import { useElevationGain, useRouteDistance, useRouteDuration, useWaypoints } from "@/stores/routingStore";
 import { I } from "../components/icons";
 import { ModalShell } from "../components/ModalShell";
 import { Btn, RDS_COLORS, SecTitle } from "../components/primitives";
@@ -26,6 +26,7 @@ export function SaveModal() {
 	const waypoints = useWaypoints();
 	const distance = useRouteDistance();
 	const duration = useRouteDuration();
+	const elevationGain = useElevationGain();
 	const { activityType, setActivityType } = useUiStore();
 	const saveRoute = useSaveRoute();
 	const pushToast = useToastStore((s) => s.push);
@@ -57,7 +58,7 @@ export function SaveModal() {
 					type: wp.type,
 				})),
 				distance: distanceNumber * 1000,
-				elevationGain: 0,
+				elevationGain: elevationGain != null ? Math.round(elevationGain) : 0,
 			},
 			{
 				onSuccess: () => {

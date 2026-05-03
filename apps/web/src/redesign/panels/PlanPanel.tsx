@@ -3,7 +3,9 @@ import { useModalsStore } from "@/redesign/stores/modalsStore";
 import { type RedesignActivity, useUiStore } from "@/redesign/stores/uiStore";
 import {
 	useClearWaypoints,
+	useElevationGain,
 	useHasRoute,
+	useIsComputingElevation,
 	useRemoveWaypoint,
 	useRouteDistance,
 	useRouteDuration,
@@ -69,6 +71,14 @@ export function PlanPanel() {
 
 	const { activityType, setActivityType } = useUiStore();
 	const openModal = useModalsStore((s) => s.openModal);
+	const elevationGain = useElevationGain();
+	const isComputingElevation = useIsComputingElevation();
+
+	const elevationVal = (() => {
+		if (elevationGain != null) return Math.round(elevationGain).toString();
+		if (hasRoute && isComputingElevation) return "…";
+		return "—";
+	})();
 
 	const stats = [
 		{
@@ -77,7 +87,7 @@ export function PlanPanel() {
 			unit: distance ? distance.split(" ")[1] || "km" : "km",
 		},
 		{ label: "Time", val: duration || "—", unit: "" },
-		{ label: "Elev gain", val: hasRoute ? "—" : "—", unit: "m" },
+		{ label: "Elev gain", val: elevationVal, unit: "m" },
 		{ label: "Pace", val: "—", unit: "/km" },
 	];
 

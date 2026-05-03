@@ -4,6 +4,11 @@ import type { Coordinate, Logger, Waypoint, WaypointHistory, WaypointType } from
 
 // ===== STATE & ACTIONS =====
 
+export interface ElevationProfilePoint {
+	distanceMeters: number;
+	elevationMeters: number;
+}
+
 export interface RouteState {
 	waypoints: Waypoint[];
 	routePath: Coordinate[];
@@ -11,6 +16,11 @@ export interface RouteState {
 	routeDistance: string;
 	routeDuration: string;
 	hasRoute: boolean;
+
+	elevationGain?: number;
+	elevationLoss?: number;
+	elevationProfile?: ElevationProfilePoint[];
+	isComputingElevation: boolean;
 
 	isMapLocked: boolean;
 
@@ -40,6 +50,10 @@ export interface RouteActions {
 	setRouteDuration: (duration: string) => void;
 	setHasRoute: (hasRoute: boolean) => void;
 
+	setElevation: (data: { gainMeters: number; lossMeters: number; profile: ElevationProfilePoint[] }) => void;
+	clearElevation: () => void;
+	setIsComputingElevation: (computing: boolean) => void;
+
 	setIsMapLocked: (isLocked: boolean) => void;
 
 	saveSnapshot: () => void;
@@ -64,6 +78,10 @@ const initialState: RouteState = {
 	routeDistance: "",
 	routeDuration: "",
 	hasRoute: false,
+	elevationGain: undefined,
+	elevationLoss: undefined,
+	elevationProfile: undefined,
+	isComputingElevation: false,
 	isMapLocked: false,
 	undoStack: [],
 	redoStack: [],
@@ -127,6 +145,9 @@ export function createRoutingStore(logger: Logger) {
 			routeDistance: state.routeDistance,
 			routeDuration: state.routeDuration,
 			hasRoute: state.hasRoute,
+			elevationGain: state.elevationGain,
+			elevationLoss: state.elevationLoss,
+			elevationProfile: state.elevationProfile,
 			isMapLocked: state.isMapLocked,
 			undoStack: state.undoStack,
 			redoStack: state.redoStack,
@@ -181,6 +202,10 @@ export function createRoutingStore(logger: Logger) {
 						routeDistance: "",
 						routeDuration: "",
 						hasRoute: false,
+						elevationGain: undefined,
+						elevationLoss: undefined,
+						elevationProfile: undefined,
+						isComputingElevation: false,
 					});
 				},
 
@@ -204,6 +229,27 @@ export function createRoutingStore(logger: Logger) {
 
 				setHasRoute: (hasRoute) => {
 					set({ hasRoute });
+				},
+
+				// === ELEVATION ===
+				setElevation: ({ gainMeters, lossMeters, profile }) => {
+					set({
+						elevationGain: gainMeters,
+						elevationLoss: lossMeters,
+						elevationProfile: profile,
+					});
+				},
+
+				clearElevation: () => {
+					set({
+						elevationGain: undefined,
+						elevationLoss: undefined,
+						elevationProfile: undefined,
+					});
+				},
+
+				setIsComputingElevation: (computing) => {
+					set({ isComputingElevation: computing });
 				},
 
 				// === MAP CONFIG ===
