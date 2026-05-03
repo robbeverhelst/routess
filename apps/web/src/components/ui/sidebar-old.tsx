@@ -33,12 +33,12 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { SettingsModal } from "@/components/ui/settings-modal";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { exportCurrentRouteToGPXFile, importRouteFromGPXString } from "@/features/routing/services/RouteIOService";
 import { useAuthState } from "@/hooks/useAuthState";
 import { googleAuth } from "../../lib/google-auth";
 import type { SupportedLanguage } from "../../lib/i18n";
 import { t } from "../../lib/i18n";
 import { Logger } from "../../lib/logger";
-import { exportRouteToGPX, importRouteFromGPX } from "../../lib/routing";
 import { LoginModal } from "../auth/LoginModal";
 
 interface SidebarProps {
@@ -163,7 +163,7 @@ export function Sidebar({
 	);
 
 	const handleExportGPX = useCallback(() => {
-		const result = exportRouteToGPX();
+		const result = exportCurrentRouteToGPXFile();
 		if (!result.success && result.message) {
 			onImportError(result.message); // Reusing onImportError for feedback
 		} else if (result.success) {
@@ -196,15 +196,17 @@ export function Sidebar({
 							onImportError("Failed to read GPX file.");
 							return;
 						}
-						await importRouteFromGPX(
+						const result = await importRouteFromGPXString({
 							gpxString,
 							map,
 							accessToken,
 							setRouteDistance,
 							setRouteDuration,
 							setHasRoute,
-							onImportError,
-						);
+						});
+						if (!result.success && result.message) {
+							onImportError(result.message);
+						}
 					} catch (error) {
 						Logger.error("Error processing GPX file:", error);
 						onImportError(error instanceof Error ? error.message : "An unknown error occurred during GPX import.");

@@ -7,7 +7,6 @@ import { initializeSourcesAndLayers } from "@/features/routing/managers/MapLayer
 import { attachMapViewAdapter } from "@/features/routing/managers/MapViewAdapter";
 import { loadSharedRouteIntoMap } from "@/features/routing/services/RouteIOService";
 import { Logger } from "@/lib/logger";
-import { setupRouting } from "@/lib/routing";
 import { useRoutingStore } from "@/stores/routingStore";
 
 interface UseMapInitializationProps {
@@ -44,8 +43,6 @@ export const useMapInitialization = ({
 		async (event: { target: MapboxMap }) => {
 			Logger.info("[useMapInitialization] Map loaded, setting up routing");
 			const map = event.target;
-
-			setupRouting(map, isMapLockedRef, mapboxToken);
 
 			// Initialize map sources and layers first
 			initializeSourcesAndLayers(map);

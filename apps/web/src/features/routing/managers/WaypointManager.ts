@@ -214,6 +214,46 @@ export const reverseRoute = async (
 	useRoutingStore.getState().saveSnapshot();
 };
 
+export const resetRoute = async (
+	map: MapboxMap,
+	accessToken: string,
+	setRouteDistance: Dispatch<SetStateAction<string>>,
+	setRouteDuration: Dispatch<SetStateAction<string>>,
+	setHasRoute: Dispatch<SetStateAction<boolean>>,
+): Promise<void> => {
+	useRoutingStore.getState().saveSnapshot();
+	useRoutingStore.getState().clearWaypoints();
+	await recomputeAndApplySnap(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
+};
+
+export const undoRouteChange = async (
+	map: MapboxMap,
+	accessToken: string,
+	setRouteDistance: Dispatch<SetStateAction<string>>,
+	setRouteDuration: Dispatch<SetStateAction<string>>,
+	setHasRoute: Dispatch<SetStateAction<boolean>>,
+): Promise<void> => {
+	const store = useRoutingStore.getState();
+	if (!store.canUndo) return;
+
+	store.undo();
+	await recomputeAndApplySnap(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
+};
+
+export const redoRouteChange = async (
+	map: MapboxMap,
+	accessToken: string,
+	setRouteDistance: Dispatch<SetStateAction<string>>,
+	setRouteDuration: Dispatch<SetStateAction<string>>,
+	setHasRoute: Dispatch<SetStateAction<boolean>>,
+): Promise<void> => {
+	const store = useRoutingStore.getState();
+	if (!store.canRedo) return;
+
+	store.redo();
+	await recomputeAndApplySnap(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
+};
+
 export const insertWaypointAtLocation = async (
 	map: MapboxMap,
 	clickedCoords: Coordinate,

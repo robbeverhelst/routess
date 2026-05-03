@@ -12,8 +12,6 @@ import { useRouteData } from "@/hooks/useRouteData";
 import { useServiceWorker } from "@/hooks/useServiceWorker";
 import { useUndoRedoState } from "@/hooks/useUndoRedoState";
 import type { SupportedLanguage } from "@/lib/i18n";
-import { Logger } from "@/lib/logger";
-import { teardownRouting } from "@/lib/routing";
 
 interface UseMapWithRoutingStateOptions {
 	mapboxToken: string;
@@ -48,13 +46,6 @@ export const useMapWithRoutingState = ({ mapboxToken }: UseMapWithRoutingStateOp
 	useEffect(() => {
 		saveLanguageToLocalStorage(currentLanguage);
 	}, [currentLanguage]);
-
-	useEffect(() => {
-		return () => {
-			Logger.info("[useMapWithRoutingState] Tearing down routing module subscriptions and refs.");
-			teardownRouting();
-		};
-	}, []);
 
 	const routeActions = useRouteActions({
 		mapRef,

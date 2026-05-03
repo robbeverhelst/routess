@@ -36,7 +36,7 @@ export interface LocationServiceCallbacks {
 export class LocationService {
 	private static instance: LocationService | null = null;
 	private state: LocationState;
-	private callbacks: LocationServiceCallbacks = {};
+	private subscribers = new Set<LocationServiceCallbacks>();
 	private watchId: number | null = null;
 	private retryTimeoutId: number | null = null;
 	private lastKnownGoodLocation: [number, number] | null = null;
@@ -132,7 +132,7 @@ export class LocationService {
 
 			permission.addEventListener("change", () => {
 				this.state.permissionState = permission.state;
-				this.notifyCallbacks("onPermissionChange", permission.state);
+				this.notifySubscribers("onPermissionChange", permission.state);
 
 				if (permission.state === "denied" && this.state.isTracking) {
 					this.stopTracking();
@@ -151,8 +151,11 @@ export class LocationService {
 		}
 	}
 
-	public setCallbacks(callbacks: LocationServiceCallbacks): void {
-		this.callbacks = { ...this.callbacks, ...callbacks };
+	public subscribe(callbacks: LocationServiceCallbacks): () => void {
+		this.subscribers.add(callbacks);
+		return () => {
+			this.subscribers.delete(callbacks);
+		};
 	}
 
 	public updateOptions(options: Partial<LocationOptions>): void {
@@ -475,20 +478,21 @@ export class LocationService {
 
 	private updateState(updates: Partial<LocationState>): void {
 		this.state = { ...this.state, ...updates };
-		this.notifyCallbacks("onLocationUpdate", this.state);
+		this.notifySubscribers("onLocationUpdate", this.state);
 
 		if (updates.error) {
-			this.notifyCallbacks("onError", updates.error, this.state);
+			this.notifySubscribers("onError", updates.error, this.state);
 		}
 
 		if (updates.isTracking !== undefined) {
-			this.notifyCallbacks("onTrackingStateChange", updates.isTracking);
+			this.notifySubscribers("onTrackingStateChange", updates.isTracking);
 		}
 	}
 
-	private notifyCallbacks(callbackName: keyof LocationServiceCallbacks, ...args: unknown[]): void {
-		const callback = this.callbacks[callbackName];
-		if (callback) {
+	private notifySubscribers(callbackName: keyof LocationServiceCallbacks, ...args: unknown[]): void {
+		for (const subscriber of this.subscribers) {
+			const callback = subscriber[callbackName];
+			if (!callback) continue;
 			try {
 				(callback as (...callbackArgs: unknown[]) => void)(...args);
 			} catch (error) {
@@ -511,7 +515,7 @@ export class LocationService {
 			this.permissionWatcher = null;
 		}
 
-		this.callbacks = {};
+		this.subscribers.clear();
 		Logger.info("[LocationService] Service destroyed");
 	}
 
