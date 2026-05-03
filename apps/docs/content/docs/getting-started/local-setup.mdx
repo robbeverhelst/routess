@@ -7,29 +7,35 @@ description: Get the full stack running on your machine.
 git clone https://github.com/robbeverhelst/maps
 cd maps
 bun install
+cp .env.example .env
 bun run dev
 ```
 
 `bun run dev` does three things:
 
-1. Starts a Postgres container via `docker-compose up -d postgres`
-2. Builds all `packages/*` (so the apps can import them)
-3. Runs every `apps/*` in dev mode in parallel
+1. Installs dependencies if `node_modules` is missing
+2. Picks free local ports for the API, docs, web app, Postgres, and pgAdmin
+3. Starts a Postgres container
+4. Starts pgAdmin
+5. Builds all `packages/*` (so the apps can import them)
+6. Runs every `apps/*` in dev mode in parallel
+
+If any default port is already in use, `bun run dev` will pick the next free local port automatically.
+Custom non-default port values in `.env` are treated as explicit overrides.
 
 You should see:
 
 - **Web** — http://localhost:5173
 - **API** — http://localhost:3000
 - **Docs** — http://localhost:3001 _(this site)_
-- **pgAdmin** — http://localhost:5050 _(if Docker started it)_
+- **pgAdmin** — http://localhost:5050 _(or the `PGADMIN_PORT` from your root `.env`)_
 
 ## Environment variables
 
-Each app has its own `.env.example`. Copy and fill in:
+The repo uses a shared root `.env`. Copy and fill in:
 
 ```sh
-cp apps/web/.env.example apps/web/.env.local
-cp apps/api/.env.example apps/api/.env.local
+cp .env.example .env
 ```
 
 Required values:
@@ -37,6 +43,14 @@ Required values:
 - `VITE_MAPBOX_ACCESS_TOKEN` — get one from [mapbox.com](https://mapbox.com)
 - `VITE_GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_ID` — from Google Cloud Console
 - `JWT_SECRET` — any random string for local dev
+
+Optional local port overrides:
+
+- `PORT` — API port, defaults to `3000`
+- `DOCS_PORT` — docs port, defaults to `3001`
+- `WEB_PORT` — web port, defaults to `5173`
+- `DB_PORT` — change this when `5432` is already in use
+- `PGADMIN_PORT` — change this when `5050` is already in use
 
 ## Useful scripts
 
