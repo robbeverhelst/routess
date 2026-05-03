@@ -2,11 +2,8 @@ import type { Map as MapboxMap } from "mapbox-gl";
 import type React from "react";
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import type { TimeOfDay } from "@/components/ui/route-controls";
-import {
-	initializeSourcesAndLayers,
-	updateRouteLayer,
-	updateWaypointsLayer,
-} from "@/features/routing/managers/MapLayerManager";
+import { initializeSourcesAndLayers } from "@/features/routing/managers/MapLayerManager";
+import { syncMapView } from "@/features/routing/managers/MapViewAdapter";
 import {
 	loadLightPresetFromLocalStorage,
 	loadMapStyleFromLocalStorage,
@@ -94,9 +91,6 @@ export const MapConfigurationProvider: React.FC<MapConfigurationProviderProps> =
 	isOnline,
 	initialBearing = 0,
 }) => {
-	// Get current route data from Zustand store
-	const waypoints = useRoutingStore((state) => state.waypoints);
-	const routePath = useRoutingStore((state) => state.routePath);
 	const isMapLocked = useRoutingStore((state) => state.isMapLocked);
 	const setIsMapLocked = useRoutingStore((state) => state.setIsMapLocked);
 
@@ -123,16 +117,9 @@ export const MapConfigurationProvider: React.FC<MapConfigurationProviderProps> =
 
 			Logger.info("[MapConfigurationProvider] Re-initializing map layers after style change");
 			initializeSourcesAndLayers(mapRef.current);
-
-			if (waypoints.length > 0) {
-				updateWaypointsLayer(mapRef.current, waypoints, isMapLocked);
-			}
-
-			if (routePath && routePath.length > 0) {
-				updateRouteLayer(mapRef.current, routePath);
-			}
+			syncMapView(mapRef.current);
 		},
-		[isMapLocked, mapRef, routePath, waypoints],
+		[mapRef],
 	);
 
 	const applyMapStyle = useCallback(
@@ -270,19 +257,6 @@ export const MapConfigurationProvider: React.FC<MapConfigurationProviderProps> =
 			window.removeEventListener("routess:set-map-style", onSetStyle);
 		};
 	}, [applyMapStyle, mapRef]);
-
-	// Effect to update waypoint visibility when lock state changes
-	useEffect(() => {
-		if (mapRef.current && hasRoute && waypoints.length > 0) {
-			Logger.info(
-				"[MapConfigurationProvider] Map lock toggled, updating waypoint visibility. Locked:",
-				isMapLocked,
-				"waypoints:",
-				waypoints.length,
-			);
-			updateWaypointsLayer(mapRef.current, waypoints, isMapLocked);
-		}
-	}, [isMapLocked, hasRoute, mapRef, waypoints]);
 
 	// Zoom handlers
 	const handleZoomIn = useCallback(() => {

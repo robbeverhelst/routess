@@ -2,13 +2,7 @@ import type { Coordinate, Waypoint, WaypointType } from "@routess/core";
 import { pointToSegmentDistance } from "@routess/core";
 import type { Map as MapboxMap } from "mapbox-gl";
 import type { Dispatch, SetStateAction } from "react";
-import {
-	clearKilometerMarkersLayer,
-	clearRouteLayer,
-	updateDragLinesLayer,
-	updateUserLocationLayer,
-	updateWaypointsLayer,
-} from "@/features/routing/managers/MapLayerManager";
+import { updateDragLinesLayer, updateUserLocationLayer } from "@/features/routing/managers/MapLayerManager";
 import { getRoute } from "@/features/routing/services/RouteCalculationService";
 import { exportCurrentRouteToGPXFile, importRouteFromGPXString } from "@/features/routing/services/RouteIOService";
 import { Logger } from "@/lib/logger";
@@ -27,11 +21,7 @@ async function updateMapFromStore(
 ) {
 	const { waypoints } = useRoutingStore.getState();
 
-	clearRouteLayer(map);
-	clearKilometerMarkersLayer(map);
 	updateDragLinesLayer(map, []);
-
-	updateWaypointsLayer(map, waypoints, _isMapLockedRef?.current ?? false);
 
 	if (waypoints.length >= 2 && accessToken) {
 		const result = await getRoute(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
@@ -39,7 +29,6 @@ async function updateMapFromStore(
 		if (result.waypointsSnapped && result.snappedWaypoints) {
 			Logger.debug("[Routing] Updating stored waypoints with snapped coordinates");
 			useRoutingStore.getState().setWaypoints(result.snappedWaypoints);
-			updateWaypointsLayer(map, result.snappedWaypoints, _isMapLockedRef?.current ?? false);
 		}
 	} else {
 		setRouteDistance("");

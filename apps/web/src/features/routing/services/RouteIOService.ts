@@ -6,12 +6,6 @@ import { decompressAndParse } from "@/lib/shareUtils";
 import { validateCoordinate } from "@/lib/utils/route-validation";
 import { useRoutingStore } from "@/stores/routingStore";
 import type { Coordinate } from "@/types/map";
-import {
-	clearKilometerMarkersLayer,
-	clearRouteLayer,
-	updateRouteLayer,
-	updateWaypointsLayer,
-} from "../managers/MapLayerManager";
 import { generateGPXString, parseGPXFile, processGPXWaypoints } from "./GPXService";
 import { getCurrentRoutePath, getRoute, setCurrentRoutePath } from "./RouteCalculationService";
 
@@ -53,9 +47,7 @@ interface RouteIoResult {
 const routeHasValidShape = (waypoints: Waypoint[]): boolean =>
 	waypoints.every((wp) => validateCoordinate(wp.coord).isValid);
 
-const clearRouteState = ({ map, setRouteDistance, setRouteDuration, setHasRoute }: LoadRouteOptions) => {
-	clearRouteLayer(map);
-	clearKilometerMarkersLayer(map);
+const clearRouteState = ({ setRouteDistance, setRouteDuration, setHasRoute }: LoadRouteOptions) => {
 	setCurrentRoutePath([]);
 	setRouteDistance("");
 	setRouteDuration("");
@@ -63,20 +55,14 @@ const clearRouteState = ({ map, setRouteDistance, setRouteDuration, setHasRoute 
 };
 
 const applyExactRoutePath = ({
-	map,
 	waypoints,
 	exactRoutePath,
 	setRouteDistance,
 	setRouteDuration,
 	setHasRoute,
-	isMapLocked,
 }: LoadRouteOptions & { exactRoutePath: Coordinate[]; isMapLocked: boolean }) => {
 	useRoutingStore.getState().setWaypoints(waypoints);
-	updateWaypointsLayer(map, waypoints, isMapLocked);
-
 	setCurrentRoutePath(exactRoutePath);
-	updateRouteLayer(map, exactRoutePath);
-	clearKilometerMarkersLayer(map);
 
 	const routeDistanceKm = calculatePathDistance(exactRoutePath);
 	const routeDurationMinutes = estimateWalkingDuration(routeDistanceKm);
@@ -119,7 +105,6 @@ export const loadRouteIntoMap = async (options: LoadRouteOptions): Promise<Route
 	}
 
 	store.setWaypoints(waypoints);
-	updateWaypointsLayer(map, waypoints, isMapLocked);
 
 	if (exactRoutePath && exactRoutePath.length >= 2) {
 		applyExactRoutePath({ ...options, exactRoutePath, isMapLocked });
@@ -138,7 +123,6 @@ export const loadRouteIntoMap = async (options: LoadRouteOptions): Promise<Route
 
 	if (routeResult.waypointsSnapped && routeResult.snappedWaypoints) {
 		store.setWaypoints(routeResult.snappedWaypoints);
-		updateWaypointsLayer(map, routeResult.snappedWaypoints, isMapLocked);
 	}
 
 	return { success: true };
