@@ -1,5 +1,4 @@
 import type { Coordinate, Waypoint, WaypointType } from "@routess/core";
-import { haversineDistance } from "@routess/core";
 import type { GeoJSONSource, Map as MapboxMap } from "mapbox-gl";
 import type { Dispatch, SetStateAction } from "react";
 import {
@@ -7,6 +6,12 @@ import {
 	clearRouteLayer,
 	updateWaypointsLayer,
 } from "@/features/routing/managers/MapLayerManager";
+import {
+	insertWaypointOnRoute,
+	resolveAddCoord,
+	reverseWaypoints,
+	setWaypointCoord,
+} from "@/features/routing/managers/WaypointCoordinator";
 import { saveWaypointsToLocalStorage } from "@/features/routing/services/LocalStorageService";
 import {
 	clearCurrentRoutePath,
@@ -14,9 +19,12 @@ import {
 	getRoute as getRouteFromService,
 	type RouteResult,
 } from "@/features/routing/services/RouteCalculationService";
-import { checkNearRoad, closestPointOnSegment } from "@/features/routing/utils/RoutingUtils";
+import { checkNearRoad } from "@/features/routing/utils/RoutingUtils";
 import { Logger } from "@/lib/logger";
 import { useRoutingStore } from "@/stores/routingStore";
+
+// Glue layer between the pure WaypointCoordinator decisions, the Zustand
+// routing store, the map layers, and route-calculation side effects.
 
 const getWaypoints = (): Waypoint[] => useRoutingStore.getState().waypoints;
 const getWaypointCoords = (): Coordinate[] => getWaypoints().map((wp) => wp.coord);
@@ -27,57 +35,44 @@ const setWaypointsList = (waypoints: Waypoint[]) => {
 		Logger.warn("[WaypointManager.setWaypointsList] Clearing existing waypoints. Current count:", current.length);
 	}
 	useRoutingStore.getState().setWaypoints(waypoints);
-	Logger.info("[WaypointManager] Waypoints set. Count:", waypoints.length);
 };
 
-const _addWaypointInternal = async (
-	coord: Coordinate,
-	type: WaypointType,
+const persistAndRender = (map: MapboxMap, isMapLocked: boolean) => {
+	updateWaypointsLayer(map, getWaypoints(), isMapLocked);
+	saveWaypointsToLocalStorage(getWaypoints());
+};
+
+const clearComputedRouteUi = (
+	map: MapboxMap,
+	setRouteDistance: Dispatch<SetStateAction<string>>,
+	setRouteDuration: Dispatch<SetStateAction<string>>,
+	setHasRoute: Dispatch<SetStateAction<boolean>>,
+) => {
+	setRouteDistance("");
+	setRouteDuration("");
+	setHasRoute(false);
+	clearCurrentRoutePath();
+	clearRouteLayer(map);
+	clearKilometerMarkersLayer(map);
+};
+
+// Recompute the route via the calculation service and apply any waypoint
+// snapping the API returned. Returns the original RouteResult so callers
+// can branch on success/failure.
+const recomputeAndApplySnap = async (
+	map: MapboxMap,
 	accessToken: string,
-): Promise<{
-	success: boolean;
-	snappedCoord?: Coordinate;
-	error?: string;
-	checkNearRoadFailed?: boolean;
-}> => {
-	const store = useRoutingStore.getState();
-
-	if (type === "direct" || store.waypoints.length === 0) {
-		store.addWaypoint(coord, type);
-		Logger.info("[_addWaypointInternal] Added direct/initial waypoint (raw):", coord);
-		return { success: true, snappedCoord: coord, checkNearRoadFailed: false };
+	isMapLocked: boolean,
+	setRouteDistance: Dispatch<SetStateAction<string>>,
+	setRouteDuration: Dispatch<SetStateAction<string>>,
+	setHasRoute: Dispatch<SetStateAction<boolean>>,
+): Promise<RouteResult> => {
+	const result = await getRouteFromService(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
+	if (result.success && result.waypointsSnapped && result.snappedWaypoints) {
+		setWaypointsList(result.snappedWaypoints);
+		persistAndRender(map, isMapLocked);
 	}
-
-	const roadCheck = await checkNearRoad(coord, accessToken);
-
-	if (roadCheck.isValid && roadCheck.snappedCoords) {
-		store.addWaypoint(roadCheck.snappedCoords, "routed");
-		Logger.info("[_addWaypointInternal] Added waypoint via checkNearRoad (49m snap):", roadCheck.snappedCoords);
-		return { success: true, snappedCoord: roadCheck.snappedCoords, checkNearRoadFailed: false };
-	}
-
-	store.addWaypoint(coord, "routed");
-	Logger.info("[_addWaypointInternal] checkNearRoad failed. Added waypoint raw for now:", coord);
-	return { success: true, snappedCoord: coord, checkNearRoadFailed: true };
-};
-
-const _removeWaypointInternal = (index: number): void => {
-	const store = useRoutingStore.getState();
-	if (index < 0 || index >= store.waypoints.length) {
-		Logger.warn("[_removeWaypointInternal] Invalid index:", index);
-		return;
-	}
-	store.removeWaypoint(index);
-};
-
-const _updateWaypointPositionInternal = (index: number, newCoord: Coordinate): void => {
-	const store = useRoutingStore.getState();
-	if (index < 0 || index >= store.waypoints.length) {
-		Logger.warn("[_updateWaypointPositionInternal] Invalid index:", index);
-		return;
-	}
-	const next = store.waypoints.map((wp, i) => (i === index ? { ...wp, coord: newCoord } : wp));
-	store.setWaypoints(next);
+	return result;
 };
 
 export const addWaypoint = async (
@@ -92,131 +87,81 @@ export const addWaypoint = async (
 	isMapLocked: boolean,
 ): Promise<boolean> => {
 	const initialWaypointCount = getWaypoints().length;
-
 	useRoutingStore.getState().saveSnapshot();
 
-	const addResult = await _addWaypointInternal(coord, type, accessToken);
+	const resolved = await resolveAddCoord(coord, type, initialWaypointCount === 0, accessToken);
+	useRoutingStore.getState().addWaypoint(resolved.coord, resolved.type);
 
+	// First non-direct waypoint: try one immediate 49m snap before route calc
+	// can give us a better answer.
 	if (getWaypoints().length === 1 && initialWaypointCount === 0 && type === "routed") {
-		Logger.info(
-			"[WaypointManager.addWaypoint] First routed waypoint. Attempting immediate 49m snap via checkNearRoad...",
-		);
-		const currentFirst = getWaypoints()[0];
-		const singleCheck = await checkNearRoad(currentFirst.coord, accessToken);
-
+		const first = getWaypoints()[0];
+		const singleCheck = await checkNearRoad(first.coord, accessToken);
 		if (singleCheck.isValid && singleCheck.snappedCoords) {
-			Logger.info("[WaypointManager.addWaypoint] First routed waypoint snapped by checkNearRoad (49m). Updating.");
 			setWaypointsList([{ coord: singleCheck.snappedCoords, type: "routed" }]);
-			updateWaypointsLayer(map, getWaypoints(), isMapLocked);
-			saveWaypointsToLocalStorage(getWaypoints());
+			persistAndRender(map, isMapLocked);
 			return true;
 		}
-
 		Logger.warn("[WaypointManager.addWaypoint] First routed waypoint failed checkNearRoad (49m). Rejecting.");
-		if (handleWaypointError) handleWaypointError("Point is too far from any road or path.");
-		_removeWaypointInternal(0);
-		updateWaypointsLayer(map, getWaypoints(), isMapLocked);
-		saveWaypointsToLocalStorage(getWaypoints());
+		handleWaypointError("Point is too far from any road or path.");
+		useRoutingStore.getState().removeWaypoint(0);
+		persistAndRender(map, isMapLocked);
 		return false;
 	}
 
-	updateWaypointsLayer(map, getWaypoints(), isMapLocked);
-	saveWaypointsToLocalStorage(getWaypoints());
+	persistAndRender(map, isMapLocked);
 
 	if (getWaypoints().length >= 2) {
-		Logger.info("[WaypointManager.addWaypoint] Recalculating route for 2+ waypoints...");
-		const routeResult: RouteResult = await getRouteFromService(
+		const routeResult = await recomputeAndApplySnap(
 			map,
 			accessToken,
+			isMapLocked,
 			setRouteDistance,
 			setRouteDuration,
 			setHasRoute,
 		);
-
 		if (routeResult.success) {
-			if (routeResult.waypointsSnapped && routeResult.snappedWaypoints) {
-				setWaypointsList(routeResult.snappedWaypoints);
-				updateWaypointsLayer(map, getWaypoints(), isMapLocked);
-			}
 			saveWaypointsToLocalStorage(getWaypoints());
 			return true;
 		}
 
-		Logger.warn("[WaypointManager.addWaypoint] getRouteFromService failed for 2+ waypoints.");
-		const currentWaypoints = getWaypoints();
-		const indexOfLast = currentWaypoints.length - 1;
-		const lastAddedRawDueToFailure =
-			addResult.checkNearRoadFailed &&
-			indexOfLast >= 0 &&
-			currentWaypoints[indexOfLast].coord[0] === coord[0] &&
-			currentWaypoints[indexOfLast].coord[1] === coord[1];
+		const last = getWaypoints().length - 1;
+		const wasRawDueToFailure =
+			resolved.checkNearRoadFailed &&
+			last >= 0 &&
+			getWaypoints()[last].coord[0] === coord[0] &&
+			getWaypoints()[last].coord[1] === coord[1];
 
-		if (lastAddedRawDueToFailure) {
-			Logger.warn(
-				"[WaypointManager.addWaypoint] Route calculation failed AND the last added waypoint was raw (>49m). Removing it.",
-			);
-			if (handleWaypointError)
-				handleWaypointError("Point is too far from any road for routing. Please click closer to a road or path.");
-
-			_removeWaypointInternal(indexOfLast);
+		if (wasRawDueToFailure) {
+			handleWaypointError("Point is too far from any road for routing. Please click closer to a road or path.");
+			useRoutingStore.getState().removeWaypoint(last);
 			updateWaypointsLayer(map, getWaypoints(), isMapLocked);
 
 			if (getWaypoints().length >= 2) {
-				Logger.info("[WaypointManager.addWaypoint] Retrying route calculation after removing bad point...");
-				const retryResult: RouteResult = await getRouteFromService(
-					map,
-					accessToken,
-					setRouteDistance,
-					setRouteDuration,
-					setHasRoute,
-				);
-				if (retryResult.success && retryResult.waypointsSnapped && retryResult.snappedWaypoints) {
-					setWaypointsList(retryResult.snappedWaypoints);
-					updateWaypointsLayer(map, getWaypoints(), isMapLocked);
-				}
+				await recomputeAndApplySnap(map, accessToken, isMapLocked, setRouteDistance, setRouteDuration, setHasRoute);
 			} else {
-				clearCurrentRoutePath();
-				clearRouteLayer(map);
-				clearKilometerMarkersLayer(map);
-				setRouteDistance("");
-				setRouteDuration("");
-				setHasRoute(false);
+				clearComputedRouteUi(map, setRouteDistance, setRouteDuration, setHasRoute);
 			}
 			saveWaypointsToLocalStorage(getWaypoints());
 			return false;
 		}
 
-		Logger.warn("[WaypointManager.addWaypoint] Route calculation failed for other reasons.");
-		if (handleWaypointError) handleWaypointError(routeResult.error || "Could not calculate route.");
+		handleWaypointError(routeResult.error || "Could not calculate route.");
 		saveWaypointsToLocalStorage(getWaypoints());
 		return true;
 	}
 
 	if (getWaypoints().length === 1 && initialWaypointCount === 0 && type === "direct") {
-		Logger.info("[WaypointManager.addWaypoint] First waypoint added (direct). No immediate snap/route.");
-		setRouteDistance("");
-		setRouteDuration("");
-		setHasRoute(false);
-		clearCurrentRoutePath();
-		clearRouteLayer(map);
-		clearKilometerMarkersLayer(map);
+		clearComputedRouteUi(map, setRouteDistance, setRouteDuration, setHasRoute);
 		saveWaypointsToLocalStorage(getWaypoints());
 		return true;
 	}
 
 	if (getWaypoints().length === 0 && initialWaypointCount === 0) {
-		Logger.info("[WaypointManager.addWaypoint] No waypoints remain after add attempt.");
 		return false;
 	}
 
-	Logger.warn(
-		"[WaypointManager.addWaypoint] Reached unexpected end of function logic. Waypoint count:",
-		getWaypoints().length,
-		"Initial count:",
-		initialWaypointCount,
-		"Type:",
-		type,
-	);
+	Logger.warn("[WaypointManager.addWaypoint] Unexpected end of flow. Count:", getWaypoints().length);
 	return false;
 };
 
@@ -232,40 +177,20 @@ export const removeWaypoint = async (
 ): Promise<void> => {
 	if (index < 0 || index >= getWaypoints().length) {
 		Logger.warn("[WaypointManager.removeWaypoint] Invalid index:", index);
-		if (handleWaypointError) handleWaypointError("Invalid waypoint index. Waypoint may no longer exist.");
+		handleWaypointError("Invalid waypoint index. Waypoint may no longer exist.");
 		return;
 	}
 
 	useRoutingStore.getState().saveSnapshot();
-	_removeWaypointInternal(index);
-	updateWaypointsLayer(map, getWaypoints(), isMapLocked);
-	saveWaypointsToLocalStorage(getWaypoints());
+	useRoutingStore.getState().removeWaypoint(index);
+	persistAndRender(map, isMapLocked);
 
 	if (getWaypoints().length >= 2) {
-		Logger.info("[WaypointManager.removeWaypoint] Recalculating route...");
-		const routeResult: RouteResult = await getRouteFromService(
-			map,
-			accessToken,
-			setRouteDistance,
-			setRouteDuration,
-			setHasRoute,
-		);
-		if (routeResult.success && routeResult.waypointsSnapped && routeResult.snappedWaypoints) {
-			setWaypointsList(routeResult.snappedWaypoints);
-			updateWaypointsLayer(map, getWaypoints(), isMapLocked);
-			saveWaypointsToLocalStorage(getWaypoints());
-		}
-		useRoutingStore.getState().saveSnapshot();
+		await recomputeAndApplySnap(map, accessToken, isMapLocked, setRouteDistance, setRouteDuration, setHasRoute);
 	} else {
-		setRouteDistance("");
-		setRouteDuration("");
-		setHasRoute(false);
-		clearCurrentRoutePath();
-		clearRouteLayer(map);
-		clearKilometerMarkersLayer(map);
-		useRoutingStore.getState().saveSnapshot();
+		clearComputedRouteUi(map, setRouteDistance, setRouteDuration, setHasRoute);
 	}
-	Logger.info("[WaypointManager.removeWaypoint] Waypoint removed and route updated.");
+	useRoutingStore.getState().saveSnapshot();
 };
 
 export const updateWaypointPositionAndRecalculate = async (
@@ -279,11 +204,9 @@ export const updateWaypointPositionAndRecalculate = async (
 	handleWaypointError: (message: string | null) => void,
 	isMapLocked: boolean,
 ): Promise<void> => {
-	Logger.info(`[WaypointManager.updateWaypointPositionAndRecalculate] Called for index: ${index}, newCoord:`, newCoord);
-
 	if (index < 0 || index >= getWaypoints().length) {
 		Logger.warn("[WaypointManager.updateWaypointPosition] Invalid index:", index);
-		if (handleWaypointError) handleWaypointError("Invalid waypoint index for update.");
+		handleWaypointError("Invalid waypoint index for update.");
 		return;
 	}
 
@@ -292,41 +215,31 @@ export const updateWaypointPositionAndRecalculate = async (
 
 	const roadCheck = await checkNearRoad(newCoord, accessToken);
 	if (roadCheck.isValid && roadCheck.snappedCoords) {
-		Logger.info("[WaypointManager.updateWaypointPositionAndRecalculate] checkNearRoad (49m) succeeded.");
 		coordsToUpdate = roadCheck.snappedCoords;
 	}
 
-	_updateWaypointPositionInternal(index, coordsToUpdate);
+	setWaypointsList(setWaypointCoord(getWaypoints(), index, coordsToUpdate));
 	updateWaypointsLayer(map, getWaypoints(), isMapLocked);
 
-	const routeRecalcResult: RouteResult = await getRouteFromService(
+	const routeResult = await recomputeAndApplySnap(
 		map,
 		accessToken,
+		isMapLocked,
 		setRouteDistance,
 		setRouteDuration,
 		setHasRoute,
 	);
 
-	if (routeRecalcResult.success) {
-		if (routeRecalcResult.waypointsSnapped && routeRecalcResult.snappedWaypoints) {
-			Logger.info("[WaypointManager.updateWaypointPositionAndRecalculate] Directions API snapped waypoints.");
-			setWaypointsList(routeRecalcResult.snappedWaypoints);
-			updateWaypointsLayer(map, getWaypoints(), isMapLocked);
-		}
+	if (routeResult.success) {
 		saveWaypointsToLocalStorage(getWaypoints());
 		useRoutingStore.getState().saveSnapshot();
-	} else {
-		Logger.warn("[WaypointManager.updateWaypointPositionAndRecalculate] Directions API recalculation failed.");
-		if (handleWaypointError)
-			handleWaypointError(
-				routeRecalcResult.error || "Failed to calculate route. Waypoint may be too far from any road or path.",
-			);
-
-		_updateWaypointPositionInternal(index, oldCoord);
-		updateWaypointsLayer(map, getWaypoints(), isMapLocked);
-		saveWaypointsToLocalStorage(getWaypoints());
-		useRoutingStore.getState().saveSnapshot();
+		return;
 	}
+
+	handleWaypointError(routeResult.error || "Failed to calculate route. Waypoint may be too far from any road or path.");
+	setWaypointsList(setWaypointCoord(getWaypoints(), index, oldCoord));
+	persistAndRender(map, isMapLocked);
+	useRoutingStore.getState().saveSnapshot();
 };
 
 export const reverseRoute = async (
@@ -338,35 +251,12 @@ export const reverseRoute = async (
 	isMapLocked: boolean,
 ): Promise<void> => {
 	const current = getWaypoints();
-	if (current.length < 2) {
-		Logger.info("[WaypointManager.reverseRoute] Not enough waypoints to reverse.");
-		return;
-	}
+	if (current.length < 2) return;
 
-	// Reverse coords; rotate types so the segment-leading-to-each-waypoint semantics survive.
-	const reversedCoords = [...current].reverse().map((wp) => wp.coord);
-	const types = current.map((wp) => wp.type);
-	const reversedTypes = [...types.slice(1).reverse(), types[0]];
-	const reversedWaypoints: Waypoint[] = reversedCoords.map((coord, i) => ({ coord, type: reversedTypes[i] }));
+	setWaypointsList(reverseWaypoints(current));
+	persistAndRender(map, isMapLocked);
 
-	setWaypointsList(reversedWaypoints);
-	updateWaypointsLayer(map, getWaypoints(), isMapLocked);
-	saveWaypointsToLocalStorage(getWaypoints());
-
-	Logger.info("[WaypointManager.reverseRoute] Route reversed. Recalculating route.");
-	const routeResult: RouteResult = await getRouteFromService(
-		map,
-		accessToken,
-		setRouteDistance,
-		setRouteDuration,
-		setHasRoute,
-	);
-
-	if (routeResult.success && routeResult.waypointsSnapped && routeResult.snappedWaypoints) {
-		setWaypointsList(routeResult.snappedWaypoints);
-		updateWaypointsLayer(map, getWaypoints(), isMapLocked);
-		saveWaypointsToLocalStorage(getWaypoints());
-	}
+	await recomputeAndApplySnap(map, accessToken, isMapLocked, setRouteDistance, setRouteDuration, setHasRoute);
 	useRoutingStore.getState().saveSnapshot();
 };
 
@@ -381,118 +271,50 @@ export const insertWaypointAtLocation = async (
 	isMapLocked: boolean,
 	options?: { skipRouteCalcAndSnapshot?: boolean },
 ): Promise<{ success: boolean; newIndex?: number; error?: string }> => {
-	Logger.info("[WaypointManager.insertWaypoint] Attempting to insert waypoint at:", clickedCoords);
-
 	const currentWaypoints = getWaypoints();
 	if (currentWaypoints.length < 1) {
 		const errorMsg = "Cannot add waypoint: No existing route segment.";
-		if (handleWaypointError) handleWaypointError(errorMsg);
+		handleWaypointError(errorMsg);
 		return { success: false, error: errorMsg };
 	}
 
-	const currentRoutePath = getCurrentRoutePath();
-	let routePathToUse: Coordinate[];
 	const routeSource = map.getSource("route") as GeoJSONSource | undefined;
 	const routeData = routeSource?._data as GeoJSON.Feature<GeoJSON.LineString> | undefined;
-
-	if (routeData?.geometry?.coordinates && routeData.geometry.coordinates.length > 0) {
-		routePathToUse = routeData.geometry.coordinates.map((p) => [p[0], p[1]] as Coordinate);
-	} else {
-		routePathToUse = currentRoutePath;
-	}
+	const routePathToUse: Coordinate[] =
+		routeData?.geometry?.coordinates && routeData.geometry.coordinates.length > 0
+			? routeData.geometry.coordinates.map((p) => [p[0], p[1]] as Coordinate)
+			: getCurrentRoutePath();
 
 	if (routePathToUse.length < 2) {
 		const errorMsg = "Cannot add waypoint: Route path is not defined or too short.";
-		if (handleWaypointError) handleWaypointError(errorMsg);
+		handleWaypointError(errorMsg);
 		return { success: false, error: errorMsg };
 	}
 
-	let minDistance = Infinity;
-	let closestPointOnRoute: Coordinate = clickedCoords;
-	let insertIndex = currentWaypoints.length;
-
-	const routeCoordToIndexMap = new Map<string, number>();
-	for (let idx = 0; idx < routePathToUse.length; idx++) {
-		const c = routePathToUse[idx];
-		routeCoordToIndexMap.set(`${c[0]},${c[1]}`, idx);
-	}
-
-	for (let i = 0; i < routePathToUse.length - 1; i++) {
-		const start = routePathToUse[i];
-		const end = routePathToUse[i + 1];
-		const pointOnSegment = closestPointOnSegment(clickedCoords, start, end);
-		const distanceToSegmentPoint = haversineDistance(clickedCoords, pointOnSegment);
-
-		if (distanceToSegmentPoint < minDistance) {
-			minDistance = distanceToSegmentPoint;
-			closestPointOnRoute = pointOnSegment;
-
-			const wps = getWaypoints();
-			for (let j = 0; j < wps.length - 1; j++) {
-				const wpStartKey = `${wps[j].coord[0]},${wps[j].coord[1]}`;
-				const wpStartIndexInPath = routeCoordToIndexMap.get(wpStartKey) ?? -1;
-				const wpEndKey = `${wps[j + 1].coord[0]},${wps[j + 1].coord[1]}`;
-				const wpEndIndexInPath = routeCoordToIndexMap.get(wpEndKey) ?? -1;
-
-				if (wpStartIndexInPath !== -1 && wpEndIndexInPath !== -1 && i >= wpStartIndexInPath && i < wpEndIndexInPath) {
-					insertIndex = j + 1;
-					break;
-				} else if (wpStartIndexInPath !== -1 && j === wps.length - 2 && i >= wpStartIndexInPath) {
-					insertIndex = j + 1;
-					break;
-				}
-			}
-		}
-	}
-
-	const MAX_CLICK_DISTANCE_FROM_ROUTE_KM = 0.1;
-	if (minDistance > MAX_CLICK_DISTANCE_FROM_ROUTE_KM && currentWaypoints.length >= 2) {
+	const decision = insertWaypointOnRoute(currentWaypoints, routePathToUse, clickedCoords);
+	if (!decision) {
 		const errorMsg = "Cannot add waypoint: Click too far from route.";
-		if (handleWaypointError) handleWaypointError(errorMsg);
+		handleWaypointError(errorMsg);
 		return { success: false, error: errorMsg };
 	}
 
-	const newWaypoint: Waypoint = { coord: closestPointOnRoute, type: "routed" };
-	const newWaypoints: Waypoint[] = [
-		...currentWaypoints.slice(0, insertIndex),
-		newWaypoint,
-		...currentWaypoints.slice(insertIndex),
-	];
-
-	setWaypointsList(newWaypoints);
-
-	updateWaypointsLayer(map, getWaypoints(), isMapLocked);
-	saveWaypointsToLocalStorage(getWaypoints());
+	setWaypointsList(decision.waypoints);
+	persistAndRender(map, isMapLocked);
 
 	if (options?.skipRouteCalcAndSnapshot) {
-		return { success: true, newIndex: insertIndex };
+		return { success: true, newIndex: decision.insertIndex };
 	}
 
 	if (getWaypoints().length >= 2) {
-		const routeResult: RouteResult = await getRouteFromService(
-			map,
-			accessToken,
-			setRouteDistance,
-			setRouteDuration,
-			setHasRoute,
-		);
-		if (routeResult.success && routeResult.waypointsSnapped && routeResult.snappedWaypoints) {
-			setWaypointsList(routeResult.snappedWaypoints);
-			updateWaypointsLayer(map, getWaypoints(), isMapLocked);
-			saveWaypointsToLocalStorage(getWaypoints());
-		}
+		await recomputeAndApplySnap(map, accessToken, isMapLocked, setRouteDistance, setRouteDuration, setHasRoute);
+		saveWaypointsToLocalStorage(getWaypoints());
 		useRoutingStore.getState().saveSnapshot();
 	} else {
-		setRouteDistance("");
-		setRouteDuration("");
-		setHasRoute(false);
-		clearCurrentRoutePath();
-		clearRouteLayer(map);
-		clearKilometerMarkersLayer(map);
+		clearComputedRouteUi(map, setRouteDistance, setRouteDuration, setHasRoute);
 		useRoutingStore.getState().saveSnapshot();
 	}
 
-	return { success: true, newIndex: insertIndex };
+	return { success: true, newIndex: decision.insertIndex };
 };
 
 export { getWaypoints, getWaypointCoords };
