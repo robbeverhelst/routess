@@ -26,9 +26,9 @@
 		"css/**/*"
 	],
 	"scripts": {
-		"build": "tsc",
+		"build": "tsc -b --force",
 		"dev": "tsc --watch",
-		"clean": "rm -rf dist",
+		"clean": "rm -rf dist tsconfig.tsbuildinfo",
 		"type-check": "tsc --noEmit"
 	},
 	"devDependencies": {
