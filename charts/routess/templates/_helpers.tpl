@@ -122,9 +122,11 @@ Docs service account name
 {{- end }}
 
 {{/*
-Frontend URL from first web ingress host
+Frontend URLs from web ingress hosts
 */}}
-{{- define "routess.frontendUrl" -}}
-{{- $host := first .Values.ingress.web.hosts }}
-{{- printf "https://%s" $host }}
+{{- define "routess.frontendUrls" -}}
+{{- range $index, $host := .Values.ingress.web.hosts -}}
+{{- if $index }},{{ end -}}
+{{- printf "https://%s" $host -}}
+{{- end -}}
 {{- end }}
