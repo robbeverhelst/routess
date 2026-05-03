@@ -3,7 +3,9 @@ import { configureApplication } from "../../../src/app/app-setup";
 import { getAppConfig } from "../../../src/config/app-config";
 
 describe("configureApplication", () => {
-	function createMockApp(): jest.Mocked<Pick<INestApplication, "use" | "enableVersioning" | "useGlobalFilters" | "useGlobalPipes" | "enableCors">> {
+	function createMockApp(): jest.Mocked<
+		Pick<INestApplication, "use" | "enableVersioning" | "useGlobalFilters" | "useGlobalPipes" | "enableCors">
+	> {
 		return {
 			use: jest.fn(),
 			enableVersioning: jest.fn(),

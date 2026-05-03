@@ -93,7 +93,9 @@ function parseJsonObject(value: string | undefined): Record<string, string> | un
 }
 
 function parseStringList(...values: Array<string | undefined>): string[] {
-	return [...new Set(values.flatMap((value) => value?.split(/[\n,]/).map((entry) => entry.trim()) ?? []).filter(Boolean))];
+	return [
+		...new Set(values.flatMap((value) => value?.split(/[\n,]/).map((entry) => entry.trim()) ?? []).filter(Boolean)),
+	];
 }
 
 export function loadEnvironment(): void {

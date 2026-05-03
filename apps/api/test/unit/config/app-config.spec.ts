@@ -25,11 +25,7 @@ describe("getAppConfig", () => {
 		const config = getAppConfig();
 
 		expect(config.app.frontendUrl).toBe("https://routess.com");
-		expect(config.app.frontendUrls).toEqual([
-			"https://routess.com",
-			"https://routess.be",
-			"https://maps.routess.com",
-		]);
+		expect(config.app.frontendUrls).toEqual(["https://routess.com", "https://routess.be", "https://maps.routess.com"]);
 	});
 
 	it("falls back to FRONTEND_URL when FRONTEND_URLS is not set", () => {
