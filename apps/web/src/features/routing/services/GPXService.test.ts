@@ -1,11 +1,13 @@
+import type { Waypoint } from "@routess/core";
 import { generateGPXString, parseGPXFile } from "@/features/routing/services/GPXService";
 
 describe("GPXService", () => {
 	it("parses exported GPX files with route and track data", async () => {
-		const waypoints: [number, number][] = [
+		const waypointCoords: [number, number][] = [
 			[4.3517, 50.8503],
 			[4.4025, 51.2194],
 		];
+		const waypoints: Waypoint[] = waypointCoords.map((coord) => ({ coord, type: "routed" }));
 		const routePath: [number, number][] = [
 			[4.3517, 50.8503],
 			[4.36, 50.9],
@@ -16,7 +18,7 @@ describe("GPXService", () => {
 		const parsed = await parseGPXFile(gpxString);
 
 		expect(parsed.error).toBeUndefined();
-		expect(parsed.waypoints).toEqual(waypoints);
+		expect(parsed.waypoints).toEqual(waypointCoords);
 		expect(parsed.trackPoints).toEqual(routePath);
 	});
 

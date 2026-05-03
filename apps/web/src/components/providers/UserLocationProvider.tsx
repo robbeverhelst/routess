@@ -1,10 +1,10 @@
 import type { Map as MapboxMap } from "mapbox-gl";
 import type React from "react";
 import { createContext, useCallback, useContext, useEffect } from "react";
+import { updateUserLocationLayer } from "@/features/routing/managers/MapLayerManager";
 import { useEnhancedLocation } from "@/hooks/useEnhancedLocation";
 import { useErrorHandler } from "@/lib/errors";
 import { Logger } from "@/lib/logger";
-import { updateUserLocationPoint } from "@/lib/routing";
 
 interface UserLocationContextType {
 	// Location state
@@ -76,7 +76,7 @@ export const UserLocationProvider: React.FC<UserLocationProviderProps> = ({
 		onLocationUpdate: (state) => {
 			// Update map with new location
 			if (mapRef.current && state.location) {
-				updateUserLocationPoint(mapRef.current, state.location);
+				updateUserLocationLayer(mapRef.current, state.location);
 			}
 		},
 	});
@@ -115,7 +115,7 @@ export const UserLocationProvider: React.FC<UserLocationProviderProps> = ({
 		if (!mapRef.current) return;
 
 		if (isMapReady && userLocation) {
-			updateUserLocationPoint(mapRef.current, userLocation);
+			updateUserLocationLayer(mapRef.current, userLocation);
 		}
 	}, [userLocation, isMapReady, mapRef]);
 

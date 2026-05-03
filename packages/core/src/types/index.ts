@@ -2,9 +2,15 @@
 export type Coordinate = [number, number];
 
 // Route and waypoint types
+export type WaypointType = "routed" | "direct";
+
+export interface Waypoint {
+	coord: Coordinate;
+	type: WaypointType;
+}
+
 export interface WaypointHistory {
-	waypoints: Coordinate[];
-	directFlags: boolean[];
+	waypoints: Waypoint[];
 	timestamp: number;
 }
 

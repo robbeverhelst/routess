@@ -1,3 +1,4 @@
+import type { Waypoint } from "@routess/core";
 import type { GeoJSONSource, Map as MapboxMap } from "mapbox-gl";
 import { Logger } from "@/lib/logger";
 import type { Coordinate } from "@/types/map";
@@ -304,25 +305,27 @@ export const initializeSourcesAndLayers = (map: MapboxMap): void => {
 	Logger.info("[MapLayerManager] All sources and layers initialized (if not already present).");
 };
 
-export const updateWaypointsLayer = (map: MapboxMap, points: Coordinate[], isMapLocked: boolean): void => {
+export const updateWaypointsLayer = (map: MapboxMap, waypoints: Waypoint[], isMapLocked: boolean): void => {
 	if (!map || !map.getSource(WAYPOINTS_SOURCE_ID)) return;
 
-	let pointsToRender = points;
-	if (isMapLocked && points.length > 2) {
-		// When locked, only show the first and last waypoints
-		pointsToRender = [points[0], points[points.length - 1]];
-	}
+	const renderable: { wp: Waypoint; originalIndex: number }[] = waypoints.map((wp, originalIndex) => ({
+		wp,
+		originalIndex,
+	}));
+	const pointsToRender =
+		isMapLocked && renderable.length > 2 ? [renderable[0], renderable[renderable.length - 1]] : renderable;
 
-	const features = pointsToRender.map((point, index, arr) => {
-		let pointType = "intermediate";
-		if (arr.length === 1) pointType = "start";
-		else if (index === 0) pointType = "start";
+	const features = pointsToRender.map(({ wp, originalIndex }, index, arr) => {
+		let pointType: string;
+		if (wp.type === "direct") pointType = "direct";
+		else if (arr.length === 1 || index === 0) pointType = "start";
 		else if (index === arr.length - 1) pointType = "end";
+		else pointType = "intermediate";
 
 		return {
 			type: "Feature" as const,
-			properties: { pointType, waypointIndex: points.indexOf(point) }, // Use original index for potential future needs, though not strictly required by current spec
-			geometry: { type: "Point" as const, coordinates: point },
+			properties: { pointType, waypointIndex: originalIndex },
+			geometry: { type: "Point" as const, coordinates: wp.coord },
 		};
 	});
 

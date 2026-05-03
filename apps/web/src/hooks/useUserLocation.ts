@@ -1,10 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Logger } from "@/lib/logger";
 
-// Assuming updateUserLocationPoint is now a standalone utility or part of a map service
-// For now, let's assume it's passed in or handled differently, as it directly interacts with the map instance.
-// If it's from '@/lib/routing', it might need refactoring or to be passed as a dependency.
-
 export interface UserLocationState {
 	location: [number, number] | null;
 	error: string | null;

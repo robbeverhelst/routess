@@ -1,24 +1,18 @@
+import type { Waypoint } from "@routess/core";
 import { decompressAndParse, serializeAndCompress } from "@/lib/shareUtils";
 
 describe("shareUtils", () => {
 	it("round-trips shared route data", () => {
-		const encoded = serializeAndCompress(
-			[
-				[4.3517, 50.8503],
-				[4.4025, 51.2194],
-			],
-			[false, true],
-			true,
-		);
+		const waypoints: Waypoint[] = [
+			{ coord: [4.3517, 50.8503], type: "routed" },
+			{ coord: [4.4025, 51.2194], type: "direct" },
+		];
+		const encoded = serializeAndCompress(waypoints, true);
 
 		expect(encoded).not.toBeNull();
 		expect(decompressAndParse(encoded || "")).toEqual({
-			w: [
-				[4.3517, 50.8503],
-				[4.4025, 51.2194],
-			],
-			f: [false, true],
-			l: true,
+			waypoints,
+			isLocked: true,
 		});
 	});
 

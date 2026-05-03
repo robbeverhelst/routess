@@ -119,16 +119,13 @@ export function useEnhancedLocation(options: UseEnhancedLocationOptions = {}): U
 			},
 		};
 
-		locationService.setCallbacks(callbacks);
+		const unsubscribe = locationService.subscribe(callbacks);
 
 		// Initial state sync
 		setLocationState(locationService.getState());
 		updateDerivedStates();
 
-		return () => {
-			// Note: We don't clear callbacks here as the service is a singleton
-			// and might be used by other components
-		};
+		return unsubscribe;
 	}, [updateDerivedStates]);
 
 	// Apply tracking mode and custom options

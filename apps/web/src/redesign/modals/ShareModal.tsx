@@ -1,14 +1,7 @@
-import { haversineDistance } from "@routess/core";
+import { haversineDistance, type Waypoint } from "@routess/core";
 import { useMemo, useState } from "react";
 import { serializeAndCompress } from "@/lib/shareUtils";
-import {
-	useDirectFlags,
-	useIsMapLocked,
-	useRouteDistance,
-	useRouteDuration,
-	useWaypoints,
-} from "@/stores/routingStore";
-import type { Coordinate } from "@/types/map";
+import { useIsMapLocked, useRouteDistance, useRouteDuration, useWaypoints } from "@/stores/routingStore";
 import { I } from "../components/icons";
 import { ModalShell } from "../components/ModalShell";
 import { Btn, RDS_COLORS, SecTitle, Toggle } from "../components/primitives";
@@ -17,16 +10,13 @@ import { useRedesignSettingsStore } from "../stores/settingsStore";
 
 const PRIVACY_KM = 1;
 
-function trimPrivacyEdges(
-	waypoints: Coordinate[],
-	directFlags: boolean[],
-): { waypoints: Coordinate[]; directFlags: boolean[] } {
-	if (waypoints.length < 4) return { waypoints, directFlags };
+function trimPrivacyEdges(waypoints: Waypoint[]): Waypoint[] {
+	if (waypoints.length < 4) return waypoints;
 
 	let startIdx = 0;
 	let cum = 0;
 	for (let i = 1; i < waypoints.length; i++) {
-		cum += haversineDistance(waypoints[i - 1], waypoints[i]);
+		cum += haversineDistance(waypoints[i - 1].coord, waypoints[i].coord);
 		if (cum > PRIVACY_KM) {
 			startIdx = i;
 			break;
@@ -36,19 +26,15 @@ function trimPrivacyEdges(
 	let endIdx = waypoints.length - 1;
 	cum = 0;
 	for (let i = waypoints.length - 1; i > 0; i--) {
-		cum += haversineDistance(waypoints[i], waypoints[i - 1]);
+		cum += haversineDistance(waypoints[i].coord, waypoints[i - 1].coord);
 		if (cum > PRIVACY_KM) {
 			endIdx = i - 1;
 			break;
 		}
 	}
 
-	if (endIdx - startIdx < 1) return { waypoints, directFlags };
-
-	return {
-		waypoints: waypoints.slice(startIdx, endIdx + 1),
-		directFlags: directFlags.slice(startIdx, endIdx + 1),
-	};
+	if (endIdx - startIdx < 1) return waypoints;
+	return waypoints.slice(startIdx, endIdx + 1);
 }
 
 const VISIBILITY = [
@@ -60,7 +46,6 @@ const VISIBILITY = [
 export function ShareModal() {
 	const closeModal = useModalsStore((s) => s.closeModal);
 	const waypoints = useWaypoints();
-	const directFlags = useDirectFlags();
 	const isMapLocked = useIsMapLocked();
 	const distance = useRouteDistance();
 	const duration = useRouteDuration();
@@ -72,14 +57,14 @@ export function ShareModal() {
 
 	const url = useMemo(() => {
 		try {
-			const trimmed = hideEdges ? trimPrivacyEdges(waypoints, directFlags) : { waypoints, directFlags };
-			const encoded = serializeAndCompress(trimmed.waypoints, trimmed.directFlags, isMapLocked);
+			const wps = hideEdges ? trimPrivacyEdges(waypoints) : waypoints;
+			const encoded = serializeAndCompress(wps, isMapLocked);
 			if (!encoded) return window.location.origin;
 			return `${window.location.origin}?route=${encoded}`;
 		} catch {
 			return window.location.origin;
 		}
-	}, [waypoints, directFlags, isMapLocked, hideEdges]);
+	}, [waypoints, isMapLocked, hideEdges]);
 
 	const copy = async () => {
 		window.dispatchEvent(new CustomEvent("routess:share-route"));

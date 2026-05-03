@@ -1,3 +1,4 @@
+import type { Waypoint } from "@routess/core";
 import { calculatePathDistance, estimateWalkingDuration, formatDistance, formatDuration } from "@routess/core";
 import type { ApiRoute } from "@/lib/api";
 import { Logger } from "@/lib/logger";
@@ -5,18 +6,7 @@ import { decompressAndParse } from "@/lib/shareUtils";
 import { validateCoordinate } from "@/lib/utils/route-validation";
 import { useRoutingStore } from "@/stores/routingStore";
 import type { Coordinate } from "@/types/map";
-import {
-	clearKilometerMarkersLayer,
-	clearRouteLayer,
-	updateRouteLayer,
-	updateWaypointsLayer,
-} from "../managers/MapLayerManager";
 import { generateGPXString, parseGPXFile, processGPXWaypoints } from "./GPXService";
-import {
-	loadMapLockStateFromLocalStorage,
-	saveMapLockStateToLocalStorage,
-	saveWaypointsToLocalStorage,
-} from "./LocalStorageService";
 import { getCurrentRoutePath, getRoute, setCurrentRoutePath } from "./RouteCalculationService";
 
 type RouteStateSetter = React.Dispatch<React.SetStateAction<string>>;
@@ -31,8 +21,7 @@ interface RouteUiStateSetters {
 interface LoadRouteOptions extends RouteUiStateSetters {
 	map: mapboxgl.Map;
 	accessToken: string;
-	waypoints: Coordinate[];
-	directFlags: boolean[];
+	waypoints: Waypoint[];
 	exactRoutePath?: Coordinate[];
 	isMapLocked?: boolean;
 	saveSnapshot?: boolean;
@@ -55,17 +44,10 @@ interface RouteIoResult {
 	message?: string;
 }
 
-const routeHasValidShape = (waypoints: Coordinate[], directFlags: boolean[]): boolean => {
-	if (waypoints.length !== directFlags.length) {
-		return false;
-	}
+const routeHasValidShape = (waypoints: Waypoint[]): boolean =>
+	waypoints.every((wp) => validateCoordinate(wp.coord).isValid);
 
-	return waypoints.every((waypoint) => validateCoordinate(waypoint).isValid);
-};
-
-const clearRouteState = ({ map, setRouteDistance, setRouteDuration, setHasRoute }: LoadRouteOptions) => {
-	clearRouteLayer(map);
-	clearKilometerMarkersLayer(map);
+const clearRouteState = ({ setRouteDistance, setRouteDuration, setHasRoute }: LoadRouteOptions) => {
 	setCurrentRoutePath([]);
 	setRouteDistance("");
 	setRouteDuration("");
@@ -73,22 +55,14 @@ const clearRouteState = ({ map, setRouteDistance, setRouteDuration, setHasRoute 
 };
 
 const applyExactRoutePath = ({
-	map,
 	waypoints,
-	directFlags,
 	exactRoutePath,
 	setRouteDistance,
 	setRouteDuration,
 	setHasRoute,
-	isMapLocked,
 }: LoadRouteOptions & { exactRoutePath: Coordinate[]; isMapLocked: boolean }) => {
-	useRoutingStore.getState().setWaypoints(waypoints, directFlags);
-	updateWaypointsLayer(map, waypoints, isMapLocked);
-	saveWaypointsToLocalStorage(waypoints, directFlags);
-
+	useRoutingStore.getState().setWaypoints(waypoints);
 	setCurrentRoutePath(exactRoutePath);
-	updateRouteLayer(map, exactRoutePath);
-	clearKilometerMarkersLayer(map);
 
 	const routeDistanceKm = calculatePathDistance(exactRoutePath);
 	const routeDurationMinutes = estimateWalkingDuration(routeDistanceKm);
@@ -103,20 +77,16 @@ export const loadRouteIntoMap = async (options: LoadRouteOptions): Promise<Route
 		map,
 		accessToken,
 		waypoints,
-		directFlags,
 		exactRoutePath,
 		setRouteDistance,
 		setRouteDuration,
 		setHasRoute,
 		saveSnapshot = false,
 	} = options;
-	const isMapLocked = options.isMapLocked ?? loadMapLockStateFromLocalStorage();
+	const isMapLocked = options.isMapLocked ?? useRoutingStore.getState().isMapLocked;
 
-	if (!routeHasValidShape(waypoints, directFlags)) {
-		return {
-			success: false,
-			message: "The route data is invalid or corrupted.",
-		};
+	if (!routeHasValidShape(waypoints)) {
+		return { success: false, message: "The route data is invalid or corrupted." };
 	}
 
 	const store = useRoutingStore.getState();
@@ -126,7 +96,6 @@ export const loadRouteIntoMap = async (options: LoadRouteOptions): Promise<Route
 	}
 
 	store.setIsMapLocked(isMapLocked);
-	saveMapLockStateToLocalStorage(isMapLocked);
 
 	clearRouteState({ ...options, isMapLocked });
 
@@ -135,16 +104,10 @@ export const loadRouteIntoMap = async (options: LoadRouteOptions): Promise<Route
 		return { success: true };
 	}
 
-	store.setWaypoints(waypoints, directFlags);
-	updateWaypointsLayer(map, waypoints, isMapLocked);
-	saveWaypointsToLocalStorage(waypoints, directFlags);
+	store.setWaypoints(waypoints);
 
 	if (exactRoutePath && exactRoutePath.length >= 2) {
-		applyExactRoutePath({
-			...options,
-			exactRoutePath,
-			isMapLocked,
-		});
+		applyExactRoutePath({ ...options, exactRoutePath, isMapLocked });
 		return { success: true };
 	}
 
@@ -155,16 +118,11 @@ export const loadRouteIntoMap = async (options: LoadRouteOptions): Promise<Route
 	const routeResult = await getRoute(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
 
 	if (!routeResult.success) {
-		return {
-			success: false,
-			message: routeResult.error || "Failed to calculate the route.",
-		};
+		return { success: false, message: routeResult.error || "Failed to calculate the route." };
 	}
 
-	if (routeResult.waypointsSnapped && routeResult.snappedWaypoints && routeResult.snappedDirectFlags) {
-		store.setWaypoints(routeResult.snappedWaypoints, routeResult.snappedDirectFlags);
-		updateWaypointsLayer(map, routeResult.snappedWaypoints, isMapLocked);
-		saveWaypointsToLocalStorage(routeResult.snappedWaypoints, routeResult.snappedDirectFlags);
+	if (routeResult.waypointsSnapped && routeResult.snappedWaypoints) {
+		store.setWaypoints(routeResult.snappedWaypoints);
 	}
 
 	return { success: true };
@@ -180,7 +138,7 @@ export const loadSharedRouteIntoMap = async ({
 }: SharedRouteOptions): Promise<RouteIoResult> => {
 	const parsed = decompressAndParse(encodedRoute);
 
-	if (!parsed || !routeHasValidShape(parsed.w, parsed.f)) {
+	if (!parsed || !routeHasValidShape(parsed.waypoints)) {
 		return {
 			success: false,
 			message: "Failed to read shared route data. The link may be invalid or corrupted.",
@@ -190,9 +148,8 @@ export const loadSharedRouteIntoMap = async ({
 	return loadRouteIntoMap({
 		map,
 		accessToken,
-		waypoints: parsed.w,
-		directFlags: parsed.f,
-		isMapLocked: parsed.l,
+		waypoints: parsed.waypoints,
+		isMapLocked: parsed.isLocked,
 		setRouteDistance,
 		setRouteDuration,
 		setHasRoute,
@@ -201,17 +158,14 @@ export const loadSharedRouteIntoMap = async ({
 
 export const loadApiRouteIntoMap = async (
 	route: ApiRoute,
-	options: Omit<LoadRouteOptions, "waypoints" | "directFlags">,
+	options: Omit<LoadRouteOptions, "waypoints">,
 ): Promise<RouteIoResult> => {
-	const waypoints: Coordinate[] = route.waypoints.map((waypoint) => [waypoint.lng, waypoint.lat]);
-	const directFlags = route.waypoints.map((waypoint) => waypoint.type === "direct");
+	const waypoints: Waypoint[] = route.waypoints.map((wp) => ({
+		coord: [wp.lng, wp.lat],
+		type: wp.type === "direct" ? "direct" : "routed",
+	}));
 
-	return loadRouteIntoMap({
-		...options,
-		waypoints,
-		directFlags,
-		saveSnapshot: true,
-	});
+	return loadRouteIntoMap({ ...options, waypoints, saveSnapshot: true });
 };
 
 export const importRouteFromGPXString = async ({
@@ -224,20 +178,18 @@ export const importRouteFromGPXString = async ({
 }: GpxImportOptions): Promise<RouteIoResult> => {
 	const parsed = await parseGPXFile(gpxString);
 
-	if (parsed.error) {
-		return { success: false, message: parsed.error };
-	}
+	if (parsed.error) return { success: false, message: parsed.error };
 
 	if (!parsed.waypoints || parsed.waypoints.length === 0) {
 		return { success: false, message: "No valid waypoints were found in the GPX file." };
 	}
 
 	if (parsed.trackPoints && parsed.trackPoints.length >= 2) {
+		const waypoints: Waypoint[] = parsed.waypoints.map((coord) => ({ coord, type: "routed" }));
 		return loadRouteIntoMap({
 			map,
 			accessToken,
-			waypoints: parsed.waypoints,
-			directFlags: new Array(parsed.waypoints.length).fill(false),
+			waypoints,
 			exactRoutePath: parsed.trackPoints,
 			setRouteDistance,
 			setRouteDuration,
@@ -248,7 +200,7 @@ export const importRouteFromGPXString = async ({
 
 	const processed = await processGPXWaypoints(parsed.waypoints, accessToken);
 
-	if (processed.error || !processed.finalWaypoints || !processed.finalDirectFlags) {
+	if (processed.error || !processed.finalWaypoints) {
 		return { success: false, message: processed.error || "Failed to import the GPX route." };
 	}
 
@@ -256,7 +208,6 @@ export const importRouteFromGPXString = async ({
 		map,
 		accessToken,
 		waypoints: processed.finalWaypoints,
-		directFlags: processed.finalDirectFlags,
 		setRouteDistance,
 		setRouteDuration,
 		setHasRoute,
@@ -269,13 +220,10 @@ export const exportCurrentRouteToGPXFile = (filename = "routess-route.gpx"): Rou
 	const routePath = getCurrentRoutePath();
 
 	if (waypoints.length === 0) {
-		return {
-			success: false,
-			message: "No route available to export.",
-		};
+		return { success: false, message: "No route available to export." };
 	}
 
-	const effectiveRoutePath = routePath.length >= 2 ? routePath : waypoints;
+	const effectiveRoutePath = routePath.length >= 2 ? routePath : waypoints.map((wp) => wp.coord);
 	const gpxContents = generateGPXString(waypoints, effectiveRoutePath);
 	const blob = new Blob([gpxContents], { type: "application/gpx+xml;charset=utf-8" });
 	const objectUrl = URL.createObjectURL(blob);
@@ -287,10 +235,7 @@ export const exportCurrentRouteToGPXFile = (filename = "routess-route.gpx"): Rou
 		link.click();
 	} catch (error) {
 		Logger.error("[RouteIOService] Failed to export GPX file:", error);
-		return {
-			success: false,
-			message: "Failed to export the GPX file.",
-		};
+		return { success: false, message: "Failed to export the GPX file." };
 	} finally {
 		URL.revokeObjectURL(objectUrl);
 	}

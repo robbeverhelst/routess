@@ -1,4 +1,20 @@
-# Maps Project Development Log
+# Routess Project Development Log
+
+## Agent skills
+
+This repo uses [Matt Pocock's engineering skills](https://github.com/mattpocock/skills/tree/main/skills/engineering). They expect the following per-repo configuration:
+
+### Issue tracker
+
+Issues live as GitHub issues at `robbeverhelst/maps`, accessed via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Five canonical state roles (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`) plus `bug` / `enhancement` categories. Default label strings — see `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: one `CONTEXT.md` at the repo root and one `docs/adr/` directory. See `docs/agents/domain.md`.
 
 ## ✅ Completed Work Summary
 

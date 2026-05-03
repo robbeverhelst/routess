@@ -1,11 +1,19 @@
 import type { Map as MapboxMap } from "mapbox-gl";
 import { useCallback } from "react";
 import type { PopupInfo as MapPopupInfo } from "@/features/routing/managers/MapInteractionManager";
-import { addWaypoint, insertWaypointAtLocation } from "@/features/routing/managers/WaypointManager";
+import {
+	addWaypoint,
+	insertWaypointAtLocation,
+	recalculateRoute,
+	redoRouteChange,
+	removeWaypoint,
+	resetRoute,
+	reverseRoute,
+	undoRouteChange,
+} from "@/features/routing/managers/WaypointManager";
 import { getCurrentRoutePath } from "@/features/routing/services/RouteCalculationService";
 import { zoomToRoute } from "@/features/routing/utils/RoutingUtils";
 import { Logger } from "@/lib/logger";
-import { recalculateRoute, redo, removeWaypoint, resetRouting, reverseRoute, undo } from "@/lib/routing";
 import { serializeAndCompress } from "@/lib/shareUtils";
 import { useRoutingStore } from "@/stores/routingStore";
 
@@ -40,26 +48,28 @@ export const useRouteActions = ({
 	setShareNotification,
 }: UseRouteActionsProps) => {
 	// Undo handler
-	const handleUndo = useCallback(() => {
-		undo(setRouteDistance, setRouteDuration, setHasRoute);
-	}, [setRouteDistance, setRouteDuration, setHasRoute]);
+	const handleUndo = useCallback(async () => {
+		if (!mapRef.current || !mapboxToken) return;
+		await undoRouteChange(mapRef.current, mapboxToken, setRouteDistance, setRouteDuration, setHasRoute);
+	}, [mapboxToken, setRouteDistance, setRouteDuration, setHasRoute, mapRef]);
 
 	// Redo handler
-	const handleRedo = useCallback(() => {
-		redo(setRouteDistance, setRouteDuration, setHasRoute);
-	}, [setRouteDistance, setRouteDuration, setHasRoute]);
+	const handleRedo = useCallback(async () => {
+		if (!mapRef.current || !mapboxToken) return;
+		await redoRouteChange(mapRef.current, mapboxToken, setRouteDistance, setRouteDuration, setHasRoute);
+	}, [mapboxToken, setRouteDistance, setRouteDuration, setHasRoute, mapRef]);
 
 	// Reverse route handler
 	const handleReverseRoute = useCallback(async () => {
 		if (!mapRef.current || !mapboxToken) return;
 		await reverseRoute(mapRef.current, mapboxToken, setRouteDistance, setRouteDuration, setHasRoute);
-	}, [mapboxToken, setRouteDistance, setRouteDuration, setHasRoute, mapRef.current]);
+	}, [mapboxToken, setRouteDistance, setRouteDuration, setHasRoute, mapRef]);
 
 	// Reset handler
 	const handleReset = useCallback(async () => {
 		if (!mapRef.current || !mapboxToken) return;
-		await resetRouting(mapRef.current, mapboxToken, setRouteDistance, setRouteDuration, setHasRoute);
-	}, [mapboxToken, setRouteDistance, setRouteDuration, setHasRoute, mapRef.current]);
+		await resetRoute(mapRef.current, mapboxToken, setRouteDistance, setRouteDuration, setHasRoute);
+	}, [mapboxToken, setRouteDistance, setRouteDuration, setHasRoute, mapRef]);
 
 	// Recalculate handler — re-runs current waypoints through the routing service
 	// after preferences (profile, exclude, snap, etc.) have changed.
@@ -82,7 +92,7 @@ export const useRouteActions = ({
 				duration: 1500, // 1.5 second animation
 			});
 		},
-		[mapRef.current],
+		[mapRef],
 	);
 
 	// Route generation handlers
@@ -101,7 +111,7 @@ export const useRouteActions = ({
 		const success = await addWaypoint(
 			mapRef.current,
 			[popup.longitude, popup.latitude],
-			true,
+			"direct",
 			mapboxToken,
 			setRouteDistance,
 			setRouteDuration,
@@ -138,10 +148,12 @@ export const useRouteActions = ({
 			setRouteDistance,
 			setRouteDuration,
 			setHasRoute,
+			handleWaypointError,
+			useRoutingStore.getState().isMapLocked,
 		);
 
 		setPopup(null);
-	}, [popup, mapboxToken, setRouteDistance, setRouteDuration, setHasRoute, setPopup, mapRef.current]);
+	}, [popup, mapboxToken, setRouteDistance, setRouteDuration, setHasRoute, handleWaypointError, setPopup, mapRef]);
 
 	const handleAddWaypointOnRoute = useCallback(async () => {
 		if (!mapRef.current || !popup || popup.type !== "add_on_route" || !mapboxToken) return;
@@ -185,18 +197,18 @@ export const useRouteActions = ({
 				Logger.warn("[useRouteActions] No route path coordinates available to zoom to.");
 			}
 		}
-	}, [hasRoute, mapRef.current]);
+	}, [hasRoute, mapRef]);
 
 	// Share link handler
 	const handleCopyShareLinkToClipboard = useCallback(() => {
-		const { waypoints, directFlags } = useRoutingStore.getState();
+		const { waypoints, isMapLocked } = useRoutingStore.getState();
 
 		if (waypoints.length === 0) {
 			handleRouteInfoError("Cannot share an empty route.");
 			return;
 		}
 
-		const encodedData = serializeAndCompress(waypoints, directFlags, useRoutingStore.getState().isMapLocked);
+		const encodedData = serializeAndCompress(waypoints, isMapLocked);
 
 		if (encodedData) {
 			const shareUrl = `${window.location.origin}${window.location.pathname}?route=${encodedData}`;

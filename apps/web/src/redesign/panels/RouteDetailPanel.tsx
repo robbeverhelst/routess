@@ -48,14 +48,12 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 	}, [moreOpen]);
 
 	const dispatchLoadRoute = () => {
-		const directFlags = (route.waypoints ?? []).map((w) => w.type === "direct");
 		window.dispatchEvent(
 			new CustomEvent("routess:load-route", {
 				detail: {
 					routeId: route.id,
 					name: route.name,
 					waypoints: route.waypoints,
-					directFlags,
 				},
 			}),
 		);

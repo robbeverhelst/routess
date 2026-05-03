@@ -383,14 +383,12 @@ export function LibraryPanel() {
 								<Btn
 									variant="ghost"
 									onClick={() => {
-										const directFlags = (r.waypoints ?? []).map((w) => w.type === "direct");
 										window.dispatchEvent(
 											new CustomEvent("routess:load-route", {
 												detail: {
 													routeId: r.id,
 													name: r.name,
 													waypoints: r.waypoints,
-													directFlags,
 												},
 											}),
 										);

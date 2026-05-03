@@ -2,19 +2,14 @@ import type { Map as MapboxMap } from "mapbox-gl";
 import type React from "react";
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import type { TimeOfDay } from "@/components/ui/route-controls";
-import {
-	initializeSourcesAndLayers,
-	updateRouteLayer,
-	updateWaypointsLayer,
-} from "@/features/routing/managers/MapLayerManager";
+import { initializeSourcesAndLayers } from "@/features/routing/managers/MapLayerManager";
+import { syncMapView } from "@/features/routing/managers/MapViewAdapter";
 import {
 	loadLightPresetFromLocalStorage,
-	loadMapLockStateFromLocalStorage,
 	loadMapStyleFromLocalStorage,
 	loadSunDirectionSettingFromLocalStorage,
 	type MapStyle,
 	saveLightPresetToLocalStorage,
-	saveMapLockStateToLocalStorage,
 	saveMapStyleToLocalStorage,
 	saveSunDirectionSettingToLocalStorage,
 } from "@/features/routing/services/LocalStorageService";
@@ -96,17 +91,9 @@ export const MapConfigurationProvider: React.FC<MapConfigurationProviderProps> =
 	isOnline,
 	initialBearing = 0,
 }) => {
-	// Get current route data from Zustand store
-	const waypoints = useRoutingStore((state) => state.waypoints);
-	const routePath = useRoutingStore((state) => state.routePath);
 	const isMapLocked = useRoutingStore((state) => state.isMapLocked);
 	const setIsMapLocked = useRoutingStore((state) => state.setIsMapLocked);
 
-	// Initialize Zustand store with localStorage value on mount
-	useEffect(() => {
-		const savedLockState = loadMapLockStateFromLocalStorage();
-		setIsMapLocked(savedLockState);
-	}, [setIsMapLocked]);
 	const [currentLightPreset, setCurrentLightPreset] = useState<TimeOfDay>(loadLightPresetFromLocalStorage() || "day");
 	const [currentBearing, setCurrentBearing] = useState<number>(initialBearing);
 	const [currentMapStyle, setCurrentMapStyle] = useState<MapStyle>(loadMapStyleFromLocalStorage());
@@ -130,16 +117,9 @@ export const MapConfigurationProvider: React.FC<MapConfigurationProviderProps> =
 
 			Logger.info("[MapConfigurationProvider] Re-initializing map layers after style change");
 			initializeSourcesAndLayers(mapRef.current);
-
-			if (waypoints.length > 0) {
-				updateWaypointsLayer(mapRef.current, waypoints, isMapLocked);
-			}
-
-			if (routePath && routePath.length > 0) {
-				updateRouteLayer(mapRef.current, routePath);
-			}
+			syncMapView(mapRef.current);
 		},
-		[isMapLocked, mapRef, routePath, waypoints],
+		[mapRef],
 	);
 
 	const applyMapStyle = useCallback(
@@ -166,7 +146,6 @@ export const MapConfigurationProvider: React.FC<MapConfigurationProviderProps> =
 	useEffect(() => {
 		if (!isOnline && !isMapLocked) {
 			setIsMapLocked(true);
-			saveMapLockStateToLocalStorage(true);
 			Logger.info("[MapConfigurationProvider] Map automatically locked due to offline status");
 		}
 	}, [isOnline, isMapLocked, setIsMapLocked]);
@@ -199,7 +178,6 @@ export const MapConfigurationProvider: React.FC<MapConfigurationProviderProps> =
 	const handleToggleLock = useCallback(() => {
 		const newLockedState = !isMapLocked;
 		setIsMapLocked(newLockedState);
-		saveMapLockStateToLocalStorage(newLockedState);
 
 		if (newLockedState && mapRef.current && hasRoute) {
 			try {
@@ -311,19 +289,6 @@ export const MapConfigurationProvider: React.FC<MapConfigurationProviderProps> =
 			window.removeEventListener("routess:set-pois", onSetPois);
 		};
 	}, [applyMapStyle, applyPoiVisibility, mapRef]);
-
-	// Effect to update waypoint visibility when lock state changes
-	useEffect(() => {
-		if (mapRef.current && hasRoute && waypoints.length > 0) {
-			Logger.info(
-				"[MapConfigurationProvider] Map lock toggled, updating waypoint visibility. Locked:",
-				isMapLocked,
-				"waypoints:",
-				waypoints.length,
-			);
-			updateWaypointsLayer(mapRef.current, waypoints, isMapLocked);
-		}
-	}, [isMapLocked, hasRoute, mapRef, waypoints]);
 
 	// Zoom handlers
 	const handleZoomIn = useCallback(() => {

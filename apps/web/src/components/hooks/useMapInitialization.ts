@@ -3,15 +3,10 @@ import type { Dispatch, SetStateAction } from "react";
 import { useCallback, useEffect, useRef } from "react";
 import type { PopupInfo as MIMPopupInfo } from "@/features/routing/managers/MapInteractionManager";
 import { initializeMapInteractions } from "@/features/routing/managers/MapInteractionManager";
-import {
-	initializeSourcesAndLayers,
-	updateRouteLayer,
-	updateWaypointsLayer,
-} from "@/features/routing/managers/MapLayerManager";
-import { setCurrentRoutePath } from "@/features/routing/services/RouteCalculationService";
+import { initializeSourcesAndLayers } from "@/features/routing/managers/MapLayerManager";
+import { attachMapViewAdapter } from "@/features/routing/managers/MapViewAdapter";
 import { loadSharedRouteIntoMap } from "@/features/routing/services/RouteIOService";
 import { Logger } from "@/lib/logger";
-import { setupRouting } from "@/lib/routing";
 import { useRoutingStore } from "@/stores/routingStore";
 
 interface UseMapInitializationProps {
@@ -40,6 +35,7 @@ export const useMapInitialization = ({
 	handleRouteInfoError,
 }: UseMapInitializationProps) => {
 	const routingDisposerRef = useRef<(() => void) | null>(null);
+	const mapViewAdapterDisposerRef = useRef<(() => void) | null>(null);
 	const routeInitTimeoutRef = useRef<number | null>(null);
 
 	// Handle map load
@@ -48,10 +44,13 @@ export const useMapInitialization = ({
 			Logger.info("[useMapInitialization] Map loaded, setting up routing");
 			const map = event.target;
 
-			setupRouting(map, isMapLockedRef, mapboxToken);
-
 			// Initialize map sources and layers first
 			initializeSourcesAndLayers(map);
+
+			// Subscribe layers to the routing store so they reconcile on
+			// every store mutation. Must run before the route-restore step
+			// below so the initial paint comes from the adapter.
+			mapViewAdapterDisposerRef.current = attachMapViewAdapter(map);
 
 			// Initialize map interactions (click handlers, etc.)
 			const disposer = initializeMapInteractions(
@@ -73,26 +72,13 @@ export const useMapInitialization = ({
 
 			Logger.info("[useMapInitialization] Routing setup complete");
 
-			// Restore route from Zustand store if it exists (after page refresh)
+			// Restore UI state from the persisted store if a route exists
+			// (the adapter handles map layers automatically).
 			const currentState = useRoutingStore.getState();
-
-			if (currentState.waypoints.length > 0) {
-				// Small delay to ensure map layers are fully initialized
-				setTimeout(() => {
-					updateWaypointsLayer(map, currentState.waypoints, currentState.isMapLocked);
-
-					if (currentState.routePath.length > 0) {
-						updateRouteLayer(map, currentState.routePath);
-
-						// Update the UI state from Zustand store
-						setRouteDistance(currentState.routeDistance);
-						setRouteDuration(currentState.routeDuration);
-						setHasRoute(currentState.hasRoute);
-
-						// Keep the route calculation service in sync with persisted state.
-						setCurrentRoutePath(currentState.routePath);
-					}
-				}, 100); // 100ms delay to ensure layers are ready
+			if (currentState.waypoints.length > 0 && currentState.routePath.length > 0) {
+				setRouteDistance(currentState.routeDistance);
+				setRouteDuration(currentState.routeDuration);
+				setHasRoute(currentState.hasRoute);
 			}
 
 			const urlParams = new URLSearchParams(window.location.search);
@@ -143,6 +129,11 @@ export const useMapInitialization = ({
 				Logger.info("[useMapInitialization] Cleaning up map interaction listeners.");
 				routingDisposerRef.current();
 				routingDisposerRef.current = null;
+			}
+
+			if (mapViewAdapterDisposerRef.current) {
+				mapViewAdapterDisposerRef.current();
+				mapViewAdapterDisposerRef.current = null;
 			}
 		};
 	}, []);
