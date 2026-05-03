@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { I } from "../components/icons";
 import { ModalShell } from "../components/ModalShell";
-import { Btn, RDS_COLORS, SecTitle } from "../components/primitives";
+import { Btn, PreviewBanner, RDS_COLORS, SecTitle } from "../components/primitives";
+import { type LoopDirection, type LoopSurface, useLoopPreferencesStore } from "../stores/loopPreferencesStore";
 import { useModalsStore } from "../stores/modalsStore";
+import { useToastStore } from "../stores/toastStore";
 
 const DIRECTIONS = [
 	{ key: "any", label: "Any", icon: I.compass },
@@ -12,14 +14,63 @@ const DIRECTIONS = [
 	{ key: "w", label: "West", icon: I.arrowUp, deg: 270 },
 ] as const;
 
-const SURFACES = ["Mixed", "Roads only", "Trails", "Paved bike paths"] as const;
+const SURFACES: LoopSurface[] = ["Mixed", "Roads only", "Trails", "Paved bike paths"];
+
+type LocationStatus = "current" | "locating" | "resolved" | "error";
 
 export function LoopModal() {
 	const closeModal = useModalsStore((s) => s.closeModal);
+	const pushToast = useToastStore((s) => s.push);
+	const { distanceKm, direction, surface, setDistanceKm, setDirection, setSurface } = useLoopPreferencesStore();
 
-	const [distanceKm, setDistanceKm] = useState(12);
-	const [direction, setDirection] = useState<(typeof DIRECTIONS)[number]["key"]>("any");
-	const [surface, setSurface] = useState<(typeof SURFACES)[number]>("Mixed");
+	const [locationStatus, setLocationStatus] = useState<LocationStatus>("current");
+	const [resolvedCoords, setResolvedCoords] = useState<{ lat: number; lng: number } | null>(null);
+
+	const handleUseCurrentLocation = () => {
+		if (!navigator.geolocation) {
+			setLocationStatus("error");
+			pushToast({
+				kind: "danger",
+				title: "Geolocation unavailable",
+				body: "This browser doesn't expose a location API.",
+			});
+			return;
+		}
+		setLocationStatus("locating");
+		navigator.geolocation.getCurrentPosition(
+			(pos) => {
+				setResolvedCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+				setLocationStatus("resolved");
+			},
+			(err) => {
+				setLocationStatus("error");
+				pushToast({
+					kind: "danger",
+					title: "Couldn't get your location",
+					body: err.message,
+				});
+			},
+			{ enableHighAccuracy: true, timeout: 8000 },
+		);
+	};
+
+	const handleGenerate = () => {
+		// Generation backend isn't live yet; preferences are persisted. Confirm to
+		// the user that the choice is saved and the generator is in the works.
+		pushToast({
+			kind: "info",
+			title: "Loop generation in progress",
+			body: "Your preferences are saved. Generation will arrive in an upcoming release.",
+			durationMs: 3500,
+		});
+	};
+
+	const startLabel =
+		locationStatus === "locating"
+			? "Locating…"
+			: resolvedCoords
+				? `Lat ${resolvedCoords.lat.toFixed(4)}, Lng ${resolvedCoords.lng.toFixed(4)}`
+				: "Current location";
 
 	return (
 		<ModalShell
@@ -31,7 +82,7 @@ export function LoopModal() {
 				<>
 					<div style={{ flex: 1 }} />
 					<Btn onClick={closeModal}>Cancel</Btn>
-					<Btn variant="primary">
+					<Btn variant="primary" onClick={handleGenerate}>
 						<I.compass size={14} /> Generate
 					</Btn>
 				</>
@@ -57,19 +108,21 @@ export function LoopModal() {
 								width: 8,
 								height: 8,
 								borderRadius: 999,
-								background: RDS_COLORS.success,
+								background: locationStatus === "error" ? RDS_COLORS.danger : RDS_COLORS.success,
 							}}
 						/>
-						<span style={{ fontSize: 13 }}>Current location</span>
+						<span style={{ fontSize: 13 }}>{startLabel}</span>
 						<div style={{ flex: 1 }} />
 						<button
 							type="button"
 							title="Use current location"
+							onClick={handleUseCurrentLocation}
+							disabled={locationStatus === "locating"}
 							style={{
 								background: "transparent",
 								border: 0,
 								color: RDS_COLORS.fgMuted,
-								cursor: "pointer",
+								cursor: locationStatus === "locating" ? "wait" : "pointer",
 								display: "inline-flex",
 							}}
 						>
@@ -127,7 +180,7 @@ export function LoopModal() {
 								<button
 									key={d.key}
 									type="button"
-									onClick={() => setDirection(d.key)}
+									onClick={() => setDirection(d.key as LoopDirection)}
 									style={{
 										padding: 12,
 										borderRadius: 8,
@@ -180,21 +233,10 @@ export function LoopModal() {
 					</div>
 				</div>
 
-				<div
-					style={{
-						display: "flex",
-						alignItems: "center",
-						gap: 10,
-						background: RDS_COLORS.accentSoft,
-						color: RDS_COLORS.accent,
-						padding: 12,
-						borderRadius: 8,
-						fontSize: 12.5,
-					}}
-				>
-					<I.zap size={14} />
-					<span>Loop generation will land in a follow-up. Settings are saved for that release.</span>
-				</div>
+				<PreviewBanner
+					title="Preview · generation backend pending"
+					body="Your preferences are saved on this device and will drive generation as soon as the loop generator service ships."
+				/>
 			</div>
 		</ModalShell>
 	);

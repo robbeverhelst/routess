@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useAuthStatus } from "@/lib/api-queries";
-import { Badge, Btn, RDS_COLORS, SecTitle } from "../components/primitives";
+import { Badge, Btn, PreviewBanner, RDS_COLORS, SecTitle } from "../components/primitives";
 import { useToastStore } from "../stores/toastStore";
 
 // TODO: replace USAGE with real per-account counters once the backend lands.
@@ -86,6 +86,12 @@ export function AccountScreen() {
 			<div style={{ maxWidth: 720, margin: "0 auto", padding: "40px 24px" }}>
 				<SecTitle>Settings</SecTitle>
 				<h1 style={{ fontSize: 26, fontWeight: 600, margin: "4px 0 0", letterSpacing: -0.5 }}>Account & billing</h1>
+
+				<PreviewBanner
+					style={{ marginTop: 18 }}
+					title="Preview · limited write support"
+					body="Plan, usage, and most account fields are placeholders today. Sign-in info reflects your Google account; other edits won't persist until the user-profile and billing endpoints land."
+				/>
 
 				{/* Plan card */}
 				<div

@@ -1,4 +1,4 @@
-import { RDS_COLORS, SecTitle } from "../components/primitives";
+import { PreviewBanner, RDS_COLORS, SecTitle } from "../components/primitives";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] as const;
 const WEEKS = 53;
@@ -47,6 +47,11 @@ export function CalendarScreen() {
 				<p style={{ fontSize: 13, color: RDS_COLORS.fgMuted, margin: "4px 0 0" }}>
 					2025 · 184 activities · 2,148 km · 12,840 m climbed
 				</p>
+
+				<PreviewBanner
+					style={{ marginTop: 18 }}
+					body="Heatmap and monthly totals use placeholder data. They'll switch to your actual activity once the activities backend is live."
+				/>
 
 				{/* Heatmap */}
 				<div

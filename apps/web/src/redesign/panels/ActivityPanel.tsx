@@ -1,6 +1,6 @@
 import { EmptyActivity } from "../components/EmptyStates";
 import { I } from "../components/icons";
-import { Badge, RDS_COLORS, SecTitle } from "../components/primitives";
+import { Badge, PreviewBanner, RDS_COLORS, SecTitle } from "../components/primitives";
 import { useActivities } from "../hooks/useActivities";
 
 export function ActivityPanel() {
@@ -85,6 +85,12 @@ export function ActivityPanel() {
 			</div>
 
 			<div style={{ padding: "14px 20px", flex: 1, overflow: "auto" }}>
+				{data.__source === "mock" && (
+					<PreviewBanner
+						style={{ marginBottom: 14 }}
+						body="Sample activity feed. Real sessions will land with the activities backend."
+					/>
+				)}
 				<SecTitle style={{ marginBottom: 10 }}>Recent sessions</SecTitle>
 				{data.recent.map((s, i) => (
 					<div

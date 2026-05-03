@@ -1,12 +1,15 @@
-// TODO: persist + apply preferences to RouteCalculationService.
-// These preferences are currently held in local component state only.
-// When a routing-preferences store is introduced, swap useState for the store
-// and feed the values into RouteCalculationService so they actually shape routes.
-import { useState } from "react";
 import { I } from "../components/icons";
 import { ModalShell } from "../components/ModalShell";
 import { Btn, RDS_COLORS, Toggle } from "../components/primitives";
 import { useModalsStore } from "../stores/modalsStore";
+import {
+	DEFAULT_ROUTING_PREFERENCES,
+	MAX_CLIMB_GRADIENT,
+	MIN_CLIMB_GRADIENT,
+	type RoutingProfile,
+	useRoutingPreferencesStore,
+} from "../stores/routingPreferencesStore";
+import { useToastStore } from "../stores/toastStore";
 
 const PROFILES = [
 	{ key: "fast", label: "Fastest", icon: I.zap, hint: "Default" },
@@ -16,11 +19,10 @@ const PROFILES = [
 ] as const;
 
 interface PrefRow {
-	key: string;
+	key: "bike" | "climbs" | "unpaved" | "highways" | "snap";
 	icon: React.ComponentType<{ size?: number }>;
 	label: string;
 	sub: string;
-	defaultOn: boolean;
 	slider?: boolean;
 }
 
@@ -30,60 +32,83 @@ const PREFS: PrefRow[] = [
 		icon: I.bike,
 		label: "Prefer bike infrastructure",
 		sub: "Cycle paths, low-traffic streets",
-		defaultOn: true,
 	},
 	{
 		key: "climbs",
 		icon: I.mountain,
 		label: "Avoid steep climbs",
 		sub: "Max gradient",
-		defaultOn: true,
 		slider: true,
 	},
-	{ key: "unpaved", icon: I.flag, label: "Avoid unpaved", sub: "Stay on asphalt where possible", defaultOn: false },
-	{ key: "highways", icon: I.trend, label: "Avoid highways", sub: "Always", defaultOn: true },
-	{ key: "snap", icon: I.target, label: "Auto-snap waypoints", sub: "Drag onto nearest road", defaultOn: true },
+	{ key: "unpaved", icon: I.flag, label: "Avoid unpaved", sub: "Stay on asphalt where possible" },
+	{ key: "highways", icon: I.trend, label: "Avoid highways", sub: "Excludes motorway segments from routing" },
+	{ key: "snap", icon: I.target, label: "Auto-snap waypoints", sub: "Drag onto nearest road" },
 ];
-
-const DEFAULT_PROFILE: (typeof PROFILES)[number]["key"] = "scenic";
-const DEFAULT_CLIMB_GRADIENT = 6;
-const MIN_CLIMB_GRADIENT = 2;
-const MAX_CLIMB_GRADIENT = 15;
-
-function buildDefaultPrefs(): Record<string, boolean> {
-	const out: Record<string, boolean> = {};
-	for (const p of PREFS) out[p.key] = p.defaultOn;
-	return out;
-}
 
 export function RoutingModal() {
 	const close = useModalsStore((s) => s.closeModal);
-	const [profile, setProfile] = useState<(typeof PROFILES)[number]["key"]>(DEFAULT_PROFILE);
-	const [prefs, setPrefs] = useState<Record<string, boolean>>(() => buildDefaultPrefs());
-	const [climbGradient, setClimbGradient] = useState<number>(DEFAULT_CLIMB_GRADIENT);
+	const pushToast = useToastStore((s) => s.push);
+	const prefs = useRoutingPreferencesStore();
 
-	const reset = () => {
-		setProfile(DEFAULT_PROFILE);
-		setPrefs(buildDefaultPrefs());
-		setClimbGradient(DEFAULT_CLIMB_GRADIENT);
-	};
+	const reset = () => prefs.reset();
 
 	const apply = () => {
-		// TODO: persist + apply preferences to RouteCalculationService.
-		// For now we close the modal — values live in local state until a
-		// routing-preferences store wires them into route calculation.
+		// Preferences are already persisted to the store via setters; trigger a
+		// recalculation of the current route so the new options take effect.
+		window.dispatchEvent(new CustomEvent("routess:recalculate-route"));
+		pushToast({
+			kind: "success",
+			title: "Routing preferences applied",
+			body: "New routes and recalculations use these settings.",
+			durationMs: 2200,
+		});
 		close();
+	};
+
+	const setPref = (key: PrefRow["key"], value: boolean) => {
+		switch (key) {
+			case "bike":
+				prefs.setBike(value);
+				return;
+			case "climbs":
+				prefs.setClimbs(value);
+				return;
+			case "unpaved":
+				prefs.setUnpaved(value);
+				return;
+			case "highways":
+				prefs.setHighways(value);
+				return;
+			case "snap":
+				prefs.setSnap(value);
+				return;
+		}
+	};
+
+	const getPref = (key: PrefRow["key"]): boolean => {
+		switch (key) {
+			case "bike":
+				return prefs.bike;
+			case "climbs":
+				return prefs.climbs;
+			case "unpaved":
+				return prefs.unpaved;
+			case "highways":
+				return prefs.highways;
+			case "snap":
+				return prefs.snap;
+		}
 	};
 
 	return (
 		<ModalShell
 			title="Routing preferences"
-			sub="Affects new routes only · current route stays as-is"
+			sub="Saved to this device · applied on Apply"
 			width={520}
 			onClose={close}
 			footer={
 				<>
-					<Btn variant="ghost" onClick={reset}>
+					<Btn variant="ghost" onClick={reset} title={`Restore defaults (${DEFAULT_ROUTING_PREFERENCES.profile})`}>
 						Reset
 					</Btn>
 					<div style={{ flex: 1 }} />
@@ -105,12 +130,12 @@ export function RoutingModal() {
 			>
 				{PROFILES.map((p) => {
 					const Icon = p.icon;
-					const on = profile === p.key;
+					const on = prefs.profile === p.key;
 					return (
 						<button
 							key={p.key}
 							type="button"
-							onClick={() => setProfile(p.key)}
+							onClick={() => prefs.setProfile(p.key as RoutingProfile)}
 							style={{
 								padding: 10,
 								borderRadius: 8,
@@ -136,7 +161,7 @@ export function RoutingModal() {
 
 			{PREFS.map((row, i) => {
 				const Icon = row.icon;
-				const on = prefs[row.key];
+				const on = getPref(row.key);
 				return (
 					<div
 						key={row.key}
@@ -167,7 +192,7 @@ export function RoutingModal() {
 							<div style={{ fontSize: 13, fontWeight: 500 }}>{row.label}</div>
 							<div style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle, marginTop: 2 }}>
 								{row.sub}
-								{row.slider && on ? <span className="rds-mono"> · {climbGradient}%</span> : null}
+								{row.slider && on ? <span className="rds-mono"> · {prefs.climbGradient}%</span> : null}
 							</div>
 							{row.slider && on && (
 								<input
@@ -175,8 +200,8 @@ export function RoutingModal() {
 									min={MIN_CLIMB_GRADIENT}
 									max={MAX_CLIMB_GRADIENT}
 									step={1}
-									value={climbGradient}
-									onChange={(e) => setClimbGradient(Number(e.target.value))}
+									value={prefs.climbGradient}
+									onChange={(e) => prefs.setClimbGradient(Number(e.target.value))}
 									aria-label="Max climb gradient (%)"
 									style={{
 										marginTop: 8,
@@ -187,7 +212,7 @@ export function RoutingModal() {
 								/>
 							)}
 						</div>
-						<Toggle on={on} onChange={(v) => setPrefs({ ...prefs, [row.key]: v })} />
+						<Toggle on={on} onChange={(v) => setPref(row.key, v)} />
 					</div>
 				);
 			})}

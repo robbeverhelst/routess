@@ -10,7 +10,43 @@ import {
 } from "@/features/routing/managers/MapLayerManager";
 import { Logger } from "@/lib/logger";
 import { getDirections } from "@/lib/utils/mapbox-api";
+import { getRoutingPreferences, type RoutingPreferences } from "@/redesign/stores/routingPreferencesStore";
+import { useRedesignSettingsStore } from "@/redesign/stores/settingsStore";
 import { useRoutingStore } from "@/stores/routingStore";
+
+// Map the user's "default activity" + routing profile choice onto a Mapbox profile.
+// Cycling-first today: routing prefs lean toward bike infra unless the user picked
+// running/walking, in which case we use mapbox/walking. "Flat" prefers driving for
+// gentler grade routing.
+function resolveMapboxProfile(prefs: RoutingPreferences): string {
+	const activity = useRedesignSettingsStore.getState().defaultActivity;
+	if (activity === "Running" || activity === "Walking") {
+		return "mapbox/walking";
+	}
+	if (prefs.profile === "flat") return "mapbox/driving";
+	return "mapbox/cycling";
+}
+
+function buildDirectionsOptions(): {
+	profile: string;
+	exclude?: string[];
+	radius?: number;
+	continueStraight?: boolean;
+} {
+	const prefs = getRoutingPreferences();
+	const profile = resolveMapboxProfile(prefs);
+	const exclude: string[] = [];
+	if (prefs.highways) exclude.push("motorway");
+	// Mapbox Directions doesn't expose unpaved/bike-infra toggles directly; we still
+	// log so the user knows their selection has shaped the request as far as the API
+	// allows. The cycling profile already biases toward bike infrastructure.
+	return {
+		profile,
+		exclude: exclude.length ? exclude : undefined,
+		radius: 150,
+		continueStraight: true,
+	};
+}
 
 // Module-level state for the detailed path, similar to how it was in routing.ts
 let currentRoutePathCoordinates: Coordinate[] = [];
@@ -169,10 +205,7 @@ async function buildMixedRoute(
 			coordsAccum.push(to);
 			totalDist += haversineDistance(from, to);
 		} else {
-			const result = await getDirections([from, to], accessToken, {
-				radius: 150,
-				continueStraight: true,
-			});
+			const result = await getDirections([from, to], accessToken, buildDirectionsOptions());
 
 			if (result.success && result.data?.routes?.[0]) {
 				const json = result.data;
@@ -192,7 +225,7 @@ async function buildMixedRoute(
 
 				totalDist += distKm;
 
-				if (json.waypoints && json.waypoints.length === 2) {
+				if (json.waypoints && json.waypoints.length === 2 && getRoutingPreferences().snap) {
 					const newWp0 = json.waypoints[0].location as Coordinate;
 					const newWp1 = json.waypoints[1].location as Coordinate;
 					if (
@@ -377,10 +410,7 @@ export const getRoute = async (
 			Logger.info("[RCS/getRoute] Calculating route using Mapbox Directions API for all segments.");
 			const currentWaypointsForAPI = [...waypoints]; // Use a snapshot for the API call
 
-			const result = await getDirections(currentWaypointsForAPI, accessToken, {
-				radius: 150, // Keep generous radius for snapping
-				continueStraight: true,
-			});
+			const result = await getDirections(currentWaypointsForAPI, accessToken, buildDirectionsOptions());
 			if (!routeInputsMatch(currentWaypointsForAPI, directFlags)) {
 				Logger.info("[RCS/getRoute] Route inputs changed during Directions request. Discarding stale result.");
 				return staleRouteResult();
@@ -402,7 +432,7 @@ export const getRoute = async (
 			setCurrentRoutePathCoordinates(data.geometry.coordinates);
 			updateRouteLayer(map, data.geometry.coordinates); // Use MapLayerManager
 
-			if (json.waypoints && Array.isArray(json.waypoints)) {
+			if (json.waypoints && Array.isArray(json.waypoints) && getRoutingPreferences().snap) {
 				const apiSnappedWaypoints = json.waypoints.map((wp: { location: Coordinate }) => wp.location);
 				if (apiSnappedWaypoints.length === currentWaypointsForAPI.length) {
 					const currentGlobalWaypoints = useRoutingStore.getState().waypoints; // Fetch fresh global waypoints

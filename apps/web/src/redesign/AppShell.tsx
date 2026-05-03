@@ -1,6 +1,8 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { lazy, type ReactNode, Suspense, useEffect, useState } from "react";
+import { apiService } from "@/lib/api";
 import { useAuthStatus } from "@/lib/api-queries";
+import { Logger } from "@/lib/logger";
 import { queryKeys } from "@/lib/query-client";
 import { useModalsStore } from "@/redesign/stores/modalsStore";
 import { type RedesignContext, useUiStore } from "@/redesign/stores/uiStore";
@@ -48,6 +50,7 @@ import { ProfileScreen } from "./screens/ProfileScreen";
 import { RecordingScreen } from "./screens/RecordingScreen";
 import { SignUpScreen } from "./screens/SignUpScreen";
 import { WelcomeScreen } from "./screens/WelcomeScreen";
+import { useRedesignSettingsStore } from "./stores/settingsStore";
 import { useToastStore } from "./stores/toastStore";
 
 const MapWithRouting = lazy(() => import("@/components/MapWithRouting"));
@@ -124,6 +127,8 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 	const { modal, overlay, openModal, openOverlay, closeOverlay } = useModalsStore();
 	const { data: auth } = useAuthStatus();
 	const online = useOnlineStatus();
+	const preferredMapStyle = useRedesignSettingsStore((s) => s.mapStyle);
+	const preferredShowPois = useRedesignSettingsStore((s) => s.showPois);
 	const hasRoute = useHasRoute();
 	const distance = useRouteDistance();
 	const duration = useRouteDuration();
@@ -187,12 +192,44 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 		const onOpenActivity = () => {
 			setContext("activity");
 		};
-		const onExportAll = () => {
-			pushToast({
-				kind: "info",
-				title: "Export coming soon",
-				body: "Bulk data export will be available once the backend lands.",
-			});
+		const onExportAll = async () => {
+			if (!localStorage.getItem("access_token")) {
+				pushToast({
+					kind: "info",
+					title: "Sign in to export",
+					body: "Account export needs an authenticated session.",
+				});
+				return;
+			}
+			try {
+				const routes = await apiService.getRoutes();
+				const bundle = {
+					exportedAt: new Date().toISOString(),
+					schema: "routess.export.v1",
+					routes,
+				};
+				const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json" });
+				const url = URL.createObjectURL(blob);
+				const link = document.createElement("a");
+				link.href = url;
+				link.download = `routess-export-${new Date().toISOString().slice(0, 10)}.json`;
+				document.body.appendChild(link);
+				link.click();
+				document.body.removeChild(link);
+				URL.revokeObjectURL(url);
+				pushToast({
+					kind: "success",
+					title: "Export ready",
+					body: `Downloaded ${routes.length} route${routes.length === 1 ? "" : "s"}.`,
+				});
+			} catch (err) {
+				Logger.error("[AppShell] export-all-data failed", err);
+				pushToast({
+					kind: "danger",
+					title: "Export failed",
+					body: "Couldn't fetch your routes. Try again in a moment.",
+				});
+			}
 		};
 		const onDuplicate = () => {
 			pushToast({
@@ -239,6 +276,23 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 	const showLogin = !isAuthenticated && !skippedAuth && authView === "login";
 	const showSignup = !isAuthenticated && !skippedAuth && authView === "signup";
 	const showWelcome = isAuthenticated && !welcomeCompleted;
+
+	useEffect(() => {
+		if (showLogin || showSignup || showWelcome || devScreen) return;
+
+		const timer = window.setTimeout(() => {
+			window.dispatchEvent(
+				new CustomEvent("routess:set-map-style", {
+					detail: { styleKey: preferredMapStyle },
+				}),
+			);
+			// Re-apply POI visibility — Mapbox style changes recreate layers, so we
+			// need to push the user's preference back onto the new style.
+			window.dispatchEvent(new CustomEvent("routess:set-pois", { detail: { visible: preferredShowPois } }));
+		}, 0);
+
+		return () => window.clearTimeout(timer);
+	}, [preferredMapStyle, preferredShowPois, showLogin, showSignup, showWelcome, devScreen]);
 
 	if (showLogin) {
 		return (

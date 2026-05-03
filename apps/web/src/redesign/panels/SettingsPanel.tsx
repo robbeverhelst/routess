@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { useLogout, useUserProfile } from "@/lib/api-queries";
-import { useRedesignSettingsStore } from "@/redesign/stores/settingsStore";
+import { useRoutingPreferencesStore } from "@/redesign/stores/routingPreferencesStore";
+import { type RedesignMapStyle, useRedesignSettingsStore } from "@/redesign/stores/settingsStore";
 import { type RedesignAccent, useUiStore } from "@/redesign/stores/uiStore";
 import { I } from "../components/icons";
 import { Btn, RDS_COLORS, SecTitle, Toggle } from "../components/primitives";
@@ -108,8 +109,6 @@ export function SettingsPanel() {
 		setShowPois,
 		terrain3d,
 		setTerrain3d,
-		autoSnap,
-		setAutoSnap,
 		publicProfile,
 		setPublicProfile,
 		hidePrivacy,
@@ -119,6 +118,8 @@ export function SettingsPanel() {
 		mapStyle,
 		setMapStyle,
 	} = useRedesignSettingsStore();
+	const autoSnap = useRoutingPreferencesStore((s) => s.snap);
+	const setAutoSnap = useRoutingPreferencesStore((s) => s.setSnap);
 
 	const userName = profile?.name ?? "Your account";
 	const userEmail = profile?.email ?? "Sign in to sync";
@@ -129,6 +130,16 @@ export function SettingsPanel() {
 
 	const handleExportData = () => {
 		window.dispatchEvent(new CustomEvent("routess:export-all-data"));
+	};
+
+	const handleMapStyleChange = (nextStyle: RedesignMapStyle) => {
+		setMapStyle(nextStyle);
+		window.dispatchEvent(new CustomEvent("routess:set-map-style", { detail: { styleKey: nextStyle } }));
+	};
+
+	const handleShowPoisChange = (next: boolean) => {
+		setShowPois(next);
+		window.dispatchEvent(new CustomEvent("routess:set-pois", { detail: { visible: next } }));
 	};
 
 	const handleSignOut = () => {
@@ -273,7 +284,7 @@ export function SettingsPanel() {
 					control={
 						<select
 							value={mapStyle}
-							onChange={(e) => setMapStyle(e.target.value)}
+							onChange={(e) => handleMapStyleChange(e.target.value as RedesignMapStyle)}
 							style={{
 								height: 30,
 								padding: "0 8px",
@@ -284,16 +295,19 @@ export function SettingsPanel() {
 								fontSize: 12.5,
 							}}
 						>
-							<option>Streets</option>
-							<option>Outdoors</option>
-							<option>Satellite</option>
+							<option value="streets">Streets</option>
+							<option value="outdoors">Outdoors</option>
+							<option value="satellite">Satellite</option>
+							<option value="terrain">Terrain</option>
+							<option value="dark">Dark</option>
+							<option value="minimal">Minimal</option>
 						</select>
 					}
 				/>
 				<Row
 					label="Show points of interest"
 					sub="Cafés, shops, transit"
-					control={<Toggle on={showPois} onChange={setShowPois} />}
+					control={<Toggle on={showPois} onChange={handleShowPoisChange} />}
 				/>
 				<Row
 					label="3D terrain"

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { I } from "../components/icons";
 import { Btn, Kbd, RDS_COLORS } from "../components/primitives";
+import { useRedesignSettingsStore } from "../stores/settingsStore";
 import { type RedesignActivity, useUiStore } from "../stores/uiStore";
 
 const STEPS = [
@@ -12,7 +13,8 @@ const STEPS = [
 export function WelcomeScreen({ onComplete }: { onComplete?: () => void }) {
 	const [step, setStep] = useState(0);
 	const { activityType, setActivityType } = useUiStore();
-	const [mapStyle, setMapStyle] = useState<"streets" | "outdoors" | "satellite">("outdoors");
+	const mapStyle = useRedesignSettingsStore((s) => s.mapStyle);
+	const setMapStyle = useRedesignSettingsStore((s) => s.setMapStyle);
 
 	const next = () => {
 		if (step === STEPS.length - 1) {
@@ -153,7 +155,7 @@ export function WelcomeScreen({ onComplete }: { onComplete?: () => void }) {
 									<button
 										key={m.key}
 										type="button"
-										onClick={() => setMapStyle(m.key as typeof mapStyle)}
+										onClick={() => setMapStyle(m.key)}
 										style={{
 											flex: 1,
 											padding: 0,

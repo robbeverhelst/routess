@@ -29,6 +29,7 @@ export function SearchModal() {
 	const [query, setQuery] = useState("");
 	const [results, setResults] = useState<Suggestion[]>([]);
 	const [loading, setLoading] = useState(false);
+	const [activeIndex, setActiveIndex] = useState(0);
 	const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 	useEffect(() => {
@@ -82,10 +83,40 @@ export function SearchModal() {
 		close();
 	};
 
-	const Row = ({ r, hot }: { r: Suggestion; hot?: boolean }) => (
+	const rows = !query.trim() ? RECENT : results;
+
+	const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+		if (e.key === "Escape") {
+			close();
+			return;
+		}
+
+		if (rows.length === 0) return;
+
+		if (e.key === "ArrowDown") {
+			e.preventDefault();
+			setActiveIndex((i) => Math.min(i + 1, rows.length - 1));
+			return;
+		}
+
+		if (e.key === "ArrowUp") {
+			e.preventDefault();
+			setActiveIndex((i) => Math.max(i - 1, 0));
+			return;
+		}
+
+		if (e.key === "Enter") {
+			e.preventDefault();
+			const selected = rows[activeIndex];
+			if (selected) handleSelect(selected);
+		}
+	};
+
+	const Row = ({ r, hot, index }: { r: Suggestion; hot?: boolean; index: number }) => (
 		<button
 			type="button"
 			onClick={() => handleSelect(r)}
+			onMouseEnter={() => setActiveIndex(index)}
 			disabled={!r.coords}
 			style={{
 				display: "flex",
@@ -152,6 +183,10 @@ export function SearchModal() {
 
 	const showEmpty = !loading && query.trim().length > 0 && results.length === 0;
 
+	useEffect(() => {
+		setActiveIndex(0);
+	}, [query, results]);
+
 	return (
 		<div
 			style={{
@@ -202,7 +237,7 @@ export function SearchModal() {
 						autoFocus
 						value={query}
 						onChange={(e) => setQuery(e.target.value)}
-						onKeyDown={(e) => e.key === "Escape" && close()}
+						onKeyDown={onKeyDown}
 						placeholder="Search addresses, places, coordinates…"
 						style={{
 							flex: 1,
@@ -219,8 +254,8 @@ export function SearchModal() {
 					{!query.trim() && (
 						<>
 							<SecTitle style={{ padding: "8px 12px 6px" }}>Recent</SecTitle>
-							{RECENT.map((r) => (
-								<Row key={r.id} r={r} />
+							{RECENT.map((r, i) => (
+								<Row key={r.id} r={r} hot={i === activeIndex} index={i} />
 							))}
 						</>
 					)}
@@ -240,7 +275,7 @@ export function SearchModal() {
 						<>
 							<SecTitle style={{ padding: "8px 12px 6px" }}>Results</SecTitle>
 							{results.map((r, i) => (
-								<Row key={r.id} r={r} hot={i === 0} />
+								<Row key={r.id} r={r} hot={i === activeIndex} index={i} />
 							))}
 						</>
 					)}

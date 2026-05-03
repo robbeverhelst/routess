@@ -214,6 +214,59 @@ export function Kbd({ children }: { children: ReactNode }) {
 	);
 }
 
+export function PreviewBanner({
+	title = "Preview · sample data",
+	body,
+	style,
+}: {
+	title?: string;
+	body?: ReactNode;
+	style?: CSSProperties;
+}) {
+	return (
+		<div
+			role="note"
+			style={{
+				display: "flex",
+				alignItems: "flex-start",
+				gap: 10,
+				padding: "10px 14px",
+				background: RDS_COLORS.accentSoft,
+				color: RDS_COLORS.accent,
+				border: `1px solid color-mix(in oklch, ${RDS_COLORS.accent} 35%, transparent)`,
+				borderRadius: 10,
+				fontSize: 12.5,
+				lineHeight: 1.45,
+				...style,
+			}}
+		>
+			<span
+				aria-hidden="true"
+				style={{
+					display: "inline-flex",
+					alignItems: "center",
+					justifyContent: "center",
+					width: 18,
+					height: 18,
+					borderRadius: 999,
+					background: "currentColor",
+					color: RDS_COLORS.bgPanel,
+					fontSize: 11,
+					fontWeight: 700,
+					flexShrink: 0,
+					marginTop: 1,
+				}}
+			>
+				i
+			</span>
+			<div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+				<div style={{ fontWeight: 600 }}>{title}</div>
+				{body && <div style={{ color: RDS_COLORS.fgMuted, fontWeight: 400 }}>{body}</div>}
+			</div>
+		</div>
+	);
+}
+
 export function SecTitle({ children, style }: { children: ReactNode; style?: CSSProperties }) {
 	return (
 		<div

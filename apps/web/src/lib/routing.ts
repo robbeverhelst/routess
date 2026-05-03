@@ -226,6 +226,24 @@ export const redo = async (
 	Logger.debug("[Routing] Redo complete. Waypoints:", useRoutingStore.getState().waypoints.length);
 };
 
+// Recalculate the current route using the current waypoints. Used when routing
+// preferences change so the visible route reflects the new options.
+export const recalculateRoute = async (
+	map: MapboxMap,
+	accessToken: string,
+	setRouteDistance: Dispatch<SetStateAction<string>>,
+	setRouteDuration: Dispatch<SetStateAction<string>>,
+	setHasRoute: Dispatch<SetStateAction<boolean>>,
+) => {
+	const { waypoints } = useRoutingStore.getState();
+	if (waypoints.length < 2) {
+		Logger.info("[Routing] No route to recalculate");
+		return;
+	}
+	Logger.info("[Routing] Recalculating route with current preferences");
+	await updateMapFromStore(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
+};
+
 // Setup function to store map reference
 export const setupRouting = (map: MapboxMap, isMapLockedRef: { current: boolean }, accessToken: string) => {
 	_mapInstance = map;
