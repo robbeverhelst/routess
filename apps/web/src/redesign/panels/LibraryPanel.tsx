@@ -1,10 +1,12 @@
 import { useMemo, useState } from "react";
+import { useIsAuthenticated } from "@/hooks/useAuthState";
 import type { ApiRoute } from "@/lib/api";
 import { useUserRoutes } from "@/lib/api-queries";
 import { useModalsStore } from "@/redesign/stores/modalsStore";
 import { type RedesignActivity, useUiStore } from "@/redesign/stores/uiStore";
 import { I } from "../components/icons";
 import { Btn, IconBtn, Kbd, RDS_COLORS } from "../components/primitives";
+import { SignInGate } from "../components/SignInGate";
 import { RouteDetailPanel } from "./RouteDetailPanel";
 
 type Filter = "all" | RedesignActivity | "favourites";
@@ -146,6 +148,22 @@ function EmptyLibrary({
 }
 
 export function LibraryPanel() {
+	const isAuthenticated = useIsAuthenticated();
+	if (!isAuthenticated) {
+		return (
+			<div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+				<SignInGate
+					title="Sign in to see your library"
+					description="Your saved routes live in your account. Sign in or create one to view, organise, and pick up where you left off."
+					icon={I.library}
+				/>
+			</div>
+		);
+	}
+	return <LibraryPanelInner />;
+}
+
+function LibraryPanelInner() {
 	const { data: routes = [], isLoading } = useUserRoutes();
 	const { favouriteRouteIds, toggleFavourite, setContext } = useUiStore();
 	const openModal = useModalsStore((s) => s.openModal);

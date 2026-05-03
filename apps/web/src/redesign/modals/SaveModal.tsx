@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useIsAuthenticated } from "@/hooks/useAuthState";
 import { useSaveRoute } from "@/lib/api-queries";
 import { useRouteDistance, useRouteDuration, useWaypoints } from "@/stores/routingStore";
 import { I } from "../components/icons";
@@ -28,6 +29,7 @@ export function SaveModal() {
 	const { activityType, setActivityType } = useUiStore();
 	const saveRoute = useSaveRoute();
 	const pushToast = useToastStore((s) => s.push);
+	const isAuthenticated = useIsAuthenticated();
 
 	const [name, setName] = useState("");
 	const [privacy, setPrivacy] = useState<(typeof PRIVACY_OPTS)[number]["key"]>("private");
@@ -36,6 +38,10 @@ export function SaveModal() {
 
 	const distanceNumber = parseFloat(distance) || 0;
 	const wpCount = waypoints.length;
+
+	if (!isAuthenticated) {
+		return <SignInToSave distance={distance} duration={duration} wpCount={wpCount} onClose={closeModal} />;
+	}
 
 	const handleSave = () => {
 		if (!name.trim() || waypoints.length < 2) return;
@@ -240,6 +246,80 @@ export function SaveModal() {
 						/>
 					</div>
 				</div>
+			</div>
+		</ModalShell>
+	);
+}
+
+function SignInToSave({
+	distance,
+	duration,
+	wpCount,
+	onClose,
+}: {
+	distance: string;
+	duration: string;
+	wpCount: number;
+	onClose: () => void;
+}) {
+	const goToSignIn = () => {
+		onClose();
+		window.dispatchEvent(new CustomEvent("routess:open-login"));
+	};
+
+	const goToSignUp = () => {
+		onClose();
+		window.dispatchEvent(new CustomEvent("routess:open-signup"));
+	};
+
+	return (
+		<ModalShell
+			title="You need an account to save"
+			sub={`${distance || "—"} · ${duration || "—"} · ${wpCount} waypoints`}
+			width={420}
+			onClose={onClose}
+			footer={
+				<>
+					<Btn onClick={onClose}>Cancel</Btn>
+					<div style={{ flex: 1 }} />
+					<Btn onClick={goToSignUp}>Create account</Btn>
+					<Btn variant="primary" onClick={goToSignIn}>
+						<I.user size={14} /> Sign in
+					</Btn>
+				</>
+			}
+		>
+			<div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+				<p style={{ margin: 0, fontSize: 13.5, color: RDS_COLORS.fg, lineHeight: 1.5 }}>
+					Saving routes requires a free Routess account.
+				</p>
+				<p style={{ margin: 0, fontSize: 12.5, color: RDS_COLORS.fgMuted, lineHeight: 1.5 }}>
+					Sign in or create an account to keep this route. Your current draft stays on the map while you sign in — you
+					can come back and finish saving in a moment.
+				</p>
+
+				<ul
+					style={{
+						listStyle: "none",
+						padding: 0,
+						margin: 0,
+						display: "flex",
+						flexDirection: "column",
+						gap: 8,
+						fontSize: 12.5,
+						color: RDS_COLORS.fgMuted,
+					}}
+				>
+					<li style={{ display: "flex", alignItems: "center", gap: 8 }}>
+						<I.save size={12} /> Save unlimited routes
+					</li>
+					<li style={{ display: "flex", alignItems: "center", gap: 8 }}>
+						<I.library size={12} /> Sync across web and mobile
+					</li>
+					<li style={{ display: "flex", alignItems: "center", gap: 8 }}>
+						<I.share size={12} /> Share routes with a link
+					</li>
+				</ul>
 			</div>
 		</ModalShell>
 	);

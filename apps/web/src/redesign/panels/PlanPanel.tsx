@@ -131,10 +131,13 @@ export function PlanPanel() {
 				</div>
 
 				<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 6 }}>
-					<EndpointInput dotColor={RDS_COLORS.success} label={startWp ? formatCoord(startWp) : "Add start point"} />
+					<EndpointInput
+						dotColor={RDS_COLORS.success}
+						label={startWp ? formatCoord(startWp.coord) : "Add start point"}
+					/>
 					<EndpointInput
 						dotColor={RDS_COLORS.danger}
-						label={endWp && waypoints.length > 1 ? formatCoord(endWp) : "Add end point"}
+						label={endWp && waypoints.length > 1 ? formatCoord(endWp.coord) : "Add end point"}
 					/>
 				</div>
 

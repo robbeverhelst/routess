@@ -1,9 +1,27 @@
+import { useIsAuthenticated } from "@/hooks/useAuthState";
 import { EmptyActivity } from "../components/EmptyStates";
 import { I } from "../components/icons";
 import { Badge, PreviewBanner, RDS_COLORS, SecTitle } from "../components/primitives";
+import { SignInGate } from "../components/SignInGate";
 import { useActivities } from "../hooks/useActivities";
 
 export function ActivityPanel() {
+	const isAuthenticated = useIsAuthenticated();
+	if (!isAuthenticated) {
+		return (
+			<div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+				<SignInGate
+					title="Sign in to track activity"
+					description="Your sessions, weekly stats, and recent runs are tied to your account. Sign in or create one to start tracking."
+					icon={I.activity}
+				/>
+			</div>
+		);
+	}
+	return <ActivityPanelInner />;
+}
+
+function ActivityPanelInner() {
 	const data = useActivities();
 	const max = Math.max(...data.weeklyHistory, 1);
 
