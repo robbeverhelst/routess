@@ -12,7 +12,7 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 	const durationStr = route.duration ? `${Math.round(route.duration / 60)} min` : "—";
 	const elevStr = route.elevationGain ? `${Math.round(route.elevationGain)}` : "—";
 	const paceStr =
-		route.distance && route.duration ? ((route.distance / 1000 / (route.duration / 3600)) || 0).toFixed(1) : "—";
+		route.distance && route.duration ? (route.distance / 1000 / (route.duration / 3600) || 0).toFixed(1) : "—";
 
 	const [moreOpen, setMoreOpen] = useState(false);
 	const moreRef = useRef<HTMLDivElement | null>(null);
