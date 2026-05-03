@@ -1,8 +1,4 @@
-/**
- * Main routing system
- */
-
-import type { Coordinate } from "@routess/core";
+import type { Coordinate, Waypoint, WaypointType } from "@routess/core";
 import { pointToSegmentDistance } from "@routess/core";
 import type { Map as MapboxMap } from "mapbox-gl";
 import type { Dispatch, SetStateAction } from "react";
@@ -19,14 +15,10 @@ import { exportCurrentRouteToGPXFile, importRouteFromGPXString } from "@/feature
 import { Logger } from "@/lib/logger";
 import { useRoutingStore } from "@/stores/routingStore";
 
-// Global references for undo/redo
 let _mapInstance: MapboxMap | null = null;
 let _isMapLockedRef: { current: boolean } | null = null;
 let _accessToken: string | null = null;
 
-// Note: haversineDistance is now imported from shared geospatial utils
-
-// Update map with current store state using RouteCalculationService
 async function updateMapFromStore(
 	map: MapboxMap,
 	accessToken: string,
@@ -40,64 +32,41 @@ async function updateMapFromStore(
 	clearKilometerMarkersLayer(map);
 	updateDragLinesLayer(map, []);
 
-	// Update waypoints on map
 	updateWaypointsLayer(map, waypoints, _isMapLockedRef?.current ?? false);
-	saveWaypointsToLocalStorage(waypoints, useRoutingStore.getState().directFlags);
+	saveWaypointsToLocalStorage(waypoints);
 
 	if (waypoints.length >= 2 && accessToken) {
-		// Use RouteCalculationService for comprehensive route calculation
 		const result = await getRoute(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
 
-		// Handle waypoint snapping if available
 		if (result.waypointsSnapped && result.snappedWaypoints) {
 			Logger.debug("[Routing] Updating stored waypoints with snapped coordinates");
-			useRoutingStore.getState().updateWaypoints(result.snappedWaypoints);
-
-			if (result.snappedDirectFlags) {
-				useRoutingStore.getState().updateDirectFlags(result.snappedDirectFlags);
-			}
-
-			// Update waypoints layer with snapped coordinates
+			useRoutingStore.getState().setWaypoints(result.snappedWaypoints);
 			updateWaypointsLayer(map, result.snappedWaypoints, _isMapLockedRef?.current ?? false);
 		}
 	} else {
 		setRouteDistance("");
 		setRouteDuration("");
 		setHasRoute(false);
-
-		// Clear route path in Zustand store
 		useRoutingStore.getState().clearRoutePath();
-
-		// Update store route info
 		useRoutingStore.getState().setRouteDistance("");
 		useRoutingStore.getState().setRouteDuration("");
 		useRoutingStore.getState().setHasRoute(false);
 	}
 }
 
-// === ROUTING FUNCTIONS ===
-
 export const addWaypoint = async (
 	map: MapboxMap,
-	coords: Coordinate,
-	isDirect: boolean,
+	coord: Coordinate,
+	type: WaypointType,
 	accessToken: string,
 	setRouteDistance: Dispatch<SetStateAction<string>>,
 	setRouteDuration: Dispatch<SetStateAction<string>>,
 	setHasRoute: Dispatch<SetStateAction<boolean>>,
 ) => {
-	Logger.debug("[Routing] Adding waypoint:", coords, "isDirect:", isDirect);
-
-	// Take snapshot before action
+	Logger.debug("[Routing] Adding waypoint:", coord, "type:", type);
 	useRoutingStore.getState().saveSnapshot();
-
-	// Add waypoint to store with original coordinates
-	// Let the Directions API handle snapping for consistency
-	useRoutingStore.getState().addWaypoint(coords, isDirect);
-
-	// Update map - this will trigger route calculation which handles snapping
+	useRoutingStore.getState().addWaypoint(coord, type);
 	await updateMapFromStore(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
-
 	Logger.debug("[Routing] Waypoint added. Total:", useRoutingStore.getState().waypoints.length);
 };
 
@@ -110,16 +79,9 @@ export const removeWaypoint = async (
 	setHasRoute: Dispatch<SetStateAction<boolean>>,
 ) => {
 	Logger.debug("[Routing] Removing waypoint at index:", index);
-
-	// Take snapshot before action
 	useRoutingStore.getState().saveSnapshot();
-
-	// Remove waypoint from store
 	useRoutingStore.getState().removeWaypoint(index);
-
-	// Update map
 	await updateMapFromStore(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
-
 	Logger.debug("[Routing] Waypoint removed. Remaining:", useRoutingStore.getState().waypoints.length);
 };
 
@@ -131,17 +93,10 @@ export const resetRouting = async (
 	setHasRoute: Dispatch<SetStateAction<boolean>>,
 ) => {
 	Logger.info("[Routing] Resetting routing");
-
-	// Take snapshot before clearing
 	useRoutingStore.getState().saveSnapshot();
-
-	// Clear waypoints
 	useRoutingStore.getState().clearWaypoints();
-	saveWaypointsToLocalStorage([], []);
-
-	// Update map
+	saveWaypointsToLocalStorage([]);
 	await updateMapFromStore(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
-
 	Logger.info("[Routing] Reset complete");
 };
 
@@ -152,29 +107,22 @@ export const reverseRoute = async (
 	setRouteDuration: Dispatch<SetStateAction<string>>,
 	setHasRoute: Dispatch<SetStateAction<boolean>>,
 ) => {
-	const { waypoints, directFlags } = useRoutingStore.getState();
-
+	const { waypoints } = useRoutingStore.getState();
 	if (waypoints.length < 2) {
 		Logger.info("[Routing] Not enough waypoints to reverse");
 		return;
 	}
 
 	Logger.info("[Routing] Reversing route");
-
-	// Take snapshot before action
 	useRoutingStore.getState().saveSnapshot();
 
-	// Reverse waypoints and directFlags
-	const reversedWaypoints = [...waypoints].reverse();
-	const reversedDirectFlags = [...directFlags].reverse();
+	const reversedCoords = [...waypoints].reverse().map((wp) => wp.coord);
+	const types = waypoints.map((wp) => wp.type);
+	const reversedTypes = [...types.slice(1).reverse(), types[0]];
+	const reversed: Waypoint[] = reversedCoords.map((coord, i) => ({ coord, type: reversedTypes[i] }));
+	useRoutingStore.getState().setWaypoints(reversed);
 
-	// Update store with reversed data
-	useRoutingStore.getState().updateWaypoints(reversedWaypoints);
-	useRoutingStore.getState().updateDirectFlags(reversedDirectFlags);
-
-	// Update map
 	await updateMapFromStore(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
-
 	Logger.info("[Routing] Route reversed");
 };
 
@@ -190,11 +138,8 @@ export const undo = async (
 	}
 
 	Logger.debug("[Routing] Undoing action");
-
-	// Undo in store
 	useRoutingStore.getState().undo();
 
-	// Update map if available
 	if (_mapInstance && _accessToken) {
 		await updateMapFromStore(_mapInstance, _accessToken, setRouteDistance, setRouteDuration, setHasRoute);
 	}
@@ -214,11 +159,8 @@ export const redo = async (
 	}
 
 	Logger.debug("[Routing] Redoing action");
-
-	// Redo in store
 	useRoutingStore.getState().redo();
 
-	// Update map if available
 	if (_mapInstance && _accessToken) {
 		await updateMapFromStore(_mapInstance, _accessToken, setRouteDistance, setRouteDuration, setHasRoute);
 	}
@@ -226,7 +168,6 @@ export const redo = async (
 	Logger.debug("[Routing] Redo complete. Waypoints:", useRoutingStore.getState().waypoints.length);
 };
 
-// Setup function to store map reference
 export const setupRouting = (map: MapboxMap, isMapLockedRef: { current: boolean }, accessToken: string) => {
 	_mapInstance = map;
 	_isMapLockedRef = isMapLockedRef;
@@ -234,15 +175,12 @@ export const setupRouting = (map: MapboxMap, isMapLockedRef: { current: boolean 
 	Logger.debug("[Routing] Setup complete with access token");
 };
 
-// Teardown function to clean up routing
 export const teardownRouting = () => {
 	_mapInstance = null;
 	_isMapLockedRef = null;
 	_accessToken = null;
 	Logger.debug("[Routing] Teardown complete");
 };
-
-// === ADDITIONAL FUNCTIONS ===
 
 export const insertWaypointAtLocation = async (
 	map: MapboxMap,
@@ -262,14 +200,12 @@ export const insertWaypointAtLocation = async (
 		return { success: false, error: errorMsg };
 	}
 
-	// For simplicity, find the closest segment and insert there
 	let minDistance = Infinity;
 	let insertIndex = waypoints.length;
 
-	// Find closest segment
 	for (let i = 0; i < waypoints.length - 1; i++) {
-		const start = waypoints[i];
-		const end = waypoints[i + 1];
+		const start = waypoints[i].coord;
+		const end = waypoints[i + 1].coord;
 		const dist = pointToSegmentDistance(clickedCoords, start, end);
 
 		if (dist < minDistance) {
@@ -278,7 +214,6 @@ export const insertWaypointAtLocation = async (
 		}
 	}
 
-	// Check if click is reasonably close to route
 	const MAX_CLICK_DISTANCE_KM = 0.1;
 	if (minDistance > MAX_CLICK_DISTANCE_KM && waypoints.length >= 2) {
 		const errorMsg = "Click too far from route.";
@@ -286,22 +221,18 @@ export const insertWaypointAtLocation = async (
 	}
 
 	if (!options?.skipRouteCalcAndSnapshot) {
-		// Take snapshot before action
 		useRoutingStore.getState().saveSnapshot();
 	}
 
-	// Insert waypoint at the calculated index
-	const newWaypoints = [...waypoints];
-	const newDirectFlags = [...useRoutingStore.getState().directFlags];
+	const newWaypoints: Waypoint[] = [
+		...waypoints.slice(0, insertIndex),
+		{ coord: clickedCoords, type: "routed" },
+		...waypoints.slice(insertIndex),
+	];
 
-	newWaypoints.splice(insertIndex, 0, clickedCoords);
-	newDirectFlags.splice(insertIndex, 0, false);
-
-	// Update store
-	useRoutingStore.getState().setWaypoints(newWaypoints, newDirectFlags);
+	useRoutingStore.getState().setWaypoints(newWaypoints);
 
 	if (!options?.skipRouteCalcAndSnapshot) {
-		// Update map
 		await updateMapFromStore(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
 	}
 
@@ -312,13 +243,13 @@ export const insertWaypointAtLocation = async (
 export const updateWaypointPosition = async (
 	map: MapboxMap,
 	index: number,
-	newCoords: Coordinate,
+	newCoord: Coordinate,
 	accessToken: string,
 	setRouteDistance: Dispatch<SetStateAction<string>>,
 	setRouteDuration: Dispatch<SetStateAction<string>>,
 	setHasRoute: Dispatch<SetStateAction<boolean>>,
 ): Promise<void> => {
-	Logger.info("[Routing] Updating waypoint position at index:", index, "to:", newCoords);
+	Logger.info("[Routing] Updating waypoint position at index:", index, "to:", newCoord);
 
 	const { waypoints } = useRoutingStore.getState();
 
@@ -327,33 +258,24 @@ export const updateWaypointPosition = async (
 		return;
 	}
 
-	// Take snapshot before action
 	useRoutingStore.getState().saveSnapshot();
 
-	// Update waypoint position
-	const newWaypoints = [...waypoints];
-	newWaypoints[index] = newCoords;
+	const next = waypoints.map((wp, i) => (i === index ? { ...wp, coord: newCoord } : wp));
+	useRoutingStore.getState().setWaypoints(next);
 
-	useRoutingStore.getState().updateWaypoints(newWaypoints);
-
-	// Update map - this will handle snapping via Directions API
 	await updateMapFromStore(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
-
 	Logger.info("[Routing] Waypoint position updated");
 };
 
-// Function to update user location on the map
 export const updateUserLocationPoint = (map: MapboxMap, coordinates: Coordinate | null) => {
 	updateUserLocationLayer(map, coordinates);
 };
 
-// GPX Export function
 export const exportRouteToGPX = (): { success: boolean; message?: string } => {
 	Logger.info("[Routing] GPX export requested");
 	return exportCurrentRouteToGPXFile();
 };
 
-// GPX Import function
 export const importRouteFromGPX = async (
 	_gpxString: string,
 	_map: MapboxMap,
@@ -377,5 +299,3 @@ export const importRouteFromGPX = async (
 		onError(result.message);
 	}
 };
-
-// Note: pointToSegmentDistance is now imported from shared geospatial utils

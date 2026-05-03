@@ -38,9 +38,7 @@ export function SaveRouteModal({
 	const [description, setDescription] = useState("");
 	const [error, setError] = useState<string | null>(null);
 
-	// Get waypoints and directFlags from Zustand store
 	const waypoints = useRoutingStore((state) => state.waypoints);
-	const directFlags = useRoutingStore((state) => state.directFlags);
 
 	const saveRouteMutation = useSaveRoute();
 
@@ -57,11 +55,10 @@ export function SaveRouteModal({
 
 		setError(null);
 
-		// Transform Coordinate[] to Waypoint[] for API
-		const transformedWaypoints: Waypoint[] = waypoints.map((coord, index) => ({
-			lng: coord[0],
-			lat: coord[1],
-			type: directFlags[index] ? "direct" : "routed",
+		const transformedWaypoints: Waypoint[] = waypoints.map((wp) => ({
+			lng: wp.coord[0],
+			lat: wp.coord[1],
+			type: wp.type,
 		}));
 
 		saveRouteMutation.mutate(

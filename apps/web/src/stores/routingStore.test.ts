@@ -1,8 +1,8 @@
+import type { Waypoint } from "@routess/core";
 import { vi } from "vitest";
 import { useRoutingStore } from "@/stores/routingStore";
 import { mockCoordinates } from "../test/utils";
 
-// Mock localStorage for persistence
 const mockLocalStorage = {
 	getItem: vi.fn(),
 	setItem: vi.fn(),
@@ -11,12 +11,12 @@ const mockLocalStorage = {
 };
 Object.defineProperty(window, "localStorage", { value: mockLocalStorage });
 
+const wp = (coord: [number, number], type: "routed" | "direct" = "routed"): Waypoint => ({ coord, type });
+
 describe("RoutingStore", () => {
 	beforeEach(() => {
-		// Reset store to initial state
 		useRoutingStore.setState({
 			waypoints: [],
-			directFlags: [],
 			routePath: [],
 			routeDistance: "",
 			routeDuration: "",
@@ -38,59 +38,59 @@ describe("RoutingStore", () => {
 		it("should add waypoints correctly", () => {
 			const store = useRoutingStore.getState();
 
-			store.addWaypoint(mockCoordinates.berlin, false);
+			store.addWaypoint(mockCoordinates.berlin, "routed");
 
 			const state = useRoutingStore.getState();
 			expect(state.waypoints).toHaveLength(1);
-			expect(state.waypoints[0]).toEqual(mockCoordinates.berlin);
-			expect(state.directFlags[0]).toBe(false);
+			expect(state.waypoints[0]).toEqual(wp(mockCoordinates.berlin, "routed"));
 		});
 
 		it("should remove waypoints correctly", () => {
 			const store = useRoutingStore.getState();
 
-			// Add two waypoints
-			store.addWaypoint(mockCoordinates.berlin, false);
-			store.addWaypoint(mockCoordinates.paris, true);
+			store.addWaypoint(mockCoordinates.berlin, "routed");
+			store.addWaypoint(mockCoordinates.paris, "direct");
 
-			// Remove the first one
 			store.removeWaypoint(0);
 
 			const state = useRoutingStore.getState();
 			expect(state.waypoints).toHaveLength(1);
-			expect(state.waypoints[0]).toEqual(mockCoordinates.paris);
-			expect(state.directFlags[0]).toBe(true);
+			expect(state.waypoints[0]).toEqual(wp(mockCoordinates.paris, "direct"));
 		});
 
 		it("should clear waypoints correctly", () => {
 			const store = useRoutingStore.getState();
 
-			// Add waypoints
-			store.addWaypoint(mockCoordinates.berlin, false);
-			store.addWaypoint(mockCoordinates.paris, true);
+			store.addWaypoint(mockCoordinates.berlin, "routed");
+			store.addWaypoint(mockCoordinates.paris, "direct");
 
-			// Clear all
 			store.clearWaypoints();
 
 			const state = useRoutingStore.getState();
 			expect(state.waypoints).toHaveLength(0);
-			expect(state.directFlags).toHaveLength(0);
 			expect(state.routePath).toHaveLength(0);
 			expect(state.routeDistance).toBe("");
 			expect(state.routeDuration).toBe("");
 			expect(state.hasRoute).toBe(false);
 		});
 
-		it("should set waypoints and flags together", () => {
+		it("should set waypoints together", () => {
 			const store = useRoutingStore.getState();
-			const waypoints = [mockCoordinates.berlin, mockCoordinates.paris];
-			const directFlags = [false, true];
+			const waypoints: Waypoint[] = [wp(mockCoordinates.berlin, "routed"), wp(mockCoordinates.paris, "direct")];
 
-			store.setWaypoints(waypoints, directFlags);
+			store.setWaypoints(waypoints);
 
 			const state = useRoutingStore.getState();
 			expect(state.waypoints).toEqual(waypoints);
-			expect(state.directFlags).toEqual(directFlags);
+		});
+
+		it("should toggle a waypoint type", () => {
+			const store = useRoutingStore.getState();
+			store.addWaypoint(mockCoordinates.berlin, "routed");
+
+			store.setWaypointType(0, "direct");
+
+			expect(useRoutingStore.getState().waypoints[0].type).toBe("direct");
 		});
 	});
 
@@ -108,11 +108,9 @@ describe("RoutingStore", () => {
 		it("should clear route path correctly", () => {
 			const store = useRoutingStore.getState();
 
-			// Set a route path first
 			store.setRoutePath([mockCoordinates.berlin, mockCoordinates.paris]);
 			expect(useRoutingStore.getState().routePath).toHaveLength(2);
 
-			// Clear it
 			store.clearRoutePath();
 
 			const state = useRoutingStore.getState();
@@ -137,10 +135,7 @@ describe("RoutingStore", () => {
 		it("should save snapshots correctly", () => {
 			const store = useRoutingStore.getState();
 
-			// Add a waypoint first
-			store.addWaypoint(mockCoordinates.berlin, false);
-
-			// Save snapshot
+			store.addWaypoint(mockCoordinates.berlin, "routed");
 			store.saveSnapshot();
 
 			const state = useRoutingStore.getState();
@@ -153,13 +148,9 @@ describe("RoutingStore", () => {
 		it("should undo correctly", () => {
 			const store = useRoutingStore.getState();
 
-			// Save initial empty state
 			store.saveSnapshot();
+			store.addWaypoint(mockCoordinates.berlin, "routed");
 
-			// Add waypoint
-			store.addWaypoint(mockCoordinates.berlin, false);
-
-			// Undo
 			store.undo();
 
 			const state = useRoutingStore.getState();
@@ -172,17 +163,15 @@ describe("RoutingStore", () => {
 		it("should redo correctly", () => {
 			const store = useRoutingStore.getState();
 
-			// Save initial state, add waypoint, undo
 			store.saveSnapshot();
-			store.addWaypoint(mockCoordinates.berlin, false);
+			store.addWaypoint(mockCoordinates.berlin, "routed");
 			store.undo();
 
-			// Now redo
 			store.redo();
 
 			const state = useRoutingStore.getState();
 			expect(state.waypoints).toHaveLength(1);
-			expect(state.waypoints[0]).toEqual(mockCoordinates.berlin);
+			expect(state.waypoints[0]).toEqual(wp(mockCoordinates.berlin, "routed"));
 			expect(state.canUndo).toBe(true);
 			expect(state.canRedo).toBe(false);
 		});
@@ -190,14 +179,12 @@ describe("RoutingStore", () => {
 		it("should clear redo stack when new action is performed after undo", () => {
 			const store = useRoutingStore.getState();
 
-			// Setup: save state, add waypoint, undo
 			store.saveSnapshot();
-			store.addWaypoint(mockCoordinates.berlin, false);
+			store.addWaypoint(mockCoordinates.berlin, "routed");
 			store.undo();
 
 			expect(useRoutingStore.getState().canRedo).toBe(true);
 
-			// Perform new action (save snapshot)
 			store.saveSnapshot();
 
 			const state = useRoutingStore.getState();
@@ -208,7 +195,6 @@ describe("RoutingStore", () => {
 		it("should handle undo when no actions to undo", () => {
 			const store = useRoutingStore.getState();
 
-			// Try to undo with empty stack
 			store.undo();
 
 			const state = useRoutingStore.getState();
@@ -219,7 +205,6 @@ describe("RoutingStore", () => {
 		it("should handle redo when no actions to redo", () => {
 			const store = useRoutingStore.getState();
 
-			// Try to redo with empty stack
 			store.redo();
 
 			const state = useRoutingStore.getState();
@@ -272,13 +257,11 @@ describe("RoutingStore", () => {
 		it("should clear share state correctly", () => {
 			const store = useRoutingStore.getState();
 
-			// Set some share state
 			store.setShareNotification("Test notification");
 			store.setDisplayedShareUrl("https://example.com");
 			store.setShowRouteInfoError(true);
 			store.setRouteInfoErrorMessage("Test error");
 
-			// Clear it
 			store.clearShareState();
 
 			const state = useRoutingStore.getState();

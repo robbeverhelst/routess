@@ -186,19 +186,18 @@ const MapWithRoutingContent: React.FC<MapboxMapProps> = ({
 		const onLoadRoute = (event: Event) => {
 			const detail = (
 				event as CustomEvent<{
-					waypoints?: [number, number][];
-					directFlags?: boolean[];
+					waypoints?: Array<{ lat: number; lng: number; type: "routed" | "direct" }>;
 				}>
 			).detail;
 			if (!detail?.waypoints || detail.waypoints.length === 0) {
 				Logger.warn("[MapWithRouting] routess:load-route received with no waypoints");
 				return;
 			}
-			const directFlags =
-				detail.directFlags && detail.directFlags.length === detail.waypoints.length
-					? detail.directFlags
-					: detail.waypoints.map(() => false);
-			useRoutingStore.getState().setWaypoints(detail.waypoints, directFlags);
+			const waypoints = detail.waypoints.map((wp) => ({
+				coord: [wp.lng, wp.lat] as [number, number],
+				type: (wp.type === "direct" ? "direct" : "routed") as "direct" | "routed",
+			}));
+			useRoutingStore.getState().setWaypoints(waypoints);
 		};
 		const onShareRoute = () => {
 			handleCopyShareLinkToClipboard();

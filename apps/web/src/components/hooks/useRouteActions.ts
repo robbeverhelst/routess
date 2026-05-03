@@ -94,7 +94,7 @@ export const useRouteActions = ({
 		const success = await addWaypoint(
 			mapRef.current,
 			[popup.longitude, popup.latitude],
-			true,
+			"direct",
 			mapboxToken,
 			setRouteDistance,
 			setRouteDuration,
@@ -182,14 +182,14 @@ export const useRouteActions = ({
 
 	// Share link handler
 	const handleCopyShareLinkToClipboard = useCallback(() => {
-		const { waypoints, directFlags } = useRoutingStore.getState();
+		const { waypoints, isMapLocked } = useRoutingStore.getState();
 
 		if (waypoints.length === 0) {
 			handleRouteInfoError("Cannot share an empty route.");
 			return;
 		}
 
-		const encodedData = serializeAndCompress(waypoints, directFlags, useRoutingStore.getState().isMapLocked);
+		const encodedData = serializeAndCompress(waypoints, isMapLocked);
 
 		if (encodedData) {
 			const shareUrl = `${window.location.origin}${window.location.pathname}?route=${encodedData}`;

@@ -3,13 +3,12 @@ import { useModalsStore } from "@/redesign/stores/modalsStore";
 import { type RedesignActivity, useUiStore } from "@/redesign/stores/uiStore";
 import {
 	useClearWaypoints,
-	useDirectFlags,
 	useHasRoute,
 	useRemoveWaypoint,
 	useRouteDistance,
 	useRouteDuration,
 	useRoutePath,
-	useRoutingStore,
+	useSetWaypointType,
 	useWaypoints,
 } from "@/stores/routingStore";
 import { I } from "../components/icons";
@@ -59,14 +58,13 @@ function ElevationSparkline() {
 
 export function PlanPanel() {
 	const waypoints = useWaypoints();
-	const directFlags = useDirectFlags();
 	const routePath = useRoutePath();
 	const distance = useRouteDistance();
 	const duration = useRouteDuration();
 	const hasRoute = useHasRoute();
 	const clear = useClearWaypoints();
 	const removeWaypoint = useRemoveWaypoint();
-	const updateDirectFlags = useRoutingStore((s) => s.updateDirectFlags);
+	const setWaypointType = useSetWaypointType();
 	const [openMenuIdx, setOpenMenuIdx] = useState<number | null>(null);
 
 	const { activityType, setActivityType } = useUiStore();
@@ -217,7 +215,7 @@ export function PlanPanel() {
 							return (
 								<div
 									// biome-ignore lint/suspicious/noArrayIndexKey: waypoints can repeat coords; combine coord with index for stable key
-									key={`${w[0]}-${w[1]}-${i}`}
+									key={`${w.coord[0]}-${w.coord[1]}-${i}`}
 									style={{
 										display: "flex",
 										alignItems: "center",
@@ -259,23 +257,20 @@ export function PlanPanel() {
 									<div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
 										<div style={{ fontSize: 13, fontWeight: 500, color: RDS_COLORS.fg }}>{label}</div>
 										<div className="rds-mono" style={{ fontSize: 11, color: RDS_COLORS.fgSubtle, marginTop: 2 }}>
-											{formatCoord(w)}
+											{formatCoord(w.coord)}
 										</div>
 									</div>
 									<WaypointMenu
 										open={openMenuIdx === i}
 										onToggle={() => setOpenMenuIdx(openMenuIdx === i ? null : i)}
 										onClose={() => setOpenMenuIdx(null)}
-										isDirect={directFlags[i] ?? false}
+										isDirect={w.type === "direct"}
 										onRemove={() => {
 											removeWaypoint(i);
 											setOpenMenuIdx(null);
 										}}
 										onToggleDirect={() => {
-											const next =
-												directFlags.length === waypoints.length ? [...directFlags] : waypoints.map(() => false);
-											next[i] = !(next[i] ?? false);
-											updateDirectFlags(next);
+											setWaypointType(i, w.type === "direct" ? "routed" : "direct");
 											setOpenMenuIdx(null);
 										}}
 									/>

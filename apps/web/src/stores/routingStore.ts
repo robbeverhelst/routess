@@ -1,14 +1,11 @@
 import { createRoutingSelectors, createRoutingStore } from "@routess/core";
 import { Logger } from "@/lib/logger";
 
-// Create the routing store with web-specific logger
 export const useRoutingStore = createRoutingStore(Logger);
 
-// Create and export all selectors
 export const {
 	// State selectors
 	useWaypoints,
-	useDirectFlags,
 	useRoutePath,
 	useRouteDistance,
 	useRouteDuration,
@@ -24,6 +21,8 @@ export const {
 	useAddWaypoint,
 	useRemoveWaypoint,
 	useSetWaypoints,
+	useSetWaypointType,
+	useUpdateWaypointCoords,
 	useClearWaypoints,
 	useSetRoutePath,
 	useClearRoutePath,
@@ -42,5 +41,4 @@ export const {
 	useClearShareState,
 } = createRoutingSelectors(useRoutingStore);
 
-// Export types for compatibility
 export type { RouteActions, RouteState, RoutingStore } from "@routess/core";

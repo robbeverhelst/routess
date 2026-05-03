@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useSaveRoute } from "@/lib/api-queries";
-import { useDirectFlags, useRouteDistance, useRouteDuration, useWaypoints } from "@/stores/routingStore";
+import { useRouteDistance, useRouteDuration, useWaypoints } from "@/stores/routingStore";
 import { I } from "../components/icons";
 import { ModalShell } from "../components/ModalShell";
 import { Btn, RDS_COLORS, SecTitle } from "../components/primitives";
@@ -23,7 +23,6 @@ const PRIVACY_OPTS = [
 export function SaveModal() {
 	const closeModal = useModalsStore((s) => s.closeModal);
 	const waypoints = useWaypoints();
-	const directFlags = useDirectFlags();
 	const distance = useRouteDistance();
 	const duration = useRouteDuration();
 	const { activityType, setActivityType } = useUiStore();
@@ -46,10 +45,10 @@ export function SaveModal() {
 				description: tags.length
 					? `Activity: ${activityType}; Privacy: ${privacy}; Tags: ${tags.join(", ")}`
 					: `Activity: ${activityType}; Privacy: ${privacy}`,
-				waypoints: waypoints.map(([lng, lat], i) => ({
-					lng,
-					lat,
-					type: directFlags[i] ? "direct" : "routed",
+				waypoints: waypoints.map((wp) => ({
+					lng: wp.coord[0],
+					lat: wp.coord[1],
+					type: wp.type,
 				})),
 				distance: distanceNumber * 1000,
 				elevationGain: 0,

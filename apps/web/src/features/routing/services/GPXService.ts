@@ -1,3 +1,4 @@
+import type { Waypoint } from "@routess/core";
 import { haversineDistance } from "@routess/core";
 import { setCurrentRoutePath } from "@/features/routing/services/RouteCalculationService";
 import { checkNearRoad } from "@/features/routing/utils/RoutingUtils";
@@ -147,7 +148,7 @@ export function convertTrackToSmartWaypoints(trackPoints: Coordinate[]): Coordin
  * @param routePath - An array of coordinates representing the calculated route path.
  * @returns A string containing the GPX data.
  */
-export const generateGPXString = (waypoints: Coordinate[], routePath: Coordinate[]): string => {
+export const generateGPXString = (waypoints: Waypoint[], routePath: Coordinate[]): string => {
 	let gpxString = `<?xml version="1.0" encoding="UTF-8"?>
 <gpx version="1.1" creator="WebApp Route Planner" xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
   <metadata>
@@ -156,12 +157,11 @@ export const generateGPXString = (waypoints: Coordinate[], routePath: Coordinate
   </metadata>
 `;
 
-	// Export waypoints for editing capability
 	if (waypoints.length > 0) {
 		gpxString += `  <rte>\n    <name>Route Waypoints</name>\n`;
-		waypoints.forEach((waypoint: Coordinate, index: number) => {
-			const lat = waypoint[1];
-			const lon = waypoint[0];
+		waypoints.forEach((waypoint, index) => {
+			const lat = waypoint.coord[1];
+			const lon = waypoint.coord[0];
 			gpxString += `    <rtept lat="${lat}" lon="${lon}">\n`;
 			gpxString += `      <name>Waypoint ${index + 1}</name>\n`;
 			gpxString += `    </rtept>\n`;
@@ -321,7 +321,7 @@ export const parseGPXFile = async (
 export const processGPXWaypoints = async (
 	gpxWaypoints: Coordinate[],
 	accessToken: string,
-): Promise<{ finalWaypoints?: Coordinate[]; finalDirectFlags?: boolean[]; error?: string }> => {
+): Promise<{ finalWaypoints?: Waypoint[]; error?: string }> => {
 	if (!gpxWaypoints || gpxWaypoints.length === 0) {
 		return { error: "No waypoints provided for processing." };
 	}
@@ -331,17 +331,12 @@ export const processGPXWaypoints = async (
 		const roadChecks = await Promise.all(gpxWaypoints.map((coord) => checkNearRoad(coord, accessToken)));
 		Logger.info("[GPXService.processGPXWaypoints] Road proximity checks complete.");
 
-		const finalNewWaypoints: Coordinate[] = [];
-		const newDirectFlags: boolean[] = [];
+		const finalWaypoints: Waypoint[] = gpxWaypoints.map((coord, index) => ({
+			coord,
+			type: roadChecks[index]?.isValid ? "routed" : "direct",
+		}));
 
-		gpxWaypoints.forEach((coord, index) => {
-			finalNewWaypoints.push(coord);
-			// If roadCheck is valid, it's NOT a direct point. If invalid/off-road, it IS a direct point.
-			newDirectFlags.push(!roadChecks[index]?.isValid);
-		});
-
-		Logger.info("[GPXService.processGPXWaypoints] Determined directFlags:", JSON.stringify(newDirectFlags));
-		return { finalWaypoints: finalNewWaypoints, finalDirectFlags: newDirectFlags };
+		return { finalWaypoints };
 	} catch (error) {
 		const errorMessage = error instanceof Error ? error.message : "Unknown error during waypoint processing";
 		Logger.error("[GPXService.processGPXWaypoints] Error processing GPX waypoints:", error);
@@ -360,25 +355,17 @@ export const processGPXWaypoints = async (
 export const processHybridGPXData = async (
 	waypoints: Coordinate[],
 	trackPoints: Coordinate[],
-): Promise<{ finalWaypoints?: Coordinate[]; finalDirectFlags?: boolean[]; error?: string }> => {
+): Promise<{ finalWaypoints?: Waypoint[]; error?: string }> => {
 	try {
 		Logger.info(
 			`[GPXService.processHybridGPXData] Processing hybrid GPX: ${waypoints.length} waypoints, ${trackPoints.length} track points.`,
 		);
 
-		// Set the track points directly as the current route path for exact display
 		setCurrentRoutePath(trackPoints);
 		Logger.info(`[GPXService.processHybridGPXData] Set ${trackPoints.length} track points as exact route path.`);
 
-		// For hybrid imports, we don't want to draw direct lines between waypoints
-		// since we already have the exact track path. Set all waypoints as non-direct.
-		const finalWaypoints = waypoints;
-		const finalDirectFlags = new Array(waypoints.length).fill(false);
-
-		Logger.info(
-			`[GPXService.processHybridGPXData] Successfully processed hybrid GPX data. All waypoints set as non-direct to avoid line drawing.`,
-		);
-		return { finalWaypoints, finalDirectFlags };
+		const finalWaypoints: Waypoint[] = waypoints.map((coord) => ({ coord, type: "routed" }));
+		return { finalWaypoints };
 	} catch (error) {
 		const errorMessage = error instanceof Error ? error.message : "Unknown error during hybrid GPX processing";
 		Logger.error("[GPXService.processHybridGPXData] Error processing hybrid GPX data:", error);

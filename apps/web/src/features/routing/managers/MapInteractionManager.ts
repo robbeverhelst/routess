@@ -158,7 +158,7 @@ export const initializeMapInteractions = (
 		const success = await addWaypoint(
 			map,
 			[e.lngLat.lng, e.lngLat.lat],
-			false, // isDirect = false for left click
+			"routed",
 			accessToken,
 			setRouteDistance,
 			setRouteDuration,
@@ -271,8 +271,8 @@ export const initializeMapInteractions = (
 				// For a new point, the visual feedback for drag lines starts from its actual (potentially snapped) position.
 				// insertWaypointAtLocation adds it. useRoutingStore.getState().waypoints will include it.
 				// The currentLngLat should be the point to drag from.
-				const newWpCoords = useRoutingStore.getState().waypoints[result.newIndex];
-				currentLngLat = newWpCoords ? ([...newWpCoords] as Coordinate) : [e.lngLat.lng, e.lngLat.lat];
+				const newWp = useRoutingStore.getState().waypoints[result.newIndex];
+				currentLngLat = newWp ? ([...newWp.coord] as Coordinate) : [e.lngLat.lng, e.lngLat.lat];
 				mapCanvas.style.cursor = "grabbing";
 				Logger.info(
 					`[MapInteractionManager] New waypoint ${result.newIndex} inserted on route, starting drag from`,
@@ -438,17 +438,17 @@ export const initializeMapInteractions = (
 			dragLineFeatures.push({
 				type: "Feature",
 				properties: {},
-				geometry: { type: "LineString", coordinates: [prevWaypoint, currentLngLat] },
+				geometry: { type: "LineString", coordinates: [prevWaypoint.coord, currentLngLat] },
 			});
 		}
 		if (nextWaypoint && currentLngLat) {
 			dragLineFeatures.push({
 				type: "Feature",
 				properties: {},
-				geometry: { type: "LineString", coordinates: [currentLngLat, nextWaypoint] },
+				geometry: { type: "LineString", coordinates: [currentLngLat, nextWaypoint.coord] },
 			});
 		}
-		Logger.info("[MapInteractionManager] Drag line features (mouse):", JSON.stringify(dragLineFeatures)); // Diagnostic log
+		Logger.info("[MapInteractionManager] Drag line features (mouse):", JSON.stringify(dragLineFeatures));
 		updateDragLinesLayer(map, dragLineFeatures);
 
 		// Optional: Throttled update of the actual waypoint position and route for live preview
@@ -472,17 +472,17 @@ export const initializeMapInteractions = (
 			dragLineFeatures.push({
 				type: "Feature",
 				properties: {},
-				geometry: { type: "LineString", coordinates: [prevWaypoint, currentLngLat] },
+				geometry: { type: "LineString", coordinates: [prevWaypoint.coord, currentLngLat] },
 			});
 		}
 		if (nextWaypoint && currentLngLat) {
 			dragLineFeatures.push({
 				type: "Feature",
 				properties: {},
-				geometry: { type: "LineString", coordinates: [currentLngLat, nextWaypoint] },
+				geometry: { type: "LineString", coordinates: [currentLngLat, nextWaypoint.coord] },
 			});
 		}
-		Logger.info("[MapInteractionManager] Drag line features (touch):", JSON.stringify(dragLineFeatures)); // Diagnostic log
+		Logger.info("[MapInteractionManager] Drag line features (touch):", JSON.stringify(dragLineFeatures));
 		updateDragLinesLayer(map, dragLineFeatures);
 	};
 

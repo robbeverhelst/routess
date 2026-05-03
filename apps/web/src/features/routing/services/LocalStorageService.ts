@@ -1,21 +1,25 @@
+import type { Waypoint } from "@routess/core";
 import type { TimeOfDay } from "@/components/ui/route-controls";
 import type { SupportedLanguage } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
 import { isDev } from "@/lib/utils/env";
 import type { Coordinate } from "@/types/map";
 
-// Data structure stored in local storage
+const WAYPOINTS_STORAGE_KEY = "mapWaypoints";
+
 interface StoredRouteData {
+	waypoints: Waypoint[];
+}
+
+// Legacy storage shape (Coordinate[] + boolean[]); read for backward compatibility.
+interface LegacyStoredRouteData {
 	waypoints: Coordinate[];
 	directFlags: boolean[];
 }
 
-const WAYPOINTS_STORAGE_KEY = "mapWaypoints";
-
-// Function to save waypoints to local storage
-export const saveWaypointsToLocalStorage = (waypoints: Coordinate[], directFlags: boolean[]): void => {
+export const saveWaypointsToLocalStorage = (waypoints: Waypoint[]): void => {
 	try {
-		const data: StoredRouteData = { waypoints, directFlags };
+		const data: StoredRouteData = { waypoints };
 		localStorage.setItem(WAYPOINTS_STORAGE_KEY, JSON.stringify(data));
 		Logger.info("[LocalStorageService] Saved waypoints to local storage");
 	} catch (error) {
@@ -23,45 +27,46 @@ export const saveWaypointsToLocalStorage = (waypoints: Coordinate[], directFlags
 	}
 };
 
-// Function to load waypoints from local storage
-export const loadWaypointsFromLocalStorage = (): StoredRouteData | null => {
+const isCoordinate = (value: unknown): value is Coordinate =>
+	Array.isArray(value) && value.length === 2 && typeof value[0] === "number" && typeof value[1] === "number";
+
+const isWaypoint = (value: unknown): value is Waypoint => {
+	if (!value || typeof value !== "object") return false;
+	const candidate = value as { coord?: unknown; type?: unknown };
+	return isCoordinate(candidate.coord) && (candidate.type === "routed" || candidate.type === "direct");
+};
+
+export const loadWaypointsFromLocalStorage = (): Waypoint[] | null => {
 	try {
 		const data = localStorage.getItem(WAYPOINTS_STORAGE_KEY);
-		if (data) {
-			const parsedData = JSON.parse(data) as StoredRouteData;
-			// Basic validation of the parsed data structure
-			if (parsedData && Array.isArray(parsedData.waypoints) && Array.isArray(parsedData.directFlags)) {
-				// Further check if waypoints are valid Coordinates (arrays of 2 numbers)
-				// And directFlags are booleans
-				const isValidWaypoints = parsedData.waypoints.every(
-					(wp: Coordinate) =>
-						Array.isArray(wp) && wp.length === 2 && typeof wp[0] === "number" && typeof wp[1] === "number",
-				);
-				const isValidFlags = parsedData.directFlags.every((flag: boolean) => typeof flag === "boolean");
+		if (!data) return null;
+		const parsed = JSON.parse(data) as Partial<StoredRouteData & LegacyStoredRouteData>;
 
-				if (isValidWaypoints && isValidFlags) {
-					Logger.info("[LocalStorageService] Loaded waypoints from local storage:", parsedData.waypoints);
-					return parsedData;
-				} else {
-					Logger.warn(
-						"[LocalStorageService] Data format error: Waypoints or directFlags have incorrect types.",
-						parsedData,
-					);
-					// Optionally, clear the invalid data from local storage
-					// localStorage.removeItem(WAYPOINTS_STORAGE_KEY);
-					return null;
-				}
-			} else {
-				Logger.warn("[LocalStorageService] Loaded data is not in the expected format:", parsedData);
-				// Optionally, clear the invalid data
-				// localStorage.removeItem(WAYPOINTS_STORAGE_KEY);
-				return null;
+		if (parsed && Array.isArray(parsed.waypoints) && parsed.waypoints.every(isWaypoint)) {
+			Logger.info("[LocalStorageService] Loaded waypoints from local storage:", parsed.waypoints.length);
+			return parsed.waypoints;
+		}
+
+		// Legacy migration: parallel arrays.
+		if (parsed && Array.isArray(parsed.waypoints) && Array.isArray(parsed.directFlags)) {
+			const coords = parsed.waypoints as unknown[];
+			const flags = parsed.directFlags as unknown[];
+			if (coords.every(isCoordinate) && flags.every((f) => typeof f === "boolean")) {
+				const migrated: Waypoint[] = (coords as Coordinate[]).map((coord, i) => ({
+					coord,
+					type: (flags[i] as boolean) ? "direct" : "routed",
+				}));
+				Logger.info("[LocalStorageService] Migrated legacy waypoints from local storage:", migrated.length);
+				return migrated;
 			}
 		}
+
+		Logger.warn("[LocalStorageService] Stored waypoint data has unexpected shape:", parsed);
+		return null;
 	} catch (error) {
 		Logger.error("[LocalStorageService] Error loading waypoints from local storage:", error);
+		return null;
 	}
-	return null;
 };
 
 const MAP_LOCK_STATE_KEY = "routingAppMapLockState";
@@ -81,7 +86,6 @@ export const loadMapLockStateFromLocalStorage = (): boolean => {
 	try {
 		const storedState = localStorage.getItem(MAP_LOCK_STATE_KEY);
 		if (storedState === null) {
-			// If not set, default to not locked (or your preferred default)
 			Logger.info("[LocalStorageService] No map lock state found, defaulting to false (unlocked).");
 			return false;
 		}
@@ -89,27 +93,25 @@ export const loadMapLockStateFromLocalStorage = (): boolean => {
 		if (isDev()) {
 			Logger.info(`[LocalStorageService] Loaded map lock state: ${isLocked}`);
 		}
-		return typeof isLocked === "boolean" ? isLocked : false; // Ensure it's a boolean
+		return typeof isLocked === "boolean" ? isLocked : false;
 	} catch (error) {
 		Logger.error("[LocalStorageService] Error loading map lock state:", error);
-		return false; // Default to false (unlocked) on error
+		return false;
 	}
 };
 
-// --- Light Preset (Time of Day) --- //
 const LIGHT_PRESET_KEY = "mapLightPreset";
 
 export function loadLightPresetFromLocalStorage(): TimeOfDay | null {
 	try {
 		const storedPreset = localStorage.getItem(LIGHT_PRESET_KEY);
 		if (storedPreset) {
-			// Basic validation if it's one of the known TimeOfDay values
 			const knownPresets: TimeOfDay[] = ["dawn", "day", "dusk", "night"];
 			if (knownPresets.includes(storedPreset as TimeOfDay)) {
 				return storedPreset as TimeOfDay;
 			}
 			Logger.warn("[LocalStorageService] Invalid light preset found in localStorage:", storedPreset);
-			localStorage.removeItem(LIGHT_PRESET_KEY); // Clear invalid entry
+			localStorage.removeItem(LIGHT_PRESET_KEY);
 		}
 		return null;
 	} catch (error) {
@@ -126,7 +128,6 @@ export function saveLightPresetToLocalStorage(preset: TimeOfDay): void {
 	}
 }
 
-// --- Map View State --- //
 const LAST_MAP_VIEW_KEY = "mapLastView";
 
 export interface MapViewState {
@@ -142,7 +143,6 @@ export function loadLastMapViewFromLocalStorage(): MapViewState | null {
 		const storedView = localStorage.getItem(LAST_MAP_VIEW_KEY);
 		if (storedView) {
 			const parsedView = JSON.parse(storedView) as MapViewState;
-			// Basic validation
 			if (
 				parsedView &&
 				typeof parsedView.longitude === "number" &&
@@ -154,7 +154,7 @@ export function loadLastMapViewFromLocalStorage(): MapViewState | null {
 				return parsedView;
 			}
 			Logger.warn("[LocalStorageService] Invalid map view state found in localStorage:", parsedView);
-			localStorage.removeItem(LAST_MAP_VIEW_KEY); // Clear invalid entry
+			localStorage.removeItem(LAST_MAP_VIEW_KEY);
 		}
 		return null;
 	} catch (error) {
@@ -171,11 +171,9 @@ export function saveLastMapViewToLocalStorage(viewState: MapViewState): void {
 	}
 }
 
-// --- Selected Language --- //
 const LANGUAGE_STORAGE_KEY = "routingAppLanguage";
 
 export function loadLanguageFromLocalStorage(): SupportedLanguage {
-	// 1. Try to load from localStorage
 	try {
 		const storedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY);
 		if (storedLanguage) {
@@ -192,11 +190,10 @@ export function loadLanguageFromLocalStorage(): SupportedLanguage {
 		Logger.error("[LocalStorageService] Error loading language from localStorage:", error);
 	}
 
-	// 2. Try to use browser language
-	let languageToSet: SupportedLanguage = "en"; // Default to 'en'
+	let languageToSet: SupportedLanguage = "en";
 
 	if (typeof navigator !== "undefined" && navigator.language) {
-		const browserLangPrimary = navigator.language.split("-")[0].toLowerCase(); // e.g., 'en-US' -> 'en'
+		const browserLangPrimary = navigator.language.split("-")[0].toLowerCase();
 		const knownLanguages: SupportedLanguage[] = ["en", "nl", "fr", "de"];
 		if (knownLanguages.includes(browserLangPrimary as SupportedLanguage)) {
 			languageToSet = browserLangPrimary as SupportedLanguage;
@@ -210,7 +207,6 @@ export function loadLanguageFromLocalStorage(): SupportedLanguage {
 		Logger.info(`[LocalStorageService] Browser language not available. Defaulting to '${languageToSet}'.`);
 	}
 
-	// 3. Save the determined language (from browser or default 'en') to localStorage for next time
 	try {
 		localStorage.setItem(LANGUAGE_STORAGE_KEY, languageToSet);
 		Logger.info(`[LocalStorageService] Saved language '${languageToSet}' to localStorage.`);
@@ -232,7 +228,6 @@ export function saveLanguageToLocalStorage(language: SupportedLanguage): void {
 	}
 }
 
-// --- Map Style --- //
 const MAP_STYLE_KEY = "mapStyle";
 
 export type MapStyle = "standard" | "satellite";
@@ -249,12 +244,12 @@ export function loadMapStyleFromLocalStorage(): MapStyle {
 			Logger.warn(
 				`[LocalStorageService] Invalid map style '${storedStyle}' found in localStorage. Defaulting to 'standard'.`,
 			);
-			localStorage.removeItem(MAP_STYLE_KEY); // Clear invalid entry
+			localStorage.removeItem(MAP_STYLE_KEY);
 		}
-		return "standard"; // Default to standard
+		return "standard";
 	} catch (error) {
 		Logger.error("[LocalStorageService] Error loading map style from localStorage:", error);
-		return "standard"; // Default to standard on error
+		return "standard";
 	}
 }
 
@@ -266,7 +261,6 @@ export function saveMapStyleToLocalStorage(style: MapStyle): void {
 	}
 }
 
-// --- Sun Direction Setting --- //
 const SUN_DIRECTION_STORAGE_KEY = "routingAppShowSunDirection";
 
 export function loadSunDirectionSettingFromLocalStorage(): boolean {
@@ -274,12 +268,12 @@ export function loadSunDirectionSettingFromLocalStorage(): boolean {
 		const storedSetting = localStorage.getItem(SUN_DIRECTION_STORAGE_KEY);
 		if (storedSetting !== null) {
 			const isEnabled = JSON.parse(storedSetting);
-			return typeof isEnabled === "boolean" ? isEnabled : false; // Default to false
+			return typeof isEnabled === "boolean" ? isEnabled : false;
 		}
-		return false; // Default to false when not set
+		return false;
 	} catch (error) {
 		Logger.error("[LocalStorageService] Error loading sun direction setting from localStorage:", error);
-		return false; // Default to false on error
+		return false;
 	}
 }
 
