@@ -92,6 +92,18 @@ export class CreateRouteDto {
 	waypoints!: WaypointDto[];
 
 	@ApiProperty({
+		description: "Routed polyline as an array of [lng, lat] coordinate pairs",
+		example: [
+			[-74.006, 40.7128],
+			[-74.0055, 40.7135],
+		],
+		required: false,
+	})
+	@IsOptional()
+	@IsArray()
+	geometry?: [number, number][];
+
+	@ApiProperty({
 		description: "Total distance of the route in meters",
 		example: 5280,
 		required: false,

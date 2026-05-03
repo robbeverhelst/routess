@@ -34,18 +34,22 @@ function getActivityType(route: ApiRoute): RedesignActivity {
 
 function MiniRouteSvg({ route, color }: { route: ApiRoute; color: string }) {
 	const path = useMemo(() => {
-		if (!route.waypoints || route.waypoints.length < 2) return null;
-		const lats = route.waypoints.map((w) => w.lat);
-		const lngs = route.waypoints.map((w) => w.lng);
+		const coords: [number, number][] =
+			route.geometry && route.geometry.length >= 2
+				? route.geometry
+				: (route.waypoints ?? []).map((w) => [w.lng, w.lat] as [number, number]);
+		if (coords.length < 2) return null;
+		const lngs = coords.map((c) => c[0]);
+		const lats = coords.map((c) => c[1]);
 		const minLat = Math.min(...lats);
 		const maxLat = Math.max(...lats);
 		const minLng = Math.min(...lngs);
 		const maxLng = Math.max(...lngs);
 		const dLat = Math.max(maxLat - minLat, 1e-6);
 		const dLng = Math.max(maxLng - minLng, 1e-6);
-		const points = route.waypoints.map((w) => {
-			const x = ((w.lng - minLng) / dLng) * 44 + 6;
-			const y = 50 - ((w.lat - minLat) / dLat) * 38;
+		const points = coords.map(([lng, lat]) => {
+			const x = ((lng - minLng) / dLng) * 44 + 6;
+			const y = 50 - ((lat - minLat) / dLat) * 38;
 			return `${x.toFixed(1)},${y.toFixed(1)}`;
 		});
 		return points.join(" L ");
@@ -398,23 +402,6 @@ function LibraryPanelInner() {
 								onClick={(e) => e.stopPropagation()}
 								onKeyDown={(e) => e.stopPropagation()}
 							>
-								<Btn
-									variant="ghost"
-									onClick={() => {
-										window.dispatchEvent(
-											new CustomEvent("routess:load-route", {
-												detail: {
-													routeId: r.id,
-													name: r.name,
-													waypoints: r.waypoints,
-												},
-											}),
-										);
-										setContext("plan");
-									}}
-								>
-									<I.play size={12} /> Load
-								</Btn>
 								<IconBtn title={fav ? "Remove favourite" : "Mark favourite"} onClick={() => toggleFavourite(r.id)}>
 									<I.heart size={14} style={fav ? { color: RDS_COLORS.danger, fill: "currentColor" } : undefined} />
 								</IconBtn>

@@ -33,6 +33,11 @@ export class RouteResponseDto {
 	waypoints!: WaypointResponseDto[];
 
 	@ApiPropertyOptional({
+		description: "Routed polyline as an array of [lng, lat] coordinate pairs",
+	})
+	geometry?: [number, number][];
+
+	@ApiPropertyOptional({
 		description: "Distance in meters",
 	})
 	distance?: number;

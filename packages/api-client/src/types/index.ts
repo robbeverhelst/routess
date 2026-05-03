@@ -36,6 +36,7 @@ export interface ApiRoute {
 	name: string;
 	description?: string;
 	waypoints: Waypoint[];
+	geometry?: [number, number][];
 	distance?: number;
 	duration?: number;
 	elevationGain?: number;
@@ -50,6 +51,7 @@ export interface CreateRouteRequest {
 	name: string;
 	description?: string;
 	waypoints: Waypoint[];
+	geometry?: [number, number][];
 	distance?: number;
 	duration?: number;
 	elevationGain?: number;
@@ -61,6 +63,7 @@ export interface UpdateRouteRequest {
 	name?: string;
 	description?: string;
 	waypoints?: Waypoint[];
+	geometry?: [number, number][];
 	distance?: number;
 	duration?: number;
 	elevationGain?: number;

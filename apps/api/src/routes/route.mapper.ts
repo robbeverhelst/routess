@@ -17,6 +17,7 @@ export function toRouteResponseDto(route: Route): RouteResponseDto {
 		name: route.name,
 		description: route.description,
 		waypoints: route.waypoints,
+		geometry: route.geometry,
 		distance: route.distance,
 		duration: route.duration,
 		elevationGain: route.elevationGain,

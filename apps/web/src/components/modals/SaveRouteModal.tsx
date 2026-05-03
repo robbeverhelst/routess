@@ -39,6 +39,7 @@ export function SaveRouteModal({
 	const [error, setError] = useState<string | null>(null);
 
 	const waypoints = useRoutingStore((state) => state.waypoints);
+	const routePath = useRoutingStore((state) => state.routePath);
 
 	const saveRouteMutation = useSaveRoute();
 
@@ -66,6 +67,7 @@ export function SaveRouteModal({
 				name: name.trim(),
 				description: description.trim() || undefined,
 				waypoints: transformedWaypoints,
+				geometry: routePath.length >= 2 ? (routePath as [number, number][]) : undefined,
 				distance: distance || 0,
 				elevationGain: elevation || 0,
 			},
