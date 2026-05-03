@@ -217,7 +217,7 @@ export const getDirections = async (
 		}
 
 		const route = result.data.routes[0];
-		if (!route.geometry || !route.geometry.coordinates) {
+		if (!route.geometry?.coordinates) {
 			return {
 				success: false,
 				error: "Invalid route geometry",

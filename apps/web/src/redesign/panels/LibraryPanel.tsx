@@ -15,7 +15,6 @@ const FILTERS: { key: Filter; label: string }[] = [
 	{ key: "all", label: "All" },
 	{ key: "cycle", label: "Cycling" },
 	{ key: "run", label: "Running" },
-	{ key: "walk", label: "Walking" },
 	{ key: "favourites", label: "Favourites" },
 ];
 

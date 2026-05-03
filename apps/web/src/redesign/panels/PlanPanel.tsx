@@ -3,7 +3,10 @@ import { useModalsStore } from "@/redesign/stores/modalsStore";
 import { type RedesignActivity, useUiStore } from "@/redesign/stores/uiStore";
 import {
 	useClearWaypoints,
+	useElevationGain,
+	useElevationProfile,
 	useHasRoute,
+	useIsComputingElevation,
 	useRemoveWaypoint,
 	useRouteDistance,
 	useRouteDuration,
@@ -11,6 +14,7 @@ import {
 	useSetWaypointType,
 	useWaypoints,
 } from "@/stores/routingStore";
+import { ElevationSparkline } from "../components/ElevationSparkline";
 import { I } from "../components/icons";
 import { Btn, IconBtn, Kbd, RDS_COLORS, SecTitle } from "../components/primitives";
 
@@ -20,40 +24,11 @@ const ACTIVITIES: { key: RedesignActivity; icon: React.ComponentType<{ size?: nu
 	{ key: "walk", icon: I.walk, label: "Walk" },
 ];
 
-function ElevationSparkline() {
-	// Default-data placeholder — when we wire real elevation data we'll
-	// derive the path from the routePath coordinates.
-	return (
-		<div
-			style={{
-				marginTop: 14,
-				height: 56,
-				position: "relative",
-				background: RDS_COLORS.bgInput,
-				borderRadius: 8,
-				padding: 6,
-			}}
-		>
-			<svg viewBox="0 0 300 44" preserveAspectRatio="none" style={{ width: "100%", height: "100%" }} aria-hidden="true">
-				<defs>
-					<linearGradient id="rds-elev" x1="0" y1="0" x2="0" y2="1">
-						<stop offset="0" stopColor="var(--rds-accent)" stopOpacity="0.35" />
-						<stop offset="1" stopColor="var(--rds-accent)" stopOpacity="0" />
-					</linearGradient>
-				</defs>
-				<path
-					d="M0 36 L 20 30 L 40 32 L 70 22 L 100 26 L 140 14 L 180 18 L 220 10 L 250 22 L 280 18 L 300 24 L 300 44 L 0 44 Z"
-					fill="url(#rds-elev)"
-				/>
-				<path
-					d="M0 36 L 20 30 L 40 32 L 70 22 L 100 26 L 140 14 L 180 18 L 220 10 L 250 22 L 280 18 L 300 24"
-					stroke="var(--rds-accent)"
-					strokeWidth="1.4"
-					fill="none"
-				/>
-			</svg>
-		</div>
-	);
+function PlanElevationSparkline() {
+	const profile = useElevationProfile();
+	const isComputing = useIsComputingElevation();
+	const hasRoute = useHasRoute();
+	return <ElevationSparkline profile={profile} loading={hasRoute && isComputing} style={{ marginTop: 14 }} />;
 }
 
 export function PlanPanel() {
@@ -69,6 +44,14 @@ export function PlanPanel() {
 
 	const { activityType, setActivityType } = useUiStore();
 	const openModal = useModalsStore((s) => s.openModal);
+	const elevationGain = useElevationGain();
+	const isComputingElevation = useIsComputingElevation();
+
+	const elevationVal = (() => {
+		if (elevationGain != null) return Math.round(elevationGain).toString();
+		if (hasRoute && isComputingElevation) return "…";
+		return "—";
+	})();
 
 	const stats = [
 		{
@@ -77,7 +60,7 @@ export function PlanPanel() {
 			unit: distance ? distance.split(" ")[1] || "km" : "km",
 		},
 		{ label: "Time", val: duration || "—", unit: "" },
-		{ label: "Elev gain", val: hasRoute ? "—" : "—", unit: "m" },
+		{ label: "Elev gain", val: elevationVal, unit: "m" },
 		{ label: "Pace", val: "—", unit: "/km" },
 	];
 
@@ -189,7 +172,7 @@ export function PlanPanel() {
 						</div>
 					))}
 				</div>
-				<ElevationSparkline />
+				<PlanElevationSparkline />
 			</div>
 
 			{/* Waypoints list */}

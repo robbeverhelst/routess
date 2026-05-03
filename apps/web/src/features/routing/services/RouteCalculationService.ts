@@ -6,10 +6,47 @@ import { Logger } from "@/lib/logger";
 import { getRoutingPreferences, type RoutingPreferences } from "@/redesign/stores/routingPreferencesStore";
 import { useRedesignSettingsStore } from "@/redesign/stores/settingsStore";
 import { useRoutingStore } from "@/stores/routingStore";
+import { getDefaultElevationService } from "./elevation";
 import { type ComputeRouteOptions, computeRoute, type DirectionsOptions } from "./RoutingEngine";
 
 const sameCoord = (a: Coordinate, b: Coordinate) => a[0] === b[0] && a[1] === b[1];
 const sameWaypoint = (a: Waypoint, b: Waypoint) => sameCoord(a.coord, b.coord) && a.type === b.type;
+
+let elevationAbort: AbortController | null = null;
+
+const computeElevationInBackground = (routePath: Coordinate[], waypoints: Waypoint[], accessToken: string): void => {
+	if (!accessToken || routePath.length < 2) {
+		useRoutingStore.getState().clearElevation();
+		useRoutingStore.getState().setIsComputingElevation(false);
+		return;
+	}
+
+	elevationAbort?.abort();
+	const controller = new AbortController();
+	elevationAbort = controller;
+
+	useRoutingStore.getState().setIsComputingElevation(true);
+
+	getDefaultElevationService(accessToken)
+		.sampleAndCompute(routePath, { signal: controller.signal })
+		.then((result) => {
+			if (controller.signal.aborted) return;
+			if (!routeInputsMatch(waypoints)) {
+				Logger.info("[RCS/elevation] Inputs changed during sampling; discarding stale elevation.");
+				return;
+			}
+			useRoutingStore.getState().setElevation(result);
+		})
+		.catch((err) => {
+			if (controller.signal.aborted) return;
+			Logger.warn("[RCS/elevation] Failed to sample elevation:", err);
+			useRoutingStore.getState().clearElevation();
+		})
+		.finally(() => {
+			if (elevationAbort === controller) elevationAbort = null;
+			if (!controller.signal.aborted) useRoutingStore.getState().setIsComputingElevation(false);
+		});
+};
 
 // Map the user's "default activity" + routing profile choice onto a Mapbox profile.
 // Cycling-first today: routing prefs lean toward bike infra unless the user picked
@@ -76,6 +113,9 @@ export const getRoute = async (
 		setRouteDistance("");
 		setRouteDuration("");
 		setHasRoute(false);
+		elevationAbort?.abort();
+		useRoutingStore.getState().clearElevation();
+		useRoutingStore.getState().setIsComputingElevation(false);
 		return { success: true, waypointsSnapped: false };
 	}
 
@@ -89,6 +129,9 @@ export const getRoute = async (
 	if (!outcome.ok) {
 		setHasRoute(false);
 		useRoutingStore.getState().setRoutePath([]);
+		elevationAbort?.abort();
+		useRoutingStore.getState().clearElevation();
+		useRoutingStore.getState().setIsComputingElevation(false);
 		return { success: false, waypointsSnapped: false, error: outcome.error };
 	}
 
@@ -99,6 +142,16 @@ export const getRoute = async (
 	setRouteDistance(formatDistance(outcome.distanceKm) + offlineSuffix);
 	setRouteDuration(formatDuration(outcome.durationMinutes) + durationSuffix);
 	setHasRoute(true);
+
+	// Elevation runs async — distance/duration display immediately while we
+	// sample terrain. Offline routes skip sampling since we can't reach the
+	// terrain tileset anyway.
+	if (outcome.offline) {
+		useRoutingStore.getState().clearElevation();
+		useRoutingStore.getState().setIsComputingElevation(false);
+	} else {
+		computeElevationInBackground(outcome.routePath, waypoints, accessToken);
+	}
 
 	if (!outcome.offline && "serviceWorker" in navigator) {
 		try {
