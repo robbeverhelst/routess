@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { persist, type PersistOptions } from "zustand/middleware";
+import { type PersistOptions, persist } from "zustand/middleware";
 import type { Coordinate, Logger, Waypoint, WaypointHistory, WaypointType } from "../types";
 
 // ===== STATE & ACTIONS =====
@@ -163,9 +163,7 @@ export function createRoutingStore(logger: Logger) {
 				updateWaypointCoords: (coords) => {
 					logger.info("[RoutingStore] Updating waypoint coords:", coords.length);
 					set((state) => ({
-						waypoints: state.waypoints.map((wp, i) =>
-							i < coords.length ? { ...wp, coord: coords[i] } : wp,
-						),
+						waypoints: state.waypoints.map((wp, i) => (i < coords.length ? { ...wp, coord: coords[i] } : wp)),
 					}));
 				},
 
@@ -241,13 +239,7 @@ export function createRoutingStore(logger: Logger) {
 							waypoints: state.waypoints.map((wp) => ({ ...wp })),
 							timestamp: Date.now(),
 						};
-						logger.info(
-							"[RoutingStore] Undo: ",
-							state.waypoints.length,
-							"->",
-							previous.waypoints.length,
-							"waypoints",
-						);
+						logger.info("[RoutingStore] Undo: ", state.waypoints.length, "->", previous.waypoints.length, "waypoints");
 						return {
 							waypoints: previous.waypoints,
 							undoStack: state.undoStack.slice(0, -1),

@@ -1,8 +1,8 @@
 import type { Logger } from "@routess/core";
-import { ApiClient } from "./services";
-import type { AuthStateManager, ErrorHandler, HttpClient, StorageAdapter } from "./types";
 import { LocalStorageAuthState, StorageAdapterAuthState } from "./adapters/auth";
 import { FetchHttpClient } from "./adapters/http";
+import { ApiClient } from "./services";
+import type { AuthStateManager, ErrorHandler, HttpClient, StorageAdapter } from "./types";
 
 export interface CreateApiClientOptions {
 	baseUrl: string;
@@ -29,7 +29,9 @@ function defaultHttpClient(platform: "web" | "mobile"): HttpClient {
 function defaultAuthStateManager(platform: "web" | "mobile", storage?: StorageAdapter): AuthStateManager {
 	if (platform === "mobile") {
 		if (!storage) {
-			throw new Error("createApiClient: mobile platform requires a `storage` adapter or an explicit `authStateManager`.");
+			throw new Error(
+				"createApiClient: mobile platform requires a `storage` adapter or an explicit `authStateManager`.",
+			);
 		}
 		return new StorageAdapterAuthState(storage);
 	}

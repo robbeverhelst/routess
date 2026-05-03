@@ -1,12 +1,6 @@
 import { useMemo, useState } from "react";
 import { serializeAndCompress } from "@/lib/shareUtils";
-import {
-	useDirectFlags,
-	useIsMapLocked,
-	useRouteDistance,
-	useRouteDuration,
-	useWaypoints,
-} from "@/stores/routingStore";
+import { useIsMapLocked, useRouteDistance, useRouteDuration, useWaypoints } from "@/stores/routingStore";
 import { I } from "../components/icons";
 import { ModalShell } from "../components/ModalShell";
 import { Btn, RDS_COLORS, SecTitle, Toggle } from "../components/primitives";
@@ -21,7 +15,6 @@ const VISIBILITY = [
 export function ShareModal() {
 	const closeModal = useModalsStore((s) => s.closeModal);
 	const waypoints = useWaypoints();
-	const directFlags = useDirectFlags();
 	const isMapLocked = useIsMapLocked();
 	const distance = useRouteDistance();
 	const duration = useRouteDuration();
@@ -32,13 +25,13 @@ export function ShareModal() {
 
 	const url = useMemo(() => {
 		try {
-			const encoded = serializeAndCompress(waypoints, directFlags, isMapLocked);
+			const encoded = serializeAndCompress(waypoints, isMapLocked);
 			if (!encoded) return window.location.origin;
 			return `${window.location.origin}?route=${encoded}`;
 		} catch {
 			return window.location.origin;
 		}
-	}, [waypoints, directFlags, isMapLocked]);
+	}, [waypoints, isMapLocked]);
 
 	const copy = async () => {
 		window.dispatchEvent(new CustomEvent("routess:share-route"));

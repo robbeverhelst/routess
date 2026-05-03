@@ -11,7 +11,9 @@ const sameWaypoint = (a: Waypoint, b: Waypoint) => sameCoord(a.coord, b.coord) &
 
 const routeInputsMatch = (waypoints: Waypoint[]): boolean => {
 	const state = useRoutingStore.getState();
-	return state.waypoints.length === waypoints.length && state.waypoints.every((wp, i) => sameWaypoint(wp, waypoints[i]));
+	return (
+		state.waypoints.length === waypoints.length && state.waypoints.every((wp, i) => sameWaypoint(wp, waypoints[i]))
+	);
 };
 
 const staleRouteResult = (): RouteResult => ({

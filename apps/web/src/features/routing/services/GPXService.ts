@@ -6,7 +6,8 @@ import { Logger } from "@/lib/logger";
 import type { Coordinate } from "@/types/map";
 
 // Re-export the heuristic so callers that imported it from GPXService keep working.
-export const convertTrackToSmartWaypoints = (trackPoints: Coordinate[]): Coordinate[] => selectSmartWaypoints(trackPoints);
+export const convertTrackToSmartWaypoints = (trackPoints: Coordinate[]): Coordinate[] =>
+	selectSmartWaypoints(trackPoints);
 
 /**
  * Generates a GPX data string from waypoints and route path.

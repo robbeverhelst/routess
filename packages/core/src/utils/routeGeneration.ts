@@ -1,5 +1,5 @@
-import { haversineDistance } from "./geospatial";
 import type { Coordinate } from "../types";
+import { haversineDistance } from "./geospatial";
 
 // Heuristic strategy for compressing a dense track of GPS points down
 // to a small set of "smart" waypoints. Detects significant direction

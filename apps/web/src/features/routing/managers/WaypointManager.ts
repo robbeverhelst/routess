@@ -92,13 +92,7 @@ export const addWaypoint = async (
 	}
 
 	if (getWaypoints().length >= 2) {
-		const routeResult = await recomputeAndApplySnap(
-			map,
-			accessToken,
-			setRouteDistance,
-			setRouteDuration,
-			setHasRoute,
-		);
+		const routeResult = await recomputeAndApplySnap(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
 		if (routeResult.success) return true;
 
 		const last = getWaypoints().length - 1;
@@ -191,13 +185,7 @@ export const updateWaypointPositionAndRecalculate = async (
 
 	setWaypointsList(setWaypointCoord(getWaypoints(), index, coordsToUpdate));
 
-	const routeResult = await recomputeAndApplySnap(
-		map,
-		accessToken,
-		setRouteDistance,
-		setRouteDuration,
-		setHasRoute,
-	);
+	const routeResult = await recomputeAndApplySnap(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
 
 	if (routeResult.success) {
 		useRoutingStore.getState().saveSnapshot();
@@ -280,4 +268,4 @@ export const insertWaypointAtLocation = async (
 	return { success: true, newIndex: decision.insertIndex };
 };
 
-export { getWaypoints, getWaypointCoords };
+export { getWaypointCoords, getWaypoints };
