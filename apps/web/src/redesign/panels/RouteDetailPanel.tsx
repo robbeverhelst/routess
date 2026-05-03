@@ -1,11 +1,108 @@
-import { useEffect, useRef, useState } from "react";
+import type { Coordinate } from "@routess/core";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useComputedElevationProfile } from "@/features/routing/services/elevation";
 import type { ApiRoute } from "@/lib/api";
 import { useSaveRoute } from "@/lib/api-queries";
-import { I } from "../components/icons";
+import { ElevationSparkline } from "../components/ElevationSparkline";
+import { I, type IconKey } from "../components/icons";
 import { Btn, IconBtn, RDS_COLORS, SecTitle } from "../components/primitives";
 import { useModalsStore } from "../stores/modalsStore";
 import { useToastStore } from "../stores/toastStore";
 import { useUiStore } from "../stores/uiStore";
+
+// SaveModal serializes activity + privacy + tags into the description string,
+// e.g. "Activity: cycle; Privacy: private" or
+//      "Activity: run; Privacy: link; Tags: hilly, scenic".
+// Anything that doesn't match this shape is treated as user-written prose.
+const PARSED_DESCRIPTION_RE = /^Activity:\s*(\w+);\s*Privacy:\s*(\w+)(?:;\s*Tags:\s*(.*?))?(?:\s*\.)?$/i;
+
+interface ParsedDescription {
+	activity: string | null;
+	privacy: string | null;
+	tags: string[];
+	freeText: string | null;
+}
+
+const parseRouteDescription = (desc: string | null | undefined): ParsedDescription => {
+	const empty: ParsedDescription = { activity: null, privacy: null, tags: [], freeText: null };
+	if (!desc) return empty;
+	const trimmed = desc.trim();
+	if (!trimmed) return empty;
+	const match = trimmed.match(PARSED_DESCRIPTION_RE);
+	if (!match) return { ...empty, freeText: trimmed };
+	const tagsList = match[3]
+		? match[3]
+				.split(",")
+				.map((t) => t.trim())
+				.filter(Boolean)
+		: [];
+	return {
+		activity: match[1].toLowerCase(),
+		privacy: match[2].toLowerCase(),
+		tags: tagsList,
+		freeText: null,
+	};
+};
+
+const ACTIVITY_LABEL: Record<string, { label: string; icon: IconKey }> = {
+	cycle: { label: "Cycling", icon: "bike" },
+	cycling: { label: "Cycling", icon: "bike" },
+	run: { label: "Running", icon: "run" },
+	running: { label: "Running", icon: "run" },
+	walk: { label: "Walking", icon: "walk" },
+	walking: { label: "Walking", icon: "walk" },
+};
+
+const PRIVACY_LABEL: Record<string, { label: string; icon: IconKey }> = {
+	private: { label: "Private", icon: "lock" },
+	link: { label: "Anyone with link", icon: "share" },
+	public: { label: "Public", icon: "globe" },
+};
+
+function MetaChip({ icon, label }: { icon: IconKey; label: string }) {
+	const Icon = I[icon];
+	return (
+		<span
+			style={{
+				display: "inline-flex",
+				alignItems: "center",
+				gap: 6,
+				padding: "4px 10px",
+				height: 24,
+				borderRadius: 999,
+				background: RDS_COLORS.bgInput,
+				border: `1px solid ${RDS_COLORS.border}`,
+				color: RDS_COLORS.fgMuted,
+				fontSize: 11.5,
+				fontWeight: 500,
+				whiteSpace: "nowrap",
+			}}
+		>
+			<Icon size={11} /> {label}
+		</span>
+	);
+}
+
+function TagChip({ label }: { label: string }) {
+	return (
+		<span
+			style={{
+				display: "inline-flex",
+				alignItems: "center",
+				padding: "4px 10px",
+				height: 24,
+				borderRadius: 999,
+				background: RDS_COLORS.accentSoft,
+				color: RDS_COLORS.accent,
+				fontSize: 11.5,
+				fontWeight: 500,
+				whiteSpace: "nowrap",
+			}}
+		>
+			#{label}
+		</span>
+	);
+}
 
 export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: () => void }) {
 	const distanceKm = route.distance ? (route.distance / 1000).toFixed(1) : "—";
@@ -22,6 +119,23 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 	const favouriteRouteIds = useUiStore((s) => s.favouriteRouteIds);
 	const toggleFavourite = useUiStore((s) => s.toggleFavourite);
 	const favorited = favouriteRouteIds.includes(route.id);
+
+	// Saved routes don't persist the elevation profile array (only the gain
+	// number), so re-sample the stored geometry on view. Falls back to
+	// waypoint coords for legacy routes saved before geometry persistence.
+	const elevationGeometry = useMemo<Coordinate[]>(() => {
+		if (route.geometry && route.geometry.length >= 2) return route.geometry;
+		return (route.waypoints ?? []).map((w) => [w.lng, w.lat] as Coordinate);
+	}, [route.geometry, route.waypoints]);
+	const { profile: computedProfile, loading: elevationLoading } = useComputedElevationProfile(
+		elevationGeometry,
+		String(route.id),
+	);
+
+	const parsedDescription = useMemo(() => parseRouteDescription(route.description), [route.description]);
+	const activityMeta = parsedDescription.activity ? ACTIVITY_LABEL[parsedDescription.activity] : null;
+	const privacyMeta = parsedDescription.privacy ? PRIVACY_LABEL[parsedDescription.privacy] : null;
+	const hasMetaChips = Boolean(activityMeta) || Boolean(privacyMeta) || parsedDescription.tags.length > 0;
 
 	useEffect(() => {
 		if (!moreOpen) return;
@@ -217,9 +331,19 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 					Created {new Date(route.createdAt).toLocaleDateString()} · {route.waypoints?.length ?? 0} waypoints
 				</p>
 
-				{route.description && (
+				{hasMetaChips && (
+					<div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 12 }}>
+						{activityMeta && <MetaChip icon={activityMeta.icon} label={activityMeta.label} />}
+						{privacyMeta && <MetaChip icon={privacyMeta.icon} label={privacyMeta.label} />}
+						{parsedDescription.tags.map((t) => (
+							<TagChip key={t} label={t} />
+						))}
+					</div>
+				)}
+
+				{parsedDescription.freeText && (
 					<p style={{ fontSize: 13, color: RDS_COLORS.fgMuted, margin: "12px 0 0", lineHeight: 1.5 }}>
-						{route.description}
+						{parsedDescription.freeText}
 					</p>
 				)}
 
@@ -262,6 +386,17 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 						</div>
 					))}
 				</div>
+
+				{elevationGeometry.length >= 2 && (
+					<div style={{ marginTop: 18 }}>
+						<SecTitle style={{ marginBottom: 8 }}>Elevation</SecTitle>
+						<ElevationSparkline
+							profile={computedProfile}
+							loading={elevationLoading}
+							gradientId={`rds-elev-${route.id}`}
+						/>
+					</div>
+				)}
 
 				{(route.startAddress || route.endAddress) && (
 					<div style={{ marginTop: 18 }}>

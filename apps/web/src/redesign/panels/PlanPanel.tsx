@@ -1,4 +1,3 @@
-import { type ElevationProfilePoint, formatDistance } from "@routess/core";
 import { useEffect, useRef, useState } from "react";
 import { useModalsStore } from "@/redesign/stores/modalsStore";
 import { type RedesignActivity, useUiStore } from "@/redesign/stores/uiStore";
@@ -15,6 +14,7 @@ import {
 	useSetWaypointType,
 	useWaypoints,
 } from "@/stores/routingStore";
+import { ElevationSparkline } from "../components/ElevationSparkline";
 import { I } from "../components/icons";
 import { Btn, IconBtn, Kbd, RDS_COLORS, SecTitle } from "../components/primitives";
 
@@ -24,121 +24,11 @@ const ACTIVITIES: { key: RedesignActivity; icon: React.ComponentType<{ size?: nu
 	{ key: "walk", icon: I.walk, label: "Walk" },
 ];
 
-const SPARKLINE_W = 300;
-const SPARKLINE_H = 44;
-const SPARKLINE_PAD_Y = 3;
-
-interface ProfileSummary {
-	line: string;
-	area: string;
-	minMeters: number;
-	maxMeters: number;
-	totalMeters: number;
-}
-
-function summarizeProfile(profile: ElevationProfilePoint[]): ProfileSummary | null {
-	if (profile.length < 2) return null;
-	const total = profile[profile.length - 1].distanceMeters;
-	if (total <= 0) return null;
-
-	let minE = Number.POSITIVE_INFINITY;
-	let maxE = Number.NEGATIVE_INFINITY;
-	for (const p of profile) {
-		if (p.elevationMeters < minE) minE = p.elevationMeters;
-		if (p.elevationMeters > maxE) maxE = p.elevationMeters;
-	}
-	// On flat-ish terrain spread the line through the middle of the chart so
-	// it doesn't sit pinned to one edge.
-	const range = maxE - minE > 0.5 ? maxE - minE : 1;
-	const innerH = SPARKLINE_H - SPARKLINE_PAD_Y * 2;
-
-	let line = "";
-	for (let i = 0; i < profile.length; i++) {
-		const p = profile[i];
-		const x = (p.distanceMeters / total) * SPARKLINE_W;
-		const y = SPARKLINE_PAD_Y + innerH - ((p.elevationMeters - minE) / range) * innerH;
-		line += i === 0 ? `M${x.toFixed(2)} ${y.toFixed(2)}` : ` L${x.toFixed(2)} ${y.toFixed(2)}`;
-	}
-	const area = `${line} L${SPARKLINE_W} ${SPARKLINE_H} L0 ${SPARKLINE_H} Z`;
-	return { line, area, minMeters: minE, maxMeters: maxE, totalMeters: total };
-}
-
-function ElevationSparkline() {
+function PlanElevationSparkline() {
 	const profile = useElevationProfile();
 	const isComputing = useIsComputingElevation();
 	const hasRoute = useHasRoute();
-	const summary = profile ? summarizeProfile(profile) : null;
-	const status = summary ? "ready" : hasRoute && isComputing ? "loading" : "empty";
-
-	const axisLabelStyle: React.CSSProperties = {
-		position: "absolute",
-		fontSize: 10,
-		lineHeight: 1,
-		color: RDS_COLORS.fgSubtle,
-		fontVariantNumeric: "tabular-nums",
-		pointerEvents: "none",
-	};
-
-	return (
-		<div
-			style={{
-				marginTop: 14,
-				position: "relative",
-				background: RDS_COLORS.bgInput,
-				borderRadius: 8,
-				padding: "16px 8px 16px 38px",
-				opacity: status === "loading" ? 0.7 : 1,
-			}}
-		>
-			<div style={{ position: "relative", height: 44 }}>
-				<svg
-					viewBox={`0 0 ${SPARKLINE_W} ${SPARKLINE_H}`}
-					preserveAspectRatio="none"
-					style={{ width: "100%", height: "100%", display: "block" }}
-					aria-hidden="true"
-				>
-					<defs>
-						<linearGradient id="rds-elev" x1="0" y1="0" x2="0" y2="1">
-							<stop offset="0" stopColor="var(--rds-accent)" stopOpacity="0.35" />
-							<stop offset="1" stopColor="var(--rds-accent)" stopOpacity="0" />
-						</linearGradient>
-					</defs>
-					{summary ? (
-						<>
-							<path d={summary.area} fill="url(#rds-elev)" />
-							<path d={summary.line} stroke="var(--rds-accent)" strokeWidth="1.4" fill="none" />
-						</>
-					) : (
-						<line
-							x1="0"
-							y1={SPARKLINE_H - SPARKLINE_PAD_Y}
-							x2={SPARKLINE_W}
-							y2={SPARKLINE_H - SPARKLINE_PAD_Y}
-							stroke="var(--rds-accent)"
-							strokeOpacity="0.25"
-							strokeWidth="1"
-							strokeDasharray="4 4"
-						/>
-					)}
-				</svg>
-			</div>
-
-			{/* Y-axis: max at top of chart, min at bottom. Anchored to the SVG's
-			    actual top/bottom edges via the parent's padding. */}
-			<span style={{ ...axisLabelStyle, left: 6, top: 12, textAlign: "right", width: 26 }}>
-				{summary ? `${Math.round(summary.maxMeters)} m` : ""}
-			</span>
-			<span style={{ ...axisLabelStyle, left: 6, bottom: 12, textAlign: "right", width: 26 }}>
-				{summary ? `${Math.round(summary.minMeters)} m` : ""}
-			</span>
-
-			{/* X-axis: 0 at start, total distance at end. */}
-			<span style={{ ...axisLabelStyle, left: 38, bottom: 2 }}>{summary ? "0" : ""}</span>
-			<span style={{ ...axisLabelStyle, right: 8, bottom: 2 }}>
-				{summary ? formatDistance(summary.totalMeters / 1000) : ""}
-			</span>
-		</div>
-	);
+	return <ElevationSparkline profile={profile} loading={hasRoute && isComputing} style={{ marginTop: 14 }} />;
 }
 
 export function PlanPanel() {
@@ -282,7 +172,7 @@ export function PlanPanel() {
 						</div>
 					))}
 				</div>
-				<ElevationSparkline />
+				<PlanElevationSparkline />
 			</div>
 
 			{/* Waypoints list */}

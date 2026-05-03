@@ -6,23 +6,13 @@ import { Logger } from "@/lib/logger";
 import { getRoutingPreferences, type RoutingPreferences } from "@/redesign/stores/routingPreferencesStore";
 import { useRedesignSettingsStore } from "@/redesign/stores/settingsStore";
 import { useRoutingStore } from "@/stores/routingStore";
-import { ElevationService, MapboxTerrainRgbElevationProvider } from "./elevation";
+import { getDefaultElevationService } from "./elevation";
 import { type ComputeRouteOptions, computeRoute, type DirectionsOptions } from "./RoutingEngine";
 
 const sameCoord = (a: Coordinate, b: Coordinate) => a[0] === b[0] && a[1] === b[1];
 const sameWaypoint = (a: Waypoint, b: Waypoint) => sameCoord(a.coord, b.coord) && a.type === b.type;
 
-let elevationService: ElevationService | null = null;
-let elevationServiceToken: string | null = null;
 let elevationAbort: AbortController | null = null;
-
-const getElevationService = (accessToken: string): ElevationService => {
-	if (!elevationService || elevationServiceToken !== accessToken) {
-		elevationService = new ElevationService(new MapboxTerrainRgbElevationProvider({ accessToken }));
-		elevationServiceToken = accessToken;
-	}
-	return elevationService;
-};
 
 const computeElevationInBackground = (routePath: Coordinate[], waypoints: Waypoint[], accessToken: string): void => {
 	if (!accessToken || routePath.length < 2) {
@@ -37,7 +27,7 @@ const computeElevationInBackground = (routePath: Coordinate[], waypoints: Waypoi
 
 	useRoutingStore.getState().setIsComputingElevation(true);
 
-	getElevationService(accessToken)
+	getDefaultElevationService(accessToken)
 		.sampleAndCompute(routePath, { signal: controller.signal })
 		.then((result) => {
 			if (controller.signal.aborted) return;
