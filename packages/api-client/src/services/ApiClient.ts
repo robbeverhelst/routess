@@ -17,14 +17,13 @@ export class ApiClient {
 	private async request<T>(
 		endpoint: string,
 		options: {
-			method?: string;
+			method?: "GET" | "POST" | "PATCH" | "DELETE";
 			body?: unknown;
 			headers?: Record<string, string>;
 		} = {},
 	): Promise<T> {
 		const { method = "GET", body, headers = {} } = options;
 
-		// Refresh token in case it changed
 		this.config.authStateManager.refreshToken();
 
 		const token = this.config.authStateManager.getToken();
@@ -32,47 +31,31 @@ export class ApiClient {
 			"Content-Type": "application/json",
 			...headers,
 		};
+		if (token) requestHeaders.Authorization = `Bearer ${token}`;
 
-		if (token) {
-			requestHeaders.Authorization = `Bearer ${token}`;
-		}
+		const url = `${this.config.baseUrl}/api/v1${endpoint}`;
+		const requestOptions = { headers: requestHeaders };
+		const httpClient = this.config.httpClient;
 
 		try {
-			let response: T;
-
-			if (method === "GET") {
-				response = await this.config.httpClient.get<T>(`${this.config.baseUrl}/api/v1${endpoint}`, {
-					headers: requestHeaders,
-				});
-			} else if (method === "DELETE") {
-				response = await this.config.httpClient.delete<T>(`${this.config.baseUrl}/api/v1${endpoint}`, {
-					headers: requestHeaders,
-				});
-			} else if (method === "POST") {
-				response = await this.config.httpClient.post<T>(`${this.config.baseUrl}/api/v1${endpoint}`, body, {
-					headers: requestHeaders,
-				});
-			} else if (method === "PATCH") {
-				response = await this.config.httpClient.patch<T>(`${this.config.baseUrl}/api/v1${endpoint}`, body, {
-					headers: requestHeaders,
-				});
-			} else {
-				throw new Error(`Unsupported HTTP method: ${method}`);
+			switch (method) {
+				case "GET":
+					return await httpClient.get<T>(url, requestOptions);
+				case "DELETE":
+					return await httpClient.delete<T>(url, requestOptions);
+				case "POST":
+					return await httpClient.post<T>(url, body, requestOptions);
+				case "PATCH":
+					return await httpClient.patch<T>(url, body, requestOptions);
 			}
-
-			return response;
 		} catch (error) {
-			if (this.config.logger) {
-				this.config.logger.error("API request failed:", error);
-			}
+			this.config.logger?.error("API request failed:", error);
 
-			// Handle 401 Unauthorized - clear stale auth state
 			if (error instanceof Error && error.message.includes("401")) {
 				this.config.authStateManager.clearToken();
 				this.config.authStateManager.clearAuthState?.();
 			}
 
-			// Use error handler if available
 			if (this.config.errorHandler) {
 				this.config.errorHandler.handleError(error instanceof Error ? error : new Error(String(error)), endpoint, () =>
 					this.request(endpoint, options),
