@@ -23,6 +23,7 @@ WORKDIR /app
 COPY package.json ./
 COPY apps/api/package.json ./apps/api/
 COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/apps/api/node_modules ./apps/api/node_modules
 
 # Copy built application from builder stage
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
@@ -40,7 +41,7 @@ EXPOSE 3000
 WORKDIR /app/apps/api
 
 # Add node_modules/.bin to PATH for CLI tools
-ENV PATH="/app/node_modules/.bin:${PATH}"
+ENV PATH="/app/apps/api/node_modules/.bin:/app/node_modules/.bin:${PATH}"
 
 # Start the application
 CMD ["bun", "run", "start:prod"] 

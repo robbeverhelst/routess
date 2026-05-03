@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import type { ApiRoute } from "@/lib/api";
+import { useSaveRoute } from "@/lib/api-queries";
 import { I } from "../components/icons";
 import { Badge, Btn, IconBtn, RDS_COLORS, SecTitle } from "../components/primitives";
+import { useModalsStore } from "../stores/modalsStore";
+import { useToastStore } from "../stores/toastStore";
+import { useUiStore } from "../stores/uiStore";
 
 // TODO: replace SEGMENTS and HISTORY with real data once route-detail backend lands
 const SEGMENTS = [
@@ -23,9 +27,14 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 	const durationStr = route.duration ? `${Math.round(route.duration / 60)} min` : "—";
 	const elevStr = route.elevationGain ? `${Math.round(route.elevationGain)}` : "—";
 
-	const [favorited, setFavorited] = useState(false);
 	const [moreOpen, setMoreOpen] = useState(false);
 	const moreRef = useRef<HTMLDivElement | null>(null);
+	const saveRoute = useSaveRoute();
+	const openDelete = useModalsStore((s) => s.openDelete);
+	const pushToast = useToastStore((s) => s.push);
+	const favouriteRouteIds = useUiStore((s) => s.favouriteRouteIds);
+	const toggleFavourite = useUiStore((s) => s.toggleFavourite);
+	const favorited = favouriteRouteIds.includes(route.id);
 
 	useEffect(() => {
 		if (!moreOpen) return;
@@ -55,17 +64,41 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 	};
 
 	const dispatchFavorite = () => {
-		setFavorited((v) => !v);
-		window.dispatchEvent(new CustomEvent("routess:toggle-favorite", { detail: { routeId: route.id } }));
+		toggleFavourite(route.id);
 	};
 
 	const dispatchDuplicate = () => {
-		window.dispatchEvent(new CustomEvent("routess:duplicate-route", { detail: { routeId: route.id } }));
-		setMoreOpen(false);
+		saveRoute.mutate(
+			{
+				name: `${route.name} (copy)`,
+				description: route.description,
+				waypoints: route.waypoints,
+				distance: route.distance,
+				duration: route.duration,
+				elevationGain: route.elevationGain,
+			},
+			{
+				onSuccess: (newRoute) => {
+					pushToast({
+						kind: "success",
+						title: "Route duplicated",
+						body: newRoute.name,
+					});
+					setMoreOpen(false);
+				},
+				onError: () => {
+					pushToast({
+						kind: "danger",
+						title: "Duplicate failed",
+						body: "Try again.",
+					});
+				},
+			},
+		);
 	};
 
 	const dispatchDelete = () => {
-		window.dispatchEvent(new CustomEvent("routess:delete-route", { detail: { routeId: route.id } }));
+		openDelete(route.id);
 		setMoreOpen(false);
 	};
 
@@ -140,6 +173,7 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 							<button
 								type="button"
 								onClick={dispatchDuplicate}
+								disabled={saveRoute.isPending}
 								style={{
 									display: "flex",
 									alignItems: "center",
@@ -161,7 +195,7 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 									e.currentTarget.style.background = "transparent";
 								}}
 							>
-								<I.copy size={14} /> Duplicate
+								<I.copy size={14} /> {saveRoute.isPending ? "Duplicating…" : "Duplicate"}
 							</button>
 							<button
 								type="button"

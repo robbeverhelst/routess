@@ -226,6 +226,20 @@ export const resetRoute = async (
 	await recomputeAndApplySnap(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
 };
 
+// Re-run the current waypoints through the routing service, e.g. after the
+// user changes routing preferences (profile, exclude, snap, …) so the
+// visible route reflects the new options.
+export const recalculateRoute = async (
+	map: MapboxMap,
+	accessToken: string,
+	setRouteDistance: Dispatch<SetStateAction<string>>,
+	setRouteDuration: Dispatch<SetStateAction<string>>,
+	setHasRoute: Dispatch<SetStateAction<boolean>>,
+): Promise<void> => {
+	if (getWaypoints().length < 2) return;
+	await recomputeAndApplySnap(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
+};
+
 export const undoRouteChange = async (
 	map: MapboxMap,
 	accessToken: string,

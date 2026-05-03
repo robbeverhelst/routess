@@ -4,6 +4,7 @@ import type { PopupInfo as MapPopupInfo } from "@/features/routing/managers/MapI
 import {
 	addWaypoint,
 	insertWaypointAtLocation,
+	recalculateRoute,
 	redoRouteChange,
 	removeWaypoint,
 	resetRoute,
@@ -69,6 +70,13 @@ export const useRouteActions = ({
 		if (!mapRef.current || !mapboxToken) return;
 		await resetRoute(mapRef.current, mapboxToken, setRouteDistance, setRouteDuration, setHasRoute);
 	}, [mapboxToken, setRouteDistance, setRouteDuration, setHasRoute, mapRef]);
+
+	// Recalculate handler — re-runs current waypoints through the routing service
+	// after preferences (profile, exclude, snap, etc.) have changed.
+	const handleRecalculateRoute = useCallback(async () => {
+		if (!mapRef.current || !mapboxToken) return;
+		await recalculateRoute(mapRef.current, mapboxToken, setRouteDistance, setRouteDuration, setHasRoute);
+	}, [mapboxToken, setRouteDistance, setRouteDuration, setHasRoute, mapRef.current]);
 
 	// Select location handler - moves camera to location instead of adding waypoint
 	const handleSelectLocation = useCallback(
@@ -233,6 +241,7 @@ export const useRouteActions = ({
 		handleRedo,
 		handleReverseRoute,
 		handleReset,
+		handleRecalculateRoute,
 		handleSelectLocation,
 		handleGenerateAtoB,
 		handleGenerateLoop,

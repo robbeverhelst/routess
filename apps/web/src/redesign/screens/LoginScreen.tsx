@@ -156,8 +156,12 @@ export function LoginScreen({ onSuccess }: { onSuccess?: () => void }) {
 					)}
 				</div>
 
-				<Btn disabled style={{ width: "100%", height: 42, marginTop: 8 }}>
-					Continue with email
+				<Btn
+					disabled
+					style={{ width: "100%", height: 42, marginTop: 8 }}
+					title="Email sign-in arrives once the email/password backend is live"
+				>
+					Continue with email · soon
 				</Btn>
 
 				<div

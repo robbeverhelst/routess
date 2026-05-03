@@ -3,11 +3,34 @@ import { formatDistance, formatDuration } from "@routess/core";
 import type { Map as MapboxMap } from "mapbox-gl";
 import type { Dispatch, SetStateAction } from "react";
 import { Logger } from "@/lib/logger";
+import { getRoutingPreferences, type RoutingPreferences } from "@/redesign/stores/routingPreferencesStore";
+import { useRedesignSettingsStore } from "@/redesign/stores/settingsStore";
 import { useRoutingStore } from "@/stores/routingStore";
-import { computeRoute } from "./RoutingEngine";
+import { type ComputeRouteOptions, computeRoute, type DirectionsOptions } from "./RoutingEngine";
 
 const sameCoord = (a: Coordinate, b: Coordinate) => a[0] === b[0] && a[1] === b[1];
 const sameWaypoint = (a: Waypoint, b: Waypoint) => sameCoord(a.coord, b.coord) && a.type === b.type;
+
+// Map the user's "default activity" + routing profile choice onto a Mapbox profile.
+// Cycling-first today: routing prefs lean toward bike infra unless the user picked
+// running/walking. "Flat" prefers driving for gentler grade routing.
+function resolveMapboxProfile(prefs: RoutingPreferences): string {
+	const activity = useRedesignSettingsStore.getState().defaultActivity;
+	if (activity === "Running" || activity === "Walking") return "mapbox/walking";
+	if (prefs.profile === "flat") return "mapbox/driving";
+	return "mapbox/cycling";
+}
+
+function buildComputeOptions(): ComputeRouteOptions {
+	const prefs = getRoutingPreferences();
+	const directions: DirectionsOptions = {
+		profile: resolveMapboxProfile(prefs),
+		radius: 150,
+		continueStraight: true,
+	};
+	if (prefs.highways) directions.exclude = ["motorway"];
+	return { directions, snap: prefs.snap };
+}
 
 const routeInputsMatch = (waypoints: Waypoint[]): boolean => {
 	const state = useRoutingStore.getState();
@@ -50,7 +73,7 @@ export const getRoute = async (
 		return { success: true, waypointsSnapped: false };
 	}
 
-	const outcome = await computeRoute(waypoints, accessToken);
+	const outcome = await computeRoute(waypoints, accessToken, buildComputeOptions());
 
 	if (!routeInputsMatch(waypoints)) {
 		Logger.info("[RCS/getRoute] Route inputs changed during calculation. Discarding stale result.");

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useAuthStatus } from "@/lib/api-queries";
 import { I } from "../components/icons";
-import { Btn, RDS_COLORS, SecTitle } from "../components/primitives";
+import { Btn, PreviewBanner, RDS_COLORS, SecTitle } from "../components/primitives";
 
 // TODO: replace STATS / ROUTES / ACTIVITIES with real data when backend lands.
 const STATS = [
@@ -135,6 +135,11 @@ export function ProfileScreen() {
 				>
 					{user?.email ?? "Sign in to set up your public profile and share routes."}
 				</p>
+
+				<PreviewBanner
+					style={{ marginTop: 18 }}
+					body="Stats, public routes, activity feed, and follow are placeholders. They'll switch on with the social/activities backend."
+				/>
 
 				<div
 					style={{

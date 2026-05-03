@@ -1,7 +1,7 @@
 {
 	"name": "routess-monorepo",
 	"private": true,
-	"version": "1.97.1",
+	"version": "1.98.0",
 	"type": "module",
 	"packageManager": "bun@1.3.11",
 	"workspaces": [
@@ -9,15 +9,15 @@
 		"packages/*"
 	],
 	"scripts": {
-		"dev": "docker-compose up -d postgres && (docker-compose up -d pgadmin || true) && bun run --filter './packages/*' build && bun run --filter './apps/*' dev",
+		"dev": "bun ./scripts/dev.ts",
 		"build": "bun run --filter './packages/*' build && bun run --filter './apps/*' build",
 		"lint": "biome check .",
 		"check-types": "bun run --filter '*' check-types",
 		"test": "bun run --filter '*' test",
 		"format": "biome format --write .",
 		"format:check": "biome format .",
-		"ci": "(docker-compose up -d postgres || docker start routess-postgres || true) && bun run format && bun run lint && bun run build && bun run check-types && bun run test",
-		"clean": "rm -rf node_modules apps/*/node_modules packages/*/node_modules apps/*/dist packages/*/dist coverage apps/*/coverage /tmp/esbuild* && bun install",
+		"ci": "docker-compose up -d postgres && bun run format && bun run lint && bun run build && bun run check-types && bun run test",
+		"clean": "sh -c '((command -v docker-compose >/dev/null 2>&1 && docker-compose down -v --remove-orphans) || (command -v docker >/dev/null 2>&1 && docker compose down -v --remove-orphans) || true) && rm -rf node_modules apps/*/node_modules packages/*/node_modules apps/*/dist packages/*/dist apps/*/tsconfig.tsbuildinfo packages/*/tsconfig.tsbuildinfo coverage apps/*/coverage apps/api/.nest apps/api/node_modules/.cache apps/docs/.next apps/docs/.source apps/web/node_modules/.vite .turbo pgadmin /tmp/esbuild*'",
 		"docker:build:web": "docker build -f apps/web/Dockerfile -t routess-web .",
 		"docker:build:api": "docker build -f apps/api/Dockerfile -t routess-api .",
 		"docker:build:docs": "docker build -f apps/docs/Dockerfile -t routess-docs .",

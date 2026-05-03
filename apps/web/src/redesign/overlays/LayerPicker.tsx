@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { I } from "../components/icons";
 import { IconBtn, RDS_COLORS, SecTitle, Toggle } from "../components/primitives";
 import { useModalsStore } from "../stores/modalsStore";
@@ -17,7 +16,8 @@ type MapStyleKey = (typeof STYLES)[number]["key"];
 
 export function LayerPicker() {
 	const close = useModalsStore((s) => s.closeOverlay);
-	const [styleKey, setStyleKey] = useState<MapStyleKey>("outdoors");
+	const styleKey = useRedesignSettingsStore((s) => s.mapStyle as MapStyleKey);
+	const setMapStyle = useRedesignSettingsStore((s) => s.setMapStyle);
 	const overlays = useRedesignSettingsStore((s) => s.overlays);
 	const setOverlay = useRedesignSettingsStore((s) => s.setOverlay);
 
@@ -75,7 +75,7 @@ export function LayerPicker() {
 								key={s.key}
 								type="button"
 								onClick={() => {
-									setStyleKey(s.key);
+									setMapStyle(s.key);
 									window.dispatchEvent(new CustomEvent("routess:set-map-style", { detail: { styleKey: s.key } }));
 								}}
 								style={{

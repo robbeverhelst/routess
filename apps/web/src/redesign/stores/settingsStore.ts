@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 export type RedesignUnits = "km" | "mi";
+export type RedesignMapStyle = "streets" | "outdoors" | "satellite" | "terrain" | "dark" | "minimal";
 
 export type OverlayKey = "heatmap" | "contour" | "bike" | "surface" | "wind";
 export type MapOverlays = Record<OverlayKey, boolean>;
@@ -14,7 +15,7 @@ interface SettingsState {
 	publicProfile: boolean;
 	hidePrivacy: boolean;
 	defaultActivity: string;
-	mapStyle: string;
+	mapStyle: RedesignMapStyle;
 	overlays: MapOverlays;
 
 	setUnits: (units: RedesignUnits) => void;
@@ -24,7 +25,7 @@ interface SettingsState {
 	setPublicProfile: (publicProfile: boolean) => void;
 	setHidePrivacy: (hidePrivacy: boolean) => void;
 	setDefaultActivity: (defaultActivity: string) => void;
-	setMapStyle: (mapStyle: string) => void;
+	setMapStyle: (mapStyle: RedesignMapStyle) => void;
 	setOverlay: (key: OverlayKey, value: boolean) => void;
 }
 
@@ -46,7 +47,7 @@ export const useRedesignSettingsStore = create<SettingsState>()(
 			publicProfile: false,
 			hidePrivacy: true,
 			defaultActivity: "Cycling",
-			mapStyle: "Streets",
+			mapStyle: "outdoors",
 			overlays: DEFAULT_OVERLAYS,
 
 			setUnits: (units) => set({ units }),

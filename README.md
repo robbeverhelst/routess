@@ -58,17 +58,29 @@ bun install
 # Copy environment template and add your API keys
 cp .env.example .env
 
+# Optional: override ports if 5432 or 5050 are already in use
+# PORT=3000
+# DOCS_PORT=3001
+# WEB_PORT=5173
+# DB_PORT=55432
+# PGADMIN_PORT=55050
+
 # Start all services (web, api, database)
 bun dev
 ```
 
-The web app runs at `http://localhost:5173` and the API at `http://localhost:3000`.
+The API defaults to `http://localhost:3000`, docs to `http://localhost:3001`, and the web app to `http://localhost:5173`.
+If `node_modules` is missing, `bun dev` will install dependencies first.
+Postgres defaults to `localhost:5432` and pgAdmin to `http://localhost:5050`.
+If any of those default ports are already taken, `bun dev` will choose the next free local port automatically and print it before startup.
+Custom non-default port values in `.env` are treated as explicit overrides.
 
 ## Scripts
 
 ```bash
 # Development
 bun dev                 # Start all applications
+bun run clean           # Remove installs, caches, and Docker state
 
 # Code Quality
 bun run format          # Format all code (Biome)

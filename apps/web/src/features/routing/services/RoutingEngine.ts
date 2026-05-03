@@ -6,6 +6,20 @@ import { getDirections } from "@/lib/utils/mapbox-api";
 // Pure routing engine: takes waypoints + access token, returns geometry + metrics.
 // No store reads, no map mutations, no UI setters. Unit-testable in isolation.
 
+export interface DirectionsOptions {
+	profile?: string;
+	exclude?: string[];
+	radius?: number;
+	continueStraight?: boolean;
+}
+
+export interface ComputeRouteOptions {
+	directions?: DirectionsOptions;
+	// When false, the engine still calls Mapbox but does not return snapped
+	// waypoints — callers won't displace the user's chosen coordinates.
+	snap?: boolean;
+}
+
 export type RouteOutcome =
 	| {
 			ok: true;
@@ -22,13 +36,23 @@ export type RouteOutcome =
 
 const sameCoord = (a: Coordinate, b: Coordinate) => a[0] === b[0] && a[1] === b[1];
 
+const baseDirectionsOptions = (overrides?: DirectionsOptions): DirectionsOptions => ({
+	radius: 150,
+	continueStraight: true,
+	...overrides,
+});
+
 interface MixedRouteResult {
 	coordsAccum: Coordinate[];
 	totalDistKm: number;
 	snappedWaypoints: Waypoint[] | null;
 }
 
-async function buildMixedRoute(waypoints: Waypoint[], accessToken: string): Promise<MixedRouteResult> {
+async function buildMixedRoute(
+	waypoints: Waypoint[],
+	accessToken: string,
+	directions: DirectionsOptions,
+): Promise<MixedRouteResult> {
 	const working: Waypoint[] = waypoints.map((wp) => ({ coord: [...wp.coord] as Coordinate, type: wp.type }));
 	const coordsAccum: Coordinate[] = [];
 	let totalDistKm = 0;
@@ -55,7 +79,7 @@ async function buildMixedRoute(waypoints: Waypoint[], accessToken: string): Prom
 			continue;
 		}
 
-		const result = await getDirections([from, to], accessToken, { radius: 150, continueStraight: true });
+		const result = await getDirections([from, to], accessToken, directions);
 		if (!result.success || !result.data?.routes?.[0]) {
 			Logger.warn(
 				`[RoutingEngine/mixed] No route for segment ${i}-${i + 1}: ${result.error || "Unknown error"}. Falling back to direct.`,
@@ -124,10 +148,17 @@ function buildAllDirect(waypoints: Waypoint[]): { routePath: Coordinate[]; dista
 	return { routePath, distanceKm };
 }
 
-export async function computeRoute(waypoints: Waypoint[], accessToken: string): Promise<RouteOutcome> {
+export async function computeRoute(
+	waypoints: Waypoint[],
+	accessToken: string,
+	options: ComputeRouteOptions = {},
+): Promise<RouteOutcome> {
 	if (waypoints.length < 2) {
 		return { ok: true, routePath: [], distanceKm: 0, durationMinutes: 0 };
 	}
+
+	const directions = baseDirectionsOptions(options.directions);
+	const snap = options.snap ?? true;
 
 	const segments = classifySegments(waypoints);
 
@@ -137,20 +168,20 @@ export async function computeRoute(waypoints: Waypoint[], accessToken: string): 
 	}
 
 	if (segments === "mixed") {
-		const { coordsAccum, totalDistKm, snappedWaypoints } = await buildMixedRoute(waypoints, accessToken);
+		const { coordsAccum, totalDistKm, snappedWaypoints } = await buildMixedRoute(waypoints, accessToken, directions);
 		return {
 			ok: true,
 			routePath: coordsAccum,
 			distanceKm: totalDistKm,
 			durationMinutes: estimateWalkingDuration(totalDistKm),
-			snappedWaypoints: snappedWaypoints ?? undefined,
+			snappedWaypoints: snap ? (snappedWaypoints ?? undefined) : undefined,
 		};
 	}
 
 	// all-routed: single Mapbox Directions call.
 	try {
 		const apiInputCoords = waypoints.map((wp) => wp.coord);
-		const result = await getDirections(apiInputCoords, accessToken, { radius: 150, continueStraight: true });
+		const result = await getDirections(apiInputCoords, accessToken, directions);
 
 		if (!result.success || !result.data?.routes || result.data.routes.length === 0) {
 			Logger.error("[RoutingEngine] Directions API failed or empty:", result.error);
@@ -164,7 +195,7 @@ export async function computeRoute(waypoints: Waypoint[], accessToken: string): 
 
 		let snappedWaypoints: Waypoint[] | undefined;
 		const apiWaypoints = result.data.waypoints;
-		if (apiWaypoints && Array.isArray(apiWaypoints) && apiWaypoints.length === waypoints.length) {
+		if (snap && apiWaypoints && Array.isArray(apiWaypoints) && apiWaypoints.length === waypoints.length) {
 			const next = waypoints.map((wp) => ({ ...wp }));
 			let changed = false;
 			for (let i = 0; i < waypoints.length; i++) {
