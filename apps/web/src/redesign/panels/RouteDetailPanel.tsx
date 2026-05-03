@@ -2,30 +2,17 @@ import { useEffect, useRef, useState } from "react";
 import type { ApiRoute } from "@/lib/api";
 import { useSaveRoute } from "@/lib/api-queries";
 import { I } from "../components/icons";
-import { Badge, Btn, IconBtn, RDS_COLORS, SecTitle } from "../components/primitives";
+import { Btn, IconBtn, RDS_COLORS, SecTitle } from "../components/primitives";
 import { useModalsStore } from "../stores/modalsStore";
 import { useToastStore } from "../stores/toastStore";
 import { useUiStore } from "../stores/uiStore";
-
-// TODO: replace SEGMENTS and HISTORY with real data once route-detail backend lands
-const SEGMENTS = [
-	{ name: "Schelde dijkpad", km: "0.0 – 2.1", elev: "+12 m", surface: "Asphalt" },
-	{ name: "Bornem stretch", km: "2.1 – 4.6", elev: "+34 m", surface: "Mixed" },
-	{ name: "Heidestraat climb", km: "4.6 – 7.8", elev: "+88 m", surface: "Asphalt" },
-	{ name: "Return via dijk", km: "7.8 – 12.4", elev: "−128 m", surface: "Asphalt" },
-];
-
-const HISTORY = [
-	{ date: "Apr 28", time: "1:04", pace: "27 km/h", note: "PB!" },
-	{ date: "Apr 14", time: "1:09", pace: "26 km/h", note: "" },
-	{ date: "Apr 04", time: "1:11", pace: "25 km/h", note: "Headwind" },
-	{ date: "Mar 22", time: "1:14", pace: "24 km/h", note: "" },
-];
 
 export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: () => void }) {
 	const distanceKm = route.distance ? (route.distance / 1000).toFixed(1) : "—";
 	const durationStr = route.duration ? `${Math.round(route.duration / 60)} min` : "—";
 	const elevStr = route.elevationGain ? `${Math.round(route.elevationGain)}` : "—";
+	const paceStr =
+		route.distance && route.duration ? ((route.distance / 1000 / (route.duration / 3600)) || 0).toFixed(1) : "—";
 
 	const [moreOpen, setMoreOpen] = useState(false);
 	const moreRef = useRef<HTMLDivElement | null>(null);
@@ -106,15 +93,11 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 		window.dispatchEvent(new CustomEvent("routess:export-gpx", { detail: { routeId: route.id } }));
 	};
 
-	const dispatchOpenActivity = (activityId: string) => {
-		window.dispatchEvent(new CustomEvent("routess:open-activity", { detail: { activityId } }));
-	};
-
 	const stats = [
 		{ label: "Distance", value: distanceKm, unit: "km" },
-		{ label: "Avg time", value: durationStr, unit: "" },
+		{ label: "Duration", value: durationStr, unit: "" },
 		{ label: "Elev gain", value: elevStr, unit: "m" },
-		{ label: "Avg pace", value: "—", unit: "km/h" },
+		{ label: "Avg speed", value: paceStr, unit: "km/h" },
 	];
 
 	return (
@@ -229,18 +212,16 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 			</div>
 
 			<div style={{ flex: 1, overflow: "auto", padding: 20 }}>
-				<div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-					<Badge variant="accent" dot>
-						Cycling
-					</Badge>
-					<Badge>Public</Badge>
-					<Badge>recovery</Badge>
-				</div>
-
 				<h2 style={{ margin: "0 0 4px", fontSize: 22, fontWeight: 600, letterSpacing: -0.4 }}>{route.name}</h2>
 				<p className="rds-mono" style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle, margin: 0 }}>
 					Created {new Date(route.createdAt).toLocaleDateString()} · {route.waypoints?.length ?? 0} waypoints
 				</p>
+
+				{route.description && (
+					<p style={{ fontSize: 13, color: RDS_COLORS.fgMuted, margin: "12px 0 0", lineHeight: 1.5 }}>
+						{route.description}
+					</p>
+				)}
 
 				{/* Stat strip */}
 				<div
@@ -282,116 +263,50 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 					))}
 				</div>
 
-				{/* Elevation */}
-				<div style={{ marginTop: 18 }}>
-					<SecTitle style={{ marginBottom: 8 }}>Elevation</SecTitle>
-					<div
-						style={{
-							height: 100,
-							background: RDS_COLORS.bgPanelElev,
-							border: `1px solid ${RDS_COLORS.border}`,
-							borderRadius: 10,
-							padding: 10,
-						}}
-					>
-						<svg
-							viewBox="0 0 600 80"
-							preserveAspectRatio="none"
-							style={{ width: "100%", height: "100%" }}
-							aria-hidden="true"
+				{(route.startAddress || route.endAddress) && (
+					<div style={{ marginTop: 18 }}>
+						<SecTitle style={{ marginBottom: 8 }}>Route</SecTitle>
+						<div
+							style={{
+								background: RDS_COLORS.bgPanel,
+								border: `1px solid ${RDS_COLORS.border}`,
+								borderRadius: 10,
+								overflow: "hidden",
+							}}
 						>
-							<defs>
-								<linearGradient id="rds-elev-detail" x1="0" y1="0" x2="0" y2="1">
-									<stop offset="0" stopColor="var(--rds-accent)" stopOpacity="0.4" />
-									<stop offset="1" stopColor="var(--rds-accent)" stopOpacity="0" />
-								</linearGradient>
-							</defs>
-							<path
-								d="M0 70 L 50 60 L 100 64 L 160 38 L 220 50 L 300 24 L 380 36 L 450 16 L 520 30 L 580 22 L 600 28 L 600 80 L 0 80 Z"
-								fill="url(#rds-elev-detail)"
-							/>
-							<path
-								d="M0 70 L 50 60 L 100 64 L 160 38 L 220 50 L 300 24 L 380 36 L 450 16 L 520 30 L 580 22 L 600 28"
-								stroke="var(--rds-accent)"
-								strokeWidth="1.6"
-								fill="none"
-							/>
-						</svg>
-					</div>
-				</div>
-
-				{/* Segments */}
-				<div style={{ marginTop: 18 }}>
-					<SecTitle style={{ marginBottom: 8 }}>Segments · {SEGMENTS.length}</SecTitle>
-					<div
-						style={{
-							background: RDS_COLORS.bgPanel,
-							border: `1px solid ${RDS_COLORS.border}`,
-							borderRadius: 10,
-							overflow: "hidden",
-						}}
-					>
-						{SEGMENTS.map((s, i) => (
-							<div
-								key={s.name}
-								style={{
-									display: "flex",
-									alignItems: "center",
-									gap: 12,
-									padding: "12px 14px",
-									borderBottom: i < SEGMENTS.length - 1 ? `1px solid ${RDS_COLORS.border}` : "none",
-								}}
-							>
-								<div className="rds-mono" style={{ fontSize: 11, color: RDS_COLORS.fgSubtle, width: 18 }}>
-									{i + 1}
-								</div>
-								<div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
-									<div style={{ fontSize: 13, fontWeight: 500 }}>{s.name}</div>
-									<div className="rds-mono" style={{ fontSize: 11, color: RDS_COLORS.fgSubtle, marginTop: 2 }}>
-										{s.km} km · {s.surface}
+							{route.startAddress && (
+								<div
+									style={{
+										display: "flex",
+										alignItems: "center",
+										gap: 10,
+										padding: "10px 14px",
+										borderBottom: route.endAddress ? `1px solid ${RDS_COLORS.border}` : "none",
+									}}
+								>
+									<I.pin size={14} style={{ color: RDS_COLORS.fgSubtle }} />
+									<div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+										<div style={{ fontSize: 11, color: RDS_COLORS.fgSubtle }}>Start</div>
+										<div style={{ fontSize: 13, color: RDS_COLORS.fg, overflow: "hidden", textOverflow: "ellipsis" }}>
+											{route.startAddress}
+										</div>
 									</div>
 								</div>
-								<div className="rds-mono" style={{ fontSize: 12, fontWeight: 600, color: RDS_COLORS.fgMuted }}>
-									{s.elev}
+							)}
+							{route.endAddress && (
+								<div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px" }}>
+									<I.flag size={14} style={{ color: RDS_COLORS.fgSubtle }} />
+									<div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+										<div style={{ fontSize: 11, color: RDS_COLORS.fgSubtle }}>End</div>
+										<div style={{ fontSize: 13, color: RDS_COLORS.fg, overflow: "hidden", textOverflow: "ellipsis" }}>
+											{route.endAddress}
+										</div>
+									</div>
 								</div>
-							</div>
-						))}
+							)}
+						</div>
 					</div>
-				</div>
-
-				{/* History */}
-				<div style={{ marginTop: 18 }}>
-					<SecTitle style={{ marginBottom: 8 }}>Ride history</SecTitle>
-					<div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-						{HISTORY.map((r, i) => (
-							<div
-								key={r.date}
-								style={{
-									display: "flex",
-									alignItems: "center",
-									gap: 12,
-									padding: "10px 0",
-									borderBottom: i < HISTORY.length - 1 ? `1px solid ${RDS_COLORS.border}` : "none",
-								}}
-							>
-								<div className="rds-mono" style={{ fontSize: 12, color: RDS_COLORS.fgMuted, width: 56 }}>
-									{r.date}
-								</div>
-								<div className="rds-mono" style={{ fontSize: 13, fontWeight: 600, width: 56 }}>
-									{r.time}
-								</div>
-								<div className="rds-mono" style={{ fontSize: 12, color: RDS_COLORS.fgMuted }}>
-									{r.pace}
-								</div>
-								<div style={{ flex: 1 }} />
-								{r.note && <Badge variant="accent">{r.note}</Badge>}
-								<IconBtn title="Open" onClick={() => dispatchOpenActivity(r.date)}>
-									<I.chevronR size={14} />
-								</IconBtn>
-							</div>
-						))}
-					</div>
-				</div>
+				)}
 			</div>
 
 			<div

@@ -26,6 +26,9 @@ export class Route extends BaseEntity {
 	@Property({ type: "json" })
 	waypoints!: Waypoint[];
 
+	@Property({ type: "json", nullable: true })
+	geometry?: [number, number][];
+
 	@Property({ type: "float", nullable: true })
 	distance?: number; // in meters
 
