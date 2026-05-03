@@ -1,11 +1,20 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import type { RedesignActivity } from "./uiStore";
 
 export type RedesignUnits = "km" | "mi";
 export type RedesignMapStyle = "streets" | "outdoors" | "satellite" | "terrain" | "dark" | "minimal";
 
 export type OverlayKey = "heatmap" | "contour" | "bike" | "surface" | "wind";
 export type MapOverlays = Record<OverlayKey, boolean>;
+
+export type SportSpeeds = Partial<Record<RedesignActivity, number>>;
+
+export const DEFAULT_SPORT_SPEEDS_KMH: Record<RedesignActivity, number> = {
+	run: 10,
+	cycle: 25,
+	walk: 5,
+};
 
 interface SettingsState {
 	units: RedesignUnits;
@@ -15,6 +24,8 @@ interface SettingsState {
 	publicProfile: boolean;
 	hidePrivacy: boolean;
 	defaultActivity: string;
+	selectedSports: RedesignActivity[];
+	sportSpeeds: SportSpeeds;
 	mapStyle: RedesignMapStyle;
 	overlays: MapOverlays;
 
@@ -25,6 +36,9 @@ interface SettingsState {
 	setPublicProfile: (publicProfile: boolean) => void;
 	setHidePrivacy: (hidePrivacy: boolean) => void;
 	setDefaultActivity: (defaultActivity: string) => void;
+	setSelectedSports: (sports: RedesignActivity[]) => void;
+	toggleSport: (sport: RedesignActivity) => void;
+	setSportSpeed: (sport: RedesignActivity, kmh: number) => void;
 	setMapStyle: (mapStyle: RedesignMapStyle) => void;
 	setOverlay: (key: OverlayKey, value: boolean) => void;
 }
@@ -47,6 +61,8 @@ export const useRedesignSettingsStore = create<SettingsState>()(
 			publicProfile: false,
 			hidePrivacy: true,
 			defaultActivity: "Cycling",
+			selectedSports: [],
+			sportSpeeds: {},
 			mapStyle: "outdoors",
 			overlays: DEFAULT_OVERLAYS,
 
@@ -57,6 +73,17 @@ export const useRedesignSettingsStore = create<SettingsState>()(
 			setPublicProfile: (publicProfile) => set({ publicProfile }),
 			setHidePrivacy: (hidePrivacy) => set({ hidePrivacy }),
 			setDefaultActivity: (defaultActivity) => set({ defaultActivity }),
+			setSelectedSports: (selectedSports) => set({ selectedSports }),
+			toggleSport: (sport) =>
+				set((state) => ({
+					selectedSports: state.selectedSports.includes(sport)
+						? state.selectedSports.filter((s) => s !== sport)
+						: [...state.selectedSports, sport],
+				})),
+			setSportSpeed: (sport, kmh) =>
+				set((state) => ({
+					sportSpeeds: { ...state.sportSpeeds, [sport]: kmh },
+				})),
 			setMapStyle: (mapStyle) => set({ mapStyle }),
 			setOverlay: (key, value) =>
 				set((state) => ({
@@ -65,7 +92,7 @@ export const useRedesignSettingsStore = create<SettingsState>()(
 		}),
 		{
 			name: "routess.redesign.settings",
-			version: 2,
+			version: 3,
 		},
 	),
 );

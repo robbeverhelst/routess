@@ -4,6 +4,7 @@ import {
 	Bell,
 	Bike,
 	BookOpen,
+	Check,
 	ChevronLeft,
 	ChevronRight,
 	Command,
@@ -96,6 +97,7 @@ export const I = {
 	bike: Bike,
 	run: Footprints,
 	walk: Footprints,
+	check: Check,
 };
 
 export type IconKey = keyof typeof I;
