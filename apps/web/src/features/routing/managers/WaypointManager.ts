@@ -12,7 +12,6 @@ import {
 	reverseWaypoints,
 	setWaypointCoord,
 } from "@/features/routing/managers/WaypointCoordinator";
-import { saveWaypointsToLocalStorage } from "@/features/routing/services/LocalStorageService";
 import {
 	clearCurrentRoutePath,
 	getCurrentRoutePath,
@@ -39,7 +38,6 @@ const setWaypointsList = (waypoints: Waypoint[]) => {
 
 const persistAndRender = (map: MapboxMap, isMapLocked: boolean) => {
 	updateWaypointsLayer(map, getWaypoints(), isMapLocked);
-	saveWaypointsToLocalStorage(getWaypoints());
 };
 
 const clearComputedRouteUi = (
@@ -121,8 +119,7 @@ export const addWaypoint = async (
 			setHasRoute,
 		);
 		if (routeResult.success) {
-			saveWaypointsToLocalStorage(getWaypoints());
-			return true;
+					return true;
 		}
 
 		const last = getWaypoints().length - 1;
@@ -142,19 +139,16 @@ export const addWaypoint = async (
 			} else {
 				clearComputedRouteUi(map, setRouteDistance, setRouteDuration, setHasRoute);
 			}
-			saveWaypointsToLocalStorage(getWaypoints());
-			return false;
+					return false;
 		}
 
 		handleWaypointError(routeResult.error || "Could not calculate route.");
-		saveWaypointsToLocalStorage(getWaypoints());
-		return true;
+			return true;
 	}
 
 	if (getWaypoints().length === 1 && initialWaypointCount === 0 && type === "direct") {
 		clearComputedRouteUi(map, setRouteDistance, setRouteDuration, setHasRoute);
-		saveWaypointsToLocalStorage(getWaypoints());
-		return true;
+			return true;
 	}
 
 	if (getWaypoints().length === 0 && initialWaypointCount === 0) {
@@ -231,8 +225,7 @@ export const updateWaypointPositionAndRecalculate = async (
 	);
 
 	if (routeResult.success) {
-		saveWaypointsToLocalStorage(getWaypoints());
-		useRoutingStore.getState().saveSnapshot();
+			useRoutingStore.getState().saveSnapshot();
 		return;
 	}
 
@@ -307,8 +300,7 @@ export const insertWaypointAtLocation = async (
 
 	if (getWaypoints().length >= 2) {
 		await recomputeAndApplySnap(map, accessToken, isMapLocked, setRouteDistance, setRouteDuration, setHasRoute);
-		saveWaypointsToLocalStorage(getWaypoints());
-		useRoutingStore.getState().saveSnapshot();
+			useRoutingStore.getState().saveSnapshot();
 	} else {
 		clearComputedRouteUi(map, setRouteDistance, setRouteDuration, setHasRoute);
 		useRoutingStore.getState().saveSnapshot();

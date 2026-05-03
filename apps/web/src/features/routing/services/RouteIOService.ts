@@ -13,11 +13,6 @@ import {
 	updateWaypointsLayer,
 } from "../managers/MapLayerManager";
 import { generateGPXString, parseGPXFile, processGPXWaypoints } from "./GPXService";
-import {
-	loadMapLockStateFromLocalStorage,
-	saveMapLockStateToLocalStorage,
-	saveWaypointsToLocalStorage,
-} from "./LocalStorageService";
 import { getCurrentRoutePath, getRoute, setCurrentRoutePath } from "./RouteCalculationService";
 
 type RouteStateSetter = React.Dispatch<React.SetStateAction<string>>;
@@ -78,7 +73,6 @@ const applyExactRoutePath = ({
 }: LoadRouteOptions & { exactRoutePath: Coordinate[]; isMapLocked: boolean }) => {
 	useRoutingStore.getState().setWaypoints(waypoints);
 	updateWaypointsLayer(map, waypoints, isMapLocked);
-	saveWaypointsToLocalStorage(waypoints);
 
 	setCurrentRoutePath(exactRoutePath);
 	updateRouteLayer(map, exactRoutePath);
@@ -103,7 +97,7 @@ export const loadRouteIntoMap = async (options: LoadRouteOptions): Promise<Route
 		setHasRoute,
 		saveSnapshot = false,
 	} = options;
-	const isMapLocked = options.isMapLocked ?? loadMapLockStateFromLocalStorage();
+	const isMapLocked = options.isMapLocked ?? useRoutingStore.getState().isMapLocked;
 
 	if (!routeHasValidShape(waypoints)) {
 		return { success: false, message: "The route data is invalid or corrupted." };
@@ -116,7 +110,6 @@ export const loadRouteIntoMap = async (options: LoadRouteOptions): Promise<Route
 	}
 
 	store.setIsMapLocked(isMapLocked);
-	saveMapLockStateToLocalStorage(isMapLocked);
 
 	clearRouteState({ ...options, isMapLocked });
 
@@ -127,7 +120,6 @@ export const loadRouteIntoMap = async (options: LoadRouteOptions): Promise<Route
 
 	store.setWaypoints(waypoints);
 	updateWaypointsLayer(map, waypoints, isMapLocked);
-	saveWaypointsToLocalStorage(waypoints);
 
 	if (exactRoutePath && exactRoutePath.length >= 2) {
 		applyExactRoutePath({ ...options, exactRoutePath, isMapLocked });
@@ -147,7 +139,6 @@ export const loadRouteIntoMap = async (options: LoadRouteOptions): Promise<Route
 	if (routeResult.waypointsSnapped && routeResult.snappedWaypoints) {
 		store.setWaypoints(routeResult.snappedWaypoints);
 		updateWaypointsLayer(map, routeResult.snappedWaypoints, isMapLocked);
-		saveWaypointsToLocalStorage(routeResult.snappedWaypoints);
 	}
 
 	return { success: true };

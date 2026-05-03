@@ -9,7 +9,6 @@ import {
 	updateUserLocationLayer,
 	updateWaypointsLayer,
 } from "@/features/routing/managers/MapLayerManager";
-import { saveWaypointsToLocalStorage } from "@/features/routing/services/LocalStorageService";
 import { getRoute } from "@/features/routing/services/RouteCalculationService";
 import { exportCurrentRouteToGPXFile, importRouteFromGPXString } from "@/features/routing/services/RouteIOService";
 import { Logger } from "@/lib/logger";
@@ -33,7 +32,6 @@ async function updateMapFromStore(
 	updateDragLinesLayer(map, []);
 
 	updateWaypointsLayer(map, waypoints, _isMapLockedRef?.current ?? false);
-	saveWaypointsToLocalStorage(waypoints);
 
 	if (waypoints.length >= 2 && accessToken) {
 		const result = await getRoute(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
@@ -95,7 +93,6 @@ export const resetRouting = async (
 	Logger.info("[Routing] Resetting routing");
 	useRoutingStore.getState().saveSnapshot();
 	useRoutingStore.getState().clearWaypoints();
-	saveWaypointsToLocalStorage([]);
 	await updateMapFromStore(map, accessToken, setRouteDistance, setRouteDuration, setHasRoute);
 	Logger.info("[Routing] Reset complete");
 };

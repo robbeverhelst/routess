@@ -9,12 +9,10 @@ import {
 } from "@/features/routing/managers/MapLayerManager";
 import {
 	loadLightPresetFromLocalStorage,
-	loadMapLockStateFromLocalStorage,
 	loadMapStyleFromLocalStorage,
 	loadSunDirectionSettingFromLocalStorage,
 	type MapStyle,
 	saveLightPresetToLocalStorage,
-	saveMapLockStateToLocalStorage,
 	saveMapStyleToLocalStorage,
 	saveSunDirectionSettingToLocalStorage,
 } from "@/features/routing/services/LocalStorageService";
@@ -102,11 +100,6 @@ export const MapConfigurationProvider: React.FC<MapConfigurationProviderProps> =
 	const isMapLocked = useRoutingStore((state) => state.isMapLocked);
 	const setIsMapLocked = useRoutingStore((state) => state.setIsMapLocked);
 
-	// Initialize Zustand store with localStorage value on mount
-	useEffect(() => {
-		const savedLockState = loadMapLockStateFromLocalStorage();
-		setIsMapLocked(savedLockState);
-	}, [setIsMapLocked]);
 	const [currentLightPreset, setCurrentLightPreset] = useState<TimeOfDay>(loadLightPresetFromLocalStorage() || "day");
 	const [currentBearing, setCurrentBearing] = useState<number>(initialBearing);
 	const [currentMapStyle, setCurrentMapStyle] = useState<MapStyle>(loadMapStyleFromLocalStorage());
@@ -166,7 +159,6 @@ export const MapConfigurationProvider: React.FC<MapConfigurationProviderProps> =
 	useEffect(() => {
 		if (!isOnline && !isMapLocked) {
 			setIsMapLocked(true);
-			saveMapLockStateToLocalStorage(true);
 			Logger.info("[MapConfigurationProvider] Map automatically locked due to offline status");
 		}
 	}, [isOnline, isMapLocked, setIsMapLocked]);
@@ -199,7 +191,6 @@ export const MapConfigurationProvider: React.FC<MapConfigurationProviderProps> =
 	const handleToggleLock = useCallback(() => {
 		const newLockedState = !isMapLocked;
 		setIsMapLocked(newLockedState);
-		saveMapLockStateToLocalStorage(newLockedState);
 
 		if (newLockedState && mapRef.current && hasRoute) {
 			try {
