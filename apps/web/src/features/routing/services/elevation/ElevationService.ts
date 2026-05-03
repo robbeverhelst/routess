@@ -6,9 +6,12 @@ const DEFAULT_TARGET_SPACING_METERS = 50;
 const DEFAULT_MAX_SAMPLES = 256;
 const DEFAULT_SMOOTHING_WINDOW = 5;
 // Treat tiny up/down jitter (≤ this many meters between consecutive smoothed
-// samples) as noise rather than real climb. Contour-line snapping in the
-// terrain tileset would otherwise inflate gain on flat sections.
-const NOISE_THRESHOLD_METERS = 1.5;
+// samples) as noise rather than real climb. Mapbox Terrain-RGB has 0.1 m
+// precision and the 5-pt smoother flattens sample noise to ~0.1 m, so 0.5 m
+// reliably clips DEM noise without erasing real terrain. (Higher thresholds
+// silently zero out modest climbs on flat-ish routes — the smoother spreads
+// each real step across the window so per-step deltas are small.)
+const NOISE_THRESHOLD_METERS = 0.5;
 
 export interface SampleAndComputeOptions {
 	targetSpacingMeters?: number;

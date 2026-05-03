@@ -42,11 +42,17 @@ describe("computeGainLoss", () => {
 	});
 
 	it("ignores sub-threshold jitter", () => {
-		// Each step is 1 m, below the 1.5 m noise threshold, so neither gain
-		// nor loss should accumulate.
-		const r = computeGainLoss([100, 101, 100, 101, 100]);
+		// Each step is 0.3 m, below the 0.5 m noise threshold.
+		const r = computeGainLoss([100, 100.3, 100, 100.3, 100]);
 		expect(r.gainMeters).toBe(0);
 		expect(r.lossMeters).toBe(0);
+	});
+
+	it("counts modest steps that beat the threshold", () => {
+		// 0.6 m steps clear the 0.5 m noise threshold and accumulate.
+		const r = computeGainLoss([100, 100.6, 100, 100.6]);
+		expect(r.gainMeters).toBeCloseTo(1.2, 5);
+		expect(r.lossMeters).toBeCloseTo(0.6, 5);
 	});
 
 	it("handles mixed up/down profile", () => {
