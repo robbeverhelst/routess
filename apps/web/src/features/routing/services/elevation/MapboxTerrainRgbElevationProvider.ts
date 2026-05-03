@@ -41,8 +41,7 @@ const lonLatToTilePixel = (lon: number, lat: number, zoom: number): TilePixel =>
 	};
 };
 
-const decodeElevation = (r: number, g: number, b: number): number =>
-	-10000 + (r * 256 * 256 + g * 256 + b) * 0.1;
+const decodeElevation = (r: number, g: number, b: number): number => -10000 + (r * 256 * 256 + g * 256 + b) * 0.1;
 
 const sampleTile = (tile: TileImage, xFrac: number, yFrac: number): number => {
 	const px = Math.min(tile.width - 1, Math.max(0, Math.floor(xFrac * tile.width)));
