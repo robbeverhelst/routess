@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useSurfaceBreakdown } from "@/features/routing/services/useSurfaceBreakdown";
 import { useModalsStore } from "@/redesign/stores/modalsStore";
 import { type RedesignActivity, useUiStore } from "@/redesign/stores/uiStore";
 import {
@@ -17,6 +18,7 @@ import {
 import { ElevationSparkline } from "../components/ElevationSparkline";
 import { I } from "../components/icons";
 import { Btn, IconBtn, Kbd, RDS_COLORS, SecTitle } from "../components/primitives";
+import { SurfaceBreakdownBar } from "../components/SurfaceBreakdownBar";
 
 const ACTIVITIES: { key: RedesignActivity; icon: React.ComponentType<{ size?: number }>; label: string }[] = [
 	{ key: "run", icon: I.run, label: "Run" },
@@ -46,6 +48,7 @@ export function PlanPanel() {
 	const openModal = useModalsStore((s) => s.openModal);
 	const elevationGain = useElevationGain();
 	const isComputingElevation = useIsComputingElevation();
+	const { breakdown: surfaceBreakdown, loading: surfaceLoading } = useSurfaceBreakdown(routePath, hasRoute);
 
 	const elevationVal = (() => {
 		if (elevationGain != null) return Math.round(elevationGain).toString();
@@ -173,6 +176,7 @@ export function PlanPanel() {
 					))}
 				</div>
 				<PlanElevationSparkline />
+				<SurfaceBreakdownBar breakdown={surfaceBreakdown} loading={surfaceLoading} />
 			</div>
 
 			{/* Waypoints list */}

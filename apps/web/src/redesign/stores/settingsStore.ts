@@ -3,7 +3,7 @@ import { persist } from "zustand/middleware";
 import type { RedesignActivity } from "./uiStore";
 
 export type RedesignUnits = "km" | "mi";
-export type RedesignMapStyle = "streets" | "outdoors" | "satellite" | "terrain" | "dark" | "minimal";
+export type RedesignMapStyle = "streets" | "outdoors" | "satellite";
 
 export type OverlayKey = "heatmap" | "contour" | "bike" | "surface" | "wind";
 export type MapOverlays = Record<OverlayKey, boolean>;
@@ -92,7 +92,17 @@ export const useRedesignSettingsStore = create<SettingsState>()(
 		}),
 		{
 			name: "routess.redesign.settings",
-			version: 3,
+			version: 4,
+			migrate: (persisted, version) => {
+				const state = persisted as Partial<SettingsState> | null;
+				if (state && version < 4) {
+					const stale = state.mapStyle as string | undefined;
+					if (stale === "dark" || stale === "minimal" || stale === "terrain") {
+						state.mapStyle = "outdoors";
+					}
+				}
+				return state as SettingsState;
+			},
 		},
 	),
 );

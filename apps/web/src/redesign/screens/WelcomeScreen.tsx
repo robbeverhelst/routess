@@ -1,8 +1,37 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { loadLastMapViewFromLocalStorage } from "@/features/routing/services/LocalStorageService";
 import { I } from "../components/icons";
 import { Btn, Kbd, RDS_COLORS } from "../components/primitives";
 import { DEFAULT_SPORT_SPEEDS_KMH, type RedesignUnits, useRedesignSettingsStore } from "../stores/settingsStore";
 import { type RedesignActivity, useUiStore } from "../stores/uiStore";
+
+const PREVIEW_FALLBACK = { lng: 4.4025, lat: 51.2194, zoom: 11 };
+
+const STYLE_PREVIEWS = [
+	{
+		key: "streets" as const,
+		styleId: "streets-v12",
+		fallbackBg: "linear-gradient(135deg, oklch(0.93 0.02 240), oklch(0.95 0.03 220))",
+		label: "Streets",
+	},
+	{
+		key: "outdoors" as const,
+		styleId: "outdoors-v12",
+		fallbackBg: "linear-gradient(135deg, oklch(0.92 0.05 145), oklch(0.88 0.07 95))",
+		label: "Outdoors",
+	},
+	{
+		key: "satellite" as const,
+		styleId: "satellite-streets-v12",
+		fallbackBg: "linear-gradient(135deg, oklch(0.4 0.04 240), oklch(0.3 0.05 145))",
+		label: "Satellite",
+	},
+];
+
+function buildStylePreviewUrl(styleId: string, lng: number, lat: number, zoom: number, token: string) {
+	const safeZoom = Math.min(Math.max(Math.round(zoom * 10) / 10, 4), 16);
+	return `https://api.mapbox.com/styles/v1/mapbox/${styleId}/static/${lng.toFixed(4)},${lat.toFixed(4)},${safeZoom}/300x280@2x?access_token=${token}&logo=false&attribution=false`;
+}
 
 const STEPS = [
 	{ title: "Pick your sports", sub: "Choose one or more — you can switch any time." },
@@ -48,6 +77,18 @@ export function WelcomeScreen({ onComplete }: { onComplete?: () => void }) {
 	const setUnits = useRedesignSettingsStore((s) => s.setUnits);
 	const mapStyle = useRedesignSettingsStore((s) => s.mapStyle);
 	const setMapStyle = useRedesignSettingsStore((s) => s.setMapStyle);
+
+	const stylePreviewUrls = useMemo(() => {
+		const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN as string | undefined;
+		if (!token) return null;
+		const view = loadLastMapViewFromLocalStorage();
+		const lng = view?.longitude ?? PREVIEW_FALLBACK.lng;
+		const lat = view?.latitude ?? PREVIEW_FALLBACK.lat;
+		const zoom = view?.zoom ?? PREVIEW_FALLBACK.zoom;
+		return Object.fromEntries(
+			STYLE_PREVIEWS.map((s) => [s.key, buildStylePreviewUrl(s.styleId, lng, lat, zoom, token)]),
+		) as Record<(typeof STYLE_PREVIEWS)[number]["key"], string>;
+	}, []);
 
 	useEffect(() => {
 		for (const sport of selectedSports) {
@@ -307,26 +348,9 @@ export function WelcomeScreen({ onComplete }: { onComplete?: () => void }) {
 
 					{step === 3 && (
 						<div style={{ display: "flex", gap: 12 }}>
-							{(
-								[
-									{
-										key: "streets",
-										bg: "linear-gradient(135deg, oklch(0.93 0.02 240), oklch(0.95 0.03 220))",
-										label: "Streets",
-									},
-									{
-										key: "outdoors",
-										bg: "linear-gradient(135deg, oklch(0.92 0.05 145), oklch(0.88 0.07 95))",
-										label: "Outdoors",
-									},
-									{
-										key: "satellite",
-										bg: "linear-gradient(135deg, oklch(0.4 0.04 240), oklch(0.3 0.05 145))",
-										label: "Satellite",
-									},
-								] as const
-							).map((m) => {
+							{STYLE_PREVIEWS.map((m) => {
 								const on = mapStyle === m.key;
+								const previewUrl = stylePreviewUrls?.[m.key];
 								return (
 									<button
 										key={m.key}
@@ -338,7 +362,10 @@ export function WelcomeScreen({ onComplete }: { onComplete?: () => void }) {
 											borderRadius: 12,
 											overflow: "hidden",
 											border: on ? `2px solid ${RDS_COLORS.accent}` : `1px solid ${RDS_COLORS.border}`,
-											background: m.bg,
+											background: m.fallbackBg,
+											backgroundImage: previewUrl ? `url("${previewUrl}")` : undefined,
+											backgroundSize: "cover",
+											backgroundPosition: "center",
 											height: 140,
 											position: "relative",
 											display: "flex",

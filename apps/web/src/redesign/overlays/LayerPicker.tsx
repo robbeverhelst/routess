@@ -1,18 +1,39 @@
+import { useMemo } from "react";
+import { loadLastMapViewFromLocalStorage } from "@/features/routing/services/LocalStorageService";
 import { I } from "../components/icons";
 import { IconBtn, RDS_COLORS, SecTitle, Toggle } from "../components/primitives";
 import { useModalsStore } from "../stores/modalsStore";
 import { type OverlayKey, useRedesignSettingsStore } from "../stores/settingsStore";
 
 const STYLES = [
-	{ key: "streets", label: "Streets", bg: "linear-gradient(135deg, oklch(0.93 0.02 240), oklch(0.95 0.03 220))" },
-	{ key: "outdoors", label: "Outdoors", bg: "linear-gradient(135deg, oklch(0.92 0.05 145), oklch(0.88 0.07 95))" },
-	{ key: "satellite", label: "Satellite", bg: "linear-gradient(135deg, oklch(0.4 0.04 240), oklch(0.3 0.05 145))" },
-	{ key: "terrain", label: "Terrain", bg: "linear-gradient(135deg, oklch(0.85 0.06 75), oklch(0.7 0.09 45))" },
-	{ key: "dark", label: "Dark", bg: "linear-gradient(135deg, oklch(0.18 0.012 270), oklch(0.22 0.014 250))" },
-	{ key: "minimal", label: "Minimal", bg: "linear-gradient(135deg, oklch(0.97 0.003 270), oklch(0.94 0.005 250))" },
+	{
+		key: "streets",
+		label: "Streets",
+		styleId: "streets-v12",
+		fallbackBg: "linear-gradient(135deg, oklch(0.93 0.02 240), oklch(0.95 0.03 220))",
+	},
+	{
+		key: "outdoors",
+		label: "Outdoors",
+		styleId: "outdoors-v12",
+		fallbackBg: "linear-gradient(135deg, oklch(0.92 0.05 145), oklch(0.88 0.07 95))",
+	},
+	{
+		key: "satellite",
+		label: "Satellite",
+		styleId: "satellite-streets-v12",
+		fallbackBg: "linear-gradient(135deg, oklch(0.4 0.04 240), oklch(0.3 0.05 145))",
+	},
 ] as const;
 
 type MapStyleKey = (typeof STYLES)[number]["key"];
+
+const PREVIEW_FALLBACK = { lng: 4.4025, lat: 51.2194, zoom: 11 };
+
+function buildPreviewUrl(styleId: string, lng: number, lat: number, zoom: number, token: string) {
+	const safeZoom = Math.min(Math.max(Math.round(zoom * 10) / 10, 4), 16);
+	return `https://api.mapbox.com/styles/v1/mapbox/${styleId}/static/${lng.toFixed(4)},${lat.toFixed(4)},${safeZoom}/200x120@2x?access_token=${token}&logo=false&attribution=false`;
+}
 
 export function LayerPicker() {
 	const close = useModalsStore((s) => s.closeOverlay);
@@ -20,6 +41,19 @@ export function LayerPicker() {
 	const setMapStyle = useRedesignSettingsStore((s) => s.setMapStyle);
 	const overlays = useRedesignSettingsStore((s) => s.overlays);
 	const setOverlay = useRedesignSettingsStore((s) => s.setOverlay);
+
+	const previews = useMemo(() => {
+		const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN as string | undefined;
+		if (!token) return null;
+		const view = loadLastMapViewFromLocalStorage();
+		const lng = view?.longitude ?? PREVIEW_FALLBACK.lng;
+		const lat = view?.latitude ?? PREVIEW_FALLBACK.lat;
+		const zoom = view?.zoom ?? PREVIEW_FALLBACK.zoom;
+		return Object.fromEntries(STYLES.map((s) => [s.key, buildPreviewUrl(s.styleId, lng, lat, zoom, token)])) as Record<
+			MapStyleKey,
+			string
+		>;
+	}, []);
 
 	const overlayItems: {
 		key: OverlayKey;
@@ -84,7 +118,15 @@ export function LayerPicker() {
 									cursor: "pointer",
 								}}
 							>
-								<div style={{ height: 56, background: s.bg }} />
+								<div
+									style={{
+										height: 56,
+										background: s.fallbackBg,
+										backgroundSize: "cover",
+										backgroundPosition: "center",
+										backgroundImage: previews?.[s.key] ? `url("${previews[s.key]}")` : undefined,
+									}}
+								/>
 								<div
 									style={{
 										padding: "6px 8px",
