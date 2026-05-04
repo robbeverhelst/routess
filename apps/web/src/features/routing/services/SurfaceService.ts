@@ -2,10 +2,13 @@ import type { Coordinate } from "@routess/core";
 import { Logger } from "@/lib/logger";
 import type { ValhallaCosting } from "./routingMode";
 
-// Public OSMF Valhalla instance — fine for development, rate-limited and not
-// for production traffic. Swap for a Stadia or self-hosted endpoint when
-// shipping to real users.
-const VALHALLA_TRACE_ATTRIBUTES_URL = "https://valhalla1.openstreetmap.de/trace_attributes";
+// Prefer Stadia Maps when VITE_STADIA_API_KEY is set (reliable, free tier).
+// Fall back to the public FOSSGIS Valhalla instance otherwise; fine for local
+// hacking but frequently slow or unreachable.
+const STADIA_API_KEY = (import.meta.env.VITE_STADIA_API_KEY as string | undefined)?.trim();
+const VALHALLA_TRACE_ATTRIBUTES_URL = STADIA_API_KEY
+	? `https://api.stadiamaps.com/trace_attributes/v1?api_key=${encodeURIComponent(STADIA_API_KEY)}`
+	: "https://valhalla1.openstreetmap.de/trace_attributes";
 
 const MAX_SHAPE_POINTS = 1500;
 

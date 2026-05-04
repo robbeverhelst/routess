@@ -437,8 +437,6 @@ const MapConfigurationContent: React.FC<MapConfigurationContentProps> = (props) 
 
 					{!props.hideOverlays && (
 						<MapNotifications
-							hasRoute={props.hasRoute}
-							routeDistance={props.routeDistance}
 							shareNotification={props.shareNotification}
 							showRouteInfoError={props.showRouteInfoError}
 							routeInfoErrorMessage={props.routeInfoErrorMessage}

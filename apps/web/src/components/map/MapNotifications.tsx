@@ -1,32 +1,18 @@
-import React, { useMemo } from "react";
+import React from "react";
 
 interface MapNotificationsProps {
-	// Route info state
-	hasRoute: boolean;
-	routeDistance?: string;
 	shareNotification: string;
 	showRouteInfoError: boolean;
 	routeInfoErrorMessage: string;
-
-	// Waypoint error state
 	waypointError: string | null;
 }
 
 const MapNotificationsComponent: React.FC<MapNotificationsProps> = ({
-	hasRoute,
-	routeDistance,
 	shareNotification,
 	showRouteInfoError,
 	routeInfoErrorMessage,
 	waypointError,
 }) => {
-	// Memoize the split operation for routeDistance to avoid repeated string operations
-	const routeDistanceParts = useMemo(() => {
-		if (!routeDistance) return { value: "", unit: "" };
-		const parts = routeDistance.split(" ");
-		return { value: parts[0] || "", unit: parts[1] || "" };
-	}, [routeDistance]);
-
 	return (
 		<>
 			{/* Waypoint error notification - BOTTOM LEFT */}
@@ -36,14 +22,6 @@ const MapNotificationsComponent: React.FC<MapNotificationsProps> = ({
 						<span className="text-xl">⚠️</span>
 						<span>{waypointError}</span>
 					</div>
-				</div>
-			)}
-
-			{/* Custom Distance Box - Consistently Bottom Right */}
-			{hasRoute && routeDistance && (
-				<div className="absolute bottom-8 right-8 z-10 bg-white/25 dark:bg-neutral-800/30 text-neutral-700 dark:text-neutral-200 p-3 rounded-lg shadow-lg backdrop-blur-md flex items-baseline gap-0.5 w-auto">
-					<span className="text-4xl font-bold">{routeDistanceParts.value}</span>
-					<span className="text-sm">{routeDistanceParts.unit}</span>
 				</div>
 			)}
 

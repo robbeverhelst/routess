@@ -2,12 +2,14 @@ import type { Waypoint } from "@routess/core";
 import type { GeoJSONSource, Map as MapboxMap } from "mapbox-gl";
 import { Logger } from "@/lib/logger";
 import type { Coordinate } from "@/types/map";
+import { type MapPalette, readMapPalette } from "./mapPalette";
 
 export const ROUTE_SOURCE_ID = "route";
 export const ROUTE_LAYER_ID = "route";
 export const ROUTE_HOVER_LAYER_ID = "route-hover-target";
 export const WAYPOINTS_SOURCE_ID = "points";
 export const WAYPOINTS_LAYER_ID = "points";
+export const WAYPOINTS_CORE_LAYER_ID = "points-core";
 export const USER_LOCATION_SOURCE_ID = "user-location-point";
 export const USER_LOCATION_HALO_LAYER_ID = "user-location-halo";
 export const USER_LOCATION_POINT_LAYER_ID = "user-location-point";
@@ -19,30 +21,35 @@ export const ROUTE_CASING_LAYER_ID = "route-casing";
 export const WAYPOINTS_SHADOW_LAYER_ID = "waypoints-shadow";
 export const ROUTE_ARROWS_LAYER_ID = "route-arrows";
 
-// Configuration for kilometer marker visibility based on zoom levels.
-// Assumes GeoJSON features for markers will have a 'markerType' property
-// ('major', 'medium', 'minor').
 const KM_MARKER_VISIBILITY_CONFIG = {
-	minZoomToShowAny: 8, // Zoom level below which no km markers are shown.
-	majorMarkerMinZoom: 8, // Zoom level from which 'major' (e.g., multiples of 10km) markers are shown.
-	mediumMarkerMinZoom: 10, // Zoom level from which 'medium' (e.g., multiples of 5km) markers are shown.
-	minorMarkerMinZoom: 12, // Zoom level from which 'minor' (e.g., 1km, 2km) markers are shown.
+	minZoomToShowAny: 9,
+	majorMarkerMinZoom: 9,
+	mediumMarkerMinZoom: 11,
+	minorMarkerMinZoom: 13,
 };
 
-// Configuration for waypoint dynamic sizing based on zoom levels
+// [zoom, ringRadius, shadowRadius, coreRadius, strokeWidth]
 const WAYPOINT_SCALING_CONFIG = {
 	zoomStops: [
-		// [zoomLevel, radius, shadowRadiusOffset, strokeWidth]
-		[6, 1, 1, 0.5], // Very small at low zoom
-		[8, 2, 1.5, 0.75], // Small
-		[10, 4, 2, 1], // Medium-small
-		[12, 6, 2.5, 1.5], // Default/Medium (current default is radius 6, shadow 8)
-		[14, 8, 3, 2], // Large
-		[16, 10, 3.5, 2.5], // Very large at high zoom
+		[6, 1.5, 4, 0, 0.5],
+		[8, 2.5, 6, 0, 0.75],
+		[10, 4, 9, 1.4, 1],
+		[12, 5.5, 12, 2, 1.25],
+		[14, 7, 15, 2.6, 1.5],
+		[16, 8.5, 18, 3.2, 1.75],
 	],
 };
 
-export const initializeSourcesAndLayers = (map: MapboxMap): void => {
+const interpolateZoomStops = (column: 1 | 2 | 3 | 4): unknown[] => [
+	"interpolate",
+	["linear"],
+	["zoom"],
+	...WAYPOINT_SCALING_CONFIG.zoomStops.flatMap((stop) => [stop[0], stop[column]]),
+];
+
+export const initializeSourcesAndLayers = (map: MapboxMap, palette?: MapPalette): void => {
+	const p = palette ?? readMapPalette();
+
 	if (!map.getSource(ROUTE_SOURCE_ID)) {
 		map.addSource(ROUTE_SOURCE_ID, {
 			type: "geojson",
@@ -59,9 +66,8 @@ export const initializeSourcesAndLayers = (map: MapboxMap): void => {
 			source: ROUTE_SOURCE_ID,
 			layout: { "line-join": "round", "line-cap": "round" },
 			paint: {
-				"line-color": "#003366",
-				"line-width": 6,
-				"line-opacity": 0.2,
+				"line-color": p.routeCasing,
+				"line-width": 5,
 				"line-emissive-strength": 1,
 			},
 		});
@@ -72,7 +78,7 @@ export const initializeSourcesAndLayers = (map: MapboxMap): void => {
 			layout: { "line-join": "round", "line-cap": "round" },
 			paint: {
 				"line-color": "#000",
-				"line-width": 12,
+				"line-width": 14,
 				"line-opacity": 0,
 				"line-emissive-strength": 1,
 			},
@@ -83,20 +89,10 @@ export const initializeSourcesAndLayers = (map: MapboxMap): void => {
 			source: ROUTE_SOURCE_ID,
 			layout: { "line-join": "round", "line-cap": "round" },
 			paint: {
-				"line-opacity": 0.75,
-				"line-color": [
-					"case",
-					["boolean", ["feature-state", "hover"], false],
-					"#FF8C00", // DarkOrange for hover
-					"#3887be", // Default color
-				],
-				"line-width": [
-					"case",
-					["boolean", ["feature-state", "hover"], false],
-					6, // Wider line on hover
-					3, // Default width
-				],
-				"line-emissive-strength": 1, // Make line color ignore map lighting
+				"line-opacity": 0.95,
+				"line-color": ["case", ["boolean", ["feature-state", "hover"], false], p.routeHover, p.routeMain],
+				"line-width": ["case", ["boolean", ["feature-state", "hover"], false], 4, 2.5],
+				"line-emissive-strength": 1,
 			},
 		});
 
@@ -106,43 +102,23 @@ export const initializeSourcesAndLayers = (map: MapboxMap): void => {
 			source: ROUTE_SOURCE_ID,
 			layout: {
 				"symbol-placement": "line",
-				"symbol-spacing": [
-					"interpolate",
-					["linear"],
-					["zoom"],
-					5,
-					30, // Very dense at zoom 5
-					12,
-					100, // Still very dense up to zoom 12
-					14,
-					300, // Maintained from previous 'good' setting (zoom 14)
-					18,
-					400, // Maintained for deeper zoom (zoom 18)
-				],
-				"text-field": "▶",
-				"text-size": [
-					"interpolate",
-					["linear"],
-					["zoom"],
-					10,
-					12, // Larger base size at low zoom
-					14,
-					18, // Scaled size at mid zoom
-					18,
-					24, // Larger size at high zoom
-				],
+				"symbol-spacing": ["interpolate", ["linear"], ["zoom"], 6, 60, 12, 140, 14, 220, 18, 320],
+				"text-field": "›",
+				"text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
+				"text-size": ["interpolate", ["linear"], ["zoom"], 8, 14, 12, 18, 16, 24],
 				"text-allow-overlap": true,
 				"text-ignore-placement": true,
 				"text-rotation-alignment": "map",
 				"text-pitch-alignment": "map",
-				"text-keep-upright": false, // Allow text to rotate with the line
+				"text-keep-upright": false,
+				"text-letter-spacing": 0,
 				visibility: "visible",
 			},
 			paint: {
-				"text-color": "#FFFFFF",
-				"text-halo-color": "#3887be",
-				"text-halo-width": 0.75, // Slightly increased halo for better definition
-				"text-opacity": 0.9,
+				"text-color": p.arrowFill,
+				"text-halo-color": p.arrowHalo,
+				"text-halo-width": 1.6,
+				"text-opacity": 0.95,
 			},
 		});
 	}
@@ -157,15 +133,9 @@ export const initializeSourcesAndLayers = (map: MapboxMap): void => {
 			type: "circle",
 			source: WAYPOINTS_SOURCE_ID,
 			paint: {
-				"circle-radius": [
-					"interpolate",
-					["linear"],
-					["zoom"],
-					...WAYPOINT_SCALING_CONFIG.zoomStops.flatMap((stop) => [stop[0], stop[1] + stop[2]]), // stop[1] is radius, stop[2] is shadowOffset
-				],
-				"circle-color": "#000",
-				"circle-opacity": 0.4,
-				"circle-translate": [1, 1],
+				"circle-radius": interpolateZoomStops(2),
+				"circle-color": p.waypointShadow,
+				"circle-blur": 0.6,
 			},
 		});
 		map.addLayer({
@@ -173,30 +143,30 @@ export const initializeSourcesAndLayers = (map: MapboxMap): void => {
 			type: "circle",
 			source: WAYPOINTS_SOURCE_ID,
 			paint: {
-				"circle-radius": [
-					"interpolate",
-					["linear"],
-					["zoom"],
-					...WAYPOINT_SCALING_CONFIG.zoomStops.flatMap((stop) => [stop[0], stop[1]]), // stop[1] is radius
-				],
+				"circle-radius": interpolateZoomStops(1),
 				"circle-color": [
 					"match",
 					["get", "pointType"],
 					"start",
-					"#2ecc71",
+					p.waypointStart,
 					"end",
-					"#e74c3c",
+					p.waypointEnd,
 					"direct",
-					"#f1c40f",
-					"#3887be", // intermediate/other
+					p.waypointDirect,
+					p.waypointInter,
 				],
-				"circle-stroke-width": [
-					"interpolate",
-					["linear"],
-					["zoom"],
-					...WAYPOINT_SCALING_CONFIG.zoomStops.flatMap((stop) => [stop[0], stop[3]]), // stop[3] is strokeWidth
-				],
-				"circle-stroke-color": "#fff",
+				"circle-stroke-width": interpolateZoomStops(4),
+				"circle-stroke-color": p.waypointStroke,
+			},
+		});
+		map.addLayer({
+			id: WAYPOINTS_CORE_LAYER_ID,
+			type: "circle",
+			source: WAYPOINTS_SOURCE_ID,
+			filter: ["match", ["get", "pointType"], ["start", "end", "direct"], true, false],
+			paint: {
+				"circle-radius": interpolateZoomStops(3),
+				"circle-color": p.waypointStroke,
 			},
 		});
 	}
@@ -211,9 +181,10 @@ export const initializeSourcesAndLayers = (map: MapboxMap): void => {
 			type: "circle",
 			source: USER_LOCATION_SOURCE_ID,
 			paint: {
-				"circle-radius": 16,
-				"circle-color": "#007cbf",
-				"circle-opacity": 0.2,
+				"circle-radius": 18,
+				"circle-color": p.userLocation,
+				"circle-opacity": 0.18,
+				"circle-blur": 0.4,
 				"circle-stroke-width": 0,
 			},
 		});
@@ -222,17 +193,14 @@ export const initializeSourcesAndLayers = (map: MapboxMap): void => {
 			type: "circle",
 			source: USER_LOCATION_SOURCE_ID,
 			paint: {
-				"circle-radius": 8,
-				"circle-color": "#007cbf",
-				"circle-stroke-width": 2,
-				"circle-stroke-color": "#ffffff",
-				"circle-opacity": 0.8,
+				"circle-radius": 7,
+				"circle-color": p.userLocation,
+				"circle-stroke-width": 2.5,
+				"circle-stroke-color": p.userLocationStroke,
 			},
 		});
 	}
 
-	// Kilometre Markers
-	// Ensure the source exists
 	if (!map.getSource(KM_MARKERS_SOURCE_ID)) {
 		map.addSource(KM_MARKERS_SOURCE_ID, {
 			type: "geojson",
@@ -240,30 +208,30 @@ export const initializeSourcesAndLayers = (map: MapboxMap): void => {
 		});
 	}
 
-	// Remove the layer if it already exists to ensure style updates
 	if (map.getLayer(KM_MARKERS_LAYER_ID)) {
 		map.removeLayer(KM_MARKERS_LAYER_ID);
 	}
-	// Add the kilometer markers layer with the updated styling
 	map.addLayer({
 		id: KM_MARKERS_LAYER_ID,
 		type: "symbol",
 		source: KM_MARKERS_SOURCE_ID,
 		layout: {
 			"text-field": ["get", "km"],
-			"text-font": ["Open Sans Semibold", "Arial Unicode MS Bold"], // Use a clear, slightly bold font
-			"text-size": 11, // Balanced text size
-			"text-anchor": "bottom", // Anchor text at its bottom
-			"text-offset": [0, -0.75], // Offset text 0.75em upwards from the point
-			"text-allow-overlap": true, // Allow text to overlap if necessary; filters still control label crowding
-			"text-ignore-placement": false, // Default, let Mapbox attempt to avoid collisions first
-			"symbol-placement": "point", // Markers are points
+			"text-font": ["Open Sans Semibold", "Arial Unicode MS Bold"],
+			"text-size": 10.5,
+			"text-letter-spacing": 0.04,
+			"text-anchor": "bottom",
+			"text-offset": [0, -0.9],
+			"text-allow-overlap": false,
+			"text-ignore-placement": false,
+			"text-padding": 4,
+			"symbol-placement": "point",
 		},
 		paint: {
-			"text-color": "#FFFFFF", // White text for good contrast
-			"text-halo-color": "rgba(0, 0, 0, 0.8)", // Strong dark halo (black, 80% opacity)
-			"text-halo-width": 1.2, // Crisp halo width
-			"text-halo-blur": 0, // No blur for sharp edges
+			"text-color": p.kmText,
+			"text-halo-color": p.kmHalo,
+			"text-halo-width": 2,
+			"text-halo-blur": 0.5,
 		},
 		filter: [
 			"all",
@@ -299,14 +267,76 @@ export const initializeSourcesAndLayers = (map: MapboxMap): void => {
 			type: "line",
 			source: TEMP_DRAG_LINES_SOURCE_ID,
 			layout: { "line-join": "round", "line-cap": "round" },
-			paint: { "line-color": "#3887be", "line-width": 3, "line-opacity": 0.75 },
+			paint: {
+				"line-color": p.dragLine,
+				"line-width": 2.5,
+				"line-opacity": 0.7,
+				"line-dasharray": [2, 2],
+			},
 		});
 	}
 	Logger.info("[MapLayerManager] All sources and layers initialized (if not already present).");
 };
 
+export const applyMapPalette = (map: MapboxMap, palette: MapPalette): void => {
+	if (!map?.getStyle()) return;
+	try {
+		if (map.getLayer(ROUTE_CASING_LAYER_ID)) {
+			map.setPaintProperty(ROUTE_CASING_LAYER_ID, "line-color", palette.routeCasing);
+		}
+		if (map.getLayer(ROUTE_LAYER_ID)) {
+			map.setPaintProperty(ROUTE_LAYER_ID, "line-color", [
+				"case",
+				["boolean", ["feature-state", "hover"], false],
+				palette.routeHover,
+				palette.routeMain,
+			]);
+		}
+		if (map.getLayer(ROUTE_ARROWS_LAYER_ID)) {
+			map.setPaintProperty(ROUTE_ARROWS_LAYER_ID, "text-color", palette.arrowFill);
+			map.setPaintProperty(ROUTE_ARROWS_LAYER_ID, "text-halo-color", palette.arrowHalo);
+		}
+		if (map.getLayer(WAYPOINTS_SHADOW_LAYER_ID)) {
+			map.setPaintProperty(WAYPOINTS_SHADOW_LAYER_ID, "circle-color", palette.waypointShadow);
+		}
+		if (map.getLayer(WAYPOINTS_LAYER_ID)) {
+			map.setPaintProperty(WAYPOINTS_LAYER_ID, "circle-color", [
+				"match",
+				["get", "pointType"],
+				"start",
+				palette.waypointStart,
+				"end",
+				palette.waypointEnd,
+				"direct",
+				palette.waypointDirect,
+				palette.waypointInter,
+			]);
+			map.setPaintProperty(WAYPOINTS_LAYER_ID, "circle-stroke-color", palette.waypointStroke);
+		}
+		if (map.getLayer(WAYPOINTS_CORE_LAYER_ID)) {
+			map.setPaintProperty(WAYPOINTS_CORE_LAYER_ID, "circle-color", palette.waypointStroke);
+		}
+		if (map.getLayer(USER_LOCATION_HALO_LAYER_ID)) {
+			map.setPaintProperty(USER_LOCATION_HALO_LAYER_ID, "circle-color", palette.userLocation);
+		}
+		if (map.getLayer(USER_LOCATION_POINT_LAYER_ID)) {
+			map.setPaintProperty(USER_LOCATION_POINT_LAYER_ID, "circle-color", palette.userLocation);
+			map.setPaintProperty(USER_LOCATION_POINT_LAYER_ID, "circle-stroke-color", palette.userLocationStroke);
+		}
+		if (map.getLayer(KM_MARKERS_LAYER_ID)) {
+			map.setPaintProperty(KM_MARKERS_LAYER_ID, "text-color", palette.kmText);
+			map.setPaintProperty(KM_MARKERS_LAYER_ID, "text-halo-color", palette.kmHalo);
+		}
+		if (map.getLayer(TEMP_DRAG_LINES_LAYER_ID)) {
+			map.setPaintProperty(TEMP_DRAG_LINES_LAYER_ID, "line-color", palette.dragLine);
+		}
+	} catch (err) {
+		Logger.warn("[MapLayerManager] Failed to apply palette", err);
+	}
+};
+
 export const updateWaypointsLayer = (map: MapboxMap, waypoints: Waypoint[], isMapLocked: boolean): void => {
-	if (!map || !map.getSource(WAYPOINTS_SOURCE_ID)) return;
+	if (!map?.getSource(WAYPOINTS_SOURCE_ID)) return;
 
 	const renderable: { wp: Waypoint; originalIndex: number }[] = waypoints.map((wp, originalIndex) => ({
 		wp,
@@ -334,7 +364,7 @@ export const updateWaypointsLayer = (map: MapboxMap, waypoints: Waypoint[], isMa
 };
 
 export const updateUserLocationLayer = (map: MapboxMap, coordinates: Coordinate | null): void => {
-	if (!map || !map.getSource(USER_LOCATION_SOURCE_ID)) return;
+	if (!map?.getSource(USER_LOCATION_SOURCE_ID)) return;
 	const features = [];
 	if (coordinates) {
 		features.push({
@@ -348,7 +378,7 @@ export const updateUserLocationLayer = (map: MapboxMap, coordinates: Coordinate 
 };
 
 export const updateRouteLayer = (map: MapboxMap, routeCoordinates: Coordinate[]): void => {
-	if (!map || !map.getSource(ROUTE_SOURCE_ID)) return;
+	if (!map?.getSource(ROUTE_SOURCE_ID)) return;
 	const source = map.getSource(ROUTE_SOURCE_ID) as GeoJSONSource;
 	source.setData({
 		type: "Feature" as const,
@@ -362,19 +392,19 @@ export const updateKilometerMarkersLayer = (
 	map: MapboxMap,
 	kmMarkerFeatures: GeoJSON.Feature<GeoJSON.Point, GeoJSON.GeoJsonProperties>[],
 ): void => {
-	if (!map || !map.getSource(KM_MARKERS_SOURCE_ID)) return;
+	if (!map?.getSource(KM_MARKERS_SOURCE_ID)) return;
 	const source = map.getSource(KM_MARKERS_SOURCE_ID) as GeoJSONSource;
 	source.setData({ type: "FeatureCollection" as const, features: kmMarkerFeatures });
 };
 
 export const updateDragLinesLayer = (map: MapboxMap, dragLineFeatures: GeoJSON.Feature<GeoJSON.LineString>[]): void => {
-	if (!map || !map.getSource(TEMP_DRAG_LINES_SOURCE_ID)) return;
+	if (!map?.getSource(TEMP_DRAG_LINES_SOURCE_ID)) return;
 	const source = map.getSource(TEMP_DRAG_LINES_SOURCE_ID) as GeoJSONSource;
 	source.setData({ type: "FeatureCollection" as const, features: dragLineFeatures });
 };
 
 export const clearRouteLayer = (map: MapboxMap): void => {
-	if (!map || !map.getSource(ROUTE_SOURCE_ID)) return;
+	if (!map?.getSource(ROUTE_SOURCE_ID)) return;
 	const source = map.getSource(ROUTE_SOURCE_ID) as GeoJSONSource;
 	source.setData({
 		type: "Feature" as const,
@@ -385,7 +415,7 @@ export const clearRouteLayer = (map: MapboxMap): void => {
 };
 
 export const clearKilometerMarkersLayer = (map: MapboxMap): void => {
-	if (!map || !map.getSource(KM_MARKERS_SOURCE_ID)) return;
+	if (!map?.getSource(KM_MARKERS_SOURCE_ID)) return;
 	const source = map.getSource(KM_MARKERS_SOURCE_ID) as GeoJSONSource;
 	source.setData({ type: "FeatureCollection" as const, features: [] });
 };
