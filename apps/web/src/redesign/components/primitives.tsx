@@ -38,12 +38,11 @@ export function IconBtn({ children, onClick, title, pressed, style, disabled }: 
 			title={title}
 			aria-pressed={pressed}
 			disabled={disabled}
+			className="rds-icon-btn"
 			style={{
 				display: "inline-flex",
 				alignItems: "center",
 				justifyContent: "center",
-				width: 32,
-				height: 32,
 				borderRadius: "var(--rds-radius-sm)",
 				background: pressed ? RDS_COLORS.bgActive : "transparent",
 				border: "1px solid transparent",
@@ -51,6 +50,8 @@ export function IconBtn({ children, onClick, title, pressed, style, disabled }: 
 				transition: "background 120ms, color 120ms, border 120ms",
 				cursor: disabled ? "not-allowed" : "pointer",
 				opacity: disabled ? 0.5 : 1,
+				flexShrink: 0,
+				padding: 0,
 				...style,
 			}}
 			onMouseEnter={(e) => {

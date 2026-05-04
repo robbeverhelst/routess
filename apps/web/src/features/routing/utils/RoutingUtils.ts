@@ -105,7 +105,7 @@ export const closestPointOnSegment = (p: Coordinate, v: Coordinate, w: Coordinat
  * @param coordinates - An array of coordinates to fit the bounds to.
  */
 export const zoomToRoute = (map: MapboxMap, coordinates: Coordinate[]): void => {
-	if (!map || !map.getBounds || !coordinates || coordinates.length === 0) {
+	if (!map?.getBounds || !coordinates || coordinates.length === 0) {
 		Logger.warn("[RoutingUtils.zoomToRoute] Map not ready or no coordinates to zoom to.");
 		return;
 	}

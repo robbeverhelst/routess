@@ -125,7 +125,7 @@ export function CommandPalette() {
 				display: "flex",
 				alignItems: "flex-start",
 				justifyContent: "center",
-				padding: "10vh 24px 24px",
+				padding: "max(6vh, calc(16px + var(--rds-safe-top))) 12px 12px",
 			}}
 		>
 			<button
@@ -143,12 +143,15 @@ export function CommandPalette() {
 			<div
 				style={{
 					position: "relative",
-					width: 600,
-					maxWidth: "100%",
+					width: "100%",
+					maxWidth: 600,
 					background: RDS_COLORS.bgPanel,
 					border: `1px solid ${RDS_COLORS.border}`,
 					borderRadius: 14,
 					boxShadow: "var(--rds-shadow-lg)",
+					display: "flex",
+					flexDirection: "column",
+					maxHeight: "calc(100dvh - max(6vh, 16px) - 24px)",
 				}}
 			>
 				<div
@@ -182,7 +185,7 @@ export function CommandPalette() {
 					/>
 					<Kbd>esc</Kbd>
 				</div>
-				<div style={{ padding: 6, maxHeight: 440, overflow: "auto" }}>
+				<div style={{ padding: 6, flex: 1, minHeight: 0, overflow: "auto" }}>
 					{filtered.length === 0 && (
 						<div
 							style={{

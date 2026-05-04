@@ -180,7 +180,7 @@ class ServiceWorkerManager {
 
 	// Skip waiting and activate new service worker
 	async skipWaiting(): Promise<void> {
-		if (!this.registration || !this.registration.waiting) {
+		if (!this.registration?.waiting) {
 			Logger.warn("[SW Manager] No waiting service worker to activate");
 			return;
 		}
