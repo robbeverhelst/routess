@@ -193,7 +193,7 @@ export const en: Record<string, string> = {
 
 	// Settings translations
 	"settings.title": "Settings",
-	"settings.description": "Customize your Routess experience and manage your preferences",
+	"settings.description": "Customize your routess experience and manage your preferences",
 	"settings.general": "General",
 	"settings.generalDesc": "Language and basic preferences",
 	"settings.storage": "Storage",

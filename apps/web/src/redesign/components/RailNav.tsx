@@ -37,7 +37,7 @@ export function RailNav() {
 			}}
 		>
 			<div style={{ marginBottom: 12, marginTop: 2 }}>
-				<img src="/logo.png" alt="Routess" width={28} height={28} style={{ borderRadius: 8, display: "block" }} />
+				<img src="/logo.png" alt="routess" width={28} height={28} style={{ borderRadius: 8, display: "block" }} />
 			</div>
 			<div
 				style={{

@@ -172,8 +172,8 @@ export function SidebarContent({
 
 			<div className="px-3 py-3 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
 				<div className="flex items-center gap-3">
-					<img src="/logo.png" alt="Routess" className="w-8 h-8 rounded-lg" />
-					<span className="text-lg font-semibold text-gray-900 dark:text-white">Routess</span>
+					<img src="/logo.png" alt="routess" className="w-8 h-8 rounded-lg" />
+					<span className="text-lg font-semibold text-gray-900 dark:text-white">routess</span>
 				</div>
 
 				<div className="flex items-center gap-1">

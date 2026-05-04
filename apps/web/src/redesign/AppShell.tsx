@@ -110,7 +110,7 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 	const { context, setContext, theme, accent, panelCollapsed, togglePanel, welcomeCompleted, completeWelcome } =
 		useUiStore();
 	const { modal, overlay, openModal, openOverlay, closeOverlay } = useModalsStore();
-	const { data: auth } = useAuthStatus();
+	const { data: auth, isLoading: authLoading } = useAuthStatus();
 	const online = useOnlineStatus();
 	const hasRoute = useHasRoute();
 	const distance = useRouteDistance();
@@ -287,12 +287,55 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 	}, [setContext]);
 
 	const isAuthenticated = !!auth?.isAuthenticated;
-	const showLogin = !isAuthenticated && !skippedAuth && authView === "login";
-	const showSignup = !isAuthenticated && !skippedAuth && authView === "signup";
+	const authResolving = authLoading;
+	const showLogin = !isAuthenticated && !authResolving && !skippedAuth && authView === "login";
+	const showSignup = !isAuthenticated && !authResolving && !skippedAuth && authView === "signup";
 	const showWelcome = isAuthenticated && !welcomeCompleted;
 
+	const authRoot = (children: ReactNode) => (
+		<div
+			data-redesign
+			data-accent={accent}
+			className={theme === "dark" ? "dark" : undefined}
+			style={{
+				position: "fixed",
+				inset: 0,
+				background: RDS_COLORS.bgCanvas,
+				color: RDS_COLORS.fg,
+			}}
+		>
+			{children}
+		</div>
+	);
+
+	if (authResolving && !skippedAuth) {
+		return authRoot(
+			<div
+				style={{
+					position: "absolute",
+					inset: 0,
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "center",
+					background: RDS_COLORS.bgCanvas,
+				}}
+			>
+				<div
+					style={{
+						width: 18,
+						height: 18,
+						borderRadius: 999,
+						border: `2px solid ${RDS_COLORS.border}`,
+						borderTopColor: RDS_COLORS.accent,
+						animation: "rds-pulse 1s linear infinite",
+					}}
+				/>
+			</div>,
+		);
+	}
+
 	if (showLogin) {
-		return (
+		return authRoot(
 			<>
 				<LoginScreen onSuccess={() => setSkippedAuth(true)} />
 				<button
@@ -313,16 +356,16 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 					New here? Create account
 				</button>
 				<ToastStack />
-			</>
+			</>,
 		);
 	}
 
 	if (showSignup) {
-		return (
+		return authRoot(
 			<>
 				<SignUpScreen onSwitchToLogin={() => setAuthView("login")} />
 				<ToastStack />
-			</>
+			</>,
 		);
 	}
 
