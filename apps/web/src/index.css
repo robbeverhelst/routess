@@ -123,7 +123,15 @@
 
 #root {
 	width: 100%;
-	height: 100vh;
+	height: 100dvh;
+}
+
+/* Safe-area insets for notched devices, exposed as CSS vars */
+:root {
+	--rds-safe-top: env(safe-area-inset-top, 0px);
+	--rds-safe-right: env(safe-area-inset-right, 0px);
+	--rds-safe-bottom: env(safe-area-inset-bottom, 0px);
+	--rds-safe-left: env(safe-area-inset-left, 0px);
 }
 
 /* ====================================================================
@@ -177,6 +185,8 @@
 	/* Layout */
 	--rds-rail-w: 56px;
 	--rds-panel-w: 360px;
+	--rds-top-bar-h: 0px;
+	--rds-bottom-tab-h: 0px;
 
 	font-family: "Inter", system-ui, -apple-system, sans-serif;
 	font-feature-settings: "ss01", "cv11";
@@ -243,6 +253,28 @@
 	--rds-accent-line: oklch(0.72 0.18 30);
 }
 
+/* IconBtn default sizing — overridable via inline style */
+[data-redesign] .rds-icon-btn {
+	width: 32px;
+	height: 32px;
+}
+
+@media (max-width: 767px) {
+	[data-redesign] .rds-icon-btn {
+		width: 36px;
+		height: 36px;
+	}
+}
+
+/* Bottom tab bar pill press feedback */
+[data-redesign] .rds-tab-btn:active .rds-tab-pill {
+	transform: scale(0.92);
+	background: var(--rds-bg-active);
+}
+[data-redesign] .rds-tab-btn[aria-current="page"]:active .rds-tab-pill {
+	background: var(--rds-accent-soft);
+}
+
 /* Helpers used by the redesign */
 [data-redesign] .rds-mono {
 	font-family: "JetBrains Mono", ui-monospace, monospace;
@@ -260,5 +292,42 @@
 	}
 	50% {
 		opacity: 0.55;
+	}
+}
+
+@keyframes rds-sheet-in {
+	from {
+		transform: translateY(100%);
+	}
+	to {
+		transform: translateY(0);
+	}
+}
+
+@keyframes rds-fade-in {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+/* Mobile layout overrides — collapse rail and panel into bottom tab bar + drawer.
+ * Top/bottom bars float as detached cards. The *-h vars represent the total inset
+ * other UI should leave above/below to clear the floating bar (margin + height + gap). */
+@media (max-width: 767px) {
+	[data-redesign] {
+		--rds-rail-w: 0px;
+		--rds-panel-w: 100vw;
+		--rds-top-bar-h: calc(48px + max(10px, calc(var(--rds-safe-top) + 6px)) + 12px);
+		--rds-bottom-tab-h: calc(60px + max(10px, calc(var(--rds-safe-bottom) + 6px)) + 12px);
+	}
+}
+
+/* Tablet narrows panel to keep map breathable */
+@media (min-width: 768px) and (max-width: 1023px) {
+	[data-redesign] {
+		--rds-panel-w: 300px;
 	}
 }

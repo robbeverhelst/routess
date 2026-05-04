@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { I } from "../components/icons";
 import { IconBtn, RDS_COLORS } from "../components/primitives";
+import { useViewport } from "../hooks/useViewport";
 import { useModalsStore } from "../stores/modalsStore";
 
 interface NotificationItem {
@@ -19,6 +20,7 @@ const TABS = ["All", "Mentions", "Social", "System"] as const;
 export function NotificationCenter() {
 	const close = useModalsStore((s) => s.closeOverlay);
 	const [tab, setTab] = useState<(typeof TABS)[number]>("All");
+	const { isMobile } = useViewport();
 
 	// No backend endpoint yet — render an empty state.
 	const items: NotificationItem[] = [];
@@ -30,20 +32,38 @@ export function NotificationCenter() {
 
 	return (
 		<div
-			style={{
-				position: "absolute",
-				top: 16,
-				right: 16,
-				width: 380,
-				background: RDS_COLORS.bgPanel,
-				border: `1px solid ${RDS_COLORS.border}`,
-				borderRadius: 14,
-				boxShadow: "var(--rds-shadow-lg)",
-				zIndex: 60,
-				maxHeight: "70vh",
-				display: "flex",
-				flexDirection: "column",
-			}}
+			style={
+				isMobile
+					? {
+							position: "absolute",
+							left: "max(12px, var(--rds-safe-left))",
+							right: "max(12px, var(--rds-safe-right))",
+							bottom: "var(--rds-bottom-tab-h)",
+							maxHeight: "calc(100dvh - var(--rds-bottom-tab-h) - var(--rds-top-bar-h) - 16px)",
+							background: RDS_COLORS.bgPanel,
+							border: `1px solid ${RDS_COLORS.border}`,
+							borderRadius: 14,
+							boxShadow: "var(--rds-shadow-lg)",
+							zIndex: 60,
+							display: "flex",
+							flexDirection: "column",
+							animation: "rds-sheet-in 200ms cubic-bezier(0.32, 0.72, 0, 1)",
+						}
+					: {
+							position: "absolute",
+							top: 16,
+							right: 16,
+							width: 380,
+							background: RDS_COLORS.bgPanel,
+							border: `1px solid ${RDS_COLORS.border}`,
+							borderRadius: 14,
+							boxShadow: "var(--rds-shadow-lg)",
+							zIndex: 60,
+							maxHeight: "70vh",
+							display: "flex",
+							flexDirection: "column",
+						}
+			}
 		>
 			<div
 				style={{

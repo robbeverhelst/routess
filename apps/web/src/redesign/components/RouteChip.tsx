@@ -1,3 +1,4 @@
+import { useViewport } from "../hooks/useViewport";
 import { RDS_COLORS, SecTitle } from "./primitives";
 
 interface RouteChipProps {
@@ -7,6 +8,37 @@ interface RouteChipProps {
 }
 
 export function RouteChip({ distance, time, elevation = "—" }: RouteChipProps) {
+	const { isMobile } = useViewport();
+
+	if (isMobile) {
+		return (
+			<div
+				style={{
+					position: "absolute",
+					left: "max(12px, var(--rds-safe-left))",
+					right: "max(12px, var(--rds-safe-right))",
+					bottom: "var(--rds-bottom-tab-h)",
+					padding: "8px 12px",
+					borderRadius: 12,
+					background: RDS_COLORS.bgPanel,
+					border: `1px solid ${RDS_COLORS.border}`,
+					boxShadow: "var(--rds-shadow-md)",
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "space-around",
+					gap: 8,
+					zIndex: 4,
+				}}
+			>
+				<Stat label="Distance" value={distance} compact />
+				<div style={{ width: 1, height: 24, background: RDS_COLORS.border }} />
+				<Stat label="Time" value={time} compact />
+				<div style={{ width: 1, height: 24, background: RDS_COLORS.border }} />
+				<Stat label="Elev" value={elevation} compact />
+			</div>
+		);
+	}
+
 	return (
 		<div
 			style={{
@@ -33,11 +65,21 @@ export function RouteChip({ distance, time, elevation = "—" }: RouteChipProps)
 	);
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({ label, value, compact }: { label: string; value: string; compact?: boolean }) {
 	return (
-		<div style={{ display: "flex", flexDirection: "column" }}>
+		<div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
 			<SecTitle>{label}</SecTitle>
-			<div className="rds-mono" style={{ fontSize: 16, fontWeight: 600, color: RDS_COLORS.fg }}>
+			<div
+				className="rds-mono"
+				style={{
+					fontSize: compact ? 14 : 16,
+					fontWeight: 600,
+					color: RDS_COLORS.fg,
+					whiteSpace: "nowrap",
+					overflow: "hidden",
+					textOverflow: "ellipsis",
+				}}
+			>
 				{value}
 			</div>
 		</div>

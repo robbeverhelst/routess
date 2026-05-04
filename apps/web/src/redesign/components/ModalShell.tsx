@@ -30,7 +30,9 @@ export function ModalShell({ title, sub, children, footer, width = 480, onClose,
 				display: "flex",
 				alignItems: anchor === "top" ? "flex-start" : "center",
 				justifyContent: "center",
-				padding: anchor === "top" ? "10vh 24px 24px" : 24,
+				padding: anchor === "top" ? "max(8vh, 24px) 12px 12px" : 12,
+				paddingTop: anchor === "top" ? "max(8vh, calc(24px + var(--rds-safe-top)))" : undefined,
+				paddingBottom: "max(12px, var(--rds-safe-bottom))",
 			}}
 		>
 			<button
@@ -50,15 +52,15 @@ export function ModalShell({ title, sub, children, footer, width = 480, onClose,
 			<div
 				style={{
 					position: "relative",
-					width,
-					maxWidth: "100%",
+					width: "100%",
+					maxWidth: width,
 					background: RDS_COLORS.bgPanel,
 					border: `1px solid ${RDS_COLORS.border}`,
 					borderRadius: 14,
 					boxShadow: "var(--rds-shadow-lg)",
 					display: "flex",
 					flexDirection: "column",
-					maxHeight: "86vh",
+					maxHeight: "min(86dvh, calc(100dvh - 24px))",
 				}}
 			>
 				<div

@@ -35,13 +35,14 @@ export function ToastStack() {
 		<div
 			style={{
 				position: "absolute",
-				right: 24,
-				bottom: 24,
+				right: "max(12px, var(--rds-safe-right))",
+				bottom: "calc(var(--rds-bottom-tab-h) + max(12px, var(--rds-safe-bottom)))",
+				left: "max(12px, var(--rds-safe-left))",
 				display: "flex",
 				flexDirection: "column",
+				alignItems: "flex-end",
 				gap: 10,
 				zIndex: 70,
-				width: 340,
 				pointerEvents: "none",
 			}}
 		>
@@ -61,6 +62,7 @@ export function ToastStack() {
 							borderRadius: 12,
 							boxShadow: "var(--rds-shadow-md)",
 							pointerEvents: "auto",
+							width: "min(340px, 100%)",
 						}}
 					>
 						<div

@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { loadLastMapViewFromLocalStorage } from "@/features/routing/services/LocalStorageService";
 import { I } from "../components/icons";
 import { IconBtn, RDS_COLORS, SecTitle, Toggle } from "../components/primitives";
+import { useViewport } from "../hooks/useViewport";
 import { useModalsStore } from "../stores/modalsStore";
 import { type OverlayKey, useRedesignSettingsStore } from "../stores/settingsStore";
 
@@ -41,6 +42,7 @@ export function LayerPicker() {
 	const setMapStyle = useRedesignSettingsStore((s) => s.setMapStyle);
 	const overlays = useRedesignSettingsStore((s) => s.overlays);
 	const setOverlay = useRedesignSettingsStore((s) => s.setOverlay);
+	const { isMobile } = useViewport();
 
 	const previews = useMemo(() => {
 		const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN as string | undefined;
@@ -71,18 +73,35 @@ export function LayerPicker() {
 
 	return (
 		<div
-			style={{
-				position: "absolute",
-				top: 60,
-				right: 16,
-				width: 340,
-				background: RDS_COLORS.bgPanel,
-				border: `1px solid ${RDS_COLORS.border}`,
-				borderRadius: 14,
-				boxShadow: "var(--rds-shadow-lg)",
-				zIndex: 60,
-				overflow: "hidden",
-			}}
+			style={
+				isMobile
+					? {
+							position: "absolute",
+							left: "max(12px, var(--rds-safe-left))",
+							right: "max(12px, var(--rds-safe-right))",
+							bottom: "var(--rds-bottom-tab-h)",
+							maxHeight: "calc(100dvh - var(--rds-bottom-tab-h) - var(--rds-top-bar-h) - 16px)",
+							background: RDS_COLORS.bgPanel,
+							border: `1px solid ${RDS_COLORS.border}`,
+							borderRadius: 14,
+							boxShadow: "var(--rds-shadow-lg)",
+							zIndex: 60,
+							overflow: "auto",
+							animation: "rds-sheet-in 200ms cubic-bezier(0.32, 0.72, 0, 1)",
+						}
+					: {
+							position: "absolute",
+							top: 60,
+							right: 16,
+							width: 340,
+							background: RDS_COLORS.bgPanel,
+							border: `1px solid ${RDS_COLORS.border}`,
+							borderRadius: 14,
+							boxShadow: "var(--rds-shadow-lg)",
+							zIndex: 60,
+							overflow: "hidden",
+						}
+			}
 		>
 			<div
 				style={{
