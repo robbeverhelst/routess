@@ -32,12 +32,12 @@ export function MobileTopBar() {
 		>
 			<img
 				src="/logo.png"
-				alt="Routess"
+				alt="routess"
 				width={26}
 				height={26}
 				style={{ borderRadius: 7, display: "block", flexShrink: 0 }}
 			/>
-			<span style={{ fontSize: 14, fontWeight: 600, letterSpacing: -0.1 }}>Routess</span>
+			<span style={{ fontSize: 14, fontWeight: 600, letterSpacing: -0.1 }}>routess</span>
 			<div style={{ flex: 1 }} />
 			<IconBtn title="Search" onClick={() => openModal("search")}>
 				<I.search size={18} />
