@@ -26,18 +26,27 @@ const SURFACE_BUCKETS: Record<string, SurfaceBucket> = {
 	impassable: "path",
 };
 
+export interface SurfaceSegment {
+	surface: SurfaceBucket;
+	coordinates: Coordinate[];
+}
+
 export interface SurfaceBreakdown {
 	meters: Record<SurfaceBucket, number>;
 	total: number;
+	segments: SurfaceSegment[];
 }
 
 interface ValhallaEdge {
 	surface?: string;
 	length?: number;
+	begin_shape_index?: number;
+	end_shape_index?: number;
 }
 
 interface ValhallaTraceAttributesResponse {
 	edges?: ValhallaEdge[];
+	shape?: string;
 }
 
 export async function fetchSurfaceBreakdown(
@@ -54,7 +63,7 @@ export async function fetchSurfaceBreakdown(
 		shape_match: "map_snap",
 		costing,
 		filters: {
-			attributes: ["edge.surface", "edge.length"],
+			attributes: ["edge.surface", "edge.length", "edge.begin_shape_index", "edge.end_shape_index", "shape"],
 			action: "include",
 		},
 	};
@@ -93,7 +102,73 @@ export async function fetchSurfaceBreakdown(
 	}
 
 	if (total <= 0) return null;
-	return { meters, total };
+
+	const matchedShape = typeof data.shape === "string" ? decodePolyline6(data.shape) : null;
+	const segments = matchedShape ? buildSurfaceSegments(edges, matchedShape) : [];
+
+	return { meters, total, segments };
+}
+
+// Group consecutive edges sharing the same surface bucket into one polyline segment
+// using each edge's [begin_shape_index, end_shape_index] range against the matched shape.
+function buildSurfaceSegments(edges: ValhallaEdge[], shape: Coordinate[]): SurfaceSegment[] {
+	if (shape.length < 2) return [];
+	const segments: SurfaceSegment[] = [];
+	let current: { bucket: SurfaceBucket; begin: number; end: number } | null = null;
+
+	for (const edge of edges) {
+		const begin = edge.begin_shape_index;
+		const end = edge.end_shape_index;
+		if (typeof begin !== "number" || typeof end !== "number" || end <= begin) continue;
+		const bucket = SURFACE_BUCKETS[edge.surface ?? ""] ?? "unpaved";
+
+		if (current && current.bucket === bucket && begin <= current.end) {
+			current.end = Math.max(current.end, end);
+		} else {
+			if (current) segments.push(sliceSegment(current.bucket, current.begin, current.end, shape));
+			current = { bucket, begin, end };
+		}
+	}
+	if (current) segments.push(sliceSegment(current.bucket, current.begin, current.end, shape));
+	return segments.filter((s) => s.coordinates.length >= 2);
+}
+
+function sliceSegment(bucket: SurfaceBucket, begin: number, end: number, shape: Coordinate[]): SurfaceSegment {
+	const lo = Math.max(0, Math.min(begin, shape.length - 1));
+	const hi = Math.max(0, Math.min(end, shape.length - 1));
+	return { surface: bucket, coordinates: shape.slice(lo, hi + 1) };
+}
+
+// Valhalla returns shape as a polyline encoded with precision 1e6 (vs Google's 1e5).
+function decodePolyline6(encoded: string): Coordinate[] {
+	const factor = 1e6;
+	const coords: Coordinate[] = [];
+	let index = 0;
+	let lat = 0;
+	let lng = 0;
+	while (index < encoded.length) {
+		let result = 0;
+		let shift = 0;
+		let byte: number;
+		do {
+			byte = encoded.charCodeAt(index++) - 63;
+			result |= (byte & 0x1f) << shift;
+			shift += 5;
+		} while (byte >= 0x20);
+		lat += result & 1 ? ~(result >> 1) : result >> 1;
+
+		result = 0;
+		shift = 0;
+		do {
+			byte = encoded.charCodeAt(index++) - 63;
+			result |= (byte & 0x1f) << shift;
+			shift += 5;
+		} while (byte >= 0x20);
+		lng += result & 1 ? ~(result >> 1) : result >> 1;
+
+		coords.push([lng / factor, lat / factor]);
+	}
+	return coords;
 }
 
 function downsampleCoords(coords: Coordinate[], max: number): Coordinate[] {

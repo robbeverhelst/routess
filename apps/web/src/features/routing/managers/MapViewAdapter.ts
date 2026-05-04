@@ -1,12 +1,15 @@
 import type { Coordinate, Waypoint } from "@routess/core";
 import { haversineDistance } from "@routess/core";
 import type { Map as MapboxMap } from "mapbox-gl";
+import { useRouteSurfaceStore } from "@/redesign/stores/routeSurfaceStore";
 import { useRoutingStore } from "@/stores/routingStore";
 import {
 	clearKilometerMarkersLayer,
 	clearRouteLayer,
+	clearRouteSurfaceLayer,
 	updateKilometerMarkersLayer,
 	updateRouteLayer,
+	updateRouteSurfaceLayer,
 	updateWaypointsLayer,
 } from "./MapLayerManager";
 
@@ -50,11 +53,17 @@ const renderWaypoints = (map: MapboxMap, waypoints: Waypoint[], isMapLocked: boo
 const renderRoute = (map: MapboxMap, routePath: Coordinate[]) => {
 	if (routePath.length === 0) {
 		clearRouteLayer(map);
+		clearRouteSurfaceLayer(map);
 		clearKilometerMarkersLayer(map);
 		return;
 	}
 	updateRouteLayer(map, routePath);
 	updateKilometerMarkersLayer(map, buildKmMarkerFeatures(routePath));
+};
+
+const renderSurface = (map: MapboxMap) => {
+	const segments = useRouteSurfaceStore.getState().breakdown?.segments ?? [];
+	updateRouteSurfaceLayer(map, segments);
 };
 
 // Attach the adapter to a map instance. Returns a disposer that detaches
@@ -63,6 +72,7 @@ export function attachMapViewAdapter(map: MapboxMap): () => void {
 	const initial = useRoutingStore.getState();
 	renderWaypoints(map, initial.waypoints, initial.isMapLocked);
 	renderRoute(map, initial.routePath);
+	renderSurface(map);
 
 	const unsubWaypoints = useRoutingStore.subscribe((state, prev) => {
 		if (state.waypoints !== prev.waypoints || state.isMapLocked !== prev.isMapLocked) {
@@ -73,8 +83,15 @@ export function attachMapViewAdapter(map: MapboxMap): () => void {
 		}
 	});
 
+	const unsubSurface = useRouteSurfaceStore.subscribe((state, prev) => {
+		if (state.breakdown !== prev.breakdown) {
+			updateRouteSurfaceLayer(map, state.breakdown?.segments ?? []);
+		}
+	});
+
 	return () => {
 		unsubWaypoints();
+		unsubSurface();
 	};
 }
 
@@ -84,4 +101,5 @@ export function syncMapView(map: MapboxMap): void {
 	const state = useRoutingStore.getState();
 	renderWaypoints(map, state.waypoints, state.isMapLocked);
 	renderRoute(map, state.routePath);
+	renderSurface(map);
 }

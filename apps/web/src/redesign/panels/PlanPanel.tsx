@@ -48,7 +48,7 @@ export function PlanPanel() {
 	const openModal = useModalsStore((s) => s.openModal);
 	const elevationGain = useElevationGain();
 	const isComputingElevation = useIsComputingElevation();
-	const { breakdown: surfaceBreakdown, loading: surfaceLoading } = useSurfaceBreakdown(routePath, hasRoute);
+	const { breakdown: surfaceBreakdown, loading: surfaceLoading } = useSurfaceBreakdown();
 
 	const elevationVal = (() => {
 		if (elevationGain != null) return Math.round(elevationGain).toString();
