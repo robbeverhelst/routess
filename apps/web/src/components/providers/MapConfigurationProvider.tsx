@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useState } from "rea
 import type { TimeOfDay } from "@/components/ui/route-controls";
 import { initializeSourcesAndLayers } from "@/features/routing/managers/MapLayerManager";
 import { syncMapView } from "@/features/routing/managers/MapViewAdapter";
+import { readMapPalette } from "@/features/routing/managers/mapPalette";
 import {
 	loadLightPresetFromLocalStorage,
 	loadSunDirectionSettingFromLocalStorage,
@@ -110,7 +111,7 @@ export const MapConfigurationProvider: React.FC<MapConfigurationProviderProps> =
 			}
 
 			Logger.info("[MapConfigurationProvider] Re-initializing map layers after style change");
-			initializeSourcesAndLayers(mapRef.current);
+			initializeSourcesAndLayers(mapRef.current, readMapPalette());
 			syncMapView(mapRef.current);
 		},
 		[mapRef],

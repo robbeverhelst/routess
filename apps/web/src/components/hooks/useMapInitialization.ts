@@ -3,8 +3,9 @@ import type { Dispatch, SetStateAction } from "react";
 import { useCallback, useEffect, useRef } from "react";
 import type { PopupInfo as MIMPopupInfo } from "@/features/routing/managers/MapInteractionManager";
 import { initializeMapInteractions } from "@/features/routing/managers/MapInteractionManager";
-import { initializeSourcesAndLayers } from "@/features/routing/managers/MapLayerManager";
+import { applyMapPalette, initializeSourcesAndLayers } from "@/features/routing/managers/MapLayerManager";
 import { attachMapViewAdapter } from "@/features/routing/managers/MapViewAdapter";
+import { readMapPalette, subscribeMapPalette } from "@/features/routing/managers/mapPalette";
 import { loadSharedRouteIntoMap } from "@/features/routing/services/RouteIOService";
 import { Logger } from "@/lib/logger";
 import { useRoutingStore } from "@/stores/routingStore";
@@ -36,6 +37,7 @@ export const useMapInitialization = ({
 }: UseMapInitializationProps) => {
 	const routingDisposerRef = useRef<(() => void) | null>(null);
 	const mapViewAdapterDisposerRef = useRef<(() => void) | null>(null);
+	const paletteDisposerRef = useRef<(() => void) | null>(null);
 	const routeInitTimeoutRef = useRef<number | null>(null);
 
 	// Handle map load
@@ -44,8 +46,15 @@ export const useMapInitialization = ({
 			Logger.info("[useMapInitialization] Map loaded, setting up routing");
 			const map = event.target;
 
-			// Initialize map sources and layers first
-			initializeSourcesAndLayers(map);
+			// Initialize map sources and layers first, using current theme palette
+			const initialPalette = readMapPalette();
+			initializeSourcesAndLayers(map, initialPalette);
+
+			// Re-apply paint when the redesign theme or accent changes at runtime
+			paletteDisposerRef.current?.();
+			paletteDisposerRef.current = subscribeMapPalette((palette) => {
+				applyMapPalette(map, palette);
+			});
 
 			// Subscribe layers to the routing store so they reconcile on
 			// every store mutation. Must run before the route-restore step
@@ -134,6 +143,11 @@ export const useMapInitialization = ({
 			if (mapViewAdapterDisposerRef.current) {
 				mapViewAdapterDisposerRef.current();
 				mapViewAdapterDisposerRef.current = null;
+			}
+
+			if (paletteDisposerRef.current) {
+				paletteDisposerRef.current();
+				paletteDisposerRef.current = null;
 			}
 		};
 	}, []);
