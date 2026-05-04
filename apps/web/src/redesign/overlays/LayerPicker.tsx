@@ -74,10 +74,7 @@ export function LayerPicker() {
 							<button
 								key={s.key}
 								type="button"
-								onClick={() => {
-									setMapStyle(s.key);
-									window.dispatchEvent(new CustomEvent("routess:set-map-style", { detail: { styleKey: s.key } }));
-								}}
+								onClick={() => setMapStyle(s.key)}
 								style={{
 									padding: 0,
 									border: on ? `2px solid ${RDS_COLORS.accent}` : `1.5px solid ${RDS_COLORS.border}`,

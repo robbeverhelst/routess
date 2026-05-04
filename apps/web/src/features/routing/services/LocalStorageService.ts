@@ -11,12 +11,10 @@ import { isDev } from "@/lib/utils/env";
 const LIGHT_PRESET_KEY = "mapLightPreset";
 const LAST_MAP_VIEW_KEY = "mapLastView";
 const LANGUAGE_STORAGE_KEY = "routingAppLanguage";
-const MAP_STYLE_KEY = "mapStyle";
 const SUN_DIRECTION_STORAGE_KEY = "routingAppShowSunDirection";
 
 const KNOWN_TIME_OF_DAY: TimeOfDay[] = ["dawn", "day", "dusk", "night"];
 const KNOWN_LANGUAGES: SupportedLanguage[] = ["en", "nl", "fr", "de"];
-const KNOWN_MAP_STYLES: MapStyle[] = ["standard", "satellite"];
 
 export type MapStyle = "standard" | "satellite";
 
@@ -130,20 +128,6 @@ export function saveLanguageToLocalStorage(language: SupportedLanguage): void {
 		if (isDev()) Logger.info(`[LocalStorageService] Saved language: ${language}`);
 	} catch (error) {
 		Logger.error("[LocalStorageService] Error saving language:", error);
-	}
-}
-
-// --- Map style ---
-
-export function loadMapStyleFromLocalStorage(): MapStyle {
-	return readEnum(MAP_STYLE_KEY, KNOWN_MAP_STYLES, "standard") ?? "standard";
-}
-
-export function saveMapStyleToLocalStorage(style: MapStyle): void {
-	try {
-		localStorage.setItem(MAP_STYLE_KEY, style);
-	} catch (error) {
-		Logger.error("[LocalStorageService] Error saving map style:", error);
 	}
 }
 

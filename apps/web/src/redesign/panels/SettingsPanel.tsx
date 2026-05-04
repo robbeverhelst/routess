@@ -101,7 +101,7 @@ export function SettingsPanel() {
 	const { data: profile } = useUserProfile();
 	const logout = useLogout();
 	const pushToast = useToastStore((s) => s.push);
-	const { accent, setAccent, density, setDensity, theme, setTheme, layout, setLayout } = useUiStore();
+	const { accent, setAccent, theme, setTheme } = useUiStore();
 	const {
 		units,
 		setUnits,
@@ -134,12 +134,10 @@ export function SettingsPanel() {
 
 	const handleMapStyleChange = (nextStyle: RedesignMapStyle) => {
 		setMapStyle(nextStyle);
-		window.dispatchEvent(new CustomEvent("routess:set-map-style", { detail: { styleKey: nextStyle } }));
 	};
 
 	const handleShowPoisChange = (next: boolean) => {
 		setShowPois(next);
-		window.dispatchEvent(new CustomEvent("routess:set-pois", { detail: { visible: next } }));
 	};
 
 	const handleSignOut = () => {
@@ -207,21 +205,6 @@ export function SettingsPanel() {
 
 			<Group title="Appearance">
 				<Row
-					label="Layout"
-					sub="Sidebar is the desktop default; floating glass and bottom sheet are alt modes"
-					control={
-						<Segmented
-							value={layout}
-							onChange={(v) => setLayout(v as "sidebar" | "floating" | "bottom")}
-							options={[
-								{ value: "sidebar", label: "Sidebar" },
-								{ value: "floating", label: "Floating" },
-								{ value: "bottom", label: "Bottom" },
-							]}
-						/>
-					}
-				/>
-				<Row
 					label="Theme"
 					control={
 						<Segmented
@@ -259,20 +242,6 @@ export function SettingsPanel() {
 								);
 							})}
 						</div>
-					}
-				/>
-				<Row
-					label="Density"
-					control={
-						<Segmented
-							value={density}
-							onChange={(v) => setDensity(v as "compact" | "default" | "comfy")}
-							options={[
-								{ value: "compact", label: "Compact" },
-								{ value: "default", label: "Default" },
-								{ value: "comfy", label: "Comfy" },
-							]}
-						/>
 					}
 					last
 				/>

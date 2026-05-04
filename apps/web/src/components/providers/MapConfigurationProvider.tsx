@@ -6,15 +6,14 @@ import { initializeSourcesAndLayers } from "@/features/routing/managers/MapLayer
 import { syncMapView } from "@/features/routing/managers/MapViewAdapter";
 import {
 	loadLightPresetFromLocalStorage,
-	loadMapStyleFromLocalStorage,
 	loadSunDirectionSettingFromLocalStorage,
 	type MapStyle,
 	saveLightPresetToLocalStorage,
-	saveMapStyleToLocalStorage,
 	saveSunDirectionSettingToLocalStorage,
 } from "@/features/routing/services/LocalStorageService";
 import { Logger } from "@/lib/logger";
 import { getSolarPositionForTimeOfDay, type SolarPosition } from "@/lib/solar";
+import { type RedesignMapStyle, useRedesignSettingsStore } from "@/redesign/stores/settingsStore";
 import { useRoutingStore } from "@/stores/routingStore";
 
 // Define bearing presets for cycling - simplified to 4 cardinal directions
@@ -23,21 +22,12 @@ const BEARING_PRESETS = [0, 90, 180, 270]; // N, E, S, W
 // Order of presets for cycling
 const lightPresetsOrder: TimeOfDay[] = ["dawn", "day", "dusk", "night"];
 
-type RedesignMapStyleKey = "streets" | "outdoors" | "satellite" | "terrain" | "dark" | "minimal";
-
-const REDESIGN_STYLE_URLS: Record<RedesignMapStyleKey, string> = {
-	streets: "mapbox://styles/mapbox/streets-v12",
-	outdoors: "mapbox://styles/mapbox/outdoors-v12",
-	satellite: "mapbox://styles/mapbox/satellite-streets-v12",
-	terrain: "mapbox://styles/mapbox/outdoors-v12",
-	dark: "mapbox://styles/mapbox/dark-v11",
-	minimal: "mapbox://styles/mapbox/light-v11",
-};
-
 interface MapConfigurationContextType {
 	// Map style state
 	currentMapStyle: MapStyle;
+	currentMapStyleKey: RedesignMapStyle;
 	onToggleMapStyle: () => void;
+	onMapStyleLoaded: () => void;
 
 	// Map lock state
 	isMapLocked: boolean;
@@ -93,15 +83,19 @@ export const MapConfigurationProvider: React.FC<MapConfigurationProviderProps> =
 }) => {
 	const isMapLocked = useRoutingStore((state) => state.isMapLocked);
 	const setIsMapLocked = useRoutingStore((state) => state.setIsMapLocked);
+	const mapStyleKey = useRedesignSettingsStore((state) => state.mapStyle);
+	const setMapStyle = useRedesignSettingsStore((state) => state.setMapStyle);
+	const showPois = useRedesignSettingsStore((state) => state.showPois);
+	const setShowPois = useRedesignSettingsStore((state) => state.setShowPois);
 
 	const [currentLightPreset, setCurrentLightPreset] = useState<TimeOfDay>(loadLightPresetFromLocalStorage() || "day");
 	const [currentBearing, setCurrentBearing] = useState<number>(initialBearing);
-	const [currentMapStyle, setCurrentMapStyle] = useState<MapStyle>(loadMapStyleFromLocalStorage());
 	const [showSunDirection, setShowSunDirection] = useState<boolean>(loadSunDirectionSettingFromLocalStorage());
 	const [currentSunPosition, setCurrentSunPosition] = useState<SolarPosition | null>(null);
+	const currentMapStyle: MapStyle = mapStyleKey === "satellite" ? "satellite" : "standard";
 
 	const restoreRouteLayers = useCallback(
-		(styleKey?: RedesignMapStyleKey) => {
+		(styleKey: RedesignMapStyle) => {
 			if (!mapRef.current) return;
 
 			if (styleKey === "satellite") {
@@ -120,26 +114,6 @@ export const MapConfigurationProvider: React.FC<MapConfigurationProviderProps> =
 			syncMapView(mapRef.current);
 		},
 		[mapRef],
-	);
-
-	const applyMapStyle = useCallback(
-		(styleKey: RedesignMapStyleKey) => {
-			if (!mapRef.current) return;
-
-			const nextMapStyle: MapStyle = styleKey === "satellite" ? "satellite" : "standard";
-			const styleUrl = REDESIGN_STYLE_URLS[styleKey];
-
-			mapRef.current.setStyle(styleUrl);
-			setCurrentMapStyle(nextMapStyle);
-
-			if (styleKey === "dark") {
-				setCurrentLightPreset("night");
-			}
-
-			mapRef.current.once("style.load", () => restoreRouteLayers(styleKey));
-			Logger.info(`[MapConfigurationProvider] Map style changed to: ${styleKey}`);
-		},
-		[mapRef, restoreRouteLayers],
 	);
 
 	// Effect to automatically lock map when offline
@@ -167,12 +141,14 @@ export const MapConfigurationProvider: React.FC<MapConfigurationProviderProps> =
 	}, [currentLightPreset]);
 
 	useEffect(() => {
-		saveMapStyleToLocalStorage(currentMapStyle);
-	}, [currentMapStyle]);
-
-	useEffect(() => {
 		saveSunDirectionSettingToLocalStorage(showSunDirection);
 	}, [showSunDirection]);
+
+	useEffect(() => {
+		if (mapStyleKey === "dark" && currentLightPreset !== "night") {
+			setCurrentLightPreset("night");
+		}
+	}, [mapStyleKey, currentLightPreset]);
 
 	// Map lock toggle handler
 	const handleToggleLock = useCallback(() => {
@@ -198,7 +174,11 @@ export const MapConfigurationProvider: React.FC<MapConfigurationProviderProps> =
 			const nextLightPreset = lightPresetsOrder[nextIndex];
 
 			setCurrentLightPreset(nextLightPreset);
-			map.setConfigProperty("basemap", "lightPreset", nextLightPreset);
+			try {
+				map.setConfigProperty("basemap", "lightPreset", nextLightPreset);
+			} catch (err) {
+				Logger.debug("[MapConfigurationProvider] Light preset update skipped for current style", err);
+			}
 
 			// Calculate sun position if user location is available
 			if (userLocation) {
@@ -234,8 +214,8 @@ export const MapConfigurationProvider: React.FC<MapConfigurationProviderProps> =
 
 	// Map style toggle handler
 	const handleToggleMapStyle = useCallback(() => {
-		applyMapStyle(currentMapStyle === "standard" ? "satellite" : "streets");
-	}, [applyMapStyle, currentMapStyle]);
+		setMapStyle(mapStyleKey === "satellite" ? "streets" : "satellite");
+	}, [mapStyleKey, setMapStyle]);
 
 	const applyPoiVisibility = useCallback(
 		(visible: boolean) => {
@@ -263,18 +243,29 @@ export const MapConfigurationProvider: React.FC<MapConfigurationProviderProps> =
 		[mapRef],
 	);
 
+	const handleMapStyleLoaded = useCallback(() => {
+		restoreRouteLayers(mapStyleKey);
+		applyPoiVisibility(showPois);
+		Logger.info(`[MapConfigurationProvider] Map style active: ${mapStyleKey}`);
+	}, [applyPoiVisibility, mapStyleKey, restoreRouteLayers, showPois]);
+
+	useEffect(() => {
+		if (!mapRef.current) return;
+		applyPoiVisibility(showPois);
+	}, [applyPoiVisibility, mapRef, showPois]);
+
 	useEffect(() => {
 		const onZoomIn = () => mapRef.current?.zoomIn();
 		const onZoomOut = () => mapRef.current?.zoomOut();
 		const onSetStyle = (event: Event) => {
-			const styleKey = (event as CustomEvent<{ styleKey?: RedesignMapStyleKey }>).detail?.styleKey;
-			if (styleKey && styleKey in REDESIGN_STYLE_URLS) {
-				applyMapStyle(styleKey);
+			const styleKey = (event as CustomEvent<{ styleKey?: RedesignMapStyle }>).detail?.styleKey;
+			if (styleKey) {
+				setMapStyle(styleKey);
 			}
 		};
 		const onSetPois = (event: Event) => {
 			const visible = (event as CustomEvent<{ visible?: boolean }>).detail?.visible;
-			if (typeof visible === "boolean") applyPoiVisibility(visible);
+			if (typeof visible === "boolean") setShowPois(visible);
 		};
 
 		window.addEventListener("routess:zoom-in", onZoomIn);
@@ -288,7 +279,7 @@ export const MapConfigurationProvider: React.FC<MapConfigurationProviderProps> =
 			window.removeEventListener("routess:set-map-style", onSetStyle);
 			window.removeEventListener("routess:set-pois", onSetPois);
 		};
-	}, [applyMapStyle, applyPoiVisibility, mapRef]);
+	}, [mapRef, setMapStyle, setShowPois]);
 
 	// Zoom handlers
 	const handleZoomIn = useCallback(() => {
@@ -307,7 +298,9 @@ export const MapConfigurationProvider: React.FC<MapConfigurationProviderProps> =
 	const contextValue: MapConfigurationContextType = {
 		// Map style state
 		currentMapStyle,
+		currentMapStyleKey: mapStyleKey,
 		onToggleMapStyle: handleToggleMapStyle,
+		onMapStyleLoaded: handleMapStyleLoaded,
 
 		// Map lock state
 		isMapLocked,

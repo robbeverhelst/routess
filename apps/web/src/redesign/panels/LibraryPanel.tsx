@@ -1,11 +1,11 @@
-import { useMemo, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import { useIsAuthenticated } from "@/hooks/useAuthState";
 import type { ApiRoute } from "@/lib/api";
 import { useUserRoutes } from "@/lib/api-queries";
 import { useModalsStore } from "@/redesign/stores/modalsStore";
 import { type RedesignActivity, useUiStore } from "@/redesign/stores/uiStore";
 import { I } from "../components/icons";
-import { Btn, IconBtn, Kbd, RDS_COLORS } from "../components/primitives";
+import { Badge, Btn, IconBtn, Kbd, RDS_COLORS } from "../components/primitives";
 import { SignInGate } from "../components/SignInGate";
 import { RouteDetailPanel } from "./RouteDetailPanel";
 
@@ -24,6 +24,18 @@ const TAG_COLOR: Record<RedesignActivity, string> = {
 	walk: RDS_COLORS.warn,
 };
 
+const TAG_BADGE_VARIANT: Record<RedesignActivity, "accent" | "success" | "warn"> = {
+	run: "accent",
+	cycle: "success",
+	walk: "warn",
+};
+
+const TAG_LABEL: Record<RedesignActivity, string> = {
+	run: "Run",
+	cycle: "Cycle",
+	walk: "Walk",
+};
+
 // Default-data: until backend tracks activity type per route, derive a stable
 // pseudo-type from the route id so each row gets a coloured tag without churn.
 function getActivityType(route: ApiRoute): RedesignActivity {
@@ -32,7 +44,7 @@ function getActivityType(route: ApiRoute): RedesignActivity {
 }
 
 function MiniRouteSvg({ route, color }: { route: ApiRoute; color: string }) {
-	const path = useMemo(() => {
+	const routePoints = useMemo(() => {
 		const coords: [number, number][] =
 			route.geometry && route.geometry.length >= 2
 				? route.geometry
@@ -47,25 +59,73 @@ function MiniRouteSvg({ route, color }: { route: ApiRoute; color: string }) {
 		const dLat = Math.max(maxLat - minLat, 1e-6);
 		const dLng = Math.max(maxLng - minLng, 1e-6);
 		const points = coords.map(([lng, lat]) => {
-			const x = ((lng - minLng) / dLng) * 44 + 6;
-			const y = 50 - ((lat - minLat) / dLat) * 38;
-			return `${x.toFixed(1)},${y.toFixed(1)}`;
+			const x = ((lng - minLng) / dLng) * 60 + 10;
+			const y = 46 - ((lat - minLat) / dLat) * 32;
+			return [Number(x.toFixed(1)), Number(y.toFixed(1))] as [number, number];
 		});
-		return points.join(" L ");
+		return points;
 	}, [route]);
 
-	if (!path) return null;
-	const first = path.split(" ")[0];
-	const last = path.split(" ").slice(-1)[0];
-	const [fx, fy] = first.split(",").map(Number);
-	const [lx, ly] = last.split(",").map(Number);
+	if (!routePoints) return null;
+	const path = routePoints.map(([x, y]) => `${x},${y}`).join(" L ");
+	const [fx, fy] = routePoints[0];
+	const [lx, ly] = routePoints[routePoints.length - 1];
 
 	return (
-		<svg viewBox="0 0 56 56" style={{ width: "100%", height: "100%" }} aria-hidden="true">
-			<path d={`M ${path}`} stroke={color} strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-			<circle cx={fx} cy={fy} r="2.5" fill={RDS_COLORS.success} />
-			<circle cx={lx} cy={ly} r="2.5" fill={RDS_COLORS.danger} />
+		<svg viewBox="0 0 80 56" style={{ width: "100%", height: "100%" }} aria-hidden="true">
+			<defs>
+				<linearGradient id={`route-preview-${route.id}`} x1="0%" y1="0%" x2="100%" y2="100%">
+					<stop offset="0%" stopColor="color-mix(in oklch, white 75%, transparent)" />
+					<stop offset="100%" stopColor="color-mix(in oklch, white 25%, transparent)" />
+				</linearGradient>
+			</defs>
+			<rect x="0" y="0" width="80" height="56" rx="10" fill={`url(#route-preview-${route.id})`} />
+			<path d="M 7 17 H 73" stroke={RDS_COLORS.border} strokeWidth="1" opacity="0.45" />
+			<path d="M 7 31 H 73" stroke={RDS_COLORS.border} strokeWidth="1" opacity="0.45" />
+			<path d="M 22 6 V 50" stroke={RDS_COLORS.border} strokeWidth="1" opacity="0.35" />
+			<path d="M 54 6 V 50" stroke={RDS_COLORS.border} strokeWidth="1" opacity="0.35" />
+			<path
+				d="M 8 45 C 18 35, 29 37, 40 28 S 63 13, 72 15"
+				stroke={RDS_COLORS.border}
+				strokeWidth="1.25"
+				fill="none"
+				opacity="0.35"
+				strokeLinecap="round"
+			/>
+			<path
+				d={`M ${path}`}
+				stroke={color}
+				strokeWidth="5.5"
+				strokeOpacity="0.18"
+				fill="none"
+				strokeLinecap="round"
+				strokeLinejoin="round"
+			/>
+			<path d={`M ${path}`} stroke={color} strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+			<circle cx={fx} cy={fy} r="2" fill={RDS_COLORS.bgPanel} stroke={RDS_COLORS.success} strokeWidth="1.5" />
+			<circle cx={lx} cy={ly} r="2.2" fill={RDS_COLORS.danger} />
 		</svg>
+	);
+}
+
+function MetaPill({ children }: { children: ReactNode }) {
+	return (
+		<span
+			className="rds-mono"
+			style={{
+				display: "inline-flex",
+				alignItems: "center",
+				height: 22,
+				padding: "0 8px",
+				borderRadius: 999,
+				background: RDS_COLORS.bgInput,
+				border: `1px solid ${RDS_COLORS.border}`,
+				fontSize: 11.5,
+				color: RDS_COLORS.fgSubtle,
+			}}
+		>
+			{children}
+		</span>
 	);
 }
 
@@ -174,6 +234,7 @@ function LibraryPanelInner() {
 	const [filter, setFilter] = useState<Filter>("all");
 	const [query, setQuery] = useState("");
 	const [openedRouteId, setOpenedRouteId] = useState<number | null>(null);
+	const hasActiveFilters = filter !== "all" || query.trim().length > 0;
 
 	const counts = useMemo(() => {
 		const c = { all: routes.length, run: 0, cycle: 0, walk: 0, favourites: favouriteRouteIds.length };
@@ -254,31 +315,36 @@ function LibraryPanelInner() {
 						<I.plus size={14} /> New
 					</Btn>
 				</div>
-				<div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-					{FILTERS.map((f) => {
-						const on = filter === f.key;
-						const count = counts[f.key];
-						return (
-							<button
-								key={f.key}
-								type="button"
-								onClick={() => setFilter(f.key)}
-								style={{
-									height: 28,
-									padding: "0 10px",
-									borderRadius: 999,
-									border: `1px solid ${RDS_COLORS.border}`,
-									background: on ? RDS_COLORS.bgActive : "transparent",
-									color: on ? RDS_COLORS.fg : RDS_COLORS.fgMuted,
-									fontSize: 12,
-									cursor: "pointer",
-								}}
-							>
-								{f.label}
-								{f.key !== "favourites" && ` · ${count}`}
-							</button>
-						);
-					})}
+				<div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+					<div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+						{FILTERS.map((f) => {
+							const on = filter === f.key;
+							const count = counts[f.key];
+							return (
+								<button
+									key={f.key}
+									type="button"
+									onClick={() => setFilter(f.key)}
+									style={{
+										height: 28,
+										padding: "0 10px",
+										borderRadius: 999,
+										border: `1px solid ${on ? RDS_COLORS.borderStrong : RDS_COLORS.border}`,
+										background: on ? RDS_COLORS.bgActive : "transparent",
+										color: on ? RDS_COLORS.fg : RDS_COLORS.fgMuted,
+										fontSize: 12,
+										cursor: "pointer",
+									}}
+								>
+									{f.label}
+									{f.key !== "favourites" && ` · ${count}`}
+								</button>
+							);
+						})}
+					</div>
+					<div className="rds-mono" style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle }}>
+						{filtered.length} route{filtered.length === 1 ? "" : "s"}
+					</div>
 				</div>
 			</div>
 
@@ -304,7 +370,19 @@ function LibraryPanelInner() {
 							color: RDS_COLORS.fgSubtle,
 						}}
 					>
-						No routes match your filter.
+						<div style={{ marginBottom: hasActiveFilters ? 12 : 0 }}>No routes match your filter.</div>
+						{hasActiveFilters && (
+							<Btn
+								variant="ghost"
+								onClick={() => {
+									setFilter("all");
+									setQuery("");
+								}}
+								style={{ color: RDS_COLORS.fgMuted, margin: "0 auto" }}
+							>
+								Clear filters
+							</Btn>
+						)}
 					</div>
 				)}
 				{filtered.map((r) => {
@@ -323,24 +401,32 @@ function LibraryPanelInner() {
 							onKeyDown={(e) => e.key === "Enter" && setOpenedRouteId(r.id)}
 							style={{
 								display: "flex",
-								alignItems: "center",
+								alignItems: "stretch",
 								gap: 12,
-								padding: "12px 10px",
-								borderRadius: 10,
+								padding: 12,
+								borderRadius: 14,
 								cursor: "pointer",
+								border: `1px solid ${RDS_COLORS.border}`,
+								background: RDS_COLORS.bgPanel,
+								marginBottom: 8,
+								transition: "background 120ms, border-color 120ms, transform 120ms",
 							}}
 							onMouseEnter={(e) => {
 								e.currentTarget.style.background = RDS_COLORS.bgHover;
+								e.currentTarget.style.borderColor = RDS_COLORS.borderStrong;
+								e.currentTarget.style.transform = "translateY(-1px)";
 							}}
 							onMouseLeave={(e) => {
-								e.currentTarget.style.background = "transparent";
+								e.currentTarget.style.background = RDS_COLORS.bgPanel;
+								e.currentTarget.style.borderColor = RDS_COLORS.border;
+								e.currentTarget.style.transform = "translateY(0)";
 							}}
 						>
 							<div
 								style={{
-									width: 56,
+									width: 80,
 									height: 56,
-									borderRadius: 8,
+									borderRadius: 10,
 									background: RDS_COLORS.bgInput,
 									border: `1px solid ${RDS_COLORS.border}`,
 									flexShrink: 0,
@@ -351,7 +437,7 @@ function LibraryPanelInner() {
 								<MiniRouteSvg route={r} color={TAG_COLOR[tag]} />
 							</div>
 							<div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
-								<div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+								<div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
 									<div
 										style={{
 											fontSize: 14,
@@ -364,47 +450,42 @@ function LibraryPanelInner() {
 									>
 										{r.name}
 									</div>
-									{fav && <I.heart size={12} style={{ color: RDS_COLORS.danger, fill: "currentColor" }} />}
+									<Badge variant={TAG_BADGE_VARIANT[tag]} dot style={{ flexShrink: 0 }}>
+										{TAG_LABEL[tag]}
+									</Badge>
 								</div>
 								<div
-									className="rds-mono"
 									style={{
 										display: "flex",
 										alignItems: "center",
-										gap: 8,
-										fontSize: 11.5,
-										color: RDS_COLORS.fgSubtle,
-										marginTop: 4,
+										gap: 6,
+										flexWrap: "wrap",
+										marginTop: 8,
 									}}
 								>
-									<span>{date}</span>
-									<span>·</span>
-									<span>{dist}</span>
-									<span>·</span>
-									<span>{r.waypoints?.length ?? 0} waypoints</span>
-									<span>·</span>
-									<span
-										style={{
-											color: TAG_COLOR[tag],
-											textTransform: "uppercase",
-											letterSpacing: 0.5,
-											fontWeight: 600,
-										}}
-									>
-										{tag}
-									</span>
+									<MetaPill>{date}</MetaPill>
+									<MetaPill>{dist}</MetaPill>
+									<MetaPill>{r.waypoints?.length ?? 0} waypoints</MetaPill>
 								</div>
 							</div>
 							{/* biome-ignore lint/a11y/noStaticElementInteractions: container only stops click bubbling so action buttons don't open detail */}
 							<div
-								style={{ display: "flex", alignItems: "center", gap: 4 }}
+								style={{ display: "flex", alignItems: "center", gap: 4, alignSelf: "flex-start" }}
 								onClick={(e) => e.stopPropagation()}
 								onKeyDown={(e) => e.stopPropagation()}
 							>
-								<IconBtn title={fav ? "Remove favourite" : "Mark favourite"} onClick={() => toggleFavourite(r.id)}>
+								<IconBtn
+									title={fav ? "Remove favourite" : "Mark favourite"}
+									onClick={() => toggleFavourite(r.id)}
+									pressed={fav}
+								>
 									<I.heart size={14} style={fav ? { color: RDS_COLORS.danger, fill: "currentColor" } : undefined} />
 								</IconBtn>
-								<IconBtn title="Delete route" onClick={() => openDelete(r.id)}>
+								<IconBtn
+									title="Delete route"
+									onClick={() => openDelete(r.id)}
+									style={{ color: RDS_COLORS.fgSubtle, opacity: 0.72 }}
+								>
 									<I.trash size={14} />
 								</IconBtn>
 							</div>
