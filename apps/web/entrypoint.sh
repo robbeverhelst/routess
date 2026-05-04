@@ -48,6 +48,7 @@ replace_placeholders() {
     replace_token "$file" "__VITE_APP_URL__" "${VITE_APP_URL:-}"
     replace_token "$file" "__VITE_API_URL__" "${VITE_API_URL:-}"
     replace_token "$file" "__VITE_APP_VERSION__" "${VITE_APP_VERSION:-}"
+    replace_token "$file" "__VITE_STADIA_API_KEY__" "${VITE_STADIA_API_KEY:-}"
     
     echo "Processed: $file"
 }
