@@ -42,7 +42,7 @@ export function BottomTabBar() {
 					"0 1px 0 oklch(1 0 0 / 0.06) inset, 0 -8px 24px -8px oklch(0 0 0 / 0.10), 0 16px 32px -8px oklch(0 0 0 / 0.18), 0 32px 64px -16px oklch(0 0 0 / 0.20)",
 				display: "flex",
 				alignItems: "stretch",
-				zIndex: 8,
+				zIndex: 11,
 			}}
 		>
 			{NAV.map((n) => {

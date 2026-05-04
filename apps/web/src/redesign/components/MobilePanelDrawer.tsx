@@ -33,9 +33,8 @@ export function MobilePanelDrawer({ title, onClose, children }: MobilePanelDrawe
 					position: "absolute",
 					left: 0,
 					right: 0,
-					bottom: "var(--rds-bottom-tab-h)",
-					maxHeight: "calc(100dvh - var(--rds-bottom-tab-h) - var(--rds-top-bar-h))",
-					height: "calc(100dvh - var(--rds-bottom-tab-h) - var(--rds-top-bar-h))",
+					bottom: 0,
+					top: "var(--rds-top-bar-h)",
 					background: RDS_COLORS.bgPanel,
 					borderTop: `1px solid ${RDS_COLORS.border}`,
 					borderTopLeftRadius: 18,
@@ -79,7 +78,17 @@ export function MobilePanelDrawer({ title, onClose, children }: MobilePanelDrawe
 						<I.close size={16} />
 					</IconBtn>
 				</header>
-				<div style={{ flex: 1, minHeight: 0, overflow: "auto", width: "100%" }}>{children}</div>
+				<div
+					style={{
+						flex: 1,
+						minHeight: 0,
+						overflow: "auto",
+						width: "100%",
+						paddingBottom: "var(--rds-bottom-tab-h)",
+					}}
+				>
+					{children}
+				</div>
 			</aside>
 		</>
 	);
