@@ -1,6 +1,6 @@
 import { useModalsStore } from "@/redesign/stores/modalsStore";
 import { type RedesignContext, useUiStore } from "@/redesign/stores/uiStore";
-import { I, RoutessMark } from "./icons";
+import { I } from "./icons";
 import { IconBtn, RDS_COLORS } from "./primitives";
 import { UserAvatar } from "./UserAvatar";
 
@@ -12,12 +12,10 @@ const NAV: { key: RedesignContext; icon: React.ComponentType<{ size?: number }>;
 ];
 
 export function RailNav() {
-	const { context, setContext, theme, toggleTheme, layout, panelCollapsed, togglePanel, setPanelCollapsed } =
-		useUiStore();
+	const { context, setContext, theme, toggleTheme, panelCollapsed, togglePanel, setPanelCollapsed } = useUiStore();
 	const openOverlay = useModalsStore((s) => s.openOverlay);
 	const overlay = useModalsStore((s) => s.overlay);
 	const closeOverlay = useModalsStore((s) => s.closeOverlay);
-	const supportsCollapse = layout === "sidebar";
 
 	return (
 		<div
@@ -38,8 +36,8 @@ export function RailNav() {
 				zIndex: 5,
 			}}
 		>
-			<div style={{ color: RDS_COLORS.accent, marginBottom: 12, marginTop: 2 }}>
-				<RoutessMark size={22} />
+			<div style={{ marginBottom: 12, marginTop: 2 }}>
+				<img src="/logo.png" alt="Routess" width={28} height={28} style={{ borderRadius: 8, display: "block" }} />
 			</div>
 			<div
 				style={{
@@ -58,10 +56,6 @@ export function RailNav() {
 						key={n.key}
 						type="button"
 						onClick={() => {
-							if (!supportsCollapse) {
-								setContext(n.key);
-								return;
-							}
 							if (on) {
 								// Clicking the active context toggles the panel.
 								togglePanel();
@@ -71,7 +65,7 @@ export function RailNav() {
 								setPanelCollapsed(false);
 							}
 						}}
-						title={on && supportsCollapse ? `${n.label} (toggle panel)` : n.label}
+						title={on ? `${n.label} (toggle panel)` : n.label}
 						style={{
 							width: 36,
 							height: 36,

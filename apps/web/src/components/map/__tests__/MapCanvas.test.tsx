@@ -94,6 +94,7 @@ describe("MapCanvas", () => {
 	const mockHandleMapError = vi.fn();
 	const mockHandleMapLoad = vi.fn();
 	const mockSetCurrentBearing = vi.fn();
+	const mockOnMapStyleLoaded = vi.fn();
 
 	const defaultProps = {
 		mapRef: React.createRef<any>(),
@@ -121,12 +122,14 @@ describe("MapCanvas", () => {
 		// Mock provider values
 		(useMapConfiguration as Mock).mockReturnValue({
 			currentMapStyle: "standard",
+			currentMapStyleKey: "streets",
 			isMapLocked: false,
 			currentLightPreset: "day",
 			currentBearing: 0,
 			setCurrentBearing: mockSetCurrentBearing,
 			showSunDirection: false,
 			currentSunPosition: null,
+			onMapStyleLoaded: mockOnMapStyleLoaded,
 		});
 
 		(useUserLocation as Mock).mockReturnValue({
@@ -161,12 +164,14 @@ describe("MapCanvas", () => {
 		it("should use satellite style when configured", () => {
 			(useMapConfiguration as Mock).mockReturnValue({
 				currentMapStyle: "satellite",
+				currentMapStyleKey: "satellite",
 				isMapLocked: false,
 				currentLightPreset: "day",
 				currentBearing: 0,
 				setCurrentBearing: mockSetCurrentBearing,
 				showSunDirection: false,
 				currentSunPosition: null,
+				onMapStyleLoaded: mockOnMapStyleLoaded,
 			});
 
 			render(<MapCanvas {...defaultProps} />);
@@ -260,10 +265,10 @@ describe("MapCanvas", () => {
 			expect(useMapInitialization).toHaveBeenCalled();
 		});
 
-		it("should use standard style by default", () => {
+		it("should use the selected redesign style by default", () => {
 			render(<MapCanvas {...defaultProps} />);
 			const map = screen.getByTestId("mock-map");
-			expect(map).toHaveAttribute("data-map-style", "mapbox://styles/mapbox/standard");
+			expect(map).toHaveAttribute("data-map-style", "mapbox://styles/mapbox/streets-v12");
 		});
 
 		it("should use saved map view when available", () => {
@@ -322,6 +327,7 @@ describe("MapCanvas", () => {
 		it("should render sun indicator when all conditions are met", () => {
 			(useMapConfiguration as Mock).mockReturnValue({
 				currentMapStyle: "standard",
+				currentMapStyleKey: "streets",
 				isMapLocked: false,
 				currentLightPreset: "day",
 				currentBearing: 0,
@@ -332,6 +338,7 @@ describe("MapCanvas", () => {
 					elevation: 45,
 					isUp: true,
 				},
+				onMapStyleLoaded: mockOnMapStyleLoaded,
 			});
 
 			(useUserLocation as Mock).mockReturnValue({

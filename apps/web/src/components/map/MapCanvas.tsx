@@ -27,6 +27,14 @@ const DEFAULT_VIEW_STATE = {
 
 const STANDARD_MAP_STYLE = "mapbox://styles/mapbox/standard";
 const SATELLITE_MAP_STYLE = "mapbox://styles/mapbox/satellite-streets-v12";
+const REDESIGN_MAP_STYLE_URLS = {
+	streets: "mapbox://styles/mapbox/streets-v12",
+	outdoors: "mapbox://styles/mapbox/outdoors-v12",
+	satellite: SATELLITE_MAP_STYLE,
+	terrain: "mapbox://styles/mapbox/outdoors-v12",
+	dark: "mapbox://styles/mapbox/dark-v11",
+	minimal: "mapbox://styles/mapbox/light-v11",
+} as const;
 
 function MapLoadingShell({ isSatellite }: { isSatellite: boolean }) {
 	return (
@@ -203,20 +211,22 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
 
 	// Get configuration from providers
 	const {
-		currentMapStyle,
+		currentMapStyleKey,
 		isMapLocked,
 		currentLightPreset,
 		currentBearing,
 		setCurrentBearing,
 		showSunDirection,
 		currentSunPosition,
+		onMapStyleLoaded,
 	} = useMapConfiguration();
 
 	const { location: userLocation, error: locationError, isLoading: isUserLocationLoading } = useUserLocation();
 
 	const { handleMapError } = useErrorHandler();
-	const isSatelliteStyle = currentMapStyle === "satellite";
-	const mapStyleUrl = isSatelliteStyle ? SATELLITE_MAP_STYLE : STANDARD_MAP_STYLE;
+	const isSatelliteStyle = currentMapStyleKey === "satellite";
+	const mapStyleUrl = REDESIGN_MAP_STYLE_URLS[currentMapStyleKey] ?? STANDARD_MAP_STYLE;
+	const supportsBasemapLightPreset = mapStyleUrl === STANDARD_MAP_STYLE;
 	const hasInvalidMapboxToken = isInvalidMapboxToken(mapboxToken);
 	const effectiveLightPreset = mapTheme === "dark" ? "night" : currentLightPreset;
 
@@ -247,14 +257,35 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
 	}, [hasInvalidMapboxToken, isMapLoaded, handleMapError]);
 
 	useEffect(() => {
-		if (!isMapLoaded || !mapRef.current || currentMapStyle !== "standard") return;
+		if (!isMapLoaded || !mapRef.current || !supportsBasemapLightPreset) return;
 
 		try {
 			mapRef.current.setConfigProperty("basemap", "lightPreset", effectiveLightPreset);
 		} catch (err) {
 			Logger.error("[MapCanvas] Failed to sync basemap light preset:", err);
 		}
-	}, [currentMapStyle, effectiveLightPreset, isMapLoaded, mapRef]);
+	}, [effectiveLightPreset, isMapLoaded, mapRef, supportsBasemapLightPreset]);
+
+	useEffect(() => {
+		if (!isMapLoaded || !mapRef.current) return;
+
+		const map = mapRef.current;
+		const handleStyleLoad = () => {
+			onMapStyleLoaded();
+			if (supportsBasemapLightPreset) {
+				try {
+					map.setConfigProperty("basemap", "lightPreset", effectiveLightPreset);
+				} catch (err) {
+					Logger.debug("[MapCanvas] Light preset update skipped for current style", err);
+				}
+			}
+		};
+
+		map.on("style.load", handleStyleLoad);
+		return () => {
+			map.off("style.load", handleStyleLoad);
+		};
+	}, [effectiveLightPreset, isMapLoaded, mapRef, onMapStyleLoaded, supportsBasemapLightPreset]);
 
 	useEffect(() => {
 		const container = containerRef.current;
@@ -462,12 +493,15 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
 							mapRef.current = internalMapRef.current.getMap();
 						}
 						setIsMapLoaded(true);
-						try {
-							evt.target.setConfigProperty("basemap", "lightPreset", effectiveLightPreset);
-						} catch (err) {
-							Logger.error("[MapCanvas] Failed to set initial basemap light preset:", err);
+						if (supportsBasemapLightPreset) {
+							try {
+								evt.target.setConfigProperty("basemap", "lightPreset", effectiveLightPreset);
+							} catch (err) {
+								Logger.debug("[MapCanvas] Initial basemap light preset skipped for current style", err);
+							}
 						}
 						handleMapLoad(evt);
+						onMapStyleLoaded();
 					}}
 					onError={(error) => {
 						Logger.error("[MapCanvas] Map error:", error);

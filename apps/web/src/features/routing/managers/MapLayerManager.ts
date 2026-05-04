@@ -255,7 +255,7 @@ export const initializeSourcesAndLayers = (map: MapboxMap): void => {
 			"text-size": 11, // Balanced text size
 			"text-anchor": "bottom", // Anchor text at its bottom
 			"text-offset": [0, -0.75], // Offset text 0.75em upwards from the point
-			"text-allow-overlap": true, // Allow text to overlap if necessary (density controlled by filters)
+			"text-allow-overlap": true, // Allow text to overlap if necessary; filters still control label crowding
 			"text-ignore-placement": false, // Default, let Mapbox attempt to avoid collisions first
 			"symbol-placement": "point", // Markers are points
 		},

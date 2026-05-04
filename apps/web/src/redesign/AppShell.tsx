@@ -15,12 +15,11 @@ import {
 	useRouteDuration,
 	useSetIsMapLocked,
 } from "@/stores/routingStore";
-import { I, RoutessMark } from "./components/icons";
+import { I } from "./components/icons";
 import { MapToolbar } from "./components/MapToolbar";
 import { Badge, IconBtn, RDS_COLORS } from "./components/primitives";
 import { RailNav } from "./components/RailNav";
 import { RouteChip } from "./components/RouteChip";
-import { UserAvatar } from "./components/UserAvatar";
 import { useOnlineStatus } from "./hooks/useOnlineStatus";
 import { CommandPalette } from "./modals/CommandPalette";
 import { ConfirmDeleteModal } from "./modals/ConfirmDeleteModal";
@@ -50,7 +49,6 @@ import { ProfileScreen } from "./screens/ProfileScreen";
 import { RecordingScreen } from "./screens/RecordingScreen";
 import { SignUpScreen } from "./screens/SignUpScreen";
 import { WelcomeScreen } from "./screens/WelcomeScreen";
-import { useRedesignSettingsStore } from "./stores/settingsStore";
 import { useToastStore } from "./stores/toastStore";
 
 const MapWithRouting = lazy(() => import("@/components/MapWithRouting"));
@@ -61,13 +59,6 @@ const SCREEN_TITLES: Record<RedesignContext, string> = {
 	discover: "Discover",
 	social: "Social",
 };
-
-const NAV: { key: RedesignContext; icon: React.ComponentType<{ size?: number }>; label: string }[] = [
-	{ key: "plan", icon: I.route, label: "Plan" },
-	{ key: "library", icon: I.library, label: "Library" },
-	{ key: "discover", icon: I.explore, label: "Discover" },
-	{ key: "social", icon: I.social, label: "Social" },
-];
 
 interface AppShellProps {
 	initialCenter?: [number, number];
@@ -111,24 +102,11 @@ function getDevScreen(): DevScreen | null {
 }
 
 export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps) {
-	const {
-		context,
-		setContext,
-		theme,
-		accent,
-		density,
-		layout,
-		panelCollapsed,
-		togglePanel,
-		welcomeCompleted,
-		completeWelcome,
-		toggleTheme,
-	} = useUiStore();
+	const { context, setContext, theme, accent, panelCollapsed, togglePanel, welcomeCompleted, completeWelcome } =
+		useUiStore();
 	const { modal, overlay, openModal, openOverlay, closeOverlay } = useModalsStore();
 	const { data: auth } = useAuthStatus();
 	const online = useOnlineStatus();
-	const preferredMapStyle = useRedesignSettingsStore((s) => s.mapStyle);
-	const preferredShowPois = useRedesignSettingsStore((s) => s.showPois);
 	const hasRoute = useHasRoute();
 	const distance = useRouteDistance();
 	const duration = useRouteDuration();
@@ -297,23 +275,6 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 	const showSignup = !isAuthenticated && !skippedAuth && authView === "signup";
 	const showWelcome = isAuthenticated && !welcomeCompleted;
 
-	useEffect(() => {
-		if (showLogin || showSignup || showWelcome || devScreen) return;
-
-		const timer = window.setTimeout(() => {
-			window.dispatchEvent(
-				new CustomEvent("routess:set-map-style", {
-					detail: { styleKey: preferredMapStyle },
-				}),
-			);
-			// Re-apply POI visibility — Mapbox style changes recreate layers, so we
-			// need to push the user's preference back onto the new style.
-			window.dispatchEvent(new CustomEvent("routess:set-pois", { detail: { visible: preferredShowPois } }));
-		}, 0);
-
-		return () => window.clearTimeout(timer);
-	}, [preferredMapStyle, preferredShowPois, showLogin, showSignup, showWelcome, devScreen]);
-
 	if (showLogin) {
 		return (
 			<>
@@ -369,7 +330,6 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 			<div
 				data-redesign
 				data-accent={accent}
-				data-density={density}
 				className={theme === "dark" ? "dark" : undefined}
 				style={{ position: "fixed", inset: 0, background: RDS_COLORS.bgCanvas, color: RDS_COLORS.fg }}
 			>
@@ -475,11 +435,9 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 			<IconBtn title="Open command palette (⌘K)" onClick={() => openModal("palette")}>
 				<I.command size={16} />
 			</IconBtn>
-			{layout === "sidebar" && (
-				<IconBtn title="Collapse panel" onClick={togglePanel}>
-					<I.chevronL size={16} />
-				</IconBtn>
-			)}
+			<IconBtn title="Collapse panel" onClick={togglePanel}>
+				<I.chevronL size={16} />
+			</IconBtn>
 		</header>
 	);
 
@@ -541,7 +499,6 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 		<div
 			data-redesign
 			data-accent={accent}
-			data-density={density}
 			className={theme === "dark" ? "dark" : undefined}
 			style={{
 				position: "fixed",
@@ -555,376 +512,77 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 		</div>
 	);
 
-	// ===== Layout: SIDEBAR (default) =====
-	if (layout === "sidebar") {
-		return sharedRoot(
-			<div style={{ position: "absolute", inset: 0 }}>
-				<RailNav />
-				<aside
-					style={{
-						position: "absolute",
-						top: 0,
-						bottom: 0,
-						left: "var(--rds-rail-w)",
-						width: panelCollapsed ? 0 : "var(--rds-panel-w)",
-						background: RDS_COLORS.bgPanel,
-						borderRight: panelCollapsed ? "none" : `1px solid ${RDS_COLORS.border}`,
-						display: "flex",
-						flexDirection: "column",
-						zIndex: 4,
-						overflow: "hidden",
-						transition: "width 200ms ease, border-color 200ms ease",
-					}}
-				>
-					{PanelHeader}
-					<div style={{ flex: 1, minHeight: 0, overflow: "hidden", width: "var(--rds-panel-w)" }}>
-						{renderPanelContent()}
-					</div>
-				</aside>
-				<main
-					style={{
-						position: "absolute",
-						top: 0,
-						right: 0,
-						bottom: 0,
-						left: panelCollapsed ? "var(--rds-rail-w)" : "calc(var(--rds-rail-w) + var(--rds-panel-w))",
-						overflow: "hidden",
-						background: RDS_COLORS.bgCanvas,
-						transition: "left 200ms ease",
-					}}
-				>
-					{MapNode}
-					{Toolbar}
-					{Chip}
-					{panelCollapsed && (
-						<button
-							type="button"
-							onClick={togglePanel}
-							title="Expand panel"
-							style={{
-								position: "absolute",
-								left: 0,
-								top: "50%",
-								transform: "translateY(-50%)",
-								width: 18,
-								height: 64,
-								borderRadius: "0 8px 8px 0",
-								background: RDS_COLORS.bgPanel,
-								border: `1px solid ${RDS_COLORS.border}`,
-								borderLeft: 0,
-								color: RDS_COLORS.fgMuted,
-								display: "flex",
-								alignItems: "center",
-								justifyContent: "center",
-								cursor: "pointer",
-								boxShadow: "var(--rds-shadow-sm)",
-								zIndex: 6,
-							}}
-						>
-							<I.chevronR size={14} />
-						</button>
-					)}
-					{renderOverlay()}
-					{renderModal()}
-					{Offline}
-				</main>
-			</div>,
-		);
-	}
-
-	// ===== Layout: FLOATING (glass over full-bleed map) =====
-	if (layout === "floating") {
-		return sharedRoot(
-			<div style={{ position: "absolute", inset: 0 }}>
-				<div style={{ position: "absolute", inset: 0 }}>{MapNode}</div>
-
-				{/* Floating rail */}
-				<div
-					className="rds-glass"
-					style={{
-						position: "absolute",
-						top: 16,
-						left: 16,
-						padding: 6,
-						display: "flex",
-						flexDirection: "column",
-						gap: 2,
-						borderRadius: 14,
-						boxShadow: "var(--rds-shadow-md)",
-						zIndex: 5,
-					}}
-				>
-					<div style={{ color: RDS_COLORS.accent, padding: 6 }}>
-						<RoutessMark size={20} />
-					</div>
-					<div style={{ height: 1, background: RDS_COLORS.border, margin: "4px 6px" }} />
-					{NAV.map((n) => {
-						const Icon = n.icon;
-						const on = context === n.key;
-						return (
-							<IconBtn
-								key={n.key}
-								title={n.label}
-								onClick={() => setContext(n.key)}
-								style={{
-									background: on ? RDS_COLORS.bgActive : "transparent",
-									color: on ? RDS_COLORS.fg : RDS_COLORS.fgMuted,
-									width: 36,
-									height: 36,
-								}}
-							>
-								<Icon size={18} />
-							</IconBtn>
-						);
-					})}
-				</div>
-
-				{/* Floating panel */}
-				<aside
-					className="rds-glass"
-					style={{
-						position: "absolute",
-						top: 16,
-						left: 80,
-						bottom: 16,
-						width: 360,
-						borderRadius: 16,
-						display: "flex",
-						flexDirection: "column",
-						overflow: "hidden",
-						boxShadow: "var(--rds-shadow-lg)",
-						zIndex: 5,
-					}}
-				>
-					{PanelHeader}
-					<div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>{renderPanelContent()}</div>
-				</aside>
-
-				{/* Top-right profile pill */}
-				<div
-					className="rds-glass"
-					style={{
-						position: "absolute",
-						top: 16,
-						right: 16,
-						display: "flex",
-						alignItems: "center",
-						gap: 10,
-						padding: "6px 10px 6px 6px",
-						borderRadius: 999,
-						boxShadow: "var(--rds-shadow-sm)",
-						zIndex: 5,
-					}}
-				>
-					<UserAvatar size={28} compact />
-					{auth?.user?.name ? (
-						<span style={{ fontSize: 13, fontWeight: 500 }}>{auth.user.name.split(" ")[0]}</span>
-					) : null}
-					<IconBtn title="Toggle theme" onClick={toggleTheme}>
-						{theme === "dark" ? <I.sun size={14} /> : <I.moon size={14} />}
-					</IconBtn>
-					<IconBtn
-						title="Notifications"
-						pressed={overlay === "notifications"}
-						onClick={() => (overlay === "notifications" ? closeOverlay() : openOverlay("notifications"))}
-					>
-						<I.bell size={14} />
-					</IconBtn>
-				</div>
-
-				{Toolbar}
-				{Chip}
-
-				{/* Command hint chip */}
-				<button
-					type="button"
-					className="rds-glass"
-					onClick={() => openModal("palette")}
-					style={{
-						position: "absolute",
-						left: 16,
-						bottom: 24,
-						padding: "8px 12px",
-						borderRadius: 10,
-						display: "flex",
-						alignItems: "center",
-						gap: 8,
-						boxShadow: "var(--rds-shadow-sm)",
-						zIndex: 4,
-						color: "inherit",
-						cursor: "pointer",
-					}}
-				>
-					<I.command size={14} />
-					<span style={{ fontSize: 12, color: RDS_COLORS.fgMuted }}>Search, jump to, command</span>
-					<span
-						style={{
-							display: "inline-flex",
-							alignItems: "center",
-							justifyContent: "center",
-							minWidth: 18,
-							height: 18,
-							padding: "0 5px",
-							border: `1px solid ${RDS_COLORS.border}`,
-							borderBottomWidth: 2,
-							borderRadius: 4,
-							background: RDS_COLORS.bgPanelElev,
-							color: RDS_COLORS.fgMuted,
-							fontFamily: '"JetBrains Mono", monospace',
-							fontSize: 10.5,
-							lineHeight: 1,
-						}}
-					>
-						⌘K
-					</span>
-				</button>
-
-				{renderOverlay()}
-				{renderModal()}
-				{Offline}
-			</div>,
-		);
-	}
-
-	// ===== Layout: BOTTOM (mobile-leaning) =====
 	return sharedRoot(
 		<div style={{ position: "absolute", inset: 0 }}>
-			<div style={{ position: "absolute", inset: 0 }}>{MapNode}</div>
-
-			{/* Top bar */}
-			<div
-				className="rds-glass"
-				style={{
-					position: "absolute",
-					top: 12,
-					left: 12,
-					right: 12,
-					height: 44,
-					padding: "6px 6px 6px 14px",
-					display: "flex",
-					alignItems: "center",
-					gap: 8,
-					borderRadius: 999,
-					boxShadow: "var(--rds-shadow-sm)",
-					zIndex: 5,
-				}}
-			>
-				<div style={{ display: "flex", alignItems: "center", gap: 8, color: RDS_COLORS.accent }}>
-					<RoutessMark size={18} />
-					<span style={{ fontSize: 14, fontWeight: 600, color: RDS_COLORS.fg }}>Routess</span>
-				</div>
-				<div style={{ flex: 1 }} />
-				<IconBtn title="Search" onClick={() => openModal("search")}>
-					<I.search size={16} />
-				</IconBtn>
-				<IconBtn title="Map style" onClick={() => (overlay === "layers" ? closeOverlay() : openOverlay("layers"))}>
-					<I.layers size={16} />
-				</IconBtn>
-				<IconBtn title="Toggle theme" onClick={toggleTheme}>
-					{theme === "dark" ? <I.sun size={16} /> : <I.moon size={16} />}
-				</IconBtn>
-				<UserAvatar size={30} compact />
-			</div>
-
-			{/* Right zoom stack */}
-			<div
-				className="rds-glass"
-				style={{
-					position: "absolute",
-					right: 16,
-					top: 80,
-					padding: 4,
-					display: "flex",
-					flexDirection: "column",
-					gap: 2,
-					borderRadius: 10,
-					boxShadow: "var(--rds-shadow-sm)",
-					zIndex: 5,
-				}}
-			>
-				<IconBtn title="Zoom in" onClick={() => window.dispatchEvent(new CustomEvent("routess:zoom-in"))}>
-					<I.plus size={14} />
-				</IconBtn>
-				<div style={{ height: 1, background: RDS_COLORS.border }} />
-				<IconBtn title="Zoom out" onClick={() => window.dispatchEvent(new CustomEvent("routess:zoom-out"))}>
-					<I.minus size={14} />
-				</IconBtn>
-				<div style={{ height: 1, background: RDS_COLORS.border }} />
-				<IconBtn title="Locate" onClick={() => window.dispatchEvent(new CustomEvent("routess:locate"))}>
-					<I.target size={14} />
-				</IconBtn>
-			</div>
-
-			{/* Bottom sheet */}
+			<RailNav />
 			<aside
 				style={{
 					position: "absolute",
-					left: 12,
-					right: 12,
-					bottom: 12,
-					maxHeight: "62%",
+					top: 0,
+					bottom: 0,
+					left: "var(--rds-rail-w)",
+					width: panelCollapsed ? 0 : "var(--rds-panel-w)",
 					background: RDS_COLORS.bgPanel,
-					border: `1px solid ${RDS_COLORS.border}`,
-					borderRadius: 18,
-					boxShadow: "var(--rds-shadow-lg)",
+					borderRight: panelCollapsed ? "none" : `1px solid ${RDS_COLORS.border}`,
 					display: "flex",
 					flexDirection: "column",
 					overflow: "hidden",
-					zIndex: 5,
+					zIndex: 4,
+					transition: "width 200ms ease, border-color 200ms ease",
 				}}
 			>
-				<div style={{ display: "flex", justifyContent: "center", padding: "8px 0 4px" }}>
-					<div
-						style={{
-							width: 36,
-							height: 4,
-							borderRadius: 999,
-							background: RDS_COLORS.borderStrong,
-						}}
-					/>
+				{PanelHeader}
+				<div style={{ flex: 1, minHeight: 0, overflow: "hidden", width: "var(--rds-panel-w)" }}>
+					{renderPanelContent()}
 				</div>
-				<div
-					style={{
-						display: "flex",
-						gap: 4,
-						padding: "4px 12px 8px",
-						borderBottom: `1px solid ${RDS_COLORS.border}`,
-					}}
-				>
-					{NAV.map((n) => {
-						const Icon = n.icon;
-						const on = context === n.key;
-						return (
-							<button
-								key={n.key}
-								type="button"
-								onClick={() => setContext(n.key)}
-								style={{
-									display: "inline-flex",
-									alignItems: "center",
-									gap: 6,
-									height: 32,
-									padding: "0 12px",
-									background: on ? RDS_COLORS.bgActive : "transparent",
-									color: on ? RDS_COLORS.fg : RDS_COLORS.fgMuted,
-									border: 0,
-									borderRadius: 999,
-									fontSize: 12.5,
-									fontWeight: 500,
-									cursor: "pointer",
-								}}
-							>
-								<Icon size={14} /> {n.label}
-							</button>
-						);
-					})}
-				</div>
-				<div style={{ flex: 1, minHeight: 0, maxHeight: 480 }}>{renderPanelContent()}</div>
 			</aside>
-
-			{renderOverlay()}
-			{renderModal()}
-			{Offline}
+			<main
+				style={{
+					position: "absolute",
+					top: 0,
+					right: 0,
+					bottom: 0,
+					left: panelCollapsed ? "var(--rds-rail-w)" : "calc(var(--rds-rail-w) + var(--rds-panel-w))",
+					overflow: "hidden",
+					background: RDS_COLORS.bgCanvas,
+					transition: "left 200ms ease",
+				}}
+			>
+				{MapNode}
+				{Toolbar}
+				{Chip}
+				{panelCollapsed && (
+					<button
+						type="button"
+						onClick={togglePanel}
+						title="Expand panel"
+						style={{
+							position: "absolute",
+							left: 0,
+							top: "50%",
+							transform: "translateY(-50%)",
+							width: 18,
+							height: 64,
+							borderRadius: "0 8px 8px 0",
+							background: RDS_COLORS.bgPanel,
+							border: `1px solid ${RDS_COLORS.border}`,
+							borderLeft: 0,
+							color: RDS_COLORS.fgMuted,
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+							cursor: "pointer",
+							boxShadow: "var(--rds-shadow-sm)",
+							zIndex: 6,
+						}}
+					>
+						<I.chevronR size={14} />
+					</button>
+				)}
+				{renderOverlay()}
+				{renderModal()}
+				{Offline}
+			</main>
 		</div>,
 	);
 }

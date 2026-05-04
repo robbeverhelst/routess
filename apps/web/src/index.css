@@ -243,14 +243,6 @@
 	--rds-accent-line: oklch(0.72 0.18 30);
 }
 
-/* Density */
-[data-redesign][data-density="compact"] {
-	--rds-density: 0.85;
-}
-[data-redesign][data-density="comfy"] {
-	--rds-density: 1.15;
-}
-
 /* Helpers used by the redesign */
 [data-redesign] .rds-mono {
 	font-family: "JetBrains Mono", ui-monospace, monospace;
@@ -269,12 +261,4 @@
 	50% {
 		opacity: 0.55;
 	}
-}
-
-/* Glass effect — used by floating + bottom layout surfaces */
-[data-redesign] .rds-glass {
-	background: color-mix(in oklch, var(--rds-bg-panel) 78%, transparent);
-	backdrop-filter: blur(16px) saturate(140%);
-	-webkit-backdrop-filter: blur(16px) saturate(140%);
-	border: 1px solid var(--rds-border);
 }
