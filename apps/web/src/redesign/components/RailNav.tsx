@@ -7,8 +7,8 @@ import { UserAvatar } from "./UserAvatar";
 const NAV: { key: RedesignContext; icon: React.ComponentType<{ size?: number }>; label: string }[] = [
 	{ key: "plan", icon: I.route, label: "Plan" },
 	{ key: "library", icon: I.library, label: "Library" },
-	{ key: "activity", icon: I.activity, label: "Activity" },
-	{ key: "settings", icon: I.settings, label: "Settings" },
+	{ key: "discover", icon: I.explore, label: "Discover" },
+	{ key: "social", icon: I.social, label: "Social" },
 ];
 
 export function RailNav() {

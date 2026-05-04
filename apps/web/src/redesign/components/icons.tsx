@@ -44,6 +44,7 @@ import {
 	Trophy,
 	Upload,
 	User,
+	Users,
 	X,
 	Zap,
 } from "lucide-react";
@@ -52,6 +53,8 @@ export const I = {
 	route: Route,
 	library: BookOpen,
 	activity: Activity,
+	explore: Compass,
+	social: Users,
 	settings: Settings,
 	bell: Bell,
 	moon: Moon,

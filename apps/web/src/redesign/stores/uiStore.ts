@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-export type RedesignContext = "plan" | "library" | "activity" | "settings";
+export type RedesignContext = "plan" | "library" | "discover" | "social";
 export type RedesignAccent = "violet" | "cobalt" | "forest" | "ember";
 export type RedesignDensity = "compact" | "default" | "comfy";
 export type RedesignTheme = "light" | "dark";
@@ -31,6 +31,10 @@ interface UiState {
 	toggleFavourite: (routeId: number) => void;
 	completeWelcome: () => void;
 }
+
+type PersistedUiState = Partial<UiState> & {
+	context?: string;
+};
 
 export const useUiStore = create<UiState>()(
 	persist(
@@ -64,6 +68,20 @@ export const useUiStore = create<UiState>()(
 		}),
 		{
 			name: "routess-redesign-ui",
+			version: 3,
+			migrate: (persistedState) => {
+				const state = (persistedState ?? {}) as PersistedUiState;
+				if (state.context === "activity") {
+					state.context = "social";
+				}
+				if (state.context === "explore") {
+					state.context = "discover";
+				}
+				if (state.context === "settings") {
+					state.context = "plan";
+				}
+				return state as UiState;
+			},
 		},
 	),
 );
