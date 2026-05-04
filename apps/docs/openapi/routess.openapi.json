@@ -757,7 +757,7 @@
 		}
 	},
 	"info": {
-		"title": "Routess API",
+		"title": "routess API",
 		"description": "API for route management and mapping functionality",
 		"version": "dev",
 		"contact": {}

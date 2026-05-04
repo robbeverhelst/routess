@@ -3,19 +3,60 @@ title: Developer Docs
 description: Architecture, packages, deployment, and contributing.
 ---
 
-These docs are for **people building, deploying, or contributing to Routess**. If you're using the app, head to the [User Guide](/en/guide) instead.
+<div className="docs-hub">
+	<div className="docs-hub__intro">
+		<p className="docs-hub__eyebrow">Build routess</p>
+		<p className="docs-hub__lead">
+			These docs are for people building, deploying, or contributing to routess. If you are using the app, jump to the{" "}
+			<a href="/en/guide">User Guide</a> instead.
+		</p>
+	</div>
 
-## What's here
+	<div className="docs-hub__grid">
+		<a href="/docs/getting-started/local-setup" className="docs-hub__card">
+			<span className="docs-hub__card-title">Get the repo running</span>
+			<span className="docs-hub__card-copy">Clone the monorepo, install dependencies, and boot the stack locally.</span>
+		</a>
 
-- **[Getting Started](/docs/getting-started/local-setup)** — Clone the repo and run it locally
-- **[Architecture](/docs/architecture/overview)** — How the pieces fit together
-- **[Apps](/docs/apps/web)** — `apps/web`, `apps/api`, and the planned mobile app
-- **[Packages](/docs/packages/core)** — The `@routess/*` workspace packages
-- **[Operations](/docs/operations/docker)** — Docker, Kubernetes, security, CI/CD
-- **[Contributing](/docs/contributing/coding-standards)** — Coding standards, testing, releases
+		<a href="/docs/architecture/overview" className="docs-hub__card">
+			<span className="docs-hub__card-title">Understand the system</span>
+			<span className="docs-hub__card-copy">See how the web app, API, shared packages, and deployment pieces fit together.</span>
+		</a>
 
-## Tech stack at a glance
+		<a href="/docs/operations/docker" className="docs-hub__card">
+			<span className="docs-hub__card-title">Ship and operate</span>
+			<span className="docs-hub__card-copy">Docker, Kubernetes, CI/CD, security defaults, and production-facing workflows.</span>
+		</a>
+	</div>
 
-- **Web** — React 19, Vite, TanStack Router, Mapbox GL, Zustand, Tailwind v4
-- **API** — NestJS 11, MikroORM, PostgreSQL
-- **Tooling** — Bun, Biome, semantic-release, Helm, GitHub Actions
+	<div className="docs-hub__stack-grid">
+		<div className="docs-hub__stack">
+			<h2 className="docs-hub__stack-title">Explore by area</h2>
+			<ul>
+				<li>
+					<a href="/docs/apps/web">Apps</a> for the web client, API, and mobile plan
+				</li>
+				<li>
+					<a href="/docs/packages/core">Packages</a> for shared business logic and client utilities
+				</li>
+				<li>
+					<a href="/docs/contributing/coding-standards">Contributing</a> for coding rules, testing, and releases
+				</li>
+			</ul>
+		</div>
+
+		<div className="docs-hub__stack">
+			<h2 className="docs-hub__stack-title">Tech stack at a glance</h2>
+			<ul>
+				<li>Web: React 19, Vite, TanStack Router, Mapbox GL, Zustand, Tailwind v4</li>
+				<li>API: NestJS 11, MikroORM, PostgreSQL</li>
+				<li>Tooling: Bun, Biome, semantic-release, Helm, GitHub Actions</li>
+			</ul>
+		</div>
+
+		<div className="docs-hub__note">
+			The strongest Fumadocs sites usually make the first screen do real routing work: clear audience split, strong entry
+			points, and a visual system that does not feel detached from the product. This hub is now doing that job.
+		</div>
+	</div>
+</div>
