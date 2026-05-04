@@ -1,5 +1,6 @@
 import type { Waypoint } from "@routess/core";
 import type { GeoJSONSource, Map as MapboxMap } from "mapbox-gl";
+import type { SurfaceSegment } from "@/features/routing/services/SurfaceService";
 import { Logger } from "@/lib/logger";
 import type { Coordinate } from "@/types/map";
 import { type MapPalette, readMapPalette } from "./mapPalette";
@@ -7,6 +8,7 @@ import { type MapPalette, readMapPalette } from "./mapPalette";
 export const ROUTE_SOURCE_ID = "route";
 export const ROUTE_LAYER_ID = "route";
 export const ROUTE_HOVER_LAYER_ID = "route-hover-target";
+export const ROUTE_SURFACE_SOURCE_ID = "route-surface";
 export const WAYPOINTS_SOURCE_ID = "points";
 export const WAYPOINTS_LAYER_ID = "points";
 export const WAYPOINTS_CORE_LAYER_ID = "points-core";
@@ -20,6 +22,19 @@ export const TEMP_DRAG_LINES_LAYER_ID = "temp-drag-lines";
 export const ROUTE_CASING_LAYER_ID = "route-casing";
 export const WAYPOINTS_SHADOW_LAYER_ID = "waypoints-shadow";
 export const ROUTE_ARROWS_LAYER_ID = "route-arrows";
+export const ROUTE_SURFACE_COMPACTED_LAYER_ID = "route-surface-compacted";
+export const ROUTE_SURFACE_UNPAVED_LAYER_ID = "route-surface-unpaved";
+export const ROUTE_SURFACE_PATH_LAYER_ID = "route-surface-path";
+
+// Dasharrays are not data-driven in mapbox-gl, so each bucket gets its own
+// filtered layer. Patterns chosen to read intuitively: solid-ish long dash
+// for compacted (still mostly road), broken dash for unpaved, fine dots for
+// footpaths.
+const SURFACE_DASH_PATTERNS = {
+	compacted: [3, 1.5],
+	unpaved: [1.5, 1.5],
+	path: [0.4, 1.6],
+} as const;
 
 const KM_MARKER_VISIBILITY_CONFIG = {
 	minZoomToShowAny: 9,
@@ -95,7 +110,46 @@ export const initializeSourcesAndLayers = (map: MapboxMap, palette?: MapPalette)
 				"line-emissive-strength": 1,
 			},
 		});
+	}
 
+	if (!map.getSource(ROUTE_SURFACE_SOURCE_ID)) {
+		map.addSource(ROUTE_SURFACE_SOURCE_ID, {
+			type: "geojson",
+			data: { type: "FeatureCollection", features: [] },
+		});
+		const surfaceOverlayPaint = {
+			"line-color": p.arrowFill,
+			"line-width": 1.6,
+			"line-opacity": 0.95,
+			"line-emissive-strength": 1,
+		} as const;
+		map.addLayer({
+			id: ROUTE_SURFACE_COMPACTED_LAYER_ID,
+			type: "line",
+			source: ROUTE_SURFACE_SOURCE_ID,
+			filter: ["==", ["get", "surface"], "compacted"],
+			layout: { "line-join": "round", "line-cap": "butt" },
+			paint: { ...surfaceOverlayPaint, "line-dasharray": [...SURFACE_DASH_PATTERNS.compacted] },
+		});
+		map.addLayer({
+			id: ROUTE_SURFACE_UNPAVED_LAYER_ID,
+			type: "line",
+			source: ROUTE_SURFACE_SOURCE_ID,
+			filter: ["==", ["get", "surface"], "unpaved"],
+			layout: { "line-join": "round", "line-cap": "butt" },
+			paint: { ...surfaceOverlayPaint, "line-dasharray": [...SURFACE_DASH_PATTERNS.unpaved] },
+		});
+		map.addLayer({
+			id: ROUTE_SURFACE_PATH_LAYER_ID,
+			type: "line",
+			source: ROUTE_SURFACE_SOURCE_ID,
+			filter: ["==", ["get", "surface"], "path"],
+			layout: { "line-join": "round", "line-cap": "round" },
+			paint: { ...surfaceOverlayPaint, "line-dasharray": [...SURFACE_DASH_PATTERNS.path] },
+		});
+	}
+
+	if (map.getSource(ROUTE_SOURCE_ID) && !map.getLayer(ROUTE_ARROWS_LAYER_ID)) {
 		map.addLayer({
 			id: ROUTE_ARROWS_LAYER_ID,
 			type: "symbol",
@@ -296,6 +350,11 @@ export const applyMapPalette = (map: MapboxMap, palette: MapPalette): void => {
 			map.setPaintProperty(ROUTE_ARROWS_LAYER_ID, "text-color", palette.arrowFill);
 			map.setPaintProperty(ROUTE_ARROWS_LAYER_ID, "text-halo-color", palette.arrowHalo);
 		}
+		for (const id of [ROUTE_SURFACE_COMPACTED_LAYER_ID, ROUTE_SURFACE_UNPAVED_LAYER_ID, ROUTE_SURFACE_PATH_LAYER_ID]) {
+			if (map.getLayer(id)) {
+				map.setPaintProperty(id, "line-color", palette.arrowFill);
+			}
+		}
 		if (map.getLayer(WAYPOINTS_SHADOW_LAYER_ID)) {
 			map.setPaintProperty(WAYPOINTS_SHADOW_LAYER_ID, "circle-color", palette.waypointShadow);
 		}
@@ -386,6 +445,26 @@ export const updateRouteLayer = (map: MapboxMap, routeCoordinates: Coordinate[])
 		properties: {},
 		geometry: { type: "LineString" as const, coordinates: routeCoordinates },
 	});
+};
+
+export const updateRouteSurfaceLayer = (map: MapboxMap, segments: SurfaceSegment[]): void => {
+	if (!map?.getSource(ROUTE_SURFACE_SOURCE_ID)) return;
+	// Only non-paved buckets render an overlay; paved sections keep the plain route line.
+	const features = segments
+		.filter((s) => s.surface !== "paved" && s.coordinates.length >= 2)
+		.map((s) => ({
+			type: "Feature" as const,
+			properties: { surface: s.surface },
+			geometry: { type: "LineString" as const, coordinates: s.coordinates },
+		}));
+	const source = map.getSource(ROUTE_SURFACE_SOURCE_ID) as GeoJSONSource;
+	source.setData({ type: "FeatureCollection" as const, features });
+};
+
+export const clearRouteSurfaceLayer = (map: MapboxMap): void => {
+	if (!map?.getSource(ROUTE_SURFACE_SOURCE_ID)) return;
+	const source = map.getSource(ROUTE_SURFACE_SOURCE_ID) as GeoJSONSource;
+	source.setData({ type: "FeatureCollection" as const, features: [] });
 };
 
 export const updateKilometerMarkersLayer = (

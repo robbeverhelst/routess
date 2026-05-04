@@ -33,6 +33,7 @@ describe("SurfaceService", () => {
 				path: 0,
 			},
 			total: 2000,
+			segments: [],
 		});
 	});
 });

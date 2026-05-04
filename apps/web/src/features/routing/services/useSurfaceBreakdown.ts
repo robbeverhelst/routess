@@ -1,8 +1,10 @@
 import type { Coordinate } from "@routess/core";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { Logger } from "@/lib/logger";
+import { useRouteSurfaceStore } from "@/redesign/stores/routeSurfaceStore";
 import { useRoutingPreferencesStore } from "@/redesign/stores/routingPreferencesStore";
 import { useRedesignSettingsStore } from "@/redesign/stores/settingsStore";
+import { useHasRoute, useRoutePath } from "@/stores/routingStore";
 import { resolveValhallaCosting, type ValhallaCosting } from "./routingMode";
 import { fetchSurfaceBreakdown, type SurfaceBreakdown } from "./SurfaceService";
 
@@ -16,11 +18,17 @@ export function buildSurfaceBreakdownKey(routePath: Coordinate[], hasRoute: bool
 	return `${costing}:${routePath.map(([lng, lat]) => `${lng.toFixed(6)},${lat.toFixed(6)}`).join("|")}`;
 }
 
-export function useSurfaceBreakdown(routePath: Coordinate[], hasRoute: boolean): SurfaceState {
-	const [breakdown, setBreakdown] = useState<SurfaceBreakdown | null>(null);
-	const [loading, setLoading] = useState(false);
+// Mount once near the app root. Watches the active route and keeps the
+// shared route-surface store in sync. Both the plan panel and the map layer
+// adapter read from that store, so we never double-fetch.
+export function useRouteSurfaceSync(): void {
+	const routePath = useRoutePath();
+	const hasRoute = useHasRoute();
 	const defaultActivity = useRedesignSettingsStore((s) => s.defaultActivity);
 	const routingProfile = useRoutingPreferencesStore((s) => s.profile);
+	const setBreakdown = useRouteSurfaceStore((s) => s.setBreakdown);
+	const setLoading = useRouteSurfaceStore((s) => s.setLoading);
+
 	const costing = useMemo(
 		() => resolveValhallaCosting(defaultActivity, routingProfile),
 		[defaultActivity, routingProfile],
@@ -51,7 +59,7 @@ export function useSurfaceBreakdown(routePath: Coordinate[], hasRoute: boolean):
 				.catch((err) => {
 					if (superseded) return;
 					if ((err as Error)?.name !== "AbortError") {
-						Logger.warn("[useSurfaceBreakdown] failed:", err);
+						Logger.warn("[useRouteSurfaceSync] failed:", err);
 					}
 					setBreakdown(null);
 					setLoading(false);
@@ -67,7 +75,12 @@ export function useSurfaceBreakdown(routePath: Coordinate[], hasRoute: boolean):
 			window.clearTimeout(requestTimeoutId);
 			controller.abort();
 		};
-	}, [key, routePath, costing]);
+	}, [key, routePath, costing, setBreakdown, setLoading]);
+}
 
+// Read-only selector for components that just want to display the breakdown.
+export function useSurfaceBreakdown(): SurfaceState {
+	const breakdown = useRouteSurfaceStore((s) => s.breakdown);
+	const loading = useRouteSurfaceStore((s) => s.loading);
 	return { breakdown, loading };
 }

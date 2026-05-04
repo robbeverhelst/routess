@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { lazy, type ReactNode, Suspense, useEffect, useState } from "react";
+import { useRouteSurfaceSync } from "@/features/routing/services/useSurfaceBreakdown";
 import { apiService } from "@/lib/api";
 import { useAuthStatus } from "@/lib/api-queries";
 import { Logger } from "@/lib/logger";
@@ -118,6 +119,8 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 	const canRedo = useCanRedo();
 	const isLocked = useIsMapLocked();
 	const setIsLocked = useSetIsMapLocked();
+
+	useRouteSurfaceSync();
 
 	const queryClient = useQueryClient();
 	const { isMobile } = useViewport();
