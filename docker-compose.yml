@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   postgres:
-    image: postgres:15
+    image: postgres:18
     environment:
       POSTGRES_DB: routess_db
       POSTGRES_USER: postgres
@@ -21,7 +21,7 @@ services:
     restart: unless-stopped
 
   pgadmin:
-    image: dpage/pgadmin4:8.14
+    image: dpage/pgadmin4:9.14
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@routess.dev
       PGADMIN_DEFAULT_PASSWORD: admin123

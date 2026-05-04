@@ -19,8 +19,8 @@
 		"zustand": "^5.0.2"
 	},
 	"devDependencies": {
-		"@types/node": "^22.11.9",
-		"typescript": "^5.7.3"
+		"@types/node": "^25.0.0",
+		"typescript": "^6.0.0"
 	},
 	"exports": {
 		".": {

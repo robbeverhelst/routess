@@ -13,6 +13,8 @@
 		"paths": {
 			"src/*": ["src/*"]
 		},
+		"types": ["jest", "node"],
+		"ignoreDeprecations": "6.0",
 		"incremental": true,
 		"skipLibCheck": true,
 		"strictNullChecks": false,

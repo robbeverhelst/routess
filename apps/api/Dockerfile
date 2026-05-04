@@ -1,5 +1,5 @@
 # Build stage
-FROM oven/bun:1.3.11-alpine AS builder
+FROM oven/bun:1.3.13-alpine AS builder
 
 # Set working directory
 WORKDIR /app
@@ -14,7 +14,7 @@ RUN bun install --frozen-lockfile
 RUN bun run --filter './packages/*' build && bun run --filter './apps/api' build
 
 # Production stage
-FROM oven/bun:1.3.11-alpine AS production
+FROM oven/bun:1.3.13-alpine AS production
 
 # Create app directory
 WORKDIR /app

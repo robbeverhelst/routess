@@ -32,18 +32,16 @@ export default defineConfig({
 	build: {
 		rollupOptions: {
 			output: {
-				manualChunks: {
-					// Separate mapbox gl into its own chunk as it's large
-					"mapbox-gl": ["mapbox-gl"],
-					// Separate React and React DOM into vendor chunk
-					"react-vendor": ["react", "react-dom"],
-					// Separate UI library into its own chunk
-					"ui-vendor": [
-						"@radix-ui/react-dialog",
-						"@radix-ui/react-popover",
-						"@radix-ui/react-select",
-						"@radix-ui/react-tooltip",
-					],
+				manualChunks(id) {
+					if (id.includes("node_modules/mapbox-gl")) return "mapbox-gl";
+					if (id.includes("node_modules/react-dom") || /node_modules\/react\//.test(id)) return "react-vendor";
+					if (
+						id.includes("node_modules/@radix-ui/react-dialog") ||
+						id.includes("node_modules/@radix-ui/react-popover") ||
+						id.includes("node_modules/@radix-ui/react-select") ||
+						id.includes("node_modules/@radix-ui/react-tooltip")
+					)
+						return "ui-vendor";
 				},
 			},
 		},
