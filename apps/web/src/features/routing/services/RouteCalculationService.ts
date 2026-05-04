@@ -3,11 +3,12 @@ import { formatDistance, formatDuration } from "@routess/core";
 import type { Map as MapboxMap } from "mapbox-gl";
 import type { Dispatch, SetStateAction } from "react";
 import { Logger } from "@/lib/logger";
-import { getRoutingPreferences, type RoutingPreferences } from "@/redesign/stores/routingPreferencesStore";
+import { getRoutingPreferences } from "@/redesign/stores/routingPreferencesStore";
 import { useRedesignSettingsStore } from "@/redesign/stores/settingsStore";
 import { useRoutingStore } from "@/stores/routingStore";
 import { getDefaultElevationService } from "./elevation";
 import { type ComputeRouteOptions, computeRoute, type DirectionsOptions } from "./RoutingEngine";
+import { resolveMapboxProfile } from "./routingMode";
 
 const sameCoord = (a: Coordinate, b: Coordinate) => a[0] === b[0] && a[1] === b[1];
 const sameWaypoint = (a: Waypoint, b: Waypoint) => sameCoord(a.coord, b.coord) && a.type === b.type;
@@ -48,19 +49,10 @@ const computeElevationInBackground = (routePath: Coordinate[], waypoints: Waypoi
 		});
 };
 
-// Map the user's "default activity" + routing profile choice onto a Mapbox profile.
-// Cycling-first today: routing prefs lean toward bike infra unless the user picked
-// running/walking. "Flat" prefers driving for gentler grade routing.
-function resolveMapboxProfile(prefs: RoutingPreferences): string {
-	const activity = useRedesignSettingsStore.getState().defaultActivity;
-	if (activity === "Running" || activity === "Walking") return "mapbox/walking";
-	if (prefs.profile === "flat") return "mapbox/driving";
-	return "mapbox/cycling";
-}
-
 function buildComputeOptions(): ComputeRouteOptions {
 	const prefs = getRoutingPreferences();
-	const profile = resolveMapboxProfile(prefs);
+	const defaultActivity = useRedesignSettingsStore.getState().defaultActivity;
+	const profile = resolveMapboxProfile(defaultActivity, prefs.profile);
 	const directions: DirectionsOptions = {
 		profile,
 		radius: 150,

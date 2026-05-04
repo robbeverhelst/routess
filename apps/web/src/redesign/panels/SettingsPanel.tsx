@@ -267,9 +267,6 @@ export function SettingsPanel() {
 							<option value="streets">Streets</option>
 							<option value="outdoors">Outdoors</option>
 							<option value="satellite">Satellite</option>
-							<option value="terrain">Terrain</option>
-							<option value="dark">Dark</option>
-							<option value="minimal">Minimal</option>
 						</select>
 					}
 				/>
