@@ -13,16 +13,17 @@ type NavItem = {
 	badge?: string;
 	accent?: boolean;
 	context?: RedesignContext;
-	action?: "profile" | "achievements";
+	action?: "profile" | "account" | "achievements";
 };
 
 const NAV: NavItem[] = [
 	{ icon: I.route, label: "Plan", badge: "Active route", context: "plan" },
 	{ icon: I.library, label: "Library", badge: "24", context: "library" },
-	{ icon: I.activity, label: "Activity", context: "activity" },
+	{ icon: I.explore, label: "Discover", context: "discover" },
+	{ icon: I.social, label: "Social", context: "social" },
 	{ icon: I.trophy, label: "Achievements", badge: "+2 new", accent: true, action: "achievements" },
 	{ icon: I.user, label: "Profile", action: "profile" },
-	{ icon: I.settings, label: "Settings", context: "settings" },
+	{ icon: I.settings, label: "Account & billing", action: "account" },
 ];
 
 export function MobileDrawer({ onClose }: { onClose?: () => void }) {
@@ -47,6 +48,11 @@ export function MobileDrawer({ onClose }: { onClose?: () => void }) {
 			return;
 		}
 		if (item.action === "profile") {
+			window.dispatchEvent(new CustomEvent("routess:open-profile"));
+			onClose?.();
+			return;
+		}
+		if (item.action === "account") {
 			window.dispatchEvent(new CustomEvent("routess:open-account"));
 			onClose?.();
 			return;

@@ -33,10 +33,10 @@ import { ShareModal } from "./modals/ShareModal";
 import { LayerPicker } from "./overlays/LayerPicker";
 import { NotificationCenter } from "./overlays/NotificationCenter";
 import { ToastStack } from "./overlays/ToastStack";
-import { ActivityPanel } from "./panels/ActivityPanel";
+import { DiscoverPanel } from "./panels/DiscoverPanel";
 import { LibraryPanel } from "./panels/LibraryPanel";
 import { PlanPanel } from "./panels/PlanPanel";
-import { SettingsPanel } from "./panels/SettingsPanel";
+import { SocialPanel } from "./panels/SocialPanel";
 import { AccountScreen } from "./screens/AccountScreen";
 import { CalendarScreen } from "./screens/CalendarScreen";
 import { CoachmarksScreen } from "./screens/CoachmarksScreen";
@@ -58,15 +58,15 @@ const MapWithRouting = lazy(() => import("@/components/MapWithRouting"));
 const SCREEN_TITLES: Record<RedesignContext, string> = {
 	plan: "Plan",
 	library: "Library",
-	activity: "Activity",
-	settings: "Settings",
+	discover: "Discover",
+	social: "Social",
 };
 
 const NAV: { key: RedesignContext; icon: React.ComponentType<{ size?: number }>; label: string }[] = [
 	{ key: "plan", icon: I.route, label: "Plan" },
 	{ key: "library", icon: I.library, label: "Library" },
-	{ key: "activity", icon: I.activity, label: "Activity" },
-	{ key: "settings", icon: I.settings, label: "Settings" },
+	{ key: "discover", icon: I.explore, label: "Discover" },
+	{ key: "social", icon: I.social, label: "Social" },
 ];
 
 interface AppShellProps {
@@ -193,8 +193,14 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 			setSkippedAuth(false);
 			setAuthView("signup");
 		};
-		const onOpenActivity = () => {
-			setContext("activity");
+		const onOpenProfile = () => {
+			setDevScreen("profile");
+		};
+		const onOpenDiscover = () => {
+			setContext("discover");
+		};
+		const onOpenSocial = () => {
+			setContext("social");
 		};
 		const onExportAll = async () => {
 			if (!localStorage.getItem("access_token")) {
@@ -259,18 +265,26 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 		};
 
 		window.addEventListener("routess:open-account", onOpenAccount);
+		window.addEventListener("routess:open-profile", onOpenProfile);
 		window.addEventListener("routess:open-login", onOpenLogin);
 		window.addEventListener("routess:open-signup", onOpenSignup);
-		window.addEventListener("routess:open-activity", onOpenActivity);
+		window.addEventListener("routess:open-discover", onOpenDiscover);
+		window.addEventListener("routess:open-explore", onOpenDiscover);
+		window.addEventListener("routess:open-social", onOpenSocial);
+		window.addEventListener("routess:open-activity", onOpenSocial);
 		window.addEventListener("routess:export-all-data", onExportAll);
 		window.addEventListener("routess:duplicate-route", onDuplicate);
 		window.addEventListener("routess:delete-route", onDelete);
 		window.addEventListener("routess:toggle-favorite", onToggleFavorite);
 		return () => {
 			window.removeEventListener("routess:open-account", onOpenAccount);
+			window.removeEventListener("routess:open-profile", onOpenProfile);
 			window.removeEventListener("routess:open-login", onOpenLogin);
 			window.removeEventListener("routess:open-signup", onOpenSignup);
-			window.removeEventListener("routess:open-activity", onOpenActivity);
+			window.removeEventListener("routess:open-discover", onOpenDiscover);
+			window.removeEventListener("routess:open-explore", onOpenDiscover);
+			window.removeEventListener("routess:open-social", onOpenSocial);
+			window.removeEventListener("routess:open-activity", onOpenSocial);
 			window.removeEventListener("routess:export-all-data", onExportAll);
 			window.removeEventListener("routess:duplicate-route", onDuplicate);
 			window.removeEventListener("routess:delete-route", onDelete);
@@ -399,10 +413,10 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 				return <PlanPanel />;
 			case "library":
 				return <LibraryPanel />;
-			case "activity":
-				return <ActivityPanel />;
-			case "settings":
-				return <SettingsPanel />;
+			case "discover":
+				return <DiscoverPanel />;
+			case "social":
+				return <SocialPanel />;
 		}
 	};
 

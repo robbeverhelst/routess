@@ -15,7 +15,7 @@ const STOPS: Stop[] = [
 		target: { top: 50, left: 50, width: 56, height: 280 },
 		tooltip: { top: 80, left: 130 },
 		title: "Switch contexts here",
-		body: "Plan, Library, Activity, and Settings each have their own panel. The map stays in place.",
+		body: "Plan, Library, Discover, and Social each have their own panel. The map stays in place.",
 	},
 	{
 		target: { top: 50, left: 116, width: 360, height: 600 },

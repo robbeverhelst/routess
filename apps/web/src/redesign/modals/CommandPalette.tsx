@@ -47,8 +47,8 @@ export function CommandPalette() {
 				items: [
 					{ id: "nav-plan", icon: I.route, label: "Plan a route", kbd: "G P", run: () => setContext("plan") },
 					{ id: "nav-lib", icon: I.library, label: "Open library", kbd: "G L", run: () => setContext("library") },
-					{ id: "nav-act", icon: I.activity, label: "View activity", kbd: "G A", run: () => setContext("activity") },
-					{ id: "nav-set", icon: I.settings, label: "Settings", kbd: "G S", run: () => setContext("settings") },
+					{ id: "nav-dis", icon: I.explore, label: "Discover routes", kbd: "G D", run: () => setContext("discover") },
+					{ id: "nav-soc", icon: I.social, label: "Open social", kbd: "G S", run: () => setContext("social") },
 				],
 			},
 			{
@@ -65,6 +65,12 @@ export function CommandPalette() {
 					},
 					{ id: "act-import", icon: I.upload, label: "Import GPX", kbd: "I", run: () => openModal("import") },
 					{ id: "act-share", icon: I.share, label: "Share current route", kbd: "⇧ S", run: () => openModal("share") },
+					{
+						id: "act-account",
+						icon: I.user,
+						label: "Account & billing",
+						run: () => window.dispatchEvent(new CustomEvent("routess:open-account")),
+					},
 					{ id: "act-theme", icon: I.moon, label: "Toggle dark mode", kbd: "⌘ D", run: toggleTheme },
 				],
 			},
