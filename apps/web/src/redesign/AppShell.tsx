@@ -102,16 +102,8 @@ function getDevScreen(): DevScreen | null {
 }
 
 export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps) {
-	const {
-		context,
-		setContext,
-		theme,
-		accent,
-		panelCollapsed,
-		togglePanel,
-		welcomeCompleted,
-		completeWelcome,
-	} = useUiStore();
+	const { context, setContext, theme, accent, panelCollapsed, togglePanel, welcomeCompleted, completeWelcome } =
+		useUiStore();
 	const { modal, overlay, openModal, openOverlay, closeOverlay } = useModalsStore();
 	const { data: auth } = useAuthStatus();
 	const online = useOnlineStatus();
@@ -540,7 +532,9 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 				}}
 			>
 				{PanelHeader}
-				<div style={{ flex: 1, minHeight: 0, overflow: "hidden", width: "var(--rds-panel-w)" }}>{renderPanelContent()}</div>
+				<div style={{ flex: 1, minHeight: 0, overflow: "hidden", width: "var(--rds-panel-w)" }}>
+					{renderPanelContent()}
+				</div>
 			</aside>
 			<main
 				style={{

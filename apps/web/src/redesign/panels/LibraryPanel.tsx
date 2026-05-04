@@ -315,7 +315,9 @@ function LibraryPanelInner() {
 						<I.plus size={14} /> New
 					</Btn>
 				</div>
-				<div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+				<div
+					style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}
+				>
 					<div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
 						{FILTERS.map((f) => {
 							const on = filter === f.key;
