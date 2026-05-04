@@ -34,27 +34,37 @@ export function useSurfaceBreakdown(routePath: Coordinate[], hasRoute: boolean):
 			return;
 		}
 
+		let superseded = false;
 		const controller = new AbortController();
+		// Public Valhalla instance is occasionally slow or unreachable; cap any
+		// single attempt so the loading flag can resolve instead of sticking.
+		const requestTimeoutId = window.setTimeout(() => controller.abort(), 10000);
 		setLoading(true);
 
-		const timer = window.setTimeout(() => {
+		const debounceTimer = window.setTimeout(() => {
 			fetchSurfaceBreakdown(routePath, costing, controller.signal)
 				.then((result) => {
-					if (controller.signal.aborted) return;
+					if (superseded) return;
 					setBreakdown(result);
+					setLoading(false);
 				})
 				.catch((err) => {
-					if (controller.signal.aborted) return;
-					Logger.warn("[useSurfaceBreakdown] failed:", err);
+					if (superseded) return;
+					if ((err as Error)?.name !== "AbortError") {
+						Logger.warn("[useSurfaceBreakdown] failed:", err);
+					}
 					setBreakdown(null);
+					setLoading(false);
 				})
 				.finally(() => {
-					if (!controller.signal.aborted) setLoading(false);
+					window.clearTimeout(requestTimeoutId);
 				});
 		}, 400);
 
 		return () => {
-			window.clearTimeout(timer);
+			superseded = true;
+			window.clearTimeout(debounceTimer);
+			window.clearTimeout(requestTimeoutId);
 			controller.abort();
 		};
 	}, [key, routePath, costing]);
