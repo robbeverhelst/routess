@@ -51,12 +51,12 @@ const nl: Page[] = [
 	{
 		path: "index.mdx",
 		content: `---
-title: Welkom bij Routess
-description: Een korte rondleiding door Routess en deze gebruikersgids.
+title: Welkom bij routess
+description: Een korte rondleiding door routess en deze gebruikersgids.
 translationStatus: machine-draft
 ---
 
-Routess is een routeplanner waarmee je een route met meerdere stops op een kaart uitstippelt en bewaart voor later. Deze gids is bedoeld voor mensen die de Routess-app gebruiken. Je hoeft niet te programmeren.
+routess is een routeplanner waarmee je een route met meerdere stops op een kaart uitstippelt en bewaart voor later. Deze gids is bedoeld voor mensen die de routess-app gebruiken. Je hoeft niet te programmeren.
 
 > Screenshotplaceholder: startscherm met een opgeslagen route.
 
@@ -75,15 +75,15 @@ Begin met [Aanmelden met Google](/nl/guide/getting-started/sign-in) of plan dire
 		path: "getting-started/sign-in.mdx",
 		content: `---
 title: Aanmelden met Google
-description: Meld je aan bij Routess met je Google-account.
+description: Meld je aan bij routess met je Google-account.
 translationStatus: machine-draft
 ---
 
-Routess gebruikt Google om je veilig aan te melden. Je hoeft geen apart wachtwoord voor Routess te beheren.
+routess gebruikt Google om je veilig aan te melden. Je hoeft geen apart wachtwoord voor routess te beheren.
 
 ## Stappen
 
-1. Open Routess en klik rechtsboven op **Aanmelden met Google**.
+1. Open routess en klik rechtsboven op **Aanmelden met Google**.
 2. Kies in het Google-venster het account dat je wilt gebruiken.
 3. Keur de gevraagde toestemming goed.
 4. Je keert terug naar de kaart en je profiel verschijnt in de navigatie.
@@ -92,7 +92,7 @@ Routess gebruikt Google om je veilig aan te melden. Je hoeft geen apart wachtwoo
 
 ## Als het niet lukt
 
-Controleer of pop-ups zijn toegestaan voor het Routess-domein. Meld je ook eerst aan op accounts.google.com als Google geen account toont.
+Controleer of pop-ups zijn toegestaan voor het routess-domein. Meld je ook eerst aan op accounts.google.com als Google geen account toont.
 `,
 	},
 	{
@@ -113,7 +113,7 @@ Klik op de kaart. Er verschijnt een waypoint. Dit is het startpunt van je route.
 
 ## 2. Voeg stops toe
 
-Klik opnieuw op de kaart om extra stops toe te voegen. Routess tekent de lijn tussen de punten terwijl je werkt.
+Klik opnieuw op de kaart om extra stops toe te voegen. routess tekent de lijn tussen de punten terwijl je werkt.
 
 ## 3. Pas de route aan
 
@@ -121,14 +121,14 @@ Sleep een waypoint om het te verplaatsen. Gebruik de routezijbalk om de volgorde
 
 ## 4. Bewaar automatisch
 
-Als je bent aangemeld, bewaart Routess je wijzigingen automatisch.
+Als je bent aangemeld, bewaart routess je wijzigingen automatisch.
 `,
 	},
 	{
 		path: "getting-started/interface-tour.mdx",
 		content: `---
 title: Rondleiding door de interface
-description: Leer de belangrijkste onderdelen van Routess kennen.
+description: Leer de belangrijkste onderdelen van routess kennen.
 translationStatus: machine-draft
 ---
 
@@ -165,7 +165,7 @@ Een route is een lijst van waypoints. Klik op de kaart om een waypoint toe te vo
 
 - De eerste klik zet je startpunt.
 - Elke volgende klik voegt een stop toe.
-- Routess tekent de verbinding tussen de punten.
+- routess tekent de verbinding tussen de punten.
 - De routezijbalk werkt meteen mee.
 
 ## Tips
@@ -185,7 +185,7 @@ translationStatus: machine-draft
 
 ## Verplaatsen
 
-Sleep een waypoint op de kaart. Routess werkt de route bij zodra je het punt loslaat.
+Sleep een waypoint op de kaart. routess werkt de route bij zodra je het punt loslaat.
 
 ## Verwijderen
 
@@ -204,11 +204,11 @@ Wijzig de volgorde van stops in de routezijbalk wanneer de route in een andere v
 		path: "routes/saving-routes.mdx",
 		content: `---
 title: Routes bewaren
-description: Hoe Routess je routes bewaart tussen sessies.
+description: Hoe routess je routes bewaart tussen sessies.
 translationStatus: machine-draft
 ---
 
-Als je bent aangemeld, bewaart Routess je route automatisch.
+Als je bent aangemeld, bewaart routess je route automatisch.
 
 Je route blijft beschikbaar na:
 
@@ -216,7 +216,7 @@ Je route blijft beschikbaar na:
 - De browser sluiten en opnieuw openen
 - Aanmelden op een ander apparaat
 
-Er is geen aparte bewaarknop. Routess schrijft wijzigingen weg terwijl je werkt.
+Er is geen aparte bewaarknop. routess schrijft wijzigingen weg terwijl je werkt.
 
 ## Zonder account
 
@@ -277,7 +277,7 @@ description: Wissel tussen verschillende kaartweergaven.
 translationStatus: machine-draft
 ---
 
-Routess heeft meerdere kaartstijlen zodat je de kaart kunt afstemmen op je taak.
+routess heeft meerdere kaartstijlen zodat je de kaart kunt afstemmen op je taak.
 
 > Screenshotplaceholder: menu met kaartstijlen.
 
@@ -298,7 +298,7 @@ description: Toon je actuele locatie op de kaart.
 translationStatus: machine-draft
 ---
 
-Routess kan je huidige locatie op de kaart tonen als je browser toestemming krijgt.
+routess kan je huidige locatie op de kaart tonen als je browser toestemming krijgt.
 
 > Screenshotplaceholder: locatiestip op de kaart.
 
@@ -340,7 +340,7 @@ description: Wijzig de taal van de app.
 translationStatus: machine-draft
 ---
 
-Routess is beschikbaar in:
+routess is beschikbaar in:
 
 - English
 - Nederlands
@@ -360,11 +360,11 @@ Wil je een taal toevoegen of vertalingen verbeteren? Bekijk de ontwikkelaarsdocu
 		path: "account/deleting-account.mdx",
 		content: `---
 title: Je account verwijderen
-description: Verwijder permanent je Routess-account en routes.
+description: Verwijder permanent je routess-account en routes.
 translationStatus: machine-draft
 ---
 
-Je kunt je Routess-account verwijderen wanneer je wilt. Dit is permanent.
+Je kunt je routess-account verwijderen wanneer je wilt. Dit is permanent.
 
 ## Wat wordt verwijderd
 
@@ -374,7 +374,7 @@ Je kunt je Routess-account verwijderen wanneer je wilt. Dit is permanent.
 
 ## Voor je verwijdert
 
-Controleer of je geen routes meer nodig hebt. Na verwijdering kan Routess je gegevens niet herstellen.
+Controleer of je geen routes meer nodig hebt. Na verwijdering kan routess je gegevens niet herstellen.
 `,
 	},
 	{
@@ -387,13 +387,13 @@ translationStatus: machine-draft
 
 ## Aanmelden lukt niet
 
-- **Google-pop-up wordt geblokkeerd.** Sta pop-ups toe voor het Routess-domein.
+- **Google-pop-up wordt geblokkeerd.** Sta pop-ups toe voor het routess-domein.
 - **Geen account zichtbaar.** Meld je eerst aan op accounts.google.com.
 - **Blijft laden.** Vernieuw de pagina en probeer opnieuw.
 
 ## Kaart laadt niet
 
-Controleer je internetverbinding en of scripts voor het Routess-domein zijn toegestaan.
+Controleer je internetverbinding en of scripts voor het routess-domein zijn toegestaan.
 
 ## Locatie werkt niet
 
@@ -408,9 +408,9 @@ description: Korte antwoorden op veelgestelde vragen.
 translationStatus: machine-draft
 ---
 
-## Is Routess gratis?
+## Is routess gratis?
 
-Ja. Routess is open source. De publieke versie op routess.com is bedoeld om gratis te gebruiken.
+Ja. routess is open source. De publieke versie op routess.com is bedoeld om gratis te gebruiken.
 
 ## Heb ik een account nodig?
 
@@ -431,12 +431,12 @@ const fr: Page[] = [
 	{
 		path: "index.mdx",
 		content: `---
-title: Bienvenue sur Routess
-description: Un apercu rapide de Routess et du guide utilisateur.
+title: Bienvenue sur routess
+description: Un apercu rapide de routess et du guide utilisateur.
 translationStatus: machine-draft
 ---
 
-Routess est une application de planification d'itineraires. Elle permet de placer plusieurs arrets sur une carte, d'ajuster le trajet et de le conserver pour plus tard.
+routess est une application de planification d'itineraires. Elle permet de placer plusieurs arrets sur une carte, d'ajuster le trajet et de le conserver pour plus tard.
 
 > Emplacement de capture d'ecran : vue d'accueil avec un itineraire enregistre.
 
@@ -455,15 +455,15 @@ Commencez par [vous connecter](/fr/guide/getting-started/sign-in) ou creez [votr
 		path: "getting-started/sign-in.mdx",
 		content: `---
 title: Se connecter avec Google
-description: Utilisez votre compte Google pour acceder a Routess.
+description: Utilisez votre compte Google pour acceder a routess.
 translationStatus: machine-draft
 ---
 
-Routess utilise Google pour l'authentification. Vous n'avez pas de mot de passe Routess distinct a gerer.
+routess utilise Google pour l'authentification. Vous n'avez pas de mot de passe routess distinct a gerer.
 
 ## Etapes
 
-1. Ouvrez Routess et cliquez sur **Se connecter avec Google**.
+1. Ouvrez routess et cliquez sur **Se connecter avec Google**.
 2. Choisissez le compte Google a utiliser.
 3. Acceptez les autorisations demandees.
 4. Vous revenez sur la carte avec votre profil actif.
@@ -472,7 +472,7 @@ Routess utilise Google pour l'authentification. Vous n'avez pas de mot de passe 
 
 ## En cas de probleme
 
-Autorisez les pop-ups pour le domaine Routess et verifiez que vous etes connecte a accounts.google.com.
+Autorisez les pop-ups pour le domaine routess et verifiez que vous etes connecte a accounts.google.com.
 `,
 	},
 	{
@@ -493,7 +493,7 @@ Cliquez sur la carte. Un premier point de passage apparait.
 
 ## 2. Ajouter des arrets
 
-Cliquez ailleurs sur la carte pour ajouter des arrets. Routess trace le trajet au fur et a mesure.
+Cliquez ailleurs sur la carte pour ajouter des arrets. routess trace le trajet au fur et a mesure.
 
 ## 3. Ajuster
 
@@ -501,14 +501,14 @@ Faites glisser un point pour le deplacer. Utilisez le panneau lateral pour verif
 
 ## 4. Enregistrer
 
-Une fois connecte, Routess enregistre automatiquement vos modifications.
+Une fois connecte, routess enregistre automatiquement vos modifications.
 `,
 	},
 	{
 		path: "getting-started/interface-tour.mdx",
 		content: `---
 title: Tour de l'interface
-description: Decouvrez les zones principales de Routess.
+description: Decouvrez les zones principales de routess.
 translationStatus: machine-draft
 ---
 
@@ -545,7 +545,7 @@ Un itineraire est une liste de points de passage. Cliquez sur la carte pour en a
 
 - Le premier clic definit le depart.
 - Les clics suivants ajoutent des arrets.
-- Routess trace la liaison entre les points.
+- routess trace la liaison entre les points.
 - Le panneau lateral se met a jour immediatement.
 
 ## Conseil
@@ -584,11 +584,11 @@ Changez l'ordre des arrets dans le panneau lateral lorsque le trajet doit suivre
 		path: "routes/saving-routes.mdx",
 		content: `---
 title: Enregistrer des itineraires
-description: Comment Routess conserve vos itineraires.
+description: Comment routess conserve vos itineraires.
 translationStatus: machine-draft
 ---
 
-Lorsque vous etes connecte, Routess enregistre automatiquement votre itineraire.
+Lorsque vous etes connecte, routess enregistre automatiquement votre itineraire.
 
 Votre itineraire reste disponible apres :
 
@@ -655,7 +655,7 @@ description: Changez l'apparence de la carte.
 translationStatus: machine-draft
 ---
 
-Routess propose plusieurs styles pour adapter la carte a votre usage.
+routess propose plusieurs styles pour adapter la carte a votre usage.
 
 > Emplacement de capture d'ecran : menu des styles.
 
@@ -676,7 +676,7 @@ description: Affichez votre position actuelle sur la carte.
 translationStatus: machine-draft
 ---
 
-Routess peut afficher votre position si votre navigateur y est autorise.
+routess peut afficher votre position si votre navigateur y est autorise.
 
 > Emplacement de capture d'ecran : point de localisation sur la carte.
 
@@ -718,7 +718,7 @@ description: Changez la langue de l'application.
 translationStatus: machine-draft
 ---
 
-Routess est disponible en :
+routess est disponible en :
 
 - English
 - Nederlands
@@ -738,11 +738,11 @@ Pour ajouter une langue ou ameliorer les traductions, consultez la documentation
 		path: "account/deleting-account.mdx",
 		content: `---
 title: Supprimer votre compte
-description: Supprimez definitivement votre compte Routess et vos itineraires.
+description: Supprimez definitivement votre compte routess et vos itineraires.
 translationStatus: machine-draft
 ---
 
-Vous pouvez supprimer votre compte Routess a tout moment. Cette action est definitive.
+Vous pouvez supprimer votre compte routess a tout moment. Cette action est definitive.
 
 ## Ce qui est supprime
 
@@ -763,13 +763,13 @@ translationStatus: machine-draft
 
 ## Probleme de connexion
 
-- **La pop-up Google est bloquee.** Autorisez les pop-ups pour le domaine Routess.
+- **La pop-up Google est bloquee.** Autorisez les pop-ups pour le domaine routess.
 - **Aucun compte ne s'affiche.** Connectez-vous d'abord sur accounts.google.com.
 - **Chargement bloque.** Rechargez la page puis reessayez.
 
 ## La carte ne se charge pas
 
-Verifiez votre connexion et assurez-vous que les scripts Routess sont autorises.
+Verifiez votre connexion et assurez-vous que les scripts routess sont autorises.
 
 ## La position ne fonctionne pas
 
@@ -784,9 +784,9 @@ description: Reponses rapides aux questions frequentes.
 translationStatus: machine-draft
 ---
 
-## Routess est-il gratuit ?
+## routess est-il gratuit ?
 
-Oui. Routess est open source. La version publique sur routess.com est prevue pour etre gratuite.
+Oui. routess est open source. La version publique sur routess.com est prevue pour etre gratuite.
 
 ## Faut-il un compte ?
 
@@ -807,12 +807,12 @@ const de: Page[] = [
 	{
 		path: "index.mdx",
 		content: `---
-title: Willkommen bei Routess
-description: Ein kurzer Rundgang durch Routess und das Benutzerhandbuch.
+title: Willkommen bei routess
+description: Ein kurzer Rundgang durch routess und das Benutzerhandbuch.
 translationStatus: machine-draft
 ---
 
-Routess ist eine Routenplanungs-App. Du setzt mehrere Stopps auf einer Karte, passt die Route an und speicherst sie fuer spaeter.
+routess ist eine Routenplanungs-App. Du setzt mehrere Stopps auf einer Karte, passt die Route an und speicherst sie fuer spaeter.
 
 > Screenshot-Platzhalter: Startansicht mit gespeicherter Route.
 
@@ -831,15 +831,15 @@ Starte mit [Mit Google anmelden](/de/guide/getting-started/sign-in) oder plane [
 		path: "getting-started/sign-in.mdx",
 		content: `---
 title: Mit Google anmelden
-description: Melde dich mit deinem Google-Konto bei Routess an.
+description: Melde dich mit deinem Google-Konto bei routess an.
 translationStatus: machine-draft
 ---
 
-Routess nutzt Google fuer die Anmeldung. Du musst kein separates Routess-Passwort verwalten.
+routess nutzt Google fuer die Anmeldung. Du musst kein separates routess-Passwort verwalten.
 
 ## Schritte
 
-1. Oeffne Routess und klicke auf **Mit Google anmelden**.
+1. Oeffne routess und klicke auf **Mit Google anmelden**.
 2. Waehle das Google-Konto aus.
 3. Bestaetige die angefragten Berechtigungen.
 4. Danach kehrst du zur Karte zurueck und dein Profil ist aktiv.
@@ -848,7 +848,7 @@ Routess nutzt Google fuer die Anmeldung. Du musst kein separates Routess-Passwor
 
 ## Wenn es nicht klappt
 
-Erlaube Pop-ups fuer die Routess-Domain und pruefe, ob du bei accounts.google.com angemeldet bist.
+Erlaube Pop-ups fuer die routess-Domain und pruefe, ob du bei accounts.google.com angemeldet bist.
 `,
 	},
 	{
@@ -869,7 +869,7 @@ Klicke auf die Karte. Der erste Wegpunkt erscheint.
 
 ## 2. Stopps hinzufuegen
 
-Klicke weitere Stellen auf der Karte an. Routess zeichnet die Verbindung waehrend der Planung.
+Klicke weitere Stellen auf der Karte an. routess zeichnet die Verbindung waehrend der Planung.
 
 ## 3. Anpassen
 
@@ -877,14 +877,14 @@ Ziehe einen Wegpunkt, um ihn zu verschieben. Pruefe die Reihenfolge in der Seite
 
 ## 4. Speichern
 
-Wenn du angemeldet bist, speichert Routess deine Aenderungen automatisch.
+Wenn du angemeldet bist, speichert routess deine Aenderungen automatisch.
 `,
 	},
 	{
 		path: "getting-started/interface-tour.mdx",
 		content: `---
 title: Rundgang durch die Oberflaeche
-description: Lerne die wichtigsten Bereiche von Routess kennen.
+description: Lerne die wichtigsten Bereiche von routess kennen.
 translationStatus: machine-draft
 ---
 
@@ -921,7 +921,7 @@ Eine Route ist eine Liste von Wegpunkten. Klicke auf die Karte, um einen Punkt h
 
 - Der erste Klick setzt den Startpunkt.
 - Weitere Klicks fuegen Stopps hinzu.
-- Routess zeichnet die Verbindung zwischen den Punkten.
+- routess zeichnet die Verbindung zwischen den Punkten.
 - Die Seitenleiste aktualisiert sich sofort.
 
 ## Tipp
@@ -941,7 +941,7 @@ translationStatus: machine-draft
 
 ## Verschieben
 
-Ziehe einen Wegpunkt auf der Karte. Routess aktualisiert die Route, wenn du ihn loslaesst.
+Ziehe einen Wegpunkt auf der Karte. routess aktualisiert die Route, wenn du ihn loslaesst.
 
 ## Loeschen
 
@@ -960,11 +960,11 @@ Aendere die Reihenfolge der Stopps in der Seitenleiste, wenn die Route anders ve
 		path: "routes/saving-routes.mdx",
 		content: `---
 title: Routen speichern
-description: Wie Routess deine Routen zwischen Sitzungen erhaelt.
+description: Wie routess deine Routen zwischen Sitzungen erhaelt.
 translationStatus: machine-draft
 ---
 
-Wenn du angemeldet bist, speichert Routess deine Route automatisch.
+Wenn du angemeldet bist, speichert routess deine Route automatisch.
 
 Deine Route bleibt verfuegbar nach:
 
@@ -972,7 +972,7 @@ Deine Route bleibt verfuegbar nach:
 - Schliessen und erneutem Oeffnen des Browsers
 - Anmeldung auf einem anderen Geraet
 
-Es gibt keinen separaten Speichern-Button. Routess speichert waehrend du arbeitest.
+Es gibt keinen separaten Speichern-Button. routess speichert waehrend du arbeitest.
 
 ## Ohne Konto
 
@@ -1031,7 +1031,7 @@ description: Wechsle zwischen Kartenansichten.
 translationStatus: machine-draft
 ---
 
-Routess bietet mehrere Kartenstile, damit die Karte zur Aufgabe passt.
+routess bietet mehrere Kartenstile, damit die Karte zur Aufgabe passt.
 
 > Screenshot-Platzhalter: Menue fuer Kartenstile.
 
@@ -1052,7 +1052,7 @@ description: Zeige deinen aktuellen Standort auf der Karte.
 translationStatus: machine-draft
 ---
 
-Routess kann deinen Standort anzeigen, wenn dein Browser die Berechtigung hat.
+routess kann deinen Standort anzeigen, wenn dein Browser die Berechtigung hat.
 
 > Screenshot-Platzhalter: Standortpunkt auf der Karte.
 
@@ -1094,7 +1094,7 @@ description: Aendere die Sprache der App.
 translationStatus: machine-draft
 ---
 
-Routess ist verfuegbar in:
+routess ist verfuegbar in:
 
 - English
 - Nederlands
@@ -1114,11 +1114,11 @@ Wenn du eine Sprache hinzufuegen oder Uebersetzungen verbessern willst, lies die
 		path: "account/deleting-account.mdx",
 		content: `---
 title: Konto loeschen
-description: Loesche dein Routess-Konto und deine Routen dauerhaft.
+description: Loesche dein routess-Konto und deine Routen dauerhaft.
 translationStatus: machine-draft
 ---
 
-Du kannst dein Routess-Konto jederzeit loeschen. Diese Aktion ist dauerhaft.
+Du kannst dein routess-Konto jederzeit loeschen. Diese Aktion ist dauerhaft.
 
 ## Was geloescht wird
 
@@ -1126,7 +1126,7 @@ Du kannst dein Routess-Konto jederzeit loeschen. Diese Aktion ist dauerhaft.
 - Alle gespeicherten Routen
 - Die Verbindung zu deiner Google-Anmeldung
 
-Pruefe vor dem Loeschen, ob du deine Routen noch brauchst. Routess kann sie danach nicht wiederherstellen.
+Pruefe vor dem Loeschen, ob du deine Routen noch brauchst. routess kann sie danach nicht wiederherstellen.
 `,
 	},
 	{
@@ -1139,13 +1139,13 @@ translationStatus: machine-draft
 
 ## Anmeldung klappt nicht
 
-- **Google-Pop-up wird blockiert.** Erlaube Pop-ups fuer die Routess-Domain.
+- **Google-Pop-up wird blockiert.** Erlaube Pop-ups fuer die routess-Domain.
 - **Kein Konto sichtbar.** Melde dich zuerst bei accounts.google.com an.
 - **Ladeanzeige bleibt stehen.** Lade die Seite neu und versuche es erneut.
 
 ## Karte laedt nicht
 
-Pruefe deine Internetverbindung und ob Scripts fuer die Routess-Domain erlaubt sind.
+Pruefe deine Internetverbindung und ob Scripts fuer die routess-Domain erlaubt sind.
 
 ## Standort funktioniert nicht
 
@@ -1160,9 +1160,9 @@ description: Kurze Antworten auf haeufige Fragen.
 translationStatus: machine-draft
 ---
 
-## Ist Routess kostenlos?
+## Ist routess kostenlos?
 
-Ja. Routess ist Open Source. Die oeffentliche Version auf routess.com soll kostenlos nutzbar sein.
+Ja. routess ist Open Source. Die oeffentliche Version auf routess.com soll kostenlos nutzbar sein.
 
 ## Brauche ich ein Konto?
 
