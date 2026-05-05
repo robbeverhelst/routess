@@ -155,6 +155,10 @@ async function main(): Promise<void> {
 		return;
 	}
 
+	// Build @routess/core first so its dist/ is on disk before the parallel
+	// pass; consumers (api-client, i18n) resolve types from there. They no
+	// longer rebuild core themselves, so the parallel pass below doesn't race.
+	await runCommand(["bun", "run", "--filter", "@routess/core", "build"], env, "Building @routess/core");
 	await runCommand(["bun", "run", "--filter", "./packages/*", "build"], env, "Building workspace packages");
 	await runCommand(["bun", "run", "--filter", "./apps/*", "dev"], env, "Starting app dev servers");
 }

@@ -7,6 +7,7 @@ export interface Waypoint {
 	lng: number;
 	type?: "routed" | "direct";
 	timestamp?: string;
+	name?: string;
 }
 
 @Entity()

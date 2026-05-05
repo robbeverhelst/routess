@@ -26,6 +26,7 @@ export const useAddWaypoint = () => useRoutingStore((s) => s.addWaypoint);
 export const useRemoveWaypoint = () => useRoutingStore((s) => s.removeWaypoint);
 export const useSetWaypoints = () => useRoutingStore((s) => s.setWaypoints);
 export const useSetWaypointType = () => useRoutingStore((s) => s.setWaypointType);
+export const useSetWaypointName = () => useRoutingStore((s) => s.setWaypointName);
 export const useUpdateWaypointCoords = () => useRoutingStore((s) => s.updateWaypointCoords);
 export const useClearWaypoints = () => useRoutingStore((s) => s.clearWaypoints);
 export const useSetRoutePath = () => useRoutingStore((s) => s.setRoutePath);

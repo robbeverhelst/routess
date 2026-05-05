@@ -44,66 +44,91 @@ function getActivityType(route: ApiRoute): RedesignActivity {
 }
 
 function MiniRouteSvg({ route, color }: { route: ApiRoute; color: string }) {
-	const routePoints = useMemo(() => {
+	const VIEW_W = 80;
+	const VIEW_H = 56;
+	const PAD_X = 8;
+	const PAD_Y = 8;
+
+	const projected = useMemo(() => {
 		const coords: [number, number][] =
 			route.geometry && route.geometry.length >= 2
 				? route.geometry
 				: (route.waypoints ?? []).map((w) => [w.lng, w.lat] as [number, number]);
 		if (coords.length < 2) return null;
-		const lngs = coords.map((c) => c[0]);
-		const lats = coords.map((c) => c[1]);
-		const minLat = Math.min(...lats);
-		const maxLat = Math.max(...lats);
-		const minLng = Math.min(...lngs);
-		const maxLng = Math.max(...lngs);
-		const dLat = Math.max(maxLat - minLat, 1e-6);
-		const dLng = Math.max(maxLng - minLng, 1e-6);
+		// Web Mercator y-projection so latitude bands at higher latitudes don't
+		// look squashed; mini preview should resemble the real map shape.
+		const projY = (lat: number) => Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 360));
+		const xs = coords.map((c) => c[0]);
+		const ys = coords.map((c) => projY(c[1]));
+		const minX = Math.min(...xs);
+		const maxX = Math.max(...xs);
+		const minY = Math.min(...ys);
+		const maxY = Math.max(...ys);
+		const dX = Math.max(maxX - minX, 1e-9);
+		const dY = Math.max(maxY - minY, 1e-9);
+		const innerW = VIEW_W - PAD_X * 2;
+		const innerH = VIEW_H - PAD_Y * 2;
+		// Preserve aspect ratio: scale uniformly and center.
+		const scale = Math.min(innerW / dX, innerH / dY);
+		const drawnW = dX * scale;
+		const drawnH = dY * scale;
+		const offX = PAD_X + (innerW - drawnW) / 2;
+		const offY = PAD_Y + (innerH - drawnH) / 2;
 		const points = coords.map(([lng, lat]) => {
-			const x = ((lng - minLng) / dLng) * 60 + 10;
-			const y = 46 - ((lat - minLat) / dLat) * 32;
-			return [Number(x.toFixed(1)), Number(y.toFixed(1))] as [number, number];
+			const x = offX + (lng - minX) * scale;
+			// Flip Y because SVG y-axis grows downward.
+			const y = offY + drawnH - (projY(lat) - minY) * scale;
+			return [Number(x.toFixed(2)), Number(y.toFixed(2))] as [number, number];
 		});
 		return points;
 	}, [route]);
 
-	if (!routePoints) return null;
-	const path = routePoints.map(([x, y]) => `${x},${y}`).join(" L ");
-	const [fx, fy] = routePoints[0];
-	const [lx, ly] = routePoints[routePoints.length - 1];
+	if (!projected) return null;
+	const path = projected.map(([x, y]) => `${x},${y}`).join(" L ");
+	const [fx, fy] = projected[0];
+	const [lx, ly] = projected[projected.length - 1];
+	const hasGeometry = (route.geometry?.length ?? 0) >= 2;
 
 	return (
-		<svg viewBox="0 0 80 56" style={{ width: "100%", height: "100%" }} aria-hidden="true">
+		<svg viewBox={`0 0 ${VIEW_W} ${VIEW_H}`} style={{ width: "100%", height: "100%" }} aria-hidden="true">
 			<defs>
 				<linearGradient id={`route-preview-${route.id}`} x1="0%" y1="0%" x2="100%" y2="100%">
 					<stop offset="0%" stopColor="color-mix(in oklch, white 75%, transparent)" />
 					<stop offset="100%" stopColor="color-mix(in oklch, white 25%, transparent)" />
 				</linearGradient>
 			</defs>
-			<rect x="0" y="0" width="80" height="56" rx="10" fill={`url(#route-preview-${route.id})`} />
-			<path d="M 7 17 H 73" stroke={RDS_COLORS.border} strokeWidth="1" opacity="0.45" />
-			<path d="M 7 31 H 73" stroke={RDS_COLORS.border} strokeWidth="1" opacity="0.45" />
-			<path d="M 22 6 V 50" stroke={RDS_COLORS.border} strokeWidth="1" opacity="0.35" />
-			<path d="M 54 6 V 50" stroke={RDS_COLORS.border} strokeWidth="1" opacity="0.35" />
-			<path
-				d="M 8 45 C 18 35, 29 37, 40 28 S 63 13, 72 15"
-				stroke={RDS_COLORS.border}
-				strokeWidth="1.25"
-				fill="none"
-				opacity="0.35"
-				strokeLinecap="round"
-			/>
+			<rect x="0" y="0" width={VIEW_W} height={VIEW_H} rx="10" fill={`url(#route-preview-${route.id})`} />
 			<path
 				d={`M ${path}`}
 				stroke={color}
-				strokeWidth="5.5"
+				strokeWidth="5"
 				strokeOpacity="0.18"
 				fill="none"
 				strokeLinecap="round"
 				strokeLinejoin="round"
 			/>
-			<path d={`M ${path}`} stroke={color} strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-			<circle cx={fx} cy={fy} r="2" fill={RDS_COLORS.bgPanel} stroke={RDS_COLORS.success} strokeWidth="1.5" />
-			<circle cx={lx} cy={ly} r="2.2" fill={RDS_COLORS.danger} />
+			<path
+				d={`M ${path}`}
+				stroke={color}
+				strokeWidth={hasGeometry ? 2.2 : 1.6}
+				strokeDasharray={hasGeometry ? undefined : "2 2"}
+				fill="none"
+				strokeLinecap="round"
+				strokeLinejoin="round"
+			/>
+			{!hasGeometry &&
+				projected.slice(1, -1).map(([x, y], i) => (
+					<circle
+						// biome-ignore lint/suspicious/noArrayIndexKey: stable coord-derived index, fine for tiny preview
+						key={i}
+						cx={x}
+						cy={y}
+						r="1.4"
+						fill={color}
+					/>
+				))}
+			<circle cx={fx} cy={fy} r="2.2" fill={RDS_COLORS.bgPanel} stroke={RDS_COLORS.success} strokeWidth="1.5" />
+			<circle cx={lx} cy={ly} r="2.4" fill={RDS_COLORS.danger} />
 		</svg>
 	);
 }

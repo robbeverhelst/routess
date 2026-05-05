@@ -587,7 +587,6 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 					{Toolbar}
 					{Chip}
 					{renderOverlay()}
-					{renderModal()}
 					{Offline}
 				</main>
 				<MobileTopBar />
@@ -600,6 +599,12 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 					</MobilePanelDrawer>
 				)}
 				<BottomTabBar />
+				{/* Modals must render above the side panel/drawer; keeping them
+				   inside main would trap their z-index in main's stacking
+				   context and let the drawer cover them. */}
+				<div style={{ position: "absolute", inset: 0, zIndex: 100, pointerEvents: "none" }}>
+					<div style={{ pointerEvents: "auto" }}>{renderModal()}</div>
+				</div>
 			</div>,
 		);
 	}
@@ -623,7 +628,6 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 				{Toolbar}
 				{Chip}
 				{renderOverlay()}
-				{renderModal()}
 				{Offline}
 			</main>
 			<aside
@@ -650,6 +654,12 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 				{PanelHeader}
 				<div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>{renderPanelContent()}</div>
 			</aside>
+			{/* Modals render above main and aside; nesting them inside main would
+			   trap their z-index in main's stacking context and let the open
+			   sidebar cover them on narrow viewports. */}
+			<div style={{ position: "absolute", inset: 0, zIndex: 100, pointerEvents: "none" }}>
+				<div style={{ pointerEvents: "auto" }}>{renderModal()}</div>
+			</div>
 		</div>,
 	);
 }

@@ -41,6 +41,7 @@ export interface RouteActions {
 	setWaypoints: (waypoints: Waypoint[]) => void;
 	updateWaypointCoords: (coords: Coordinate[]) => void;
 	setWaypointType: (index: number, type: WaypointType) => void;
+	setWaypointName: (index: number, name: string | undefined) => void;
 	clearWaypoints: () => void;
 
 	setRoutePath: (routePath: Coordinate[]) => void;
@@ -191,6 +192,15 @@ export function createRoutingStore(logger: Logger) {
 				setWaypointType: (index, type) => {
 					set((state) => ({
 						waypoints: state.waypoints.map((wp, i) => (i === index ? { ...wp, type } : wp)),
+					}));
+				},
+
+				setWaypointName: (index, name) => {
+					const trimmed = name?.trim();
+					set((state) => ({
+						waypoints: state.waypoints.map((wp, i) =>
+							i === index ? { ...wp, name: trimmed && trimmed.length > 0 ? trimmed : undefined } : wp,
+						),
 					}));
 				},
 

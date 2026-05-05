@@ -12,9 +12,11 @@ import {
 	useRouteDistance,
 	useRouteDuration,
 	useRoutePath,
+	useSetWaypointName,
 	useSetWaypointType,
 	useWaypoints,
 } from "@/stores/routingStore";
+import { EditableLabel } from "../components/EditableLabel";
 import { ElevationSparkline } from "../components/ElevationSparkline";
 import { I } from "../components/icons";
 import { Btn, IconBtn, Kbd, RDS_COLORS, SecTitle } from "../components/primitives";
@@ -42,6 +44,7 @@ export function PlanPanel() {
 	const clear = useClearWaypoints();
 	const removeWaypoint = useRemoveWaypoint();
 	const setWaypointType = useSetWaypointType();
+	const setWaypointName = useSetWaypointName();
 	const [openMenuIdx, setOpenMenuIdx] = useState<number | null>(null);
 
 	const { activityType, setActivityType } = useUiStore();
@@ -244,8 +247,13 @@ export function PlanPanel() {
 											/>
 										)}
 									</div>
-									<div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
-										<div style={{ fontSize: 13, fontWeight: 500, color: RDS_COLORS.fg }}>{label}</div>
+									<div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
+										<EditableLabel
+											value={w.name}
+											placeholder={label}
+											onSave={(next) => setWaypointName(i, next)}
+											style={{ fontSize: 13, fontWeight: 500 }}
+										/>
 										<div className="rds-mono" style={{ fontSize: 11, color: RDS_COLORS.fgSubtle, marginTop: 2 }}>
 											{formatCoord(w.coord)}
 										</div>

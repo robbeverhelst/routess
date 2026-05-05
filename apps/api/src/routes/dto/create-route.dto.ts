@@ -45,6 +45,15 @@ class WaypointDto {
 	@IsString()
 	@IsIn(["routed", "direct"])
 	type!: "routed" | "direct";
+
+	@ApiProperty({
+		description: "Optional user-assigned name for the waypoint",
+		example: "Coffee stop",
+		required: false,
+	})
+	@IsOptional()
+	@IsString()
+	name?: string;
 }
 
 export class CreateRouteDto {

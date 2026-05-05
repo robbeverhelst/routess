@@ -15,6 +15,9 @@ class WaypointResponseDto {
 
 	@ApiPropertyOptional()
 	timestamp?: string;
+
+	@ApiPropertyOptional({ description: "Optional user-assigned name for the waypoint" })
+	name?: string;
 }
 
 export class RouteResponseDto {
