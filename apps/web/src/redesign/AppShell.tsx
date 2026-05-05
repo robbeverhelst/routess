@@ -370,11 +370,11 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 	}
 
 	if (showWelcome) {
-		return (
+		return authRoot(
 			<>
 				<WelcomeScreen onComplete={completeWelcome} />
 				<ToastStack />
-			</>
+			</>,
 		);
 	}
 

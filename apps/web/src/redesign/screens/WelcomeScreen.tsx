@@ -4,6 +4,7 @@ import { Logger } from "@/lib/logger";
 import { AUTH_CARD_STYLE, AuthBackdrop, AuthCardAccentBar } from "../components/auth-shared";
 import { I } from "../components/icons";
 import { Btn, RDS_COLORS } from "../components/primitives";
+import { useViewport } from "../hooks/useViewport";
 import {
 	DEFAULT_SPORT_SPEEDS_KMH,
 	type LocationPermission,
@@ -246,17 +247,35 @@ export function WelcomeScreen({ onComplete }: { onComplete?: () => void }) {
 	const unitLabel = units === "mi" ? "mph" : "km/h";
 	const stepDef = STEPS[step];
 	const totalSteps = STEPS.length;
+	const { width } = useViewport();
+	const layout: "side" | "stacked" | "card-only" = width >= 1024 ? "side" : width >= 560 ? "stacked" : "card-only";
 
 	return (
 		<AuthBackdrop>
 			<div
 				style={{
-					...AUTH_CARD_STYLE,
+					display: "flex",
+					flexDirection: layout === "side" ? "row" : "column",
+					alignItems: "center",
+					justifyContent: "center",
+					gap: layout === "side" ? 32 : 16,
 					width: "100%",
-					maxWidth: 580,
-					padding: "32px 32px 26px",
+					maxWidth: layout === "side" ? 1020 : 580,
 				}}
 			>
+				{layout === "side" && <WelcomeHero step={step} totalSteps={totalSteps} steps={STEPS} />}
+				{layout === "stacked" && (
+					<WelcomeHeroStacked step={step} totalSteps={totalSteps} stepDef={stepDef} />
+				)}
+				<div
+					style={{
+						...AUTH_CARD_STYLE,
+						width: layout === "side" ? 540 : "100%",
+						maxWidth: "100%",
+						flexShrink: 0,
+						padding: "32px 32px 26px",
+					}}
+				>
 				<AuthCardAccentBar />
 
 				<div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 22 }}>
@@ -633,7 +652,264 @@ export function WelcomeScreen({ onComplete }: { onComplete?: () => void }) {
 					</Btn>
 				</div>
 			</div>
+			</div>
 		</AuthBackdrop>
+	);
+}
+
+function WelcomeHero({ step, totalSteps, steps }: { step: number; totalSteps: number; steps: StepDef[] }) {
+	return (
+		<div
+			style={{
+				position: "relative",
+				width: 400,
+				height: 540,
+				borderRadius: 22,
+				overflow: "hidden",
+				background: `linear-gradient(155deg,
+					color-mix(in oklch, ${RDS_COLORS.accent} 88%, black),
+					color-mix(in oklch, ${RDS_COLORS.accent} 78%, black) 55%,
+					color-mix(in oklch, ${RDS_COLORS.accent} 65%, ${RDS_COLORS.success}))`,
+				boxShadow: `
+					0 1px 0 oklch(1 0 0 / 0.06) inset,
+					0 20px 50px -12px color-mix(in oklch, ${RDS_COLORS.accent} 35%, transparent),
+					0 40px 100px -24px oklch(0 0 0 / 0.28)
+				`,
+				border: "1px solid oklch(1 0 0 / 0.12)",
+				color: "white",
+				flexShrink: 0,
+				padding: 32,
+				display: "flex",
+				flexDirection: "column",
+				gap: 20,
+			}}
+		>
+			<div
+				aria-hidden
+				style={{
+					position: "absolute",
+					top: -80,
+					right: -80,
+					width: 280,
+					height: 280,
+					borderRadius: "50%",
+					background: `radial-gradient(circle, color-mix(in oklch, ${RDS_COLORS.warn} 35%, transparent), transparent 70%)`,
+					filter: "blur(60px)",
+					pointerEvents: "none",
+				}}
+			/>
+			<div
+				aria-hidden
+				style={{
+					position: "absolute",
+					bottom: -100,
+					left: -60,
+					width: 320,
+					height: 320,
+					borderRadius: "50%",
+					background: `radial-gradient(circle, color-mix(in oklch, ${RDS_COLORS.success} 35%, transparent), transparent 65%)`,
+					filter: "blur(70px)",
+					pointerEvents: "none",
+				}}
+			/>
+
+			<div style={{ position: "relative", display: "flex", alignItems: "center", gap: 10 }}>
+				<I.compass size={16} style={{ opacity: 0.85 }} />
+				<span
+					style={{
+						fontSize: 12,
+						fontWeight: 500,
+						letterSpacing: 0.4,
+						textTransform: "uppercase",
+						opacity: 0.85,
+					}}
+				>
+					routess
+				</span>
+			</div>
+
+			<div style={{ position: "relative" }}>
+				<div style={{ fontSize: 28, fontWeight: 600, letterSpacing: -0.4, lineHeight: 1.15, marginBottom: 8 }}>
+					You're in.
+					<br />
+					Let's set you up.
+				</div>
+				<div style={{ fontSize: 13.5, opacity: 0.85, lineHeight: 1.5 }}>
+					A minute or two and you're ready to plan your first route.
+				</div>
+			</div>
+
+			<div
+				aria-hidden
+				style={{
+					position: "relative",
+					height: 1,
+					background: "oklch(1 0 0 / 0.18)",
+				}}
+			/>
+
+			<ol
+				style={{
+					position: "relative",
+					margin: 0,
+					padding: 0,
+					listStyle: "none",
+					display: "flex",
+					flexDirection: "column",
+					gap: 12,
+				}}
+			>
+				{steps.map((s, i) => {
+					const done = i < step;
+					const active = i === step;
+					return (
+						<li
+							key={s.title}
+							style={{
+								display: "flex",
+								alignItems: "flex-start",
+								gap: 12,
+								opacity: done ? 0.7 : active ? 1 : 0.55,
+								transition: "opacity 200ms",
+							}}
+						>
+							<span
+								style={{
+									width: 22,
+									height: 22,
+									borderRadius: 999,
+									background: done
+										? "white"
+										: active
+											? "oklch(1 0 0 / 0.22)"
+											: "oklch(1 0 0 / 0.08)",
+									border: active ? "1px solid oklch(1 0 0 / 0.5)" : "1px solid oklch(1 0 0 / 0.18)",
+									color: done ? RDS_COLORS.accent : "white",
+									display: "inline-flex",
+									alignItems: "center",
+									justifyContent: "center",
+									fontSize: 11,
+									fontWeight: 600,
+									flexShrink: 0,
+									marginTop: 1,
+								}}
+							>
+								{done ? <I.check size={12} /> : i + 1}
+							</span>
+							<span
+								style={{
+									fontSize: 13,
+									fontWeight: active ? 600 : 500,
+									lineHeight: 1.4,
+									textDecoration: done ? "line-through" : "none",
+								}}
+							>
+								{s.title}
+							</span>
+						</li>
+					);
+				})}
+			</ol>
+
+			<div style={{ flex: 1 }} />
+
+			<div
+				style={{
+					position: "relative",
+					fontSize: 11,
+					opacity: 0.7,
+					letterSpacing: 0.3,
+				}}
+			>
+				{step + 1} of {totalSteps}
+			</div>
+		</div>
+	);
+}
+
+function WelcomeHeroStacked({
+	step,
+	totalSteps,
+	stepDef,
+}: {
+	step: number;
+	totalSteps: number;
+	stepDef: StepDef;
+}) {
+	const progress = (step / Math.max(totalSteps - 1, 1)) * 100;
+	return (
+		<div
+			style={{
+				position: "relative",
+				width: "100%",
+				borderRadius: 18,
+				overflow: "hidden",
+				background: `linear-gradient(120deg,
+					color-mix(in oklch, ${RDS_COLORS.accent} 88%, black),
+					color-mix(in oklch, ${RDS_COLORS.accent} 75%, black) 60%,
+					color-mix(in oklch, ${RDS_COLORS.accent} 60%, ${RDS_COLORS.success}))`,
+				boxShadow: `
+					0 1px 0 oklch(1 0 0 / 0.06) inset,
+					0 16px 40px -14px color-mix(in oklch, ${RDS_COLORS.accent} 35%, transparent)
+				`,
+				border: "1px solid oklch(1 0 0 / 0.12)",
+				color: "white",
+				padding: "20px 22px 18px",
+			}}
+		>
+			<div
+				aria-hidden
+				style={{
+					position: "absolute",
+					top: -60,
+					right: -40,
+					width: 200,
+					height: 200,
+					borderRadius: "50%",
+					background: `radial-gradient(circle, color-mix(in oklch, ${RDS_COLORS.warn} 35%, transparent), transparent 70%)`,
+					filter: "blur(50px)",
+					pointerEvents: "none",
+				}}
+			/>
+			<div style={{ position: "relative", display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+				<I.compass size={14} style={{ opacity: 0.9 }} />
+				<span style={{ fontSize: 11.5, fontWeight: 500, letterSpacing: 0.4, textTransform: "uppercase", opacity: 0.9 }}>
+					routess
+				</span>
+				<div style={{ flex: 1 }} />
+				<span style={{ fontSize: 11, opacity: 0.8, letterSpacing: 0.3 }}>
+					{step + 1} / {totalSteps}
+				</span>
+			</div>
+
+			<div style={{ position: "relative", fontSize: 19, fontWeight: 600, letterSpacing: -0.3, lineHeight: 1.2, marginBottom: 4 }}>
+				{stepDef.title}
+			</div>
+			<div style={{ position: "relative", fontSize: 12.5, opacity: 0.85, lineHeight: 1.45 }}>
+				A minute or two and you're ready to plan your first route.
+			</div>
+
+			<div
+				style={{
+					position: "relative",
+					marginTop: 14,
+					height: 4,
+					borderRadius: 999,
+					background: "oklch(1 0 0 / 0.18)",
+					overflow: "hidden",
+				}}
+			>
+				<div
+					style={{
+						width: `${progress}%`,
+						height: "100%",
+						background: "white",
+						borderRadius: 999,
+						transition: "width 240ms ease-out",
+					}}
+				/>
+			</div>
+		</div>
 	);
 }
 
