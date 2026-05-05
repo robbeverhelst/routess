@@ -16,6 +16,7 @@ const config: Options = {
 	dbName: appConfig.database.name,
 	entities: [User, Route, Session],
 	migrations: {
+		// Production runs compiled JS migrations from dist, while local tooling still uses TS sources.
 		path: "./dist/migrations",
 		pathTs: "./src/migrations",
 	},
