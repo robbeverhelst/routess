@@ -2,8 +2,8 @@ import type { Map as MapboxMap } from "mapbox-gl";
 import { useEffect } from "react";
 import { useRouteImportExport } from "@/components/hooks/useRouteImportExport";
 import { useMapInteraction } from "@/components/providers/MapInteractionProvider";
-import { useMapModals } from "@/components/providers/MapModalsProvider";
 import { useUserLocation } from "@/components/providers/UserLocationProvider";
+import { useModalsStore } from "@/stores/modalsStore";
 
 interface MapShortcutBindingsProps {
 	mapRef: React.RefObject<MapboxMap | null>;
@@ -23,7 +23,6 @@ export const MapShortcutBindings: React.FC<MapShortcutBindingsProps> = ({
 	onImportError,
 }) => {
 	const { handlePWAShortcuts } = useMapInteraction();
-	const { openRouteGeneratorModal } = useMapModals();
 	const { handleLocateButtonClick } = useUserLocation();
 	const { handleImportGPX } = useRouteImportExport({
 		map: mapRef.current,
@@ -36,7 +35,7 @@ export const MapShortcutBindings: React.FC<MapShortcutBindingsProps> = ({
 
 	useEffect(() => {
 		const cleanup = handlePWAShortcuts(
-			openRouteGeneratorModal,
+			() => useModalsStore.getState().openModal("routing"),
 			() => {
 				void handleLocateButtonClick();
 			},
@@ -44,7 +43,7 @@ export const MapShortcutBindings: React.FC<MapShortcutBindingsProps> = ({
 		);
 
 		return cleanup;
-	}, [handleImportGPX, handleLocateButtonClick, handlePWAShortcuts, openRouteGeneratorModal]);
+	}, [handleImportGPX, handleLocateButtonClick, handlePWAShortcuts]);
 
 	return null;
 };

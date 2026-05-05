@@ -1,7 +1,6 @@
 import type { Map as MapboxMap } from "mapbox-gl";
 import type React from "react";
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
-import type { TimeOfDay } from "@/components/ui/route-controls";
 import { initializeSourcesAndLayers } from "@/features/routing/managers/MapLayerManager";
 import { syncMapView } from "@/features/routing/managers/MapViewAdapter";
 import { readMapPalette } from "@/features/routing/managers/mapPalette";
@@ -14,13 +13,13 @@ import {
 } from "@/features/routing/services/LocalStorageService";
 import { Logger } from "@/lib/logger";
 import { getSolarPositionForTimeOfDay, type SolarPosition } from "@/lib/solar";
-import { type RedesignMapStyle, useRedesignSettingsStore } from "@/redesign/stores/settingsStore";
+import { type RedesignMapStyle, useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 import { useRoutingStore } from "@/stores/routingStore";
 
-// Define bearing presets for cycling - simplified to 4 cardinal directions
-const BEARING_PRESETS = [0, 90, 180, 270]; // N, E, S, W
+type TimeOfDay = "dawn" | "day" | "dusk" | "night";
 
-// Order of presets for cycling
+const BEARING_PRESETS = [0, 90, 180, 270];
+
 const lightPresetsOrder: TimeOfDay[] = ["dawn", "day", "dusk", "night"];
 
 interface MapConfigurationContextType {

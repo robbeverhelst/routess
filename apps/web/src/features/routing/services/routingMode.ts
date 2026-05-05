@@ -1,4 +1,4 @@
-import type { RoutingProfile } from "@/redesign/stores/routingPreferencesStore";
+import type { RoutingProfile } from "@/stores/routingPreferencesStore";
 
 export type MapboxProfile = "mapbox/walking" | "mapbox/cycling" | "mapbox/driving";
 export type ValhallaCosting = "pedestrian" | "bicycle" | "auto";

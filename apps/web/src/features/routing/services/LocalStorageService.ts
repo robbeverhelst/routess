@@ -1,7 +1,8 @@
-import type { TimeOfDay } from "@/components/ui/route-controls";
 import type { SupportedLanguage } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
 import { isDev } from "@/lib/utils/env";
+
+type TimeOfDay = "dawn" | "day" | "dusk" | "night";
 
 // UI preferences not owned by the routing store. The routing store
 // (waypoints, routePath, isMapLocked, etc.) is persisted via Zustand

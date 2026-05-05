@@ -1,7 +1,7 @@
 import type { Coordinate, Waypoint } from "@routess/core";
 import { haversineDistance } from "@routess/core";
 import type { Map as MapboxMap } from "mapbox-gl";
-import { useRouteSurfaceStore } from "@/redesign/stores/routeSurfaceStore";
+import { useRouteSurfaceStore } from "@/stores/routeSurfaceStore";
 import { useRoutingStore } from "@/stores/routingStore";
 import {
 	clearKilometerMarkersLayer,
