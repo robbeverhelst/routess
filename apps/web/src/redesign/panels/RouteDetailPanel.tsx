@@ -1,12 +1,19 @@
 import type { Coordinate } from "@routess/core";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useComputedElevationProfile } from "@/features/routing/services/elevation";
+import { resolveValhallaCosting } from "@/features/routing/services/routingMode";
+import { fetchSurfaceBreakdown, type SurfaceBreakdown } from "@/features/routing/services/SurfaceService";
 import type { ApiRoute } from "@/lib/api";
-import { useSaveRoute } from "@/lib/api-queries";
+import { useSaveRoute, useUpdateRoute } from "@/lib/api-queries";
+import { Logger } from "@/lib/logger";
+import { EditableLabel } from "../components/EditableLabel";
 import { ElevationSparkline } from "../components/ElevationSparkline";
 import { I, type IconKey } from "../components/icons";
 import { Btn, IconBtn, RDS_COLORS, SecTitle } from "../components/primitives";
+import { SurfaceBreakdownBar } from "../components/SurfaceBreakdownBar";
 import { useModalsStore } from "../stores/modalsStore";
+import { useRoutingPreferencesStore } from "../stores/routingPreferencesStore";
+import { useRedesignSettingsStore } from "../stores/settingsStore";
 import { useToastStore } from "../stores/toastStore";
 import { useUiStore } from "../stores/uiStore";
 
@@ -114,11 +121,16 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 	const [moreOpen, setMoreOpen] = useState(false);
 	const moreRef = useRef<HTMLDivElement | null>(null);
 	const saveRoute = useSaveRoute();
+	const updateRoute = useUpdateRoute();
 	const openDelete = useModalsStore((s) => s.openDelete);
+	const openModal = useModalsStore((s) => s.openModal);
 	const pushToast = useToastStore((s) => s.push);
 	const favouriteRouteIds = useUiStore((s) => s.favouriteRouteIds);
 	const toggleFavourite = useUiStore((s) => s.toggleFavourite);
+	const setContext = useUiStore((s) => s.setContext);
 	const favorited = favouriteRouteIds.includes(route.id);
+	const defaultActivity = useRedesignSettingsStore((s) => s.defaultActivity);
+	const routingProfile = useRoutingPreferencesStore((s) => s.profile);
 
 	// Saved routes don't persist the elevation profile array (only the gain
 	// number), so re-sample the stored geometry on view. Falls back to
@@ -131,6 +143,44 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 		elevationGeometry,
 		String(route.id),
 	);
+
+	// Surface breakdown isn't persisted with saved routes, so fetch it on view
+	// from the stored geometry. Falls back silently if Valhalla is unavailable.
+	const [surfaceBreakdown, setSurfaceBreakdown] = useState<SurfaceBreakdown | null>(null);
+	const [surfaceLoading, setSurfaceLoading] = useState(false);
+	const costing = useMemo(
+		() => resolveValhallaCosting(defaultActivity, routingProfile),
+		[defaultActivity, routingProfile],
+	);
+	useEffect(() => {
+		if (elevationGeometry.length < 2) {
+			setSurfaceBreakdown(null);
+			setSurfaceLoading(false);
+			return;
+		}
+		const controller = new AbortController();
+		const timeoutId = window.setTimeout(() => controller.abort(), 10000);
+		setSurfaceLoading(true);
+		fetchSurfaceBreakdown(elevationGeometry, costing, controller.signal)
+			.then((result) => {
+				setSurfaceBreakdown(result);
+				setSurfaceLoading(false);
+			})
+			.catch((err) => {
+				if ((err as Error)?.name !== "AbortError") {
+					Logger.warn("[RouteDetailPanel] surface fetch failed:", err);
+				}
+				setSurfaceBreakdown(null);
+				setSurfaceLoading(false);
+			})
+			.finally(() => {
+				window.clearTimeout(timeoutId);
+			});
+		return () => {
+			controller.abort();
+			window.clearTimeout(timeoutId);
+		};
+	}, [elevationGeometry, costing]);
 
 	const parsedDescription = useMemo(() => parseRouteDescription(route.description), [route.description]);
 	const activityMeta = parsedDescription.activity ? ACTIVITY_LABEL[parsedDescription.activity] : null;
@@ -155,13 +205,39 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 					routeId: route.id,
 					name: route.name,
 					waypoints: route.waypoints,
+					geometry: route.geometry,
+					distance: route.distance,
+					duration: route.duration,
+					elevationGain: route.elevationGain,
 				},
 			}),
 		);
+		setContext("plan");
+		pushToast({
+			kind: "success",
+			title: "Route loaded",
+			body: route.name,
+		});
 	};
 
 	const dispatchShare = () => {
-		window.dispatchEvent(new CustomEvent("routess:share-route"));
+		// ShareModal reads from the routing store; load the saved route there
+		// first so the share URL encodes this route's waypoints rather than
+		// whatever was last on the map.
+		window.dispatchEvent(
+			new CustomEvent("routess:load-route", {
+				detail: {
+					routeId: route.id,
+					name: route.name,
+					waypoints: route.waypoints,
+					geometry: route.geometry,
+					distance: route.distance,
+					duration: route.duration,
+					elevationGain: route.elevationGain,
+				},
+			}),
+		);
+		openModal("share");
 	};
 
 	const dispatchFavorite = () => {
@@ -205,6 +281,24 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 
 	const dispatchExport = () => {
 		window.dispatchEvent(new CustomEvent("routess:export-gpx", { detail: { routeId: route.id } }));
+	};
+
+	const renameWaypoint = (index: number, next: string | undefined) => {
+		const current = route.waypoints[index]?.name;
+		if (current === next) return;
+		const updatedWaypoints = route.waypoints.map((wp, i) => {
+			if (i !== index) return wp;
+			const { name: _omit, ...rest } = wp;
+			return next ? { ...rest, name: next } : rest;
+		});
+		updateRoute.mutate(
+			{ routeId: route.id, updates: { waypoints: updatedWaypoints } },
+			{
+				onError: () => {
+					pushToast({ kind: "danger", title: "Rename failed", body: "Try again." });
+				},
+			},
+		);
 	};
 
 	const stats = [
@@ -395,6 +489,85 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 							loading={elevationLoading}
 							gradientId={`rds-elev-${route.id}`}
 						/>
+					</div>
+				)}
+
+				{elevationGeometry.length >= 2 && <SurfaceBreakdownBar breakdown={surfaceBreakdown} loading={surfaceLoading} />}
+
+				{route.waypoints && route.waypoints.length > 0 && (
+					<div style={{ marginTop: 18 }}>
+						<SecTitle style={{ marginBottom: 10 }}>Waypoints · {route.waypoints.length}</SecTitle>
+						<div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+							{route.waypoints.map((w, i) => {
+								const isStart = i === 0;
+								const isEnd = i === route.waypoints.length - 1;
+								const dot = isStart ? RDS_COLORS.success : isEnd ? RDS_COLORS.danger : RDS_COLORS.accent;
+								const label = isStart ? "Start" : isEnd ? "End" : `Waypoint ${i}`;
+								const coordStr = `${w.lat.toFixed(5)}, ${w.lng.toFixed(5)}`;
+								return (
+									<div
+										// biome-ignore lint/suspicious/noArrayIndexKey: same coord can repeat; combine with index for stable key
+										key={`${w.lng}-${w.lat}-${i}`}
+										style={{
+											display: "flex",
+											alignItems: "center",
+											gap: 12,
+											padding: "6px 10px",
+											borderRadius: 8,
+										}}
+									>
+										<div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 16 }}>
+											<div
+												style={{
+													width: 10,
+													height: 10,
+													borderRadius: 999,
+													background: dot,
+													border: `2px solid ${RDS_COLORS.bgPanel}`,
+													boxShadow: `0 0 0 1.5px ${dot}`,
+												}}
+											/>
+											{!isEnd && (
+												<div
+													style={{
+														width: 1.5,
+														flex: 1,
+														minHeight: 12,
+														background: RDS_COLORS.borderStrong,
+														marginTop: 2,
+													}}
+												/>
+											)}
+										</div>
+										<div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
+											<div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+												<EditableLabel
+													value={w.name}
+													placeholder={label}
+													onSave={(next) => renameWaypoint(i, next)}
+													disabled={updateRoute.isPending}
+													style={{ fontSize: 13, fontWeight: 500 }}
+												/>
+												{w.type === "direct" && (
+													<span
+														style={{
+															fontSize: 10.5,
+															color: RDS_COLORS.fgSubtle,
+															fontWeight: 400,
+														}}
+													>
+														direct
+													</span>
+												)}
+											</div>
+											<div className="rds-mono" style={{ fontSize: 11, color: RDS_COLORS.fgSubtle, marginTop: 2 }}>
+												{coordStr}
+											</div>
+										</div>
+									</div>
+								);
+							})}
+						</div>
 					</div>
 				)}
 

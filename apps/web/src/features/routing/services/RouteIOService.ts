@@ -163,6 +163,7 @@ export const loadApiRouteIntoMap = async (
 	const waypoints: Waypoint[] = route.waypoints.map((wp) => ({
 		coord: [wp.lng, wp.lat],
 		type: wp.type === "direct" ? "direct" : "routed",
+		...(wp.name ? { name: wp.name } : {}),
 	}));
 
 	return loadRouteIntoMap({ ...options, waypoints, saveSnapshot: true });

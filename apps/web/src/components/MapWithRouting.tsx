@@ -10,11 +10,14 @@ import { MapInteractionProvider } from "@/components/providers/MapInteractionPro
 import { MapModalsProvider } from "@/components/providers/MapModalsProvider";
 import { UserLocationProvider, useUserLocation } from "@/components/providers/UserLocationProvider";
 import type { PopupInfo as MapPopupInfo } from "@/features/routing/managers/MapInteractionManager";
-import { exportCurrentRouteToGPXFile, importRouteFromGPXString } from "@/features/routing/services/RouteIOService";
+import {
+	exportCurrentRouteToGPXFile,
+	importRouteFromGPXString,
+	loadRouteIntoMap,
+} from "@/features/routing/services/RouteIOService";
 import { ErrorBoundary } from "@/lib/errors";
 import type { SupportedLanguage } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
-import { useRoutingStore } from "@/stores/routingStore";
 
 // Get Mapbox access token from environment variables
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN || "__VITE_MAPBOX_ACCESS_TOKEN__";
@@ -187,18 +190,37 @@ const MapWithRoutingContent: React.FC<MapboxMapProps> = ({
 		const onLoadRoute = (event: Event) => {
 			const detail = (
 				event as CustomEvent<{
-					waypoints?: Array<{ lat: number; lng: number; type: "routed" | "direct" }>;
+					waypoints?: Array<{ lat: number; lng: number; type: "routed" | "direct"; name?: string }>;
+					geometry?: [number, number][];
 				}>
 			).detail;
 			if (!detail?.waypoints || detail.waypoints.length === 0) {
 				Logger.warn("[MapWithRouting] routess:load-route received with no waypoints");
 				return;
 			}
+			if (!mapRef.current) {
+				Logger.warn("[MapWithRouting] routess:load-route received before map ready");
+				return;
+			}
 			const waypoints = detail.waypoints.map((wp) => ({
 				coord: [wp.lng, wp.lat] as [number, number],
 				type: (wp.type === "direct" ? "direct" : "routed") as "direct" | "routed",
+				...(wp.name ? { name: wp.name } : {}),
 			}));
-			useRoutingStore.getState().setWaypoints(waypoints);
+			void loadRouteIntoMap({
+				map: mapRef.current,
+				accessToken: MAPBOX_TOKEN,
+				waypoints,
+				exactRoutePath: detail.geometry && detail.geometry.length >= 2 ? detail.geometry : undefined,
+				setRouteDistance,
+				setRouteDuration,
+				setHasRoute,
+				saveSnapshot: true,
+			}).then((result) => {
+				if (!result.success) {
+					Logger.warn("[MapWithRouting] load-route failed:", result.message);
+				}
+			});
 		};
 		const onShareRoute = () => {
 			handleCopyShareLinkToClipboard();
