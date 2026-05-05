@@ -1,14 +1,19 @@
-import { type ReactNode, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useIsAuthenticated } from "@/hooks/useAuthState";
 import type { ApiRoute } from "@/lib/api";
 import { useUserRoutes } from "@/lib/api-queries";
+import { buildMapboxStaticPreviewUrl } from "@/lib/utils/mapboxStaticPreview";
 import { useModalsStore } from "@/redesign/stores/modalsStore";
 import { type RedesignActivity, useUiStore } from "@/redesign/stores/uiStore";
 import { I } from "../components/icons";
 import { Badge, Btn, IconBtn, Kbd, RDS_COLORS } from "../components/primitives";
 import { SignInGate } from "../components/SignInGate";
 import { useUnits } from "../lib/units";
+import { useRedesignSettingsStore } from "../stores/settingsStore";
 import { RouteDetailPanel } from "./RouteDetailPanel";
+
+const THUMB_WIDTH = 80;
+const THUMB_HEIGHT = 56;
 
 type Filter = "all" | RedesignActivity | "favourites";
 
@@ -134,25 +139,39 @@ function MiniRouteSvg({ route, color }: { route: ApiRoute; color: string }) {
 	);
 }
 
-function MetaPill({ children }: { children: ReactNode }) {
-	return (
-		<span
-			className="rds-mono"
-			style={{
-				display: "inline-flex",
-				alignItems: "center",
-				height: 22,
-				padding: "0 8px",
-				borderRadius: 999,
-				background: RDS_COLORS.bgInput,
-				border: `1px solid ${RDS_COLORS.border}`,
-				fontSize: 11.5,
-				color: RDS_COLORS.fgSubtle,
-			}}
-		>
-			{children}
-		</span>
+function RouteThumb({ route, color }: { route: ApiRoute; color: string }) {
+	const mapStyle = useRedesignSettingsStore((s) => s.mapStyle);
+	const points = useMemo<[number, number][]>(() => {
+		if (route.geometry && route.geometry.length >= 2) return route.geometry;
+		return (route.waypoints ?? []).map((w) => [w.lng, w.lat] as [number, number]);
+	}, [route]);
+	const staticUrl = useMemo(
+		() =>
+			buildMapboxStaticPreviewUrl(points, {
+				width: THUMB_WIDTH,
+				height: THUMB_HEIGHT,
+				mapStyle,
+				strokeWidth: 3,
+				showPins: false,
+				padding: 8,
+				maxPoints: 60,
+			}),
+		[points, mapStyle],
 	);
+	const [failedUrl, setFailedUrl] = useState<string | null>(null);
+	const showStatic = staticUrl !== null && failedUrl !== staticUrl;
+
+	if (showStatic && staticUrl) {
+		return (
+			<img
+				src={staticUrl}
+				alt=""
+				onError={() => setFailedUrl(staticUrl)}
+				style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+			/>
+		);
+	}
+	return <MiniRouteSvg route={route} color={color} />;
 }
 
 function EmptyLibrary({
@@ -453,8 +472,8 @@ function LibraryPanelInner() {
 						>
 							<div
 								style={{
-									width: 80,
-									height: 56,
+									width: THUMB_WIDTH,
+									height: THUMB_HEIGHT,
 									borderRadius: 10,
 									background: RDS_COLORS.bgInput,
 									border: `1px solid ${RDS_COLORS.border}`,
@@ -463,7 +482,7 @@ function LibraryPanelInner() {
 									position: "relative",
 								}}
 							>
-								<MiniRouteSvg route={r} color={TAG_COLOR[tag]} />
+								<RouteThumb route={r} color={TAG_COLOR[tag]} />
 							</div>
 							<div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
 								<div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
@@ -484,17 +503,24 @@ function LibraryPanelInner() {
 									</Badge>
 								</div>
 								<div
+									className="rds-mono"
 									style={{
 										display: "flex",
 										alignItems: "center",
 										gap: 6,
-										flexWrap: "wrap",
-										marginTop: 8,
+										marginTop: 6,
+										fontSize: 11.5,
+										color: RDS_COLORS.fgSubtle,
+										overflow: "hidden",
+										whiteSpace: "nowrap",
+										textOverflow: "ellipsis",
 									}}
 								>
-									<MetaPill>{date}</MetaPill>
-									<MetaPill>{dist}</MetaPill>
-									<MetaPill>{r.waypoints?.length ?? 0} waypoints</MetaPill>
+									<span>{date}</span>
+									<span style={{ opacity: 0.5 }}>·</span>
+									<span>{dist}</span>
+									<span style={{ opacity: 0.5 }}>·</span>
+									<span>{r.waypoints?.length ?? 0} wp</span>
 								</div>
 							</div>
 							{/* biome-ignore lint/a11y/noStaticElementInteractions: container only stops click bubbling so action buttons don't open detail */}
