@@ -16,7 +16,7 @@ const config: Options = {
 	dbName: appConfig.database.name,
 	entities: [User, Route, Session],
 	migrations: {
-		path: "./src/migrations",
+		path: "./dist/migrations",
 		pathTs: "./src/migrations",
 	},
 	debug: appConfig.database.debug,
