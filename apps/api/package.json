@@ -13,7 +13,7 @@
 		"predev": "mikro-orm schema:update --run || true",
 		"dev": "nest start --watch",
 		"start:debug": "nest start --debug --watch",
-		"start:prod": "bun dist/src/start-prod.js",
+		"start:prod": "bun dist/start-prod.js",
 		"lint": "biome check --fix src/ test/",
 		"lint:check": "biome check src/ test/",
 		"test": "bun test --timeout 30000 --max-concurrency 1",
