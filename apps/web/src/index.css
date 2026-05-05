@@ -329,6 +329,6 @@
 /* Tablet narrows panel to keep map breathable */
 @media (min-width: 768px) and (max-width: 1023px) {
 	[data-redesign] {
-		--rds-panel-w: 300px;
+		--rds-panel-w: 320px;
 	}
 }
