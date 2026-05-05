@@ -1,5 +1,6 @@
-import { type ElevationProfilePoint, formatDistance } from "@routess/core";
+import type { ElevationProfilePoint } from "@routess/core";
 import type { CSSProperties } from "react";
+import { useUnits } from "../lib/units";
 import { RDS_COLORS } from "./primitives";
 
 const SPARKLINE_W = 300;
@@ -62,6 +63,7 @@ export function ElevationSparkline({
 }: ElevationSparklineProps) {
 	const summary = profile ? summarizeProfile(profile) : null;
 	const dim = loading && !summary;
+	const { formatDistance, formatElevation } = useUnits();
 
 	const axisLabelStyle: CSSProperties = {
 		position: "absolute",
@@ -118,10 +120,10 @@ export function ElevationSparkline({
 
 			{/* Y-axis: max at top of chart, min at bottom. */}
 			<span style={{ ...axisLabelStyle, left: 6, top: 12, textAlign: "right", width: 26 }}>
-				{summary ? `${Math.round(summary.maxMeters)} m` : ""}
+				{summary ? formatElevation(summary.maxMeters) : ""}
 			</span>
 			<span style={{ ...axisLabelStyle, left: 6, bottom: 12, textAlign: "right", width: 26 }}>
-				{summary ? `${Math.round(summary.minMeters)} m` : ""}
+				{summary ? formatElevation(summary.minMeters) : ""}
 			</span>
 
 			{/* X-axis: 0 at start, total distance at end. */}

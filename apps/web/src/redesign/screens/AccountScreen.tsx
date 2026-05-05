@@ -1,14 +1,7 @@
 import { useMemo, useState } from "react";
 import { useAuthStatus } from "@/lib/api-queries";
-import { Badge, Btn, PreviewBanner, RDS_COLORS, SecTitle } from "../components/primitives";
+import { Btn, RDS_COLORS, SecTitle } from "../components/primitives";
 import { useToastStore } from "../stores/toastStore";
-
-// TODO: replace USAGE with real per-account counters once the backend lands.
-const USAGE = [
-	{ label: "Saved routes", current: 38, max: 50 },
-	{ label: "GPX exports", current: 6, max: 10 },
-	{ label: "Offline regions", current: 0, max: 0, locked: true },
-];
 
 interface Field {
 	label: string;
@@ -87,98 +80,6 @@ export function AccountScreen() {
 				<SecTitle>Settings</SecTitle>
 				<h1 style={{ fontSize: 26, fontWeight: 600, margin: "4px 0 0", letterSpacing: -0.5 }}>Account & billing</h1>
 
-				<PreviewBanner
-					style={{ marginTop: 18 }}
-					title="Preview · limited write support"
-					body="Plan, usage, and most account fields are placeholders today. Sign-in info reflects your Google account; other edits won't persist until the user-profile and billing endpoints land."
-				/>
-
-				{/* Plan card */}
-				<div
-					style={{
-						marginTop: 24,
-						padding: 22,
-						borderRadius: 14,
-						border: `1px solid ${RDS_COLORS.accent}`,
-						background: `linear-gradient(135deg, ${RDS_COLORS.accentSoft}, transparent)`,
-						position: "relative",
-						overflow: "hidden",
-					}}
-				>
-					<div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-						<Badge variant="accent">Free</Badge>
-						<span style={{ fontSize: 12, color: RDS_COLORS.fgMuted }}>You're on the free plan</span>
-					</div>
-					<div style={{ display: "flex", alignItems: "flex-end", gap: 18 }}>
-						<div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
-							<h2 style={{ margin: 0, fontSize: 22, fontWeight: 600, letterSpacing: -0.3 }}>Upgrade to Routess Pro</h2>
-							<p
-								style={{
-									fontSize: 13,
-									color: RDS_COLORS.fgMuted,
-									margin: "6px 0 0",
-									lineHeight: 1.5,
-								}}
-							>
-								Unlimited routes, offline maps, advanced training metrics, priority routing, custom map styles.
-							</p>
-						</div>
-						<div style={{ textAlign: "right" }}>
-							<div className="rds-mono" style={{ fontSize: 32, fontWeight: 600, lineHeight: 1 }}>
-								€7
-							</div>
-							<div style={{ fontSize: 11, color: RDS_COLORS.fgMuted, marginTop: 2 }}>/ month</div>
-						</div>
-						<Btn variant="primary" style={{ height: 42, padding: "0 22px" }} disabled title="Pro pricing not yet live">
-							Upgrade
-						</Btn>
-					</div>
-				</div>
-
-				{/* Usage */}
-				<div
-					style={{
-						marginTop: 24,
-						padding: 20,
-						background: RDS_COLORS.bgPanel,
-						border: `1px solid ${RDS_COLORS.border}`,
-						borderRadius: 12,
-					}}
-				>
-					<SecTitle style={{ marginBottom: 12 }}>Usage this month</SecTitle>
-					{USAGE.map((u) => (
-						<div key={u.label} style={{ marginBottom: 14 }}>
-							<div style={{ display: "flex", alignItems: "center", marginBottom: 6 }}>
-								<span style={{ fontSize: 13 }}>{u.label}</span>
-								<span style={{ flex: 1 }} />
-								<span className="rds-mono" style={{ fontSize: 12, color: RDS_COLORS.fgMuted }}>
-									{u.locked ? "Pro only" : `${u.current} / ${u.max}`}
-								</span>
-							</div>
-							<div
-								style={{
-									height: 6,
-									background: RDS_COLORS.bgInput,
-									borderRadius: 999,
-									overflow: "hidden",
-								}}
-							>
-								<div
-									style={{
-										height: "100%",
-										width: u.locked ? "100%" : `${(u.current / u.max) * 100}%`,
-										background: u.locked
-											? RDS_COLORS.borderStrong
-											: u.current / u.max > 0.8
-												? RDS_COLORS.warn
-												: RDS_COLORS.accent,
-									}}
-								/>
-							</div>
-						</div>
-					))}
-				</div>
-
 				{/* Account details */}
 				<div
 					style={{
@@ -207,8 +108,10 @@ export function AccountScreen() {
 								variant="ghost"
 								style={{ height: 28, padding: "0 10px", fontSize: 12 }}
 								onClick={() => handleEdit(i)}
+								disabled={f.editable}
+								title={f.editable ? "Coming soon" : undefined}
 							>
-								Edit
+								{f.editable ? "Soon" : "Edit"}
 							</Btn>
 						</div>
 					))}
@@ -233,6 +136,8 @@ export function AccountScreen() {
 						</div>
 						<Btn
 							onClick={handleDeleteAccount}
+							disabled
+							title="Coming soon"
 							style={{
 								background: "transparent",
 								color: RDS_COLORS.danger,

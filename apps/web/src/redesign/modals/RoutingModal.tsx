@@ -24,6 +24,7 @@ interface PrefRow {
 	label: string;
 	sub: string;
 	slider?: boolean;
+	comingSoon?: boolean;
 }
 
 const PREFS: PrefRow[] = [
@@ -31,16 +32,18 @@ const PREFS: PrefRow[] = [
 		key: "bike",
 		icon: I.bike,
 		label: "Prefer bike infrastructure",
-		sub: "Cycle paths, low-traffic streets",
+		sub: "Coming soon",
+		comingSoon: true,
 	},
 	{
 		key: "climbs",
 		icon: I.mountain,
 		label: "Avoid steep climbs",
-		sub: "Max gradient",
+		sub: "Coming soon",
 		slider: true,
+		comingSoon: true,
 	},
-	{ key: "unpaved", icon: I.flag, label: "Avoid unpaved", sub: "Stay on asphalt where possible" },
+	{ key: "unpaved", icon: I.flag, label: "Avoid unpaved", sub: "Coming soon", comingSoon: true },
 	{ key: "highways", icon: I.trend, label: "Avoid highways", sub: "Excludes motorway segments from routing" },
 	{ key: "snap", icon: I.target, label: "Auto-snap waypoints", sub: "Drag onto nearest road" },
 ];
@@ -162,6 +165,7 @@ export function RoutingModal() {
 			{PREFS.map((row, i) => {
 				const Icon = row.icon;
 				const on = getPref(row.key);
+				const disabled = row.comingSoon === true;
 				return (
 					<div
 						key={row.key}
@@ -171,6 +175,7 @@ export function RoutingModal() {
 							gap: 12,
 							padding: "12px 0",
 							borderBottom: i < PREFS.length - 1 ? `1px solid ${RDS_COLORS.border}` : "none",
+							opacity: disabled ? 0.5 : 1,
 						}}
 					>
 						<div
@@ -192,9 +197,9 @@ export function RoutingModal() {
 							<div style={{ fontSize: 13, fontWeight: 500 }}>{row.label}</div>
 							<div style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle, marginTop: 2 }}>
 								{row.sub}
-								{row.slider && on ? <span className="rds-mono"> · {prefs.climbGradient}%</span> : null}
+								{row.slider && on && !disabled ? <span className="rds-mono"> · {prefs.climbGradient}%</span> : null}
 							</div>
-							{row.slider && on && (
+							{row.slider && on && !disabled && (
 								<input
 									type="range"
 									min={MIN_CLIMB_GRADIENT}
@@ -212,7 +217,7 @@ export function RoutingModal() {
 								/>
 							)}
 						</div>
-						<Toggle on={on} onChange={(v) => setPref(row.key, v)} />
+						<Toggle on={on} onChange={(v) => setPref(row.key, v)} disabled={disabled} />
 					</div>
 				);
 			})}

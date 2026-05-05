@@ -7,6 +7,7 @@ import { type RedesignActivity, useUiStore } from "@/redesign/stores/uiStore";
 import { I } from "../components/icons";
 import { Badge, Btn, IconBtn, Kbd, RDS_COLORS } from "../components/primitives";
 import { SignInGate } from "../components/SignInGate";
+import { useUnits } from "../lib/units";
 import { RouteDetailPanel } from "./RouteDetailPanel";
 
 type Filter = "all" | RedesignActivity | "favourites";
@@ -256,6 +257,7 @@ function LibraryPanelInner() {
 	const { favouriteRouteIds, toggleFavourite, setContext } = useUiStore();
 	const openModal = useModalsStore((s) => s.openModal);
 	const openDelete = useModalsStore((s) => s.openDelete);
+	const { formatDistance } = useUnits();
 	const [filter, setFilter] = useState<Filter>("all");
 	const [query, setQuery] = useState("");
 	const [openedRouteId, setOpenedRouteId] = useState<number | null>(null);
@@ -415,7 +417,7 @@ function LibraryPanelInner() {
 				{filtered.map((r) => {
 					const tag = getActivityType(r);
 					const fav = favouriteRouteIds.includes(r.id);
-					const dist = r.distance ? `${(r.distance / 1000).toFixed(1)} km` : "—";
+					const dist = r.distance ? formatDistance(r.distance / 1000) : "—";
 					const date = new Date(r.createdAt).toLocaleDateString(undefined, {
 						month: "short",
 						day: "numeric",

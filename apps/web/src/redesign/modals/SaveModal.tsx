@@ -37,7 +37,18 @@ export function SaveModal() {
 	const [tags, setTags] = useState<string[]>([]);
 	const [tagDraft, setTagDraft] = useState("");
 
-	const distanceNumber = parseFloat(distance) || 0;
+	// `distance` is the formatted "X.X km" or "X.X mi" string from the routing
+	// store. Convert it back to meters for the API based on the unit suffix.
+	const distanceMeters = (() => {
+		const value = parseFloat(distance) || 0;
+		if (!value) return 0;
+		if (distance.includes("mi")) return Math.round(value * 1609.344);
+		if (distance.includes("ft")) return Math.round(value * 0.3048);
+		// "X m" or "X.X km" — split on space to disambiguate
+		const unit = distance.split(" ")[1] || "km";
+		if (unit.startsWith("m") && !unit.startsWith("mi")) return Math.round(value);
+		return Math.round(value * 1000);
+	})();
 	const wpCount = waypoints.length;
 
 	if (!isAuthenticated) {
@@ -58,7 +69,7 @@ export function SaveModal() {
 					type: wp.type,
 					...(wp.name ? { name: wp.name } : {}),
 				})),
-				distance: distanceNumber * 1000,
+				distance: distanceMeters,
 				elevationGain: elevationGain != null ? Math.round(elevationGain) : 0,
 			},
 			{

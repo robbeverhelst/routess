@@ -1,12 +1,8 @@
 import type { ReactNode } from "react";
 import { useLogout, useUserProfile } from "@/lib/api-queries";
-import { Logger } from "@/lib/logger";
+import { getVersionDisplay } from "@/lib/version";
 import { useRoutingPreferencesStore } from "@/redesign/stores/routingPreferencesStore";
-import {
-	type LocationPermission,
-	type RedesignMapStyle,
-	useRedesignSettingsStore,
-} from "@/redesign/stores/settingsStore";
+import { type RedesignMapStyle, useRedesignSettingsStore } from "@/redesign/stores/settingsStore";
 import { type RedesignAccent, type RedesignActivity, useUiStore } from "@/redesign/stores/uiStore";
 import { I } from "../components/icons";
 import { Btn, RDS_COLORS, SecTitle, Toggle } from "../components/primitives";
@@ -23,19 +19,6 @@ const SPORT_LABELS: Record<RedesignActivity, string> = {
 	cycle: "Cycling",
 	walk: "Walking",
 };
-
-function locationStatusLabel(p: LocationPermission): string {
-	switch (p) {
-		case "granted":
-			return "Allowed — used to centre the map on you";
-		case "denied":
-			return "Denied — enable to centre the map on you";
-		case "skipped":
-			return "Skipped — enable any time to centre the map on you";
-		default:
-			return "Not set — enable to centre the map on you";
-	}
-}
 
 function Group({ title, children }: { title: string; children: ReactNode }) {
 	return (
@@ -148,8 +131,6 @@ export function SettingsPanel() {
 		toggleSport,
 		mapStyle,
 		setMapStyle,
-		locationPermission,
-		setLocationPermission,
 	} = useRedesignSettingsStore();
 	const autoSnap = useRoutingPreferencesStore((s) => s.snap);
 	const setAutoSnap = useRoutingPreferencesStore((s) => s.setSnap);
@@ -182,29 +163,6 @@ export function SettingsPanel() {
 		}
 		setActivityType(sport);
 		setDefaultActivity(SPORT_LABELS[sport]);
-	};
-
-	const handleRequestLocation = async () => {
-		if (typeof navigator === "undefined" || !navigator.geolocation) {
-			pushToast({ kind: "warn", title: "Location unavailable" });
-			setLocationPermission("denied");
-			return;
-		}
-		try {
-			await new Promise<void>((resolve, reject) => {
-				navigator.geolocation.getCurrentPosition(
-					() => resolve(),
-					(err) => reject(err),
-					{ timeout: 10000 },
-				);
-			});
-			setLocationPermission("granted");
-			pushToast({ kind: "success", title: "Location enabled" });
-		} catch (err) {
-			Logger.warn("Location permission denied", err);
-			setLocationPermission("denied");
-			pushToast({ kind: "warn", title: "Location declined" });
-		}
 	};
 
 	const userName = profile?.name ?? "Your account";
@@ -397,8 +355,8 @@ export function SettingsPanel() {
 				/>
 				<Row
 					label="Show points of interest"
-					sub="Cafés, shops, transit"
-					control={<Toggle on={showPois} onChange={handleShowPoisChange} />}
+					sub="Coming soon"
+					control={<Toggle on={showPois} onChange={handleShowPoisChange} disabled />}
 				/>
 				<Row
 					label="3D terrain"
@@ -411,15 +369,11 @@ export function SettingsPanel() {
 			<Group title="Privacy">
 				<Row
 					label="Location access"
-					sub={locationStatusLabel(locationPermission)}
+					sub="Coming soon"
 					control={
-						locationPermission === "granted" ? (
-							<Btn variant="ghost" onClick={() => setLocationPermission("denied")}>
-								Disable
-							</Btn>
-						) : (
-							<Btn onClick={handleRequestLocation}>Enable</Btn>
-						)
+						<Btn variant="ghost" disabled title="Coming soon">
+							Enable
+						</Btn>
 					}
 				/>
 				<Row
@@ -455,6 +409,18 @@ export function SettingsPanel() {
 						>
 							{logout.isPending ? "Signing out…" : profile ? "Sign out" : "Sign in"}
 						</Btn>
+					}
+					last
+				/>
+			</Group>
+
+			<Group title="About">
+				<Row
+					label="Version"
+					control={
+						<span style={{ fontSize: 12.5, color: RDS_COLORS.fgMuted, fontVariantNumeric: "tabular-nums" }}>
+							{getVersionDisplay()}
+						</span>
 					}
 					last
 				/>

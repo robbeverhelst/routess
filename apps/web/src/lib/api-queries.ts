@@ -203,10 +203,10 @@ export function useAuthStatus() {
 			}
 		},
 		enabled: hasToken, // Only check if we have a token
-		staleTime: 2 * 60 * 1000, // Check auth every 2 minutes
+		staleTime: 10 * 60 * 1000,
 		retry: false, // Don't retry auth checks
-		refetchOnWindowFocus: true, // Recheck when window gains focus
-		refetchOnMount: true, // Always check on mount
+		refetchOnWindowFocus: false,
+		refetchOnMount: false,
 	});
 }
 

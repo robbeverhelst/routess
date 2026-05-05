@@ -261,14 +261,6 @@ export const nl: Record<string, string> = {
 	"location.mode.driving": "Rijmodus - Gebalanceerde updates",
 	"location.mode.batteryOptimized": "Batterij geoptimaliseerd - Verminderde frequentie",
 
-	// Version translations
-	"version.notification.updating": "App bijwerken...",
-	"version.notification.clearingCache": "Gecachte gegevens wissen om de nieuwste functies te krijgen",
-	"version.notification.updated": "App bijgewerkt!",
-	"version.notification.updatedAndRefreshed": "App bijgewerkt & ververst!",
-	"version.notification.updatedWithWarning": "App bijgewerkt",
-	"version.notification.cacheWarning": "(cache wissen mislukt)",
-
 	// SaveRoute translations
 	"saveRoute.title": "Route Opslaan",
 	"saveRoute.description": "Sla je route op om er later vanaf elk apparaat toegang toe te hebben",

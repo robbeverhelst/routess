@@ -165,7 +165,14 @@ async function handleRequest(request) {
 	const _url = new URL(request.url);
 
 	try {
-		// App Shell - Cache First
+		// Navigation / HTML - Network First so a fresh deploy is picked up immediately.
+		// Cache-first here would pin users to a stale index.html that references
+		// old hashed JS bundles, requiring a manual cache clear to ever upgrade.
+		if (isNavigationRequest(request)) {
+			return await networkFirstForNavigation(request, CACHE_NAMES.APP_SHELL);
+		}
+
+		// App Shell (hashed JS/CSS, icons, manifest) - Cache First (filenames are immutable)
 		if (isAppShellRequest(request)) {
 			return await cacheFirst(request, CACHE_NAMES.APP_SHELL);
 		}
@@ -201,14 +208,19 @@ async function handleRequest(request) {
 }
 
 // Request type checkers
+function isNavigationRequest(request) {
+	const url = new URL(request.url);
+	return (
+		url.origin === self.location.origin &&
+		(request.mode === "navigate" || url.pathname === "/" || url.pathname.endsWith(".html"))
+	);
+}
+
 function isAppShellRequest(request) {
 	const url = new URL(request.url);
 	return (
 		url.origin === self.location.origin &&
-		(request.mode === "navigate" ||
-			url.pathname === "/" ||
-			url.pathname.endsWith(".html") ||
-			url.pathname.endsWith(".css") ||
+		(url.pathname.endsWith(".css") ||
 			url.pathname.endsWith(".js") ||
 			url.pathname.startsWith("/icons/") ||
 			url.pathname === "/manifest.json" ||
@@ -231,7 +243,27 @@ function isMapTileRequest(request) {
 
 // Caching strategies implementation
 
-// Cache First - Good for app shell
+// Network First for navigation/HTML — keeps users on the latest deploy when online,
+// falls back to the cached shell only when offline.
+async function networkFirstForNavigation(request, cacheName) {
+	const cache = await caches.open(cacheName);
+
+	try {
+		const networkResponse = await fetch(request);
+		if (networkResponse.ok) {
+			cache.put(request, networkResponse.clone());
+		}
+		return networkResponse;
+	} catch (error) {
+		const cachedResponse = (await cache.match(request)) || (await cache.match("/"));
+		if (cachedResponse) {
+			return cachedResponse;
+		}
+		throw error;
+	}
+}
+
+// Cache First - Good for hashed static assets
 async function cacheFirst(request, cacheName) {
 	const cache = await caches.open(cacheName);
 	const cachedResponse = await cache.match(request);

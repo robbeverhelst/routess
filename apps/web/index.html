@@ -61,6 +61,26 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Instrument+Serif&display=swap"
       rel="stylesheet"
     />
+
+    <!-- Mapbox: warm DNS/TLS before Mapbox GL JS initializes. -->
+    <link rel="preconnect" href="https://api.mapbox.com" crossorigin />
+    <link rel="preconnect" href="https://events.mapbox.com" crossorigin />
+
+    <!-- Apply persisted dark theme synchronously to avoid a light->dark flash on cold load. -->
+    <script>
+      (() => {
+        try {
+          const raw = localStorage.getItem("routess-redesign-ui");
+          if (!raw) return;
+          const parsed = JSON.parse(raw);
+          if (parsed?.state && parsed.state.theme === "dark") {
+            document.documentElement.classList.add("dark");
+          }
+        } catch (_) {
+          /* ignore — fall back to default light theme */
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
