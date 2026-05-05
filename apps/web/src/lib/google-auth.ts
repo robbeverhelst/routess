@@ -74,7 +74,6 @@ class GoogleAuthService {
 	// Handle Google login error
 	handleGoogleError(error?: unknown): void {
 		Logger.error("Google Sign-In failed:", error);
-		throw new Error("Google authentication failed");
 	}
 
 	// Sign out

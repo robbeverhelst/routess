@@ -4,6 +4,13 @@ Routess is a route-planning product for cyclists, runners, and hikers. Users pla
 
 ## Language
 
+## Git Convention
+
+- Use Conventional Commit messages for every commit.
+- Default format: `type(scope): summary`.
+- Prefer `fix(scope): ...` for bug fixes and `feat(scope): ...` for features.
+- Keep the scope specific to the area changed.
+
 ### Route domain
 
 **Route**:

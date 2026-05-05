@@ -96,7 +96,7 @@ export function SignUpScreen({ onSwitchToLogin }: { onSwitchToLogin?: () => void
 								onSuccess={handleGoogle}
 								onError={() => pushToast({ kind: "danger", title: "Sign up cancelled" })}
 								isLoading={isLoading}
-								label="Sign up with Google"
+								text="signup_with"
 							/>
 						) : (
 							<div
