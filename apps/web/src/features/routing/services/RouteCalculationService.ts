@@ -1,8 +1,9 @@
 import type { Coordinate, Waypoint } from "@routess/core";
-import { formatDistance, formatDuration } from "@routess/core";
+import { formatDuration } from "@routess/core";
 import type { Map as MapboxMap } from "mapbox-gl";
 import type { Dispatch, SetStateAction } from "react";
 import { Logger } from "@/lib/logger";
+import { formatDistance } from "@/redesign/lib/units";
 import { getRoutingPreferences } from "@/redesign/stores/routingPreferencesStore";
 import { useRedesignSettingsStore } from "@/redesign/stores/settingsStore";
 import { useRoutingStore } from "@/stores/routingStore";
@@ -131,7 +132,8 @@ export const getRoute = async (
 
 	const offlineSuffix = outcome.offline ? " (offline)" : "";
 	const durationSuffix = outcome.offline ? " (estimated)" : "";
-	setRouteDistance(formatDistance(outcome.distanceKm) + offlineSuffix);
+	const units = useRedesignSettingsStore.getState().units === "mi" ? "mi" : "km";
+	setRouteDistance(formatDistance(outcome.distanceKm, units) + offlineSuffix);
 	setRouteDuration(formatDuration(outcome.durationMinutes) + durationSuffix);
 	setHasRoute(true);
 

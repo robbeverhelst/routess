@@ -21,6 +21,7 @@ import { ElevationSparkline } from "../components/ElevationSparkline";
 import { I } from "../components/icons";
 import { Btn, IconBtn, Kbd, RDS_COLORS, SecTitle } from "../components/primitives";
 import { SurfaceBreakdownBar } from "../components/SurfaceBreakdownBar";
+import { useUnits } from "../lib/units";
 
 const ACTIVITIES: { key: RedesignActivity; icon: React.ComponentType<{ size?: number }>; label: string }[] = [
 	{ key: "run", icon: I.run, label: "Run" },
@@ -52,22 +53,25 @@ export function PlanPanel() {
 	const elevationGain = useElevationGain();
 	const isComputingElevation = useIsComputingElevation();
 	const { breakdown: surfaceBreakdown, loading: surfaceLoading } = useSurfaceBreakdown();
+	const { formatElevationParts, units } = useUnits();
 
+	const elevParts = elevationGain != null ? formatElevationParts(elevationGain) : null;
 	const elevationVal = (() => {
-		if (elevationGain != null) return Math.round(elevationGain).toString();
+		if (elevParts) return elevParts.value;
 		if (hasRoute && isComputingElevation) return "…";
 		return "—";
 	})();
+	const elevationUnit = elevParts ? elevParts.unit : units === "mi" ? "ft" : "m";
 
 	const stats = [
 		{
 			label: "Distance",
 			val: distance ? distance.split(" ")[0] : "—",
-			unit: distance ? distance.split(" ")[1] || "km" : "km",
+			unit: distance ? distance.split(" ")[1] || "km" : units === "mi" ? "mi" : "km",
 		},
 		{ label: "Time", val: duration || "—", unit: "" },
-		{ label: "Elev gain", val: elevationVal, unit: "m" },
-		{ label: "Pace", val: "—", unit: "/km" },
+		{ label: "Elev gain", val: elevationVal, unit: elevationUnit },
+		{ label: "Pace", val: "—", unit: units === "mi" ? "/mi" : "/km" },
 	];
 
 	const startWp = waypoints[0];
@@ -90,7 +94,13 @@ export function PlanPanel() {
 							<button
 								key={a.key}
 								type="button"
-								onClick={() => setActivityType(a.key)}
+								onClick={() => {
+									if (activityType === a.key) return;
+									setActivityType(a.key);
+									if (hasRoute) {
+										window.dispatchEvent(new CustomEvent("routess:recalculate-route"));
+									}
+								}}
 								style={{
 									display: "inline-flex",
 									alignItems: "center",

@@ -11,6 +11,7 @@ import { ElevationSparkline } from "../components/ElevationSparkline";
 import { I, type IconKey } from "../components/icons";
 import { Btn, IconBtn, RDS_COLORS, SecTitle } from "../components/primitives";
 import { SurfaceBreakdownBar } from "../components/SurfaceBreakdownBar";
+import { useUnits } from "../lib/units";
 import { useModalsStore } from "../stores/modalsStore";
 import { useRoutingPreferencesStore } from "../stores/routingPreferencesStore";
 import { useRedesignSettingsStore } from "../stores/settingsStore";
@@ -112,11 +113,18 @@ function TagChip({ label }: { label: string }) {
 }
 
 export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: () => void }) {
-	const distanceKm = route.distance ? (route.distance / 1000).toFixed(1) : "—";
+	const { formatDistanceParts, formatSpeedParts, formatElevationParts } = useUnits();
+	const distanceParts = route.distance ? formatDistanceParts(route.distance / 1000) : null;
+	const elevParts = route.elevationGain ? formatElevationParts(route.elevationGain) : null;
+	const speedParts =
+		route.distance && route.duration ? formatSpeedParts(route.distance / 1000 / (route.duration / 3600) || 0) : null;
+	const distanceStr = distanceParts ? distanceParts.value : "—";
+	const distanceUnit = distanceParts ? distanceParts.unit : "";
 	const durationStr = route.duration ? `${Math.round(route.duration / 60)} min` : "—";
-	const elevStr = route.elevationGain ? `${Math.round(route.elevationGain)}` : "—";
-	const paceStr =
-		route.distance && route.duration ? (route.distance / 1000 / (route.duration / 3600) || 0).toFixed(1) : "—";
+	const elevStr = elevParts ? elevParts.value : "—";
+	const elevUnit = elevParts ? elevParts.unit : "";
+	const paceStr = speedParts ? speedParts.value : "—";
+	const paceUnit = speedParts ? speedParts.unit : "";
 
 	const [moreOpen, setMoreOpen] = useState(false);
 	const moreRef = useRef<HTMLDivElement | null>(null);
@@ -302,10 +310,10 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 	};
 
 	const stats = [
-		{ label: "Distance", value: distanceKm, unit: "km" },
+		{ label: "Distance", value: distanceStr, unit: distanceUnit },
 		{ label: "Duration", value: durationStr, unit: "" },
-		{ label: "Elev gain", value: elevStr, unit: "m" },
-		{ label: "Avg speed", value: paceStr, unit: "km/h" },
+		{ label: "Elev gain", value: elevStr, unit: elevUnit },
+		{ label: "Avg speed", value: paceStr, unit: paceUnit },
 	];
 
 	return (

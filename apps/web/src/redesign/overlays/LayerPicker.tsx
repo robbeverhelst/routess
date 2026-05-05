@@ -1,10 +1,10 @@
 import { useMemo } from "react";
 import { loadLastMapViewFromLocalStorage } from "@/features/routing/services/LocalStorageService";
 import { I } from "../components/icons";
-import { IconBtn, RDS_COLORS, SecTitle, Toggle } from "../components/primitives";
+import { IconBtn, RDS_COLORS, SecTitle } from "../components/primitives";
 import { useViewport } from "../hooks/useViewport";
 import { useModalsStore } from "../stores/modalsStore";
-import { type OverlayKey, useRedesignSettingsStore } from "../stores/settingsStore";
+import { useRedesignSettingsStore } from "../stores/settingsStore";
 
 const STYLES = [
 	{
@@ -40,8 +40,6 @@ export function LayerPicker() {
 	const close = useModalsStore((s) => s.closeOverlay);
 	const styleKey = useRedesignSettingsStore((s) => s.mapStyle as MapStyleKey);
 	const setMapStyle = useRedesignSettingsStore((s) => s.setMapStyle);
-	const overlays = useRedesignSettingsStore((s) => s.overlays);
-	const setOverlay = useRedesignSettingsStore((s) => s.setOverlay);
 	const { isMobile } = useViewport();
 
 	const previews = useMemo(() => {
@@ -56,20 +54,6 @@ export function LayerPicker() {
 			string
 		>;
 	}, []);
-
-	const overlayItems: {
-		key: OverlayKey;
-		icon: (typeof I)[keyof typeof I];
-		label: string;
-		sub: string;
-		pro?: boolean;
-	}[] = [
-		{ key: "heatmap", icon: I.trend, label: "Heatmap", sub: "Your activity history" },
-		{ key: "contour", icon: I.mountain, label: "Contour lines", sub: "Show elevation" },
-		{ key: "bike", icon: I.bike, label: "Cycling lanes", sub: "Highlight bike infra" },
-		{ key: "surface", icon: I.flag, label: "Surface type", sub: "Color by paved/gravel" },
-		{ key: "wind", icon: I.zap, label: "Wind", sub: "Live wind direction", pro: true },
-	];
 
 	return (
 		<div
@@ -163,72 +147,40 @@ export function LayerPicker() {
 					})}
 				</div>
 			</div>
-			<div style={{ borderTop: `1px solid ${RDS_COLORS.border}`, padding: 4 }}>
-				<SecTitle style={{ padding: "10px 14px 6px" }}>Overlays</SecTitle>
-				{overlayItems.map((o) => {
-					const Icon = o.icon;
-					const on = overlays[o.key];
-					return (
-						<div
-							key={o.key}
-							style={{
-								display: "flex",
-								alignItems: "center",
-								gap: 12,
-								padding: "9px 12px",
-								borderRadius: 8,
-							}}
-						>
-							<div
-								style={{
-									width: 26,
-									height: 26,
-									borderRadius: 6,
-									background: RDS_COLORS.bgInput,
-									display: "flex",
-									alignItems: "center",
-									justifyContent: "center",
-									color: RDS_COLORS.fgMuted,
-								}}
-							>
-								<Icon size={13} />
-							</div>
-							<div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
-								<div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-									<span style={{ fontSize: 12.5, fontWeight: 500 }}>{o.label}</span>
-									{o.pro && (
-										<span
-											style={{
-												display: "inline-flex",
-												alignItems: "center",
-												padding: "2px 6px",
-												height: 16,
-												borderRadius: 999,
-												background: RDS_COLORS.accentSoft,
-												color: RDS_COLORS.accent,
-												fontSize: 9.5,
-												fontWeight: 600,
-											}}
-										>
-											Pro
-										</span>
-									)}
-								</div>
-								<div style={{ fontSize: 10.5, color: RDS_COLORS.fgSubtle, marginTop: 1 }}>{o.sub}</div>
-							</div>
-							<Toggle on={on} disabled={o.pro} onChange={(v) => setOverlay(o.key, v)} />
-						</div>
-					);
-				})}
+			<div style={{ borderTop: `1px solid ${RDS_COLORS.border}`, padding: "10px 14px 14px" }}>
+				<SecTitle style={{ padding: "0 0 6px" }}>Overlays</SecTitle>
 				<div
 					style={{
-						padding: "10px 14px 12px",
-						fontSize: 10.5,
-						color: RDS_COLORS.fgSubtle,
-						lineHeight: 1.4,
+						display: "flex",
+						alignItems: "center",
+						gap: 10,
+						padding: "10px 12px",
+						borderRadius: 8,
+						background: RDS_COLORS.bgInput,
+						border: `1px solid ${RDS_COLORS.border}`,
 					}}
 				>
-					Overlay rendering is in progress — your selections are saved and will activate when each layer ships.
+					<div
+						style={{
+							width: 26,
+							height: 26,
+							borderRadius: 6,
+							background: RDS_COLORS.accentSoft,
+							color: RDS_COLORS.accent,
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+							flexShrink: 0,
+						}}
+					>
+						<I.layers size={13} />
+					</div>
+					<div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
+						<span style={{ fontSize: 12.5, fontWeight: 500 }}>Overlays coming soon</span>
+						<span style={{ fontSize: 10.5, color: RDS_COLORS.fgSubtle, marginTop: 2, lineHeight: 1.4 }}>
+							Heatmaps, contour lines, cycling infrastructure and surface colouring land with the layer pipeline.
+						</span>
+					</div>
 				</div>
 			</div>
 		</div>

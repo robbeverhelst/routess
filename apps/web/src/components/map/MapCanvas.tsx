@@ -29,17 +29,18 @@ const STANDARD_MAP_STYLE = "mapbox://styles/mapbox/standard";
 const STANDARD_SATELLITE_MAP_STYLE = "mapbox://styles/robbeverhelst/cmosm5k7x000c01segxetckb9";
 const OUTDOORS_MAP_STYLE = "mapbox://styles/robbeverhelst/cmosm4baj001j01s65hjz79cw";
 
-type MapStyleVariant = { light: string; dark: string; supportsLightPreset: boolean };
+// Each style is one Mapbox style URL. Light/dark mode is applied at runtime
+// via setConfigProperty("basemap", "lightPreset"), not by swapping the URL.
+type MapStyleVariant = { url: string; supportsLightPreset: boolean };
 
 const REDESIGN_MAP_STYLE_VARIANTS: Record<string, MapStyleVariant> = {
-	streets: { light: STANDARD_MAP_STYLE, dark: STANDARD_MAP_STYLE, supportsLightPreset: true },
-	outdoors: { light: OUTDOORS_MAP_STYLE, dark: OUTDOORS_MAP_STYLE, supportsLightPreset: true },
-	satellite: { light: STANDARD_SATELLITE_MAP_STYLE, dark: STANDARD_SATELLITE_MAP_STYLE, supportsLightPreset: true },
+	streets: { url: STANDARD_MAP_STYLE, supportsLightPreset: true },
+	outdoors: { url: OUTDOORS_MAP_STYLE, supportsLightPreset: true },
+	satellite: { url: STANDARD_SATELLITE_MAP_STYLE, supportsLightPreset: true },
 };
 
 const FALLBACK_STYLE_VARIANT: MapStyleVariant = {
-	light: STANDARD_MAP_STYLE,
-	dark: STANDARD_MAP_STYLE,
+	url: STANDARD_MAP_STYLE,
 	supportsLightPreset: true,
 };
 
@@ -233,7 +234,7 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
 	const { handleMapError } = useErrorHandler();
 	const isSatelliteStyle = currentMapStyleKey === "satellite";
 	const styleVariant = REDESIGN_MAP_STYLE_VARIANTS[currentMapStyleKey] ?? FALLBACK_STYLE_VARIANT;
-	const mapStyleUrl = mapTheme === "dark" ? styleVariant.dark : styleVariant.light;
+	const mapStyleUrl = styleVariant.url;
 	const supportsBasemapLightPreset = styleVariant.supportsLightPreset;
 	const hasInvalidMapboxToken = isInvalidMapboxToken(mapboxToken);
 	const effectiveLightPreset = mapTheme === "dark" ? "night" : currentLightPreset;

@@ -5,12 +5,7 @@ import { AUTH_CARD_STYLE, AuthBackdrop, AuthCardAccentBar } from "../components/
 import { I } from "../components/icons";
 import { Btn, RDS_COLORS } from "../components/primitives";
 import { useViewport } from "../hooks/useViewport";
-import {
-	DEFAULT_SPORT_SPEEDS_KMH,
-	type LocationPermission,
-	type RedesignUnits,
-	useRedesignSettingsStore,
-} from "../stores/settingsStore";
+import { type LocationPermission, useRedesignSettingsStore } from "../stores/settingsStore";
 import { useToastStore } from "../stores/toastStore";
 import { type RedesignActivity, useUiStore } from "../stores/uiStore";
 
@@ -63,11 +58,6 @@ const STEPS: StepDef[] = [
 		why: "Affects every distance, elevation and pace number you'll see.",
 	},
 	{
-		title: "Set your average speed",
-		sub: "We use this to estimate how long a route will take. A rough number is fine.",
-		why: "Per-sport so a 5 km walk and a 5 km ride don't share the same ETA.",
-	},
-	{
 		title: "Pick your map style",
 		sub: "Three flavours. You can flip between them any time from the layers menu.",
 		why: "Different styles surface different details — trails, traffic, real imagery.",
@@ -90,16 +80,6 @@ const SPORTS: {
 	{ key: "cycle", icon: I.bike, label: "Cycling", sub: "Speed · routes", defaultLabel: "Cycling" },
 	{ key: "walk", icon: I.walk, label: "Walking", sub: "Distance · POIs", defaultLabel: "Walking" },
 ];
-
-const KMH_TO_MPH = 0.621371;
-
-function toDisplay(kmh: number, units: RedesignUnits): number {
-	return units === "mi" ? kmh * KMH_TO_MPH : kmh;
-}
-
-function fromDisplay(value: number, units: RedesignUnits): number {
-	return units === "mi" ? value / KMH_TO_MPH : value;
-}
 
 function ChangeLaterHint({ children }: { children: ReactNode }) {
 	return (
@@ -134,8 +114,6 @@ export function WelcomeScreen({ onComplete }: { onComplete?: () => void }) {
 
 	const selectedSports = useRedesignSettingsStore((s) => s.selectedSports);
 	const toggleSport = useRedesignSettingsStore((s) => s.toggleSport);
-	const sportSpeeds = useRedesignSettingsStore((s) => s.sportSpeeds);
-	const setSportSpeed = useRedesignSettingsStore((s) => s.setSportSpeed);
 	const setDefaultActivity = useRedesignSettingsStore((s) => s.setDefaultActivity);
 	const units = useRedesignSettingsStore((s) => s.units);
 	const setUnits = useRedesignSettingsStore((s) => s.setUnits);
@@ -155,14 +133,6 @@ export function WelcomeScreen({ onComplete }: { onComplete?: () => void }) {
 			STYLE_PREVIEWS.map((s) => [s.key, buildStylePreviewUrl(s.styleId, lng, lat, zoom, token)]),
 		) as Record<(typeof STYLE_PREVIEWS)[number]["key"], string>;
 	}, []);
-
-	useEffect(() => {
-		for (const sport of selectedSports) {
-			if (sportSpeeds[sport] === undefined) {
-				setSportSpeed(sport, DEFAULT_SPORT_SPEEDS_KMH[sport]);
-			}
-		}
-	}, [selectedSports, sportSpeeds, setSportSpeed]);
 
 	const defaultSport: RedesignActivity | null = useMemo(() => {
 		if (selectedSports.length === 0) return null;
@@ -242,8 +212,6 @@ export function WelcomeScreen({ onComplete }: { onComplete?: () => void }) {
 		}
 	};
 
-	const speedSports = selectedSports.length > 0 ? selectedSports : (["cycle"] as RedesignActivity[]);
-	const unitLabel = units === "mi" ? "mph" : "km/h";
 	const stepDef = STEPS[step];
 	const totalSteps = STEPS.length;
 	const { width } = useViewport();
@@ -491,80 +459,6 @@ export function WelcomeScreen({ onComplete }: { onComplete?: () => void }) {
 
 						{step === 2 && (
 							<>
-								<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-									{speedSports.map((sport) => {
-										const cfg = SPORTS.find((s) => s.key === sport);
-										if (!cfg) return null;
-										const Icon = cfg.icon;
-										const kmh = sportSpeeds[sport] ?? DEFAULT_SPORT_SPEEDS_KMH[sport];
-										const display = toDisplay(kmh, units);
-										return (
-											<div
-												key={sport}
-												style={{
-													display: "flex",
-													alignItems: "center",
-													gap: 14,
-													padding: "12px 14px",
-													background: RDS_COLORS.bgInput,
-													border: `1px solid ${RDS_COLORS.border}`,
-													borderRadius: 12,
-												}}
-											>
-												<div
-													style={{
-														width: 34,
-														height: 34,
-														borderRadius: 10,
-														background: RDS_COLORS.accentSoft,
-														color: RDS_COLORS.accent,
-														display: "inline-flex",
-														alignItems: "center",
-														justifyContent: "center",
-														flexShrink: 0,
-													}}
-												>
-													<Icon size={18} />
-												</div>
-												<div style={{ flex: 1, minWidth: 0 }}>
-													<div style={{ fontSize: 13, fontWeight: 600, color: RDS_COLORS.fg }}>{cfg.label}</div>
-													<div style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle }}>Average pace</div>
-												</div>
-												<input
-													type="number"
-													min={1}
-													max={100}
-													step={units === "mi" ? 0.5 : 1}
-													value={Number.isFinite(display) ? Math.round(display * 10) / 10 : ""}
-													onChange={(e) => {
-														const n = Number.parseFloat(e.target.value);
-														if (Number.isFinite(n) && n > 0) {
-															setSportSpeed(sport, fromDisplay(n, units));
-														}
-													}}
-													style={{
-														width: 72,
-														height: 34,
-														padding: "0 10px",
-														borderRadius: 8,
-														background: RDS_COLORS.bgPanel,
-														border: `1px solid ${RDS_COLORS.border}`,
-														color: RDS_COLORS.fg,
-														fontSize: 13,
-														textAlign: "right",
-													}}
-												/>
-												<span style={{ fontSize: 12, color: RDS_COLORS.fgMuted, width: 36 }}>{unitLabel}</span>
-											</div>
-										);
-									})}
-								</div>
-								<ChangeLaterHint>Tweak speeds whenever — Settings → Sports.</ChangeLaterHint>
-							</>
-						)}
-
-						{step === 3 && (
-							<>
 								<div style={{ display: "flex", gap: 10 }}>
 									{STYLE_PREVIEWS.map((m) => {
 										const on = mapStyle === m.key;
@@ -619,7 +513,7 @@ export function WelcomeScreen({ onComplete }: { onComplete?: () => void }) {
 							</>
 						)}
 
-						{step === 4 && (
+						{step === 3 && (
 							<>
 								<LocationStep
 									permission={locationPermission}

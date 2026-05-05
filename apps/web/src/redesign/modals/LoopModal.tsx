@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { I } from "../components/icons";
 import { ModalShell } from "../components/ModalShell";
-import { Btn, PreviewBanner, RDS_COLORS, SecTitle } from "../components/primitives";
+import { Btn, RDS_COLORS, SecTitle } from "../components/primitives";
 import { type LoopDirection, type LoopSurface, useLoopPreferencesStore } from "../stores/loopPreferencesStore";
 import { useModalsStore } from "../stores/modalsStore";
 import { useToastStore } from "../stores/toastStore";
@@ -80,9 +80,10 @@ export function LoopModal() {
 			onClose={closeModal}
 			footer={
 				<>
+					<span style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle }}>Generator coming soon</span>
 					<div style={{ flex: 1 }} />
 					<Btn onClick={closeModal}>Cancel</Btn>
-					<Btn variant="primary" onClick={handleGenerate}>
+					<Btn variant="primary" onClick={handleGenerate} disabled>
 						<I.compass size={14} /> Generate
 					</Btn>
 				</>
@@ -232,11 +233,6 @@ export function LoopModal() {
 						})}
 					</div>
 				</div>
-
-				<PreviewBanner
-					title="Preview · generation backend pending"
-					body="Your preferences are saved on this device and will drive generation as soon as the loop generator service ships."
-				/>
 			</div>
 		</ModalShell>
 	);

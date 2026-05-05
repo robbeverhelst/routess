@@ -237,29 +237,6 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 				});
 			}
 		};
-		const onDuplicate = () => {
-			pushToast({
-				kind: "info",
-				title: "Duplicate coming soon",
-				body: "Route duplication will be wired up with the route library backend.",
-			});
-		};
-		const onDelete = () => {
-			pushToast({
-				kind: "info",
-				title: "Delete coming soon",
-				body: "Route deletion will be wired up with the route library backend.",
-			});
-		};
-		const onToggleFavorite = () => {
-			pushToast({
-				kind: "info",
-				title: "Favourite saved locally",
-				body: "Favourite syncing will arrive with the backend.",
-				durationMs: 2500,
-			});
-		};
-
 		window.addEventListener("routess:open-account", onOpenAccount);
 		window.addEventListener("routess:open-profile", onOpenProfile);
 		window.addEventListener("routess:open-login", onOpenLogin);
@@ -269,9 +246,6 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 		window.addEventListener("routess:open-social", onOpenSocial);
 		window.addEventListener("routess:open-activity", onOpenSocial);
 		window.addEventListener("routess:export-all-data", onExportAll);
-		window.addEventListener("routess:duplicate-route", onDuplicate);
-		window.addEventListener("routess:delete-route", onDelete);
-		window.addEventListener("routess:toggle-favorite", onToggleFavorite);
 		return () => {
 			window.removeEventListener("routess:open-account", onOpenAccount);
 			window.removeEventListener("routess:open-profile", onOpenProfile);
@@ -282,9 +256,6 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 			window.removeEventListener("routess:open-social", onOpenSocial);
 			window.removeEventListener("routess:open-activity", onOpenSocial);
 			window.removeEventListener("routess:export-all-data", onExportAll);
-			window.removeEventListener("routess:duplicate-route", onDuplicate);
-			window.removeEventListener("routess:delete-route", onDelete);
-			window.removeEventListener("routess:toggle-favorite", onToggleFavorite);
 		};
 	}, [setContext]);
 
