@@ -7,6 +7,7 @@ export type WaypointType = "routed" | "direct";
 export interface Waypoint {
 	coord: Coordinate;
 	type: WaypointType;
+	name?: string;
 }
 
 export interface WaypointHistory {

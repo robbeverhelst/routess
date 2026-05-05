@@ -60,6 +60,7 @@ export function SaveRouteModal({
 			lng: wp.coord[0],
 			lat: wp.coord[1],
 			type: wp.type,
+			...(wp.name ? { name: wp.name } : {}),
 		}));
 
 		saveRouteMutation.mutate(

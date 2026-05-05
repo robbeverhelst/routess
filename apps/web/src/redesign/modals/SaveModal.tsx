@@ -56,6 +56,7 @@ export function SaveModal() {
 					lng: wp.coord[0],
 					lat: wp.coord[1],
 					type: wp.type,
+					...(wp.name ? { name: wp.name } : {}),
 				})),
 				distance: distanceNumber * 1000,
 				elevationGain: elevationGain != null ? Math.round(elevationGain) : 0,

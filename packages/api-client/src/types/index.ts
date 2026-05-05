@@ -29,6 +29,7 @@ export interface Waypoint {
 	lat: number;
 	lng: number;
 	type: "routed" | "direct";
+	name?: string;
 }
 
 export interface ApiRoute {
