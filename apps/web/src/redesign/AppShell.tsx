@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { lazy, type ReactNode, Suspense, useEffect, useState } from "react";
+import { lazy, type ReactNode, Suspense, useEffect, useRef, useState } from "react";
 import { useRouteSurfaceSync } from "@/features/routing/services/useSurfaceBreakdown";
 import { apiService } from "@/lib/api";
 import { useAuthStatus } from "@/lib/api-queries";
@@ -130,14 +130,19 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 	const [skippedAuth, setSkippedAuth] = useState(false);
 	const [offlineDismissed, setOfflineDismissed] = useState(false);
 	const [devScreen, setDevScreen] = useState<DevScreen | null>(getDevScreen);
-	const [mobileSyncedRef, setMobileSyncedRef] = useState(false);
+	const wasMobileRef = useRef<boolean | null>(null);
 
 	useEffect(() => {
-		if (isMobile && !mobileSyncedRef) {
-			useUiStore.getState().setPanelCollapsed(true);
-			setMobileSyncedRef(true);
+		if (wasMobileRef.current === null) {
+			wasMobileRef.current = isMobile;
+			if (isMobile) useUiStore.getState().setPanelCollapsed(true);
+			return;
 		}
-	}, [isMobile, mobileSyncedRef]);
+		if (isMobile && !wasMobileRef.current) {
+			useUiStore.getState().setPanelCollapsed(true);
+		}
+		wasMobileRef.current = isMobile;
+	}, [isMobile]);
 
 	useEffect(() => {
 		document.documentElement.classList.toggle("dark", theme === "dark");

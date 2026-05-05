@@ -78,10 +78,12 @@ export function LoginModal({ isOpen, onOpenChange, onLoginSuccess, currentLangua
 
 	return (
 		<Dialog open={isOpen} onOpenChange={onOpenChange}>
-			<DialogContent className="sm:max-w-md">
+			<DialogContent className="sm:max-w-md border-border bg-card text-card-foreground shadow-2xl">
 				<DialogHeader className="text-center">
-					<DialogTitle className="text-xl font-semibold">{t("auth.welcomeBack", currentLanguage)}</DialogTitle>
-					<DialogDescription className="text-gray-600 dark:text-gray-400">
+					<DialogTitle className="text-xl font-semibold text-foreground">
+						{t("auth.welcomeBack", currentLanguage)}
+					</DialogTitle>
+					<DialogDescription className="text-muted-foreground">
 						{t("auth.signInToSaveRoutes", currentLanguage)}
 					</DialogDescription>
 				</DialogHeader>
@@ -89,7 +91,7 @@ export function LoginModal({ isOpen, onOpenChange, onLoginSuccess, currentLangua
 				<div className="space-y-4 pt-4">
 					{/* Google Sign In Button (custom UI overlaying hidden GSI button) */}
 					<div className="relative w-full h-11">
-						<div className="w-full h-11 flex items-center justify-center gap-2.5 rounded-md border border-input bg-background text-sm font-medium pointer-events-none">
+						<div className="pointer-events-none flex h-11 w-full items-center justify-center gap-2.5 rounded-md border border-border bg-background text-sm font-medium text-foreground shadow-xs">
 							<GoogleIcon size={18} />
 							{t("auth.continueWithGoogle", currentLanguage)}
 						</div>
@@ -119,33 +121,31 @@ export function LoginModal({ isOpen, onOpenChange, onLoginSuccess, currentLangua
 					{/* Divider */}
 					<div className="relative">
 						<div className="absolute inset-0 flex items-center">
-							<span className="w-full border-t border-gray-200 dark:border-gray-700" />
+							<span className="w-full border-t border-border" />
 						</div>
 						<div className="relative flex justify-center text-xs uppercase">
-							<span className="bg-white dark:bg-gray-900 px-2 text-gray-500">
-								{t("auth.benefits", currentLanguage)}
-							</span>
+							<span className="bg-card px-2 text-muted-foreground">{t("auth.benefits", currentLanguage)}</span>
 						</div>
 					</div>
 
 					{/* Benefits List */}
-					<div className="space-y-3 text-sm text-gray-600 dark:text-gray-400">
+					<div className="space-y-3 text-sm text-muted-foreground">
 						<div className="flex items-center space-x-3">
-							<div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
+							<div className="h-2 w-2 flex-shrink-0 rounded-full bg-sky-500"></div>
 							<span>{t("auth.benefit.saveRoutes", currentLanguage)}</span>
 						</div>
 						<div className="flex items-center space-x-3">
-							<div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
+							<div className="h-2 w-2 flex-shrink-0 rounded-full bg-emerald-500"></div>
 							<span>{t("auth.benefit.accessAnywhere", currentLanguage)}</span>
 						</div>
 						<div className="flex items-center space-x-3">
-							<div className="w-2 h-2 bg-purple-500 rounded-full flex-shrink-0"></div>
+							<div className="h-2 w-2 flex-shrink-0 rounded-full bg-indigo-500"></div>
 							<span>{t("auth.benefit.shareEasily", currentLanguage)}</span>
 						</div>
 					</div>
 
 					{/* Privacy Notice */}
-					<div className="text-xs text-gray-500 text-center pt-2 border-t border-gray-100 dark:border-gray-800">
+					<div className="border-t border-border pt-2 text-center text-xs text-muted-foreground">
 						{t("auth.privacyNotice", currentLanguage)}
 					</div>
 				</div>

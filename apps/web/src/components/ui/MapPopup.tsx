@@ -1,7 +1,7 @@
-import type { Map as MapboxMap } from "mapbox-gl";
-import React from "react";
-import { Button } from "@/components/ui/button";
+import React, { type CSSProperties, type ReactNode } from "react";
+import { Marker } from "react-map-gl/mapbox";
 import { type SupportedLanguage, t } from "@/lib/i18n";
+import { I } from "@/redesign/components/icons";
 
 export interface PopupInfo {
 	longitude: number;
@@ -13,17 +13,87 @@ export interface PopupInfo {
 
 interface MapPopupProps {
 	popupInfo: PopupInfo;
-	mapInstance: MapboxMap;
 	onAddDirectWaypoint: () => void;
 	onRemoveWaypoint: () => void;
 	onAddWaypointOnRoute: () => void;
 	currentLanguage: SupportedLanguage;
-	// onShowInfo: (message: string) => void; // If we want to handle info popups more actively
+}
+
+const CARD_STYLE: CSSProperties = {
+	display: "inline-flex",
+	alignItems: "center",
+	padding: 4,
+	background: "var(--rds-bg-panel-elev)",
+	border: "1px solid var(--rds-border)",
+	borderRadius: 10,
+	boxShadow: "var(--rds-shadow-lg)",
+	color: "var(--rds-fg)",
+};
+
+const CARET_STYLE: CSSProperties = {
+	position: "absolute",
+	left: "50%",
+	bottom: -5,
+	width: 8,
+	height: 8,
+	transform: "translateX(-50%) rotate(45deg)",
+	background: "var(--rds-bg-panel-elev)",
+	borderRight: "1px solid var(--rds-border)",
+	borderBottom: "1px solid var(--rds-border)",
+};
+
+interface PopupButtonProps {
+	icon: ReactNode;
+	label: string;
+	onClick: () => void;
+	tone?: "accent" | "success" | "danger";
+}
+
+function PopupButton({ icon, label, onClick, tone = "accent" }: PopupButtonProps) {
+	const color =
+		tone === "danger" ? "var(--rds-danger)" : tone === "success" ? "var(--rds-success)" : "var(--rds-accent)";
+	const bgHover =
+		tone === "danger"
+			? "color-mix(in oklch, var(--rds-danger) 12%, transparent)"
+			: tone === "success"
+				? "color-mix(in oklch, var(--rds-success) 14%, transparent)"
+				: "var(--rds-accent-soft)";
+
+	return (
+		<button
+			type="button"
+			onClick={onClick}
+			style={{
+				display: "inline-flex",
+				alignItems: "center",
+				gap: 8,
+				padding: "6px 10px",
+				border: 0,
+				background: "transparent",
+				color,
+				fontSize: 12.5,
+				fontWeight: 600,
+				borderRadius: 8,
+				cursor: "pointer",
+				whiteSpace: "nowrap",
+				lineHeight: 1,
+				transition: "background 120ms",
+			}}
+			onMouseEnter={(e) => {
+				e.currentTarget.style.background = bgHover;
+			}}
+			onMouseLeave={(e) => {
+				e.currentTarget.style.background = "transparent";
+			}}
+		>
+			<span style={{ display: "inline-flex" }}>{icon}</span>
+			<span>{label}</span>
+		</button>
+	);
 }
 
 const MapPopupComponent: React.FC<MapPopupProps> = ({
 	popupInfo,
-	mapInstance,
 	onAddDirectWaypoint,
 	onRemoveWaypoint,
 	onAddWaypointOnRoute,
@@ -31,62 +101,65 @@ const MapPopupComponent: React.FC<MapPopupProps> = ({
 }) => {
 	if (!popupInfo) return null;
 
-	const position = mapInstance.project([popupInfo.longitude, popupInfo.latitude]);
-
 	return (
-		<div
-			className="absolute z-10 animate-in fade-in"
-			style={{
-				left: position.x,
-				top: position.y - 10, // Adjusted for better pointing, original was -30 which might be too high
-				transform: "translate(-50%, -100%)",
-			}}
+		<Marker
+			longitude={popupInfo.longitude}
+			latitude={popupInfo.latitude}
+			anchor="bottom"
+			offset={[0, -12]}
+			style={{ zIndex: 10, pointerEvents: "auto" }}
 		>
-			{popupInfo.type === "direct" && (
-				<div className="p-2 bg-white rounded-md shadow-md border border-border">
-					<Button
-						variant="ghost"
-						className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
-						onClick={onAddDirectWaypoint}
-					>
-						{t("mapPopup.button.addDirectWaypoint", currentLanguage)}
-					</Button>
-				</div>
-			)}
+			<div className="animate-in fade-in" style={{ position: "relative" }}>
+				{popupInfo.type === "direct" && (
+					<div style={CARD_STYLE}>
+						<PopupButton
+							tone="accent"
+							icon={<I.flag size={13} />}
+							label={t("mapPopup.button.addDirectWaypoint", currentLanguage)}
+							onClick={onAddDirectWaypoint}
+						/>
+					</div>
+				)}
 
-			{popupInfo.type === "remove" && (
-				<div className="p-2 bg-white rounded-md shadow-md border border-border">
-					<Button
-						variant="ghost"
-						className="text-red-600 hover:text-red-800 hover:bg-red-50 flex items-center gap-2"
-						onClick={onRemoveWaypoint}
-					>
-						<span className="text-lg">🗑️</span>
-						<span>{t("mapPopup.button.removePoint", currentLanguage)}</span>
-					</Button>
-				</div>
-			)}
+				{popupInfo.type === "remove" && (
+					<div style={CARD_STYLE}>
+						<PopupButton
+							tone="danger"
+							icon={<I.trash size={13} />}
+							label={t("mapPopup.button.removePoint", currentLanguage)}
+							onClick={onRemoveWaypoint}
+						/>
+					</div>
+				)}
 
-			{popupInfo.type === "add_on_route" && (
-				<div className="p-2 bg-white rounded-md shadow-md border border-border">
-					<Button
-						variant="ghost"
-						className="text-green-600 hover:text-green-800 hover:bg-green-50"
-						onClick={onAddWaypointOnRoute}
-					>
-						{t("mapPopup.button.addWaypointHere", currentLanguage)}
-					</Button>
-				</div>
-			)}
+				{popupInfo.type === "add_on_route" && (
+					<div style={CARD_STYLE}>
+						<PopupButton
+							tone="success"
+							icon={<I.plus size={13} />}
+							label={t("mapPopup.button.addWaypointHere", currentLanguage)}
+							onClick={onAddWaypointOnRoute}
+						/>
+					</div>
+				)}
 
-			{popupInfo.type === "info" && popupInfo.message && (
-				<div className="p-2 bg-white rounded-md shadow-md border border-border">
-					<div className="text-sm text-gray-800">{popupInfo.message}</div>
-				</div>
-			)}
-		</div>
+				{popupInfo.type === "info" && popupInfo.message && (
+					<div
+						style={{
+							...CARD_STYLE,
+							padding: "8px 12px",
+							fontSize: 12.5,
+							color: "var(--rds-fg-muted)",
+						}}
+					>
+						{popupInfo.message}
+					</div>
+				)}
+
+				<div style={CARET_STYLE} aria-hidden="true" />
+			</div>
+		</Marker>
 	);
 };
 
-// Memoize MapPopup to prevent unnecessary re-renders when props haven't changed
 export const MapPopup = React.memo(MapPopupComponent);

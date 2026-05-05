@@ -1,3 +1,4 @@
+import type React from "react";
 import type { CSSProperties, ReactNode } from "react";
 
 export const RDS_COLORS = {
@@ -28,9 +29,22 @@ interface IconBtnProps {
 	pressed?: boolean;
 	style?: CSSProperties;
 	disabled?: boolean;
+	draggable?: boolean;
+	onDragStart?: (e: React.DragEvent<HTMLButtonElement>) => void;
+	onDragEnd?: (e: React.DragEvent<HTMLButtonElement>) => void;
 }
 
-export function IconBtn({ children, onClick, title, pressed, style, disabled }: IconBtnProps) {
+export function IconBtn({
+	children,
+	onClick,
+	title,
+	pressed,
+	style,
+	disabled,
+	draggable,
+	onDragStart,
+	onDragEnd,
+}: IconBtnProps) {
 	return (
 		<button
 			type="button"
@@ -38,6 +52,9 @@ export function IconBtn({ children, onClick, title, pressed, style, disabled }: 
 			title={title}
 			aria-pressed={pressed}
 			disabled={disabled}
+			draggable={draggable}
+			onDragStart={onDragStart}
+			onDragEnd={onDragEnd}
 			className="rds-icon-btn"
 			style={{
 				display: "inline-flex",
