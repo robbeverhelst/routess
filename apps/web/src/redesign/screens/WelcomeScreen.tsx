@@ -182,8 +182,7 @@ export function WelcomeScreen({ onComplete }: { onComplete?: () => void }) {
 		toggleSport(sport);
 	};
 
-	const handleSetDefault = (sport: RedesignActivity, e: React.MouseEvent) => {
-		e.stopPropagation();
+	const handleSetDefault = (sport: RedesignActivity) => {
 		if (!selectedSports.includes(sport)) {
 			toggleSport(sport);
 		}
@@ -264,9 +263,7 @@ export function WelcomeScreen({ onComplete }: { onComplete?: () => void }) {
 				}}
 			>
 				{layout === "side" && <WelcomeHero step={step} totalSteps={totalSteps} steps={STEPS} />}
-				{layout === "stacked" && (
-					<WelcomeHeroStacked step={step} totalSteps={totalSteps} stepDef={stepDef} />
-				)}
+				{layout === "stacked" && <WelcomeHeroStacked step={step} totalSteps={totalSteps} stepDef={stepDef} />}
 				<div
 					style={{
 						...AUTH_CARD_STYLE,
@@ -276,382 +273,384 @@ export function WelcomeScreen({ onComplete }: { onComplete?: () => void }) {
 						padding: "32px 32px 26px",
 					}}
 				>
-				<AuthCardAccentBar />
+					<AuthCardAccentBar />
 
-				<div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 22 }}>
-					<img
-						src="/logo.png"
-						alt="routess"
-						width={28}
-						height={28}
-						style={{ borderRadius: 7, display: "block", flexShrink: 0 }}
-					/>
-					<span
-						style={{
-							fontSize: 15,
-							fontWeight: 600,
-							color: RDS_COLORS.fg,
-							letterSpacing: -0.2,
-						}}
-					>
-						routess
-					</span>
-					<div style={{ flex: 1 }} />
-					<span
-						style={{
-							fontSize: 11,
-							color: RDS_COLORS.fgSubtle,
-							textTransform: "uppercase",
-							letterSpacing: 0.6,
-							fontWeight: 600,
-						}}
-					>
-						Step {step + 1} of {totalSteps}
-					</span>
-				</div>
-
-				<div style={{ display: "flex", gap: 6, marginBottom: 22 }}>
-					{STEPS.map((s, i) => (
-						<div
-							key={s.title}
-							data-step={i}
-							style={{
-								flex: 1,
-								height: 3,
-								borderRadius: 999,
-								background:
-									i < step
-										? RDS_COLORS.accent
-										: i === step
-											? `linear-gradient(90deg, ${RDS_COLORS.accent}, color-mix(in oklch, ${RDS_COLORS.accent} 60%, ${RDS_COLORS.success}))`
-											: RDS_COLORS.border,
-							}}
+					<div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 22 }}>
+						<img
+							src="/logo.png"
+							alt="routess"
+							width={28}
+							height={28}
+							style={{ borderRadius: 7, display: "block", flexShrink: 0 }}
 						/>
-					))}
-				</div>
+						<span
+							style={{
+								fontSize: 15,
+								fontWeight: 600,
+								color: RDS_COLORS.fg,
+								letterSpacing: -0.2,
+							}}
+						>
+							routess
+						</span>
+						<div style={{ flex: 1 }} />
+						<span
+							style={{
+								fontSize: 11,
+								color: RDS_COLORS.fgSubtle,
+								textTransform: "uppercase",
+								letterSpacing: 0.6,
+								fontWeight: 600,
+							}}
+						>
+							Step {step + 1} of {totalSteps}
+						</span>
+					</div>
 
-				<h2 style={{ fontSize: 24, fontWeight: 600, margin: "0 0 8px", letterSpacing: -0.4, lineHeight: 1.2 }}>
-					{stepDef.title}
-				</h2>
-				<p style={{ fontSize: 14, color: RDS_COLORS.fgMuted, margin: 0, lineHeight: 1.5 }}>{stepDef.sub}</p>
+					<div style={{ display: "flex", gap: 6, marginBottom: 22 }}>
+						{STEPS.map((s, i) => (
+							<div
+								key={s.title}
+								data-step={i}
+								style={{
+									flex: 1,
+									height: 3,
+									borderRadius: 999,
+									background:
+										i < step
+											? RDS_COLORS.accent
+											: i === step
+												? `linear-gradient(90deg, ${RDS_COLORS.accent}, color-mix(in oklch, ${RDS_COLORS.accent} 60%, ${RDS_COLORS.success}))`
+												: RDS_COLORS.border,
+								}}
+							/>
+						))}
+					</div>
 
-				<div
-					style={{
-						display: "flex",
-						alignItems: "flex-start",
-						gap: 8,
-						marginTop: 12,
-						fontSize: 12,
-						color: RDS_COLORS.fgSubtle,
-						lineHeight: 1.55,
-					}}
-				>
-					<I.zap size={12} style={{ marginTop: 3, flexShrink: 0, color: RDS_COLORS.accent }} />
-					<span>{stepDef.why}</span>
-				</div>
+					<h2 style={{ fontSize: 24, fontWeight: 600, margin: "0 0 8px", letterSpacing: -0.4, lineHeight: 1.2 }}>
+						{stepDef.title}
+					</h2>
+					<p style={{ fontSize: 14, color: RDS_COLORS.fgMuted, margin: 0, lineHeight: 1.5 }}>{stepDef.sub}</p>
 
-				<div style={{ marginTop: 22 }}>
-					{step === 0 && (
-						<>
-							<div style={{ display: "flex", gap: 10 }}>
-								{SPORTS.map((a) => {
-									const Icon = a.icon;
-									const on = selectedSports.includes(a.key);
-									const isDefault = on && defaultSport === a.key;
-									return (
-										<div
-											key={a.key}
-											role="button"
-											tabIndex={0}
-											aria-pressed={on}
-											onClick={() => handleSportClick(a.key)}
-											onKeyDown={(e) => {
-												if (e.key === "Enter" || e.key === " ") {
-													e.preventDefault();
-													handleSportClick(a.key);
-												}
-											}}
-											style={{
-												flex: 1,
-												position: "relative",
-												padding: "16px 14px 14px",
-												borderRadius: 12,
-												background: on ? RDS_COLORS.accentSoft : RDS_COLORS.bgInput,
-												border: on ? `2px solid ${RDS_COLORS.accent}` : `1px solid ${RDS_COLORS.border}`,
-												color: on ? RDS_COLORS.accent : RDS_COLORS.fg,
-												display: "flex",
-												flexDirection: "column",
-												gap: 8,
-												alignItems: "flex-start",
-												cursor: "pointer",
-												transition: "background 120ms, border-color 120ms, color 120ms",
-												textAlign: "left",
-												outline: "none",
-											}}
-										>
-											<span
-												style={{
-													position: "absolute",
-													top: 10,
-													right: 10,
-													width: 18,
-													height: 18,
-													borderRadius: 999,
-													display: "inline-flex",
-													alignItems: "center",
-													justifyContent: "center",
-													background: on ? RDS_COLORS.accent : "transparent",
-													color: on ? RDS_COLORS.accentFg : "transparent",
-													border: on ? "none" : `1.5px solid ${RDS_COLORS.border}`,
-													transition: "background 120ms, color 120ms",
-												}}
-											>
-												{on && <I.check size={11} />}
-											</span>
-											<Icon size={22} />
-											<div style={{ fontSize: 14, fontWeight: 600 }}>{a.label}</div>
-											<div style={{ fontSize: 11.5, color: on ? RDS_COLORS.accent : RDS_COLORS.fgSubtle }}>
-												{a.sub}
-											</div>
+					<div
+						style={{
+							display: "flex",
+							alignItems: "flex-start",
+							gap: 8,
+							marginTop: 12,
+							fontSize: 12,
+							color: RDS_COLORS.fgSubtle,
+							lineHeight: 1.55,
+						}}
+					>
+						<I.zap size={12} style={{ marginTop: 3, flexShrink: 0, color: RDS_COLORS.accent }} />
+						<span>{stepDef.why}</span>
+					</div>
 
-											{on && (
+					<div style={{ marginTop: 22 }}>
+						{step === 0 && (
+							<>
+								<div style={{ display: "flex", gap: 10 }}>
+									{SPORTS.map((a) => {
+										const Icon = a.icon;
+										const on = selectedSports.includes(a.key);
+										const isDefault = on && defaultSport === a.key;
+										return (
+											<div key={a.key} style={{ flex: 1, position: "relative" }}>
 												<button
 													type="button"
-													onClick={(e) => handleSetDefault(a.key, e)}
-													aria-pressed={isDefault}
+													aria-pressed={on}
+													onClick={() => handleSportClick(a.key)}
 													style={{
-														marginTop: 4,
-														display: "inline-flex",
-														alignItems: "center",
-														gap: 4,
-														padding: "3px 8px",
-														borderRadius: 999,
-														background: isDefault ? RDS_COLORS.accent : "transparent",
-														color: isDefault ? RDS_COLORS.accentFg : RDS_COLORS.accent,
-														border: isDefault ? "none" : `1px solid ${RDS_COLORS.accent}`,
-														fontSize: 10.5,
-														fontWeight: 600,
-														letterSpacing: 0.2,
-														cursor: isDefault ? "default" : "pointer",
-														textTransform: "uppercase",
+														width: "100%",
+														position: "relative",
+														padding: on ? "16px 14px 42px" : "16px 14px 14px",
+														borderRadius: 12,
+														background: on ? RDS_COLORS.accentSoft : RDS_COLORS.bgInput,
+														border: on ? `2px solid ${RDS_COLORS.accent}` : `1px solid ${RDS_COLORS.border}`,
+														color: on ? RDS_COLORS.accent : RDS_COLORS.fg,
+														display: "flex",
+														flexDirection: "column",
+														gap: 8,
+														alignItems: "flex-start",
+														cursor: "pointer",
+														transition: "background 120ms, border-color 120ms, color 120ms, padding 120ms",
+														textAlign: "left",
+														fontFamily: "inherit",
 													}}
 												>
-													<I.check size={10} />
-													{isDefault ? "Default" : "Set default"}
+													<span
+														style={{
+															position: "absolute",
+															top: 10,
+															right: 10,
+															width: 18,
+															height: 18,
+															borderRadius: 999,
+															display: "inline-flex",
+															alignItems: "center",
+															justifyContent: "center",
+															background: on ? RDS_COLORS.accent : "transparent",
+															color: on ? RDS_COLORS.accentFg : "transparent",
+															border: on ? "none" : `1.5px solid ${RDS_COLORS.border}`,
+															transition: "background 120ms, color 120ms",
+														}}
+													>
+														{on && <I.check size={11} />}
+													</span>
+													<Icon size={22} />
+													<div style={{ fontSize: 14, fontWeight: 600 }}>{a.label}</div>
+													<div
+														style={{
+															fontSize: 11.5,
+															color: on ? RDS_COLORS.accent : RDS_COLORS.fgSubtle,
+														}}
+													>
+														{a.sub}
+													</div>
 												</button>
-											)}
-										</div>
-									);
-								})}
-							</div>
-							<ChangeLaterHint>
-								You can add more sports or change your default any time from Settings.
-							</ChangeLaterHint>
-						</>
-					)}
 
-					{step === 1 && (
-						<>
-							<div style={{ display: "flex", gap: 10 }}>
-								{[
-									{ key: "km" as const, label: "Metric", sub: "km · m · km/h" },
-									{ key: "mi" as const, label: "Imperial", sub: "mi · ft · mph" },
-								].map((u) => {
-									const on = units === u.key;
-									return (
-										<button
-											key={u.key}
-											type="button"
-											aria-pressed={on}
-											onClick={() => setUnits(u.key)}
-											style={{
-												flex: 1,
-												padding: 20,
-												borderRadius: 12,
-												background: on ? RDS_COLORS.accentSoft : RDS_COLORS.bgInput,
-												border: on ? `2px solid ${RDS_COLORS.accent}` : `1px solid ${RDS_COLORS.border}`,
-												color: on ? RDS_COLORS.accent : RDS_COLORS.fg,
-												display: "flex",
-												flexDirection: "column",
-												alignItems: "flex-start",
-												gap: 6,
-												cursor: "pointer",
-												transition: "background 120ms, border-color 120ms, color 120ms",
-												textAlign: "left",
-											}}
-										>
-											<div style={{ fontSize: 15, fontWeight: 600 }}>{u.label}</div>
-											<div style={{ fontSize: 12, color: on ? RDS_COLORS.accent : RDS_COLORS.fgSubtle }}>{u.sub}</div>
-										</button>
-									);
-								})}
-							</div>
-							<ChangeLaterHint>Switch units any time from Settings.</ChangeLaterHint>
-						</>
-					)}
+												{on && (
+													<button
+														type="button"
+														onClick={() => handleSetDefault(a.key)}
+														aria-pressed={isDefault}
+														style={{
+															position: "absolute",
+															left: 14,
+															bottom: 12,
+															display: "inline-flex",
+															alignItems: "center",
+															gap: 4,
+															padding: "3px 8px",
+															borderRadius: 999,
+															background: isDefault ? RDS_COLORS.accent : RDS_COLORS.bgPanel,
+															color: isDefault ? RDS_COLORS.accentFg : RDS_COLORS.accent,
+															border: isDefault ? "none" : `1px solid ${RDS_COLORS.accent}`,
+															fontSize: 10.5,
+															fontWeight: 600,
+															letterSpacing: 0.2,
+															cursor: isDefault ? "default" : "pointer",
+															textTransform: "uppercase",
+															fontFamily: "inherit",
+														}}
+													>
+														<I.check size={10} />
+														{isDefault ? "Default" : "Set default"}
+													</button>
+												)}
+											</div>
+										);
+									})}
+								</div>
+								<ChangeLaterHint>
+									You can add more sports or change your default any time from Settings.
+								</ChangeLaterHint>
+							</>
+						)}
 
-					{step === 2 && (
-						<>
-							<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-								{speedSports.map((sport) => {
-									const cfg = SPORTS.find((s) => s.key === sport);
-									if (!cfg) return null;
-									const Icon = cfg.icon;
-									const kmh = sportSpeeds[sport] ?? DEFAULT_SPORT_SPEEDS_KMH[sport];
-									const display = toDisplay(kmh, units);
-									return (
-										<div
-											key={sport}
-											style={{
-												display: "flex",
-												alignItems: "center",
-												gap: 14,
-												padding: "12px 14px",
-												background: RDS_COLORS.bgInput,
-												border: `1px solid ${RDS_COLORS.border}`,
-												borderRadius: 12,
-											}}
-										>
-											<div
+						{step === 1 && (
+							<>
+								<div style={{ display: "flex", gap: 10 }}>
+									{[
+										{ key: "km" as const, label: "Metric", sub: "km · m · km/h" },
+										{ key: "mi" as const, label: "Imperial", sub: "mi · ft · mph" },
+									].map((u) => {
+										const on = units === u.key;
+										return (
+											<button
+												key={u.key}
+												type="button"
+												aria-pressed={on}
+												onClick={() => setUnits(u.key)}
 												style={{
-													width: 34,
-													height: 34,
-													borderRadius: 10,
-													background: RDS_COLORS.accentSoft,
-													color: RDS_COLORS.accent,
-													display: "inline-flex",
-													alignItems: "center",
-													justifyContent: "center",
-													flexShrink: 0,
+													flex: 1,
+													padding: 20,
+													borderRadius: 12,
+													background: on ? RDS_COLORS.accentSoft : RDS_COLORS.bgInput,
+													border: on ? `2px solid ${RDS_COLORS.accent}` : `1px solid ${RDS_COLORS.border}`,
+													color: on ? RDS_COLORS.accent : RDS_COLORS.fg,
+													display: "flex",
+													flexDirection: "column",
+													alignItems: "flex-start",
+													gap: 6,
+													cursor: "pointer",
+													transition: "background 120ms, border-color 120ms, color 120ms",
+													textAlign: "left",
 												}}
 											>
-												<Icon size={18} />
-											</div>
-											<div style={{ flex: 1, minWidth: 0 }}>
-												<div style={{ fontSize: 13, fontWeight: 600, color: RDS_COLORS.fg }}>{cfg.label}</div>
-												<div style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle }}>Average pace</div>
-											</div>
-											<input
-												type="number"
-												min={1}
-												max={100}
-												step={units === "mi" ? 0.5 : 1}
-												value={Number.isFinite(display) ? Math.round(display * 10) / 10 : ""}
-												onChange={(e) => {
-													const n = Number.parseFloat(e.target.value);
-													if (Number.isFinite(n) && n > 0) {
-														setSportSpeed(sport, fromDisplay(n, units));
-													}
-												}}
-												style={{
-													width: 72,
-													height: 34,
-													padding: "0 10px",
-													borderRadius: 8,
-													background: RDS_COLORS.bgPanel,
-													border: `1px solid ${RDS_COLORS.border}`,
-													color: RDS_COLORS.fg,
-													fontSize: 13,
-													textAlign: "right",
-												}}
-											/>
-											<span style={{ fontSize: 12, color: RDS_COLORS.fgMuted, width: 36 }}>{unitLabel}</span>
-										</div>
-									);
-								})}
-							</div>
-							<ChangeLaterHint>Tweak speeds whenever — Settings → Sports.</ChangeLaterHint>
-						</>
-					)}
+												<div style={{ fontSize: 15, fontWeight: 600 }}>{u.label}</div>
+												<div style={{ fontSize: 12, color: on ? RDS_COLORS.accent : RDS_COLORS.fgSubtle }}>{u.sub}</div>
+											</button>
+										);
+									})}
+								</div>
+								<ChangeLaterHint>Switch units any time from Settings.</ChangeLaterHint>
+							</>
+						)}
 
-					{step === 3 && (
-						<>
-							<div style={{ display: "flex", gap: 10 }}>
-								{STYLE_PREVIEWS.map((m) => {
-									const on = mapStyle === m.key;
-									const previewUrl = stylePreviewUrls?.[m.key];
-									return (
-										<button
-											key={m.key}
-											type="button"
-											onClick={() => setMapStyle(m.key)}
-											style={{
-												flex: 1,
-												padding: 0,
-												borderRadius: 12,
-												overflow: "hidden",
-												border: on ? `2px solid ${RDS_COLORS.accent}` : `1px solid ${RDS_COLORS.border}`,
-												background: m.fallbackBg,
-												backgroundImage: previewUrl ? `url("${previewUrl}")` : undefined,
-												backgroundSize: "cover",
-												backgroundPosition: "center",
-												height: 150,
-												position: "relative",
-												display: "flex",
-												alignItems: "flex-end",
-												cursor: "pointer",
-											}}
-										>
+						{step === 2 && (
+							<>
+								<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+									{speedSports.map((sport) => {
+										const cfg = SPORTS.find((s) => s.key === sport);
+										if (!cfg) return null;
+										const Icon = cfg.icon;
+										const kmh = sportSpeeds[sport] ?? DEFAULT_SPORT_SPEEDS_KMH[sport];
+										const display = toDisplay(kmh, units);
+										return (
 											<div
+												key={sport}
 												style={{
-													width: "100%",
-													padding: "10px 12px",
-													background: `color-mix(in oklch, ${RDS_COLORS.bgPanel} 92%, transparent)`,
-													textAlign: "left",
+													display: "flex",
+													alignItems: "center",
+													gap: 14,
+													padding: "12px 14px",
+													background: RDS_COLORS.bgInput,
+													border: `1px solid ${RDS_COLORS.border}`,
+													borderRadius: 12,
 												}}
 											>
 												<div
 													style={{
-														fontSize: 13,
-														fontWeight: 600,
-														color: RDS_COLORS.fg,
-														marginBottom: 2,
+														width: 34,
+														height: 34,
+														borderRadius: 10,
+														background: RDS_COLORS.accentSoft,
+														color: RDS_COLORS.accent,
+														display: "inline-flex",
+														alignItems: "center",
+														justifyContent: "center",
+														flexShrink: 0,
 													}}
 												>
-													{m.label}
+													<Icon size={18} />
 												</div>
-												<div style={{ fontSize: 11, color: RDS_COLORS.fgSubtle, lineHeight: 1.35 }}>{m.sub}</div>
+												<div style={{ flex: 1, minWidth: 0 }}>
+													<div style={{ fontSize: 13, fontWeight: 600, color: RDS_COLORS.fg }}>{cfg.label}</div>
+													<div style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle }}>Average pace</div>
+												</div>
+												<input
+													type="number"
+													min={1}
+													max={100}
+													step={units === "mi" ? 0.5 : 1}
+													value={Number.isFinite(display) ? Math.round(display * 10) / 10 : ""}
+													onChange={(e) => {
+														const n = Number.parseFloat(e.target.value);
+														if (Number.isFinite(n) && n > 0) {
+															setSportSpeed(sport, fromDisplay(n, units));
+														}
+													}}
+													style={{
+														width: 72,
+														height: 34,
+														padding: "0 10px",
+														borderRadius: 8,
+														background: RDS_COLORS.bgPanel,
+														border: `1px solid ${RDS_COLORS.border}`,
+														color: RDS_COLORS.fg,
+														fontSize: 13,
+														textAlign: "right",
+													}}
+												/>
+												<span style={{ fontSize: 12, color: RDS_COLORS.fgMuted, width: 36 }}>{unitLabel}</span>
 											</div>
-										</button>
-									);
-								})}
-							</div>
-							<ChangeLaterHint>Flip styles from the layers menu on the map any time.</ChangeLaterHint>
-						</>
-					)}
-
-					{step === 4 && (
-						<>
-							<LocationStep
-								permission={locationPermission}
-								requesting={requestingLocation}
-								onAllow={requestLocation}
-								onSkip={skipLocation}
-							/>
-							<ChangeLaterHint>You can grant or revoke location any time in Settings → Privacy.</ChangeLaterHint>
-						</>
-					)}
-				</div>
-
-				<div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 24 }}>
-					<Btn variant="ghost" onClick={finish} style={{ color: RDS_COLORS.fgMuted }}>
-						Skip
-					</Btn>
-					<div style={{ flex: 1 }} />
-					{step > 0 && <Btn onClick={() => setStep(step - 1)}>Back</Btn>}
-					<Btn variant="primary" onClick={next} disabled={!canContinue}>
-						{step === STEPS.length - 1 ? (
-							<>
-								Get started <I.chevronR size={12} />
-							</>
-						) : (
-							<>
-								Continue <I.chevronR size={12} />
+										);
+									})}
+								</div>
+								<ChangeLaterHint>Tweak speeds whenever — Settings → Sports.</ChangeLaterHint>
 							</>
 						)}
-					</Btn>
+
+						{step === 3 && (
+							<>
+								<div style={{ display: "flex", gap: 10 }}>
+									{STYLE_PREVIEWS.map((m) => {
+										const on = mapStyle === m.key;
+										const previewUrl = stylePreviewUrls?.[m.key];
+										return (
+											<button
+												key={m.key}
+												type="button"
+												onClick={() => setMapStyle(m.key)}
+												style={{
+													flex: 1,
+													padding: 0,
+													borderRadius: 12,
+													overflow: "hidden",
+													border: on ? `2px solid ${RDS_COLORS.accent}` : `1px solid ${RDS_COLORS.border}`,
+													background: m.fallbackBg,
+													backgroundImage: previewUrl ? `url("${previewUrl}")` : undefined,
+													backgroundSize: "cover",
+													backgroundPosition: "center",
+													height: 150,
+													position: "relative",
+													display: "flex",
+													alignItems: "flex-end",
+													cursor: "pointer",
+												}}
+											>
+												<div
+													style={{
+														width: "100%",
+														padding: "10px 12px",
+														background: `color-mix(in oklch, ${RDS_COLORS.bgPanel} 92%, transparent)`,
+														textAlign: "left",
+													}}
+												>
+													<div
+														style={{
+															fontSize: 13,
+															fontWeight: 600,
+															color: RDS_COLORS.fg,
+															marginBottom: 2,
+														}}
+													>
+														{m.label}
+													</div>
+													<div style={{ fontSize: 11, color: RDS_COLORS.fgSubtle, lineHeight: 1.35 }}>{m.sub}</div>
+												</div>
+											</button>
+										);
+									})}
+								</div>
+								<ChangeLaterHint>Flip styles from the layers menu on the map any time.</ChangeLaterHint>
+							</>
+						)}
+
+						{step === 4 && (
+							<>
+								<LocationStep
+									permission={locationPermission}
+									requesting={requestingLocation}
+									onAllow={requestLocation}
+									onSkip={skipLocation}
+								/>
+								<ChangeLaterHint>You can grant or revoke location any time in Settings → Privacy.</ChangeLaterHint>
+							</>
+						)}
+					</div>
+
+					<div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 24 }}>
+						<Btn variant="ghost" onClick={finish} style={{ color: RDS_COLORS.fgMuted }}>
+							Skip
+						</Btn>
+						<div style={{ flex: 1 }} />
+						{step > 0 && <Btn onClick={() => setStep(step - 1)}>Back</Btn>}
+						<Btn variant="primary" onClick={next} disabled={!canContinue}>
+							{step === STEPS.length - 1 ? (
+								<>
+									Get started <I.chevronR size={12} />
+								</>
+							) : (
+								<>
+									Continue <I.chevronR size={12} />
+								</>
+							)}
+						</Btn>
+					</div>
 				</div>
-			</div>
 			</div>
 		</AuthBackdrop>
 	);
@@ -778,11 +777,7 @@ function WelcomeHero({ step, totalSteps, steps }: { step: number; totalSteps: nu
 									width: 22,
 									height: 22,
 									borderRadius: 999,
-									background: done
-										? "white"
-										: active
-											? "oklch(1 0 0 / 0.22)"
-											: "oklch(1 0 0 / 0.08)",
+									background: done ? "white" : active ? "oklch(1 0 0 / 0.22)" : "oklch(1 0 0 / 0.08)",
 									border: active ? "1px solid oklch(1 0 0 / 0.5)" : "1px solid oklch(1 0 0 / 0.18)",
 									color: done ? RDS_COLORS.accent : "white",
 									display: "inline-flex",
@@ -827,15 +822,7 @@ function WelcomeHero({ step, totalSteps, steps }: { step: number; totalSteps: nu
 	);
 }
 
-function WelcomeHeroStacked({
-	step,
-	totalSteps,
-	stepDef,
-}: {
-	step: number;
-	totalSteps: number;
-	stepDef: StepDef;
-}) {
+function WelcomeHeroStacked({ step, totalSteps, stepDef }: { step: number; totalSteps: number; stepDef: StepDef }) {
 	const progress = (step / Math.max(totalSteps - 1, 1)) * 100;
 	return (
 		<div
@@ -882,7 +869,16 @@ function WelcomeHeroStacked({
 				</span>
 			</div>
 
-			<div style={{ position: "relative", fontSize: 19, fontWeight: 600, letterSpacing: -0.3, lineHeight: 1.2, marginBottom: 4 }}>
+			<div
+				style={{
+					position: "relative",
+					fontSize: 19,
+					fontWeight: 600,
+					letterSpacing: -0.3,
+					lineHeight: 1.2,
+					marginBottom: 4,
+				}}
+			>
 				{stepDef.title}
 			</div>
 			<div style={{ position: "relative", fontSize: 12.5, opacity: 0.85, lineHeight: 1.45 }}>

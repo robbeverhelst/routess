@@ -155,11 +155,7 @@ export function SettingsPanel() {
 	const setAutoSnap = useRoutingPreferencesStore((s) => s.setSnap);
 
 	const defaultSport: RedesignActivity | null =
-		selectedSports.length === 0
-			? null
-			: selectedSports.includes(activityType)
-				? activityType
-				: selectedSports[0];
+		selectedSports.length === 0 ? null : selectedSports.includes(activityType) ? activityType : selectedSports[0];
 
 	const handleToggleSport = (sport: RedesignActivity) => {
 		const wasOnly = selectedSports.length === 1 && selectedSports[0] === sport;
