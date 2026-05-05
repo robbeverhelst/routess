@@ -1,7 +1,7 @@
 import { EntityManager, EntityRepository } from "@mikro-orm/core";
 import { InjectRepository } from "@mikro-orm/nestjs";
 import { Inject, Injectable, Logger, UnauthorizedException } from "@nestjs/common";
-import { OAuth2Client } from "google-auth-library";
+import { OAuth2Client, type TokenPayload } from "google-auth-library";
 import { type AppConfig } from "../config/app-config";
 import { APP_CONFIG } from "../config/config.module";
 import { User } from "../entities/user.entity";
@@ -34,66 +34,65 @@ export class AuthService {
 			ipAddress?: string;
 		},
 	): Promise<AuthResponseDto> {
+		let payload: TokenPayload | undefined;
 		try {
 			const ticket = await this.googleClient.verifyIdToken({
 				idToken: googleAuthDto.credential,
 				audience: this.config.auth.googleClientId,
 			});
-
-			const payload = ticket.getPayload();
-			if (!payload) {
-				throw new UnauthorizedException("Invalid Google token");
-			}
-
-			const { sub: googleId, email, name, picture } = payload;
-
-			if (!email) {
-				throw new UnauthorizedException("Email not provided by Google");
-			}
-
-			let user = await this.userRepository.findOne({
-				$or: [{ googleId }, { email }],
-				deletedAt: null,
-			});
-
-			if (!user) {
-				user = this.userRepository.create({
-					email,
-					name: name || email,
-					googleId,
-					avatar: picture,
-					isEmailVerified: true,
-				});
-				await this.entityManager.persistAndFlush(user);
-
-				// Record new user registration metric
-				this.metricsService.recordUserRegistration("google");
-			} else {
-				if (!user.googleId) {
-					user.googleId = googleId;
-					user.avatar = picture;
-					user.isEmailVerified = true;
-					await this.entityManager.persistAndFlush(user);
-				}
-			}
-
-			// Create session and get JWT with session tracking
-			const accessToken = await this.sessionService.createSession(user.id, {
-				userAgent:
-					typeof sessionContext?.userAgent === "string"
-						? sessionContext.userAgent
-						: sessionContext?.userAgent?.join(", "),
-				ipAddress: sessionContext?.ipAddress,
-			});
-
-			return {
-				accessToken,
-				user: toUserResponseDto(user),
-			};
+			payload = ticket.getPayload();
 		} catch (error) {
-			this.logger.warn(`Google authentication failed: ${error instanceof Error ? error.message : String(error)}`);
+			this.logger.warn(`Google token verification failed: ${error instanceof Error ? error.message : String(error)}`);
 			throw new UnauthorizedException("Failed to authenticate with Google");
 		}
+
+		if (!payload) {
+			throw new UnauthorizedException("Invalid Google token");
+		}
+
+		const { sub: googleId, email, name, picture } = payload;
+
+		if (!email) {
+			throw new UnauthorizedException("Email not provided by Google");
+		}
+
+		let user = await this.userRepository.findOne({
+			$or: [{ googleId }, { email }],
+			deletedAt: null,
+		});
+
+		if (!user) {
+			user = this.userRepository.create({
+				email,
+				name: name || email,
+				googleId,
+				avatar: picture,
+				isEmailVerified: true,
+			});
+			await this.entityManager.persistAndFlush(user);
+
+			// Record new user registration metric
+			this.metricsService.recordUserRegistration("google");
+		} else if (!user.googleId) {
+			user.googleId = googleId;
+			user.avatar = picture;
+			user.isEmailVerified = true;
+			await this.entityManager.persistAndFlush(user);
+		}
+
+		// Create session and get JWT with session tracking
+		const accessToken = await this.sessionService.createSession(user.id, {
+			userAgent:
+				typeof sessionContext?.userAgent === "string"
+					? sessionContext.userAgent
+					: sessionContext?.userAgent?.join(", "),
+			ipAddress: sessionContext?.ipAddress,
+		});
+
+		return {
+			accessToken,
+			user: toUserResponseDto(user),
+		};
 	}
 
 	async validateUserById(userId: number): Promise<User | null> {
