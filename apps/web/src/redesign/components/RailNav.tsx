@@ -50,7 +50,7 @@ export function RailNav() {
 			{NAV.map((n) => {
 				const on = context === n.key;
 				const Icon = n.icon;
-				const accent = on && !panelCollapsed;
+				const open = on && !panelCollapsed;
 				return (
 					<button
 						key={n.key}
@@ -70,29 +70,33 @@ export function RailNav() {
 							width: 36,
 							height: 36,
 							borderRadius: 8,
-							background: on ? RDS_COLORS.bgActive : "transparent",
-							color: on ? RDS_COLORS.fg : RDS_COLORS.fgMuted,
+							background: open ? RDS_COLORS.accentSoft : on ? RDS_COLORS.bgActive : "transparent",
+							color: open ? RDS_COLORS.accent : on ? RDS_COLORS.fg : RDS_COLORS.fgMuted,
 							border: 0,
 							position: "relative",
 							display: "flex",
 							alignItems: "center",
 							justifyContent: "center",
 							cursor: "pointer",
+							transition: "background var(--rds-panel-anim), color var(--rds-panel-anim)",
 						}}
 					>
-						{accent && (
-							<div
-								style={{
-									position: "absolute",
-									left: -10,
-									top: 8,
-									bottom: 8,
-									width: 2.5,
-									borderRadius: 999,
-									background: RDS_COLORS.accent,
-								}}
-							/>
-						)}
+						<div
+							style={{
+								position: "absolute",
+								left: -10,
+								top: 8,
+								bottom: 8,
+								width: 2.5,
+								borderRadius: 999,
+								background: RDS_COLORS.accent,
+								opacity: open ? 1 : 0,
+								transform: open ? "scaleY(1)" : "scaleY(0.4)",
+								transformOrigin: "center",
+								transition: "opacity var(--rds-panel-anim), transform var(--rds-panel-anim)",
+								pointerEvents: "none",
+							}}
+						/>
 						<Icon size={18} />
 					</button>
 				);

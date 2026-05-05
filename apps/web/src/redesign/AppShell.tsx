@@ -561,74 +561,49 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 	return sharedRoot(
 		<div style={{ position: "absolute", inset: 0 }}>
 			<RailNav />
-			<aside
-				style={{
-					position: "absolute",
-					top: 0,
-					bottom: 0,
-					left: "var(--rds-rail-w)",
-					width: panelCollapsed ? 0 : "var(--rds-panel-w)",
-					background: RDS_COLORS.bgPanel,
-					borderRight: panelCollapsed ? "none" : `1px solid ${RDS_COLORS.border}`,
-					display: "flex",
-					flexDirection: "column",
-					overflow: "hidden",
-					zIndex: 4,
-					transition: "width 200ms ease, border-color 200ms ease",
-				}}
-			>
-				{PanelHeader}
-				<div style={{ flex: 1, minHeight: 0, overflow: "hidden", width: "var(--rds-panel-w)" }}>
-					{renderPanelContent()}
-				</div>
-			</aside>
 			<main
 				style={{
 					position: "absolute",
 					top: 0,
 					right: 0,
 					bottom: 0,
-					left: panelCollapsed ? "var(--rds-rail-w)" : "calc(var(--rds-rail-w) + var(--rds-panel-w))",
+					left: "var(--rds-rail-w)",
 					overflow: "hidden",
 					background: RDS_COLORS.bgCanvas,
-					transition: "left 200ms ease",
+					zIndex: 1,
 				}}
 			>
 				{MapNode}
 				{Toolbar}
 				{Chip}
-				{panelCollapsed && (
-					<button
-						type="button"
-						onClick={togglePanel}
-						title="Expand panel"
-						style={{
-							position: "absolute",
-							left: 0,
-							top: "50%",
-							transform: "translateY(-50%)",
-							width: 18,
-							height: 64,
-							borderRadius: "0 8px 8px 0",
-							background: RDS_COLORS.bgPanel,
-							border: `1px solid ${RDS_COLORS.border}`,
-							borderLeft: 0,
-							color: RDS_COLORS.fgMuted,
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "center",
-							cursor: "pointer",
-							boxShadow: "var(--rds-shadow-sm)",
-							zIndex: 6,
-						}}
-					>
-						<I.chevronR size={14} />
-					</button>
-				)}
 				{renderOverlay()}
 				{renderModal()}
 				{Offline}
 			</main>
+			<aside
+				aria-hidden={panelCollapsed}
+				style={{
+					position: "absolute",
+					top: 0,
+					bottom: 0,
+					left: "var(--rds-rail-w)",
+					width: "var(--rds-panel-w)",
+					background: RDS_COLORS.bgPanel,
+					borderRight: `1px solid ${RDS_COLORS.border}`,
+					display: "flex",
+					flexDirection: "column",
+					overflow: "hidden",
+					zIndex: 3,
+					transform: panelCollapsed ? "translateX(-100%)" : "translateX(0)",
+					boxShadow: panelCollapsed ? "none" : "var(--rds-shadow-md)",
+					transition: "transform var(--rds-panel-anim), box-shadow var(--rds-panel-anim)",
+					willChange: "transform",
+					pointerEvents: panelCollapsed ? "none" : "auto",
+				}}
+			>
+				{PanelHeader}
+				<div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>{renderPanelContent()}</div>
+			</aside>
 		</div>,
 	);
 }
