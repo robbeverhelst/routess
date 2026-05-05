@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-export type RedesignContext = "plan" | "library" | "discover" | "social";
+export type RedesignContext = "plan" | "library" | "discover" | "social" | "settings";
 export type RedesignAccent = "violet" | "cobalt" | "forest" | "ember";
 export type RedesignTheme = "light" | "dark";
 export type RedesignActivity = "run" | "cycle" | "walk";
@@ -66,9 +66,6 @@ export const useUiStore = create<UiState>()(
 				}
 				if (state.context === "explore") {
 					state.context = "discover";
-				}
-				if (state.context === "settings") {
-					state.context = "plan";
 				}
 				return state as UiState;
 			},

@@ -15,6 +15,7 @@ const NAV: NavItem[] = [
 	{ key: "library", icon: I.library, label: "Library" },
 	{ key: "discover", icon: I.explore, label: "Discover" },
 	{ key: "social", icon: I.social, label: "Social" },
+	{ key: "settings", icon: I.settings, label: "Settings" },
 ];
 
 export function BottomTabBar() {

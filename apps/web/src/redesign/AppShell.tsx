@@ -40,6 +40,7 @@ import { ToastStack } from "./overlays/ToastStack";
 import { DiscoverPanel } from "./panels/DiscoverPanel";
 import { LibraryPanel } from "./panels/LibraryPanel";
 import { PlanPanel } from "./panels/PlanPanel";
+import { SettingsPanel } from "./panels/SettingsPanel";
 import { SocialPanel } from "./panels/SocialPanel";
 import { AccountScreen } from "./screens/AccountScreen";
 import { CalendarScreen } from "./screens/CalendarScreen";
@@ -63,6 +64,7 @@ const SCREEN_TITLES: Record<RedesignContext, string> = {
 	library: "Library",
 	discover: "Discover",
 	social: "Social",
+	settings: "Settings",
 };
 
 interface AppShellProps {
@@ -436,6 +438,8 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 				return <DiscoverPanel />;
 			case "social":
 				return <SocialPanel />;
+			case "settings":
+				return <SettingsPanel />;
 		}
 	};
 
