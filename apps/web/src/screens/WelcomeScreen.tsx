@@ -2,7 +2,14 @@ import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { loadLastMapViewFromLocalStorage } from "@/features/routing/services/LocalStorageService";
 import { type SupportedLanguage, t } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
-import { type LocationPermission, useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
+import {
+	DEFAULT_SPORT_SPEEDS_KMH,
+	type LocationPermission,
+	type RedesignUnits,
+	SPORT_SPEED_MAX_KMH,
+	SPORT_SPEED_MIN_KMH,
+	useRedesignSettingsStore,
+} from "@/stores/redesignSettingsStore";
 import { useToastStore } from "@/stores/toastStore";
 import { type RedesignActivity, useUiStore } from "@/stores/uiStore";
 import { AUTH_CARD_STYLE, AuthBackdrop, AuthCardAccentBar } from "../components/auth-shared";
@@ -59,6 +66,11 @@ const STEPS: StepDef[] = [
 		whyKey: "welcome.steps.units.help",
 	},
 	{
+		titleKey: "welcome.steps.pace.title",
+		subKey: "welcome.steps.pace.subtitle",
+		whyKey: "welcome.steps.pace.help",
+	},
+	{
 		titleKey: "welcome.steps.style.title",
 		subKey: "welcome.steps.style.subtitle",
 		whyKey: "welcome.steps.style.help",
@@ -69,6 +81,21 @@ const STEPS: StepDef[] = [
 		whyKey: "welcome.steps.location.help",
 	},
 ];
+
+const KMH_TO_MPH = 0.621371;
+
+function toDisplaySpeed(kmh: number, units: RedesignUnits): number {
+	return units === "mi" ? kmh * KMH_TO_MPH : kmh;
+}
+
+function fromDisplaySpeed(value: number, units: RedesignUnits): number {
+	return units === "mi" ? value / KMH_TO_MPH : value;
+}
+
+function formatDisplaySpeed(kmh: number, units: RedesignUnits): string {
+	const display = toDisplaySpeed(kmh, units);
+	return Number.isFinite(display) ? String(Math.round(display * 10) / 10) : "";
+}
 
 const SPORTS: {
 	key: RedesignActivity;
@@ -104,6 +131,74 @@ function ChangeLaterHint({ children }: { children: ReactNode }) {
 	);
 }
 
+function WelcomeSpeedInput({
+	kmh,
+	units,
+	onChange,
+}: {
+	kmh: number;
+	units: RedesignUnits;
+	onChange: (kmh: number) => void;
+}) {
+	const [draft, setDraft] = useState(() => formatDisplaySpeed(kmh, units));
+	const [isEditing, setIsEditing] = useState(false);
+
+	useEffect(() => {
+		if (!isEditing) {
+			setDraft(formatDisplaySpeed(kmh, units));
+		}
+	}, [isEditing, kmh, units]);
+
+	const commitDraft = () => {
+		const n = Number.parseFloat(draft);
+		if (Number.isFinite(n) && n > 0) {
+			onChange(fromDisplaySpeed(n, units));
+			return;
+		}
+		setDraft(formatDisplaySpeed(kmh, units));
+	};
+
+	return (
+		<input
+			type="number"
+			inputMode="decimal"
+			min={units === "mi" ? Math.round(SPORT_SPEED_MIN_KMH * KMH_TO_MPH * 10) / 10 : SPORT_SPEED_MIN_KMH}
+			max={units === "mi" ? Math.round(SPORT_SPEED_MAX_KMH * KMH_TO_MPH) : SPORT_SPEED_MAX_KMH}
+			step={units === "mi" ? 0.5 : 1}
+			value={draft}
+			onChange={(e) => {
+				setDraft(e.target.value);
+			}}
+			onFocus={() => setIsEditing(true)}
+			onBlur={() => {
+				setIsEditing(false);
+				commitDraft();
+			}}
+			onKeyDown={(e) => {
+				if (e.key === "Enter") {
+					e.currentTarget.blur();
+				}
+				if (e.key === "Escape") {
+					setDraft(formatDisplaySpeed(kmh, units));
+					e.currentTarget.blur();
+				}
+			}}
+			style={{
+				width: 78,
+				height: 36,
+				padding: "0 10px",
+				borderRadius: 8,
+				background: RDS_COLORS.bgPanel,
+				border: `1px solid ${RDS_COLORS.border}`,
+				color: RDS_COLORS.fg,
+				fontSize: 13.5,
+				textAlign: "right",
+				fontVariantNumeric: "tabular-nums",
+			}}
+		/>
+	);
+}
+
 export function WelcomeScreen({ onComplete }: { onComplete?: () => void }) {
 	const [step, setStep] = useState(0);
 	const [requestingLocation, setRequestingLocation] = useState(false);
@@ -116,6 +211,8 @@ export function WelcomeScreen({ onComplete }: { onComplete?: () => void }) {
 	const selectedSports = useRedesignSettingsStore((s) => s.selectedSports);
 	const toggleSport = useRedesignSettingsStore((s) => s.toggleSport);
 	const setDefaultActivity = useRedesignSettingsStore((s) => s.setDefaultActivity);
+	const sportSpeeds = useRedesignSettingsStore((s) => s.sportSpeeds);
+	const setSportSpeed = useRedesignSettingsStore((s) => s.setSportSpeed);
 	const units = useRedesignSettingsStore((s) => s.units);
 	const setUnits = useRedesignSettingsStore((s) => s.setUnits);
 	const mapStyle = useRedesignSettingsStore((s) => s.mapStyle);
@@ -478,6 +575,61 @@ export function WelcomeScreen({ onComplete }: { onComplete?: () => void }) {
 
 						{step === 2 && (
 							<>
+								<div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+									{(selectedSports.length > 0 ? selectedSports : SPORTS.map((s) => s.key)).map((sport) => {
+										const cfg = SPORTS.find((s) => s.key === sport);
+										if (!cfg) return null;
+										const Icon = cfg.icon;
+										const kmh = sportSpeeds[sport] ?? DEFAULT_SPORT_SPEEDS_KMH[sport];
+										const unitLabel = units === "mi" ? "mph" : "km/h";
+										return (
+											<div
+												key={sport}
+												style={{
+													display: "flex",
+													alignItems: "center",
+													gap: 14,
+													padding: "14px 16px",
+													background: RDS_COLORS.bgInput,
+													border: `1px solid ${RDS_COLORS.border}`,
+													borderRadius: 12,
+												}}
+											>
+												<div
+													style={{
+														width: 36,
+														height: 36,
+														borderRadius: 10,
+														background: RDS_COLORS.accentSoft,
+														color: RDS_COLORS.accent,
+														display: "inline-flex",
+														alignItems: "center",
+														justifyContent: "center",
+														flexShrink: 0,
+													}}
+												>
+													<Icon size={18} />
+												</div>
+												<div style={{ flex: 1, minWidth: 0 }}>
+													<div style={{ fontSize: 13.5, fontWeight: 600, color: RDS_COLORS.fg }}>
+														{t(cfg.labelKey, language)}
+													</div>
+													<div style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle, marginTop: 2 }}>
+														{t("welcome.pace.average", language)}
+													</div>
+												</div>
+												<WelcomeSpeedInput kmh={kmh} units={units} onChange={(next) => setSportSpeed(sport, next)} />
+												<span style={{ fontSize: 12, color: RDS_COLORS.fgMuted, width: 36 }}>{unitLabel}</span>
+											</div>
+										);
+									})}
+								</div>
+								<ChangeLaterHint>{t("welcome.pace.changeLater", language)}</ChangeLaterHint>
+							</>
+						)}
+
+						{step === 3 && (
+							<>
 								<div style={{ display: "flex", gap: 10 }}>
 									{STYLE_PREVIEWS.map((m) => {
 										const on = mapStyle === m.key;
@@ -534,7 +686,7 @@ export function WelcomeScreen({ onComplete }: { onComplete?: () => void }) {
 							</>
 						)}
 
-						{step === 3 && (
+						{step === 4 && (
 							<>
 								<LocationStep
 									permission={locationPermission}

@@ -4,7 +4,7 @@ import type { Map as MapboxMap } from "mapbox-gl";
 import type { Dispatch, SetStateAction } from "react";
 import { Logger } from "@/lib/logger";
 import { formatDistance } from "@/lib/units";
-import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
+import { activityLabelToKey, getSpeedForActivity, useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 import { getRoutingPreferences } from "@/stores/routingPreferencesStore";
 import { useRoutingStore } from "@/stores/routingStore";
 import { getDefaultElevationService } from "./elevation";
@@ -52,7 +52,8 @@ const computeElevationInBackground = (routePath: Coordinate[], waypoints: Waypoi
 
 function buildComputeOptions(): ComputeRouteOptions {
 	const prefs = getRoutingPreferences();
-	const defaultActivity = useRedesignSettingsStore.getState().defaultActivity;
+	const settings = useRedesignSettingsStore.getState();
+	const defaultActivity = settings.defaultActivity;
 	const profile = resolveMapboxProfile(defaultActivity, prefs.profile);
 	const directions: DirectionsOptions = {
 		profile,
@@ -65,7 +66,9 @@ function buildComputeOptions(): ComputeRouteOptions {
 	if (prefs.highways && profile === "mapbox/driving") {
 		directions.exclude = ["motorway"];
 	}
-	return { directions, snap: prefs.snap };
+	const sportKey = activityLabelToKey(defaultActivity) ?? "walk";
+	const speedKmh = getSpeedForActivity(sportKey, settings.sportSpeeds);
+	return { directions, snap: prefs.snap, speedKmh };
 }
 
 const routeInputsMatch = (waypoints: Waypoint[]): boolean => {
