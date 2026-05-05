@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useSurfaceBreakdown } from "@/features/routing/services/useSurfaceBreakdown";
 import { useModalsStore } from "@/redesign/stores/modalsStore";
 import { type RedesignActivity, useUiStore } from "@/redesign/stores/uiStore";
@@ -12,8 +12,9 @@ import {
 	useRouteDistance,
 	useRouteDuration,
 	useRoutePath,
+	useSaveSnapshot,
 	useSetWaypointName,
-	useSetWaypointType,
+	useSetWaypoints,
 	useWaypoints,
 } from "@/stores/routingStore";
 import { EditableLabel } from "../components/EditableLabel";
@@ -44,9 +45,23 @@ export function PlanPanel() {
 	const hasRoute = useHasRoute();
 	const clear = useClearWaypoints();
 	const removeWaypoint = useRemoveWaypoint();
-	const setWaypointType = useSetWaypointType();
+	const setWaypoints = useSetWaypoints();
 	const setWaypointName = useSetWaypointName();
-	const [openMenuIdx, setOpenMenuIdx] = useState<number | null>(null);
+	const saveSnapshot = useSaveSnapshot();
+	const [draggingIdx, setDraggingIdx] = useState<number | null>(null);
+	const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+
+	const handleRemoveWaypoint = (index: number) => {
+		saveSnapshot();
+		removeWaypoint(index);
+		window.dispatchEvent(new CustomEvent("routess:recalculate-route"));
+	};
+
+	const handleReorderWaypoints = (next: typeof waypoints) => {
+		saveSnapshot();
+		setWaypoints(next);
+		window.dispatchEvent(new CustomEvent("routess:recalculate-route"));
+	};
 
 	const { activityType, setActivityType } = useUiStore();
 	const openModal = useModalsStore((s) => s.openModal);
@@ -168,9 +183,9 @@ export function PlanPanel() {
 
 			{/* Stats */}
 			<div style={{ padding: "14px 20px", borderBottom: `1px solid ${RDS_COLORS.border}` }}>
-				<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 4 }}>
+				<div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(72px, 1fr))", gap: 8 }}>
 					{stats.map((s) => (
-						<div key={s.label}>
+						<div key={s.label} style={{ minWidth: 0 }}>
 							<SecTitle>{s.label}</SecTitle>
 							<div
 								className="rds-mono"
@@ -180,6 +195,9 @@ export function PlanPanel() {
 									color: RDS_COLORS.fg,
 									marginTop: 4,
 									lineHeight: 1,
+									overflow: "hidden",
+									textOverflow: "ellipsis",
+									whiteSpace: "nowrap",
 								}}
 							>
 								{s.val}
@@ -215,16 +233,40 @@ export function PlanPanel() {
 							const isEnd = i === waypoints.length - 1;
 							const dot = isStart ? RDS_COLORS.success : isEnd ? RDS_COLORS.danger : RDS_COLORS.accent;
 							const label = isStart ? "Start" : isEnd ? "End" : `Waypoint ${i}`;
+							const isDragging = draggingIdx === i;
+							const isDragTarget = dragOverIdx === i && draggingIdx !== null && draggingIdx !== i;
 							return (
+								// biome-ignore lint/a11y/noStaticElementInteractions: drag-drop row is a non-interactive container; the grip button inside is the keyboard-actionable control
 								<div
 									// biome-ignore lint/suspicious/noArrayIndexKey: waypoints can repeat coords; combine coord with index for stable key
 									key={`${w.coord[0]}-${w.coord[1]}-${i}`}
+									onDragOver={(e) => {
+										if (draggingIdx === null) return;
+										e.preventDefault();
+										if (dragOverIdx !== i) setDragOverIdx(i);
+									}}
+									onDragLeave={() => {
+										if (dragOverIdx === i) setDragOverIdx(null);
+									}}
+									onDrop={(e) => {
+										if (draggingIdx === null || draggingIdx === i) return;
+										e.preventDefault();
+										const next = waypoints.slice();
+										const [moved] = next.splice(draggingIdx, 1);
+										next.splice(i, 0, moved);
+										handleReorderWaypoints(next);
+										setDraggingIdx(null);
+										setDragOverIdx(null);
+									}}
 									style={{
 										display: "flex",
 										alignItems: "center",
 										gap: 12,
 										padding: "8px 10px",
 										borderRadius: 8,
+										opacity: isDragging ? 0.4 : 1,
+										background: isDragTarget ? RDS_COLORS.bgHover : "transparent",
+										transition: "background 100ms",
 									}}
 								>
 									<div
@@ -268,20 +310,30 @@ export function PlanPanel() {
 											{formatCoord(w.coord)}
 										</div>
 									</div>
-									<WaypointMenu
-										open={openMenuIdx === i}
-										onToggle={() => setOpenMenuIdx(openMenuIdx === i ? null : i)}
-										onClose={() => setOpenMenuIdx(null)}
-										isDirect={w.type === "direct"}
-										onRemove={() => {
-											removeWaypoint(i);
-											setOpenMenuIdx(null);
-										}}
-										onToggleDirect={() => {
-											setWaypointType(i, w.type === "direct" ? "routed" : "direct");
-											setOpenMenuIdx(null);
-										}}
-									/>
+									<div style={{ display: "flex", alignItems: "center", gap: 2 }}>
+										<IconBtn
+											title="Drag to reorder"
+											draggable
+											onDragStart={(e) => {
+												e.dataTransfer.effectAllowed = "move";
+												setDraggingIdx(i);
+											}}
+											onDragEnd={() => {
+												setDraggingIdx(null);
+												setDragOverIdx(null);
+											}}
+											style={{ cursor: draggingIdx === i ? "grabbing" : "grab", color: RDS_COLORS.fgSubtle }}
+										>
+											<I.grip size={14} />
+										</IconBtn>
+										<IconBtn
+											title="Remove waypoint"
+											onClick={() => handleRemoveWaypoint(i)}
+											style={{ color: RDS_COLORS.fgSubtle }}
+										>
+											<I.trash size={14} />
+										</IconBtn>
+									</div>
 								</div>
 							);
 						})}
@@ -294,25 +346,37 @@ export function PlanPanel() {
 				style={{
 					display: "flex",
 					alignItems: "center",
-					gap: 8,
-					padding: "12px 20px",
+					gap: 6,
+					padding: "12px 16px",
 					borderTop: `1px solid ${RDS_COLORS.border}`,
 				}}
 			>
-				<Btn variant="primary" style={{ flex: 1 }} disabled={!hasRoute} onClick={() => openModal("save")}>
-					<I.save size={14} /> Save route
+				<Btn
+					variant="primary"
+					style={{ flex: 1, minWidth: 0, padding: "0 10px" }}
+					disabled={!hasRoute}
+					onClick={() => openModal("save")}
+				>
+					<I.save size={14} /> Save
 				</Btn>
-				<Btn title="Share route" disabled={!hasRoute} onClick={() => openModal("share")}>
+				<Btn title="Share route" disabled={!hasRoute} onClick={() => openModal("share")} style={{ padding: "0 10px" }}>
 					<I.share size={14} />
 				</Btn>
 				<Btn
 					title="Import GPX"
 					disabled={routePath.length === 0 && waypoints.length === 0}
 					onClick={() => openModal("import")}
+					style={{ padding: "0 10px" }}
 				>
 					<I.download size={14} />
 				</Btn>
-				<Btn title="Clear" variant="ghost" onClick={clear} disabled={waypoints.length === 0}>
+				<Btn
+					title="Clear"
+					variant="ghost"
+					onClick={clear}
+					disabled={waypoints.length === 0}
+					style={{ padding: "0 10px" }}
+				>
 					<I.trash size={14} />
 				</Btn>
 			</div>
@@ -353,98 +417,4 @@ function EndpointInput({ dotColor, label }: { dotColor: string; label: string })
 
 function formatCoord(c: [number, number]) {
 	return `${c[1].toFixed(4)}, ${c[0].toFixed(4)}`;
-}
-
-interface WaypointMenuProps {
-	open: boolean;
-	onToggle: () => void;
-	onClose: () => void;
-	isDirect: boolean;
-	onRemove: () => void;
-	onToggleDirect: () => void;
-}
-
-function WaypointMenu({ open, onToggle, onClose, isDirect, onRemove, onToggleDirect }: WaypointMenuProps) {
-	const wrapRef = useRef<HTMLDivElement>(null);
-
-	useEffect(() => {
-		if (!open) return;
-		const handleClick = (e: MouseEvent) => {
-			if (!wrapRef.current) return;
-			if (!wrapRef.current.contains(e.target as Node)) onClose();
-		};
-		const handleKey = (e: KeyboardEvent) => {
-			if (e.key === "Escape") onClose();
-		};
-		document.addEventListener("mousedown", handleClick);
-		document.addEventListener("keydown", handleKey);
-		return () => {
-			document.removeEventListener("mousedown", handleClick);
-			document.removeEventListener("keydown", handleKey);
-		};
-	}, [open, onClose]);
-
-	return (
-		<div ref={wrapRef} style={{ position: "relative" }}>
-			<IconBtn title="More options" onClick={onToggle} pressed={open}>
-				<I.more size={14} />
-			</IconBtn>
-			{open && (
-				<div
-					role="menu"
-					style={{
-						position: "absolute",
-						top: "calc(100% + 4px)",
-						right: 0,
-						minWidth: 160,
-						background: RDS_COLORS.bgPanelElev,
-						border: `1px solid ${RDS_COLORS.border}`,
-						borderRadius: 8,
-						boxShadow: "var(--rds-shadow-lg)",
-						zIndex: 30,
-						padding: 4,
-						display: "flex",
-						flexDirection: "column",
-					}}
-				>
-					<MenuItem onClick={onToggleDirect}>{isDirect ? "Make routed" : "Make direct"}</MenuItem>
-					<MenuItem onClick={onRemove} danger>
-						Remove
-					</MenuItem>
-				</div>
-			)}
-		</div>
-	);
-}
-
-function MenuItem({ children, onClick, danger }: { children: React.ReactNode; onClick: () => void; danger?: boolean }) {
-	return (
-		<button
-			type="button"
-			onClick={onClick}
-			role="menuitem"
-			style={{
-				display: "flex",
-				alignItems: "center",
-				gap: 8,
-				height: 30,
-				padding: "0 10px",
-				border: 0,
-				background: "transparent",
-				color: danger ? RDS_COLORS.danger : RDS_COLORS.fg,
-				fontSize: 12.5,
-				textAlign: "left",
-				borderRadius: 6,
-				cursor: "pointer",
-			}}
-			onMouseEnter={(e) => {
-				e.currentTarget.style.background = RDS_COLORS.bgHover;
-			}}
-			onMouseLeave={(e) => {
-				e.currentTarget.style.background = "transparent";
-			}}
-		>
-			{children}
-		</button>
-	);
 }
