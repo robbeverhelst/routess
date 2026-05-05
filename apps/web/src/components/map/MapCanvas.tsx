@@ -26,15 +26,22 @@ const DEFAULT_VIEW_STATE = {
 };
 
 const STANDARD_MAP_STYLE = "mapbox://styles/mapbox/standard";
-const SATELLITE_MAP_STYLE = "mapbox://styles/mapbox/satellite-streets-v12";
-const REDESIGN_MAP_STYLE_URLS = {
-	streets: "mapbox://styles/mapbox/streets-v12",
-	outdoors: "mapbox://styles/mapbox/outdoors-v12",
-	satellite: SATELLITE_MAP_STYLE,
-	terrain: "mapbox://styles/mapbox/outdoors-v12",
-	dark: "mapbox://styles/mapbox/dark-v11",
-	minimal: "mapbox://styles/mapbox/light-v11",
-} as const;
+const STANDARD_SATELLITE_MAP_STYLE = "mapbox://styles/robbeverhelst/cmosm5k7x000c01segxetckb9";
+const OUTDOORS_MAP_STYLE = "mapbox://styles/robbeverhelst/cmosm4baj001j01s65hjz79cw";
+
+type MapStyleVariant = { light: string; dark: string; supportsLightPreset: boolean };
+
+const REDESIGN_MAP_STYLE_VARIANTS: Record<string, MapStyleVariant> = {
+	streets: { light: STANDARD_MAP_STYLE, dark: STANDARD_MAP_STYLE, supportsLightPreset: true },
+	outdoors: { light: OUTDOORS_MAP_STYLE, dark: OUTDOORS_MAP_STYLE, supportsLightPreset: true },
+	satellite: { light: STANDARD_SATELLITE_MAP_STYLE, dark: STANDARD_SATELLITE_MAP_STYLE, supportsLightPreset: true },
+};
+
+const FALLBACK_STYLE_VARIANT: MapStyleVariant = {
+	light: STANDARD_MAP_STYLE,
+	dark: STANDARD_MAP_STYLE,
+	supportsLightPreset: true,
+};
 
 function MapLoadingShell({ isSatellite }: { isSatellite: boolean }) {
 	return (
@@ -225,8 +232,9 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
 
 	const { handleMapError } = useErrorHandler();
 	const isSatelliteStyle = currentMapStyleKey === "satellite";
-	const mapStyleUrl = REDESIGN_MAP_STYLE_URLS[currentMapStyleKey] ?? STANDARD_MAP_STYLE;
-	const supportsBasemapLightPreset = mapStyleUrl === STANDARD_MAP_STYLE;
+	const styleVariant = REDESIGN_MAP_STYLE_VARIANTS[currentMapStyleKey] ?? FALLBACK_STYLE_VARIANT;
+	const mapStyleUrl = mapTheme === "dark" ? styleVariant.dark : styleVariant.light;
+	const supportsBasemapLightPreset = styleVariant.supportsLightPreset;
 	const hasInvalidMapboxToken = isInvalidMapboxToken(mapboxToken);
 	const effectiveLightPreset = mapTheme === "dark" ? "night" : currentLightPreset;
 

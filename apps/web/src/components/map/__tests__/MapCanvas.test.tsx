@@ -176,7 +176,7 @@ describe("MapCanvas", () => {
 
 			render(<MapCanvas {...defaultProps} />);
 			const map = screen.getByTestId("mock-map");
-			expect(map).toHaveAttribute("data-map-style", "mapbox://styles/mapbox/satellite-streets-v12");
+			expect(map).toHaveAttribute("data-map-style", "mapbox://styles/robbeverhelst/cmosm5k7x000c01segxetckb9");
 		});
 	});
 
@@ -268,7 +268,7 @@ describe("MapCanvas", () => {
 		it("should use the selected redesign style by default", () => {
 			render(<MapCanvas {...defaultProps} />);
 			const map = screen.getByTestId("mock-map");
-			expect(map).toHaveAttribute("data-map-style", "mapbox://styles/mapbox/streets-v12");
+			expect(map).toHaveAttribute("data-map-style", "mapbox://styles/mapbox/standard");
 		});
 
 		it("should use saved map view when available", () => {
