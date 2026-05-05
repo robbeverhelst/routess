@@ -113,7 +113,7 @@ export function UserAvatar({ size = 30, onClick, title, compact = false }: UserA
 				width: size,
 				height: size,
 				borderRadius: 999,
-				background: user?.picture
+				background: user?.avatar
 					? "transparent"
 					: `linear-gradient(135deg, ${RDS_COLORS.accent}, oklch(0.65 0.15 200))`,
 				color: "white",
@@ -128,9 +128,9 @@ export function UserAvatar({ size = 30, onClick, title, compact = false }: UserA
 				overflow: "hidden",
 			}}
 		>
-			{user?.picture ? (
+			{user?.avatar ? (
 				<img
-					src={user.picture}
+					src={user.avatar}
 					alt={user.name ?? "avatar"}
 					style={{ width: "100%", height: "100%", objectFit: "cover" }}
 				/>
