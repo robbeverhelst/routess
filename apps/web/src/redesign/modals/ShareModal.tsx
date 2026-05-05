@@ -1,10 +1,12 @@
 import { haversineDistance, type Waypoint } from "@routess/core";
 import { type CSSProperties, type ReactNode, useEffect, useMemo, useState } from "react";
 import { serializeAndCompress } from "@/lib/shareUtils";
+import { buildMapboxStaticPreviewUrl } from "@/lib/utils/mapboxStaticPreview";
 import {
 	useIsMapLocked,
 	useRouteDistance,
 	useRouteDuration,
+	useRoutePath,
 	useSetShareNotification,
 	useWaypoints,
 } from "@/stores/routingStore";
@@ -15,6 +17,10 @@ import { useModalsStore } from "../stores/modalsStore";
 import { useRedesignSettingsStore } from "../stores/settingsStore";
 
 const PRIVACY_KM = 1;
+const PREVIEW_WIDTH = 480;
+const PREVIEW_HEIGHT = 168;
+
+type Coordinate = [number, number];
 
 function trimPrivacyEdges(waypoints: Waypoint[]): Waypoint[] {
 	if (waypoints.length < 4) return waypoints;
@@ -103,6 +109,7 @@ function TargetTile({ label, icon, onClick, disabled, tint }: TargetTileProps) {
 export function ShareModal() {
 	const closeModal = useModalsStore((s) => s.closeModal);
 	const waypoints = useWaypoints();
+	const routePath = useRoutePath();
 	const isMapLocked = useIsMapLocked();
 	const distance = useRouteDistance();
 	const duration = useRouteDuration();
@@ -110,6 +117,7 @@ export function ShareModal() {
 
 	const hideEdges = useRedesignSettingsStore((s) => s.hidePrivacy);
 	const setHideEdges = useRedesignSettingsStore((s) => s.setHidePrivacy);
+	const mapStyle = useRedesignSettingsStore((s) => s.mapStyle);
 	const [copied, setCopied] = useState(false);
 	const [canNativeShare, setCanNativeShare] = useState(false);
 
@@ -129,6 +137,18 @@ export function ShareModal() {
 	}, [waypoints, isMapLocked, hideEdges]);
 
 	const hasRoute = waypoints.length > 0;
+	const previewPoints = useMemo<Coordinate[]>(() => {
+		if (routePath.length >= 2) return routePath as Coordinate[];
+		const previewWaypoints = hideEdges ? trimPrivacyEdges(waypoints) : waypoints;
+		return previewWaypoints.map((waypoint) => waypoint.coord as Coordinate);
+	}, [routePath, waypoints, hideEdges]);
+	const staticMapUrl = useMemo(
+		() => buildMapboxStaticPreviewUrl(previewPoints, { width: PREVIEW_WIDTH, height: PREVIEW_HEIGHT, mapStyle }),
+		[previewPoints, mapStyle],
+	);
+	const hasPreview = previewPoints.length > 0;
+	const [failedUrl, setFailedUrl] = useState<string | null>(null);
+	const showStaticMap = staticMapUrl !== null && failedUrl !== staticMapUrl;
 	const shareText = useMemo(() => {
 		const parts: string[] = ["Check out this route on Routess"];
 		if (distance) parts.push(distance);
@@ -241,22 +261,80 @@ export function ShareModal() {
 						background: RDS_COLORS.bgPanelElev,
 					}}
 				>
-					<div style={{ height: 140, position: "relative", background: RDS_COLORS.bgInput }}>
-						<svg
-							viewBox="0 0 480 140"
-							style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
-							aria-hidden="true"
-						>
-							<path
-								d="M 60 100 Q 160 30, 250 80 T 420 50"
-								stroke="var(--rds-accent)"
-								strokeWidth="2.6"
-								fill="none"
-								strokeLinecap="round"
+					<div
+						style={{
+							height: PREVIEW_HEIGHT,
+							position: "relative",
+							background: `linear-gradient(180deg, ${RDS_COLORS.bgInput} 0%, ${RDS_COLORS.bgPanelElev} 100%)`,
+						}}
+					>
+						{showStaticMap && staticMapUrl && (
+							<img
+								src={staticMapUrl}
+								alt="Route preview"
+								onError={() => setFailedUrl(staticMapUrl)}
+								style={{
+									position: "absolute",
+									inset: 0,
+									width: "100%",
+									height: "100%",
+									objectFit: "cover",
+									display: "block",
+								}}
 							/>
-							<circle cx="60" cy="100" r="5" fill="var(--rds-success)" stroke="white" strokeWidth="2" />
-							<circle cx="420" cy="50" r="5" fill="var(--rds-danger)" stroke="white" strokeWidth="2" />
-						</svg>
+						)}
+						{!showStaticMap && (
+							<svg
+								viewBox={`0 0 ${PREVIEW_WIDTH} ${PREVIEW_HEIGHT}`}
+								style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
+								aria-hidden="true"
+							>
+								<defs>
+									<pattern id="share-preview-grid" width="40" height="40" patternUnits="userSpaceOnUse">
+										<path d="M 40 0 L 0 0 0 40" fill="none" stroke={RDS_COLORS.border} strokeOpacity="0.45" />
+									</pattern>
+								</defs>
+								<rect width={PREVIEW_WIDTH} height={PREVIEW_HEIGHT} fill="url(#share-preview-grid)" />
+							</svg>
+						)}
+						{!hasPreview && (
+							<div
+								style={{
+									position: "absolute",
+									inset: 0,
+									display: "flex",
+									flexDirection: "column",
+									alignItems: "center",
+									justifyContent: "center",
+									gap: 8,
+									color: RDS_COLORS.fgSubtle,
+								}}
+							>
+								<I.route size={24} />
+								<div style={{ fontSize: 12.5, fontWeight: 500 }}>No route to preview yet</div>
+							</div>
+						)}
+						<div
+							style={{
+								position: "absolute",
+								top: 12,
+								left: 12,
+								display: "inline-flex",
+								alignItems: "center",
+								gap: 6,
+								padding: "6px 9px",
+								borderRadius: 999,
+								background: "rgba(255,255,255,0.82)",
+								border: `1px solid ${RDS_COLORS.border}`,
+								color: RDS_COLORS.fgMuted,
+								fontSize: 11,
+								fontWeight: 600,
+								backdropFilter: "blur(10px)",
+							}}
+						>
+							<I.route size={12} />
+							<span>{showStaticMap ? "Map preview" : "Share preview"}</span>
+						</div>
 					</div>
 					<div style={{ padding: 14 }}>
 						<div style={{ fontSize: 14, fontWeight: 600 }}>Current route</div>
