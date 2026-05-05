@@ -208,68 +208,98 @@ export function SettingsPanel() {
 						</Btn>
 					}
 				/>
-				<Row
-					label="Sports"
-					sub="Tap to add — star sets your default for new routes"
-					control={
-						<div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
-							{SPORT_OPTIONS.map((s) => {
-								const on = selectedSports.includes(s.key);
-								const isDefault = on && defaultSport === s.key;
-								const Icon = s.icon;
-								return (
-									<div key={s.key} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-										<button
-											type="button"
-											onClick={() => handleToggleSport(s.key)}
-											aria-pressed={on}
-											title={on ? `Remove ${s.label}` : `Add ${s.label}`}
-											style={{
-												display: "inline-flex",
-												alignItems: "center",
-												gap: 5,
-												padding: "4px 9px",
-												borderRadius: 999,
-												background: on ? RDS_COLORS.accentSoft : RDS_COLORS.bgInput,
-												border: on ? `1px solid ${RDS_COLORS.accent}` : `1px solid ${RDS_COLORS.border}`,
-												color: on ? RDS_COLORS.accent : RDS_COLORS.fgMuted,
-												fontSize: 11.5,
-												fontWeight: 500,
-												cursor: "pointer",
-											}}
-										>
-											<Icon size={11} />
-											{s.label}
-										</button>
-										{on && (
-											<button
-												type="button"
-												onClick={() => handleSetDefault(s.key)}
-												aria-pressed={isDefault}
-												title={isDefault ? "Default sport" : `Make ${s.label} default`}
-												style={{
-													width: 22,
-													height: 22,
-													padding: 0,
-													borderRadius: 999,
-													background: isDefault ? RDS_COLORS.accent : "transparent",
-													color: isDefault ? RDS_COLORS.accentFg : RDS_COLORS.fgSubtle,
-													border: isDefault ? "none" : `1px solid ${RDS_COLORS.border}`,
-													display: "inline-flex",
-													alignItems: "center",
-													justifyContent: "center",
-													cursor: isDefault ? "default" : "pointer",
-												}}
-											>
-												<I.check size={11} />
-											</button>
-										)}
-									</div>
-								);
-							})}
-						</div>
-					}
-				/>
+				<div
+					style={{
+						padding: "14px 14px 16px",
+						borderBottom: `1px solid ${RDS_COLORS.border}`,
+					}}
+				>
+					<div style={{ fontSize: 13, color: RDS_COLORS.fg }}>Sports</div>
+					<div
+						style={{
+							fontSize: 11.5,
+							color: RDS_COLORS.fgSubtle,
+							marginTop: 4,
+							maxWidth: 360,
+							lineHeight: 1.45,
+						}}
+					>
+						Choose which sports appear across the app. Tap the check to make one your default for new routes.
+					</div>
+					<div
+						style={{
+							display: "flex",
+							flexWrap: "wrap",
+							gap: 10,
+							marginTop: 14,
+						}}
+					>
+						{SPORT_OPTIONS.map((s) => {
+							const on = selectedSports.includes(s.key);
+							const isDefault = on && defaultSport === s.key;
+							const Icon = s.icon;
+							return (
+								<div
+									key={s.key}
+									style={{
+										display: "inline-flex",
+										alignItems: "center",
+										gap: 6,
+										padding: 4,
+										borderRadius: 999,
+										background: on ? RDS_COLORS.accentSoft : RDS_COLORS.bgInput,
+										border: `1px solid ${on ? RDS_COLORS.accent : RDS_COLORS.border}`,
+									}}
+								>
+									<button
+										type="button"
+										onClick={() => handleToggleSport(s.key)}
+										aria-pressed={on}
+										title={on ? `Remove ${s.label}` : `Add ${s.label}`}
+										style={{
+											display: "inline-flex",
+											alignItems: "center",
+											gap: 7,
+											padding: "6px 10px",
+											borderRadius: 999,
+											background: "transparent",
+											border: 0,
+											color: on ? RDS_COLORS.accent : RDS_COLORS.fgMuted,
+											fontSize: 12.5,
+											fontWeight: 600,
+											cursor: "pointer",
+										}}
+									>
+										<Icon size={12} />
+										{s.label}
+									</button>
+									<button
+										type="button"
+										onClick={() => handleSetDefault(s.key)}
+										aria-pressed={isDefault}
+										title={isDefault ? "Default sport" : `Make ${s.label} default`}
+										style={{
+											width: 26,
+											height: 26,
+											padding: 0,
+											borderRadius: 999,
+											background: isDefault ? RDS_COLORS.accent : RDS_COLORS.bgPanel,
+											color: isDefault ? RDS_COLORS.accentFg : on ? RDS_COLORS.accent : RDS_COLORS.fgSubtle,
+											border: isDefault ? "none" : `1px solid ${on ? RDS_COLORS.accent : RDS_COLORS.border}`,
+											display: "inline-flex",
+											alignItems: "center",
+											justifyContent: "center",
+											cursor: isDefault ? "default" : "pointer",
+											boxShadow: isDefault ? "0 0 0 1px rgba(255,255,255,0.24) inset" : "none",
+										}}
+									>
+										<I.check size={12} />
+									</button>
+								</div>
+							);
+						})}
+					</div>
+				</div>
 				<Row
 					label="Units"
 					control={
