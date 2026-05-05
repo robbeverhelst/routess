@@ -1,6 +1,7 @@
 import { GoogleLogin } from "@react-oauth/google";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { track } from "../../lib/analytics";
 import { type CredentialResponse, googleAuth } from "../../lib/google-auth";
 import type { SupportedLanguage } from "../../lib/i18n";
 import { t } from "../../lib/i18n";
@@ -27,11 +28,14 @@ export function LoginModal({ isOpen, onOpenChange, onLoginSuccess, currentLangua
 
 			Logger.info("Google login successful:", { email: user.email, name: user.name });
 
+			track("login");
+
 			// Close modal and trigger success callback
 			onOpenChange(false);
 			onLoginSuccess();
 		} catch (error) {
 			Logger.error("Google login failed:", error);
+			track("login_failed");
 			// You can add error handling UI here if needed
 		} finally {
 			setIsLoading(false);
