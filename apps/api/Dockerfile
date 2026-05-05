@@ -1,41 +1,44 @@
-# Build stage
+FROM oven/bun:1.3.13-alpine AS deps
+
+WORKDIR /app
+
+COPY package.json bun.lock ./
+COPY apps/api/package.json ./apps/api/
+COPY apps/docs/package.json ./apps/docs/
+COPY apps/web/package.json ./apps/web/
+COPY packages/api-client/package.json ./packages/api-client/
+COPY packages/core/package.json ./packages/core/
+COPY packages/design-tokens/package.json ./packages/design-tokens/
+COPY packages/i18n/package.json ./packages/i18n/
+
+RUN bun install --frozen-lockfile --ignore-scripts
+
 FROM oven/bun:1.3.13-alpine AS builder
 
-# Set working directory
 WORKDIR /app
 
-# Copy everything to avoid overlay issues
-COPY . .
+COPY --from=deps /app /app
 
-# Install dependencies
-RUN bun install --frozen-lockfile
+COPY tsconfig.json ./
+COPY apps/api ./apps/api
+COPY packages ./packages
 
-# Build the application
 RUN bun run --filter './packages/*' build && bun run --filter './apps/api' build
 
-# Production stage
 FROM oven/bun:1.3.13-alpine AS production
 
-# Create app directory
 WORKDIR /app
 
-# Copy package metadata and lockfile-consistent dependencies from the builder stage
 COPY package.json ./
 COPY apps/api/package.json ./apps/api/
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/apps/api/node_modules ./apps/api/node_modules
-
-# Copy built application from builder stage
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 
-# Expose port
 EXPOSE 3000
 
-# Set working directory to api
 WORKDIR /app/apps/api
 
-# Add node_modules/.bin to PATH for CLI tools
 ENV PATH="/app/apps/api/node_modules/.bin:/app/node_modules/.bin:${PATH}"
 
-# Start the application
-CMD ["bun", "run", "start:prod"] 
+CMD ["bun", "run", "start:prod"]
