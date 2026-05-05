@@ -4,6 +4,7 @@ import type { RedesignActivity } from "./uiStore";
 
 export type RedesignUnits = "km" | "mi";
 export type RedesignMapStyle = "streets" | "outdoors" | "satellite";
+export type LocationPermission = "unknown" | "granted" | "denied" | "skipped";
 
 export type OverlayKey = "heatmap" | "contour" | "bike" | "surface" | "wind";
 export type MapOverlays = Record<OverlayKey, boolean>;
@@ -28,6 +29,7 @@ interface SettingsState {
 	sportSpeeds: SportSpeeds;
 	mapStyle: RedesignMapStyle;
 	overlays: MapOverlays;
+	locationPermission: LocationPermission;
 
 	setUnits: (units: RedesignUnits) => void;
 	setShowPois: (showPois: boolean) => void;
@@ -41,6 +43,7 @@ interface SettingsState {
 	setSportSpeed: (sport: RedesignActivity, kmh: number) => void;
 	setMapStyle: (mapStyle: RedesignMapStyle) => void;
 	setOverlay: (key: OverlayKey, value: boolean) => void;
+	setLocationPermission: (permission: LocationPermission) => void;
 }
 
 const DEFAULT_OVERLAYS: MapOverlays = {
@@ -65,6 +68,7 @@ export const useRedesignSettingsStore = create<SettingsState>()(
 			sportSpeeds: {},
 			mapStyle: "outdoors",
 			overlays: DEFAULT_OVERLAYS,
+			locationPermission: "unknown",
 
 			setUnits: (units) => set({ units }),
 			setShowPois: (showPois) => set({ showPois }),
@@ -89,10 +93,11 @@ export const useRedesignSettingsStore = create<SettingsState>()(
 				set((state) => ({
 					overlays: { ...state.overlays, [key]: value },
 				})),
+			setLocationPermission: (locationPermission) => set({ locationPermission }),
 		}),
 		{
 			name: "routess.redesign.settings",
-			version: 4,
+			version: 5,
 			migrate: (persisted, version) => {
 				const state = persisted as Partial<SettingsState> | null;
 				if (state && version < 4) {
@@ -100,6 +105,9 @@ export const useRedesignSettingsStore = create<SettingsState>()(
 					if (stale === "dark" || stale === "minimal" || stale === "terrain") {
 						state.mapStyle = "outdoors";
 					}
+				}
+				if (state && version < 5 && state.locationPermission === undefined) {
+					state.locationPermission = "unknown";
 				}
 				return state as SettingsState;
 			},

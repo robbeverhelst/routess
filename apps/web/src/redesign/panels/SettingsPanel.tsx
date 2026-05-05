@@ -1,11 +1,41 @@
 import type { ReactNode } from "react";
 import { useLogout, useUserProfile } from "@/lib/api-queries";
+import { Logger } from "@/lib/logger";
 import { useRoutingPreferencesStore } from "@/redesign/stores/routingPreferencesStore";
-import { type RedesignMapStyle, useRedesignSettingsStore } from "@/redesign/stores/settingsStore";
-import { type RedesignAccent, useUiStore } from "@/redesign/stores/uiStore";
+import {
+	type LocationPermission,
+	type RedesignMapStyle,
+	useRedesignSettingsStore,
+} from "@/redesign/stores/settingsStore";
+import { type RedesignAccent, type RedesignActivity, useUiStore } from "@/redesign/stores/uiStore";
 import { I } from "../components/icons";
 import { Btn, RDS_COLORS, SecTitle, Toggle } from "../components/primitives";
 import { useToastStore } from "../stores/toastStore";
+
+const SPORT_OPTIONS: { key: RedesignActivity; label: string; icon: React.ComponentType<{ size?: number }> }[] = [
+	{ key: "run", label: "Running", icon: I.run },
+	{ key: "cycle", label: "Cycling", icon: I.bike },
+	{ key: "walk", label: "Walking", icon: I.walk },
+];
+
+const SPORT_LABELS: Record<RedesignActivity, string> = {
+	run: "Running",
+	cycle: "Cycling",
+	walk: "Walking",
+};
+
+function locationStatusLabel(p: LocationPermission): string {
+	switch (p) {
+		case "granted":
+			return "Allowed — used to centre the map on you";
+		case "denied":
+			return "Denied — enable to centre the map on you";
+		case "skipped":
+			return "Skipped — enable any time to centre the map on you";
+		default:
+			return "Not set — enable to centre the map on you";
+	}
+}
 
 function Group({ title, children }: { title: string; children: ReactNode }) {
 	return (
@@ -101,7 +131,7 @@ export function SettingsPanel() {
 	const { data: profile } = useUserProfile();
 	const logout = useLogout();
 	const pushToast = useToastStore((s) => s.push);
-	const { accent, setAccent, theme, setTheme } = useUiStore();
+	const { accent, setAccent, theme, setTheme, activityType, setActivityType } = useUiStore();
 	const {
 		units,
 		setUnits,
@@ -113,13 +143,73 @@ export function SettingsPanel() {
 		setPublicProfile,
 		hidePrivacy,
 		setHidePrivacy,
-		defaultActivity,
 		setDefaultActivity,
+		selectedSports,
+		toggleSport,
 		mapStyle,
 		setMapStyle,
+		locationPermission,
+		setLocationPermission,
 	} = useRedesignSettingsStore();
 	const autoSnap = useRoutingPreferencesStore((s) => s.snap);
 	const setAutoSnap = useRoutingPreferencesStore((s) => s.setSnap);
+
+	const defaultSport: RedesignActivity | null =
+		selectedSports.length === 0
+			? null
+			: selectedSports.includes(activityType)
+				? activityType
+				: selectedSports[0];
+
+	const handleToggleSport = (sport: RedesignActivity) => {
+		const wasOnly = selectedSports.length === 1 && selectedSports[0] === sport;
+		if (wasOnly) {
+			pushToast({ kind: "warn", title: "Keep at least one sport selected" });
+			return;
+		}
+		toggleSport(sport);
+		if (selectedSports.includes(sport) && sport === defaultSport) {
+			const fallback = selectedSports.find((s) => s !== sport);
+			if (fallback) {
+				setActivityType(fallback);
+				setDefaultActivity(SPORT_LABELS[fallback]);
+			}
+		} else if (!selectedSports.includes(sport) && selectedSports.length === 0) {
+			setActivityType(sport);
+			setDefaultActivity(SPORT_LABELS[sport]);
+		}
+	};
+
+	const handleSetDefault = (sport: RedesignActivity) => {
+		if (!selectedSports.includes(sport)) {
+			toggleSport(sport);
+		}
+		setActivityType(sport);
+		setDefaultActivity(SPORT_LABELS[sport]);
+	};
+
+	const handleRequestLocation = async () => {
+		if (typeof navigator === "undefined" || !navigator.geolocation) {
+			pushToast({ kind: "warn", title: "Location unavailable" });
+			setLocationPermission("denied");
+			return;
+		}
+		try {
+			await new Promise<void>((resolve, reject) => {
+				navigator.geolocation.getCurrentPosition(
+					() => resolve(),
+					(err) => reject(err),
+					{ timeout: 10000 },
+				);
+			});
+			setLocationPermission("granted");
+			pushToast({ kind: "success", title: "Location enabled" });
+		} catch (err) {
+			Logger.warn("Location permission denied", err);
+			setLocationPermission("denied");
+			pushToast({ kind: "warn", title: "Location declined" });
+		}
+	};
 
 	const userName = profile?.name ?? "Your account";
 	const userEmail = profile?.email ?? "Sign in to sync";
@@ -165,26 +255,65 @@ export function SettingsPanel() {
 					}
 				/>
 				<Row
-					label="Default activity"
-					sub="Used for new routes"
+					label="Sports"
+					sub="Tap to add — star sets your default for new routes"
 					control={
-						<select
-							value={defaultActivity}
-							onChange={(e) => setDefaultActivity(e.target.value)}
-							style={{
-								height: 30,
-								padding: "0 8px",
-								borderRadius: 6,
-								background: RDS_COLORS.bgInput,
-								border: `1px solid ${RDS_COLORS.border}`,
-								color: RDS_COLORS.fg,
-								fontSize: 12.5,
-							}}
-						>
-							<option>Cycling</option>
-							<option>Running</option>
-							<option>Walking</option>
-						</select>
+						<div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+							{SPORT_OPTIONS.map((s) => {
+								const on = selectedSports.includes(s.key);
+								const isDefault = on && defaultSport === s.key;
+								const Icon = s.icon;
+								return (
+									<div key={s.key} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+										<button
+											type="button"
+											onClick={() => handleToggleSport(s.key)}
+											aria-pressed={on}
+											title={on ? `Remove ${s.label}` : `Add ${s.label}`}
+											style={{
+												display: "inline-flex",
+												alignItems: "center",
+												gap: 5,
+												padding: "4px 9px",
+												borderRadius: 999,
+												background: on ? RDS_COLORS.accentSoft : RDS_COLORS.bgInput,
+												border: on ? `1px solid ${RDS_COLORS.accent}` : `1px solid ${RDS_COLORS.border}`,
+												color: on ? RDS_COLORS.accent : RDS_COLORS.fgMuted,
+												fontSize: 11.5,
+												fontWeight: 500,
+												cursor: "pointer",
+											}}
+										>
+											<Icon size={11} />
+											{s.label}
+										</button>
+										{on && (
+											<button
+												type="button"
+												onClick={() => handleSetDefault(s.key)}
+												aria-pressed={isDefault}
+												title={isDefault ? "Default sport" : `Make ${s.label} default`}
+												style={{
+													width: 22,
+													height: 22,
+													padding: 0,
+													borderRadius: 999,
+													background: isDefault ? RDS_COLORS.accent : "transparent",
+													color: isDefault ? RDS_COLORS.accentFg : RDS_COLORS.fgSubtle,
+													border: isDefault ? "none" : `1px solid ${RDS_COLORS.border}`,
+													display: "inline-flex",
+													alignItems: "center",
+													justifyContent: "center",
+													cursor: isDefault ? "default" : "pointer",
+												}}
+											>
+												<I.check size={11} />
+											</button>
+										)}
+									</div>
+								);
+							})}
+						</div>
 					}
 				/>
 				<Row
@@ -284,6 +413,19 @@ export function SettingsPanel() {
 			</Group>
 
 			<Group title="Privacy">
+				<Row
+					label="Location access"
+					sub={locationStatusLabel(locationPermission)}
+					control={
+						locationPermission === "granted" ? (
+							<Btn variant="ghost" onClick={() => setLocationPermission("denied")}>
+								Disable
+							</Btn>
+						) : (
+							<Btn onClick={handleRequestLocation}>Enable</Btn>
+						)
+					}
+				/>
 				<Row
 					label="Public profile"
 					sub="Anyone with the link can see your routes"
