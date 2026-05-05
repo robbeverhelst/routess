@@ -1,7 +1,7 @@
 import React, { type CSSProperties, type ReactNode } from "react";
 import { Marker } from "react-map-gl/mapbox";
+import { I } from "@/components/icons";
 import { type SupportedLanguage, t } from "@/lib/i18n";
-import { I } from "@/redesign/components/icons";
 
 export interface PopupInfo {
 	longitude: number;

@@ -1,4 +1,4 @@
-import type { RedesignMapStyle } from "@/redesign/stores/settingsStore";
+import type { RedesignMapStyle } from "@/stores/redesignSettingsStore";
 
 type Coordinate = [number, number];
 
