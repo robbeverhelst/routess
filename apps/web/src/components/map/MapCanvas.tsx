@@ -534,10 +534,9 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
 						"star-intensity": 0.6,
 					}}
 				>
-					{popup && mapRef.current && (
+					{popup && (
 						<MapPopup
 							popupInfo={popup}
-							mapInstance={mapRef.current}
 							onAddDirectWaypoint={onAddDirectWaypoint}
 							onRemoveWaypoint={onRemoveWaypoint}
 							onAddWaypointOnRoute={onAddWaypointOnRoute}
