@@ -265,14 +265,6 @@ export const de: Record<string, string> = {
 	"location.mode.driving": "Fahrmodus - Ausgewogene Updates",
 	"location.mode.batteryOptimized": "Batterieoptimiert - Reduzierte Häufigkeit",
 
-	// Version translations
-	"version.notification.updating": "App wird aktualisiert...",
-	"version.notification.clearingCache": "Cache-Daten werden gelöscht, um die neuesten Funktionen zu erhalten",
-	"version.notification.updated": "App aktualisiert!",
-	"version.notification.updatedAndRefreshed": "App aktualisiert & aktualisiert!",
-	"version.notification.updatedWithWarning": "App aktualisiert",
-	"version.notification.cacheWarning": "(Cache-Löschung fehlgeschlagen)",
-
 	// SaveRoute translations
 	"saveRoute.title": "Route Speichern",
 	"saveRoute.description": "Speichern Sie Ihre Route, um später von jedem Gerät darauf zugreifen zu können",

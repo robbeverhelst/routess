@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { useLogout, useUserProfile } from "@/lib/api-queries";
 import { Logger } from "@/lib/logger";
+import { getVersionDisplay } from "@/lib/version";
 import { useRoutingPreferencesStore } from "@/redesign/stores/routingPreferencesStore";
 import {
 	type LocationPermission,
@@ -455,6 +456,18 @@ export function SettingsPanel() {
 						>
 							{logout.isPending ? "Signing out…" : profile ? "Sign out" : "Sign in"}
 						</Btn>
+					}
+					last
+				/>
+			</Group>
+
+			<Group title="About">
+				<Row
+					label="Version"
+					control={
+						<span style={{ fontSize: 12.5, color: RDS_COLORS.fgMuted, fontVariantNumeric: "tabular-nums" }}>
+							{getVersionDisplay()}
+						</span>
 					}
 					last
 				/>

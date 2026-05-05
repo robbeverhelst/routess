@@ -258,14 +258,6 @@ export const en: Record<string, string> = {
 	"location.mode.driving": "Driving mode - Balanced updates",
 	"location.mode.batteryOptimized": "Battery optimized - Reduced frequency",
 
-	// Version translations
-	"version.notification.updating": "Updating App...",
-	"version.notification.clearingCache": "Clearing cached data to ensure you get the latest features",
-	"version.notification.updated": "App Updated!",
-	"version.notification.updatedAndRefreshed": "App Updated & Refreshed!",
-	"version.notification.updatedWithWarning": "App Updated",
-	"version.notification.cacheWarning": "(cache clear failed)",
-
 	// SaveRoute translations
 	"saveRoute.title": "Save Route",
 	"saveRoute.description": "Save your route to access it later from any device",

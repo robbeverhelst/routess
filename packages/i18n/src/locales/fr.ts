@@ -270,14 +270,6 @@ export const fr: Record<string, string> = {
 	"location.mode.driving": "Mode conduite - Mises à jour équilibrées",
 	"location.mode.batteryOptimized": "Optimisé batterie - Fréquence réduite",
 
-	// Version translations
-	"version.notification.updating": "Mise à jour de l'app...",
-	"version.notification.clearingCache": "Effacement des données en cache pour obtenir les dernières fonctionnalités",
-	"version.notification.updated": "App mise à jour !",
-	"version.notification.updatedAndRefreshed": "App mise à jour et actualisée !",
-	"version.notification.updatedWithWarning": "App mise à jour",
-	"version.notification.cacheWarning": "(échec de l'effacement du cache)",
-
 	// SaveRoute translations
 	"saveRoute.title": "Enregistrer l'Itinéraire",
 	"saveRoute.description": "Sauvegardez votre itinéraire pour y accéder plus tard depuis n'importe quel appareil",
