@@ -9,6 +9,7 @@
 		"target": "es2017",
 		"sourceMap": true,
 		"outDir": "./dist",
+		"rootDir": "./src",
 		"baseUrl": "./",
 		"paths": {
 			"src/*": ["src/*"]
@@ -22,5 +23,6 @@
 		"strictBindCallApply": false,
 		"forceConsistentCasingInFileNames": false,
 		"noFallthroughCasesInSwitch": false
-	}
+	},
+	"include": ["src/**/*"]
 }
