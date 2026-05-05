@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { track } from "./analytics";
 import { type ApiRoute, apiService, type Waypoint } from "./api";
 import { googleAuth } from "./google-auth";
 import { Logger } from "./logger";
@@ -65,12 +66,19 @@ export function useSaveRoute() {
 			Logger.info("Saving route:", routeData.name);
 			return apiService.createRoute(routeData);
 		},
-		onSuccess: (newRoute) => {
+		onSuccess: (newRoute, vars) => {
 			// Invalidate and refetch routes list
 			queryClient.invalidateQueries({ queryKey: queryKeys.routes.list() });
 
 			// Add the new route to the cache
 			queryClient.setQueryData(queryKeys.routes.detail(newRoute.id.toString()), newRoute);
+
+			track("route_saved", {
+				waypoint_count: vars.waypoints.length,
+				distance_m: Math.round(vars.distance),
+				elevation_gain_m: Math.round(vars.elevationGain),
+				has_description: !!vars.description,
+			});
 
 			Logger.info("Route saved successfully:", newRoute.id);
 		},
@@ -98,6 +106,8 @@ export function useDeleteRoute() {
 			// Remove specific route from cache
 			queryClient.removeQueries({ queryKey: queryKeys.routes.detail(routeId.toString()) });
 
+			track("route_deleted");
+
 			Logger.info("Route deleted successfully:", routeId);
 		},
 		onError: (error) => {
@@ -123,6 +133,8 @@ export function useUpdateRoute() {
 
 			// Invalidate routes list to ensure consistency
 			queryClient.invalidateQueries({ queryKey: queryKeys.routes.list() });
+
+			track("route_updated");
 
 			Logger.info("Route updated successfully:", updatedRoute.id);
 		},
@@ -212,6 +224,7 @@ export function useLogout() {
 		onSuccess: () => {
 			// Clear all cached data on logout
 			queryClient.clear();
+			track("logout");
 			Logger.info("Cache cleared after logout");
 		},
 		onError: (error) => {
