@@ -1,5 +1,5 @@
 import { GoogleLogin } from "@react-oauth/google";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import type { CredentialResponse } from "@/lib/google-auth";
 import { useViewport } from "../hooks/useViewport";
 import { useUiStore } from "../stores/uiStore";
@@ -34,66 +34,61 @@ interface CustomGoogleButtonProps {
 	onSuccess: (cred: CredentialResponse) => void | Promise<void>;
 	onError: () => void;
 	isLoading?: boolean;
-	label?: string;
+	text?: "continue_with" | "signup_with" | "signin_with" | "signin";
 }
 
 export function CustomGoogleButton({
 	onSuccess,
 	onError,
 	isLoading = false,
-	label = "Continue with Google",
+	text = "continue_with",
 }: CustomGoogleButtonProps) {
+	const containerRef = useRef<HTMLDivElement | null>(null);
+	const [buttonWidth, setButtonWidth] = useState(400);
+
+	useEffect(() => {
+		const node = containerRef.current;
+		if (!node) return;
+
+		const updateWidth = () => {
+			const nextWidth = Math.max(220, Math.round(node.getBoundingClientRect().width));
+			setButtonWidth((currentWidth) => (currentWidth === nextWidth ? currentWidth : nextWidth));
+		};
+
+		updateWidth();
+
+		if (typeof ResizeObserver === "undefined") return;
+
+		const observer = new ResizeObserver(() => updateWidth());
+		observer.observe(node);
+		return () => observer.disconnect();
+	}, []);
+
 	return (
-		<div className="rds-google-btn" style={{ position: "relative", width: "100%", height: 46 }}>
-			<div
-				className="rds-google-btn__face"
-				style={{
-					width: "100%",
-					height: 46,
-					display: "flex",
-					alignItems: "center",
-					justifyContent: "center",
-					gap: 10,
-					borderRadius: "var(--rds-radius-sm)",
-					background: RDS_COLORS.fg,
-					border: `1px solid ${RDS_COLORS.fg}`,
-					color: RDS_COLORS.bgPanel,
-					fontSize: 14,
-					fontWeight: 500,
-					opacity: isLoading ? 0.5 : 1,
-					pointerEvents: "none",
-					transition: "filter 120ms",
-					boxShadow: "0 2px 4px oklch(0 0 0 / 0.12), 0 4px 12px oklch(0 0 0 / 0.08)",
-				}}
-			>
-				<GoogleIcon size={18} />
-				{label}
-			</div>
-			<div
-				style={{
-					position: "absolute",
-					inset: 0,
-					opacity: 0,
-					cursor: isLoading ? "not-allowed" : "pointer",
-					pointerEvents: isLoading ? "none" : "auto",
-					colorScheme: "light",
-				}}
-			>
+		<div
+			ref={containerRef}
+			className="rds-google-btn"
+			style={{
+				width: "100%",
+				minHeight: 40,
+				display: "flex",
+				justifyContent: "center",
+				opacity: isLoading ? 0.6 : 1,
+				pointerEvents: isLoading ? "none" : "auto",
+				transition: "opacity 120ms",
+			}}
+		>
+			<div style={{ colorScheme: "light" }}>
 				<GoogleLogin
 					onSuccess={onSuccess}
 					onError={onError}
 					auto_select={false}
-					theme="filled_blue"
+					theme="outline"
 					size="large"
-					width="400"
-					text="continue_with"
+					width={String(buttonWidth)}
+					text={text}
 				/>
 			</div>
-			<style>{`
-				.rds-google-btn:hover .rds-google-btn__face {
-					filter: brightness(1.18);
-				}
-			`}</style>
 		</div>
 	);
 }

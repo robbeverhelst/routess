@@ -4,6 +4,13 @@
 
 This repo uses [Matt Pocock's engineering skills](https://github.com/mattpocock/skills/tree/main/skills/engineering). They expect the following per-repo configuration:
 
+## Commit Convention
+
+- All commits must use Conventional Commit format.
+- Prefer `fix(scope): summary` for bug fixes and `feat(scope): summary` for features.
+- Keep the scope concrete, such as `web`, `api`, `auth`, or `routing`.
+- Do not create free-form commit subjects like `Update stuff` or `Fix bug`.
+
 ### Issue tracker
 
 Issues live as GitHub issues at `robbeverhelst/maps`, accessed via the `gh` CLI. See `docs/agents/issue-tracker.md`.
