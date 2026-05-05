@@ -17,8 +17,10 @@ const config: Options = {
 	entities: [User, Route, Session],
 	migrations: {
 		// Production runs compiled JS migrations from dist, while local tooling still uses TS sources.
+		// pathTs is only included outside production: the production image ships dist only, and mikro-orm
+		// calls ensureDir on the TS path at startup, which fails on a read-only container filesystem.
 		path: "./dist/migrations",
-		pathTs: "./src/migrations",
+		...(appConfig.app.isProduction ? {} : { pathTs: "./src/migrations" }),
 	},
 	debug: appConfig.database.debug,
 	allowGlobalContext: appConfig.app.isTest,
