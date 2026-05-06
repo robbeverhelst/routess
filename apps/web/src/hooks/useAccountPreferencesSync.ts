@@ -1,7 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef } from "react";
-import { authStorageKeys } from "@/lib/auth-state";
 import { type ApiUser, apiService } from "@/lib/api";
+import { authStorageKeys } from "@/lib/auth-state";
 import { Logger } from "@/lib/logger";
 import { queryKeys } from "@/lib/query-client";
 import {
@@ -19,6 +19,10 @@ interface AuthStatusSnapshot {
 
 export function useAccountPreferencesSync(auth: AuthStatusSnapshot | undefined) {
 	const queryClient = useQueryClient();
+	const isAuthenticated = auth?.isAuthenticated ?? false;
+	const authUser = auth?.user ?? null;
+	const authUserId = authUser?.id ?? null;
+	const authUserPreferences = authUser?.preferences ?? null;
 	const units = useRedesignSettingsStore((state) => state.units);
 	const showPois = useRedesignSettingsStore((state) => state.showPois);
 	const terrain3d = useRedesignSettingsStore((state) => state.terrain3d);
@@ -74,39 +78,38 @@ export function useAccountPreferencesSync(auth: AuthStatusSnapshot | undefined) 
 		() => JSON.stringify(normalizeRedesignSettings(DEFAULT_REDESIGN_SETTINGS)),
 		[],
 	);
-	const serializedServerPreferences = useMemo(() => {
-		if (!auth?.user?.preferences) {
-			return null;
-		}
-
-		return JSON.stringify(normalizeRedesignSettings(auth.user.preferences));
-	}, [auth?.user?.preferences]);
+	const normalizedServerPreferences = useMemo(
+		() => (authUserPreferences ? normalizeRedesignSettings(authUserPreferences) : null),
+		[authUserPreferences],
+	);
+	const serializedServerPreferences = useMemo(
+		() => (normalizedServerPreferences ? JSON.stringify(normalizedServerPreferences) : null),
+		[normalizedServerPreferences],
+	);
 
 	useEffect(() => {
-		if (!auth?.isAuthenticated || !auth.user) {
+		if (!isAuthenticated || !authUser) {
 			lastSyncedPreferencesRef.current = null;
 			bootstrappedUserIdRef.current = null;
 			lastStoredUserRef.current = null;
 			return;
 		}
 
-		const serializedUser = JSON.stringify(auth.user);
+		const serializedUser = JSON.stringify(authUser);
 		if (serializedUser !== lastStoredUserRef.current) {
 			lastStoredUserRef.current = serializedUser;
 			localStorage.setItem(authStorageKeys.user, serializedUser);
 		}
-	}, [auth?.isAuthenticated, auth?.user]);
+	}, [authUser, isAuthenticated]);
 
 	useEffect(() => {
-		if (!auth?.isAuthenticated || !auth.user) {
+		if (!isAuthenticated || authUserId === null) {
 			return;
 		}
 
-		if (serializedServerPreferences) {
-			const normalizedServerPreferences = JSON.parse(serializedServerPreferences);
-
+		if (normalizedServerPreferences && serializedServerPreferences) {
 			lastSyncedPreferencesRef.current = serializedServerPreferences;
-			bootstrappedUserIdRef.current = auth.user.id;
+			bootstrappedUserIdRef.current = authUserId;
 
 			if (serializedServerPreferences !== serializedPreferences) {
 				applyingServerStateRef.current = true;
@@ -121,15 +124,22 @@ export function useAccountPreferencesSync(auth: AuthStatusSnapshot | undefined) 
 			return;
 		}
 
-		if (bootstrappedUserIdRef.current === auth.user.id) {
+		if (bootstrappedUserIdRef.current === authUserId) {
 			return;
 		}
 
-		bootstrappedUserIdRef.current = auth.user.id;
-	}, [auth?.isAuthenticated, auth?.user?.id, replaceAllSettings, serializedServerPreferences]);
+		bootstrappedUserIdRef.current = authUserId;
+	}, [
+		authUserId,
+		isAuthenticated,
+		normalizedServerPreferences,
+		replaceAllSettings,
+		serializedPreferences,
+		serializedServerPreferences,
+	]);
 
 	useEffect(() => {
-		if (!auth?.isAuthenticated || !auth.user) {
+		if (!isAuthenticated || authUserId === null) {
 			return;
 		}
 
@@ -141,7 +151,7 @@ export function useAccountPreferencesSync(auth: AuthStatusSnapshot | undefined) 
 			return;
 		}
 
-		if (!auth.user.preferences && serializedPreferences === serializedDefaultPreferences) {
+		if (!authUserPreferences && serializedPreferences === serializedDefaultPreferences) {
 			return;
 		}
 
@@ -169,9 +179,9 @@ export function useAccountPreferencesSync(auth: AuthStatusSnapshot | undefined) 
 			window.clearTimeout(saveTimer);
 		};
 	}, [
-		auth?.isAuthenticated,
-		auth?.user?.id,
-		auth?.user?.preferences,
+		authUserId,
+		authUserPreferences,
+		isAuthenticated,
 		preferences,
 		queryClient,
 		serializedDefaultPreferences,

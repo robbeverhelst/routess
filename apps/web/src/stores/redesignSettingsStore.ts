@@ -105,9 +105,7 @@ function isFinitePositiveNumber(value: unknown): value is number {
 	return typeof value === "number" && Number.isFinite(value) && value > 0;
 }
 
-export function normalizeRedesignSettings(
-	input?: Partial<RedesignSettingsSnapshot> | null,
-): RedesignSettingsSnapshot {
+export function normalizeRedesignSettings(input?: Partial<RedesignSettingsSnapshot> | null): RedesignSettingsSnapshot {
 	const rawSelectedSports = Array.isArray(input?.selectedSports) ? input.selectedSports.filter(isActivity) : [];
 	const selectedSports = [...new Set(rawSelectedSports)];
 	const rawSportSpeeds = input?.sportSpeeds ?? {};
@@ -129,8 +127,7 @@ export function normalizeRedesignSettings(
 		autoSnap: typeof input?.autoSnap === "boolean" ? input.autoSnap : DEFAULT_REDESIGN_SETTINGS.autoSnap,
 		publicProfile:
 			typeof input?.publicProfile === "boolean" ? input.publicProfile : DEFAULT_REDESIGN_SETTINGS.publicProfile,
-		hidePrivacy:
-			typeof input?.hidePrivacy === "boolean" ? input.hidePrivacy : DEFAULT_REDESIGN_SETTINGS.hidePrivacy,
+		hidePrivacy: typeof input?.hidePrivacy === "boolean" ? input.hidePrivacy : DEFAULT_REDESIGN_SETTINGS.hidePrivacy,
 		defaultActivity:
 			typeof input?.defaultActivity === "string" ? input.defaultActivity : DEFAULT_REDESIGN_SETTINGS.defaultActivity,
 		selectedSports,

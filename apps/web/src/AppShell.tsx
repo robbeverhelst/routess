@@ -6,6 +6,7 @@ import { useAuthStatus } from "@/lib/api-queries";
 import { Logger } from "@/lib/logger";
 import { queryKeys } from "@/lib/query-client";
 import { useModalsStore } from "@/stores/modalsStore";
+import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 import {
 	useCanRedo,
 	useCanUndo,
@@ -17,16 +18,15 @@ import {
 } from "@/stores/routingStore";
 import { useToastStore } from "@/stores/toastStore";
 import { type RedesignContext, useUiStore } from "@/stores/uiStore";
-import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 import { BottomTabBar } from "./components/BottomTabBar";
 import { I } from "./components/icons";
 import { MapToolbar } from "./components/MapToolbar";
 import { MobilePanelDrawer } from "./components/MobilePanelDrawer";
 import { MobileTopBar } from "./components/MobileTopBar";
 import { Badge, IconBtn, RDS_COLORS } from "./components/primitives";
-import { useAccountPreferencesSync } from "./hooks/useAccountPreferencesSync";
 import { RailNav } from "./components/RailNav";
 import { RouteChip } from "./components/RouteChip";
+import { useAccountPreferencesSync } from "./hooks/useAccountPreferencesSync";
 import { useOnlineStatus } from "./hooks/useOnlineStatus";
 import { useViewport } from "./hooks/useViewport";
 import { CommandPalette } from "./modals/CommandPalette";
@@ -284,8 +284,7 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 	const hasBootstrappedWelcomeSelections = hasAccountSports || hadStoredSportsAtStartupRef.current;
 	const showLogin = !isAuthenticated && !authResolving && !skippedAuth && authView === "login";
 	const showSignup = !isAuthenticated && !authResolving && !skippedAuth && authView === "signup";
-	const showWelcome =
-		isAuthenticated && (forceWelcome || (!welcomeCompleted && !hasBootstrappedWelcomeSelections));
+	const showWelcome = isAuthenticated && (forceWelcome || (!welcomeCompleted && !hasBootstrappedWelcomeSelections));
 
 	useEffect(() => {
 		if (forceWelcome) {
