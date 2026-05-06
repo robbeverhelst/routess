@@ -4,9 +4,10 @@ import type { Map as MapboxMap } from "mapbox-gl";
 import type { Dispatch, SetStateAction } from "react";
 import { Logger } from "@/lib/logger";
 import { formatDistance } from "@/lib/units";
-import { activityLabelToKey, getSpeedForActivity, useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
+import { activityKeyToLabel, getSpeedForActivity, useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 import { getRoutingPreferences } from "@/stores/routingPreferencesStore";
 import { useRoutingStore } from "@/stores/routingStore";
+import { useUiStore } from "@/stores/uiStore";
 import { getDefaultElevationService } from "./elevation";
 import { type ComputeRouteOptions, computeRoute, type DirectionsOptions } from "./RoutingEngine";
 import { resolveMapboxProfile } from "./routingMode";
@@ -53,8 +54,11 @@ const computeElevationInBackground = (routePath: Coordinate[], waypoints: Waypoi
 function buildComputeOptions(): ComputeRouteOptions {
 	const prefs = getRoutingPreferences();
 	const settings = useRedesignSettingsStore.getState();
-	const defaultActivity = settings.defaultActivity;
-	const profile = resolveMapboxProfile(defaultActivity, prefs.profile);
+	// Active sport in the planner UI drives routing + duration so switching the
+	// activity tab actually re-routes and re-estimates. The persisted
+	// defaultActivity only seeds the initial activityType on first load.
+	const sportKey = useUiStore.getState().activityType;
+	const profile = resolveMapboxProfile(activityKeyToLabel(sportKey), prefs.profile);
 	const directions: DirectionsOptions = {
 		profile,
 		radius: 150,
@@ -66,7 +70,6 @@ function buildComputeOptions(): ComputeRouteOptions {
 	if (prefs.highways && profile === "mapbox/driving") {
 		directions.exclude = ["motorway"];
 	}
-	const sportKey = activityLabelToKey(defaultActivity) ?? "walk";
 	const speedKmh = getSpeedForActivity(sportKey, settings.sportSpeeds);
 	return { directions, snap: prefs.snap, speedKmh };
 }

@@ -4,7 +4,7 @@ import { useSurfaceBreakdown } from "@/features/routing/services/useSurfaceBreak
 import { t } from "@/lib/i18n";
 import { formatSpeedParts, useUnits } from "@/lib/units";
 import { useModalsStore } from "@/stores/modalsStore";
-import { activityLabelToKey, getSpeedForActivity, useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
+import { getSpeedForActivity, useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 import {
 	useClearWaypoints,
 	useElevationGain,
@@ -94,7 +94,6 @@ export function PlanPanel() {
 	const elevationUnit = elevParts ? elevParts.unit : units === "mi" ? "ft" : "m";
 
 	const sportSpeeds = useRedesignSettingsStore((s) => s.sportSpeeds);
-	const defaultActivity = useRedesignSettingsStore((s) => s.defaultActivity);
 
 	const paceParts = useMemo(() => {
 		if (hasRoute && routePath.length >= 2) {
@@ -104,10 +103,9 @@ export function PlanPanel() {
 				return formatSpeedParts((distanceKm / durationMinutes) * 60, units);
 			}
 		}
-		const sportKey = activityLabelToKey(defaultActivity) ?? activityType;
-		const configured = getSpeedForActivity(sportKey, sportSpeeds);
+		const configured = getSpeedForActivity(activityType, sportSpeeds);
 		return configured > 0 ? formatSpeedParts(configured, units) : null;
-	}, [hasRoute, routePath, duration, units, sportSpeeds, defaultActivity, activityType]);
+	}, [hasRoute, routePath, duration, units, sportSpeeds, activityType]);
 
 	const stats = [
 		{

@@ -41,8 +41,18 @@ const ACTIVITY_LABEL_TO_KEY: Record<string, RedesignActivity> = {
 	Walking: "walk",
 };
 
+const ACTIVITY_KEY_TO_LABEL: Record<RedesignActivity, string> = {
+	run: "Running",
+	cycle: "Cycling",
+	walk: "Walking",
+};
+
 export function activityLabelToKey(label: string): RedesignActivity | null {
 	return ACTIVITY_LABEL_TO_KEY[label] ?? null;
+}
+
+export function activityKeyToLabel(sport: RedesignActivity): string {
+	return ACTIVITY_KEY_TO_LABEL[sport];
 }
 
 export function getSpeedForActivity(sport: RedesignActivity, speeds: SportSpeeds): number {
