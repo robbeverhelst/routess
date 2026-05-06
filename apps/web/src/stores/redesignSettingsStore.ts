@@ -108,7 +108,7 @@ export const DEFAULT_REDESIGN_SETTINGS: RedesignSettingsSnapshot = {
 	hidePrivacy: true,
 	defaultActivity: "Cycling",
 	selectedSports: [],
-	sportSpeeds: { ...DEFAULT_SPORT_SPEEDS_KMH },
+	sportSpeeds: {},
 	mapStyle: "outdoors",
 	overlays: DEFAULT_OVERLAYS,
 	locationPermission: "unknown",
@@ -142,7 +142,9 @@ export function normalizeRedesignSettings(input?: Partial<RedesignSettingsSnapsh
 
 	for (const activity of ["run", "cycle", "walk"] as const) {
 		const value = rawSportSpeeds[activity];
-		sportSpeeds[activity] = isFinitePositiveNumber(value) ? value : DEFAULT_SPORT_SPEEDS_KMH[activity];
+		if (isFinitePositiveNumber(value)) {
+			sportSpeeds[activity] = value;
+		}
 	}
 
 	const rawOverlays = input?.overlays ?? {};
