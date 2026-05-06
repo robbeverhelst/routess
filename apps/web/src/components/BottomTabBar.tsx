@@ -1,5 +1,4 @@
 import type { CSSProperties } from "react";
-import { useModalsStore } from "@/stores/modalsStore";
 import { type RedesignContext, useUiStore } from "@/stores/uiStore";
 import { I } from "./icons";
 import { RDS_COLORS } from "./primitives";
@@ -20,9 +19,6 @@ const NAV: NavItem[] = [
 
 export function BottomTabBar() {
 	const { context, setContext, panelCollapsed, togglePanel, setPanelCollapsed } = useUiStore();
-	const openOverlay = useModalsStore((s) => s.openOverlay);
-	const overlay = useModalsStore((s) => s.overlay);
-	const closeOverlay = useModalsStore((s) => s.closeOverlay);
 
 	return (
 		<nav
@@ -65,12 +61,6 @@ export function BottomTabBar() {
 					/>
 				);
 			})}
-			<TabButton
-				icon={I.bell}
-				label="Alerts"
-				active={overlay === "notifications"}
-				onClick={() => (overlay === "notifications" ? closeOverlay() : openOverlay("notifications"))}
-			/>
 		</nav>
 	);
 }

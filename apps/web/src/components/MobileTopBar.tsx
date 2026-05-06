@@ -7,6 +7,10 @@ import { UserAvatar } from "./UserAvatar";
 export function MobileTopBar() {
 	const { theme, toggleTheme } = useUiStore();
 	const openModal = useModalsStore((s) => s.openModal);
+	const openOverlay = useModalsStore((s) => s.openOverlay);
+	const closeOverlay = useModalsStore((s) => s.closeOverlay);
+	const overlay = useModalsStore((s) => s.overlay);
+	const alertsActive = overlay === "notifications";
 
 	return (
 		<header
@@ -41,6 +45,13 @@ export function MobileTopBar() {
 			<div style={{ flex: 1 }} />
 			<IconBtn title="Search" onClick={() => openModal("search")}>
 				<I.search size={18} />
+			</IconBtn>
+			<IconBtn
+				title="Alerts"
+				pressed={alertsActive}
+				onClick={() => (alertsActive ? closeOverlay() : openOverlay("notifications"))}
+			>
+				<I.bell size={18} />
 			</IconBtn>
 			<IconBtn title="Toggle theme" onClick={toggleTheme}>
 				{theme === "dark" ? <I.sun size={18} /> : <I.moon size={18} />}
