@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { t } from "@/lib/i18n";
 import { type RedesignContext, useUiStore } from "@/stores/uiStore";
 import { I } from "./icons";
 import { RDS_COLORS } from "./primitives";
@@ -6,23 +7,23 @@ import { RDS_COLORS } from "./primitives";
 interface NavItem {
 	key: RedesignContext;
 	icon: React.ComponentType<{ size?: number }>;
-	label: string;
+	labelKey: string;
 }
 
 const NAV: NavItem[] = [
-	{ key: "plan", icon: I.route, label: "Plan" },
-	{ key: "library", icon: I.library, label: "Library" },
-	{ key: "discover", icon: I.explore, label: "Discover" },
-	{ key: "social", icon: I.social, label: "Social" },
-	{ key: "settings", icon: I.settings, label: "Settings" },
+	{ key: "plan", icon: I.route, labelKey: "nav.plan" },
+	{ key: "library", icon: I.library, labelKey: "nav.library" },
+	{ key: "discover", icon: I.explore, labelKey: "nav.discover" },
+	{ key: "social", icon: I.social, labelKey: "nav.social" },
+	{ key: "settings", icon: I.settings, labelKey: "nav.settings" },
 ];
 
 export function BottomTabBar() {
-	const { context, setContext, panelCollapsed, togglePanel, setPanelCollapsed } = useUiStore();
+	const { context, setContext, panelCollapsed, togglePanel, setPanelCollapsed, language } = useUiStore();
 
 	return (
 		<nav
-			aria-label="Primary navigation"
+			aria-label={t("a11y.primaryNav", language)}
 			style={{
 				position: "absolute",
 				left: "max(10px, var(--rds-safe-left))",
@@ -48,7 +49,7 @@ export function BottomTabBar() {
 					<TabButton
 						key={n.key}
 						icon={n.icon}
-						label={n.label}
+						label={t(n.labelKey, language)}
 						active={isActive}
 						onClick={() => {
 							if (context === n.key) {

@@ -1,3 +1,5 @@
+import { t } from "@/lib/i18n";
+import { useUiStore } from "@/stores/uiStore";
 import { I } from "../components/icons";
 import { MapBackdrop } from "../components/MapBackdrop";
 import { Btn, RDS_COLORS } from "../components/primitives";
@@ -8,32 +10,32 @@ const VARIANTS: Record<
 	ErrorKind,
 	{
 		icon: React.ComponentType<{ size?: number }>;
-		title: string;
-		body: string;
-		action: string;
-		fallback: string;
+		titleKey: string;
+		bodyKey: string;
+		actionKey: string;
+		fallbackKey: string;
 	}
 > = {
 	offline: {
 		icon: I.globe,
-		title: "You're offline",
-		body: "We can't reach the map server. Cached tiles will still load. Recording continues — your activity will sync when you reconnect.",
-		action: "Retry connection",
-		fallback: "Continue offline",
+		titleKey: "error.offline.title",
+		bodyKey: "error.offline.body",
+		actionKey: "error.offline.retry",
+		fallbackKey: "error.offline.continue",
 	},
 	routefail: {
 		icon: I.refresh,
-		title: "Couldn't build that route",
-		body: "There's no continuous path between your waypoints with the current preferences. Try a different routing profile or move a waypoint.",
-		action: "Adjust routing",
-		fallback: "Edit waypoints",
+		titleKey: "error.routing.title",
+		bodyKey: "error.routing.body",
+		actionKey: "error.routing.adjust",
+		fallbackKey: "error.routing.edit",
 	},
 	gps: {
 		icon: I.target,
-		title: "GPS signal lost",
-		body: "We've paused recording until we can reacquire your location. Move to an open area or check device permissions.",
-		action: "Resume when ready",
-		fallback: "Stop recording",
+		titleKey: "error.gps.title",
+		bodyKey: "error.gps.body",
+		actionKey: "error.gps.resume",
+		fallbackKey: "error.gps.stop",
 	},
 };
 
@@ -46,6 +48,7 @@ export function ErrorScreen({
 	onAction?: () => void;
 	onFallback?: () => void;
 }) {
+	const language = useUiStore((s) => s.language);
 	const v = VARIANTS[kind];
 	const Icon = v.icon;
 	return (
@@ -95,7 +98,7 @@ export function ErrorScreen({
 					>
 						<Icon size={26} />
 					</div>
-					<h2 style={{ margin: 0, fontSize: 20, fontWeight: 600, letterSpacing: -0.3 }}>{v.title}</h2>
+					<h2 style={{ margin: 0, fontSize: 20, fontWeight: 600, letterSpacing: -0.3 }}>{t(v.titleKey, language)}</h2>
 					<p
 						style={{
 							fontSize: 13.5,
@@ -104,13 +107,13 @@ export function ErrorScreen({
 							lineHeight: 1.55,
 						}}
 					>
-						{v.body}
+						{t(v.bodyKey, language)}
 					</p>
 					<Btn variant="primary" onClick={onAction} style={{ width: "100%", height: 42 }}>
-						{v.action}
+						{t(v.actionKey, language)}
 					</Btn>
 					<Btn variant="ghost" onClick={onFallback} style={{ width: "100%", marginTop: 8, color: RDS_COLORS.fgMuted }}>
-						{v.fallback}
+						{t(v.fallbackKey, language)}
 					</Btn>
 				</div>
 			</div>

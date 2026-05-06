@@ -2,10 +2,18 @@
 	"name": "@routess/i18n",
 	"version": "0.1.0",
 	"description": "Internationalization package for Routess with support for web and mobile",
-	"main": "dist/index.js",
-	"module": "dist/index.js",
-	"types": "dist/index.d.ts",
+	"type": "module",
+	"main": "src/index.ts",
+	"module": "src/index.ts",
+	"types": "src/index.ts",
+	"exports": {
+		".": {
+			"types": "./src/index.ts",
+			"default": "./src/index.ts"
+		}
+	},
 	"files": [
+		"src",
 		"dist"
 	],
 	"scripts": {

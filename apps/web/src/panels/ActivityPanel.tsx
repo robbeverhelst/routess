@@ -1,7 +1,10 @@
+import { t } from "@/lib/i18n";
+import { useUiStore } from "@/stores/uiStore";
 import { ComingSoonState } from "../components/ComingSoonState";
 import { RDS_COLORS, SecTitle } from "../components/primitives";
 
 export function ActivityPanel() {
+	const language = useUiStore((s) => s.language);
 	return (
 		<div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
 			<div
@@ -10,13 +13,13 @@ export function ActivityPanel() {
 					borderBottom: `1px solid ${RDS_COLORS.border}`,
 				}}
 			>
-				<SecTitle>Activity</SecTitle>
+				<SecTitle>{t("stub.activity.label", language)}</SecTitle>
 			</div>
 			<div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
 				<ComingSoonState
 					icon="bell"
-					title="Your activity feed"
-					body="Your recorded sessions, distance trends, and pace summaries arrive with the activities backend."
+					title={t("stub.activity.title", language)}
+					body={t("stub.activity.body", language)}
 				/>
 			</div>
 		</div>

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useSurfaceBreakdown } from "@/features/routing/services/useSurfaceBreakdown";
+import { t } from "@/lib/i18n";
 import { useUnits } from "@/lib/units";
 import { useModalsStore } from "@/stores/modalsStore";
 import {
@@ -24,10 +25,10 @@ import { I } from "../components/icons";
 import { Btn, IconBtn, Kbd, RDS_COLORS, SecTitle } from "../components/primitives";
 import { SurfaceBreakdownBar } from "../components/SurfaceBreakdownBar";
 
-const ACTIVITIES: { key: RedesignActivity; icon: React.ComponentType<{ size?: number }>; label: string }[] = [
-	{ key: "run", icon: I.run, label: "Run" },
-	{ key: "cycle", icon: I.bike, label: "Cycle" },
-	{ key: "walk", icon: I.walk, label: "Walk" },
+const ACTIVITIES: { key: RedesignActivity; icon: React.ComponentType<{ size?: number }>; labelKey: string }[] = [
+	{ key: "run", icon: I.run, labelKey: "sport.short.run" },
+	{ key: "cycle", icon: I.bike, labelKey: "sport.short.cycle" },
+	{ key: "walk", icon: I.walk, labelKey: "sport.short.walk" },
 ];
 
 function PlanElevationSparkline() {
@@ -63,7 +64,7 @@ export function PlanPanel() {
 		window.dispatchEvent(new CustomEvent("routess:recalculate-route"));
 	};
 
-	const { activityType, setActivityType } = useUiStore();
+	const { activityType, setActivityType, language } = useUiStore();
 	const openModal = useModalsStore((s) => s.openModal);
 	const elevationGain = useElevationGain();
 	const isComputingElevation = useIsComputingElevation();
@@ -80,13 +81,13 @@ export function PlanPanel() {
 
 	const stats = [
 		{
-			label: "Distance",
+			label: t("plan.distance", language),
 			val: distance ? distance.split(" ")[0] : "—",
 			unit: distance ? distance.split(" ")[1] || "km" : units === "mi" ? "mi" : "km",
 		},
-		{ label: "Time", val: duration || "—", unit: "" },
-		{ label: "Elev gain", val: elevationVal, unit: elevationUnit },
-		{ label: "Pace", val: "—", unit: units === "mi" ? "/mi" : "/km" },
+		{ label: t("plan.time", language), val: duration || "—", unit: "" },
+		{ label: t("plan.elev", language), val: elevationVal, unit: elevationUnit },
+		{ label: t("plan.pace", language), val: "—", unit: units === "mi" ? "/mi" : "/km" },
 	];
 
 	const startWp = waypoints[0];
@@ -131,15 +132,15 @@ export function PlanPanel() {
 									cursor: "pointer",
 								}}
 							>
-								<Icon size={14} /> {a.label}
+								<Icon size={14} /> {t(a.labelKey, language)}
 							</button>
 						);
 					})}
 					<div style={{ flex: 1 }} />
-					<IconBtn title="Routing preferences" onClick={() => openModal("routing")}>
+					<IconBtn title={t("plan.routingPrefs", language)} onClick={() => openModal("routing")}>
 						<I.sliders size={16} />
 					</IconBtn>
-					<IconBtn title="Generate loop" onClick={() => openModal("loop")}>
+					<IconBtn title={t("plan.generateLoop", language)} onClick={() => openModal("loop")}>
 						<I.compass size={16} />
 					</IconBtn>
 				</div>
@@ -147,11 +148,11 @@ export function PlanPanel() {
 				<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 6 }}>
 					<EndpointInput
 						dotColor={RDS_COLORS.success}
-						label={startWp ? formatCoord(startWp.coord) : "Add start point"}
+						label={startWp ? formatCoord(startWp.coord) : t("plan.addStart", language)}
 					/>
 					<EndpointInput
 						dotColor={RDS_COLORS.danger}
-						label={endWp && waypoints.length > 1 ? formatCoord(endWp.coord) : "Add end point"}
+						label={endWp && waypoints.length > 1 ? formatCoord(endWp.coord) : t("plan.addEnd", language)}
 					/>
 				</div>
 
@@ -174,7 +175,7 @@ export function PlanPanel() {
 						cursor: "pointer",
 					}}
 				>
-					<I.plus size={14} /> Add waypoint
+					<I.plus size={14} /> {t("plan.addWaypoint", language)}
 					<span style={{ flex: 1 }} />
 					<Kbd>⌘</Kbd>
 					<Kbd>K</Kbd>
@@ -212,7 +213,9 @@ export function PlanPanel() {
 
 			{/* Waypoints list */}
 			<div style={{ padding: "14px 20px", overflow: "auto", flex: 1 }}>
-				<SecTitle style={{ marginBottom: 10 }}>Waypoints · {waypoints.length}</SecTitle>
+				<SecTitle style={{ marginBottom: 10 }}>
+					{t("plan.waypointsCount", language, { count: String(waypoints.length) })}
+				</SecTitle>
 				{waypoints.length === 0 ? (
 					<div
 						style={{
@@ -223,8 +226,8 @@ export function PlanPanel() {
 							lineHeight: 1.55,
 						}}
 					>
-						Tap the map to add your first waypoint, or use <Kbd>⌘</Kbd>
-						<Kbd>K</Kbd> to search a place.
+						{t("plan.tapMapToAdd", language)} <Kbd>⌘</Kbd>
+						<Kbd>K</Kbd>.
 					</div>
 				) : (
 					<div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -232,7 +235,11 @@ export function PlanPanel() {
 							const isStart = i === 0;
 							const isEnd = i === waypoints.length - 1;
 							const dot = isStart ? RDS_COLORS.success : isEnd ? RDS_COLORS.danger : RDS_COLORS.accent;
-							const label = isStart ? "Start" : isEnd ? "End" : `Waypoint ${i}`;
+							const label = isStart
+								? t("common.start", language)
+								: isEnd
+									? t("common.end", language)
+									: t("common.waypoint", language, { n: String(i) });
 							const isDragging = draggingIdx === i;
 							const isDragTarget = dragOverIdx === i && draggingIdx !== null && draggingIdx !== i;
 							return (
@@ -312,7 +319,7 @@ export function PlanPanel() {
 									</div>
 									<div style={{ display: "flex", alignItems: "center", gap: 2 }}>
 										<IconBtn
-											title="Drag to reorder"
+											title={t("plan.dragToReorder", language)}
 											draggable
 											onDragStart={(e) => {
 												e.dataTransfer.effectAllowed = "move";
@@ -327,7 +334,7 @@ export function PlanPanel() {
 											<I.grip size={14} />
 										</IconBtn>
 										<IconBtn
-											title="Remove waypoint"
+											title={t("plan.removeWaypoint", language)}
 											onClick={() => handleRemoveWaypoint(i)}
 											style={{ color: RDS_COLORS.fgSubtle }}
 										>
@@ -357,13 +364,18 @@ export function PlanPanel() {
 					disabled={!hasRoute}
 					onClick={() => openModal("save")}
 				>
-					<I.save size={14} /> Save
+					<I.save size={14} /> {t("common.save", language)}
 				</Btn>
-				<Btn title="Share route" disabled={!hasRoute} onClick={() => openModal("share")} style={{ padding: "0 10px" }}>
+				<Btn
+					title={t("plan.shareRoute", language)}
+					disabled={!hasRoute}
+					onClick={() => openModal("share")}
+					style={{ padding: "0 10px" }}
+				>
 					<I.share size={14} />
 				</Btn>
 				<Btn
-					title="Import GPX"
+					title={t("plan.importGpx", language)}
 					disabled={routePath.length === 0 && waypoints.length === 0}
 					onClick={() => openModal("import")}
 					style={{ padding: "0 10px" }}
@@ -371,7 +383,7 @@ export function PlanPanel() {
 					<I.download size={14} />
 				</Btn>
 				<Btn
-					title="Clear"
+					title={t("plan.clear", language)}
 					variant="ghost"
 					onClick={clear}
 					disabled={waypoints.length === 0}

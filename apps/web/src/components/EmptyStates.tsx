@@ -1,3 +1,5 @@
+import { t } from "@/lib/i18n";
+import { useUiStore } from "@/stores/uiStore";
 import { I } from "./icons";
 import { Btn, RDS_COLORS, SecTitle } from "./primitives";
 
@@ -8,6 +10,7 @@ export function EmptyActivity({
 	onStartRecording?: () => void;
 	onConnect?: () => void;
 }) {
+	const language = useUiStore((s) => s.language);
 	return (
 		<div
 			style={{
@@ -34,7 +37,7 @@ export function EmptyActivity({
 				>
 					<I.activity size={36} />
 				</div>
-				<h3 style={{ margin: 0, fontSize: 17, fontWeight: 600 }}>Nothing to show yet</h3>
+				<h3 style={{ margin: 0, fontSize: 17, fontWeight: 600 }}>{t("empty.nothing.title", language)}</h3>
 				<p
 					style={{
 						fontSize: 13,
@@ -43,14 +46,14 @@ export function EmptyActivity({
 						lineHeight: 1.55,
 					}}
 				>
-					Once you record or sync a few rides, you'll see weekly volume, splits, and trends here.
+					{t("empty.nothing.body", language)}
 				</p>
 				<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
 					<Btn variant="primary" style={{ width: "100%" }} onClick={onStartRecording}>
-						<I.play size={12} /> Start recording
+						<I.play size={12} /> {t("empty.startRecording", language)}
 					</Btn>
 					<Btn style={{ width: "100%" }} onClick={onConnect} disabled>
-						<I.refresh size={14} /> Connect Garmin / Strava
+						<I.refresh size={14} /> {t("empty.connectGarmin", language)}
 					</Btn>
 				</div>
 				<div
@@ -63,7 +66,7 @@ export function EmptyActivity({
 						color: RDS_COLORS.fgSubtle,
 					}}
 				>
-					Or{" "}
+					{t("empty.orPrefix", language)}{" "}
 					<button
 						type="button"
 						style={{
@@ -76,9 +79,9 @@ export function EmptyActivity({
 							cursor: "pointer",
 						}}
 					>
-						upload past activities
+						{t("empty.uploadPast", language)}
 					</button>{" "}
-					as a bulk import.
+					{t("empty.bulkImportSuffix", language)}
 				</div>
 			</div>
 		</div>
@@ -94,6 +97,7 @@ export function EmptySearch({
 	suggestions: string[];
 	onSuggest: (s: string) => void;
 }) {
+	const language = useUiStore((s) => s.language);
 	return (
 		<div
 			style={{
@@ -120,7 +124,7 @@ export function EmptySearch({
 				>
 					<I.search size={32} />
 				</div>
-				<h3 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>No results for "{query}"</h3>
+				<h3 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>{t("empty.noResults", language, { query })}</h3>
 				<p
 					style={{
 						fontSize: 13,
@@ -129,10 +133,10 @@ export function EmptySearch({
 						lineHeight: 1.55,
 					}}
 				>
-					Check spelling, try a shorter query, or search by coordinates.
+					{t("empty.checkSpelling", language)}
 				</p>
 				<div style={{ display: "flex", flexDirection: "column", gap: 8, textAlign: "left" }}>
-					<SecTitle>Try instead</SecTitle>
+					<SecTitle>{t("empty.tryInstead", language)}</SecTitle>
 					{suggestions.map((s) => (
 						<button
 							key={s}

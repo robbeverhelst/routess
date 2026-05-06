@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
+import { type SupportedLanguage, t } from "@/lib/i18n";
 import { useModalsStore } from "@/stores/modalsStore";
+import { useUiStore } from "@/stores/uiStore";
 import { EmptySearch } from "../components/EmptyStates";
 import { I } from "../components/icons";
 import { Kbd, RDS_COLORS, SecTitle } from "../components/primitives";
@@ -12,9 +14,16 @@ interface Suggestion {
 	coords?: [number, number];
 }
 
-const RECENT: Suggestion[] = [
-	{ id: "r1", name: "Search history is local-only", sub: "Recent searches will appear here", tag: "Hint" },
-];
+function buildRecent(language: SupportedLanguage): Suggestion[] {
+	return [
+		{
+			id: "r1",
+			name: t("search.history.title", language),
+			sub: t("search.history.body", language),
+			tag: t("search.history.hint", language),
+		},
+	];
+}
 
 function suggestForQuery(query: string): string[] {
 	// Trim and offer 3 simple alternatives. The mockup hardcodes Schelde / Bornem / coords;
@@ -26,6 +35,8 @@ function suggestForQuery(query: string): string[] {
 
 export function SearchModal() {
 	const close = useModalsStore((s) => s.closeModal);
+	const language = useUiStore((s) => s.language);
+	const RECENT = buildRecent(language);
 	const [query, setQuery] = useState("");
 	const [results, setResults] = useState<Suggestion[]>([]);
 	const [loading, setLoading] = useState(false);
@@ -202,7 +213,7 @@ export function SearchModal() {
 		>
 			<button
 				type="button"
-				aria-label="Close search"
+				aria-label={t("common.close", language)}
 				onClick={close}
 				style={{
 					position: "absolute",
@@ -242,7 +253,7 @@ export function SearchModal() {
 						value={query}
 						onChange={(e) => setQuery(e.target.value)}
 						onKeyDown={onKeyDown}
-						placeholder="Search addresses, places, coordinates…"
+						placeholder={t("search.placeholder", language)}
 						style={{
 							flex: 1,
 							background: "transparent",
@@ -252,12 +263,12 @@ export function SearchModal() {
 							color: "inherit",
 						}}
 					/>
-					<Kbd>esc</Kbd>
+					<Kbd>{t("search.esc", language)}</Kbd>
 				</div>
 				<div style={{ padding: 8, flex: 1, minHeight: 0, overflow: "auto" }}>
 					{!query.trim() && (
 						<>
-							<SecTitle style={{ padding: "8px 12px 6px" }}>Recent</SecTitle>
+							<SecTitle style={{ padding: "8px 12px 6px" }}>{t("search.recent", language)}</SecTitle>
 							{RECENT.map((r, i) => (
 								<Row key={r.id} r={r} hot={i === activeIndex} index={i} />
 							))}
@@ -272,12 +283,12 @@ export function SearchModal() {
 								color: RDS_COLORS.fgSubtle,
 							}}
 						>
-							Searching…
+							{t("search.searching", language)}
 						</div>
 					)}
 					{!loading && results.length > 0 && (
 						<>
-							<SecTitle style={{ padding: "8px 12px 6px" }}>Results</SecTitle>
+							<SecTitle style={{ padding: "8px 12px 6px" }}>{t("search.results", language)}</SecTitle>
 							{results.map((r, i) => (
 								<Row key={r.id} r={r} hot={i === activeIndex} index={i} />
 							))}
@@ -300,13 +311,13 @@ export function SearchModal() {
 					}}
 				>
 					<span>
-						<Kbd>↑</Kbd> <Kbd>↓</Kbd> navigate
+						<Kbd>↑</Kbd> <Kbd>↓</Kbd> {t("search.kbd.navigate", language)}
 					</span>
 					<span>
-						<Kbd>↵</Kbd> select
+						<Kbd>↵</Kbd> {t("search.kbd.select", language)}
 					</span>
 					<div style={{ flex: 1 }} />
-					<span>Powered by Mapbox</span>
+					<span>{t("search.poweredBy", language)}</span>
 				</div>
 			</div>
 		</div>

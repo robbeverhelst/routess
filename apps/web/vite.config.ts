@@ -26,8 +26,10 @@ export default defineConfig({
 		},
 	},
 	optimizeDeps: {
-		// Include workspace packages in dependency optimization to prevent dev mode issues
-		include: ["@routess/core", "@routess/api-client", "@routess/design-tokens", "@routess/i18n"],
+		// Exclude workspace packages from dep pre-bundling so edits to their src
+		// are picked up live by HMR. Pre-bundling otherwise freezes the package
+		// state at dev-server startup, which made locale edits silently no-op.
+		exclude: ["@routess/core", "@routess/api-client", "@routess/design-tokens", "@routess/i18n"],
 	},
 	build: {
 		rollupOptions: {

@@ -1,5 +1,6 @@
 import { haversineDistance, type Waypoint } from "@routess/core";
 import { type CSSProperties, type ReactNode, useEffect, useMemo, useState } from "react";
+import { t } from "@/lib/i18n";
 import { serializeAndCompress } from "@/lib/shareUtils";
 import { buildMapboxStaticPreviewUrl } from "@/lib/utils/mapboxStaticPreview";
 import { useModalsStore } from "@/stores/modalsStore";
@@ -12,6 +13,7 @@ import {
 	useSetShareNotification,
 	useWaypoints,
 } from "@/stores/routingStore";
+import { useUiStore } from "@/stores/uiStore";
 import { FacebookBrand, I, WhatsAppBrand, XBrand } from "../components/icons";
 import { ModalShell } from "../components/ModalShell";
 import { Btn, RDS_COLORS, SecTitle, Toggle } from "../components/primitives";
@@ -108,6 +110,7 @@ function TargetTile({ label, icon, onClick, disabled, tint }: TargetTileProps) {
 
 export function ShareModal() {
 	const closeModal = useModalsStore((s) => s.closeModal);
+	const language = useUiStore((s) => s.language);
 	const waypoints = useWaypoints();
 	const routePath = useRoutePath();
 	const isMapLocked = useIsMapLocked();
@@ -150,64 +153,64 @@ export function ShareModal() {
 	const [failedUrl, setFailedUrl] = useState<string | null>(null);
 	const showStaticMap = staticMapUrl !== null && failedUrl !== staticMapUrl;
 	const shareText = useMemo(() => {
-		const parts: string[] = ["Check out this route on Routess"];
+		const parts: string[] = [t("share.checkOut", language)];
 		if (distance) parts.push(distance);
 		if (duration) parts.push(duration);
 		return parts.join(" · ");
-	}, [distance, duration]);
+	}, [distance, duration, language]);
 
 	const copy = async () => {
 		if (!hasRoute) {
-			notify(setShareNotification, "Cannot share an empty route.");
+			notify(setShareNotification, t("share.empty", language));
 			return;
 		}
 		try {
 			await navigator.clipboard.writeText(url);
 			setCopied(true);
 			setTimeout(() => setCopied(false), 1500);
-			notify(setShareNotification, "Link copied to clipboard!");
+			notify(setShareNotification, t("share.copied", language));
 		} catch {
-			notify(setShareNotification, "Failed to copy link.");
+			notify(setShareNotification, t("share.copyFailed", language));
 		}
 	};
 
 	const shareNative = async () => {
 		if (!hasRoute) {
-			notify(setShareNotification, "Cannot share an empty route.");
+			notify(setShareNotification, t("share.empty", language));
 			return;
 		}
 		try {
 			await navigator.share({
-				title: "Routess route",
+				title: t("share.routessRoute", language),
 				text: shareText,
 				url,
 			});
-			notify(setShareNotification, "Shared!");
+			notify(setShareNotification, t("share.shared", language));
 			closeModal();
 		} catch (err) {
 			if (err instanceof DOMException && err.name === "AbortError") return;
-			notify(setShareNotification, "Sharing was cancelled.");
+			notify(setShareNotification, t("share.cancelled", language));
 		}
 	};
 
 	const openExternal = (target: string, label: string) => {
 		if (!hasRoute) {
-			notify(setShareNotification, "Cannot share an empty route.");
+			notify(setShareNotification, t("share.empty", language));
 			return;
 		}
 		const w = window.open(target, "_blank", "noopener,noreferrer");
 		if (w) {
-			notify(setShareNotification, `Opened ${label}.`);
+			notify(setShareNotification, t("share.opened", language, { label }));
 			closeModal();
 		} else {
-			notify(setShareNotification, "Popup blocked. Try copying the link instead.");
+			notify(setShareNotification, t("share.popupBlocked", language));
 		}
 	};
 
 	const shareEmail = () => {
-		const subject = encodeURIComponent("My Routess route");
+		const subject = encodeURIComponent(t("share.myRoute", language));
 		const body = encodeURIComponent(`${shareText}\n\n${url}`);
-		openExternal(`mailto:?subject=${subject}&body=${body}`, "email");
+		openExternal(`mailto:?subject=${subject}&body=${body}`, t("share.email", language));
 	};
 
 	const shareX = () => {
@@ -228,7 +231,7 @@ export function ShareModal() {
 
 	const downloadGpx = () => {
 		if (!hasRoute) {
-			notify(setShareNotification, "Cannot export an empty route.");
+			notify(setShareNotification, t("share.exportEmpty", language));
 			return;
 		}
 		window.dispatchEvent(new CustomEvent("routess:export-gpx"));
@@ -237,16 +240,16 @@ export function ShareModal() {
 
 	return (
 		<ModalShell
-			title="Share route"
+			title={t("share.title", language)}
 			sub={`${distance || "—"} · ${duration || "—"}`}
 			width={520}
 			onClose={closeModal}
 			footer={
 				<>
 					<div style={{ flex: 1 }} />
-					<Btn onClick={closeModal}>Close</Btn>
+					<Btn onClick={closeModal}>{t("common.close", language)}</Btn>
 					<Btn variant="primary" onClick={copy} disabled={!hasRoute}>
-						<I.copy size={14} /> {copied ? "Copied" : "Copy link"}
+						<I.copy size={14} /> {copied ? t("common.copied", language) : t("share.copyLink", language)}
 					</Btn>
 				</>
 			}
@@ -271,7 +274,7 @@ export function ShareModal() {
 						{showStaticMap && staticMapUrl && (
 							<img
 								src={staticMapUrl}
-								alt="Route preview"
+								alt={t("share.previewAlt", language)}
 								onError={() => setFailedUrl(staticMapUrl)}
 								style={{
 									position: "absolute",
@@ -311,7 +314,7 @@ export function ShareModal() {
 								}}
 							>
 								<I.route size={24} />
-								<div style={{ fontSize: 12.5, fontWeight: 500 }}>No route to preview yet</div>
+								<div style={{ fontSize: 12.5, fontWeight: 500 }}>{t("share.noPreview", language)}</div>
 							</div>
 						)}
 						<div
@@ -333,11 +336,11 @@ export function ShareModal() {
 							}}
 						>
 							<I.route size={12} />
-							<span>{showStaticMap ? "Map preview" : "Share preview"}</span>
+							<span>{showStaticMap ? t("share.mapPreview", language) : t("share.sharePreview", language)}</span>
 						</div>
 					</div>
 					<div style={{ padding: 14 }}>
-						<div style={{ fontSize: 14, fontWeight: 600 }}>Current route</div>
+						<div style={{ fontSize: 14, fontWeight: 600 }}>{t("share.currentRoute", language)}</div>
 						<div
 							className="rds-mono"
 							style={{
@@ -350,13 +353,13 @@ export function ShareModal() {
 						>
 							<span>{distance || "—"}</span>
 							<span>·</span>
-							<span>{waypoints.length} waypoints</span>
+							<span>{t("share.waypointsCount", language, { count: String(waypoints.length) })}</span>
 						</div>
 					</div>
 				</div>
 
 				<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-					<SecTitle>Share link</SecTitle>
+					<SecTitle>{t("share.shareLink", language)}</SecTitle>
 					<div
 						style={{
 							display: "flex",
@@ -389,40 +392,55 @@ export function ShareModal() {
 							disabled={!hasRoute}
 							style={{ height: 28, padding: "0 10px", fontSize: 11 }}
 						>
-							{copied ? "Copied" : "Copy"}
+							{copied ? t("common.copied", language) : t("common.copy", language)}
 						</Btn>
 					</div>
 				</div>
 
 				<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-					<SecTitle>Share via</SecTitle>
+					<SecTitle>{t("share.via", language)}</SecTitle>
 					<div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
 						{canNativeShare && (
 							<TargetTile
-								label="More"
+								label={t("share.more", language)}
 								icon={<I.share size={18} />}
 								onClick={shareNative}
 								tint={RDS_COLORS.accent}
 								disabled={!hasRoute}
 							/>
 						)}
-						<TargetTile label="Email" icon={<I.mail size={18} />} onClick={shareEmail} disabled={!hasRoute} />
-						<TargetTile label="X" icon={<XBrand size={16} />} onClick={shareX} disabled={!hasRoute} />
 						<TargetTile
-							label="Facebook"
+							label={t("share.email", language)}
+							icon={<I.mail size={18} />}
+							onClick={shareEmail}
+							disabled={!hasRoute}
+						/>
+						<TargetTile
+							label={t("share.x", language)}
+							icon={<XBrand size={16} />}
+							onClick={shareX}
+							disabled={!hasRoute}
+						/>
+						<TargetTile
+							label={t("share.facebook", language)}
 							icon={<FacebookBrand size={18} />}
 							onClick={shareFacebook}
 							tint="#1877F2"
 							disabled={!hasRoute}
 						/>
 						<TargetTile
-							label="WhatsApp"
+							label={t("share.whatsapp", language)}
 							icon={<WhatsAppBrand size={18} />}
 							onClick={shareWhatsApp}
 							tint="#25D366"
 							disabled={!hasRoute}
 						/>
-						<TargetTile label="GPX" icon={<I.download size={18} />} onClick={downloadGpx} disabled={!hasRoute} />
+						<TargetTile
+							label={t("share.gpx", language)}
+							icon={<I.download size={18} />}
+							onClick={downloadGpx}
+							disabled={!hasRoute}
+						/>
 					</div>
 				</div>
 
@@ -439,9 +457,9 @@ export function ShareModal() {
 				>
 					<I.lock size={14} />
 					<div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
-						<div style={{ fontSize: 12.5, fontWeight: 500 }}>Hide first/last 1 km</div>
+						<div style={{ fontSize: 12.5, fontWeight: 500 }}>{t("share.hidePrivacy", language)}</div>
 						<div style={{ fontSize: 11, color: RDS_COLORS.fgSubtle, marginTop: 2 }}>
-							Recommended for routes near home
+							{t("share.hidePrivacyHint", language)}
 						</div>
 					</div>
 					<Toggle on={hideEdges} onChange={setHideEdges} />

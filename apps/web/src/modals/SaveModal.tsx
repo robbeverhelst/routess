@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useIsAuthenticated } from "@/hooks/useAuthState";
 import { useSaveRoute } from "@/lib/api-queries";
+import { t } from "@/lib/i18n";
 import { useModalsStore } from "@/stores/modalsStore";
 import { useElevationGain, useRouteDistance, useRouteDuration, useWaypoints } from "@/stores/routingStore";
 import { useToastStore } from "@/stores/toastStore";
@@ -9,16 +10,16 @@ import { I } from "../components/icons";
 import { ModalShell } from "../components/ModalShell";
 import { Btn, RDS_COLORS, SecTitle } from "../components/primitives";
 
-const ACTIVITIES: { key: RedesignActivity; icon: React.ComponentType<{ size?: number }>; label: string }[] = [
-	{ key: "run", icon: I.run, label: "Run" },
-	{ key: "cycle", icon: I.bike, label: "Cycle" },
-	{ key: "walk", icon: I.walk, label: "Walk" },
+const ACTIVITIES: { key: RedesignActivity; icon: React.ComponentType<{ size?: number }>; labelKey: string }[] = [
+	{ key: "run", icon: I.run, labelKey: "sport.short.run" },
+	{ key: "cycle", icon: I.bike, labelKey: "sport.short.cycle" },
+	{ key: "walk", icon: I.walk, labelKey: "sport.short.walk" },
 ];
 
 const PRIVACY_OPTS = [
-	{ key: "private", label: "Private", sub: "Only me" },
-	{ key: "link", label: "Link", sub: "Anyone with link" },
-	{ key: "public", label: "Public", sub: "Discoverable" },
+	{ key: "private", labelKey: "save.privacy.private", subKey: "save.privacy.privateSub" },
+	{ key: "link", labelKey: "save.privacy.link", subKey: "save.privacy.linkSub" },
+	{ key: "public", labelKey: "save.privacy.public", subKey: "save.privacy.publicSub" },
 ] as const;
 
 export function SaveModal() {
@@ -27,7 +28,7 @@ export function SaveModal() {
 	const distance = useRouteDistance();
 	const duration = useRouteDuration();
 	const elevationGain = useElevationGain();
-	const { activityType, setActivityType } = useUiStore();
+	const { activityType, setActivityType, language } = useUiStore();
 	const saveRoute = useSaveRoute();
 	const pushToast = useToastStore((s) => s.push);
 	const isAuthenticated = useIsAuthenticated();
@@ -37,14 +38,11 @@ export function SaveModal() {
 	const [tags, setTags] = useState<string[]>([]);
 	const [tagDraft, setTagDraft] = useState("");
 
-	// `distance` is the formatted "X.X km" or "X.X mi" string from the routing
-	// store. Convert it back to meters for the API based on the unit suffix.
 	const distanceMeters = (() => {
 		const value = parseFloat(distance) || 0;
 		if (!value) return 0;
 		if (distance.includes("mi")) return Math.round(value * 1609.344);
 		if (distance.includes("ft")) return Math.round(value * 0.3048);
-		// "X m" or "X.X km" — split on space to disambiguate
 		const unit = distance.split(" ")[1] || "km";
 		if (unit.startsWith("m") && !unit.startsWith("mi")) return Math.round(value);
 		return Math.round(value * 1000);
@@ -76,48 +74,56 @@ export function SaveModal() {
 				onSuccess: () => {
 					pushToast({
 						kind: "success",
-						title: "Route saved",
+						title: t("save.toast.saved", language),
 						body: `${name.trim()} · ${distance || "—"}`,
 					});
 					closeModal();
 				},
 				onError: () => {
-					pushToast({ kind: "danger", title: "Save failed", body: "Try again." });
+					pushToast({
+						kind: "danger",
+						title: t("save.toast.failed", language),
+						body: t("common.tryAgain", language),
+					});
 				},
 			},
 		);
 	};
 
 	const addTag = () => {
-		const t = tagDraft.trim();
-		if (!t || tags.includes(t)) return;
-		setTags([...tags, t]);
+		const tag = tagDraft.trim();
+		if (!tag || tags.includes(tag)) return;
+		setTags([...tags, tag]);
 		setTagDraft("");
 	};
 
 	return (
 		<ModalShell
-			title="Save route"
-			sub={`${distance || "—"} · ${duration || "—"} · ${wpCount} waypoints`}
+			title={t("save.title", language)}
+			sub={t("save.waypointsCount", language, {
+				distance: distance || "—",
+				duration: duration || "—",
+				count: String(wpCount),
+			})}
 			width={520}
 			onClose={closeModal}
 			footer={
 				<>
 					<div style={{ flex: 1 }} />
-					<Btn onClick={closeModal}>Cancel</Btn>
+					<Btn onClick={closeModal}>{t("common.cancel", language)}</Btn>
 					<Btn variant="primary" onClick={handleSave} disabled={!name.trim() || wpCount < 2 || saveRoute.isPending}>
-						<I.save size={14} /> {saveRoute.isPending ? "Saving…" : "Save route"}
+						<I.save size={14} /> {saveRoute.isPending ? t("save.saving", language) : t("save.title", language)}
 					</Btn>
 				</>
 			}
 		>
 			<div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 				<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-					<SecTitle>Name</SecTitle>
+					<SecTitle>{t("save.name", language)}</SecTitle>
 					<input
 						value={name}
 						onChange={(e) => setName(e.target.value)}
-						placeholder="Schelde loop — long"
+						placeholder={t("save.namePlaceholder", language)}
 						style={{
 							height: 36,
 							padding: "0 12px",
@@ -134,7 +140,7 @@ export function SaveModal() {
 				</div>
 
 				<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-					<SecTitle>Activity</SecTitle>
+					<SecTitle>{t("save.activity", language)}</SecTitle>
 					<div style={{ display: "flex", gap: 8 }}>
 						{ACTIVITIES.map((a) => {
 							const Icon = a.icon;
@@ -160,7 +166,7 @@ export function SaveModal() {
 										cursor: "pointer",
 									}}
 								>
-									<Icon size={14} /> {a.label}
+									<Icon size={14} /> {t(a.labelKey, language)}
 								</button>
 							);
 						})}
@@ -168,7 +174,7 @@ export function SaveModal() {
 				</div>
 
 				<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-					<SecTitle>Privacy</SecTitle>
+					<SecTitle>{t("save.privacyLabel", language)}</SecTitle>
 					<div
 						style={{
 							background: RDS_COLORS.bgInput,
@@ -197,8 +203,8 @@ export function SaveModal() {
 										cursor: "pointer",
 									}}
 								>
-									<div style={{ fontSize: 12.5, fontWeight: 600, color: RDS_COLORS.fg }}>{p.label}</div>
-									<div style={{ fontSize: 11, color: RDS_COLORS.fgSubtle, marginTop: 2 }}>{p.sub}</div>
+									<div style={{ fontSize: 12.5, fontWeight: 600, color: RDS_COLORS.fg }}>{t(p.labelKey, language)}</div>
+									<div style={{ fontSize: 11, color: RDS_COLORS.fgSubtle, marginTop: 2 }}>{t(p.subKey, language)}</div>
 								</button>
 							);
 						})}
@@ -206,11 +212,11 @@ export function SaveModal() {
 				</div>
 
 				<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-					<SecTitle>Tags</SecTitle>
+					<SecTitle>{t("save.tags", language)}</SecTitle>
 					<div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
-						{tags.map((t) => (
+						{tags.map((tag) => (
 							<span
-								key={t}
+								key={tag}
 								style={{
 									display: "inline-flex",
 									alignItems: "center",
@@ -223,12 +229,12 @@ export function SaveModal() {
 									fontSize: 11.5,
 								}}
 							>
-								{t}
+								{tag}
 								<button
 									type="button"
-									onClick={() => setTags(tags.filter((x) => x !== t))}
+									onClick={() => setTags(tags.filter((x) => x !== tag))}
 									style={{ background: "transparent", border: 0, color: "inherit", cursor: "pointer", padding: 0 }}
-									aria-label={`Remove ${t}`}
+									aria-label={t("save.removeTag", language, { tag })}
 								>
 									<I.close size={10} />
 								</button>
@@ -243,7 +249,7 @@ export function SaveModal() {
 									addTag();
 								}
 							}}
-							placeholder="+ Add tag"
+							placeholder={t("save.addTag", language)}
 							style={{
 								flex: 1,
 								minWidth: 100,
@@ -275,6 +281,7 @@ function SignInToSave({
 	wpCount: number;
 	onClose: () => void;
 }) {
+	const language = useUiStore((s) => s.language);
 	const goToSignIn = () => {
 		onClose();
 		window.dispatchEvent(new CustomEvent("routess:open-login"));
@@ -287,28 +294,31 @@ function SignInToSave({
 
 	return (
 		<ModalShell
-			title="You need an account to save"
-			sub={`${distance || "—"} · ${duration || "—"} · ${wpCount} waypoints`}
+			title={t("save.gate.title", language)}
+			sub={t("save.waypointsCount", language, {
+				distance: distance || "—",
+				duration: duration || "—",
+				count: String(wpCount),
+			})}
 			width={420}
 			onClose={onClose}
 			footer={
 				<>
-					<Btn onClick={onClose}>Cancel</Btn>
+					<Btn onClick={onClose}>{t("common.cancel", language)}</Btn>
 					<div style={{ flex: 1 }} />
-					<Btn onClick={goToSignUp}>Create account</Btn>
+					<Btn onClick={goToSignUp}>{t("save.createAccount", language)}</Btn>
 					<Btn variant="primary" onClick={goToSignIn}>
-						<I.user size={14} /> Sign in
+						<I.user size={14} /> {t("common.signIn", language)}
 					</Btn>
 				</>
 			}
 		>
 			<div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
 				<p style={{ margin: 0, fontSize: 13.5, color: RDS_COLORS.fg, lineHeight: 1.5 }}>
-					Saving routes requires a free Routess account.
+					{t("save.gate.subtitle", language)}
 				</p>
 				<p style={{ margin: 0, fontSize: 12.5, color: RDS_COLORS.fgMuted, lineHeight: 1.5 }}>
-					Sign in or create an account to keep this route. Your current draft stays on the map while you sign in — you
-					can come back and finish saving in a moment.
+					{t("save.gate.body", language)}
 				</p>
 
 				<ul
@@ -324,13 +334,13 @@ function SignInToSave({
 					}}
 				>
 					<li style={{ display: "flex", alignItems: "center", gap: 8 }}>
-						<I.save size={12} /> Save unlimited routes
+						<I.save size={12} /> {t("save.gate.benefit.unlimited", language)}
 					</li>
 					<li style={{ display: "flex", alignItems: "center", gap: 8 }}>
-						<I.library size={12} /> Sync across web and mobile
+						<I.library size={12} /> {t("save.gate.benefit.sync", language)}
 					</li>
 					<li style={{ display: "flex", alignItems: "center", gap: 8 }}>
-						<I.share size={12} /> Share routes with a link
+						<I.share size={12} /> {t("save.gate.benefit.share", language)}
 					</li>
 				</ul>
 			</div>

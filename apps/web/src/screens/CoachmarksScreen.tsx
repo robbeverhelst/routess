@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { t } from "@/lib/i18n";
+import { useUiStore } from "@/stores/uiStore";
 import { I } from "../components/icons";
 import { MapBackdrop } from "../components/MapBackdrop";
 import { Badge, Btn, RDS_COLORS } from "../components/primitives";
@@ -6,39 +8,40 @@ import { Badge, Btn, RDS_COLORS } from "../components/primitives";
 interface Stop {
 	target: { top: number; left: number; width: number; height: number };
 	tooltip: { top: number; left: number };
-	title: string;
-	body: string;
+	titleKey: string;
+	bodyKey: string;
 }
 
 const STOPS: Stop[] = [
 	{
 		target: { top: 50, left: 50, width: 56, height: 280 },
 		tooltip: { top: 80, left: 130 },
-		title: "Switch contexts here",
-		body: "Plan, Library, Discover, and Social each have their own panel. The map stays in place.",
+		titleKey: "coach.stop1.title",
+		bodyKey: "coach.stop1.body",
 	},
 	{
 		target: { top: 50, left: 116, width: 360, height: 600 },
 		tooltip: { top: 80, left: 500 },
-		title: "Your panel",
-		body: "Everything you need for the current task lives in this panel — search, filter, edit.",
+		titleKey: "coach.stop2.title",
+		bodyKey: "coach.stop2.body",
 	},
 	{
 		target: { top: 12, left: 280, width: 480, height: 44 },
 		tooltip: { top: 60, left: 280 },
-		title: "Map controls",
-		body: "Search a place, lock the map, change the style, and zoom from one toolbar.",
+		titleKey: "coach.stop3.title",
+		bodyKey: "coach.stop3.body",
 	},
 	{
 		target: { top: 600, left: 240, width: 360, height: 56 },
 		tooltip: { top: 530, left: 240 },
-		title: "Save & share",
-		body: "Save your route or share it with a single link. ⌘K from anywhere to jump.",
+		titleKey: "coach.stop4.title",
+		bodyKey: "coach.stop4.body",
 	},
 ];
 
 export function CoachmarksScreen({ onComplete }: { onComplete?: () => void }) {
 	const [step, setStep] = useState(0);
+	const language = useUiStore((s) => s.language);
 	const stop = STOPS[step];
 
 	return (
@@ -51,7 +54,6 @@ export function CoachmarksScreen({ onComplete }: { onComplete?: () => void }) {
 					background: "color-mix(in oklch, oklch(0 0 0) 55%, transparent)",
 				}}
 			/>
-			{/* Spotlight */}
 			<div
 				style={{
 					position: "absolute",
@@ -67,7 +69,6 @@ export function CoachmarksScreen({ onComplete }: { onComplete?: () => void }) {
 				}}
 			/>
 
-			{/* Tooltip */}
 			<div
 				style={{
 					position: "absolute",
@@ -84,10 +85,10 @@ export function CoachmarksScreen({ onComplete }: { onComplete?: () => void }) {
 			>
 				<div style={{ marginBottom: 10 }}>
 					<Badge variant="accent" dot>
-						{step + 1} of {STOPS.length}
+						{t("coach.stepFraction", language, { n: String(step + 1), total: String(STOPS.length) })}
 					</Badge>
 				</div>
-				<div style={{ fontSize: 15, fontWeight: 600 }}>{stop.title}</div>
+				<div style={{ fontSize: 15, fontWeight: 600 }}>{t(stop.titleKey, language)}</div>
 				<p
 					style={{
 						fontSize: 13,
@@ -96,14 +97,14 @@ export function CoachmarksScreen({ onComplete }: { onComplete?: () => void }) {
 						lineHeight: 1.5,
 					}}
 				>
-					{stop.body}
+					{t(stop.bodyKey, language)}
 				</p>
 				<div style={{ display: "flex", alignItems: "center", gap: 8 }}>
 					<Btn variant="ghost" onClick={onComplete} style={{ color: RDS_COLORS.fgMuted }}>
-						Skip tour
+						{t("coach.skipTour", language)}
 					</Btn>
 					<div style={{ flex: 1 }} />
-					{step > 0 && <Btn onClick={() => setStep(step - 1)}>Back</Btn>}
+					{step > 0 && <Btn onClick={() => setStep(step - 1)}>{t("common.back", language)}</Btn>}
 					<Btn
 						variant="primary"
 						onClick={() => {
@@ -113,10 +114,10 @@ export function CoachmarksScreen({ onComplete }: { onComplete?: () => void }) {
 					>
 						{step < STOPS.length - 1 ? (
 							<>
-								Next <I.chevronR size={12} />
+								{t("coach.next", language)} <I.chevronR size={12} />
 							</>
 						) : (
-							<>Done</>
+							t("coach.done", language)
 						)}
 					</Btn>
 				</div>

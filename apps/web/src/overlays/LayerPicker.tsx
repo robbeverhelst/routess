@@ -1,7 +1,9 @@
 import { useMemo } from "react";
 import { loadLastMapViewFromLocalStorage } from "@/features/routing/services/LocalStorageService";
+import { t } from "@/lib/i18n";
 import { useModalsStore } from "@/stores/modalsStore";
 import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
+import { useUiStore } from "@/stores/uiStore";
 import { I } from "../components/icons";
 import { IconBtn, RDS_COLORS, SecTitle } from "../components/primitives";
 import { useViewport } from "../hooks/useViewport";
@@ -9,19 +11,19 @@ import { useViewport } from "../hooks/useViewport";
 const STYLES = [
 	{
 		key: "streets",
-		label: "Streets",
+		labelKey: "settings.map.streets",
 		styleId: "streets-v12",
 		fallbackBg: "linear-gradient(135deg, oklch(0.93 0.02 240), oklch(0.95 0.03 220))",
 	},
 	{
 		key: "outdoors",
-		label: "Outdoors",
+		labelKey: "settings.map.outdoors",
 		styleId: "outdoors-v12",
 		fallbackBg: "linear-gradient(135deg, oklch(0.92 0.05 145), oklch(0.88 0.07 95))",
 	},
 	{
 		key: "satellite",
-		label: "Satellite",
+		labelKey: "settings.map.satellite",
 		styleId: "satellite-streets-v12",
 		fallbackBg: "linear-gradient(135deg, oklch(0.4 0.04 240), oklch(0.3 0.05 145))",
 	},
@@ -40,6 +42,7 @@ export function LayerPicker() {
 	const close = useModalsStore((s) => s.closeOverlay);
 	const styleKey = useRedesignSettingsStore((s) => s.mapStyle as MapStyleKey);
 	const setMapStyle = useRedesignSettingsStore((s) => s.setMapStyle);
+	const language = useUiStore((s) => s.language);
 	const { isMobile } = useViewport();
 
 	const previews = useMemo(() => {
@@ -97,9 +100,9 @@ export function LayerPicker() {
 				}}
 			>
 				<I.layers size={16} />
-				<div style={{ fontSize: 14, fontWeight: 600 }}>Map style</div>
+				<div style={{ fontSize: 14, fontWeight: 600 }}>{t("settings.map.styleLabel", language)}</div>
 				<div style={{ flex: 1 }} />
-				<IconBtn title="Close" onClick={close}>
+				<IconBtn title={t("common.close", language)} onClick={close}>
 					<I.close size={14} />
 				</IconBtn>
 			</div>
@@ -140,7 +143,7 @@ export function LayerPicker() {
 										background: RDS_COLORS.bgPanel,
 									}}
 								>
-									{s.label}
+									{t(s.labelKey, language)}
 								</div>
 							</button>
 						);
@@ -148,7 +151,7 @@ export function LayerPicker() {
 				</div>
 			</div>
 			<div style={{ borderTop: `1px solid ${RDS_COLORS.border}`, padding: "10px 14px 14px" }}>
-				<SecTitle style={{ padding: "0 0 6px" }}>Overlays</SecTitle>
+				<SecTitle style={{ padding: "0 0 6px" }}>{t("layers.overlays", language)}</SecTitle>
 				<div
 					style={{
 						display: "flex",
@@ -176,9 +179,9 @@ export function LayerPicker() {
 						<I.layers size={13} />
 					</div>
 					<div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
-						<span style={{ fontSize: 12.5, fontWeight: 500 }}>Overlays coming soon</span>
+						<span style={{ fontSize: 12.5, fontWeight: 500 }}>{t("layers.overlaysComingSoon", language)}</span>
 						<span style={{ fontSize: 10.5, color: RDS_COLORS.fgSubtle, marginTop: 2, lineHeight: 1.4 }}>
-							Heatmaps, contour lines, cycling infrastructure and surface colouring land with the layer pipeline.
+							{t("layers.overlaysSub", language)}
 						</span>
 					</div>
 				</div>

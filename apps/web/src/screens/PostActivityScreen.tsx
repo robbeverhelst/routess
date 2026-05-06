@@ -1,13 +1,8 @@
 import { useRef, useState } from "react";
+import { t } from "@/lib/i18n";
+import { useUiStore } from "@/stores/uiStore";
 import { I } from "../components/icons";
 import { Badge, Btn, RDS_COLORS, SecTitle } from "../components/primitives";
-
-const STATS = [
-	{ label: "Distance", value: "12.4", unit: "km" },
-	{ label: "Time", value: "1:04", unit: "h" },
-	{ label: "Avg pace", value: "27.3", unit: "km/h" },
-	{ label: "Elev", value: "186", unit: "m" },
-];
 
 const SPLITS = [
 	{ km: "1", time: "2:18", pace: "26.1 km/h", bar: 70 },
@@ -15,12 +10,6 @@ const SPLITS = [
 	{ km: "3", time: "2:08", pace: "28.1 km/h", bar: 86, fastest: true },
 	{ km: "4", time: "2:21", pace: "25.5 km/h", bar: 64 },
 	{ km: "5", time: "2:26", pace: "24.7 km/h", bar: 58 },
-];
-
-const PRS = [
-	{ label: "PR", value: "Heidestraat climb" },
-	{ label: "+1", value: "achievement" },
-	{ label: "Top 8%", value: "this segment" },
 ];
 
 interface PhotoEntry {
@@ -32,7 +21,21 @@ interface PhotoEntry {
 export function PostActivityScreen({ onClose }: { onClose?: () => void } = {}) {
 	const fileInputRef = useRef<HTMLInputElement | null>(null);
 	const [photos, setPhotos] = useState<PhotoEntry[]>([]);
-	const [notes, setNotes] = useState("Headwind on the way out, tailwind back. Legs felt fresh.");
+	const language = useUiStore((s) => s.language);
+	const [notes, setNotes] = useState(() => t("post.headwindNotes", language));
+
+	const STATS = [
+		{ label: t("post.distance", language), value: "12.4", unit: "km" },
+		{ label: t("post.time", language), value: "1:04", unit: "h" },
+		{ label: t("post.avgPace", language), value: "27.3", unit: "km/h" },
+		{ label: t("post.elev", language), value: "186", unit: "m" },
+	];
+
+	const PRS = [
+		{ label: t("post.pr", language), value: t("post.heidestraat", language) },
+		{ label: "+1", value: t("post.achievement", language) },
+		{ label: "Top 8%", value: t("post.topPercent", language) },
+	];
 
 	const handleShare = () => {
 		window.dispatchEvent(new CustomEvent("routess:share-route"));
@@ -43,7 +46,7 @@ export function PostActivityScreen({ onClose }: { onClose?: () => void } = {}) {
 	};
 
 	const handleDiscard = () => {
-		if (window.confirm("Discard this activity? This cannot be undone.")) {
+		if (window.confirm(t("post.discardConfirm", language))) {
 			for (const p of photos) URL.revokeObjectURL(p.url);
 			onClose?.();
 		}
@@ -62,7 +65,6 @@ export function PostActivityScreen({ onClose }: { onClose?: () => void } = {}) {
 			url: URL.createObjectURL(file),
 		}));
 		setPhotos((prev) => [...prev, ...next]);
-		// reset so the same file can be re-selected later
 		e.target.value = "";
 	};
 
@@ -71,20 +73,17 @@ export function PostActivityScreen({ onClose }: { onClose?: () => void } = {}) {
 			<div style={{ maxWidth: 720, margin: "0 auto", padding: "32px 24px 80px" }}>
 				<div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18 }}>
 					<Badge variant="accent" dot>
-						Saved
+						{t("post.saved", language)}
 					</Badge>
 					<span className="rds-mono" style={{ fontSize: 12, color: RDS_COLORS.fgSubtle }}>
 						Apr 28 · 09:42 → 10:51
 					</span>
 				</div>
-				<h1 style={{ fontSize: 30, fontWeight: 600, margin: 0, letterSpacing: -0.6 }}>
-					Morning ride along the Schelde
-				</h1>
+				<h1 style={{ fontSize: 30, fontWeight: 600, margin: 0, letterSpacing: -0.6 }}>{t("post.title", language)}</h1>
 				<p style={{ fontSize: 14, color: RDS_COLORS.fgMuted, margin: "6px 0 0" }}>
-					You finished the route. Personal best on segment <strong>Heidestraat climb</strong>.
+					{t("post.summary", language, { segment: t("post.heidestraat", language) })}
 				</p>
 
-				{/* Hero map */}
 				<div
 					style={{
 						marginTop: 24,
@@ -113,7 +112,6 @@ export function PostActivityScreen({ onClose }: { onClose?: () => void } = {}) {
 					</svg>
 				</div>
 
-				{/* PR strip */}
 				<div style={{ display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
 					{PRS.map((p) => (
 						<div
@@ -135,7 +133,6 @@ export function PostActivityScreen({ onClose }: { onClose?: () => void } = {}) {
 					))}
 				</div>
 
-				{/* Big stats */}
 				<div
 					style={{
 						display: "grid",
@@ -173,9 +170,8 @@ export function PostActivityScreen({ onClose }: { onClose?: () => void } = {}) {
 					))}
 				</div>
 
-				{/* Splits */}
 				<div style={{ marginTop: 24 }}>
-					<SecTitle style={{ marginBottom: 10 }}>Splits</SecTitle>
+					<SecTitle style={{ marginBottom: 10 }}>{t("post.splits", language)}</SecTitle>
 					<div
 						style={{
 							background: RDS_COLORS.bgPanel,
@@ -196,7 +192,7 @@ export function PostActivityScreen({ onClose }: { onClose?: () => void } = {}) {
 								}}
 							>
 								<div className="rds-mono" style={{ fontSize: 12, color: RDS_COLORS.fgSubtle, width: 28 }}>
-									km {s.km}
+									{t("post.km", language, { n: s.km })}
 								</div>
 								<div
 									style={{
@@ -226,7 +222,7 @@ export function PostActivityScreen({ onClose }: { onClose?: () => void } = {}) {
 								</div>
 								{s.fastest && (
 									<Badge variant="accent" style={{ fontSize: 10 }}>
-										fastest
+										{t("post.fastest", language)}
 									</Badge>
 								)}
 							</div>
@@ -234,9 +230,8 @@ export function PostActivityScreen({ onClose }: { onClose?: () => void } = {}) {
 					</div>
 				</div>
 
-				{/* Notes */}
 				<div style={{ marginTop: 24 }}>
-					<SecTitle style={{ marginBottom: 8 }}>Notes</SecTitle>
+					<SecTitle style={{ marginBottom: 8 }}>{t("post.notes", language)}</SecTitle>
 					<textarea
 						value={notes}
 						onChange={(e) => setNotes(e.target.value)}
@@ -253,14 +248,15 @@ export function PostActivityScreen({ onClose }: { onClose?: () => void } = {}) {
 							outline: "none",
 							fontFamily: "inherit",
 						}}
-						placeholder="How did it feel?"
+						placeholder={t("post.notesPlaceholder", language)}
 					/>
 				</div>
 
-				{/* Photos */}
 				{photos.length > 0 && (
 					<div style={{ marginTop: 24 }}>
-						<SecTitle style={{ marginBottom: 10 }}>Photos ({photos.length})</SecTitle>
+						<SecTitle style={{ marginBottom: 10 }}>
+							{t("post.photos", language, { count: String(photos.length) })}
+						</SecTitle>
 						<div
 							style={{
 								display: "grid",
@@ -290,16 +286,15 @@ export function PostActivityScreen({ onClose }: { onClose?: () => void } = {}) {
 					</div>
 				)}
 
-				{/* Actions */}
 				<div style={{ display: "flex", gap: 8, marginTop: 24, flexWrap: "wrap" }}>
 					<Btn variant="primary" onClick={handleShare}>
-						<I.share size={14} /> Share
+						<I.share size={14} /> {t("post.share", language)}
 					</Btn>
 					<Btn onClick={handleExportGpx}>
-						<I.download size={14} /> Export GPX
+						<I.download size={14} /> {t("post.exportGpx", language)}
 					</Btn>
 					<Btn onClick={handleAddPhotosClick}>
-						<I.zap size={14} /> Add photos
+						<I.zap size={14} /> {t("post.addPhotos", language)}
 					</Btn>
 					<input
 						ref={fileInputRef}
@@ -311,7 +306,7 @@ export function PostActivityScreen({ onClose }: { onClose?: () => void } = {}) {
 					/>
 					<div style={{ flex: 1 }} />
 					<Btn variant="ghost" onClick={handleDiscard} style={{ color: RDS_COLORS.danger }}>
-						<I.trash size={14} /> Discard
+						<I.trash size={14} /> {t("post.discard", language)}
 					</Btn>
 				</div>
 			</div>

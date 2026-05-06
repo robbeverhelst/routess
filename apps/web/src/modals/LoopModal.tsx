@@ -1,26 +1,36 @@
 import { useState } from "react";
+import { t } from "@/lib/i18n";
 import { type LoopDirection, type LoopSurface, useLoopPreferencesStore } from "@/stores/loopPreferencesStore";
 import { useModalsStore } from "@/stores/modalsStore";
 import { useToastStore } from "@/stores/toastStore";
+import { useUiStore } from "@/stores/uiStore";
 import { I } from "../components/icons";
 import { ModalShell } from "../components/ModalShell";
 import { Btn, RDS_COLORS, SecTitle } from "../components/primitives";
 
 const DIRECTIONS = [
-	{ key: "any", label: "Any", icon: I.compass },
-	{ key: "n", label: "North", icon: I.arrowUp, deg: 0 },
-	{ key: "e", label: "East", icon: I.arrowUp, deg: 90 },
-	{ key: "s", label: "South", icon: I.arrowUp, deg: 180 },
-	{ key: "w", label: "West", icon: I.arrowUp, deg: 270 },
+	{ key: "any", labelKey: "loop.dir.any", icon: I.compass },
+	{ key: "n", labelKey: "loop.dir.north", icon: I.arrowUp, deg: 0 },
+	{ key: "e", labelKey: "loop.dir.east", icon: I.arrowUp, deg: 90 },
+	{ key: "s", labelKey: "loop.dir.south", icon: I.arrowUp, deg: 180 },
+	{ key: "w", labelKey: "loop.dir.west", icon: I.arrowUp, deg: 270 },
 ] as const;
 
 const SURFACES: LoopSurface[] = ["Mixed", "Roads only", "Trails", "Paved bike paths"];
+
+const SURFACE_LABEL_KEY: Record<LoopSurface, string> = {
+	Mixed: "loop.surface.mixed",
+	"Roads only": "loop.surface.roads",
+	Trails: "loop.surface.trails",
+	"Paved bike paths": "loop.surface.bike",
+};
 
 type LocationStatus = "current" | "locating" | "resolved" | "error";
 
 export function LoopModal() {
 	const closeModal = useModalsStore((s) => s.closeModal);
 	const pushToast = useToastStore((s) => s.push);
+	const language = useUiStore((s) => s.language);
 	const { distanceKm, direction, surface, setDistanceKm, setDirection, setSurface } = useLoopPreferencesStore();
 
 	const [locationStatus, setLocationStatus] = useState<LocationStatus>("current");
@@ -31,8 +41,8 @@ export function LoopModal() {
 			setLocationStatus("error");
 			pushToast({
 				kind: "danger",
-				title: "Geolocation unavailable",
-				body: "This browser doesn't expose a location API.",
+				title: t("loop.geoUnavailable", language),
+				body: t("loop.geoUnavailableSub", language),
 			});
 			return;
 		}
@@ -46,7 +56,7 @@ export function LoopModal() {
 				setLocationStatus("error");
 				pushToast({
 					kind: "danger",
-					title: "Couldn't get your location",
+					title: t("loop.couldNotLocate", language),
 					body: err.message,
 				});
 			},
@@ -59,39 +69,39 @@ export function LoopModal() {
 		// the user that the choice is saved and the generator is in the works.
 		pushToast({
 			kind: "info",
-			title: "Loop generation in progress",
-			body: "Your preferences are saved. Generation will arrive in an upcoming release.",
+			title: t("loop.toast.title", language),
+			body: t("loop.toast.body", language),
 			durationMs: 3500,
 		});
 	};
 
 	const startLabel =
 		locationStatus === "locating"
-			? "Locating…"
+			? t("loop.locating", language)
 			: resolvedCoords
-				? `Lat ${resolvedCoords.lat.toFixed(4)}, Lng ${resolvedCoords.lng.toFixed(4)}`
-				: "Current location";
+				? t("loop.coords", language, { lat: resolvedCoords.lat.toFixed(4), lng: resolvedCoords.lng.toFixed(4) })
+				: t("loop.currentLocation", language);
 
 	return (
 		<ModalShell
-			title="Generate a loop"
-			sub="From your starting point, back to your starting point"
+			title={t("loop.title", language)}
+			sub={t("loop.subtitle", language)}
 			width={520}
 			onClose={closeModal}
 			footer={
 				<>
-					<span style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle }}>Generator coming soon</span>
+					<span style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle }}>{t("loop.comingSoon", language)}</span>
 					<div style={{ flex: 1 }} />
-					<Btn onClick={closeModal}>Cancel</Btn>
+					<Btn onClick={closeModal}>{t("common.cancel", language)}</Btn>
 					<Btn variant="primary" onClick={handleGenerate} disabled>
-						<I.compass size={14} /> Generate
+						<I.compass size={14} /> {t("loop.generate", language)}
 					</Btn>
 				</>
 			}
 		>
 			<div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 				<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-					<SecTitle>Start point</SecTitle>
+					<SecTitle>{t("loop.startPoint", language)}</SecTitle>
 					<div
 						style={{
 							display: "flex",
@@ -116,7 +126,7 @@ export function LoopModal() {
 						<div style={{ flex: 1 }} />
 						<button
 							type="button"
-							title="Use current location"
+							title={t("loop.useCurrent", language)}
 							onClick={handleUseCurrentLocation}
 							disabled={locationStatus === "locating"}
 							style={{
@@ -134,7 +144,7 @@ export function LoopModal() {
 
 				<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
 					<div style={{ display: "flex", alignItems: "center" }}>
-						<SecTitle style={{ flex: 1 }}>Target distance</SecTitle>
+						<SecTitle style={{ flex: 1 }}>{t("loop.targetDistance", language)}</SecTitle>
 						<span className="rds-mono" style={{ fontSize: 14, fontWeight: 600 }}>
 							{distanceKm} km
 						</span>
@@ -157,16 +167,16 @@ export function LoopModal() {
 							color: RDS_COLORS.fgSubtle,
 						}}
 					>
-						<span>1 km</span>
+						<span>{t("loop.km1", language)}</span>
 						<span>10</span>
 						<span>20</span>
 						<span>30</span>
-						<span>40 km</span>
+						<span>{t("loop.km40", language)}</span>
 					</div>
 				</div>
 
 				<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-					<SecTitle>Direction</SecTitle>
+					<SecTitle>{t("loop.directionLabel", language)}</SecTitle>
 					<div
 						style={{
 							display: "grid",
@@ -199,7 +209,7 @@ export function LoopModal() {
 										size={20}
 										style={"deg" in d && d.deg !== 0 ? { transform: `rotate(${d.deg}deg)` } : undefined}
 									/>
-									<div style={{ fontSize: 12, fontWeight: 500 }}>{d.label}</div>
+									<div style={{ fontSize: 12, fontWeight: 500 }}>{t(d.labelKey, language)}</div>
 								</button>
 							);
 						})}
@@ -207,7 +217,7 @@ export function LoopModal() {
 				</div>
 
 				<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-					<SecTitle>Surface</SecTitle>
+					<SecTitle>{t("loop.surfaceLabel", language)}</SecTitle>
 					<div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
 						{SURFACES.map((s) => {
 							const on = surface === s;
@@ -227,7 +237,7 @@ export function LoopModal() {
 										cursor: "pointer",
 									}}
 								>
-									{s}
+									{t(SURFACE_LABEL_KEY[s], language)}
 								</button>
 							);
 						})}

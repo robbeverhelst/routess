@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useDeleteRoute, useUserRoutes } from "@/lib/api-queries";
+import { t } from "@/lib/i18n";
 import { useModalsStore } from "@/stores/modalsStore";
 import { useToastStore } from "@/stores/toastStore";
+import { useUiStore } from "@/stores/uiStore";
 import { I } from "../components/icons";
 import { ModalShell } from "../components/ModalShell";
 import { Btn, RDS_COLORS, SecTitle } from "../components/primitives";
@@ -13,9 +15,11 @@ export function ConfirmDeleteModal() {
 	const route = routes.find((r) => r.id === routeId);
 	const deleteRoute = useDeleteRoute();
 	const pushToast = useToastStore((s) => s.push);
+	const language = useUiStore((s) => s.language);
 	const [confirmText, setConfirmText] = useState("");
 
-	const canDelete = confirmText.trim().toLowerCase() === "delete";
+	const confirmWord = t("confirm.delete.confirmWord", language);
+	const canDelete = confirmText.trim().toLowerCase() === confirmWord.toLowerCase();
 
 	const handleDelete = () => {
 		if (!routeId || !canDelete) return;
@@ -23,7 +27,7 @@ export function ConfirmDeleteModal() {
 			onSuccess: () => {
 				pushToast({
 					kind: "danger",
-					title: "Route deleted",
+					title: t("confirm.delete.toast", language),
 					body: route?.name ?? "",
 				});
 				closeModal();
@@ -33,16 +37,16 @@ export function ConfirmDeleteModal() {
 
 	return (
 		<ModalShell
-			title="Delete route?"
+			title={t("confirm.delete.title", language)}
 			width={420}
 			onClose={closeModal}
 			footer={
 				<>
 					<div style={{ flex: 1 }} />
-					<Btn onClick={closeModal}>Cancel</Btn>
+					<Btn onClick={closeModal}>{t("common.cancel", language)}</Btn>
 					<Btn variant="danger" onClick={handleDelete} disabled={!canDelete || deleteRoute.isPending}>
 						<I.trash size={14} />
-						{deleteRoute.isPending ? "Deleting…" : "Delete forever"}
+						{deleteRoute.isPending ? t("confirm.delete.deleting", language) : t("confirm.delete.forever", language)}
 					</Btn>
 				</>
 			}
@@ -75,21 +79,17 @@ export function ConfirmDeleteModal() {
 					<I.trash size={16} />
 				</div>
 				<div style={{ fontSize: 13, color: RDS_COLORS.fg, lineHeight: 1.5 }}>
-					{route ? (
-						<>
-							<strong>{route.name}</strong> will be permanently removed. This cannot be undone.
-						</>
-					) : (
-						"This route will be permanently removed. This cannot be undone."
-					)}
+					{route
+						? t("confirm.delete.warning", language, { name: route.name })
+						: t("confirm.delete.warningGeneric", language)}
 				</div>
 			</div>
 			<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-				<SecTitle>Type "delete" to confirm</SecTitle>
+				<SecTitle>{t("confirm.delete.typeToConfirm", language)}</SecTitle>
 				<input
 					value={confirmText}
 					onChange={(e) => setConfirmText(e.target.value)}
-					placeholder="delete"
+					placeholder={t("confirm.delete.placeholder", language)}
 					// biome-ignore lint/a11y/noAutofocus: confirm-delete asks for explicit text input; focusing on open is expected
 					autoFocus
 					style={{
