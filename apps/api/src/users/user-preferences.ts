@@ -135,13 +135,10 @@ function normalizeOverlays(input: unknown): UserPreferenceOverlays {
 	const source = input && typeof input === "object" ? (input as Record<string, unknown>) : {};
 
 	return {
-		heatmap:
-			typeof source.heatmap === "boolean" ? source.heatmap : DEFAULT_USER_PREFERENCES.overlays.heatmap,
-		contour:
-			typeof source.contour === "boolean" ? source.contour : DEFAULT_USER_PREFERENCES.overlays.contour,
+		heatmap: typeof source.heatmap === "boolean" ? source.heatmap : DEFAULT_USER_PREFERENCES.overlays.heatmap,
+		contour: typeof source.contour === "boolean" ? source.contour : DEFAULT_USER_PREFERENCES.overlays.contour,
 		bike: typeof source.bike === "boolean" ? source.bike : DEFAULT_USER_PREFERENCES.overlays.bike,
-		surface:
-			typeof source.surface === "boolean" ? source.surface : DEFAULT_USER_PREFERENCES.overlays.surface,
+		surface: typeof source.surface === "boolean" ? source.surface : DEFAULT_USER_PREFERENCES.overlays.surface,
 		wind: typeof source.wind === "boolean" ? source.wind : DEFAULT_USER_PREFERENCES.overlays.wind,
 	};
 }
@@ -156,8 +153,7 @@ export function normalizeUserPreferences(input?: Partial<UserPreferences> | null
 		autoSnap: typeof input?.autoSnap === "boolean" ? input.autoSnap : DEFAULT_USER_PREFERENCES.autoSnap,
 		publicProfile:
 			typeof input?.publicProfile === "boolean" ? input.publicProfile : DEFAULT_USER_PREFERENCES.publicProfile,
-		hidePrivacy:
-			typeof input?.hidePrivacy === "boolean" ? input.hidePrivacy : DEFAULT_USER_PREFERENCES.hidePrivacy,
+		hidePrivacy: typeof input?.hidePrivacy === "boolean" ? input.hidePrivacy : DEFAULT_USER_PREFERENCES.hidePrivacy,
 		defaultActivity: normalizeDefaultActivity(input?.defaultActivity, selectedSports),
 		selectedSports,
 		sportSpeeds: normalizeSportSpeeds(input?.sportSpeeds),

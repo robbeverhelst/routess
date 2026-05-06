@@ -1,4 +1,5 @@
 import type { BaseLayoutProps } from "fumadocs-ui/layouts/shared";
+import Image from "next/image";
 import { i18n, localeLabels } from "@/lib/i18n";
 
 export function baseOptions(locale: string = "en"): BaseLayoutProps {
@@ -9,7 +10,7 @@ export function baseOptions(locale: string = "en"): BaseLayoutProps {
 		nav: {
 			title: (
 				<span className="docs-wordmark">
-					<img src="/logo.png" alt="" width={26} height={26} className="docs-wordmark__logo" aria-hidden="true" />
+					<Image src="/logo.png" alt="" width={26} height={26} className="docs-wordmark__logo" aria-hidden="true" />
 					<span className="docs-wordmark__text">routess</span>
 					<span className="docs-wordmark__tag">docs</span>
 				</span>

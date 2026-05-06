@@ -1,5 +1,5 @@
-import { Type } from "class-transformer";
 import { ApiPropertyOptional } from "@nestjs/swagger";
+import { Type } from "class-transformer";
 import { IsOptional, IsString, ValidateNested } from "class-validator";
 import { UpdateUserPreferencesDto } from "./user-preferences.dto";
 

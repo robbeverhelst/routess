@@ -1,6 +1,6 @@
 import { Entity, Index, PrimaryKey, Property } from "@mikro-orm/core";
-import { BaseEntity } from "./base.entity";
 import type { UserPreferences } from "../users/user-preferences";
+import { BaseEntity } from "./base.entity";
 
 @Entity()
 @Index({ properties: ["email"] }) // Index for email lookups

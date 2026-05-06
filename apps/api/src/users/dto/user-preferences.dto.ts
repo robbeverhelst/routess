@@ -1,3 +1,4 @@
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
 import {
 	ArrayUnique,
@@ -10,7 +11,6 @@ import {
 	IsString,
 	ValidateNested,
 } from "class-validator";
-import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
 const ACTIVITIES = ["run", "cycle", "walk"] as const;
 const UNITS = ["km", "mi"] as const;
