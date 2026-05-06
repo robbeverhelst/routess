@@ -1,5 +1,7 @@
+import { Type } from "class-transformer";
 import { ApiPropertyOptional } from "@nestjs/swagger";
-import { IsOptional, IsString } from "class-validator";
+import { IsOptional, IsString, ValidateNested } from "class-validator";
+import { UpdateUserPreferencesDto } from "./user-preferences.dto";
 
 export class UpdateCurrentUserDto {
 	@ApiPropertyOptional({
@@ -15,4 +17,12 @@ export class UpdateCurrentUserDto {
 	@IsOptional()
 	@IsString()
 	avatar?: string;
+
+	@ApiPropertyOptional({
+		type: UpdateUserPreferencesDto,
+	})
+	@IsOptional()
+	@ValidateNested()
+	@Type(() => UpdateUserPreferencesDto)
+	preferences?: UpdateUserPreferencesDto;
 }

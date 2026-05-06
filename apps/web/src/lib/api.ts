@@ -30,11 +30,19 @@ export const apiService = createApiClient({
 });
 
 export type {
+	ApiActivity,
+	ApiLocationPermission,
+	ApiMapStyle,
+	ApiOverlays,
 	ApiRoute,
+	ApiSportSpeeds,
+	ApiUnits,
 	ApiUser,
+	ApiUserPreferences,
 	AuthResponse,
 	CreateRouteRequest,
 	GoogleAuthRequest,
+	UpdateCurrentUserRequest,
 	UpdateRouteRequest,
 	Waypoint,
 } from "@routess/api-client";

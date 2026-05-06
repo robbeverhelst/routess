@@ -1,5 +1,6 @@
 import { Entity, Index, PrimaryKey, Property } from "@mikro-orm/core";
 import { BaseEntity } from "./base.entity";
+import type { UserPreferences } from "../users/user-preferences";
 
 @Entity()
 @Index({ properties: ["email"] }) // Index for email lookups
@@ -22,4 +23,7 @@ export class User extends BaseEntity {
 
 	@Property({ default: false })
 	isEmailVerified = false;
+
+	@Property({ type: "json", nullable: true })
+	preferences?: UserPreferences | null;
 }

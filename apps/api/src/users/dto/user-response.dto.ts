@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { UserPreferencesDto } from "./user-preferences.dto";
 
 export class UserStatisticsDto {
 	@ApiProperty({
@@ -38,6 +39,12 @@ export class UserResponseDto {
 		example: true,
 	})
 	isEmailVerified!: boolean;
+
+	@ApiPropertyOptional({
+		type: UserPreferencesDto,
+		nullable: true,
+	})
+	preferences?: UserPreferencesDto | null;
 }
 
 export class UserProfileDto extends UserResponseDto {

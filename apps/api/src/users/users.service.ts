@@ -5,6 +5,7 @@ import { SessionService } from "../auth/session.service";
 import { Route } from "../entities/route.entity";
 import { User } from "../entities/user.entity";
 import type { UpdateCurrentUserDto } from "./dto/update-current-user.dto";
+import { mergeUserPreferences } from "./user-preferences";
 
 @Injectable()
 export class UsersService {
@@ -33,6 +34,9 @@ export class UsersService {
 		}
 		if (updateUserDto.avatar !== undefined) {
 			user.avatar = updateUserDto.avatar;
+		}
+		if (updateUserDto.preferences !== undefined) {
+			user.preferences = mergeUserPreferences(user.preferences, updateUserDto.preferences);
 		}
 
 		await this.em.persistAndFlush(user);
