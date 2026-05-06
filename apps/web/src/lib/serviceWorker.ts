@@ -26,6 +26,9 @@ export interface NetworkStatus {
 
 type EventCallback = (data?: unknown) => void;
 
+const CONTROLLER_RELOAD_GUARD_KEY = "routess:sw-controller-reload-at";
+const CONTROLLER_RELOAD_GUARD_WINDOW_MS = 30_000;
+
 class ServiceWorkerManager {
 	private registration: ServiceWorkerRegistration | null = null;
 	private updateAvailable = false;
@@ -75,6 +78,32 @@ class ServiceWorkerManager {
 		return "serviceWorker" in navigator;
 	}
 
+	private getController(): ServiceWorker | null {
+		if (!this.isSupported()) {
+			return null;
+		}
+
+		return navigator.serviceWorker.controller ?? null;
+	}
+
+	private shouldReloadForControllerChange(): boolean {
+		try {
+			const lastReloadAt = window.sessionStorage.getItem(CONTROLLER_RELOAD_GUARD_KEY);
+			const now = Date.now();
+
+			if (lastReloadAt && now - Number(lastReloadAt) < CONTROLLER_RELOAD_GUARD_WINDOW_MS) {
+				Logger.warn("[SW Manager] Suppressing repeated controller-change reload");
+				return false;
+			}
+
+			window.sessionStorage.setItem(CONTROLLER_RELOAD_GUARD_KEY, String(now));
+			return true;
+		} catch (error) {
+			Logger.warn("[SW Manager] Failed to persist controller-change reload guard:", error);
+			return true;
+		}
+	}
+
 	// Register the service worker
 	async register(): Promise<ServiceWorkerRegistration | null> {
 		if (!this.isSupported()) {
@@ -107,7 +136,7 @@ class ServiceWorkerManager {
 	}
 
 	private setupEventListeners() {
-		if (!this.registration) return;
+		if (!this.registration || !this.isSupported()) return;
 
 		// Listen for service worker updates
 		this.registration.addEventListener("updatefound", () => {
@@ -120,7 +149,7 @@ class ServiceWorkerManager {
 				newWorker.addEventListener("statechange", () => {
 					Logger.info("[SW Manager] New service worker state:", newWorker.state);
 
-					if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+					if (newWorker.state === "installed" && this.getController()) {
 						// New service worker is installed and ready
 						this.updateAvailable = true;
 						this.emit("updateavailable", newWorker);
@@ -138,7 +167,7 @@ class ServiceWorkerManager {
 			this.emit("statechange", this.getState());
 
 			// Reload the page when a new service worker takes control
-			if (this.updateAvailable) {
+			if (this.updateAvailable && this.shouldReloadForControllerChange()) {
 				window.location.reload();
 			}
 		});
@@ -199,7 +228,7 @@ class ServiceWorkerManager {
 		return {
 			isSupported: this.isSupported(),
 			isRegistered: !!this.registration,
-			isControlling: !!navigator.serviceWorker.controller,
+			isControlling: !!this.getController(),
 			hasUpdate: this.updateAvailable,
 			isInstalling: !!this.registration?.installing,
 			registration: this.registration,
@@ -208,7 +237,7 @@ class ServiceWorkerManager {
 
 	// Cache management methods
 	async getCacheStatus(): Promise<CacheStatus | null> {
-		const controller = navigator.serviceWorker.controller;
+		const controller = this.getController();
 		if (!controller) {
 			Logger.warn("[SW Manager] No service worker controller available");
 			return null;
@@ -231,7 +260,7 @@ class ServiceWorkerManager {
 	}
 
 	async clearCache(cacheName: string): Promise<boolean> {
-		const controller = navigator.serviceWorker.controller;
+		const controller = this.getController();
 		if (!controller) {
 			Logger.warn("[SW Manager] No service worker controller available");
 			return false;
@@ -254,7 +283,7 @@ class ServiceWorkerManager {
 	}
 
 	async precacheRoute(routeData: Record<string, unknown>): Promise<boolean> {
-		const controller = navigator.serviceWorker.controller;
+		const controller = this.getController();
 		if (!controller) {
 			Logger.warn("[SW Manager] No service worker controller available");
 			return false;

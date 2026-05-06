@@ -6,6 +6,7 @@ import { useAuthStatus } from "@/lib/api-queries";
 import { Logger } from "@/lib/logger";
 import { queryKeys } from "@/lib/query-client";
 import { useModalsStore } from "@/stores/modalsStore";
+import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 import {
 	useCanRedo,
 	useCanUndo,
@@ -25,6 +26,7 @@ import { MobileTopBar } from "./components/MobileTopBar";
 import { Badge, IconBtn, RDS_COLORS } from "./components/primitives";
 import { RailNav } from "./components/RailNav";
 import { RouteChip } from "./components/RouteChip";
+import { useAccountPreferencesSync } from "./hooks/useAccountPreferencesSync";
 import { useOnlineStatus } from "./hooks/useOnlineStatus";
 import { useViewport } from "./hooks/useViewport";
 import { CommandPalette } from "./modals/CommandPalette";
@@ -57,7 +59,8 @@ import { RecordingScreen } from "./screens/RecordingScreen";
 import { SignUpScreen } from "./screens/SignUpScreen";
 import { WelcomeScreen } from "./screens/WelcomeScreen";
 
-const MapWithRouting = lazy(() => import("@/components/MapWithRouting"));
+const loadMapWithRouting = () => import("@/components/MapWithRouting");
+const MapWithRouting = lazy(loadMapWithRouting);
 
 const SCREEN_TITLES: Record<RedesignContext, string> = {
 	plan: "Plan",
@@ -108,9 +111,16 @@ function getDevScreen(): DevScreen | null {
 	return (allowed as string[]).includes(value) ? (value as DevScreen) : null;
 }
 
+function shouldForceWelcome(): boolean {
+	if (typeof window === "undefined") return false;
+	const value = new URLSearchParams(window.location.search).get("welcome");
+	return value === "1" || value === "true" || value === "force";
+}
+
 export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps) {
 	const { context, setContext, theme, accent, panelCollapsed, togglePanel, welcomeCompleted, completeWelcome } =
 		useUiStore();
+	const selectedSports = useRedesignSettingsStore((s) => s.selectedSports);
 	const { modal, overlay, openModal, openOverlay, closeOverlay } = useModalsStore();
 	const { data: auth, isLoading: authLoading } = useAuthStatus();
 	const online = useOnlineStatus();
@@ -130,7 +140,11 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 	const [skippedAuth, setSkippedAuth] = useState(false);
 	const [offlineDismissed, setOfflineDismissed] = useState(false);
 	const [devScreen, setDevScreen] = useState<DevScreen | null>(getDevScreen);
+	const [forceWelcome] = useState<boolean>(shouldForceWelcome);
 	const wasMobileRef = useRef<boolean | null>(null);
+	const hadStoredSportsAtStartupRef = useRef(selectedSports.length > 0);
+
+	useAccountPreferencesSync(auth);
 
 	useEffect(() => {
 		if (wasMobileRef.current === null) {
@@ -266,9 +280,26 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 
 	const isAuthenticated = !!auth?.isAuthenticated;
 	const authResolving = authLoading;
+	const hasAccountSports = (auth?.user?.preferences?.selectedSports?.length ?? 0) > 0;
+	const hasBootstrappedWelcomeSelections = hasAccountSports || hadStoredSportsAtStartupRef.current;
 	const showLogin = !isAuthenticated && !authResolving && !skippedAuth && authView === "login";
 	const showSignup = !isAuthenticated && !authResolving && !skippedAuth && authView === "signup";
-	const showWelcome = isAuthenticated && !welcomeCompleted;
+	const showWelcome = isAuthenticated && (forceWelcome || (!welcomeCompleted && !hasBootstrappedWelcomeSelections));
+
+	useEffect(() => {
+		if (forceWelcome) {
+			return;
+		}
+		if (isAuthenticated && !welcomeCompleted && hasBootstrappedWelcomeSelections) {
+			completeWelcome();
+		}
+	}, [completeWelcome, forceWelcome, hasBootstrappedWelcomeSelections, isAuthenticated, welcomeCompleted]);
+
+	useEffect(() => {
+		if (isAuthenticated) {
+			void loadMapWithRouting();
+		}
+	}, [isAuthenticated]);
 
 	const authRoot = (children: ReactNode) => (
 		<div

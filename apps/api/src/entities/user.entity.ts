@@ -1,4 +1,5 @@
 import { Entity, Index, PrimaryKey, Property } from "@mikro-orm/core";
+import type { UserPreferences } from "../users/user-preferences";
 import { BaseEntity } from "./base.entity";
 
 @Entity()
@@ -22,4 +23,7 @@ export class User extends BaseEntity {
 
 	@Property({ default: false })
 	isEmailVerified = false;
+
+	@Property({ type: "json", nullable: true })
+	preferences?: UserPreferences | null;
 }

@@ -160,10 +160,9 @@ samp {
 	letter-spacing: -0.04em;
 }
 
-img.docs-wordmark__logo,
 .docs-wordmark__logo {
-	width: 1.6rem !important;
-	height: 1.6rem !important;
+	width: 1.6rem;
+	height: 1.6rem;
 	max-width: 1.6rem;
 	max-height: 1.6rem;
 	border-radius: 0.4rem;

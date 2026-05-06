@@ -4,6 +4,7 @@ import type {
 	ApiUser,
 	AuthResponse,
 	CreateRouteRequest,
+	UpdateCurrentUserRequest,
 	UpdateRouteRequest,
 } from "../types";
 
@@ -84,6 +85,13 @@ export class ApiClient {
 
 	async getProfile(): Promise<ApiUser> {
 		return this.request<ApiUser>("/auth/me");
+	}
+
+	async updateCurrentUser(user: UpdateCurrentUserRequest): Promise<ApiUser> {
+		return this.request<ApiUser>("/users/me", {
+			method: "PATCH",
+			body: user,
+		});
 	}
 
 	async logout(): Promise<void> {

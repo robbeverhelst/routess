@@ -4,12 +4,37 @@ import type { Logger } from "@routess/core";
 export type { StorageAdapter } from "@routess/core";
 
 // API Response Types
+export type ApiActivity = "run" | "cycle" | "walk";
+export type ApiUnits = "km" | "mi";
+export type ApiMapStyle = "streets" | "outdoors" | "satellite";
+export type ApiLocationPermission = "unknown" | "granted" | "denied" | "skipped";
+export type ApiOverlayKey = "heatmap" | "contour" | "bike" | "surface" | "wind";
+
+export type ApiOverlays = Record<ApiOverlayKey, boolean>;
+export type ApiSportSpeeds = Partial<Record<ApiActivity, number>>;
+
+export interface ApiUserPreferences {
+	units: ApiUnits;
+	showPois: boolean;
+	terrain3d: boolean;
+	autoSnap: boolean;
+	publicProfile: boolean;
+	hidePrivacy: boolean;
+	defaultActivity: string;
+	selectedSports: ApiActivity[];
+	sportSpeeds: ApiSportSpeeds;
+	mapStyle: ApiMapStyle;
+	overlays: ApiOverlays;
+	locationPermission: ApiLocationPermission;
+}
+
 export interface ApiUser {
 	id: number;
 	email: string;
 	name: string;
 	avatar?: string;
 	isEmailVerified: boolean;
+	preferences?: ApiUserPreferences | null;
 	statistics?: {
 		totalRoutes: number;
 		totalDistance: number;
@@ -70,6 +95,12 @@ export interface UpdateRouteRequest {
 	elevationGain?: number;
 	startAddress?: string;
 	endAddress?: string;
+}
+
+export interface UpdateCurrentUserRequest {
+	name?: string;
+	avatar?: string;
+	preferences?: Partial<ApiUserPreferences>;
 }
 
 // HTTP Client Interface
