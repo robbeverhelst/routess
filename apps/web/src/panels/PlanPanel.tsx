@@ -1,5 +1,5 @@
 import { calculatePathDistance } from "@routess/core";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSurfaceBreakdown } from "@/features/routing/services/useSurfaceBreakdown";
 import { t } from "@/lib/i18n";
 import { formatSpeedParts, useUnits } from "@/lib/units";
@@ -94,6 +94,21 @@ export function PlanPanel() {
 	const elevationUnit = elevParts ? elevParts.unit : units === "mi" ? "ft" : "m";
 
 	const sportSpeeds = useRedesignSettingsStore((s) => s.sportSpeeds);
+	const selectedSports = useRedesignSettingsStore((s) => s.selectedSports);
+
+	const availableActivities = useMemo(
+		() => (selectedSports.length > 0 ? ACTIVITIES.filter((a) => selectedSports.includes(a.key)) : ACTIVITIES),
+		[selectedSports],
+	);
+
+	// If the active sport gets removed in Settings, snap to a still-selected one
+	// so we never route or estimate against a sport the user has hidden.
+	useEffect(() => {
+		if (selectedSports.length === 0) return;
+		if (!selectedSports.includes(activityType)) {
+			setActivityType(selectedSports[0]);
+		}
+	}, [selectedSports, activityType, setActivityType]);
 
 	const paceParts = useMemo(() => {
 		if (hasRoute && routePath.length >= 2) {
@@ -135,7 +150,7 @@ export function PlanPanel() {
 				}}
 			>
 				<div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-					{ACTIVITIES.map((a) => {
+					{availableActivities.map((a) => {
 						const Icon = a.icon;
 						const on = activityType === a.key;
 						return (
