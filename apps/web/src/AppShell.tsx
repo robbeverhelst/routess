@@ -3,6 +3,7 @@ import { lazy, type ReactNode, Suspense, useEffect, useRef, useState } from "rea
 import { useRouteSurfaceSync } from "@/features/routing/services/useSurfaceBreakdown";
 import { apiService } from "@/lib/api";
 import { useAuthStatus } from "@/lib/api-queries";
+import { type SupportedLanguage, t } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
 import { queryKeys } from "@/lib/query-client";
 import { useModalsStore } from "@/stores/modalsStore";
@@ -62,13 +63,17 @@ import { WelcomeScreen } from "./screens/WelcomeScreen";
 const loadMapWithRouting = () => import("@/components/MapWithRouting");
 const MapWithRouting = lazy(loadMapWithRouting);
 
-const SCREEN_TITLES: Record<RedesignContext, string> = {
-	plan: "Plan",
-	library: "Library",
-	discover: "Discover",
-	social: "Social",
-	settings: "Settings",
+const SCREEN_TITLE_KEYS: Record<RedesignContext, string> = {
+	plan: "nav.plan",
+	library: "nav.library",
+	discover: "nav.discover",
+	social: "nav.social",
+	settings: "nav.settings",
 };
+
+function screenTitle(context: RedesignContext, language: SupportedLanguage): string {
+	return t(SCREEN_TITLE_KEYS[context], language);
+}
 
 interface AppShellProps {
 	initialCenter?: [number, number];
@@ -118,8 +123,17 @@ function shouldForceWelcome(): boolean {
 }
 
 export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps) {
-	const { context, setContext, theme, accent, panelCollapsed, togglePanel, welcomeCompleted, completeWelcome } =
-		useUiStore();
+	const {
+		context,
+		setContext,
+		theme,
+		accent,
+		panelCollapsed,
+		togglePanel,
+		welcomeCompleted,
+		completeWelcome,
+		language,
+	} = useUiStore();
 	const selectedSports = useRedesignSettingsStore((s) => s.selectedSports);
 	const { modal, overlay, openModal, openOverlay, closeOverlay } = useModalsStore();
 	const { data: auth, isLoading: authLoading } = useAuthStatus();
@@ -221,8 +235,8 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 			if (!localStorage.getItem("access_token")) {
 				pushToast({
 					kind: "info",
-					title: "Sign in to export",
-					body: "Account export needs an authenticated session.",
+					title: t("account.signInToExport", language),
+					body: t("account.exportNeedsAuth", language),
 				});
 				return;
 			}
@@ -244,15 +258,18 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 				URL.revokeObjectURL(url);
 				pushToast({
 					kind: "success",
-					title: "Export ready",
-					body: `Downloaded ${routes.length} route${routes.length === 1 ? "" : "s"}.`,
+					title: t("account.exportReady", language),
+					body:
+						routes.length === 1
+							? t("account.downloadedSingular", language, { count: String(routes.length) })
+							: t("account.downloadedPlural", language, { count: String(routes.length) }),
 				});
 			} catch (err) {
 				Logger.error("[AppShell] export-all-data failed", err);
 				pushToast({
 					kind: "danger",
-					title: "Export failed",
-					body: "Couldn't fetch your routes. Try again in a moment.",
+					title: t("account.exportFailed", language),
+					body: t("account.exportFailedSub", language),
 				});
 			}
 		};
@@ -276,7 +293,7 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 			window.removeEventListener("routess:open-activity", onOpenSocial);
 			window.removeEventListener("routess:export-all-data", onExportAll);
 		};
-	}, [setContext]);
+	}, [setContext, language]);
 
 	const isAuthenticated = !!auth?.isAuthenticated;
 	const authResolving = authLoading;
@@ -362,7 +379,7 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 						zIndex: 100,
 					}}
 				>
-					New here? Create account
+					{t("appshell.newHere", language)}
 				</button>
 				<ToastStack />
 			</>,
@@ -428,7 +445,7 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 						zIndex: 200,
 					}}
 				>
-					← Back to app
+					{t("appshell.backToApp", language)}
 				</button>
 				<ToastStack />
 			</div>
@@ -495,17 +512,17 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 				height: 56,
 			}}
 		>
-			<span style={{ fontSize: 15, fontWeight: 600, letterSpacing: -0.2 }}>{SCREEN_TITLES[context]}</span>
+			<span style={{ fontSize: 15, fontWeight: 600, letterSpacing: -0.2 }}>{screenTitle(context, language)}</span>
 			{context === "plan" && (
 				<Badge variant="accent" dot>
-					Active route
+					{t("drawer.activeRoute", language)}
 				</Badge>
 			)}
 			<div style={{ flex: 1 }} />
-			<IconBtn title="Open command palette (⌘K)" onClick={() => openModal("palette")}>
+			<IconBtn title={t("appshell.openPalette", language)} onClick={() => openModal("palette")}>
 				<I.command size={16} />
 			</IconBtn>
-			<IconBtn title="Collapse panel" onClick={togglePanel}>
+			<IconBtn title={t("appshell.collapsePanel", language)} onClick={togglePanel}>
 				<I.chevronL size={16} />
 			</IconBtn>
 		</header>
@@ -602,7 +619,7 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 				<MobileTopBar />
 				{!panelCollapsed && (
 					<MobilePanelDrawer
-						title={SCREEN_TITLES[context]}
+						title={screenTitle(context, language)}
 						onClose={() => useUiStore.getState().setPanelCollapsed(true)}
 					>
 						{renderPanelContent()}

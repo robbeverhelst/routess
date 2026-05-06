@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import type { ApiRoute } from "@/lib/api";
 import { useUserRoutes } from "@/lib/api-queries";
+import { t } from "@/lib/i18n";
 import { useModalsStore } from "@/stores/modalsStore";
 import type { RedesignContext } from "@/stores/uiStore";
 import { useUiStore } from "@/stores/uiStore";
@@ -36,6 +37,7 @@ export function CommandPalette() {
 	const openModal = useModalsStore((s) => s.openModal);
 	const setContext = useUiStore((s) => s.setContext);
 	const toggleTheme = useUiStore((s) => s.toggleTheme);
+	const language = useUiStore((s) => s.language);
 	const { data: routes = [] } = useUserRoutes();
 	const [query, setQuery] = useState("");
 	const [activeIndex, setActiveIndex] = useState(0);
@@ -43,39 +45,87 @@ export function CommandPalette() {
 	const groups = useMemo<{ title: string; items: CmdItem[] }[]>(
 		() => [
 			{
-				title: "Navigate",
+				title: t("cmd.group.navigate", language),
 				items: [
-					{ id: "nav-plan", icon: I.route, label: "Plan a route", kbd: "G P", run: () => setContext("plan") },
-					{ id: "nav-lib", icon: I.library, label: "Open library", kbd: "G L", run: () => setContext("library") },
-					{ id: "nav-dis", icon: I.explore, label: "Discover routes", kbd: "G D", run: () => setContext("discover") },
-					{ id: "nav-soc", icon: I.social, label: "Open social", kbd: "G S", run: () => setContext("social") },
+					{
+						id: "nav-plan",
+						icon: I.route,
+						label: t("cmd.nav.plan", language),
+						kbd: "G P",
+						run: () => setContext("plan"),
+					},
+					{
+						id: "nav-lib",
+						icon: I.library,
+						label: t("cmd.nav.library", language),
+						kbd: "G L",
+						run: () => setContext("library"),
+					},
+					{
+						id: "nav-dis",
+						icon: I.explore,
+						label: t("cmd.nav.discover", language),
+						kbd: "G D",
+						run: () => setContext("discover"),
+					},
+					{
+						id: "nav-soc",
+						icon: I.social,
+						label: t("cmd.nav.social", language),
+						kbd: "G S",
+						run: () => setContext("social"),
+					},
 				],
 			},
 			{
-				title: "Actions",
+				title: t("cmd.group.actions", language),
 				items: [
-					{ id: "act-save", icon: I.save, label: "Save current route", kbd: "S", run: () => openModal("save") },
-					{ id: "act-loop", icon: I.compass, label: "Generate loop", kbd: "L", run: () => openModal("loop") },
+					{
+						id: "act-save",
+						icon: I.save,
+						label: t("cmd.action.save", language),
+						kbd: "S",
+						run: () => openModal("save"),
+					},
+					{
+						id: "act-loop",
+						icon: I.compass,
+						label: t("cmd.action.loop", language),
+						kbd: "L",
+						run: () => openModal("loop"),
+					},
 					{
 						id: "act-routing",
 						icon: I.sliders,
-						label: "Routing preferences",
+						label: t("cmd.action.routing", language),
 						kbd: "R",
 						run: () => openModal("routing"),
 					},
-					{ id: "act-import", icon: I.upload, label: "Import GPX", kbd: "I", run: () => openModal("import") },
-					{ id: "act-share", icon: I.share, label: "Share current route", kbd: "⇧ S", run: () => openModal("share") },
+					{
+						id: "act-import",
+						icon: I.upload,
+						label: t("cmd.action.import", language),
+						kbd: "I",
+						run: () => openModal("import"),
+					},
+					{
+						id: "act-share",
+						icon: I.share,
+						label: t("cmd.action.share", language),
+						kbd: "⇧ S",
+						run: () => openModal("share"),
+					},
 					{
 						id: "act-account",
 						icon: I.user,
-						label: "Account & billing",
+						label: t("cmd.action.account", language),
 						run: () => window.dispatchEvent(new CustomEvent("routess:open-account")),
 					},
-					{ id: "act-theme", icon: I.moon, label: "Toggle dark mode", kbd: "⌘ D", run: toggleTheme },
+					{ id: "act-theme", icon: I.moon, label: t("cmd.action.theme", language), kbd: "⌘ D", run: toggleTheme },
 				],
 			},
 			{
-				title: "Recent routes",
+				title: t("cmd.group.recent", language),
 				items: routes.slice(0, 5).map((r) => ({
 					id: `route-${r.id}`,
 					icon: I.pin,
@@ -85,7 +135,7 @@ export function CommandPalette() {
 				})),
 			},
 		],
-		[routes, openModal, setContext, toggleTheme],
+		[routes, openModal, setContext, toggleTheme, language],
 	);
 
 	const filtered = useMemo(() => {
@@ -130,7 +180,7 @@ export function CommandPalette() {
 		>
 			<button
 				type="button"
-				aria-label="Close palette"
+				aria-label={t("cmd.closeAria", language)}
 				onClick={close}
 				style={{
 					position: "absolute",
@@ -173,7 +223,7 @@ export function CommandPalette() {
 							setActiveIndex(0);
 						}}
 						onKeyDown={onKeyDown}
-						placeholder="Type a command, search, or jump…"
+						placeholder={t("cmd.placeholder", language)}
 						style={{
 							flex: 1,
 							background: "transparent",
@@ -183,7 +233,7 @@ export function CommandPalette() {
 							color: "inherit",
 						}}
 					/>
-					<Kbd>esc</Kbd>
+					<Kbd>{t("search.esc", language)}</Kbd>
 				</div>
 				<div style={{ padding: 6, flex: 1, minHeight: 0, overflow: "auto" }}>
 					{filtered.length === 0 && (
@@ -195,7 +245,7 @@ export function CommandPalette() {
 								color: RDS_COLORS.fgSubtle,
 							}}
 						>
-							No results for "{query}"
+							{t("cmd.noResults", language, { query })}
 						</div>
 					)}
 					{filtered.map((g, gi) => {
@@ -272,15 +322,15 @@ export function CommandPalette() {
 				>
 					<span>
 						<Kbd>↑</Kbd>
-						<Kbd>↓</Kbd> navigate
+						<Kbd>↓</Kbd> {t("cmd.kbd.navigate", language)}
 					</span>
 					<span>
-						<Kbd>↵</Kbd> run
+						<Kbd>↵</Kbd> {t("cmd.kbd.run", language)}
 					</span>
 					<div style={{ flex: 1 }} />
 					<span>
 						<Kbd>⌘</Kbd>
-						<Kbd>K</Kbd> toggle
+						<Kbd>K</Kbd> {t("cmd.kbd.toggle", language)}
 					</span>
 				</div>
 			</div>

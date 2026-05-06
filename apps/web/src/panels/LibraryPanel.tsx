@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useIsAuthenticated } from "@/hooks/useAuthState";
 import type { ApiRoute } from "@/lib/api";
 import { useUserRoutes } from "@/lib/api-queries";
+import { t } from "@/lib/i18n";
 import { useUnits } from "@/lib/units";
 import { buildMapboxStaticPreviewUrl } from "@/lib/utils/mapboxStaticPreview";
 import { useModalsStore } from "@/stores/modalsStore";
@@ -17,11 +18,11 @@ const THUMB_HEIGHT = 56;
 
 type Filter = "all" | RedesignActivity | "favourites";
 
-const FILTERS: { key: Filter; label: string }[] = [
-	{ key: "all", label: "All" },
-	{ key: "cycle", label: "Cycling" },
-	{ key: "run", label: "Running" },
-	{ key: "favourites", label: "Favourites" },
+const FILTERS: { key: Filter; labelKey: string }[] = [
+	{ key: "all", labelKey: "library.filter.all" },
+	{ key: "cycle", labelKey: "library.filter.cycling" },
+	{ key: "run", labelKey: "library.filter.running" },
+	{ key: "favourites", labelKey: "library.filter.favourites" },
 ];
 
 const TAG_COLOR: Record<RedesignActivity, string> = {
@@ -36,10 +37,10 @@ const TAG_BADGE_VARIANT: Record<RedesignActivity, "accent" | "success" | "warn">
 	walk: "warn",
 };
 
-const TAG_LABEL: Record<RedesignActivity, string> = {
-	run: "Run",
-	cycle: "Cycle",
-	walk: "Walk",
+const TAG_LABEL_KEY: Record<RedesignActivity, string> = {
+	run: "sport.short.run",
+	cycle: "sport.short.cycle",
+	walk: "sport.short.walk",
 };
 
 // Default-data: until backend tracks activity type per route, derive a stable
@@ -183,6 +184,7 @@ function EmptyLibrary({
 	onLoop?: () => void;
 	onImport?: () => void;
 }) {
+	const language = useUiStore((s) => s.language);
 	return (
 		<div
 			style={{
@@ -228,7 +230,7 @@ function EmptyLibrary({
 						<I.plus size={14} />
 					</div>
 				</div>
-				<h3 style={{ margin: 0, fontSize: 17, fontWeight: 600 }}>No routes yet</h3>
+				<h3 style={{ margin: 0, fontSize: 17, fontWeight: 600 }}>{t("library.empty.title", language)}</h3>
 				<p
 					style={{
 						fontSize: 13,
@@ -237,17 +239,17 @@ function EmptyLibrary({
 						lineHeight: 1.55,
 					}}
 				>
-					Plan one on the map, generate a loop from your front door, or import a GPX from Strava.
+					{t("library.empty.subtitle", language)}
 				</p>
 				<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
 					<Btn variant="primary" style={{ width: "100%" }} onClick={onPlan}>
-						<I.plus size={14} /> Plan a route
+						<I.plus size={14} /> {t("library.empty.plan", language)}
 					</Btn>
 					<Btn style={{ width: "100%" }} onClick={onLoop}>
-						<I.compass size={14} /> Generate a loop
+						<I.compass size={14} /> {t("library.empty.loop", language)}
 					</Btn>
 					<Btn variant="ghost" style={{ width: "100%", color: RDS_COLORS.fgMuted }} onClick={onImport}>
-						<I.upload size={14} /> Import GPX
+						<I.upload size={14} /> {t("library.empty.import", language)}
 					</Btn>
 				</div>
 			</div>
@@ -257,12 +259,13 @@ function EmptyLibrary({
 
 export function LibraryPanel() {
 	const isAuthenticated = useIsAuthenticated();
+	const language = useUiStore((s) => s.language);
 	if (!isAuthenticated) {
 		return (
 			<div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
 				<SignInGate
-					title="Sign in to see your library"
-					description="Your saved routes live in your account. Sign in or create one to view, organise, and pick up where you left off."
+					title={t("library.gate.title", language)}
+					description={t("library.gate.body", language)}
 					icon={I.library}
 				/>
 			</div>
@@ -273,7 +276,7 @@ export function LibraryPanel() {
 
 function LibraryPanelInner() {
 	const { data: routes = [], isLoading } = useUserRoutes();
-	const { favouriteRouteIds, toggleFavourite, setContext } = useUiStore();
+	const { favouriteRouteIds, toggleFavourite, setContext, language } = useUiStore();
 	const openModal = useModalsStore((s) => s.openModal);
 	const openDelete = useModalsStore((s) => s.openDelete);
 	const { formatDistance } = useUnits();
@@ -353,12 +356,12 @@ function LibraryPanelInner() {
 								fontSize: 13,
 								color: "inherit",
 							}}
-							placeholder="Search routes…"
+							placeholder={t("library.searchPlaceholder", language)}
 						/>
 						<Kbd>/</Kbd>
 					</div>
 					<Btn variant="primary" onClick={() => setContext("plan")}>
-						<I.plus size={14} /> New
+						<I.plus size={14} /> {t("common.new", language)}
 					</Btn>
 				</div>
 				<div
@@ -384,14 +387,15 @@ function LibraryPanelInner() {
 										cursor: "pointer",
 									}}
 								>
-									{f.label}
+									{t(f.labelKey, language)}
 									{f.key !== "favourites" && ` · ${count}`}
 								</button>
 							);
 						})}
 					</div>
 					<div className="rds-mono" style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle }}>
-						{filtered.length} route{filtered.length === 1 ? "" : "s"}
+						{filtered.length}{" "}
+						{filtered.length === 1 ? t("library.routeSingular", language) : t("library.routePlural", language)}
 					</div>
 				</div>
 			</div>
@@ -406,7 +410,7 @@ function LibraryPanelInner() {
 							color: RDS_COLORS.fgSubtle,
 						}}
 					>
-						Loading routes…
+						{t("library.loading", language)}
 					</div>
 				)}
 				{!isLoading && filtered.length === 0 && (
@@ -418,7 +422,7 @@ function LibraryPanelInner() {
 							color: RDS_COLORS.fgSubtle,
 						}}
 					>
-						<div style={{ marginBottom: hasActiveFilters ? 12 : 0 }}>No routes match your filter.</div>
+						<div style={{ marginBottom: hasActiveFilters ? 12 : 0 }}>{t("library.noMatch", language)}</div>
 						{hasActiveFilters && (
 							<Btn
 								variant="ghost"
@@ -428,7 +432,7 @@ function LibraryPanelInner() {
 								}}
 								style={{ color: RDS_COLORS.fgMuted, margin: "0 auto" }}
 							>
-								Clear filters
+								{t("library.clearFilters", language)}
 							</Btn>
 						)}
 					</div>
@@ -499,7 +503,7 @@ function LibraryPanelInner() {
 										{r.name}
 									</div>
 									<Badge variant={TAG_BADGE_VARIANT[tag]} dot style={{ flexShrink: 0 }}>
-										{TAG_LABEL[tag]}
+										{t(TAG_LABEL_KEY[tag], language)}
 									</Badge>
 								</div>
 								<div
@@ -520,7 +524,9 @@ function LibraryPanelInner() {
 									<span style={{ opacity: 0.5 }}>·</span>
 									<span>{dist}</span>
 									<span style={{ opacity: 0.5 }}>·</span>
-									<span>{r.waypoints?.length ?? 0} wp</span>
+									<span>
+										{r.waypoints?.length ?? 0} {t("library.wp", language)}
+									</span>
 								</div>
 							</div>
 							{/* biome-ignore lint/a11y/noStaticElementInteractions: container only stops click bubbling so action buttons don't open detail */}
@@ -530,14 +536,14 @@ function LibraryPanelInner() {
 								onKeyDown={(e) => e.stopPropagation()}
 							>
 								<IconBtn
-									title={fav ? "Remove favourite" : "Mark favourite"}
+									title={fav ? t("route.removeFavourite", language) : t("library.markFavourite", language)}
 									onClick={() => toggleFavourite(r.id)}
 									pressed={fav}
 								>
 									<I.heart size={14} style={fav ? { color: RDS_COLORS.danger, fill: "currentColor" } : undefined} />
 								</IconBtn>
 								<IconBtn
-									title="Delete route"
+									title={t("library.deleteRoute", language)}
 									onClick={() => openDelete(r.id)}
 									style={{ color: RDS_COLORS.fgSubtle, opacity: 0.72 }}
 								>

@@ -1,3 +1,4 @@
+import { t } from "@/lib/i18n";
 import { useModalsStore } from "@/stores/modalsStore";
 import { useUiStore } from "@/stores/uiStore";
 import { I } from "./icons";
@@ -5,7 +6,7 @@ import { IconBtn, RDS_COLORS } from "./primitives";
 import { UserAvatar } from "./UserAvatar";
 
 export function MobileTopBar() {
-	const { theme, toggleTheme } = useUiStore();
+	const { theme, toggleTheme, language } = useUiStore();
 	const openModal = useModalsStore((s) => s.openModal);
 	const openOverlay = useModalsStore((s) => s.openOverlay);
 	const closeOverlay = useModalsStore((s) => s.closeOverlay);
@@ -43,17 +44,17 @@ export function MobileTopBar() {
 			/>
 			<span style={{ fontSize: 14, fontWeight: 600, letterSpacing: -0.1 }}>routess</span>
 			<div style={{ flex: 1 }} />
-			<IconBtn title="Search" onClick={() => openModal("search")}>
+			<IconBtn title={t("common.search", language)} onClick={() => openModal("search")}>
 				<I.search size={18} />
 			</IconBtn>
 			<IconBtn
-				title="Alerts"
+				title={t("nav.alerts", language)}
 				pressed={alertsActive}
 				onClick={() => (alertsActive ? closeOverlay() : openOverlay("notifications"))}
 			>
 				<I.bell size={18} />
 			</IconBtn>
-			<IconBtn title="Toggle theme" onClick={toggleTheme}>
+			<IconBtn title={t("appshell.toggleTheme", language)} onClick={toggleTheme}>
 				{theme === "dark" ? <I.sun size={18} /> : <I.moon size={18} />}
 			</IconBtn>
 			<UserAvatar size={30} compact />

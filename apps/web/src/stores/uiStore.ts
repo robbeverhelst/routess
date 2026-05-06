@@ -1,5 +1,10 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import {
+	loadLanguageFromLocalStorage,
+	saveLanguageToLocalStorage,
+} from "@/features/routing/services/LocalStorageService";
+import type { SupportedLanguage } from "@/lib/i18n";
 
 export type RedesignContext = "plan" | "library" | "discover" | "social" | "settings";
 export type RedesignAccent = "violet" | "cobalt" | "forest" | "ember";
@@ -11,6 +16,7 @@ interface UiState {
 	accent: RedesignAccent;
 	theme: RedesignTheme;
 	activityType: RedesignActivity;
+	language: SupportedLanguage;
 	panelCollapsed: boolean;
 	favouriteRouteIds: number[];
 	welcomeCompleted: boolean;
@@ -20,6 +26,7 @@ interface UiState {
 	setTheme: (t: RedesignTheme) => void;
 	toggleTheme: () => void;
 	setActivityType: (a: RedesignActivity) => void;
+	setLanguage: (l: SupportedLanguage) => void;
 	togglePanel: () => void;
 	setPanelCollapsed: (v: boolean) => void;
 	toggleFavourite: (routeId: number) => void;
@@ -37,6 +44,7 @@ export const useUiStore = create<UiState>()(
 			accent: "violet",
 			theme: "light",
 			activityType: "cycle",
+			language: loadLanguageFromLocalStorage(),
 			panelCollapsed: false,
 			favouriteRouteIds: [],
 			welcomeCompleted: false,
@@ -46,6 +54,10 @@ export const useUiStore = create<UiState>()(
 			setTheme: (theme) => set({ theme }),
 			toggleTheme: () => set({ theme: get().theme === "dark" ? "light" : "dark" }),
 			setActivityType: (activityType) => set({ activityType }),
+			setLanguage: (language) => {
+				saveLanguageToLocalStorage(language);
+				set({ language });
+			},
 			togglePanel: () => set({ panelCollapsed: !get().panelCollapsed }),
 			setPanelCollapsed: (panelCollapsed) => set({ panelCollapsed }),
 			toggleFavourite: (routeId) => {

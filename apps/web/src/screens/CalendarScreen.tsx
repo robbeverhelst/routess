@@ -1,7 +1,10 @@
+import { t } from "@/lib/i18n";
+import { useUiStore } from "@/stores/uiStore";
 import { ComingSoonState } from "../components/ComingSoonState";
 import { RDS_COLORS } from "../components/primitives";
 
 export function CalendarScreen() {
+	const language = useUiStore((s) => s.language);
 	return (
 		<div
 			style={{
@@ -13,11 +16,7 @@ export function CalendarScreen() {
 				justifyContent: "center",
 			}}
 		>
-			<ComingSoonState
-				icon="activity"
-				title="Activity calendar"
-				body="Your activity heatmap and monthly distance totals will appear here once the activities backend is live."
-			/>
+			<ComingSoonState icon="activity" title={t("calendar.title", language)} body={t("calendar.body", language)} />
 		</div>
 	);
 }

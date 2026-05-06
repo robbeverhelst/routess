@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { t } from "@/lib/i18n";
+import { useUiStore } from "@/stores/uiStore";
 import { I } from "../components/icons";
 import { MapBackdrop } from "../components/MapBackdrop";
 import { Badge, Btn, RDS_COLORS, SecTitle } from "../components/primitives";
@@ -14,17 +16,18 @@ function fmtTime(secs: number): { mmss: string; hundredths: string } {
 	};
 }
 
-const STATS = [
-	{ label: "Distance", value: "8.2", unit: "km" },
-	{ label: "Pace", value: "4:32", unit: "/km" },
-	{ label: "HR avg", value: "148", unit: "bpm" },
-	{ label: "Cadence", value: "172", unit: "spm" },
-];
-
 export function RecordingScreen({ onStop }: { onStop?: () => void }) {
 	const [running, setRunning] = useState(true);
-	const [elapsed, setElapsed] = useState(42.18); // seconds
+	const [elapsed, setElapsed] = useState(42.18);
 	const [lap, setLap] = useState(3);
+	const language = useUiStore((s) => s.language);
+
+	const STATS = [
+		{ label: t("record.distance", language), value: "8.2", unit: "km" },
+		{ label: t("record.pace", language), value: "4:32", unit: "/km" },
+		{ label: t("record.hrAvg", language), value: "148", unit: "bpm" },
+		{ label: t("record.cadence", language), value: "172", unit: "spm" },
+	];
 	const startedAt = useRef<number | null>(null);
 	const baseline = useRef(elapsed);
 
@@ -43,7 +46,7 @@ export function RecordingScreen({ onStop }: { onStop?: () => void }) {
 		return () => cancelAnimationFrame(raf);
 	}, [running]);
 
-	const t = fmtTime(elapsed);
+	const time = fmtTime(elapsed);
 
 	return (
 		<div
@@ -79,15 +82,17 @@ export function RecordingScreen({ onStop }: { onStop?: () => void }) {
 							animation: running ? "rds-pulse 1.4s infinite" : undefined,
 						}}
 					/>
-					<span style={{ fontSize: 13, fontWeight: 600 }}>{running ? "Recording" : "Paused"}</span>
+					<span style={{ fontSize: 13, fontWeight: 600 }}>
+						{running ? t("record.recording", language) : t("record.paused", language)}
+					</span>
 					<span className="rds-mono" style={{ fontSize: 13, color: RDS_COLORS.fgMuted }}>
 						· Schelde loop
 					</span>
 					<div style={{ flex: 1 }} />
 					<Badge>
-						<I.target size={11} /> GPS strong
+						<I.target size={11} /> {t("record.gpsStrong", language)}
 					</Badge>
-					<Badge>12 satellites</Badge>
+					<Badge>{t("record.satellites", language, { count: "12" })}</Badge>
 				</div>
 			</div>
 
@@ -104,7 +109,7 @@ export function RecordingScreen({ onStop }: { onStop?: () => void }) {
 				>
 					<div style={{ display: "flex", alignItems: "flex-end", gap: 16 }}>
 						<div style={{ display: "flex", flexDirection: "column" }}>
-							<SecTitle>Elapsed</SecTitle>
+							<SecTitle>{t("record.elapsed", language)}</SecTitle>
 							<div
 								className="rds-mono"
 								style={{
@@ -114,13 +119,13 @@ export function RecordingScreen({ onStop }: { onStop?: () => void }) {
 									letterSpacing: -2,
 								}}
 							>
-								{t.mmss}
-								<span style={{ fontSize: 28, color: RDS_COLORS.fgSubtle, fontWeight: 400 }}>:{t.hundredths}</span>
+								{time.mmss}
+								<span style={{ fontSize: 28, color: RDS_COLORS.fgSubtle, fontWeight: 400 }}>:{time.hundredths}</span>
 							</div>
 						</div>
 						<div style={{ flex: 1 }} />
 						<div style={{ display: "flex", flexDirection: "column", textAlign: "right" }}>
-							<SecTitle>Lap {lap} of 4</SecTitle>
+							<SecTitle>{t("record.lapOf", language, { n: String(lap), total: "4" })}</SecTitle>
 							<div className="rds-mono" style={{ fontSize: 18, fontWeight: 600, marginTop: 4 }}>
 								2:14 <span style={{ fontSize: 11, color: RDS_COLORS.fgSubtle }}>/ km</span>
 							</div>
@@ -165,7 +170,7 @@ export function RecordingScreen({ onStop }: { onStop?: () => void }) {
 
 					<div style={{ display: "flex", gap: 8, marginTop: 16 }}>
 						<Btn style={{ flex: 1, height: 48, fontSize: 14 }} onClick={() => setLap((l) => l + 1)}>
-							<I.flag size={14} /> Lap
+							<I.flag size={14} /> {t("record.lap", language)}
 						</Btn>
 						<Btn
 							style={{
@@ -178,10 +183,11 @@ export function RecordingScreen({ onStop }: { onStop?: () => void }) {
 							}}
 							onClick={() => setRunning((r) => !r)}
 						>
-							{running ? "Pause" : "Resume"}
+							{running ? t("record.pause", language) : t("record.resume", language)}
 						</Btn>
 						<Btn variant="danger" style={{ height: 48, fontSize: 14, padding: "0 22px" }} onClick={onStop}>
-							<span style={{ width: 14, height: 14, background: "white", borderRadius: 2 }} /> Stop
+							<span style={{ width: 14, height: 14, background: "white", borderRadius: 2 }} />{" "}
+							{t("record.stop", language)}
 						</Btn>
 					</div>
 				</div>

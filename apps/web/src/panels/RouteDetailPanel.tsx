@@ -5,6 +5,7 @@ import { resolveValhallaCosting } from "@/features/routing/services/routingMode"
 import { fetchSurfaceBreakdown, type SurfaceBreakdown } from "@/features/routing/services/SurfaceService";
 import type { ApiRoute } from "@/lib/api";
 import { useSaveRoute, useUpdateRoute } from "@/lib/api-queries";
+import { t } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
 import { useUnits } from "@/lib/units";
 import { useModalsStore } from "@/stores/modalsStore";
@@ -52,19 +53,19 @@ const parseRouteDescription = (desc: string | null | undefined): ParsedDescripti
 	};
 };
 
-const ACTIVITY_LABEL: Record<string, { label: string; icon: IconKey }> = {
-	cycle: { label: "Cycling", icon: "bike" },
-	cycling: { label: "Cycling", icon: "bike" },
-	run: { label: "Running", icon: "run" },
-	running: { label: "Running", icon: "run" },
-	walk: { label: "Walking", icon: "walk" },
-	walking: { label: "Walking", icon: "walk" },
+const ACTIVITY_LABEL: Record<string, { labelKey: string; icon: IconKey }> = {
+	cycle: { labelKey: "sport.cycle", icon: "bike" },
+	cycling: { labelKey: "sport.cycle", icon: "bike" },
+	run: { labelKey: "sport.run", icon: "run" },
+	running: { labelKey: "sport.run", icon: "run" },
+	walk: { labelKey: "sport.walk", icon: "walk" },
+	walking: { labelKey: "sport.walk", icon: "walk" },
 };
 
-const PRIVACY_LABEL: Record<string, { label: string; icon: IconKey }> = {
-	private: { label: "Private", icon: "lock" },
-	link: { label: "Anyone with link", icon: "share" },
-	public: { label: "Public", icon: "globe" },
+const PRIVACY_LABEL: Record<string, { labelKey: string; icon: IconKey }> = {
+	private: { labelKey: "save.privacy.private", icon: "lock" },
+	link: { labelKey: "save.privacy.linkSub", icon: "share" },
+	public: { labelKey: "save.privacy.public", icon: "globe" },
 };
 
 function MetaChip({ icon, label }: { icon: IconKey; label: string }) {
@@ -113,6 +114,7 @@ function TagChip({ label }: { label: string }) {
 }
 
 export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: () => void }) {
+	const language = useUiStore((s) => s.language);
 	const { formatDistanceParts, formatSpeedParts, formatElevationParts } = useUnits();
 	const distanceParts = route.distance ? formatDistanceParts(route.distance / 1000) : null;
 	const elevParts = route.elevationGain ? formatElevationParts(route.elevationGain) : null;
@@ -223,7 +225,7 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 		setContext("plan");
 		pushToast({
 			kind: "success",
-			title: "Route loaded",
+			title: t("route.loaded", language),
 			body: route.name,
 		});
 	};
@@ -266,7 +268,7 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 				onSuccess: (newRoute) => {
 					pushToast({
 						kind: "success",
-						title: "Route duplicated",
+						title: t("route.duplicated", language),
 						body: newRoute.name,
 					});
 					setMoreOpen(false);
@@ -274,8 +276,8 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 				onError: () => {
 					pushToast({
 						kind: "danger",
-						title: "Duplicate failed",
-						body: "Try again.",
+						title: t("route.duplicateFailed", language),
+						body: t("common.tryAgain", language),
 					});
 				},
 			},
@@ -303,17 +305,21 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 			{ routeId: route.id, updates: { waypoints: updatedWaypoints } },
 			{
 				onError: () => {
-					pushToast({ kind: "danger", title: "Rename failed", body: "Try again." });
+					pushToast({
+						kind: "danger",
+						title: t("route.renameFailed", language),
+						body: t("common.tryAgain", language),
+					});
 				},
 			},
 		);
 	};
 
 	const stats = [
-		{ label: "Distance", value: distanceStr, unit: distanceUnit },
-		{ label: "Duration", value: durationStr, unit: "" },
-		{ label: "Elev gain", value: elevStr, unit: elevUnit },
-		{ label: "Avg speed", value: paceStr, unit: paceUnit },
+		{ label: t("route.distance", language), value: distanceStr, unit: distanceUnit },
+		{ label: t("route.duration", language), value: durationStr, unit: "" },
+		{ label: t("route.elev", language), value: elevStr, unit: elevUnit },
+		{ label: t("route.avgSpeed", language), value: paceStr, unit: paceUnit },
 	];
 
 	return (
@@ -327,10 +333,10 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 					borderBottom: `1px solid ${RDS_COLORS.border}`,
 				}}
 			>
-				<IconBtn title="Back" onClick={onBack}>
+				<IconBtn title={t("route.back", language)} onClick={onBack}>
 					<I.chevronL size={16} />
 				</IconBtn>
-				<span style={{ fontSize: 13, color: RDS_COLORS.fgMuted }}>Library</span>
+				<span style={{ fontSize: 13, color: RDS_COLORS.fgMuted }}>{t("route.library", language)}</span>
 				<I.chevronR size={12} />
 				<span
 					style={{
@@ -344,14 +350,17 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 					{route.name}
 				</span>
 				<div style={{ flex: 1 }} />
-				<IconBtn title={favorited ? "Remove favourite" : "Favourite"} onClick={dispatchFavorite}>
+				<IconBtn
+					title={favorited ? t("route.removeFavourite", language) : t("route.makeFavourite", language)}
+					onClick={dispatchFavorite}
+				>
 					<I.heart size={14} style={favorited ? { color: RDS_COLORS.danger, fill: "currentColor" } : undefined} />
 				</IconBtn>
-				<IconBtn title="Share" onClick={dispatchShare}>
+				<IconBtn title={t("route.share", language)} onClick={dispatchShare}>
 					<I.share size={14} />
 				</IconBtn>
 				<div ref={moreRef} style={{ position: "relative" }}>
-					<IconBtn title="More" onClick={() => setMoreOpen((v) => !v)} pressed={moreOpen}>
+					<IconBtn title={t("route.more", language)} onClick={() => setMoreOpen((v) => !v)} pressed={moreOpen}>
 						<I.more size={14} />
 					</IconBtn>
 					{moreOpen && (
@@ -394,7 +403,8 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 									e.currentTarget.style.background = "transparent";
 								}}
 							>
-								<I.copy size={14} /> {saveRoute.isPending ? "Duplicating…" : "Duplicate"}
+								<I.copy size={14} />{" "}
+								{saveRoute.isPending ? t("route.duplicating", language) : t("route.duplicate", language)}
 							</button>
 							<button
 								type="button"
@@ -420,7 +430,7 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 									e.currentTarget.style.background = "transparent";
 								}}
 							>
-								<I.trash size={14} /> Delete
+								<I.trash size={14} /> {t("route.delete", language)}
 							</button>
 						</div>
 					)}
@@ -430,15 +440,18 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 			<div style={{ flex: 1, overflow: "auto", padding: 20 }}>
 				<h2 style={{ margin: "0 0 4px", fontSize: 22, fontWeight: 600, letterSpacing: -0.4 }}>{route.name}</h2>
 				<p className="rds-mono" style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle, margin: 0 }}>
-					Created {new Date(route.createdAt).toLocaleDateString()} · {route.waypoints?.length ?? 0} waypoints
+					{t("route.created", language, {
+						date: new Date(route.createdAt).toLocaleDateString(),
+						count: String(route.waypoints?.length ?? 0),
+					})}
 				</p>
 
 				{hasMetaChips && (
 					<div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 12 }}>
-						{activityMeta && <MetaChip icon={activityMeta.icon} label={activityMeta.label} />}
-						{privacyMeta && <MetaChip icon={privacyMeta.icon} label={privacyMeta.label} />}
-						{parsedDescription.tags.map((t) => (
-							<TagChip key={t} label={t} />
+						{activityMeta && <MetaChip icon={activityMeta.icon} label={t(activityMeta.labelKey, language)} />}
+						{privacyMeta && <MetaChip icon={privacyMeta.icon} label={t(privacyMeta.labelKey, language)} />}
+						{parsedDescription.tags.map((tag) => (
+							<TagChip key={tag} label={tag} />
 						))}
 					</div>
 				)}
@@ -491,7 +504,7 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 
 				{elevationGeometry.length >= 2 && (
 					<div style={{ marginTop: 18 }}>
-						<SecTitle style={{ marginBottom: 8 }}>Elevation</SecTitle>
+						<SecTitle style={{ marginBottom: 8 }}>{t("route.elevation", language)}</SecTitle>
 						<ElevationSparkline
 							profile={computedProfile}
 							loading={elevationLoading}
@@ -504,13 +517,19 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 
 				{route.waypoints && route.waypoints.length > 0 && (
 					<div style={{ marginTop: 18 }}>
-						<SecTitle style={{ marginBottom: 10 }}>Waypoints · {route.waypoints.length}</SecTitle>
+						<SecTitle style={{ marginBottom: 10 }}>
+							{t("route.waypointsCount", language, { count: String(route.waypoints.length) })}
+						</SecTitle>
 						<div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
 							{route.waypoints.map((w, i) => {
 								const isStart = i === 0;
 								const isEnd = i === route.waypoints.length - 1;
 								const dot = isStart ? RDS_COLORS.success : isEnd ? RDS_COLORS.danger : RDS_COLORS.accent;
-								const label = isStart ? "Start" : isEnd ? "End" : `Waypoint ${i}`;
+								const label = isStart
+									? t("common.start", language)
+									: isEnd
+										? t("common.end", language)
+										: t("common.waypoint", language, { n: String(i) });
 								const coordStr = `${w.lat.toFixed(5)}, ${w.lng.toFixed(5)}`;
 								return (
 									<div
@@ -564,7 +583,7 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 															fontWeight: 400,
 														}}
 													>
-														direct
+														{t("route.direct", language)}
 													</span>
 												)}
 											</div>
@@ -581,7 +600,7 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 
 				{(route.startAddress || route.endAddress) && (
 					<div style={{ marginTop: 18 }}>
-						<SecTitle style={{ marginBottom: 8 }}>Route</SecTitle>
+						<SecTitle style={{ marginBottom: 8 }}>{t("route.routeLabel", language)}</SecTitle>
 						<div
 							style={{
 								background: RDS_COLORS.bgPanel,
@@ -602,7 +621,7 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 								>
 									<I.pin size={14} style={{ color: RDS_COLORS.fgSubtle }} />
 									<div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
-										<div style={{ fontSize: 11, color: RDS_COLORS.fgSubtle }}>Start</div>
+										<div style={{ fontSize: 11, color: RDS_COLORS.fgSubtle }}>{t("common.start", language)}</div>
 										<div style={{ fontSize: 13, color: RDS_COLORS.fg, overflow: "hidden", textOverflow: "ellipsis" }}>
 											{route.startAddress}
 										</div>
@@ -613,7 +632,7 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 								<div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px" }}>
 									<I.flag size={14} style={{ color: RDS_COLORS.fgSubtle }} />
 									<div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
-										<div style={{ fontSize: 11, color: RDS_COLORS.fgSubtle }}>End</div>
+										<div style={{ fontSize: 11, color: RDS_COLORS.fgSubtle }}>{t("common.end", language)}</div>
 										<div style={{ fontSize: 13, color: RDS_COLORS.fg, overflow: "hidden", textOverflow: "ellipsis" }}>
 											{route.endAddress}
 										</div>
@@ -634,12 +653,12 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 				}}
 			>
 				<Btn variant="primary" style={{ flex: 1 }} onClick={dispatchLoadRoute}>
-					<I.play size={12} /> Load on map
+					<I.play size={12} /> {t("route.loadOnMap", language)}
 				</Btn>
-				<Btn onClick={dispatchExport} title="Download GPX">
+				<Btn onClick={dispatchExport} title={t("route.downloadGpx", language)}>
 					<I.download size={14} />
 				</Btn>
-				<Btn onClick={dispatchShare} title="Share">
+				<Btn onClick={dispatchShare} title={t("route.share", language)}>
 					<I.share size={14} />
 				</Btn>
 			</div>

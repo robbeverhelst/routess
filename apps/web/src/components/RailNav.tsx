@@ -1,19 +1,21 @@
+import { t } from "@/lib/i18n";
 import { useModalsStore } from "@/stores/modalsStore";
 import { type RedesignContext, useUiStore } from "@/stores/uiStore";
 import { I } from "./icons";
 import { IconBtn, RDS_COLORS } from "./primitives";
 import { UserAvatar } from "./UserAvatar";
 
-const NAV: { key: RedesignContext; icon: React.ComponentType<{ size?: number }>; label: string }[] = [
-	{ key: "plan", icon: I.route, label: "Plan" },
-	{ key: "library", icon: I.library, label: "Library" },
-	{ key: "discover", icon: I.explore, label: "Discover" },
-	{ key: "social", icon: I.social, label: "Social" },
-	{ key: "settings", icon: I.settings, label: "Settings" },
+const NAV: { key: RedesignContext; icon: React.ComponentType<{ size?: number }>; labelKey: string }[] = [
+	{ key: "plan", icon: I.route, labelKey: "nav.plan" },
+	{ key: "library", icon: I.library, labelKey: "nav.library" },
+	{ key: "discover", icon: I.explore, labelKey: "nav.discover" },
+	{ key: "social", icon: I.social, labelKey: "nav.social" },
+	{ key: "settings", icon: I.settings, labelKey: "nav.settings" },
 ];
 
 export function RailNav() {
-	const { context, setContext, theme, toggleTheme, panelCollapsed, togglePanel, setPanelCollapsed } = useUiStore();
+	const { context, setContext, theme, toggleTheme, panelCollapsed, togglePanel, setPanelCollapsed, language } =
+		useUiStore();
 	const openOverlay = useModalsStore((s) => s.openOverlay);
 	const overlay = useModalsStore((s) => s.overlay);
 	const closeOverlay = useModalsStore((s) => s.closeOverlay);
@@ -66,7 +68,7 @@ export function RailNav() {
 								setPanelCollapsed(false);
 							}
 						}}
-						title={on ? `${n.label} (toggle panel)` : n.label}
+						title={on ? t("rail.togglePanel", language, { label: t(n.labelKey, language) }) : t(n.labelKey, language)}
 						style={{
 							width: 36,
 							height: 36,
@@ -104,13 +106,13 @@ export function RailNav() {
 			})}
 			<div style={{ flex: 1 }} />
 			<IconBtn
-				title="Notifications"
+				title={t("rail.notifications", language)}
 				pressed={overlay === "notifications"}
 				onClick={() => (overlay === "notifications" ? closeOverlay() : openOverlay("notifications"))}
 			>
 				<I.bell size={18} />
 			</IconBtn>
-			<IconBtn title="Toggle theme" onClick={toggleTheme}>
+			<IconBtn title={t("appshell.toggleTheme", language)} onClick={toggleTheme}>
 				{theme === "dark" ? <I.sun size={18} /> : <I.moon size={18} />}
 			</IconBtn>
 			<div style={{ marginTop: 6 }}>

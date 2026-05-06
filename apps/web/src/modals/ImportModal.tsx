@@ -1,19 +1,30 @@
 import { useRef, useState } from "react";
+import { t } from "@/lib/i18n";
 import { useModalsStore } from "@/stores/modalsStore";
 import { useToastStore } from "@/stores/toastStore";
+import { useUiStore } from "@/stores/uiStore";
 import { I } from "../components/icons";
 import { ModalShell } from "../components/ModalShell";
 import { Btn, RDS_COLORS, SecTitle } from "../components/primitives";
 
 const EXTENSIONS = [".gpx", ".tcx", ".fit", ".kml"] as const;
-const ACTIVITIES = ["Auto-detect", "Run", "Cycle", "Walk"] as const;
+
+const ACTIVITY_KEYS = [
+	{ key: "auto", labelKey: "import.autoDetect" },
+	{ key: "run", labelKey: "sport.short.run" },
+	{ key: "cycle", labelKey: "sport.short.cycle" },
+	{ key: "walk", labelKey: "sport.short.walk" },
+] as const;
+
+type ActivityKey = (typeof ACTIVITY_KEYS)[number]["key"];
 
 export function ImportModal() {
 	const closeModal = useModalsStore((s) => s.closeModal);
 	const pushToast = useToastStore((s) => s.push);
+	const language = useUiStore((s) => s.language);
 	const inputRef = useRef<HTMLInputElement>(null);
 	const [file, setFile] = useState<File | null>(null);
-	const [activity, setActivity] = useState<(typeof ACTIVITIES)[number]>("Auto-detect");
+	const [activity, setActivity] = useState<ActivityKey>("auto");
 	const [isDragging, setIsDragging] = useState(false);
 	const [isImporting, setIsImporting] = useState(false);
 
@@ -30,8 +41,8 @@ export function ImportModal() {
 		if (ext !== "gpx") {
 			pushToast({
 				kind: "warn",
-				title: "Only GPX is supported right now",
-				body: "TCX, FIT, and KML imports are coming in a follow-up.",
+				title: t("import.gpxOnly.title", language),
+				body: t("import.gpxOnly.body", language),
 			});
 			return;
 		}
@@ -45,15 +56,15 @@ export function ImportModal() {
 			);
 			pushToast({
 				kind: "success",
-				title: "Route imported",
+				title: t("import.toast.imported", language),
 				body: file.name,
 			});
 			closeModal();
 		} catch (err) {
 			pushToast({
 				kind: "danger",
-				title: "Import failed",
-				body: err instanceof Error ? err.message : "Could not read the file.",
+				title: t("import.toast.failed", language),
+				body: err instanceof Error ? err.message : t("import.toast.failedSub", language),
 			});
 		} finally {
 			setIsImporting(false);
@@ -62,22 +73,22 @@ export function ImportModal() {
 
 	return (
 		<ModalShell
-			title="Import route"
-			sub="GPX, TCX, FIT · max 25 MB"
+			title={t("import.title", language)}
+			sub={t("import.subtitle", language)}
 			width={560}
 			onClose={closeModal}
 			footer={
 				<>
 					<div style={{ flex: 1 }} />
-					<Btn onClick={closeModal}>Cancel</Btn>
+					<Btn onClick={closeModal}>{t("common.cancel", language)}</Btn>
 					{!file && (
 						<Btn variant="primary" onClick={onPick}>
-							Choose file
+							{t("import.choose", language)}
 						</Btn>
 					)}
 					{file && (
 						<Btn variant="primary" onClick={onImport} disabled={isImporting}>
-							<I.zap size={14} /> {isImporting ? "Importing…" : "Import 1 route"}
+							<I.zap size={14} /> {isImporting ? t("import.importing", language) : t("import.import1", language)}
 						</Btn>
 					)}
 				</>
@@ -130,8 +141,8 @@ export function ImportModal() {
 					>
 						<I.upload size={24} />
 					</div>
-					<div style={{ fontSize: 15, fontWeight: 600 }}>Drop file here</div>
-					<div style={{ fontSize: 12.5, color: RDS_COLORS.fgMuted, marginTop: 6 }}>or click to browse</div>
+					<div style={{ fontSize: 15, fontWeight: 600 }}>{t("import.dropHere", language)}</div>
+					<div style={{ fontSize: 12.5, color: RDS_COLORS.fgMuted, marginTop: 6 }}>{t("import.orClick", language)}</div>
 					<div
 						style={{
 							display: "flex",
@@ -208,20 +219,20 @@ export function ImportModal() {
 								fontSize: 11.5,
 							}}
 						>
-							<I.zap size={11} /> Ready
+							<I.zap size={11} /> {t("import.ready", language)}
 						</span>
 					</div>
 
 					<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-						<SecTitle>Activity type</SecTitle>
+						<SecTitle>{t("import.activityType", language)}</SecTitle>
 						<div style={{ display: "flex", gap: 8 }}>
-							{ACTIVITIES.map((l) => {
-								const on = activity === l;
+							{ACTIVITY_KEYS.map((opt) => {
+								const on = activity === opt.key;
 								return (
 									<button
-										key={l}
+										key={opt.key}
 										type="button"
-										onClick={() => setActivity(l)}
+										onClick={() => setActivity(opt.key)}
 										style={{
 											flex: 1,
 											height: 34,
@@ -233,7 +244,7 @@ export function ImportModal() {
 											cursor: "pointer",
 										}}
 									>
-										{l}
+										{t(opt.labelKey, language)}
 									</button>
 								);
 							})}
@@ -252,9 +263,7 @@ export function ImportModal() {
 							}}
 						>
 							<I.zap size={14} style={{ color: RDS_COLORS.warn }} />
-							<div style={{ fontSize: 12, color: RDS_COLORS.fgMuted }}>
-								Only GPX is supported right now. TCX, FIT, and KML imports are coming in a follow-up.
-							</div>
+							<div style={{ fontSize: 12, color: RDS_COLORS.fgMuted }}>{t("import.note", language)}</div>
 						</div>
 					)}
 				</div>

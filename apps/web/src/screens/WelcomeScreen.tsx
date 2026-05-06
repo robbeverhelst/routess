@@ -1,5 +1,6 @@
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { loadLastMapViewFromLocalStorage } from "@/features/routing/services/LocalStorageService";
+import { type SupportedLanguage, t } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
 import { type LocationPermission, useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 import { useToastStore } from "@/stores/toastStore";
@@ -16,22 +17,22 @@ const STYLE_PREVIEWS = [
 		key: "streets" as const,
 		styleId: "streets-v12",
 		fallbackBg: "linear-gradient(135deg, oklch(0.93 0.02 240), oklch(0.95 0.03 220))",
-		label: "Streets",
-		sub: "Clean, light, easy to read in the city.",
+		labelKey: "welcome.styles.streets.title",
+		subKey: "welcome.styles.streets.body",
 	},
 	{
 		key: "outdoors" as const,
 		styleId: "outdoors-v12",
 		fallbackBg: "linear-gradient(135deg, oklch(0.92 0.05 145), oklch(0.88 0.07 95))",
-		label: "Outdoors",
-		sub: "Trails, contour lines, terrain detail.",
+		labelKey: "welcome.styles.outdoors.title",
+		subKey: "welcome.styles.outdoors.body",
 	},
 	{
 		key: "satellite" as const,
 		styleId: "satellite-streets-v12",
 		fallbackBg: "linear-gradient(135deg, oklch(0.4 0.04 240), oklch(0.3 0.05 145))",
-		label: "Satellite",
-		sub: "Real imagery with street labels on top.",
+		labelKey: "welcome.styles.satellite.title",
+		subKey: "welcome.styles.satellite.body",
 	},
 ];
 
@@ -41,44 +42,43 @@ function buildStylePreviewUrl(styleId: string, lng: number, lat: number, zoom: n
 }
 
 interface StepDef {
-	title: string;
-	sub: string;
-	why: string;
+	titleKey: string;
+	subKey: string;
+	whyKey: string;
 }
 
 const STEPS: StepDef[] = [
 	{
-		title: "Pick your default sport(s)",
-		sub: "Tap one or more. The first one becomes your default — tap the star on another to swap.",
-		why: "We use this to suggest the right routing profile and average speed when you start a new map.",
+		titleKey: "welcome.steps.sports.title",
+		subKey: "welcome.steps.sports.subtitle",
+		whyKey: "welcome.steps.sports.help",
 	},
 	{
-		title: "Choose your units",
-		sub: "How would you like distances and speeds shown across the app?",
-		why: "Affects every distance, elevation and pace number you'll see.",
+		titleKey: "welcome.steps.units.title",
+		subKey: "welcome.steps.units.subtitle",
+		whyKey: "welcome.steps.units.help",
 	},
 	{
-		title: "Pick your map style",
-		sub: "Three flavours. You can flip between them any time from the layers menu.",
-		why: "Different styles surface different details — trails, traffic, real imagery.",
+		titleKey: "welcome.steps.style.title",
+		subKey: "welcome.steps.style.subtitle",
+		whyKey: "welcome.steps.style.help",
 	},
 	{
-		title: "Allow location access?",
-		sub: "Centre the map on you and snap routes to where you actually are.",
-		why: "Location stays on your device. Routess never stores or shares it.",
+		titleKey: "welcome.steps.location.title",
+		subKey: "welcome.steps.location.subtitle",
+		whyKey: "welcome.steps.location.help",
 	},
 ];
 
 const SPORTS: {
 	key: RedesignActivity;
 	icon: React.ComponentType<{ size?: number }>;
-	label: string;
-	sub: string;
-	defaultLabel: string;
+	labelKey: string;
+	subKey: string;
 }[] = [
-	{ key: "run", icon: I.run, label: "Running", sub: "Pace · splits", defaultLabel: "Running" },
-	{ key: "cycle", icon: I.bike, label: "Cycling", sub: "Speed · routes", defaultLabel: "Cycling" },
-	{ key: "walk", icon: I.walk, label: "Walking", sub: "Distance · POIs", defaultLabel: "Walking" },
+	{ key: "run", icon: I.run, labelKey: "sport.run", subKey: "sport.tag.run" },
+	{ key: "cycle", icon: I.bike, labelKey: "sport.cycle", subKey: "sport.tag.cycle" },
+	{ key: "walk", icon: I.walk, labelKey: "sport.walk", subKey: "sport.tag.walk" },
 ];
 
 function ChangeLaterHint({ children }: { children: ReactNode }) {
@@ -108,6 +108,7 @@ export function WelcomeScreen({ onComplete }: { onComplete?: () => void }) {
 	const [step, setStep] = useState(0);
 	const [requestingLocation, setRequestingLocation] = useState(false);
 	const pushToast = useToastStore((s) => s.push);
+	const language = useUiStore((s) => s.language);
 
 	const setActivityType = useUiStore((s) => s.setActivityType);
 	const activityType = useUiStore((s) => s.activityType);
@@ -143,8 +144,8 @@ export function WelcomeScreen({ onComplete }: { onComplete?: () => void }) {
 	useEffect(() => {
 		if (defaultSport && defaultSport !== activityType) {
 			setActivityType(defaultSport);
-			const label = SPORTS.find((s) => s.key === defaultSport)?.defaultLabel;
-			if (label) setDefaultActivity(label);
+			const labelKey = SPORTS.find((s) => s.key === defaultSport)?.labelKey;
+			if (labelKey) setDefaultActivity(t(labelKey, "en"));
 		}
 	}, [defaultSport, activityType, setActivityType, setDefaultActivity]);
 
@@ -157,13 +158,17 @@ export function WelcomeScreen({ onComplete }: { onComplete?: () => void }) {
 			toggleSport(sport);
 		}
 		setActivityType(sport);
-		const label = SPORTS.find((s) => s.key === sport)?.defaultLabel;
-		if (label) setDefaultActivity(label);
+		const labelKey = SPORTS.find((s) => s.key === sport)?.labelKey;
+		if (labelKey) setDefaultActivity(t(labelKey, "en"));
 	};
 
 	const requestLocation = async () => {
 		if (typeof navigator === "undefined" || !navigator.geolocation) {
-			pushToast({ kind: "warn", title: "Location unavailable", body: "This browser doesn't support geolocation." });
+			pushToast({
+				kind: "warn",
+				title: t("welcome.toast.unavailable", language),
+				body: t("welcome.toast.unavailableSub", language),
+			});
 			setLocationPermission("denied");
 			return;
 		}
@@ -177,11 +182,15 @@ export function WelcomeScreen({ onComplete }: { onComplete?: () => void }) {
 				);
 			});
 			setLocationPermission("granted");
-			pushToast({ kind: "success", title: "Location enabled" });
+			pushToast({ kind: "success", title: t("welcome.location.enabled", language) });
 		} catch (err) {
 			Logger.warn("Location permission denied", err);
 			setLocationPermission("denied");
-			pushToast({ kind: "warn", title: "Location declined", body: "You can enable it later in Settings." });
+			pushToast({
+				kind: "warn",
+				title: t("welcome.toast.declined", language),
+				body: t("welcome.toast.declinedSub", language),
+			});
 		} finally {
 			setRequestingLocation(false);
 		}
@@ -197,8 +206,8 @@ export function WelcomeScreen({ onComplete }: { onComplete?: () => void }) {
 		const primary = defaultSport ?? selectedSports[0];
 		if (primary) {
 			setActivityType(primary);
-			const sportLabel = SPORTS.find((s) => s.key === primary)?.defaultLabel;
-			if (sportLabel) setDefaultActivity(sportLabel);
+			const labelKey = SPORTS.find((s) => s.key === primary)?.labelKey;
+			if (labelKey) setDefaultActivity(t(labelKey, "en"));
 		}
 		onComplete?.();
 	};
@@ -230,8 +239,10 @@ export function WelcomeScreen({ onComplete }: { onComplete?: () => void }) {
 					maxWidth: layout === "side" ? 1020 : 580,
 				}}
 			>
-				{layout === "side" && <WelcomeHero step={step} totalSteps={totalSteps} steps={STEPS} />}
-				{layout === "stacked" && <WelcomeHeroStacked step={step} totalSteps={totalSteps} stepDef={stepDef} />}
+				{layout === "side" && <WelcomeHero step={step} totalSteps={totalSteps} steps={STEPS} language={language} />}
+				{layout === "stacked" && (
+					<WelcomeHeroStacked step={step} totalSteps={totalSteps} stepDef={stepDef} language={language} />
+				)}
 				<div
 					style={{
 						...AUTH_CARD_STYLE,
@@ -271,14 +282,14 @@ export function WelcomeScreen({ onComplete }: { onComplete?: () => void }) {
 								fontWeight: 600,
 							}}
 						>
-							Step {step + 1} of {totalSteps}
+							{t("welcome.stepIndicator", language, { n: String(step + 1), total: String(totalSteps) })}
 						</span>
 					</div>
 
 					<div style={{ display: "flex", gap: 6, marginBottom: 22 }}>
 						{STEPS.map((s, i) => (
 							<div
-								key={s.title}
+								key={s.titleKey}
 								data-step={i}
 								style={{
 									flex: 1,
@@ -296,9 +307,11 @@ export function WelcomeScreen({ onComplete }: { onComplete?: () => void }) {
 					</div>
 
 					<h2 style={{ fontSize: 24, fontWeight: 600, margin: "0 0 8px", letterSpacing: -0.4, lineHeight: 1.2 }}>
-						{stepDef.title}
+						{t(stepDef.titleKey, language)}
 					</h2>
-					<p style={{ fontSize: 14, color: RDS_COLORS.fgMuted, margin: 0, lineHeight: 1.5 }}>{stepDef.sub}</p>
+					<p style={{ fontSize: 14, color: RDS_COLORS.fgMuted, margin: 0, lineHeight: 1.5 }}>
+						{t(stepDef.subKey, language)}
+					</p>
 
 					<div
 						style={{
@@ -312,7 +325,7 @@ export function WelcomeScreen({ onComplete }: { onComplete?: () => void }) {
 						}}
 					>
 						<I.zap size={12} style={{ marginTop: 3, flexShrink: 0, color: RDS_COLORS.accent }} />
-						<span>{stepDef.why}</span>
+						<span>{t(stepDef.whyKey, language)}</span>
 					</div>
 
 					<div style={{ marginTop: 22 }}>
@@ -367,14 +380,14 @@ export function WelcomeScreen({ onComplete }: { onComplete?: () => void }) {
 														{on && <I.check size={11} />}
 													</span>
 													<Icon size={22} />
-													<div style={{ fontSize: 14, fontWeight: 600 }}>{a.label}</div>
+													<div style={{ fontSize: 14, fontWeight: 600 }}>{t(a.labelKey, language)}</div>
 													<div
 														style={{
 															fontSize: 11.5,
 															color: on ? RDS_COLORS.accent : RDS_COLORS.fgSubtle,
 														}}
 													>
-														{a.sub}
+														{t(a.subKey, language)}
 													</div>
 												</button>
 
@@ -404,16 +417,14 @@ export function WelcomeScreen({ onComplete }: { onComplete?: () => void }) {
 														}}
 													>
 														<I.check size={10} />
-														{isDefault ? "Default" : "Set default"}
+														{isDefault ? t("welcome.default", language) : t("welcome.setDefault", language)}
 													</button>
 												)}
 											</div>
 										);
 									})}
 								</div>
-								<ChangeLaterHint>
-									You can add more sports or change your default any time from Settings.
-								</ChangeLaterHint>
+								<ChangeLaterHint>{t("welcome.changeLater", language)}</ChangeLaterHint>
 							</>
 						)}
 
@@ -421,8 +432,16 @@ export function WelcomeScreen({ onComplete }: { onComplete?: () => void }) {
 							<>
 								<div style={{ display: "flex", gap: 10 }}>
 									{[
-										{ key: "km" as const, label: "Metric", sub: "km · m · km/h" },
-										{ key: "mi" as const, label: "Imperial", sub: "mi · ft · mph" },
+										{
+											key: "km" as const,
+											label: t("welcome.units.metric", language),
+											sub: t("welcome.units.metricSub", language),
+										},
+										{
+											key: "mi" as const,
+											label: t("welcome.units.imperial", language),
+											sub: t("welcome.units.imperialSub", language),
+										},
 									].map((u) => {
 										const on = units === u.key;
 										return (
@@ -453,7 +472,7 @@ export function WelcomeScreen({ onComplete }: { onComplete?: () => void }) {
 										);
 									})}
 								</div>
-								<ChangeLaterHint>Switch units any time from Settings.</ChangeLaterHint>
+								<ChangeLaterHint>{t("welcome.units.changeLater", language)}</ChangeLaterHint>
 							</>
 						)}
 
@@ -501,15 +520,17 @@ export function WelcomeScreen({ onComplete }: { onComplete?: () => void }) {
 															marginBottom: 2,
 														}}
 													>
-														{m.label}
+														{t(m.labelKey, language)}
 													</div>
-													<div style={{ fontSize: 11, color: RDS_COLORS.fgSubtle, lineHeight: 1.35 }}>{m.sub}</div>
+													<div style={{ fontSize: 11, color: RDS_COLORS.fgSubtle, lineHeight: 1.35 }}>
+														{t(m.subKey, language)}
+													</div>
 												</div>
 											</button>
 										);
 									})}
 								</div>
-								<ChangeLaterHint>Flip styles from the layers menu on the map any time.</ChangeLaterHint>
+								<ChangeLaterHint>{t("welcome.styles.flipLater", language)}</ChangeLaterHint>
 							</>
 						)}
 
@@ -520,26 +541,27 @@ export function WelcomeScreen({ onComplete }: { onComplete?: () => void }) {
 									requesting={requestingLocation}
 									onAllow={requestLocation}
 									onSkip={skipLocation}
+									language={language}
 								/>
-								<ChangeLaterHint>You can grant or revoke location any time in Settings → Privacy.</ChangeLaterHint>
+								<ChangeLaterHint>{t("welcome.location.changeLater", language)}</ChangeLaterHint>
 							</>
 						)}
 					</div>
 
 					<div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 24 }}>
 						<Btn variant="ghost" onClick={finish} style={{ color: RDS_COLORS.fgMuted }}>
-							Skip
+							{t("welcome.skip", language)}
 						</Btn>
 						<div style={{ flex: 1 }} />
-						{step > 0 && <Btn onClick={() => setStep(step - 1)}>Back</Btn>}
+						{step > 0 && <Btn onClick={() => setStep(step - 1)}>{t("common.back", language)}</Btn>}
 						<Btn variant="primary" onClick={next} disabled={!canContinue}>
 							{step === STEPS.length - 1 ? (
 								<>
-									Get started <I.chevronR size={12} />
+									{t("welcome.getStarted", language)} <I.chevronR size={12} />
 								</>
 							) : (
 								<>
-									Continue <I.chevronR size={12} />
+									{t("welcome.continue", language)} <I.chevronR size={12} />
 								</>
 							)}
 						</Btn>
@@ -550,7 +572,17 @@ export function WelcomeScreen({ onComplete }: { onComplete?: () => void }) {
 	);
 }
 
-function WelcomeHero({ step, totalSteps, steps }: { step: number; totalSteps: number; steps: StepDef[] }) {
+function WelcomeHero({
+	step,
+	totalSteps,
+	steps,
+	language,
+}: {
+	step: number;
+	totalSteps: number;
+	steps: StepDef[];
+	language: SupportedLanguage;
+}) {
 	return (
 		<div
 			style={{
@@ -623,13 +655,11 @@ function WelcomeHero({ step, totalSteps, steps }: { step: number; totalSteps: nu
 
 			<div style={{ position: "relative" }}>
 				<div style={{ fontSize: 28, fontWeight: 600, letterSpacing: -0.4, lineHeight: 1.15, marginBottom: 8 }}>
-					You're in.
+					{t("welcome.youreIn", language)}
 					<br />
-					Let's set you up.
+					{t("welcome.letsSetUp", language)}
 				</div>
-				<div style={{ fontSize: 13.5, opacity: 0.85, lineHeight: 1.5 }}>
-					A minute or two and you're ready to plan your first route.
-				</div>
+				<div style={{ fontSize: 13.5, opacity: 0.85, lineHeight: 1.5 }}>{t("welcome.minute", language)}</div>
 			</div>
 
 			<div
@@ -657,7 +687,7 @@ function WelcomeHero({ step, totalSteps, steps }: { step: number; totalSteps: nu
 					const active = i === step;
 					return (
 						<li
-							key={s.title}
+							key={s.titleKey}
 							style={{
 								display: "flex",
 								alignItems: "flex-start",
@@ -693,7 +723,7 @@ function WelcomeHero({ step, totalSteps, steps }: { step: number; totalSteps: nu
 									textDecoration: done ? "line-through" : "none",
 								}}
 							>
-								{s.title}
+								{t(s.titleKey, language)}
 							</span>
 						</li>
 					);
@@ -710,13 +740,23 @@ function WelcomeHero({ step, totalSteps, steps }: { step: number; totalSteps: nu
 					letterSpacing: 0.3,
 				}}
 			>
-				{step + 1} of {totalSteps}
+				{t("welcome.stepFraction", language, { n: String(step + 1), total: String(totalSteps) })}
 			</div>
 		</div>
 	);
 }
 
-function WelcomeHeroStacked({ step, totalSteps, stepDef }: { step: number; totalSteps: number; stepDef: StepDef }) {
+function WelcomeHeroStacked({
+	step,
+	totalSteps,
+	stepDef,
+	language,
+}: {
+	step: number;
+	totalSteps: number;
+	stepDef: StepDef;
+	language: SupportedLanguage;
+}) {
 	const progress = (step / Math.max(totalSteps - 1, 1)) * 100;
 	return (
 		<div
@@ -759,7 +799,7 @@ function WelcomeHeroStacked({ step, totalSteps, stepDef }: { step: number; total
 				</span>
 				<div style={{ flex: 1 }} />
 				<span style={{ fontSize: 11, opacity: 0.8, letterSpacing: 0.3 }}>
-					{step + 1} / {totalSteps}
+					{t("welcome.stepFractionShort", language, { n: String(step + 1), total: String(totalSteps) })}
 				</span>
 			</div>
 
@@ -773,10 +813,10 @@ function WelcomeHeroStacked({ step, totalSteps, stepDef }: { step: number; total
 					marginBottom: 4,
 				}}
 			>
-				{stepDef.title}
+				{t(stepDef.titleKey, language)}
 			</div>
 			<div style={{ position: "relative", fontSize: 12.5, opacity: 0.85, lineHeight: 1.45 }}>
-				A minute or two and you're ready to plan your first route.
+				{t("welcome.minute", language)}
 			</div>
 
 			<div
@@ -808,11 +848,13 @@ function LocationStep({
 	requesting,
 	onAllow,
 	onSkip,
+	language,
 }: {
 	permission: LocationPermission;
 	requesting: boolean;
 	onAllow: () => void;
 	onSkip: () => void;
+	language: SupportedLanguage;
 }) {
 	const granted = permission === "granted";
 	const denied = permission === "denied";
@@ -820,12 +862,12 @@ function LocationStep({
 	const decided = granted || denied || skipped;
 
 	const statusLabel = granted
-		? "Location enabled"
+		? t("welcome.location.enabled", language)
 		: denied
-			? "Permission denied"
+			? t("welcome.location.denied", language)
 			: skipped
-				? "Skipped for now"
-				: "Not decided yet";
+				? t("welcome.location.skipped", language)
+				: t("welcome.location.notDecided", language);
 
 	const statusColor = granted ? RDS_COLORS.success : denied ? RDS_COLORS.danger : RDS_COLORS.fgSubtle;
 
@@ -858,7 +900,9 @@ function LocationStep({
 					<I.locate size={18} />
 				</div>
 				<div style={{ flex: 1, minWidth: 0 }}>
-					<div style={{ fontSize: 13.5, fontWeight: 600, color: RDS_COLORS.fg }}>Use my location</div>
+					<div style={{ fontSize: 13.5, fontWeight: 600, color: RDS_COLORS.fg }}>
+						{t("welcome.location.useMyLocation", language)}
+					</div>
 					<div style={{ fontSize: 11.5, color: statusColor, marginTop: 2 }}>{statusLabel}</div>
 				</div>
 			</div>
@@ -878,24 +922,30 @@ function LocationStep({
 			>
 				<li style={{ display: "flex", gap: 8 }}>
 					<I.check size={12} style={{ marginTop: 4, color: RDS_COLORS.success, flexShrink: 0 }} />
-					<span>Centre the map on you when you open Routess.</span>
+					<span>{t("welcome.location.benefit1", language)}</span>
 				</li>
 				<li style={{ display: "flex", gap: 8 }}>
 					<I.check size={12} style={{ marginTop: 4, color: RDS_COLORS.success, flexShrink: 0 }} />
-					<span>Snap your start point to your real-world position.</span>
+					<span>{t("welcome.location.benefit2", language)}</span>
 				</li>
 				<li style={{ display: "flex", gap: 8 }}>
 					<I.lock size={12} style={{ marginTop: 4, color: RDS_COLORS.fgSubtle, flexShrink: 0 }} />
-					<span>Stays on your device. Never sent to our servers.</span>
+					<span>{t("welcome.location.benefit3", language)}</span>
 				</li>
 			</ul>
 
 			<div style={{ display: "flex", gap: 8, marginTop: 4 }}>
 				<Btn variant="primary" onClick={onAllow} disabled={requesting || granted} style={{ flex: 1, height: 40 }}>
-					{requesting ? "Requesting..." : granted ? "Granted" : decided ? "Try again" : "Allow location"}
+					{requesting
+						? t("welcome.location.requesting", language)
+						: granted
+							? t("welcome.location.granted", language)
+							: decided
+								? t("welcome.location.tryAgain", language)
+								: t("welcome.location.allow", language)}
 				</Btn>
 				<Btn onClick={onSkip} disabled={requesting} style={{ flex: 1, height: 40 }}>
-					Maybe later
+					{t("welcome.location.maybeLater", language)}
 				</Btn>
 			</div>
 		</div>

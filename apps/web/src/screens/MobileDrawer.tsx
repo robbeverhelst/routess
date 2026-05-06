@@ -1,4 +1,5 @@
 import { useAuthStatus } from "@/lib/api-queries";
+import { type SupportedLanguage, t } from "@/lib/i18n";
 import { useModalsStore } from "@/stores/modalsStore";
 import { useToastStore } from "@/stores/toastStore";
 import { type RedesignContext, useUiStore } from "@/stores/uiStore";
@@ -9,32 +10,43 @@ import { UserAvatar } from "../components/UserAvatar";
 
 type NavItem = {
 	icon: (typeof I)[keyof typeof I];
-	label: string;
-	badge?: string;
+	labelKey: string;
+	badgeKey?: string;
+	badgeText?: string;
 	accent?: boolean;
 	context?: RedesignContext;
 	action?: "profile" | "account" | "achievements";
 };
 
-const NAV: NavItem[] = [
-	{ icon: I.route, label: "Plan", badge: "Active route", context: "plan" },
-	{ icon: I.library, label: "Library", badge: "24", context: "library" },
-	{ icon: I.explore, label: "Discover", context: "discover" },
-	{ icon: I.social, label: "Social", context: "social" },
-	{ icon: I.trophy, label: "Achievements", badge: "+2 new", accent: true, action: "achievements" },
-	{ icon: I.user, label: "Profile", action: "profile" },
-	{ icon: I.settings, label: "Account & billing", action: "account" },
-];
+function buildNav(_language: SupportedLanguage, libraryCount: string): NavItem[] {
+	return [
+		{ icon: I.route, labelKey: "nav.plan", badgeKey: "drawer.activeRoute", context: "plan" },
+		{ icon: I.library, labelKey: "nav.library", badgeText: libraryCount, context: "library" },
+		{ icon: I.explore, labelKey: "nav.discover", context: "discover" },
+		{ icon: I.social, labelKey: "nav.social", context: "social" },
+		{
+			icon: I.trophy,
+			labelKey: "drawer.achievements",
+			badgeKey: "drawer.achievementsBadge",
+			accent: true,
+			action: "achievements",
+		},
+		{ icon: I.user, labelKey: "drawer.profile", action: "profile" },
+		{ icon: I.settings, labelKey: "drawer.accountBilling", action: "account" },
+	];
+}
 
 export function MobileDrawer({ onClose }: { onClose?: () => void }) {
 	const theme = useUiStore((s) => s.theme);
 	const toggleTheme = useUiStore((s) => s.toggleTheme);
 	const setContext = useUiStore((s) => s.setContext);
 	const activeContext = useUiStore((s) => s.context);
+	const language = useUiStore((s) => s.language);
 	const openOverlay = useModalsStore((s) => s.openOverlay);
 	const pushToast = useToastStore((s) => s.push);
 	const { data: auth } = useAuthStatus();
 	const user = auth?.user ?? null;
+	const NAV = buildNav(language, "24");
 
 	const handleAlerts = () => {
 		openOverlay("notifications");
@@ -60,8 +72,8 @@ export function MobileDrawer({ onClose }: { onClose?: () => void }) {
 		if (item.action === "achievements") {
 			pushToast({
 				kind: "info",
-				title: "Achievements coming soon",
-				body: "Trophies and milestones land with the activity backend.",
+				title: t("drawer.achievementsToast", language),
+				body: t("drawer.achievementsToastSub", language),
 			});
 		}
 	};
@@ -84,7 +96,7 @@ export function MobileDrawer({ onClose }: { onClose?: () => void }) {
 			/>
 			<button
 				type="button"
-				aria-label="Close drawer"
+				aria-label={t("drawer.closeAria", language)}
 				onClick={onClose}
 				style={{
 					position: "absolute",
@@ -120,20 +132,23 @@ export function MobileDrawer({ onClose }: { onClose?: () => void }) {
 				>
 					<UserAvatar size={44} />
 					<div style={{ display: "flex", flexDirection: "column" }}>
-						<div style={{ fontSize: 14, fontWeight: 600 }}>{user?.name ?? "Guest"}</div>
-						<div style={{ fontSize: 12, color: RDS_COLORS.fgSubtle }}>{user?.email ?? "Not signed in"}</div>
+						<div style={{ fontSize: 14, fontWeight: 600 }}>{user?.name ?? t("drawer.guest", language)}</div>
+						<div style={{ fontSize: 12, color: RDS_COLORS.fgSubtle }}>
+							{user?.email ?? t("drawer.notSignedIn", language)}
+						</div>
 					</div>
 					<div style={{ flex: 1 }} />
-					<IconBtn title="Close" onClick={onClose}>
+					<IconBtn title={t("common.close", language)} onClick={onClose}>
 						<I.close size={14} />
 					</IconBtn>
 				</div>
 				{NAV.map((r) => {
 					const Icon = r.icon;
 					const isActive = r.context !== undefined && r.context === activeContext;
+					const badge = r.badgeKey ? t(r.badgeKey, language) : r.badgeText;
 					return (
 						<button
-							key={r.label}
+							key={r.labelKey}
 							type="button"
 							onClick={() => handleNav(r)}
 							style={{
@@ -150,8 +165,8 @@ export function MobileDrawer({ onClose }: { onClose?: () => void }) {
 							}}
 						>
 							<Icon size={16} />
-							<span style={{ fontSize: 14, fontWeight: 500, flex: 1 }}>{r.label}</span>
-							{r.badge && <Badge variant={r.accent ? "accent" : "default"}>{r.badge}</Badge>}
+							<span style={{ fontSize: 14, fontWeight: 500, flex: 1 }}>{t(r.labelKey, language)}</span>
+							{badge && <Badge variant={r.accent ? "accent" : "default"}>{badge}</Badge>}
 						</button>
 					);
 				})}
@@ -165,10 +180,11 @@ export function MobileDrawer({ onClose }: { onClose?: () => void }) {
 					}}
 				>
 					<Btn style={{ flex: 1 }} onClick={toggleTheme}>
-						{theme === "dark" ? <I.sun size={14} /> : <I.moon size={14} />} {theme === "dark" ? "Light" : "Dark"}
+						{theme === "dark" ? <I.sun size={14} /> : <I.moon size={14} />}{" "}
+						{theme === "dark" ? t("drawer.theme.light", language) : t("drawer.theme.dark", language)}
 					</Btn>
 					<Btn style={{ flex: 1 }} onClick={handleAlerts}>
-						<I.bell size={14} /> Alerts
+						<I.bell size={14} /> {t("nav.alerts", language)}
 					</Btn>
 				</div>
 			</aside>
