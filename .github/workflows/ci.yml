@@ -15,6 +15,68 @@ env:
   CHART_NAME: routess
 
 jobs:
+  lint:
+    runs-on: arc-routess
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.13"
+
+      - uses: actions/cache@v5
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
+          restore-keys: ${{ runner.os }}-bun-
+
+      - uses: actions/cache@v5
+        with:
+          path: |
+            node_modules
+            **/node_modules
+          key: ${{ runner.os }}-modules-${{ hashFiles('**/bun.lock') }}
+          restore-keys: ${{ runner.os }}-modules-
+
+      - run: bun install --frozen-lockfile
+
+      - name: Format & lint
+        run: bunx biome check .
+
+  typecheck:
+    runs-on: arc-routess
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.13"
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+
+      - uses: actions/cache@v5
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
+          restore-keys: ${{ runner.os }}-bun-
+
+      - uses: actions/cache@v5
+        with:
+          path: |
+            node_modules
+            **/node_modules
+          key: ${{ runner.os }}-modules-${{ hashFiles('**/bun.lock') }}
+          restore-keys: ${{ runner.os }}-modules-
+
+      - run: bun install --frozen-lockfile
+
+      - name: Type-check
+        run: bun run --filter '*' check-types
+
   test:
     runs-on: arc-routess
     timeout-minutes: 15
@@ -40,8 +102,6 @@ jobs:
           --health-retries 5
     steps:
       - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -57,16 +117,48 @@ jobs:
           key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
           restore-keys: ${{ runner.os }}-bun-
 
-      - run: bun install
+      - uses: actions/cache@v5
+        with:
+          path: |
+            node_modules
+            **/node_modules
+          key: ${{ runner.os }}-modules-${{ hashFiles('**/bun.lock') }}
+          restore-keys: ${{ runner.os }}-modules-
 
-      - name: Format & lint
-        run: bunx biome check .
-
-      - name: Type-check
-        run: bun run --filter '*' check-types
+      - run: bun install --frozen-lockfile
 
       - name: Test
         run: bun run --filter './apps/api' --filter './apps/web' --filter './packages/*' test
+
+  build:
+    runs-on: arc-routess
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.13"
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+
+      - uses: actions/cache@v5
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
+          restore-keys: ${{ runner.os }}-bun-
+
+      - uses: actions/cache@v5
+        with:
+          path: |
+            node_modules
+            **/node_modules
+          key: ${{ runner.os }}-modules-${{ hashFiles('**/bun.lock') }}
+          restore-keys: ${{ runner.os }}-modules-
+
+      - run: bun install --frozen-lockfile
 
       - name: Build
         run: bun run --filter './packages/*' build && bun run --filter './apps/*' build
@@ -75,8 +167,6 @@ jobs:
     runs-on: arc-routess
     steps:
       - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
 
       - name: Set up Helm
         uses: azure/setup-helm@v5
@@ -98,7 +188,10 @@ jobs:
 
   release:
     needs:
+      - lint
+      - typecheck
       - test
+      - build
       - helm-validate
     runs-on: arc-routess
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
