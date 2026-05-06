@@ -4,7 +4,7 @@
 
 import type React from "react";
 import { useEffect, useState } from "react";
-import { useSettingsStore } from "@/stores/settingsStore";
+import { useSettingsStore } from "@/stores/errorSettingsStore";
 import type { AppError } from "./types";
 import { useErrorHandler } from "./useErrorHandler";
 

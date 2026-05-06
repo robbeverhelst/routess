@@ -1,9 +1,9 @@
 import type { Coordinate } from "@routess/core";
 import { useEffect, useMemo } from "react";
 import { Logger } from "@/lib/logger";
-import { useRouteSurfaceStore } from "@/redesign/stores/routeSurfaceStore";
-import { useRoutingPreferencesStore } from "@/redesign/stores/routingPreferencesStore";
-import { useRedesignSettingsStore } from "@/redesign/stores/settingsStore";
+import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
+import { useRouteSurfaceStore } from "@/stores/routeSurfaceStore";
+import { useRoutingPreferencesStore } from "@/stores/routingPreferencesStore";
 import { useHasRoute, useRoutePath } from "@/stores/routingStore";
 import { resolveValhallaCosting, type ValhallaCosting } from "./routingMode";
 import { fetchSurfaceBreakdown, type SurfaceBreakdown } from "./SurfaceService";
