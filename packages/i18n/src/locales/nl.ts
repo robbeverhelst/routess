@@ -447,11 +447,9 @@ export const nl: Record<string, string> = {
 	"stub.discover.body":
 		"Lokale routerangschikking, populaire bestemmingen en samengestelde keuzes komen met de discovery-backend.",
 	"stub.social.title": "Volg vrienden en deel routes",
-	"stub.social.body":
-		"Volgen, profielstatistieken en je inbox met gedeelde routes komen met de sociale backend.",
+	"stub.social.body": "Volgen, profielstatistieken en je inbox met gedeelde routes komen met de sociale backend.",
 	"stub.activity.title": "Je activiteitenfeed",
-	"stub.activity.body":
-		"Je opgenomen sessies, afstandstrends en tempo-overzichten komen met de activiteitenbackend.",
+	"stub.activity.body": "Je opgenomen sessies, afstandstrends en tempo-overzichten komen met de activiteitenbackend.",
 	"stub.activity.label": "Activiteit",
 
 	// SaveModal
@@ -540,8 +538,7 @@ export const nl: Record<string, string> = {
 	"loop.geoUnavailableSub": "Deze browser biedt geen locatie-API.",
 	"loop.couldNotLocate": "Kon je locatie niet ophalen",
 	"loop.toast.title": "Lus genereren in uitvoering",
-	"loop.toast.body":
-		"Je voorkeuren zijn opgeslagen. Generatie komt in een toekomstige release.",
+	"loop.toast.body": "Je voorkeuren zijn opgeslagen. Generatie komt in een toekomstige release.",
 	"loop.locating": "Locatie zoeken…",
 	"loop.coords": "Lat {lat}, Lng {lng}",
 	"loop.currentLocation": "Huidige locatie",
@@ -577,7 +574,7 @@ export const nl: Record<string, string> = {
 
 	// ConfirmDeleteModal
 	"confirm.delete.title": "Route verwijderen?",
-	"confirm.delete.typeToConfirm": "Typ \"verwijder\" om te bevestigen",
+	"confirm.delete.typeToConfirm": 'Typ "verwijder" om te bevestigen',
 	"confirm.delete.placeholder": "verwijder",
 	"confirm.delete.toast": "Route verwijderd",
 	"confirm.delete.deleting": "Verwijderen…",
@@ -608,8 +605,7 @@ export const nl: Record<string, string> = {
 	"signup.toast.created": "Account aangemaakt",
 	"signup.toast.failed": "Aanmelden mislukt",
 	"signup.toast.emailComingSoon": "E-mail aanmelden binnenkort",
-	"signup.toast.useGoogleForNow":
-		"Gebruik voorlopig Google. Zelfde account, geen wachtwoord.",
+	"signup.toast.useGoogleForNow": "Gebruik voorlopig Google. Zelfde account, geen wachtwoord.",
 	"signup.title": "Maak je account aan.",
 	"signup.subtitle": "Voor altijd gratis. Tot 50 opgeslagen routes.",
 	"signup.googleNotConfigured": "Google-aanmelding niet geconfigureerd",
@@ -644,25 +640,19 @@ export const nl: Record<string, string> = {
 	"welcome.steps.units.subtitle": "Hoe wil je dat afstanden en snelheden in de app worden getoond?",
 	"welcome.steps.units.help": "Beïnvloedt elk afstands-, hoogte- en tempocijfer dat je ziet.",
 	"welcome.steps.style.title": "Kies je kaartstijl",
-	"welcome.steps.style.subtitle":
-		"Drie smaken. Je kunt altijd wisselen vanuit het lagenmenu.",
-	"welcome.steps.style.help":
-		"Verschillende stijlen tonen verschillende details: paden, verkeer, echte beelden.",
+	"welcome.steps.style.subtitle": "Drie smaken. Je kunt altijd wisselen vanuit het lagenmenu.",
+	"welcome.steps.style.help": "Verschillende stijlen tonen verschillende details: paden, verkeer, echte beelden.",
 	"welcome.steps.location.title": "Locatietoegang toestaan?",
-	"welcome.steps.location.subtitle":
-		"Centreer de kaart op jou en plak routes vast aan waar je echt bent.",
-	"welcome.steps.location.help":
-		"Locatie blijft op je apparaat. routess slaat het nooit op of deelt het.",
-	"welcome.changeLater":
-		"Je kunt altijd meer sporten toevoegen of je standaard wijzigen via Instellingen.",
+	"welcome.steps.location.subtitle": "Centreer de kaart op jou en plak routes vast aan waar je echt bent.",
+	"welcome.steps.location.help": "Locatie blijft op je apparaat. routess slaat het nooit op of deelt het.",
+	"welcome.changeLater": "Je kunt altijd meer sporten toevoegen of je standaard wijzigen via Instellingen.",
 	"welcome.units.metric": "Metrisch",
 	"welcome.units.metricSub": "km · m · km/u",
 	"welcome.units.imperial": "Imperiaal",
 	"welcome.units.imperialSub": "mi · ft · mph",
 	"welcome.units.changeLater": "Wissel eenheden altijd via Instellingen.",
 	"welcome.styles.flipLater": "Wissel stijlen altijd via het lagenmenu op de kaart.",
-	"welcome.location.changeLater":
-		"Je kunt locatie altijd geven of intrekken via Instellingen, Privacy.",
+	"welcome.location.changeLater": "Je kunt locatie altijd geven of intrekken via Instellingen, Privacy.",
 	"welcome.skip": "Overslaan",
 	"welcome.getStarted": "Aan de slag",
 	"welcome.continue": "Doorgaan",
@@ -717,7 +707,7 @@ export const nl: Record<string, string> = {
 	"empty.connectGarmin": "Garmin / Strava koppelen",
 	"empty.uploadPast": "eerdere activiteiten uploaden",
 	"empty.bulkImport": "als bulk-import.",
-	"empty.noResults": "Geen resultaten voor \"{query}\"",
+	"empty.noResults": 'Geen resultaten voor "{query}"',
 	"empty.checkSpelling": "Controleer spelling, probeer een kortere zoekopdracht of zoek op coördinaten.",
 	"empty.tryInstead": "Probeer in plaats daarvan",
 	"empty.orPrefix": "Of",
@@ -902,7 +892,7 @@ export const nl: Record<string, string> = {
 	"cmd.action.share": "Huidige route delen",
 	"cmd.action.account": "Account & facturering",
 	"cmd.action.theme": "Donkere modus wisselen",
-	"cmd.noResults": "Geen resultaten voor \"{query}\"",
+	"cmd.noResults": 'Geen resultaten voor "{query}"',
 	"cmd.kbd.navigate": "navigeren",
 	"cmd.kbd.run": "uitvoeren",
 	"cmd.kbd.toggle": "wisselen",

@@ -338,7 +338,8 @@ export const en: Record<string, string> = {
 	"settings.profile.signInToSync": "Sign in to sync",
 	"settings.profile.edit": "Edit",
 	"settings.sports.title": "Sports",
-	"settings.sports.subtitle": "Choose which sports appear across the app. Tap the check to make one your default for new routes.",
+	"settings.sports.subtitle":
+		"Choose which sports appear across the app. Tap the check to make one your default for new routes.",
 	"settings.sports.minimum": "Keep at least one sport selected",
 	"settings.sports.removeAria": "Remove {sport}",
 	"settings.sports.addAria": "Add {sport}",
@@ -425,7 +426,8 @@ export const en: Record<string, string> = {
 	"library.empty.loop": "Generate a loop",
 	"library.empty.import": "Import GPX",
 	"library.gate.title": "Sign in to see your library",
-	"library.gate.body": "Your saved routes live in your account. Sign in or create one to view, organise, and pick up where you left off.",
+	"library.gate.body":
+		"Your saved routes live in your account. Sign in or create one to view, organise, and pick up where you left off.",
 	"library.searchPlaceholder": "Search routes…",
 	"library.routeSingular": "route",
 	"library.routePlural": "routes",
@@ -442,7 +444,8 @@ export const en: Record<string, string> = {
 	"stub.social.title": "Follow friends and share routes",
 	"stub.social.body": "Following, profile stats, and your shared-routes inbox arrive with the social backend.",
 	"stub.activity.title": "Your activity feed",
-	"stub.activity.body": "Your recorded sessions, distance trends, and pace summaries arrive with the activities backend.",
+	"stub.activity.body":
+		"Your recorded sessions, distance trends, and pace summaries arrive with the activities backend.",
 	"stub.activity.label": "Activity",
 
 	// SaveModal
@@ -464,7 +467,8 @@ export const en: Record<string, string> = {
 	"save.addTag": "+ Add tag",
 	"save.gate.title": "You need an account to save",
 	"save.gate.subtitle": "Saving routes requires a free routess account.",
-	"save.gate.body": "Sign in or create an account to keep this route. Your current draft stays on the map while you sign in. You can come back and finish saving in a moment.",
+	"save.gate.body":
+		"Sign in or create an account to keep this route. Your current draft stays on the map while you sign in. You can come back and finish saving in a moment.",
 	"save.gate.benefit.unlimited": "Save unlimited routes",
 	"save.gate.benefit.sync": "Sync across web and mobile",
 	"save.gate.benefit.share": "Share routes with a link",
@@ -566,7 +570,7 @@ export const en: Record<string, string> = {
 
 	// ConfirmDeleteModal
 	"confirm.delete.title": "Delete route?",
-	"confirm.delete.typeToConfirm": "Type \"delete\" to confirm",
+	"confirm.delete.typeToConfirm": 'Type "delete" to confirm',
 	"confirm.delete.placeholder": "delete",
 	"confirm.delete.toast": "Route deleted",
 	"confirm.delete.deleting": "Deleting…",
@@ -624,8 +628,10 @@ export const en: Record<string, string> = {
 	"welcome.styles.satellite.title": "Satellite",
 	"welcome.styles.satellite.body": "Real imagery with street labels on top.",
 	"welcome.steps.sports.title": "Pick your default sport(s)",
-	"welcome.steps.sports.subtitle": "Tap one or more. The first one becomes your default. Tap the star on another to swap.",
-	"welcome.steps.sports.help": "We use this to suggest the right routing profile and average speed when you start a new map.",
+	"welcome.steps.sports.subtitle":
+		"Tap one or more. The first one becomes your default. Tap the star on another to swap.",
+	"welcome.steps.sports.help":
+		"We use this to suggest the right routing profile and average speed when you start a new map.",
 	"welcome.steps.units.title": "Choose your units",
 	"welcome.steps.units.subtitle": "How would you like distances and speeds shown across the app?",
 	"welcome.steps.units.help": "Affects every distance, elevation and pace number you'll see.",
@@ -674,15 +680,18 @@ export const en: Record<string, string> = {
 
 	// ErrorScreen
 	"error.offline.title": "You're offline",
-	"error.offline.body": "We can't reach the map server. Cached tiles will still load. Recording continues. Your activity will sync when you reconnect.",
+	"error.offline.body":
+		"We can't reach the map server. Cached tiles will still load. Recording continues. Your activity will sync when you reconnect.",
 	"error.offline.retry": "Retry connection",
 	"error.offline.continue": "Continue offline",
 	"error.routing.title": "Couldn't build that route",
-	"error.routing.body": "There's no continuous path between your waypoints with the current preferences. Try a different routing profile or move a waypoint.",
+	"error.routing.body":
+		"There's no continuous path between your waypoints with the current preferences. Try a different routing profile or move a waypoint.",
 	"error.routing.adjust": "Adjust routing",
 	"error.routing.edit": "Edit waypoints",
 	"error.gps.title": "GPS signal lost",
-	"error.gps.body": "We've paused recording until we can reacquire your location. Move to an open area or check device permissions.",
+	"error.gps.body":
+		"We've paused recording until we can reacquire your location. Move to an open area or check device permissions.",
 	"error.gps.resume": "Resume when ready",
 	"error.gps.stop": "Stop recording",
 
@@ -693,7 +702,7 @@ export const en: Record<string, string> = {
 	"empty.connectGarmin": "Connect Garmin / Strava",
 	"empty.uploadPast": "upload past activities",
 	"empty.bulkImport": "as a bulk import.",
-	"empty.noResults": "No results for \"{query}\"",
+	"empty.noResults": 'No results for "{query}"',
 	"empty.checkSpelling": "Check spelling, try a shorter query, or search by coordinates.",
 	"empty.tryInstead": "Try instead",
 	"empty.orPrefix": "Or",
@@ -712,12 +721,15 @@ export const en: Record<string, string> = {
 
 	// Stub screens (calendar, profile, compare)
 	"calendar.title": "Activity calendar",
-	"calendar.body": "Your activity heatmap and monthly distance totals will appear here once the activities backend is live.",
+	"calendar.body":
+		"Your activity heatmap and monthly distance totals will appear here once the activities backend is live.",
 	"profile.title": "Public profile",
-	"profile.body": "Stats, public routes, follower lists, and your activity feed arrive with the social and activities backends.",
+	"profile.body":
+		"Stats, public routes, follower lists, and your activity feed arrive with the social and activities backends.",
 	"compare.heading": "Compare routes",
 	"compare.title": "Compare two routes side by side",
-	"compare.body": "Pick two routes from your library to compare distance, elevation, and pace once route comparison is wired up.",
+	"compare.body":
+		"Pick two routes from your library to compare distance, elevation, and pace once route comparison is wired up.",
 
 	// AccountScreen
 	"account.heading": "Account & billing",
@@ -737,7 +749,8 @@ export const en: Record<string, string> = {
 	"account.readonly": "{label} is read-only",
 	"account.readonlySub": "This field is managed via your {managed}.",
 	"account.editPrompt": "Edit {label}",
-	"account.deleteConfirm": "Are you sure you want to permanently delete your account? All routes, activities, and data will be lost. This cannot be undone.",
+	"account.deleteConfirm":
+		"Are you sure you want to permanently delete your account? All routes, activities, and data will be lost. This cannot be undone.",
 	"account.deleteToast.title": "Account deletion coming soon",
 	"account.deleteToast.body": "We'll wire this to the backend deletion endpoint when it lands.",
 	"account.danger": "Danger zone",
@@ -849,10 +862,12 @@ export const en: Record<string, string> = {
 	"toolbar.removeRoute": "Remove route",
 	"rail.togglePanel": "{label} (toggle panel)",
 	"rail.notifications": "Notifications",
-	"notifications.body": "Mentions, social activity and system messages will land here once the notifications backend ships.",
+	"notifications.body":
+		"Mentions, social activity and system messages will land here once the notifications backend ships.",
 	"layers.overlays": "Overlays",
 	"layers.overlaysComingSoon": "Overlays coming soon",
-	"layers.overlaysSub": "Heatmaps, contour lines, cycling infrastructure and surface colouring land with the layer pipeline.",
+	"layers.overlaysSub":
+		"Heatmaps, contour lines, cycling infrastructure and surface colouring land with the layer pipeline.",
 
 	// CommandPalette
 	"cmd.placeholder": "Type a command, search, or jump…",
@@ -870,7 +885,7 @@ export const en: Record<string, string> = {
 	"cmd.action.share": "Share current route",
 	"cmd.action.account": "Account & billing",
 	"cmd.action.theme": "Toggle dark mode",
-	"cmd.noResults": "No results for \"{query}\"",
+	"cmd.noResults": 'No results for "{query}"',
 	"cmd.kbd.navigate": "navigate",
 	"cmd.kbd.run": "run",
 	"cmd.kbd.toggle": "toggle",
