@@ -295,8 +295,7 @@ export const de: Record<string, string> = {
 	"settings.pace.subtitle": "Wird zur Schätzung von Routenzeiten verwendet",
 	"welcome.steps.pace.title": "Ihr durchschnittliches Tempo",
 	"welcome.steps.pace.subtitle": "Passen Sie die typische Geschwindigkeit für jede gewählte Sportart an.",
-	"welcome.steps.pace.help":
-		"Wir verwenden dies, um Routendauern auf direkten Segmenten und offline zu schätzen.",
+	"welcome.steps.pace.help": "Wir verwenden dies, um Routendauern auf direkten Segmenten und offline zu schätzen.",
 	"welcome.pace.average": "Durchschnittliches Tempo",
 	"welcome.pace.changeLater": "Passen Sie diese Werte später unter Einstellungen, Tempo an.",
 
