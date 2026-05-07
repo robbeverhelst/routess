@@ -290,6 +290,15 @@ export const de: Record<string, string> = {
 	"routeLibrary.load": "Laden",
 	"routeLibrary.tooltip": "Routenbibliothek öffnen",
 
+	// Redesign pace settings
+	"settings.pace.title": "Tempo",
+	"settings.pace.subtitle": "Wird zur Schätzung von Routenzeiten verwendet",
+	"welcome.steps.pace.title": "Ihr durchschnittliches Tempo",
+	"welcome.steps.pace.subtitle": "Passen Sie die typische Geschwindigkeit für jede gewählte Sportart an.",
+	"welcome.steps.pace.help": "Wir verwenden dies, um Routendauern auf direkten Segmenten und offline zu schätzen.",
+	"welcome.pace.average": "Durchschnittliches Tempo",
+	"welcome.pace.changeLater": "Passen Sie diese Werte später unter Einstellungen, Tempo an.",
+
 	// Common translations
 	"common.cancel": "Abbrechen",
 	"common.retry": "Erneut versuchen",

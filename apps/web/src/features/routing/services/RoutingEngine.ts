@@ -1,5 +1,5 @@
 import type { Coordinate, Waypoint } from "@routess/core";
-import { estimateWalkingDuration, haversineDistance } from "@routess/core";
+import { estimateDuration, haversineDistance } from "@routess/core";
 import { Logger } from "@/lib/logger";
 import { getDirections } from "@/lib/utils/mapbox-api";
 
@@ -18,6 +18,9 @@ export interface ComputeRouteOptions {
 	// When false, the engine still calls Mapbox but does not return snapped
 	// waypoints — callers won't displace the user's chosen coordinates.
 	snap?: boolean;
+	// Speed in km/h used for duration estimates on direct/offline segments.
+	// Falls back to 5 km/h (walking) when not provided.
+	speedKmh?: number;
 }
 
 export type RouteOutcome =
@@ -159,12 +162,13 @@ export async function computeRoute(
 
 	const directions = baseDirectionsOptions(options.directions);
 	const snap = options.snap ?? true;
+	const speedKmh = options.speedKmh && options.speedKmh > 0 ? options.speedKmh : 5;
 
 	const segments = classifySegments(waypoints);
 
 	if (segments === "all-direct") {
 		const { routePath, distanceKm } = buildAllDirect(waypoints);
-		return { ok: true, routePath, distanceKm, durationMinutes: estimateWalkingDuration(distanceKm) };
+		return { ok: true, routePath, distanceKm, durationMinutes: estimateDuration(distanceKm, speedKmh) };
 	}
 
 	if (segments === "mixed") {
@@ -173,7 +177,7 @@ export async function computeRoute(
 			ok: true,
 			routePath: coordsAccum,
 			distanceKm: totalDistKm,
-			durationMinutes: estimateWalkingDuration(totalDistKm),
+			durationMinutes: estimateDuration(totalDistKm, speedKmh),
 			snappedWaypoints: snap ? (snappedWaypoints ?? undefined) : undefined,
 		};
 	}
@@ -216,7 +220,7 @@ export async function computeRoute(
 			ok: true,
 			routePath,
 			distanceKm,
-			durationMinutes: estimateWalkingDuration(distanceKm),
+			durationMinutes: estimateDuration(distanceKm, speedKmh),
 			offline: true,
 		};
 	}

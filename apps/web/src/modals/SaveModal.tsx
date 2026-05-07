@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useIsAuthenticated } from "@/hooks/useAuthState";
 import { useSaveRoute } from "@/lib/api-queries";
 import { t } from "@/lib/i18n";
 import { useModalsStore } from "@/stores/modalsStore";
+import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 import { useElevationGain, useRouteDistance, useRouteDuration, useWaypoints } from "@/stores/routingStore";
 import { useToastStore } from "@/stores/toastStore";
 import { type RedesignActivity, useUiStore } from "@/stores/uiStore";
@@ -29,9 +30,22 @@ export function SaveModal() {
 	const duration = useRouteDuration();
 	const elevationGain = useElevationGain();
 	const { activityType, setActivityType, language } = useUiStore();
+	const selectedSports = useRedesignSettingsStore((s) => s.selectedSports);
 	const saveRoute = useSaveRoute();
 	const pushToast = useToastStore((s) => s.push);
 	const isAuthenticated = useIsAuthenticated();
+
+	const availableActivities = useMemo(
+		() => (selectedSports.length > 0 ? ACTIVITIES.filter((a) => selectedSports.includes(a.key)) : ACTIVITIES),
+		[selectedSports],
+	);
+
+	useEffect(() => {
+		if (selectedSports.length === 0) return;
+		if (!selectedSports.includes(activityType)) {
+			setActivityType(selectedSports[0]);
+		}
+	}, [selectedSports, activityType, setActivityType]);
 
 	const [name, setName] = useState("");
 	const [privacy, setPrivacy] = useState<(typeof PRIVACY_OPTS)[number]["key"]>("private");
@@ -142,7 +156,7 @@ export function SaveModal() {
 				<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
 					<SecTitle>{t("save.activity", language)}</SecTitle>
 					<div style={{ display: "flex", gap: 8 }}>
-						{ACTIVITIES.map((a) => {
+						{availableActivities.map((a) => {
 							const Icon = a.icon;
 							const on = activityType === a.key;
 							return (

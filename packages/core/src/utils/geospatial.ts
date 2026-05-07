@@ -105,16 +105,14 @@ export const isValidCoordinate = (coordinate: Coordinate): boolean => {
 };
 
 /**
- * Estimates walking duration based on distance
- * Uses a conservative 5 km/h average walking speed
- *
- * @param distanceKm - Distance in kilometers
- * @returns Duration in minutes
+ * Estimates duration in minutes for a distance at a given speed.
  */
-export const estimateWalkingDuration = (distanceKm: number): number => {
-	const WALKING_SPEED_KMH = 5;
-	return Math.round((distanceKm / WALKING_SPEED_KMH) * 60);
+export const estimateDuration = (distanceKm: number, speedKmh: number): number => {
+	if (speedKmh <= 0) return 0;
+	return Math.round((distanceKm / speedKmh) * 60);
 };
+
+export const estimateWalkingDuration = (distanceKm: number): number => estimateDuration(distanceKm, 5);
 
 /**
  * Calculates the bearing between two coordinates

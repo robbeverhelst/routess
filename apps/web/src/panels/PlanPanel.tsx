@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { calculatePathDistance } from "@routess/core";
+import { useEffect, useMemo, useState } from "react";
 import { useSurfaceBreakdown } from "@/features/routing/services/useSurfaceBreakdown";
 import { t } from "@/lib/i18n";
-import { useUnits } from "@/lib/units";
+import { formatSpeedParts, useUnits } from "@/lib/units";
 import { useModalsStore } from "@/stores/modalsStore";
+import { getSpeedForActivity, useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 import {
 	useClearWaypoints,
 	useElevationGain,
@@ -24,6 +26,18 @@ import { ElevationSparkline } from "../components/ElevationSparkline";
 import { I } from "../components/icons";
 import { Btn, IconBtn, Kbd, RDS_COLORS, SecTitle } from "../components/primitives";
 import { SurfaceBreakdownBar } from "../components/SurfaceBreakdownBar";
+
+// Parses durations produced by @routess/core formatDuration: "X min", "X h", or "X.X h"
+// (with optional " (estimated)" / " (offline)" suffix). Returns minutes or null.
+function parseDurationToMinutes(s: string): number | null {
+	if (!s) return null;
+	const cleaned = s.replace(/\s*\([^)]+\)\s*/g, "").trim();
+	const m = cleaned.match(/^(-?\d+(?:\.\d+)?)\s*(min|h)$/i);
+	if (!m) return null;
+	const value = Number.parseFloat(m[1]);
+	if (!Number.isFinite(value)) return null;
+	return m[2].toLowerCase() === "h" ? value * 60 : value;
+}
 
 const ACTIVITIES: { key: RedesignActivity; icon: React.ComponentType<{ size?: number }>; labelKey: string }[] = [
 	{ key: "run", icon: I.run, labelKey: "sport.short.run" },
@@ -79,6 +93,35 @@ export function PlanPanel() {
 	})();
 	const elevationUnit = elevParts ? elevParts.unit : units === "mi" ? "ft" : "m";
 
+	const sportSpeeds = useRedesignSettingsStore((s) => s.sportSpeeds);
+	const selectedSports = useRedesignSettingsStore((s) => s.selectedSports);
+
+	const availableActivities = useMemo(
+		() => (selectedSports.length > 0 ? ACTIVITIES.filter((a) => selectedSports.includes(a.key)) : ACTIVITIES),
+		[selectedSports],
+	);
+
+	// If the active sport gets removed in Settings, snap to a still-selected one
+	// so we never route or estimate against a sport the user has hidden.
+	useEffect(() => {
+		if (selectedSports.length === 0) return;
+		if (!selectedSports.includes(activityType)) {
+			setActivityType(selectedSports[0]);
+		}
+	}, [selectedSports, activityType, setActivityType]);
+
+	const paceParts = useMemo(() => {
+		if (hasRoute && routePath.length >= 2) {
+			const distanceKm = calculatePathDistance(routePath);
+			const durationMinutes = parseDurationToMinutes(duration);
+			if (distanceKm > 0 && durationMinutes && durationMinutes > 0) {
+				return formatSpeedParts((distanceKm / durationMinutes) * 60, units);
+			}
+		}
+		const configured = getSpeedForActivity(activityType, sportSpeeds);
+		return configured > 0 ? formatSpeedParts(configured, units) : null;
+	}, [hasRoute, routePath, duration, units, sportSpeeds, activityType]);
+
 	const stats = [
 		{
 			label: t("plan.distance", language),
@@ -87,7 +130,11 @@ export function PlanPanel() {
 		},
 		{ label: t("plan.time", language), val: duration || "—", unit: "" },
 		{ label: t("plan.elev", language), val: elevationVal, unit: elevationUnit },
-		{ label: t("plan.pace", language), val: "—", unit: units === "mi" ? "/mi" : "/km" },
+		{
+			label: t("plan.pace", language),
+			val: paceParts?.value ?? "—",
+			unit: paceParts?.unit ?? (units === "mi" ? "mph" : "km/h"),
+		},
 	];
 
 	const startWp = waypoints[0];
@@ -103,7 +150,7 @@ export function PlanPanel() {
 				}}
 			>
 				<div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-					{ACTIVITIES.map((a) => {
+					{availableActivities.map((a) => {
 						const Icon = a.icon;
 						const on = activityType === a.key;
 						return (

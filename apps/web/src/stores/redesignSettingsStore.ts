@@ -32,6 +32,35 @@ export const DEFAULT_SPORT_SPEEDS_KMH: Record<RedesignActivity, number> = {
 	walk: 5,
 };
 
+export const SPORT_SPEED_MIN_KMH = 1;
+export const SPORT_SPEED_MAX_KMH = 80;
+
+const ACTIVITY_LABEL_TO_KEY: Record<string, RedesignActivity> = {
+	Running: "run",
+	Cycling: "cycle",
+	Walking: "walk",
+};
+
+const ACTIVITY_KEY_TO_LABEL: Record<RedesignActivity, string> = {
+	run: "Running",
+	cycle: "Cycling",
+	walk: "Walking",
+};
+
+export function activityLabelToKey(label: string): RedesignActivity | null {
+	return ACTIVITY_LABEL_TO_KEY[label] ?? null;
+}
+
+export function activityKeyToLabel(sport: RedesignActivity): string {
+	return ACTIVITY_KEY_TO_LABEL[sport];
+}
+
+export function getSpeedForActivity(sport: RedesignActivity, speeds: SportSpeeds): number {
+	const stored = speeds[sport];
+	if (stored && stored > 0) return stored;
+	return DEFAULT_SPORT_SPEEDS_KMH[sport];
+}
+
 interface SettingsState {
 	units: RedesignUnits;
 	showPois: boolean;
@@ -202,9 +231,11 @@ export const useRedesignSettingsStore = create<SettingsState>()(
 						: [...state.selectedSports, sport],
 				})),
 			setSportSpeed: (sport, kmh) =>
-				set((state) => ({
-					sportSpeeds: { ...state.sportSpeeds, [sport]: kmh },
-				})),
+				set((state) => {
+					if (!Number.isFinite(kmh)) return state;
+					const clamped = Math.min(Math.max(kmh, SPORT_SPEED_MIN_KMH), SPORT_SPEED_MAX_KMH);
+					return { sportSpeeds: { ...state.sportSpeeds, [sport]: clamped } };
+				}),
 			setMapStyle: (mapStyle) => set({ mapStyle }),
 			setOverlay: (key, value) =>
 				set((state) => ({
@@ -215,7 +246,7 @@ export const useRedesignSettingsStore = create<SettingsState>()(
 		}),
 		{
 			name: "routess.redesign.settings",
-			version: 5,
+			version: 6,
 			migrate: (persisted, version) => {
 				const state = persisted as Partial<RedesignSettingsSnapshot> | null;
 				if (state && version < 4) {

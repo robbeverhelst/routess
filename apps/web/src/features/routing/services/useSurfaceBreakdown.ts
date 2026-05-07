@@ -1,10 +1,11 @@
 import type { Coordinate } from "@routess/core";
 import { useEffect, useMemo } from "react";
 import { Logger } from "@/lib/logger";
-import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
+import { activityKeyToLabel } from "@/stores/redesignSettingsStore";
 import { useRouteSurfaceStore } from "@/stores/routeSurfaceStore";
 import { useRoutingPreferencesStore } from "@/stores/routingPreferencesStore";
 import { useHasRoute, useRoutePath } from "@/stores/routingStore";
+import { useUiStore } from "@/stores/uiStore";
 import { resolveValhallaCosting, type ValhallaCosting } from "./routingMode";
 import { fetchSurfaceBreakdown, type SurfaceBreakdown } from "./SurfaceService";
 
@@ -24,14 +25,14 @@ export function buildSurfaceBreakdownKey(routePath: Coordinate[], hasRoute: bool
 export function useRouteSurfaceSync(): void {
 	const routePath = useRoutePath();
 	const hasRoute = useHasRoute();
-	const defaultActivity = useRedesignSettingsStore((s) => s.defaultActivity);
+	const activityType = useUiStore((s) => s.activityType);
 	const routingProfile = useRoutingPreferencesStore((s) => s.profile);
 	const setBreakdown = useRouteSurfaceStore((s) => s.setBreakdown);
 	const setLoading = useRouteSurfaceStore((s) => s.setLoading);
 
 	const costing = useMemo(
-		() => resolveValhallaCosting(defaultActivity, routingProfile),
-		[defaultActivity, routingProfile],
+		() => resolveValhallaCosting(activityKeyToLabel(activityType), routingProfile),
+		[activityType, routingProfile],
 	);
 	const key = useMemo(() => buildSurfaceBreakdownKey(routePath, hasRoute, costing), [routePath, hasRoute, costing]);
 

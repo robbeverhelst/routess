@@ -1,8 +1,15 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { useLogout, useUserProfile } from "@/lib/api-queries";
 import { type SupportedLanguage, t } from "@/lib/i18n";
 import { getVersionDisplay } from "@/lib/version";
-import { type RedesignMapStyle, useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
+import {
+	DEFAULT_SPORT_SPEEDS_KMH,
+	getSpeedForActivity,
+	type RedesignMapStyle,
+	SPORT_SPEED_MAX_KMH,
+	SPORT_SPEED_MIN_KMH,
+	useRedesignSettingsStore,
+} from "@/stores/redesignSettingsStore";
 import { useRoutingPreferencesStore } from "@/stores/routingPreferencesStore";
 import { useToastStore } from "@/stores/toastStore";
 import { type RedesignAccent, type RedesignActivity, useUiStore } from "@/stores/uiStore";
@@ -111,6 +118,110 @@ function Segmented({
 	);
 }
 
+const KM_PER_MILE = 1.609344;
+
+function formatSpeedDraft(kmh: number, units: "km" | "mi"): string {
+	const display = units === "mi" ? kmh / KM_PER_MILE : kmh;
+	return Number.isFinite(display) ? String(Math.round(display * 10) / 10) : "";
+}
+
+function SpeedRow({
+	label,
+	sub,
+	kmh,
+	units,
+	onChange,
+	onReset,
+	isDefault,
+	last,
+}: {
+	label: string;
+	sub: string;
+	kmh: number;
+	units: "km" | "mi";
+	onChange: (kmh: number) => void;
+	onReset: () => void;
+	isDefault: boolean;
+	last?: boolean;
+}) {
+	const unitLabel = units === "mi" ? "mph" : "km/h";
+	const [draft, setDraft] = useState(() => formatSpeedDraft(kmh, units));
+	const [isEditing, setIsEditing] = useState(false);
+
+	useEffect(() => {
+		if (!isEditing) {
+			setDraft(formatSpeedDraft(kmh, units));
+		}
+	}, [isEditing, kmh, units]);
+
+	const commitDraft = () => {
+		const n = Number.parseFloat(draft);
+		if (Number.isFinite(n) && n > 0) {
+			onChange(units === "mi" ? n * KM_PER_MILE : n);
+			return;
+		}
+		setDraft(formatSpeedDraft(kmh, units));
+	};
+
+	return (
+		<Row
+			label={label}
+			sub={sub}
+			last={last}
+			control={
+				<div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+					<input
+						type="number"
+						inputMode="decimal"
+						min={units === "mi" ? Math.round((SPORT_SPEED_MIN_KMH / KM_PER_MILE) * 10) / 10 : SPORT_SPEED_MIN_KMH}
+						max={units === "mi" ? Math.round(SPORT_SPEED_MAX_KMH / KM_PER_MILE) : SPORT_SPEED_MAX_KMH}
+						step={units === "mi" ? 0.5 : 1}
+						value={draft}
+						onChange={(e) => {
+							setDraft(e.target.value);
+						}}
+						onFocus={() => setIsEditing(true)}
+						onBlur={() => {
+							setIsEditing(false);
+							commitDraft();
+						}}
+						onKeyDown={(e) => {
+							if (e.key === "Enter") {
+								e.currentTarget.blur();
+							}
+							if (e.key === "Escape") {
+								setDraft(formatSpeedDraft(kmh, units));
+								e.currentTarget.blur();
+							}
+						}}
+						style={{
+							width: 68,
+							height: 30,
+							padding: "0 8px",
+							borderRadius: 6,
+							background: RDS_COLORS.bgInput,
+							border: `1px solid ${RDS_COLORS.border}`,
+							color: RDS_COLORS.fg,
+							fontSize: 12.5,
+							textAlign: "right",
+							fontVariantNumeric: "tabular-nums",
+						}}
+					/>
+					<span style={{ fontSize: 11.5, color: RDS_COLORS.fgMuted, width: 32 }}>{unitLabel}</span>
+					<Btn
+						variant="ghost"
+						onClick={onReset}
+						disabled={isDefault}
+						title={isDefault ? "Already at default" : "Reset to default"}
+					>
+						<I.refresh size={12} />
+					</Btn>
+				</div>
+			}
+		/>
+	);
+}
+
 const ACCENT_OPTIONS: { key: RedesignAccent; labelKey: string; swatch: string }[] = [
 	{ key: "violet", labelKey: "settings.accent.violet", swatch: "oklch(0.5 0.17 282)" },
 	{ key: "cobalt", labelKey: "settings.accent.cobalt", swatch: "oklch(0.5 0.17 250)" },
@@ -137,6 +248,8 @@ export function SettingsPanel() {
 		setDefaultActivity,
 		selectedSports,
 		toggleSport,
+		sportSpeeds,
+		setSportSpeed,
 		mapStyle,
 		setMapStyle,
 	} = useRedesignSettingsStore();
@@ -332,6 +445,30 @@ export function SettingsPanel() {
 					last
 				/>
 			</Group>
+
+			{selectedSports.length > 0 && (
+				<Group title={t("settings.pace.title", language)}>
+					{selectedSports.map((sport, idx) => {
+						const cfg = SPORT_OPTIONS.find((s) => s.key === sport);
+						if (!cfg) return null;
+						const kmh = getSpeedForActivity(sport, sportSpeeds);
+						const isLast = idx === selectedSports.length - 1;
+						return (
+							<SpeedRow
+								key={sport}
+								label={t(cfg.labelKey, language)}
+								sub={t("settings.pace.subtitle", language)}
+								kmh={kmh}
+								units={units}
+								onChange={(next) => setSportSpeed(sport, next)}
+								onReset={() => setSportSpeed(sport, DEFAULT_SPORT_SPEEDS_KMH[sport])}
+								isDefault={kmh === DEFAULT_SPORT_SPEEDS_KMH[sport]}
+								last={isLast}
+							/>
+						);
+					})}
+				</Group>
+			)}
 
 			<Group title={t("settings.appearance", language)}>
 				<Row

@@ -3,8 +3,8 @@ import type { RoutingProfile } from "@/stores/routingPreferencesStore";
 export type MapboxProfile = "mapbox/walking" | "mapbox/cycling" | "mapbox/driving";
 export type ValhallaCosting = "pedestrian" | "bicycle" | "auto";
 
-export function resolveMapboxProfile(defaultActivity: string, profile: RoutingProfile): MapboxProfile {
-	if (defaultActivity === "Running" || defaultActivity === "Walking") return "mapbox/walking";
+export function resolveMapboxProfile(activityLabel: string, profile: RoutingProfile): MapboxProfile {
+	if (activityLabel === "Running" || activityLabel === "Walking") return "mapbox/walking";
 	if (profile === "flat") return "mapbox/driving";
 	return "mapbox/cycling";
 }
@@ -20,6 +20,6 @@ export function mapMapboxProfileToValhallaCosting(profile: MapboxProfile): Valha
 	}
 }
 
-export function resolveValhallaCosting(defaultActivity: string, profile: RoutingProfile): ValhallaCosting {
-	return mapMapboxProfileToValhallaCosting(resolveMapboxProfile(defaultActivity, profile));
+export function resolveValhallaCosting(activityLabel: string, profile: RoutingProfile): ValhallaCosting {
+	return mapMapboxProfileToValhallaCosting(resolveMapboxProfile(activityLabel, profile));
 }

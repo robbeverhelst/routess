@@ -108,17 +108,26 @@ export function useAccountPreferencesSync(auth: AuthStatusSnapshot | undefined) 
 		}
 
 		if (normalizedServerPreferences && serializedServerPreferences) {
-			lastSyncedPreferencesRef.current = serializedServerPreferences;
+			const isNewUser = bootstrappedUserIdRef.current !== authUserId;
+			const localMatchesLastSynced =
+				lastSyncedPreferencesRef.current !== null && serializedPreferences === lastSyncedPreferencesRef.current;
+			const localIsStillDefault = serializedPreferences === serializedDefaultPreferences;
+			const shouldApplyServerPreferences = isNewUser || localMatchesLastSynced || localIsStillDefault;
+
 			bootstrappedUserIdRef.current = authUserId;
 
-			if (serializedServerPreferences !== serializedPreferences) {
-				applyingServerStateRef.current = true;
-				replaceAllSettings(normalizedServerPreferences);
-				queueMicrotask(() => {
+			if (shouldApplyServerPreferences) {
+				lastSyncedPreferencesRef.current = serializedServerPreferences;
+
+				if (serializedServerPreferences !== serializedPreferences) {
+					applyingServerStateRef.current = true;
+					replaceAllSettings(normalizedServerPreferences);
+					queueMicrotask(() => {
+						applyingServerStateRef.current = false;
+					});
+				} else {
 					applyingServerStateRef.current = false;
-				});
-			} else {
-				applyingServerStateRef.current = false;
+				}
 			}
 
 			return;
@@ -134,6 +143,7 @@ export function useAccountPreferencesSync(auth: AuthStatusSnapshot | undefined) 
 		isAuthenticated,
 		normalizedServerPreferences,
 		replaceAllSettings,
+		serializedDefaultPreferences,
 		serializedPreferences,
 		serializedServerPreferences,
 	]);
