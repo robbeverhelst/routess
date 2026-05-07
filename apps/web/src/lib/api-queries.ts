@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { track } from "./analytics";
 import { type ApiRoute, apiService, type Waypoint } from "./api";
+import { hasStoredUser, storeUser } from "./auth-state";
 import { googleAuth } from "./google-auth";
 import { Logger } from "./logger";
 import { queryKeys } from "./query-client";
@@ -13,24 +14,24 @@ import { queryKeys } from "./query-client";
  * Hook to fetch all routes for the current user
  */
 export function useUserRoutes() {
-	const hasToken = !!localStorage.getItem("access_token");
+	const hasUser = hasStoredUser();
 
 	return useQuery({
 		queryKey: queryKeys.routes.list(),
 		queryFn: async () => {
 			// Double-check authentication before making the call
-			if (!localStorage.getItem("access_token")) {
-				throw new Error("No authentication token available");
+			if (!hasStoredUser()) {
+				throw new Error("No authenticated user available");
 			}
 
 			const routes = await apiService.getRoutes();
 			Logger.info(`Fetched ${routes.length} routes from API`);
 			return routes;
 		},
-		enabled: hasToken, // Only fetch if authenticated
+		enabled: hasUser, // Only fetch if authenticated
 		staleTime: 2 * 60 * 1000, // Routes are fresh for 2 minutes
-		retry: hasToken ? 2 : false, // Only retry if we have a token
-		refetchOnWindowFocus: hasToken, // Only refetch on focus if authenticated
+		retry: hasUser ? 2 : false, // Only retry if authenticated
+		refetchOnWindowFocus: hasUser, // Only refetch on focus if authenticated
 	});
 }
 
@@ -152,24 +153,24 @@ export function useUpdateRoute() {
  * Hook to fetch current user profile
  */
 export function useUserProfile() {
-	const hasToken = !!localStorage.getItem("access_token");
+	const hasUser = hasStoredUser();
 
 	return useQuery({
 		queryKey: queryKeys.user.profile(),
 		queryFn: async () => {
 			// Double-check authentication before making the call
-			if (!localStorage.getItem("access_token")) {
-				throw new Error("No authentication token available");
+			if (!hasStoredUser()) {
+				throw new Error("No authenticated user available");
 			}
 
 			const profile = await apiService.getProfile();
 			Logger.info("Fetched user profile:", profile.email);
 			return profile;
 		},
-		enabled: hasToken, // Only fetch if authenticated
+		enabled: hasUser, // Only fetch if authenticated
 		staleTime: 5 * 60 * 1000, // Profile is fresh for 5 minutes
-		retry: hasToken ? 1 : false, // Only retry once if we have a token
-		refetchOnWindowFocus: hasToken, // Only refetch on focus if authenticated
+		retry: hasUser ? 1 : false, // Only retry once if authenticated
+		refetchOnWindowFocus: hasUser, // Only refetch on focus if authenticated
 	});
 }
 
@@ -183,7 +184,7 @@ export function useUserProfile() {
  * Hook to check authentication status with proper token validation
  */
 export function useAuthStatus() {
-	const hasToken = !!localStorage.getItem("access_token");
+	const hasUser = hasStoredUser();
 
 	return useQuery({
 		queryKey: queryKeys.auth.session(),
@@ -193,6 +194,7 @@ export function useAuthStatus() {
 
 				if (isValid) {
 					const profile = await apiService.getProfile();
+					storeUser(profile);
 					return { isAuthenticated: true, user: profile };
 				} else {
 					return { isAuthenticated: false, user: null };
@@ -202,7 +204,7 @@ export function useAuthStatus() {
 				return { isAuthenticated: false, user: null };
 			}
 		},
-		enabled: hasToken, // Only check if we have a token
+		enabled: hasUser,
 		staleTime: 10 * 60 * 1000,
 		retry: false, // Don't retry auth checks
 		refetchOnWindowFocus: false,
@@ -247,8 +249,7 @@ export function usePrefetchRoutes() {
 	const queryClient = useQueryClient();
 
 	return () => {
-		const hasToken = !!localStorage.getItem("access_token");
-		if (hasToken) {
+		if (hasStoredUser()) {
 			queryClient.prefetchQuery({
 				queryKey: queryKeys.routes.list(),
 				queryFn: apiService.getRoutes,

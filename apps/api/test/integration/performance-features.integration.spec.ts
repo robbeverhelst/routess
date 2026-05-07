@@ -52,10 +52,10 @@ describe("Performance Features Integration", () => {
 							name: `Compression Test Route ${i}`,
 							description: `This is a test route for compression testing with a longer description to increase response size. Route number ${i}`,
 							waypoints: [
-								{ lat: 50.8503 + i * 0.001, lng: 4.3517, type: "routed" },
-								{ lat: 50.8463 + i * 0.001, lng: 4.3517, type: "direct" },
-								{ lat: 50.8423 + i * 0.001, lng: 4.3517, type: "routed" },
-								{ lat: 50.8383 + i * 0.001, lng: 4.3517, type: "direct" },
+								{ coord: [4.3517, 50.8503 + i * 0.001], type: "routed" },
+								{ coord: [4.3517, 50.8463 + i * 0.001], type: "direct" },
+								{ coord: [4.3517, 50.8423 + i * 0.001], type: "routed" },
+								{ coord: [4.3517, 50.8383 + i * 0.001], type: "direct" },
 							],
 						}),
 				);
@@ -110,8 +110,8 @@ describe("Performance Features Integration", () => {
 							name: `Test Route ${i}`,
 							description: `Test route number ${i}`,
 							waypoints: [
-								{ lat: 50.8503 + i * 0.001, lng: 4.3517, type: "routed" },
-								{ lat: 50.8463 + i * 0.001, lng: 4.3517, type: "direct" },
+								{ coord: [4.3517, 50.8503 + i * 0.001], type: "routed" },
+								{ coord: [4.3517, 50.8463 + i * 0.001], type: "direct" },
 							],
 						}),
 				);

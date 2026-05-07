@@ -1,5 +1,5 @@
-import { t } from "@/lib/i18n";
-import { useUiStore } from "@/stores/uiStore";
+import { emitAppEvent } from "@/lib/app-events";
+import { useT } from "@/lib/i18n";
 import { I } from "./icons";
 import { Btn, RDS_COLORS } from "./primitives";
 
@@ -10,13 +10,13 @@ interface SignInGateProps {
 }
 
 export function SignInGate({ title, description, icon: Icon = I.user }: SignInGateProps) {
-	const language = useUiStore((s) => s.language);
+	const t = useT();
 	const goToSignIn = () => {
-		window.dispatchEvent(new CustomEvent("routess:open-login"));
+		emitAppEvent("routess:open-login");
 	};
 
 	const goToSignUp = () => {
-		window.dispatchEvent(new CustomEvent("routess:open-signup"));
+		emitAppEvent("routess:open-signup");
 	};
 
 	return (
@@ -58,9 +58,9 @@ export function SignInGate({ title, description, icon: Icon = I.user }: SignInGa
 					{description}
 				</p>
 				<div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
-					<Btn onClick={goToSignUp}>{t("save.createAccount", language)}</Btn>
+					<Btn onClick={goToSignUp}>{t("save.createAccount")}</Btn>
 					<Btn variant="primary" onClick={goToSignIn}>
-						<I.user size={14} /> {t("common.signIn", language)}
+						<I.user size={14} /> {t("common.signIn")}
 					</Btn>
 				</div>
 			</div>

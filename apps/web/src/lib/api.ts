@@ -1,18 +1,16 @@
-import { createApiClient, LocalStorageAuthState } from "@routess/api-client";
+import { createApiClient } from "@routess/api-client";
 import { clearStoredAuthState, notifyAuthStateChange } from "@/lib/auth-state";
 import { handleAPIError } from "@/lib/errors";
 import { Logger } from "@/lib/logger";
+import { getRuntimeConfig } from "@/lib/runtime-config";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "__VITE_API_URL__";
+const API_BASE_URL = getRuntimeConfig("VITE_API_URL") ?? "";
 
-// Wrap the default localStorage auth state with the web app's
-// clearAuthState hook (clears React state + notifies listeners).
-const baseAuth = new LocalStorageAuthState();
 const webAuthStateManager = {
-	getToken: () => baseAuth.getToken(),
-	setToken: (token: string) => baseAuth.setToken(token),
-	clearToken: () => baseAuth.clearToken(),
-	refreshToken: () => baseAuth.refreshToken(),
+	getToken: () => null,
+	setToken: (_token: string) => undefined,
+	clearToken: () => undefined,
+	refreshToken: () => undefined,
 	clearAuthState() {
 		clearStoredAuthState();
 		notifyAuthStateChange();
@@ -21,7 +19,6 @@ const webAuthStateManager = {
 
 export const apiService = createApiClient({
 	baseUrl: API_BASE_URL,
-	platform: "web",
 	authStateManager: webAuthStateManager,
 	errorHandler: {
 		handleError: (error, context, retryFn) => handleAPIError(error, context, retryFn),

@@ -44,7 +44,11 @@ export class UsersService {
 	}
 
 	async getStatistics(userId: number): Promise<{ totalRoutes: number; totalDistance: number }> {
-		return this.sessionService.getUserStatistics(userId);
+		const routes = await this.routeRepository.find({ user: userId, deletedAt: null });
+		return {
+			totalRoutes: routes.length,
+			totalDistance: routes.reduce((total, route) => total + (route.distance || 0), 0),
+		};
 	}
 
 	async remove(id: number): Promise<void> {

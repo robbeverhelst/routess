@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { t } from "@/lib/i18n";
+import { useT } from "@/lib/i18n";
 import { type RedesignContext, useUiStore } from "@/stores/uiStore";
 import { I } from "./icons";
 import { RDS_COLORS } from "./primitives";
@@ -19,11 +19,12 @@ const NAV: NavItem[] = [
 ];
 
 export function BottomTabBar() {
-	const { context, setContext, panelCollapsed, togglePanel, setPanelCollapsed, language } = useUiStore();
+	const t = useT();
+	const { context, setContext, panelCollapsed, togglePanel, setPanelCollapsed } = useUiStore();
 
 	return (
 		<nav
-			aria-label={t("a11y.primaryNav", language)}
+			aria-label={t("a11y.primaryNav")}
 			style={{
 				position: "absolute",
 				left: "max(10px, var(--rds-safe-left))",
@@ -49,7 +50,7 @@ export function BottomTabBar() {
 					<TabButton
 						key={n.key}
 						icon={n.icon}
-						label={t(n.labelKey, language)}
+						label={t(n.labelKey)}
 						active={isActive}
 						onClick={() => {
 							if (context === n.key) {

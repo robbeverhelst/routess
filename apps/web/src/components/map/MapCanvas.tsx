@@ -5,13 +5,17 @@ import type { Map as MapboxMap } from "mapbox-gl";
 import type { Dispatch, SetStateAction } from "react";
 import { useMapInitialization } from "@/components/hooks/useMapInitialization";
 import { useMapPositioning } from "@/components/hooks/useMapPositioning";
-import { useMapConfiguration } from "@/components/providers/MapConfigurationProvider";
+import { useMapViewBindings } from "@/components/hooks/useMapViewBindings";
 import { useUserLocation } from "@/components/providers/UserLocationProvider";
 import { MapPopup, type PopupInfo as MapPopupInfo } from "@/components/ui/MapPopup";
 import { SunPositionIndicator } from "@/components/ui/SunPositionIndicator";
+import { useServiceWorker } from "@/hooks/useServiceWorker";
 import { useErrorHandler } from "@/lib/errors";
 import type { SupportedLanguage } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
+import { useMapViewStore } from "@/stores/mapViewStore";
+import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
+import { useRoutingStore } from "@/stores/routingStore";
 
 // Map configuration constants
 const MAP_PITCH = 30; // Default pitch angle for the map
@@ -162,10 +166,8 @@ interface MapCanvasProps {
 	mapTheme?: "light" | "dark";
 	currentLanguage: SupportedLanguage;
 
-	// Route state management
-	setRouteDistance: Dispatch<SetStateAction<string>>;
-	setRouteDuration: Dispatch<SetStateAction<string>>;
-	setHasRoute: Dispatch<SetStateAction<boolean>>;
+	// RouteDraft editor lifecycle (set by useMapInitialization on map load)
+	setEditor: (editor: import("@/features/routing/RouteDraftEditor").RouteDraftEditor | null) => void;
 	hasRoute: boolean;
 
 	// Popup management
@@ -177,7 +179,6 @@ interface MapCanvasProps {
 
 	// Error handling
 	handleWaypointError: (message: string | null) => void;
-	handleRouteInfoError: (message: string) => void;
 
 	// Initial positioning data
 	lastKnownLocationFromStorage: [number, number] | null;
@@ -195,9 +196,7 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
 	routeId,
 	mapTheme = "light",
 	currentLanguage,
-	setRouteDistance,
-	setRouteDuration,
-	setHasRoute,
+	setEditor,
 	hasRoute,
 	popup,
 	setPopup,
@@ -205,7 +204,6 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
 	onRemoveWaypoint,
 	onAddWaypointOnRoute,
 	handleWaypointError,
-	handleRouteInfoError,
 	lastKnownLocationFromStorage,
 	detectedRouteInLocalStorageOnInit,
 	lastSavedMapView,
@@ -217,19 +215,17 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
 	const [isMapLoaded, setIsMapLoaded] = useState(false);
 	const [loadTimedOut, setLoadTimedOut] = useState(false);
 
-	// Get configuration from providers
-	const {
-		currentMapStyleKey,
-		isMapLocked,
-		currentLightPreset,
-		currentBearing,
-		setCurrentBearing,
-		showSunDirection,
-		currentSunPosition,
-		onMapStyleLoaded,
-	} = useMapConfiguration();
+	const currentMapStyleKey = useRedesignSettingsStore((s) => s.mapStyle);
+	const isMapLocked = useRoutingStore((s) => s.isMapLocked);
+	const currentLightPreset = useMapViewStore((s) => s.lightPreset);
+	const currentBearing = useMapViewStore((s) => s.bearing);
+	const setCurrentBearing = useMapViewStore((s) => s.setBearing);
+	const showSunDirection = useMapViewStore((s) => s.showSunDirection);
+	const currentSunPosition = useMapViewStore((s) => s.sunPosition);
 
 	const { location: userLocation, error: locationError, isLoading: isUserLocationLoading } = useUserLocation();
+	const { isOnline } = useServiceWorker();
+	const { onMapStyleLoaded } = useMapViewBindings({ map: mapRef.current, userLocation, isOnline });
 
 	const { handleMapError } = useErrorHandler();
 	const isSatelliteStyle = currentMapStyleKey === "satellite";
@@ -327,15 +323,12 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
 	// Map initialization hook
 	const { handleMapLoad } = useMapInitialization({
 		mapboxToken,
-		setRouteDistance,
-		setRouteDuration,
-		setHasRoute,
 		setPopup,
+		setEditor,
 		handleWaypointError,
 		isMapLockedRef,
 		currentLightPreset,
 		routeId,
-		handleRouteInfoError,
 	});
 
 	// Memoize the complex initial view state calculation to avoid repeated computations

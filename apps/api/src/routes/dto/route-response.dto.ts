@@ -2,22 +2,26 @@ import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { UserResponseDto } from "../../users/dto/user-response.dto";
 
 class WaypointResponseDto {
-	@ApiProperty()
-	lat!: number;
+	@ApiProperty({
+		description: "Waypoint coordinate as a [lng, lat] pair",
+		example: [-74.006, 40.7128],
+		type: "array",
+		items: { type: "number" },
+		minItems: 2,
+		maxItems: 2,
+	})
+	coord!: [number, number];
 
-	@ApiProperty()
-	lng!: number;
-
-	@ApiPropertyOptional({
+	@ApiProperty({
 		enum: ["routed", "direct"],
 	})
-	type?: "routed" | "direct";
-
-	@ApiPropertyOptional()
-	timestamp?: string;
+	type!: "routed" | "direct";
 
 	@ApiPropertyOptional({ description: "Optional user-assigned name for the waypoint" })
 	name?: string;
+
+	@ApiPropertyOptional({ description: "Timestamp when the waypoint was recorded" })
+	timestamp?: string;
 }
 
 export class RouteResponseDto {

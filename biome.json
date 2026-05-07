@@ -12,11 +12,6 @@
 			}
 		}
 	},
-	"javascript": {
-		"parser": {
-			"unsafeParameterDecoratorsEnabled": true
-		}
-	},
 	"formatter": {
 		"enabled": true,
 		"indentStyle": "tab",
@@ -26,18 +21,52 @@
 		"enabled": true,
 		"rules": {
 			"recommended": true,
+			"a11y": {
+				"recommended": true
+			},
+			"complexity": {
+				"recommended": true,
+				"noUselessFragments": "error"
+			},
 			"correctness": {
+				"recommended": true,
 				"noUnusedVariables": "error",
 				"noUnusedImports": "error"
 			},
+			"performance": {
+				"recommended": true,
+				"noAccumulatingSpread": "error"
+			},
+			"security": {
+				"recommended": true
+			},
+			"style": {
+				"recommended": true,
+				"noNonNullAssertion": "error",
+				"noParameterAssign": "error",
+				"useConst": "error",
+				"useTemplate": "error"
+			},
 			"suspicious": {
-				"noExplicitAny": "warn"
+				"recommended": true,
+				"noExplicitAny": "error",
+				"noConsole": "error",
+				"noDebugger": "error",
+				"noEmptyBlockStatements": "error"
+			},
+			"nursery": {
+				"recommended": true
 			}
 		}
 	},
 	"overrides": [
 		{
 			"includes": ["apps/api/**"],
+			"javascript": {
+				"parser": {
+					"unsafeParameterDecoratorsEnabled": true
+				}
+			},
 			"linter": {
 				"rules": {
 					"correctness": {
@@ -50,11 +79,32 @@
 			}
 		},
 		{
-			"includes": ["**/*.spec.ts", "**/*.spec.tsx", "**/*.test.ts", "**/*.test.tsx", "**/test/**"],
+			"includes": [
+				"scripts/**",
+				"**/jest.setup.ts",
+				"**/*.spec.ts",
+				"**/*.spec.tsx",
+				"**/*.test.ts",
+				"**/*.test.tsx",
+				"**/test/**",
+				"**/__tests__/**"
+			],
 			"linter": {
 				"rules": {
 					"suspicious": {
-						"noExplicitAny": "off"
+						"noExplicitAny": "off",
+						"noConsole": "off",
+						"noEmptyBlockStatements": "off"
+					}
+				}
+			}
+		},
+		{
+			"includes": ["**/public/sw.js", "**/public/sw.*.js"],
+			"linter": {
+				"rules": {
+					"suspicious": {
+						"noEmptyBlockStatements": "off"
 					}
 				}
 			}

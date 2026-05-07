@@ -53,8 +53,8 @@ describe("Routes Integration Tests", () => {
 				name: "Test Route",
 				description: "A test route description",
 				waypoints: [
-					{ lat: 52.52, lng: 13.405, timestamp: new Date().toISOString(), type: "routed" },
-					{ lat: 52.521, lng: 13.406, timestamp: new Date().toISOString(), type: "routed" },
+					{ coord: [13.405, 52.52], timestamp: new Date().toISOString(), type: "routed" },
+					{ coord: [13.406, 52.521], timestamp: new Date().toISOString(), type: "routed" },
 				],
 				distance: 1500,
 				// duration: 900,
@@ -83,7 +83,7 @@ describe("Routes Integration Tests", () => {
 		it("should fail to create route without authentication", async () => {
 			const routeData = {
 				name: "Test Route",
-				waypoints: [{ lat: 52.52, lng: 13.405, type: "routed" }],
+				waypoints: [{ coord: [13.405, 52.52], type: "routed" }],
 			};
 
 			await supertest(app.getHttpServer()).post("/api/v1/routes").send(routeData).expect(401);
@@ -104,7 +104,7 @@ describe("Routes Integration Tests", () => {
 		it("should require type field for waypoints", async () => {
 			const routeWithoutType = {
 				name: "Test Route",
-				waypoints: [{ lat: 52.52, lng: 13.405 }], // Missing required 'type' field
+				waypoints: [{ coord: [13.405, 52.52] }], // Missing required 'type' field
 			};
 
 			await supertest(app.getHttpServer())
@@ -125,7 +125,7 @@ describe("Routes Integration Tests", () => {
 			userRoute1 = orm.em.create(Route, {
 				name: "User Route 1",
 				user: testUser,
-				waypoints: [{ lat: 52.52, lng: 13.405, type: "routed" }],
+				waypoints: [{ coord: [13.405, 52.52], type: "routed" }],
 				distance: 1000,
 				// duration: 600,
 			});
@@ -133,7 +133,7 @@ describe("Routes Integration Tests", () => {
 			userRoute2 = orm.em.create(Route, {
 				name: "User Route 2",
 				user: testUser,
-				waypoints: [{ lat: 52.53, lng: 13.415, type: "routed" }],
+				waypoints: [{ coord: [13.415, 52.53], type: "routed" }],
 				distance: 2000,
 				// duration: 1200,
 			});
@@ -141,7 +141,7 @@ describe("Routes Integration Tests", () => {
 			otherUserRoute = orm.em.create(Route, {
 				name: "Other User Route",
 				user: otherUser,
-				waypoints: [{ lat: 52.54, lng: 13.425, type: "routed" }],
+				waypoints: [{ coord: [13.425, 52.54], type: "routed" }],
 				distance: 3000,
 				// duration: 1800,
 			});
@@ -186,7 +186,7 @@ describe("Routes Integration Tests", () => {
 			testRoute = orm.em.create(Route, {
 				name: "Test Route",
 				user: testUser,
-				waypoints: [{ lat: 52.52, lng: 13.405, type: "routed" }],
+				waypoints: [{ coord: [13.405, 52.52], type: "routed" }],
 				distance: 1000,
 				// duration: 600,
 			});
@@ -236,7 +236,7 @@ describe("Routes Integration Tests", () => {
 				name: "Original Name",
 				description: "Original Description",
 				user: testUser,
-				waypoints: [{ lat: 52.52, lng: 13.405, type: "routed" }],
+				waypoints: [{ coord: [13.405, 52.52], type: "routed" }],
 				distance: 1000,
 				// duration: 600,
 			});
@@ -295,7 +295,7 @@ describe("Routes Integration Tests", () => {
 			testRoute = orm.em.create(Route, {
 				name: "Route to Delete",
 				user: testUser,
-				waypoints: [{ lat: 52.52, lng: 13.405, type: "routed" }],
+				waypoints: [{ coord: [13.405, 52.52], type: "routed" }],
 				distance: 1000,
 				// duration: 600,
 			});

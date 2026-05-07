@@ -18,18 +18,18 @@ export class MetricsService implements OnModuleInit {
 	) {}
 
 	// HTTP metrics
-	private httpRequestDuration: Histogram;
-	private httpRequestTotal: Counter;
-	private httpRequestErrors: Counter;
+	private httpRequestDuration!: Histogram;
+	private httpRequestTotal!: Counter;
+	private httpRequestErrors!: Counter;
 
 	// Business metrics
-	private userRegistrations: Counter;
-	private routesCreated: Counter;
-	private routesDeleted: Counter;
-	private activeUsers: UpDownCounter;
+	private userRegistrations!: Counter;
+	private routesCreated!: Counter;
+	private routesDeleted!: Counter;
+	private activeUsers!: UpDownCounter;
 	private activeUsersCount = 0;
 
-	private dbQueryDuration: Histogram;
+	private dbQueryDuration!: Histogram;
 
 	async onModuleInit() {
 		await this.initializeMetrics();

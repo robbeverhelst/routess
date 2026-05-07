@@ -1,4 +1,4 @@
-import type { Waypoint } from "@routess/core";
+import { emptyHistory, type Waypoint } from "@routess/core";
 import { vi } from "vitest";
 import { useRoutingStore } from "@/stores/routingStore";
 import { mockCoordinates } from "../test/utils";
@@ -22,14 +22,9 @@ describe("RoutingStore", () => {
 			routeDuration: "",
 			hasRoute: false,
 			isMapLocked: false,
-			undoStack: [],
-			redoStack: [],
+			history: emptyHistory<Waypoint[]>(),
 			canUndo: false,
 			canRedo: false,
-			shareNotification: "",
-			displayedShareUrl: null,
-			showRouteInfoError: false,
-			routeInfoErrorMessage: "",
 		});
 		vi.clearAllMocks();
 	});
@@ -139,10 +134,10 @@ describe("RoutingStore", () => {
 			store.saveSnapshot();
 
 			const state = useRoutingStore.getState();
-			expect(state.undoStack).toHaveLength(1);
+			expect(state.history.past).toHaveLength(1);
 			expect(state.canUndo).toBe(true);
 			expect(state.canRedo).toBe(false);
-			expect(state.redoStack).toHaveLength(0);
+			expect(state.history.future).toHaveLength(0);
 		});
 
 		it("should undo correctly", () => {
@@ -157,7 +152,7 @@ describe("RoutingStore", () => {
 			expect(state.waypoints).toHaveLength(0);
 			expect(state.canUndo).toBe(false);
 			expect(state.canRedo).toBe(true);
-			expect(state.redoStack).toHaveLength(1);
+			expect(state.history.future).toHaveLength(1);
 		});
 
 		it("should redo correctly", () => {
@@ -188,7 +183,7 @@ describe("RoutingStore", () => {
 			store.saveSnapshot();
 
 			const state = useRoutingStore.getState();
-			expect(state.redoStack).toHaveLength(0);
+			expect(state.history.future).toHaveLength(0);
 			expect(state.canRedo).toBe(false);
 		});
 
@@ -222,53 +217,6 @@ describe("RoutingStore", () => {
 
 			store.setIsMapLocked(false);
 			expect(useRoutingStore.getState().isMapLocked).toBe(false);
-		});
-	});
-
-	describe("Share and Error Management", () => {
-		it("should manage share notification correctly", () => {
-			const store = useRoutingStore.getState();
-
-			store.setShareNotification("Link copied!");
-			expect(useRoutingStore.getState().shareNotification).toBe("Link copied!");
-		});
-
-		it("should manage share URL correctly", () => {
-			const store = useRoutingStore.getState();
-
-			store.setDisplayedShareUrl("https://example.com/route/123");
-			expect(useRoutingStore.getState().displayedShareUrl).toBe("https://example.com/route/123");
-
-			store.setDisplayedShareUrl(null);
-			expect(useRoutingStore.getState().displayedShareUrl).toBe(null);
-		});
-
-		it("should manage route info errors correctly", () => {
-			const store = useRoutingStore.getState();
-
-			store.setShowRouteInfoError(true);
-			store.setRouteInfoErrorMessage("Failed to calculate route");
-
-			const state = useRoutingStore.getState();
-			expect(state.showRouteInfoError).toBe(true);
-			expect(state.routeInfoErrorMessage).toBe("Failed to calculate route");
-		});
-
-		it("should clear share state correctly", () => {
-			const store = useRoutingStore.getState();
-
-			store.setShareNotification("Test notification");
-			store.setDisplayedShareUrl("https://example.com");
-			store.setShowRouteInfoError(true);
-			store.setRouteInfoErrorMessage("Test error");
-
-			store.clearShareState();
-
-			const state = useRoutingStore.getState();
-			expect(state.shareNotification).toBe("");
-			expect(state.displayedShareUrl).toBe(null);
-			expect(state.showRouteInfoError).toBe(false);
-			expect(state.routeInfoErrorMessage).toBe("");
 		});
 	});
 });

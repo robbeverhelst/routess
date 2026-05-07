@@ -1,6 +1,8 @@
-import { Property } from "@mikro-orm/core";
+import { OptionalProps, Property } from "@mikro-orm/core";
 
 export abstract class BaseEntity {
+	[OptionalProps]?: "createdAt" | "updatedAt" | "deletedAt";
+
 	@Property()
 	createdAt = new Date();
 

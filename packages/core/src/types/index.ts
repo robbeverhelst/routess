@@ -8,11 +8,7 @@ export interface Waypoint {
 	coord: Coordinate;
 	type: WaypointType;
 	name?: string;
-}
-
-export interface WaypointHistory {
-	waypoints: Waypoint[];
-	timestamp: number;
+	timestamp?: string;
 }
 
 // Map style types

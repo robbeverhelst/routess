@@ -3,9 +3,6 @@ node_modules
 **/.old_modules-*
 .git
 .github
-.turbo
-**/.turbo
-dist
 **/dist
 build
 **/build
@@ -22,9 +19,6 @@ coverage
 !.env.example
 .context
 .claude
-android
-ios
-apps/native
 **/__tests__
 **/__fixtures__
 **/test-fixtures
@@ -35,6 +29,3 @@ apps/native
 *.md
 !apps/docs/**/*.md
 !apps/docs/**/*.mdx
-README.md
-CONTEXT.md
-CHANGELOG.md

@@ -55,5 +55,3 @@ await writeFile(
 	)}\n`,
 	"utf8",
 );
-
-console.log(`Generated OpenAPI reference pages in ${outputDir}`);

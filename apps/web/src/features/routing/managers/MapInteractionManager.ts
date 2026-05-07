@@ -1,5 +1,6 @@
 import type { Map as MapboxMap, MapLayerMouseEvent, MapMouseEvent, MapTouchEvent } from "mapbox-gl";
 import type { Dispatch, SetStateAction } from "react";
+// Dispatch/SetStateAction kept for setPopup which is still a React setter.
 import {
 	ROUTE_HOVER_LAYER_ID,
 	ROUTE_LAYER_ID,
@@ -8,11 +9,7 @@ import {
 	updateDragLinesLayer,
 	WAYPOINTS_LAYER_ID,
 } from "@/features/routing/managers/MapLayerManager";
-import {
-	addWaypoint,
-	insertWaypointAtLocation,
-	updateWaypointPositionAndRecalculate as updateWaypointPosition,
-} from "@/features/routing/managers/WaypointManager";
+import type { RouteDraftEditor } from "@/features/routing/RouteDraftEditor";
 import { Logger } from "@/lib/logger";
 import { useRoutingStore } from "@/stores/routingStore";
 import type { Coordinate } from "@/types/map";
@@ -97,12 +94,8 @@ const buildDragLineFeatures = (
 
 export const initializeMapInteractions = (
 	map: MapboxMap,
-	accessToken: string,
-	setRouteDistance: Dispatch<SetStateAction<string>>,
-	setRouteDuration: Dispatch<SetStateAction<string>>,
-	setHasRoute: Dispatch<SetStateAction<boolean>>,
+	editor: RouteDraftEditor,
 	setPopup: Dispatch<SetStateAction<PopupInfo | null>>,
-	handleWaypointError: (message: string | null) => void,
 	isMapLockedRef: { current: boolean },
 ): (() => void) => {
 	const mapCanvas = map.getCanvas();
@@ -235,37 +228,17 @@ export const initializeMapInteractions = (
 		const nextCoord = [...state.currentLngLat] as Coordinate;
 
 		try {
-			await updateWaypointPosition(
-				map,
-				waypointIndex,
-				nextCoord,
-				accessToken,
-				setRouteDistance,
-				setRouteDuration,
-				setHasRoute,
-				handleWaypointError,
-				isMapLockedRef.current,
-			);
+			await editor.moveWaypoint(waypointIndex, nextCoord);
 		} finally {
 			resetDragState();
 		}
 	};
 
 	const insertAndStartDrag = async (coord: Coordinate, mode: DragMode) => {
-		const result = await insertWaypointAtLocation(
-			map,
-			coord,
-			accessToken,
-			setRouteDistance,
-			setRouteDuration,
-			setHasRoute,
-			handleWaypointError,
-			isMapLockedRef.current,
-			{ skipRouteCalcAndSnapshot: true },
-		);
+		const result = await editor.insertWaypointOnRoute(coord, { skipRouteCalc: true });
 
 		if (!result.success || typeof result.newIndex !== "number") {
-			Logger.warn("[MapInteractionManager] Failed to insert waypoint on route for dragging.", result.error);
+			Logger.warn("[MapInteractionManager] Failed to insert waypoint on route for dragging.", result.message);
 			return;
 		}
 
@@ -304,19 +277,9 @@ export const initializeMapInteractions = (
 		}
 
 		setPopup(null);
-		const success = await addWaypoint(
-			map,
-			[event.lngLat.lng, event.lngLat.lat],
-			"routed",
-			accessToken,
-			setRouteDistance,
-			setRouteDuration,
-			setHasRoute,
-			handleWaypointError,
-			isMapLockedRef.current,
-		);
+		const result = await editor.addWaypoint([event.lngLat.lng, event.lngLat.lat], "routed");
 
-		if (!success) {
+		if (!result.success) {
 			Logger.warn("[MapInteractionManager] Waypoint addition failed - action cancelled");
 		}
 	};

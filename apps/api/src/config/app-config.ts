@@ -20,6 +20,7 @@ export interface AppConfig {
 		jwtExpiresIn: string;
 		googleClientId: string;
 		sessionTtlMs: number;
+		cookieName: string;
 	};
 	database: {
 		host: string;
@@ -50,6 +51,7 @@ const DEFAULTS = {
 	frontendUrl: "http://localhost:5173",
 	jwtExpiresIn: "7d",
 	sessionTtlDays: 7,
+	sessionCookieName: "routess_session",
 	metricsPath: "/metrics",
 	metricsPort: 9464,
 };
@@ -98,6 +100,14 @@ function parseStringList(...values: Array<string | undefined>): string[] {
 	];
 }
 
+function requireProductionValue(name: string, value: string | undefined): string {
+	if (!value?.trim()) {
+		throw new Error(`${name} must be set when NODE_ENV=production`);
+	}
+
+	return value;
+}
+
 export function loadEnvironment(): void {
 	if (isEnvironmentLoaded) {
 		return;
@@ -127,6 +137,9 @@ export function getAppConfig(): AppConfig {
 	const isTest = nodeEnv === "test";
 	const isDevelopment = !isProduction && !isTest;
 	const sessionTtlMs = parseInteger(process.env.SESSION_TTL_DAYS, DEFAULTS.sessionTtlDays) * 24 * 60 * 60 * 1000;
+	const jwtSecret = isProduction
+		? requireProductionValue("JWT_SECRET", process.env.JWT_SECRET)
+		: process.env.JWT_SECRET || "development-only-secret-change-me";
 	const explicitFrontendUrls = parseStringList(process.env.FRONTEND_URLS);
 	const fallbackFrontendUrls = parseStringList(process.env.FRONTEND_URL);
 	const allowedFrontendUrls =
@@ -150,10 +163,11 @@ export function getAppConfig(): AppConfig {
 			frontendUrls: allowedFrontendUrls,
 		},
 		auth: {
-			jwtSecret: process.env.JWT_SECRET || "development-only-secret-change-me",
+			jwtSecret,
 			jwtExpiresIn: process.env.JWT_EXPIRES_IN || DEFAULTS.jwtExpiresIn,
 			googleClientId: process.env.GOOGLE_CLIENT_ID || "",
 			sessionTtlMs,
+			cookieName: process.env.SESSION_COOKIE_NAME || DEFAULTS.sessionCookieName,
 		},
 		database: {
 			host: process.env.DB_HOST || "localhost",

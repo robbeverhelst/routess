@@ -60,14 +60,17 @@ jobs:
       - name: Format & lint
         run: bunx biome check .
 
+      - name: Build packages
+        run: bun run --filter './packages/*' build
+
       - name: Type-check
         run: bun run --filter '*' check-types
 
       - name: Test
         run: bun run --filter './apps/api' --filter './apps/web' --filter './packages/*' test
 
-      - name: Build
-        run: bun run --filter './packages/*' build && bun run --filter './apps/*' build
+      - name: Build apps
+        run: bun run --filter './apps/*' build
 
   helm-validate:
     runs-on: arc-routess

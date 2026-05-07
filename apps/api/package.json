@@ -56,6 +56,7 @@
 		"@opentelemetry/exporter-trace-otlp-http": "^0.217.0",
 		"@opentelemetry/sdk-metrics": "^2.0.1",
 		"@opentelemetry/sdk-node": "^0.217.0",
+		"@routess/core": "workspace:*",
 		"bcryptjs": "^3.0.2",
 		"class-transformer": "^0.5.1",
 		"class-validator": "^0.15.0",

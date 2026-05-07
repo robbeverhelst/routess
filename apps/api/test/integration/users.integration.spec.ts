@@ -60,14 +60,14 @@ describe("Users Integration Tests", () => {
 			const route1 = orm.em.create(Route, {
 				name: "Route 1",
 				user: testUser,
-				waypoints: [{ lat: 52.52, lng: 13.405, type: "routed" }],
+				waypoints: [{ coord: [13.405, 52.52], type: "routed" }],
 				distance: 5000,
 			});
 
 			const route2 = orm.em.create(Route, {
 				name: "Route 2",
 				user: testUser,
-				waypoints: [{ lat: 52.53, lng: 13.415, type: "routed" }],
+				waypoints: [{ coord: [13.415, 52.53], type: "routed" }],
 				distance: 3000,
 			});
 
@@ -124,7 +124,7 @@ describe("Users Integration Tests", () => {
 			const route = orm.em.create(Route, {
 				name: "Route 1",
 				user: testUser,
-				waypoints: [{ lat: 52.52, lng: 13.405, type: "routed" }],
+				waypoints: [{ coord: [13.405, 52.52], type: "routed" }],
 				distance: 5000,
 			});
 			await orm.em.persistAndFlush(route);

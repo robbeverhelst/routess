@@ -6,127 +6,84 @@ import { initializeMapInteractions } from "@/features/routing/managers/MapIntera
 import { applyMapPalette, initializeSourcesAndLayers } from "@/features/routing/managers/MapLayerManager";
 import { attachMapViewAdapter } from "@/features/routing/managers/MapViewAdapter";
 import { readMapPalette, subscribeMapPalette } from "@/features/routing/managers/mapPalette";
-import { loadSharedRouteIntoMap } from "@/features/routing/services/RouteIOService";
+import { createRouteDraftEditor, type RouteDraftEditor } from "@/features/routing/RouteDraftEditor";
 import { Logger } from "@/lib/logger";
-import { useRoutingStore } from "@/stores/routingStore";
+import { useToastStore } from "@/stores/toastStore";
 
 interface UseMapInitializationProps {
 	mapboxToken: string;
-	setRouteDistance: Dispatch<SetStateAction<string>>;
-	setRouteDuration: Dispatch<SetStateAction<string>>;
-	setHasRoute: Dispatch<SetStateAction<boolean>>;
 	setPopup: Dispatch<SetStateAction<MIMPopupInfo | null>>;
+	setEditor: (editor: RouteDraftEditor | null) => void;
 	handleWaypointError: (message: string | null) => void;
 	isMapLockedRef: { current: boolean };
 	currentLightPreset: string;
 	routeId?: string;
-	handleRouteInfoError: (message: string) => void;
 }
 
 export const useMapInitialization = ({
 	mapboxToken,
-	setRouteDistance,
-	setRouteDuration,
-	setHasRoute,
 	setPopup,
+	setEditor,
 	handleWaypointError,
 	isMapLockedRef,
 	currentLightPreset,
 	routeId,
-	handleRouteInfoError,
 }: UseMapInitializationProps) => {
+	const pushToast = useToastStore((s) => s.push);
 	const routingDisposerRef = useRef<(() => void) | null>(null);
 	const mapViewAdapterDisposerRef = useRef<(() => void) | null>(null);
 	const paletteDisposerRef = useRef<(() => void) | null>(null);
 	const routeInitTimeoutRef = useRef<number | null>(null);
 
-	// Handle map load
 	const handleMapLoad = useCallback(
 		async (event: { target: MapboxMap }) => {
 			Logger.info("[useMapInitialization] Map loaded, setting up routing");
 			const map = event.target;
 
-			// Initialize map sources and layers first, using current theme palette
 			const initialPalette = readMapPalette();
 			initializeSourcesAndLayers(map, initialPalette);
 
-			// Re-apply paint when the redesign theme or accent changes at runtime
 			paletteDisposerRef.current?.();
 			paletteDisposerRef.current = subscribeMapPalette((palette) => {
 				applyMapPalette(map, palette);
 			});
 
-			// Subscribe layers to the routing store so they reconcile on
-			// every store mutation. Must run before the route-restore step
-			// below so the initial paint comes from the adapter.
 			mapViewAdapterDisposerRef.current = attachMapViewAdapter(map);
 
-			// Initialize map interactions (click handlers, etc.)
-			const disposer = initializeMapInteractions(
+			const editor = createRouteDraftEditor({
 				map,
-				mapboxToken,
-				setRouteDistance,
-				setRouteDuration,
-				setHasRoute,
-				setPopup,
-				handleWaypointError,
-				isMapLockedRef,
-			);
+				accessToken: mapboxToken,
+				onError: (message) => handleWaypointError(message),
+			});
+			setEditor(editor);
 
-			// Store the disposer for cleanup
-			routingDisposerRef.current = disposer;
+			routingDisposerRef.current = initializeMapInteractions(map, editor, setPopup, isMapLockedRef);
 
-			// Apply light preset immediately
 			map.setConfigProperty("basemap", "lightPreset", currentLightPreset);
 
 			Logger.info("[useMapInitialization] Routing setup complete");
 
 			// Restore UI state from the persisted store if a route exists
-			// (the adapter handles map layers automatically).
-			const currentState = useRoutingStore.getState();
-			if (currentState.waypoints.length > 0 && currentState.routePath.length > 0) {
-				setRouteDistance(currentState.routeDistance);
-				setRouteDuration(currentState.routeDuration);
-				setHasRoute(currentState.hasRoute);
-			}
+			// (the adapter handles map layers automatically). The editor reads
+			// distance/duration/hasRoute from the same store, so nothing else
+			// needs syncing here.
 
 			const urlParams = new URLSearchParams(window.location.search);
 			const encodedRoute = urlParams.get("route") || routeId;
 
 			if (encodedRoute) {
 				Logger.info("[useMapInitialization] Found shared route data, attempting to load...");
-
-				const result = await loadSharedRouteIntoMap({
-					map,
-					accessToken: mapboxToken,
-					encodedRoute,
-					setRouteDistance,
-					setRouteDuration,
-					setHasRoute,
-				});
-
+				const result = await editor.loadFromShareLink(encodedRoute);
 				if (!result.success) {
-					handleRouteInfoError(result.message || "Failed to load shared route.");
+					pushToast({ kind: "danger", title: result.message || "Failed to load shared route." });
 				} else if (urlParams.get("route")) {
 					window.history.replaceState({}, document.title, window.location.pathname);
 				}
 			}
 		},
-		[
-			mapboxToken,
-			setRouteDistance,
-			setRouteDuration,
-			setHasRoute,
-			setPopup,
-			handleWaypointError,
-			isMapLockedRef,
-			currentLightPreset,
-			routeId,
-			handleRouteInfoError,
-		],
+		[mapboxToken, setPopup, setEditor, handleWaypointError, isMapLockedRef, currentLightPreset, routeId, pushToast],
 	);
 
-	// Clean up the timeout when component unmounts
 	useEffect(() => {
 		return () => {
 			if (routeInitTimeoutRef.current) {

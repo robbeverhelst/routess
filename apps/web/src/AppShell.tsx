@@ -3,6 +3,8 @@ import { lazy, type ReactNode, Suspense, useEffect, useRef, useState } from "rea
 import { useRouteSurfaceSync } from "@/features/routing/services/useSurfaceBreakdown";
 import { apiService } from "@/lib/api";
 import { useAuthStatus } from "@/lib/api-queries";
+import { emitAppEvent, onAppEvent } from "@/lib/app-events";
+import { hasStoredUser } from "@/lib/auth-state";
 import { type SupportedLanguage, t } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
 import { queryKeys } from "@/lib/query-client";
@@ -71,8 +73,8 @@ const SCREEN_TITLE_KEYS: Record<RedesignContext, string> = {
 	settings: "nav.settings",
 };
 
-function screenTitle(context: RedesignContext, language: SupportedLanguage): string {
-	return t(SCREEN_TITLE_KEYS[context], language);
+function screenTitle(context: RedesignContext, _language: SupportedLanguage): string {
+	return t(SCREEN_TITLE_KEYS[context]);
 }
 
 interface AppShellProps {
@@ -198,7 +200,7 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 			// sign-in/sign-out. Without this, the cached { isAuthenticated: true }
 			// lingers and the UI never reflects a sign-out.
 			queryClient.invalidateQueries({ queryKey: queryKeys.auth.session() });
-			const stillSignedIn = !!localStorage.getItem("access_token");
+			const stillSignedIn = hasStoredUser();
 			if (!stillSignedIn) {
 				setSkippedAuth(false);
 				setAuthView("login");
@@ -232,11 +234,11 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 			setContext("social");
 		};
 		const onExportAll = async () => {
-			if (!localStorage.getItem("access_token")) {
+			if (!hasStoredUser()) {
 				pushToast({
 					kind: "info",
-					title: t("account.signInToExport", language),
-					body: t("account.exportNeedsAuth", language),
+					title: t("account.signInToExport"),
+					body: t("account.exportNeedsAuth"),
 				});
 				return;
 			}
@@ -258,42 +260,38 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 				URL.revokeObjectURL(url);
 				pushToast({
 					kind: "success",
-					title: t("account.exportReady", language),
+					title: t("account.exportReady"),
 					body:
 						routes.length === 1
-							? t("account.downloadedSingular", language, { count: String(routes.length) })
-							: t("account.downloadedPlural", language, { count: String(routes.length) }),
+							? t("account.downloadedSingular", { count: String(routes.length) })
+							: t("account.downloadedPlural", { count: String(routes.length) }),
 				});
 			} catch (err) {
 				Logger.error("[AppShell] export-all-data failed", err);
 				pushToast({
 					kind: "danger",
-					title: t("account.exportFailed", language),
-					body: t("account.exportFailedSub", language),
+					title: t("account.exportFailed"),
+					body: t("account.exportFailedSub"),
 				});
 			}
 		};
-		window.addEventListener("routess:open-account", onOpenAccount);
-		window.addEventListener("routess:open-profile", onOpenProfile);
-		window.addEventListener("routess:open-login", onOpenLogin);
-		window.addEventListener("routess:open-signup", onOpenSignup);
-		window.addEventListener("routess:open-discover", onOpenDiscover);
-		window.addEventListener("routess:open-explore", onOpenDiscover);
-		window.addEventListener("routess:open-social", onOpenSocial);
-		window.addEventListener("routess:open-activity", onOpenSocial);
-		window.addEventListener("routess:export-all-data", onExportAll);
+		const unsubscribers = [
+			onAppEvent("routess:open-account", onOpenAccount),
+			onAppEvent("routess:open-profile", onOpenProfile),
+			onAppEvent("routess:open-login", onOpenLogin),
+			onAppEvent("routess:open-signup", onOpenSignup),
+			onAppEvent("routess:open-discover", onOpenDiscover),
+			onAppEvent("routess:open-explore", onOpenDiscover),
+			onAppEvent("routess:open-social", onOpenSocial),
+			onAppEvent("routess:open-activity", onOpenSocial),
+			onAppEvent("routess:export-all-data", () => void onExportAll()),
+		];
 		return () => {
-			window.removeEventListener("routess:open-account", onOpenAccount);
-			window.removeEventListener("routess:open-profile", onOpenProfile);
-			window.removeEventListener("routess:open-login", onOpenLogin);
-			window.removeEventListener("routess:open-signup", onOpenSignup);
-			window.removeEventListener("routess:open-discover", onOpenDiscover);
-			window.removeEventListener("routess:open-explore", onOpenDiscover);
-			window.removeEventListener("routess:open-social", onOpenSocial);
-			window.removeEventListener("routess:open-activity", onOpenSocial);
-			window.removeEventListener("routess:export-all-data", onExportAll);
+			for (const unsubscribe of unsubscribers) {
+				unsubscribe();
+			}
 		};
-	}, [setContext, language]);
+	}, [setContext]);
 
 	const isAuthenticated = !!auth?.isAuthenticated;
 	const authResolving = authLoading;
@@ -379,7 +377,7 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 						zIndex: 100,
 					}}
 				>
-					{t("appshell.newHere", language)}
+					{t("appshell.newHere")}
 				</button>
 				<ToastStack />
 			</>,
@@ -445,7 +443,7 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 						zIndex: 200,
 					}}
 				>
-					{t("appshell.backToApp", language)}
+					{t("appshell.backToApp")}
 				</button>
 				<ToastStack />
 			</div>
@@ -515,14 +513,14 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 			<span style={{ fontSize: 15, fontWeight: 600, letterSpacing: -0.2 }}>{screenTitle(context, language)}</span>
 			{context === "plan" && (
 				<Badge variant="accent" dot>
-					{t("drawer.activeRoute", language)}
+					{t("drawer.activeRoute")}
 				</Badge>
 			)}
 			<div style={{ flex: 1 }} />
-			<IconBtn title={t("appshell.openPalette", language)} onClick={() => openModal("palette")}>
+			<IconBtn title={t("appshell.openPalette")} onClick={() => openModal("palette")}>
 				<I.command size={16} />
 			</IconBtn>
-			<IconBtn title={t("appshell.collapsePanel", language)} onClick={togglePanel}>
+			<IconBtn title={t("appshell.collapsePanel")} onClick={togglePanel}>
 				<I.chevronL size={16} />
 			</IconBtn>
 		</header>
@@ -555,18 +553,18 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 		<MapToolbar
 			canUndo={canUndo}
 			canRedo={canRedo}
-			onUndo={() => window.dispatchEvent(new CustomEvent("routess:undo"))}
-			onRedo={() => window.dispatchEvent(new CustomEvent("routess:redo"))}
-			onRemoveRoute={() => window.dispatchEvent(new CustomEvent("routess:reset-route"))}
+			onUndo={() => emitAppEvent("routess:undo")}
+			onRedo={() => emitAppEvent("routess:redo")}
+			onRemoveRoute={() => emitAppEvent("routess:reset-route")}
 			hasRoute={hasRoute}
 			isLocked={isLocked}
 			onLock={() => setIsLocked(!isLocked)}
 			onSearch={() => openModal("search")}
-			onLocate={() => window.dispatchEvent(new CustomEvent("routess:locate"))}
+			onLocate={() => emitAppEvent("routess:locate")}
 			onLayers={() => (overlay === "layers" ? closeOverlay() : openOverlay("layers"))}
-			onFocusRoute={() => window.dispatchEvent(new CustomEvent("routess:focus-route"))}
-			onZoomIn={() => window.dispatchEvent(new CustomEvent("routess:zoom-in"))}
-			onZoomOut={() => window.dispatchEvent(new CustomEvent("routess:zoom-out"))}
+			onFocusRoute={() => emitAppEvent("routess:focus-route")}
+			onZoomIn={() => emitAppEvent("routess:zoom-in")}
+			onZoomOut={() => emitAppEvent("routess:zoom-out")}
 			isMobile={isMobile}
 		/>
 	);

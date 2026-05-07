@@ -146,35 +146,6 @@ export const validateWaypoints = (waypoints: unknown): ValidationResult => {
 };
 
 /**
- * Validates direct flags array
- */
-export const validateDirectFlags = (directFlags: unknown, waypointCount: number): ValidationResult => {
-	const errors: string[] = [];
-	const warnings: string[] = [];
-
-	if (!Array.isArray(directFlags)) {
-		errors.push("Direct flags must be an array");
-		return { isValid: false, errors, warnings };
-	}
-
-	if (directFlags.length !== waypointCount) {
-		errors.push(`Direct flags length (${directFlags.length}) must match waypoints length (${waypointCount})`);
-	}
-
-	directFlags.forEach((flag, index) => {
-		if (typeof flag !== "boolean") {
-			errors.push(`Direct flag ${index} must be a boolean, got ${typeof flag}`);
-		}
-	});
-
-	return {
-		isValid: errors.length === 0,
-		errors,
-		warnings,
-	};
-};
-
-/**
  * Validates route distance
  */
 export const validateRouteDistance = (distance: number): ValidationResult => {
@@ -238,7 +209,6 @@ export const validateRouteDuration = (duration: number): ValidationResult => {
  */
 export const validateRoute = (route: {
 	waypoints: unknown;
-	directFlags?: unknown;
 	routePath?: unknown;
 	routeDistance?: unknown;
 	routeDuration?: unknown;
@@ -250,16 +220,6 @@ export const validateRoute = (route: {
 	const waypointsResult = validateWaypoints(route.waypoints);
 	errors.push(...waypointsResult.errors);
 	warnings.push(...waypointsResult.warnings);
-
-	// Get waypoint count for other validations
-	const waypointCount = Array.isArray(route.waypoints) ? route.waypoints.length : 0;
-
-	// Validate direct flags if provided
-	if (route.directFlags !== undefined) {
-		const directFlagsResult = validateDirectFlags(route.directFlags, waypointCount);
-		errors.push(...directFlagsResult.errors);
-		warnings.push(...directFlagsResult.warnings);
-	}
 
 	// Validate route path if provided
 	if (route.routePath !== undefined) {

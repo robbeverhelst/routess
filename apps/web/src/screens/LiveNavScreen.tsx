@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { t } from "@/lib/i18n";
-import { useUiStore } from "@/stores/uiStore";
+import { emitAppEvent } from "@/lib/app-events";
+import { useT } from "@/lib/i18n";
 import { I } from "../components/icons";
 import { MapBackdrop } from "../components/MapBackdrop";
 import { Btn, IconBtn, RDS_COLORS, SecTitle, Toggle } from "../components/primitives";
@@ -10,25 +10,25 @@ export function LiveNavScreen({ onClose }: { onClose?: () => void }) {
 	const [voiceGuidance, setVoiceGuidance] = useState(true);
 	const [speedAlerts, setSpeedAlerts] = useState(false);
 	const [muted, setMuted] = useState(false);
-	const language = useUiStore((s) => s.language);
+	const t = useT();
 
 	const STATS = [
-		{ label: t("nav.remaining", language), value: "4.7", unit: "km" },
-		{ label: t("nav.eta", language), value: "11:42", unit: "" },
-		{ label: t("nav.speed", language), value: "24", unit: "km/h" },
-		{ label: t("nav.hr", language), value: "142", unit: "bpm" },
+		{ label: t("nav.remaining"), value: "4.7", unit: "km" },
+		{ label: t("nav.eta"), value: "11:42", unit: "" },
+		{ label: t("nav.speed"), value: "24", unit: "km/h" },
+		{ label: t("nav.hr"), value: "142", unit: "bpm" },
 	];
 
 	const handleShare = () => {
-		window.dispatchEvent(new CustomEvent("routess:share-route"));
+		emitAppEvent("routess:share-route");
 	};
 
 	const handleExportGpx = () => {
-		window.dispatchEvent(new CustomEvent("routess:export-gpx"));
+		emitAppEvent("routess:export-gpx");
 	};
 
 	const handleReroute = () => {
-		window.dispatchEvent(new CustomEvent("routess:reroute"));
+		emitAppEvent("routess:reroute");
 	};
 
 	return (
@@ -82,11 +82,11 @@ export function LiveNavScreen({ onClose }: { onClose?: () => void }) {
 							240 m
 						</div>
 						<div style={{ fontSize: 14, opacity: 0.92, marginTop: 4 }}>
-							{t("nav.turnRight", language, { street: "Schelde dijkpad" })}
+							{t("nav.turnRight", { street: "Schelde dijkpad" })}
 						</div>
 					</div>
 					<IconBtn
-						title={t("nav.voiceOptions", language)}
+						title={t("nav.voiceOptions")}
 						pressed={voicePanelOpen}
 						onClick={() => setVoicePanelOpen((v) => !v)}
 						style={{ width: 40, height: 40, color: RDS_COLORS.accentFg }}
@@ -107,11 +107,9 @@ export function LiveNavScreen({ onClose }: { onClose?: () => void }) {
 						boxShadow: "var(--rds-shadow-sm)",
 					}}
 				>
-					<SecTitle>{t("nav.then", language)}</SecTitle>
+					<SecTitle>{t("nav.then")}</SecTitle>
 					<I.arrowUp size={14} />
-					<div style={{ fontSize: 13, color: RDS_COLORS.fgMuted }}>
-						{t("nav.continue", language, { distance: "1.4 km" })}
-					</div>
+					<div style={{ fontSize: 13, color: RDS_COLORS.fgMuted }}>{t("nav.continue", { distance: "1.4 km" })}</div>
 				</div>
 				{voicePanelOpen && (
 					<div
@@ -127,13 +125,13 @@ export function LiveNavScreen({ onClose }: { onClose?: () => void }) {
 							gap: 10,
 						}}
 					>
-						<SecTitle>{t("nav.voiceOptions", language)}</SecTitle>
+						<SecTitle>{t("nav.voiceOptions")}</SecTitle>
 						<div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-							<span style={{ fontSize: 13, flex: 1 }}>{t("nav.voiceGuidance", language)}</span>
+							<span style={{ fontSize: 13, flex: 1 }}>{t("nav.voiceGuidance")}</span>
 							<Toggle on={voiceGuidance} onChange={setVoiceGuidance} />
 						</div>
 						<div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-							<span style={{ fontSize: 13, flex: 1 }}>{t("nav.speedAlerts", language)}</span>
+							<span style={{ fontSize: 13, flex: 1 }}>{t("nav.speedAlerts")}</span>
 							<Toggle on={speedAlerts} onChange={setSpeedAlerts} />
 						</div>
 					</div>
@@ -183,20 +181,20 @@ export function LiveNavScreen({ onClose }: { onClose?: () => void }) {
 					</div>
 					<div style={{ display: "flex", gap: 8, padding: "0 18px 18px", flexWrap: "wrap" }}>
 						<Btn onClick={() => setMuted((m) => !m)} variant={muted ? "primary" : undefined}>
-							<I.bell size={14} /> {muted ? t("nav.unmute", language) : t("nav.mute", language)}
+							<I.bell size={14} /> {muted ? t("nav.unmute") : t("nav.mute")}
 						</Btn>
 						<Btn onClick={handleReroute}>
-							<I.layers size={14} /> {t("nav.reroute", language)}
+							<I.layers size={14} /> {t("nav.reroute")}
 						</Btn>
 						<Btn onClick={handleShare}>
-							<I.share size={14} /> {t("nav.share", language)}
+							<I.share size={14} /> {t("nav.share")}
 						</Btn>
 						<Btn onClick={handleExportGpx}>
-							<I.download size={14} /> {t("nav.exportGpx", language)}
+							<I.download size={14} /> {t("nav.exportGpx")}
 						</Btn>
 						<div style={{ flex: 1 }} />
 						<Btn variant="danger" onClick={onClose}>
-							{t("nav.end", language)}
+							{t("nav.end")}
 						</Btn>
 					</div>
 				</div>

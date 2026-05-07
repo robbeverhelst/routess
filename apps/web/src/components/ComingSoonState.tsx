@@ -1,6 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
-import { t } from "@/lib/i18n";
-import { useUiStore } from "@/stores/uiStore";
+import { useT } from "@/lib/i18n";
 import { I, type IconKey } from "./icons";
 import { RDS_COLORS } from "./primitives";
 
@@ -14,7 +13,7 @@ interface ComingSoonStateProps {
 
 export function ComingSoonState({ icon = "compass", title, body, style, action }: ComingSoonStateProps) {
 	const Icon = I[icon];
-	const language = useUiStore((s) => s.language);
+	const t = useT();
 	return (
 		<div
 			style={{
@@ -60,7 +59,7 @@ export function ComingSoonState({ icon = "compass", title, body, style, action }
 					color: RDS_COLORS.accent,
 				}}
 			>
-				{t("common.comingSoon", language)}
+				{t("common.comingSoon")}
 			</div>
 			{action}
 		</div>

@@ -1,5 +1,4 @@
-import { t } from "@/lib/i18n";
-import { useUiStore } from "@/stores/uiStore";
+import { useT } from "@/lib/i18n";
 import { I } from "./icons";
 import { Btn, RDS_COLORS, SecTitle } from "./primitives";
 
@@ -10,7 +9,7 @@ export function EmptyActivity({
 	onStartRecording?: () => void;
 	onConnect?: () => void;
 }) {
-	const language = useUiStore((s) => s.language);
+	const t = useT();
 	return (
 		<div
 			style={{
@@ -37,7 +36,7 @@ export function EmptyActivity({
 				>
 					<I.activity size={36} />
 				</div>
-				<h3 style={{ margin: 0, fontSize: 17, fontWeight: 600 }}>{t("empty.nothing.title", language)}</h3>
+				<h3 style={{ margin: 0, fontSize: 17, fontWeight: 600 }}>{t("empty.nothing.title")}</h3>
 				<p
 					style={{
 						fontSize: 13,
@@ -46,14 +45,14 @@ export function EmptyActivity({
 						lineHeight: 1.55,
 					}}
 				>
-					{t("empty.nothing.body", language)}
+					{t("empty.nothing.body")}
 				</p>
 				<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
 					<Btn variant="primary" style={{ width: "100%" }} onClick={onStartRecording}>
-						<I.play size={12} /> {t("empty.startRecording", language)}
+						<I.play size={12} /> {t("empty.startRecording")}
 					</Btn>
 					<Btn style={{ width: "100%" }} onClick={onConnect} disabled>
-						<I.refresh size={14} /> {t("empty.connectGarmin", language)}
+						<I.refresh size={14} /> {t("empty.connectGarmin")}
 					</Btn>
 				</div>
 				<div
@@ -66,7 +65,7 @@ export function EmptyActivity({
 						color: RDS_COLORS.fgSubtle,
 					}}
 				>
-					{t("empty.orPrefix", language)}{" "}
+					{t("empty.orPrefix")}{" "}
 					<button
 						type="button"
 						style={{
@@ -79,9 +78,9 @@ export function EmptyActivity({
 							cursor: "pointer",
 						}}
 					>
-						{t("empty.uploadPast", language)}
+						{t("empty.uploadPast")}
 					</button>{" "}
-					{t("empty.bulkImportSuffix", language)}
+					{t("empty.bulkImportSuffix")}
 				</div>
 			</div>
 		</div>
@@ -97,7 +96,7 @@ export function EmptySearch({
 	suggestions: string[];
 	onSuggest: (s: string) => void;
 }) {
-	const language = useUiStore((s) => s.language);
+	const t = useT();
 	return (
 		<div
 			style={{
@@ -124,7 +123,7 @@ export function EmptySearch({
 				>
 					<I.search size={32} />
 				</div>
-				<h3 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>{t("empty.noResults", language, { query })}</h3>
+				<h3 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>{t("empty.noResults", { query })}</h3>
 				<p
 					style={{
 						fontSize: 13,
@@ -133,10 +132,10 @@ export function EmptySearch({
 						lineHeight: 1.55,
 					}}
 				>
-					{t("empty.checkSpelling", language)}
+					{t("empty.checkSpelling")}
 				</p>
 				<div style={{ display: "flex", flexDirection: "column", gap: 8, textAlign: "left" }}>
-					<SecTitle>{t("empty.tryInstead", language)}</SecTitle>
+					<SecTitle>{t("empty.tryInstead")}</SecTitle>
 					{suggestions.map((s) => (
 						<button
 							key={s}

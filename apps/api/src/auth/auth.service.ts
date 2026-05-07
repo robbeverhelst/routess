@@ -6,7 +6,7 @@ import { type AppConfig } from "../config/app-config";
 import { APP_CONFIG } from "../config/config.module";
 import { User } from "../entities/user.entity";
 import { MetricsService } from "../telemetry/metrics.service";
-import { toUserProfileDto, toUserResponseDto } from "../users/user.mapper";
+import { toUserResponseDto } from "../users/user.mapper";
 import type { AuthResponseDto, GoogleAuthDto } from "./dto";
 import { SessionService } from "./session.service";
 
@@ -93,20 +93,6 @@ export class AuthService {
 			accessToken,
 			user: toUserResponseDto(user),
 		};
-	}
-
-	async validateUserById(userId: number): Promise<User | null> {
-		return this.userRepository.findOne({ id: userId, deletedAt: null });
-	}
-
-	async getProfile(userId: number) {
-		const user = await this.userRepository.findOne({ id: userId, deletedAt: null });
-		if (!user) {
-			throw new UnauthorizedException("User not found");
-		}
-
-		const statistics = await this.sessionService.getUserStatistics(userId);
-		return toUserProfileDto(user, statistics);
 	}
 
 	async logout(jti: string): Promise<void> {

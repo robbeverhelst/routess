@@ -1,14 +1,9 @@
 import { Entity, Index, ManyToOne, PrimaryKey, Property, type Ref } from "@mikro-orm/core";
+import type { Waypoint } from "@routess/core";
 import { BaseEntity } from "./base.entity";
 import { User } from "./user.entity";
 
-export interface Waypoint {
-	lat: number;
-	lng: number;
-	type?: "routed" | "direct";
-	timestamp?: string;
-	name?: string;
-}
+export type { Waypoint } from "@routess/core";
 
 @Entity()
 @Index({ properties: ["user"] }) // Index for user-based route lookups

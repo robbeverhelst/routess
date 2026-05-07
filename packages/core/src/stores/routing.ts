@@ -1,6 +1,15 @@
 import { create } from "zustand";
 import { type PersistOptions, persist } from "zustand/middleware";
-import type { Coordinate, Logger, Waypoint, WaypointHistory, WaypointType } from "../types";
+import {
+	emptyHistory,
+	type HistoryStacks,
+	canRedo as historyCanRedo,
+	canUndo as historyCanUndo,
+	recordSnapshot,
+	redoStep,
+	undoStep,
+} from "../history";
+import type { Coordinate, Logger, Waypoint, WaypointType } from "../types";
 
 // ===== STATE & ACTIONS =====
 
@@ -24,15 +33,9 @@ export interface RouteState {
 
 	isMapLocked: boolean;
 
-	undoStack: WaypointHistory[];
-	redoStack: WaypointHistory[];
+	history: HistoryStacks<Waypoint[]>;
 	canUndo: boolean;
 	canRedo: boolean;
-
-	shareNotification: string;
-	displayedShareUrl: string | null;
-	showRouteInfoError: boolean;
-	routeInfoErrorMessage: string;
 }
 
 export interface RouteActions {
@@ -61,12 +64,6 @@ export interface RouteActions {
 	undo: () => void;
 	redo: () => void;
 	clearHistory: () => void;
-
-	setShareNotification: (message: string) => void;
-	setDisplayedShareUrl: (url: string | null) => void;
-	setShowRouteInfoError: (show: boolean) => void;
-	setRouteInfoErrorMessage: (message: string) => void;
-	clearShareState: () => void;
 }
 
 export type RoutingStore = RouteState & RouteActions;
@@ -84,49 +81,30 @@ const initialState: RouteState = {
 	elevationProfile: undefined,
 	isComputingElevation: false,
 	isMapLocked: false,
-	undoStack: [],
-	redoStack: [],
+	history: emptyHistory<Waypoint[]>(),
 	canUndo: false,
 	canRedo: false,
-	shareNotification: "",
-	displayedShareUrl: null,
-	showRouteInfoError: false,
-	routeInfoErrorMessage: "",
 };
 
 // ===== PERSISTENCE MIGRATION =====
 
 // v0 stored waypoints as Coordinate[] alongside a parallel directFlags: boolean[].
-// v1 collapses both into Waypoint[] = { coord, type }[].
-type LegacyRouteSnapshot = {
-	waypoints?: Coordinate[];
-	directFlags?: boolean[];
-	timestamp?: number;
-};
-
+// v1 collapses both into Waypoint[] = { coord, type }[]. Pre-existing undo/redo
+// stacks are dropped on migration; history is no longer persisted.
 type LegacyPersistedRoute = {
 	waypoints?: Coordinate[];
 	directFlags?: boolean[];
-	undoStack?: LegacyRouteSnapshot[];
-	redoStack?: LegacyRouteSnapshot[];
 	[key: string]: unknown;
 };
 
 const migrateWaypoints = (coords: Coordinate[] = [], flags: boolean[] = []): Waypoint[] =>
 	coords.map((coord, i) => ({ coord, type: flags[i] ? "direct" : "routed" }));
 
-const migrateSnapshot = (snap: LegacyRouteSnapshot | undefined): WaypointHistory => ({
-	waypoints: migrateWaypoints(snap?.waypoints ?? [], snap?.directFlags ?? []),
-	timestamp: snap?.timestamp ?? Date.now(),
-});
-
 const migrateLegacyPersistedState = (persisted: LegacyPersistedRoute): Partial<RouteState> => {
-	const { waypoints, directFlags, undoStack, redoStack, ...rest } = persisted;
+	const { waypoints, directFlags, undoStack: _u, redoStack: _r, ...rest } = persisted;
 	return {
 		...(rest as Partial<RouteState>),
 		waypoints: migrateWaypoints(waypoints ?? [], directFlags ?? []),
-		undoStack: (undoStack ?? []).map(migrateSnapshot),
-		redoStack: (redoStack ?? []).map(migrateSnapshot),
 	};
 };
 
@@ -140,6 +118,10 @@ export function createRoutingStore(logger: Logger) {
 			if (version >= 1) return persisted as Partial<RouteState>;
 			return migrateLegacyPersistedState((persisted ?? {}) as LegacyPersistedRoute);
 		},
+		// History (undo/redo stacks) is persisted so undo still works after a
+		// page refresh — users expect that. Bounded growth is enforced by the
+		// 50-snapshot cap inside HistoryManager.recordSnapshot, so localStorage
+		// stays small.
 		partialize: (state) => ({
 			waypoints: state.waypoints,
 			routePath: state.routePath,
@@ -150,14 +132,9 @@ export function createRoutingStore(logger: Logger) {
 			elevationLoss: state.elevationLoss,
 			elevationProfile: state.elevationProfile,
 			isMapLocked: state.isMapLocked,
-			undoStack: state.undoStack,
-			redoStack: state.redoStack,
+			history: state.history,
 			canUndo: state.canUndo,
 			canRedo: state.canRedo,
-			shareNotification: state.shareNotification,
-			displayedShareUrl: state.displayedShareUrl,
-			showRouteInfoError: state.showRouteInfoError,
-			routeInfoErrorMessage: state.routeInfoErrorMessage,
 		}),
 	};
 
@@ -270,81 +247,57 @@ export function createRoutingStore(logger: Logger) {
 				// === HISTORY ===
 				saveSnapshot: () => {
 					set((state) => {
-						const snapshot: WaypointHistory = {
-							waypoints: state.waypoints.map((wp) => ({ ...wp })),
-							timestamp: Date.now(),
-						};
-						logger.info("[RoutingStore] Saving snapshot:", snapshot.waypoints.length, "waypoints");
+						const snapshot = state.waypoints.map((wp) => ({ ...wp }));
+						const nextHistory = recordSnapshot(state.history, snapshot);
+						logger.info("[RoutingStore] Saving snapshot:", snapshot.length, "waypoints");
 						return {
-							undoStack: [...state.undoStack, snapshot],
-							redoStack: [],
-							canUndo: true,
-							canRedo: false,
+							history: nextHistory,
+							canUndo: historyCanUndo(nextHistory),
+							canRedo: historyCanRedo(nextHistory),
 						};
 					});
 				},
 
 				undo: () => {
 					set((state) => {
-						if (state.undoStack.length === 0) {
+						const current = state.waypoints.map((wp) => ({ ...wp }));
+						const step = undoStep(state.history, current);
+						if (!step) {
 							logger.warn("[RoutingStore] No actions to undo");
 							return state;
 						}
-						const previous = state.undoStack[state.undoStack.length - 1];
-						const current: WaypointHistory = {
-							waypoints: state.waypoints.map((wp) => ({ ...wp })),
-							timestamp: Date.now(),
-						};
-						logger.info("[RoutingStore] Undo: ", state.waypoints.length, "->", previous.waypoints.length, "waypoints");
+						logger.info("[RoutingStore] Undo:", state.waypoints.length, "->", step.previous.length, "waypoints");
 						return {
-							waypoints: previous.waypoints,
-							undoStack: state.undoStack.slice(0, -1),
-							redoStack: [...state.redoStack, current],
-							canUndo: state.undoStack.length > 1,
-							canRedo: true,
+							waypoints: step.previous,
+							history: step.history,
+							canUndo: historyCanUndo(step.history),
+							canRedo: historyCanRedo(step.history),
 						};
 					});
 				},
 
 				redo: () => {
 					set((state) => {
-						if (state.redoStack.length === 0) {
+						const current = state.waypoints.map((wp) => ({ ...wp }));
+						const step = redoStep(state.history, current);
+						if (!step) {
 							logger.warn("[RoutingStore] No actions to redo");
 							return state;
 						}
-						const current: WaypointHistory = {
-							waypoints: state.waypoints.map((wp) => ({ ...wp })),
-							timestamp: Date.now(),
-						};
-						const next = state.redoStack[state.redoStack.length - 1];
-						logger.info("[RoutingStore] Redo to snapshot from:", new Date(next.timestamp));
+						logger.info("[RoutingStore] Redo:", state.waypoints.length, "->", step.next.length, "waypoints");
 						return {
-							waypoints: next.waypoints,
-							undoStack: [...state.undoStack, current],
-							redoStack: state.redoStack.slice(0, -1),
-							canUndo: true,
-							canRedo: state.redoStack.length > 1,
+							waypoints: step.next,
+							history: step.history,
+							canUndo: historyCanUndo(step.history),
+							canRedo: historyCanRedo(step.history),
 						};
 					});
 				},
 
 				clearHistory: () => {
 					logger.info("[RoutingStore] Clearing history");
-					set({ undoStack: [], redoStack: [], canUndo: false, canRedo: false });
+					set({ history: emptyHistory<Waypoint[]>(), canUndo: false, canRedo: false });
 				},
-
-				// === SHARE / ERROR ===
-				setShareNotification: (message) => set({ shareNotification: message }),
-				setDisplayedShareUrl: (url) => set({ displayedShareUrl: url }),
-				setShowRouteInfoError: (show) => set({ showRouteInfoError: show }),
-				setRouteInfoErrorMessage: (message) => set({ routeInfoErrorMessage: message }),
-				clearShareState: () =>
-					set({
-						shareNotification: "",
-						displayedShareUrl: null,
-						showRouteInfoError: false,
-						routeInfoErrorMessage: "",
-					}),
 			}),
 			persistConfig,
 		),

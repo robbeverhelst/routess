@@ -1,4 +1,5 @@
-import { t } from "@/lib/i18n";
+import { emitAppEvent } from "@/lib/app-events";
+import { useT } from "@/lib/i18n";
 import { useModalsStore } from "@/stores/modalsStore";
 import {
 	DEFAULT_ROUTING_PREFERENCES,
@@ -8,7 +9,6 @@ import {
 	useRoutingPreferencesStore,
 } from "@/stores/routingPreferencesStore";
 import { useToastStore } from "@/stores/toastStore";
-import { useUiStore } from "@/stores/uiStore";
 import { I } from "../components/icons";
 import { ModalShell } from "../components/ModalShell";
 import { Btn, RDS_COLORS, Toggle } from "../components/primitives";
@@ -47,17 +47,17 @@ const PREFS: PrefRow[] = [
 export function RoutingModal() {
 	const close = useModalsStore((s) => s.closeModal);
 	const pushToast = useToastStore((s) => s.push);
-	const language = useUiStore((s) => s.language);
+	const t = useT();
 	const prefs = useRoutingPreferencesStore();
 
 	const reset = () => prefs.reset();
 
 	const apply = () => {
-		window.dispatchEvent(new CustomEvent("routess:recalculate-route"));
+		emitAppEvent("routess:recalculate-route");
 		pushToast({
 			kind: "success",
-			title: t("routing.appliedTitle", language),
-			body: t("routing.appliedBody", language),
+			title: t("routing.appliedTitle"),
+			body: t("routing.appliedBody"),
 			durationMs: 2200,
 		});
 		close();
@@ -100,8 +100,8 @@ export function RoutingModal() {
 
 	return (
 		<ModalShell
-			title={t("routing.title", language)}
-			sub={t("routing.subtitle", language)}
+			title={t("routing.title")}
+			sub={t("routing.subtitle")}
 			width={520}
 			onClose={close}
 			footer={
@@ -109,14 +109,14 @@ export function RoutingModal() {
 					<Btn
 						variant="ghost"
 						onClick={reset}
-						title={t("routing.restoreDefaults", language, { profile: DEFAULT_ROUTING_PREFERENCES.profile })}
+						title={t("routing.restoreDefaults", { profile: DEFAULT_ROUTING_PREFERENCES.profile })}
 					>
-						{t("routing.reset", language)}
+						{t("routing.reset")}
 					</Btn>
 					<div style={{ flex: 1 }} />
-					<Btn onClick={close}>{t("common.cancel", language)}</Btn>
+					<Btn onClick={close}>{t("common.cancel")}</Btn>
 					<Btn variant="primary" onClick={apply}>
-						{t("routing.apply", language)}
+						{t("routing.apply")}
 					</Btn>
 				</>
 			}
@@ -151,9 +151,9 @@ export function RoutingModal() {
 							}}
 						>
 							<Icon size={16} />
-							<div style={{ fontSize: 12.5, fontWeight: 600 }}>{t(p.labelKey, language)}</div>
+							<div style={{ fontSize: 12.5, fontWeight: 600 }}>{t(p.labelKey)}</div>
 							<div className="rds-mono" style={{ fontSize: 10, color: RDS_COLORS.fgSubtle }}>
-								{t(p.hintKey, language)}
+								{t(p.hintKey)}
 							</div>
 						</button>
 					);
@@ -192,9 +192,9 @@ export function RoutingModal() {
 							<Icon size={14} />
 						</div>
 						<div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
-							<div style={{ fontSize: 13, fontWeight: 500 }}>{t(row.labelKey, language)}</div>
+							<div style={{ fontSize: 13, fontWeight: 500 }}>{t(row.labelKey)}</div>
 							<div style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle, marginTop: 2 }}>
-								{t(row.subKey, language)}
+								{t(row.subKey)}
 								{row.slider && on && !disabled ? <span className="rds-mono"> · {prefs.climbGradient}%</span> : null}
 							</div>
 							{row.slider && on && !disabled && (
@@ -205,7 +205,7 @@ export function RoutingModal() {
 									step={1}
 									value={prefs.climbGradient}
 									onChange={(e) => prefs.setClimbGradient(Number(e.target.value))}
-									aria-label={t("routing.maxGradient", language)}
+									aria-label={t("routing.maxGradient")}
 									style={{
 										marginTop: 8,
 										width: "100%",

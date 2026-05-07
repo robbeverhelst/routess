@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
-import { t } from "@/lib/i18n";
-import { useUiStore } from "@/stores/uiStore";
+import { emitAppEvent } from "@/lib/app-events";
+import { useT } from "@/lib/i18n";
 import { I } from "../components/icons";
 import { Badge, Btn, RDS_COLORS, SecTitle } from "../components/primitives";
 
@@ -21,32 +21,32 @@ interface PhotoEntry {
 export function PostActivityScreen({ onClose }: { onClose?: () => void } = {}) {
 	const fileInputRef = useRef<HTMLInputElement | null>(null);
 	const [photos, setPhotos] = useState<PhotoEntry[]>([]);
-	const language = useUiStore((s) => s.language);
-	const [notes, setNotes] = useState(() => t("post.headwindNotes", language));
+	const t = useT();
+	const [notes, setNotes] = useState(() => t("post.headwindNotes"));
 
 	const STATS = [
-		{ label: t("post.distance", language), value: "12.4", unit: "km" },
-		{ label: t("post.time", language), value: "1:04", unit: "h" },
-		{ label: t("post.avgPace", language), value: "27.3", unit: "km/h" },
-		{ label: t("post.elev", language), value: "186", unit: "m" },
+		{ label: t("post.distance"), value: "12.4", unit: "km" },
+		{ label: t("post.time"), value: "1:04", unit: "h" },
+		{ label: t("post.avgPace"), value: "27.3", unit: "km/h" },
+		{ label: t("post.elev"), value: "186", unit: "m" },
 	];
 
 	const PRS = [
-		{ label: t("post.pr", language), value: t("post.heidestraat", language) },
-		{ label: "+1", value: t("post.achievement", language) },
-		{ label: "Top 8%", value: t("post.topPercent", language) },
+		{ label: t("post.pr"), value: t("post.heidestraat") },
+		{ label: "+1", value: t("post.achievement") },
+		{ label: "Top 8%", value: t("post.topPercent") },
 	];
 
 	const handleShare = () => {
-		window.dispatchEvent(new CustomEvent("routess:share-route"));
+		emitAppEvent("routess:share-route");
 	};
 
 	const handleExportGpx = () => {
-		window.dispatchEvent(new CustomEvent("routess:export-gpx"));
+		emitAppEvent("routess:export-gpx");
 	};
 
 	const handleDiscard = () => {
-		if (window.confirm(t("post.discardConfirm", language))) {
+		if (window.confirm(t("post.discardConfirm"))) {
 			for (const p of photos) URL.revokeObjectURL(p.url);
 			onClose?.();
 		}
@@ -73,15 +73,15 @@ export function PostActivityScreen({ onClose }: { onClose?: () => void } = {}) {
 			<div style={{ maxWidth: 720, margin: "0 auto", padding: "32px 24px 80px" }}>
 				<div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18 }}>
 					<Badge variant="accent" dot>
-						{t("post.saved", language)}
+						{t("post.saved")}
 					</Badge>
 					<span className="rds-mono" style={{ fontSize: 12, color: RDS_COLORS.fgSubtle }}>
 						Apr 28 · 09:42 → 10:51
 					</span>
 				</div>
-				<h1 style={{ fontSize: 30, fontWeight: 600, margin: 0, letterSpacing: -0.6 }}>{t("post.title", language)}</h1>
+				<h1 style={{ fontSize: 30, fontWeight: 600, margin: 0, letterSpacing: -0.6 }}>{t("post.title")}</h1>
 				<p style={{ fontSize: 14, color: RDS_COLORS.fgMuted, margin: "6px 0 0" }}>
-					{t("post.summary", language, { segment: t("post.heidestraat", language) })}
+					{t("post.summary", { segment: t("post.heidestraat") })}
 				</p>
 
 				<div
@@ -171,7 +171,7 @@ export function PostActivityScreen({ onClose }: { onClose?: () => void } = {}) {
 				</div>
 
 				<div style={{ marginTop: 24 }}>
-					<SecTitle style={{ marginBottom: 10 }}>{t("post.splits", language)}</SecTitle>
+					<SecTitle style={{ marginBottom: 10 }}>{t("post.splits")}</SecTitle>
 					<div
 						style={{
 							background: RDS_COLORS.bgPanel,
@@ -192,7 +192,7 @@ export function PostActivityScreen({ onClose }: { onClose?: () => void } = {}) {
 								}}
 							>
 								<div className="rds-mono" style={{ fontSize: 12, color: RDS_COLORS.fgSubtle, width: 28 }}>
-									{t("post.km", language, { n: s.km })}
+									{t("post.km", { n: s.km })}
 								</div>
 								<div
 									style={{
@@ -222,7 +222,7 @@ export function PostActivityScreen({ onClose }: { onClose?: () => void } = {}) {
 								</div>
 								{s.fastest && (
 									<Badge variant="accent" style={{ fontSize: 10 }}>
-										{t("post.fastest", language)}
+										{t("post.fastest")}
 									</Badge>
 								)}
 							</div>
@@ -231,7 +231,7 @@ export function PostActivityScreen({ onClose }: { onClose?: () => void } = {}) {
 				</div>
 
 				<div style={{ marginTop: 24 }}>
-					<SecTitle style={{ marginBottom: 8 }}>{t("post.notes", language)}</SecTitle>
+					<SecTitle style={{ marginBottom: 8 }}>{t("post.notes")}</SecTitle>
 					<textarea
 						value={notes}
 						onChange={(e) => setNotes(e.target.value)}
@@ -248,15 +248,13 @@ export function PostActivityScreen({ onClose }: { onClose?: () => void } = {}) {
 							outline: "none",
 							fontFamily: "inherit",
 						}}
-						placeholder={t("post.notesPlaceholder", language)}
+						placeholder={t("post.notesPlaceholder")}
 					/>
 				</div>
 
 				{photos.length > 0 && (
 					<div style={{ marginTop: 24 }}>
-						<SecTitle style={{ marginBottom: 10 }}>
-							{t("post.photos", language, { count: String(photos.length) })}
-						</SecTitle>
+						<SecTitle style={{ marginBottom: 10 }}>{t("post.photos", { count: String(photos.length) })}</SecTitle>
 						<div
 							style={{
 								display: "grid",
@@ -288,13 +286,13 @@ export function PostActivityScreen({ onClose }: { onClose?: () => void } = {}) {
 
 				<div style={{ display: "flex", gap: 8, marginTop: 24, flexWrap: "wrap" }}>
 					<Btn variant="primary" onClick={handleShare}>
-						<I.share size={14} /> {t("post.share", language)}
+						<I.share size={14} /> {t("post.share")}
 					</Btn>
 					<Btn onClick={handleExportGpx}>
-						<I.download size={14} /> {t("post.exportGpx", language)}
+						<I.download size={14} /> {t("post.exportGpx")}
 					</Btn>
 					<Btn onClick={handleAddPhotosClick}>
-						<I.zap size={14} /> {t("post.addPhotos", language)}
+						<I.zap size={14} /> {t("post.addPhotos")}
 					</Btn>
 					<input
 						ref={fileInputRef}
@@ -306,7 +304,7 @@ export function PostActivityScreen({ onClose }: { onClose?: () => void } = {}) {
 					/>
 					<div style={{ flex: 1 }} />
 					<Btn variant="ghost" onClick={handleDiscard} style={{ color: RDS_COLORS.danger }}>
-						<I.trash size={14} /> {t("post.discard", language)}
+						<I.trash size={14} /> {t("post.discard")}
 					</Btn>
 				</div>
 			</div>

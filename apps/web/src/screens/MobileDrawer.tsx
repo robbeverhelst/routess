@@ -1,4 +1,5 @@
 import { useAuthStatus } from "@/lib/api-queries";
+import { emitAppEvent } from "@/lib/app-events";
 import { type SupportedLanguage, t } from "@/lib/i18n";
 import { useModalsStore } from "@/stores/modalsStore";
 import { useToastStore } from "@/stores/toastStore";
@@ -60,20 +61,20 @@ export function MobileDrawer({ onClose }: { onClose?: () => void }) {
 			return;
 		}
 		if (item.action === "profile") {
-			window.dispatchEvent(new CustomEvent("routess:open-profile"));
+			emitAppEvent("routess:open-profile");
 			onClose?.();
 			return;
 		}
 		if (item.action === "account") {
-			window.dispatchEvent(new CustomEvent("routess:open-account"));
+			emitAppEvent("routess:open-account");
 			onClose?.();
 			return;
 		}
 		if (item.action === "achievements") {
 			pushToast({
 				kind: "info",
-				title: t("drawer.achievementsToast", language),
-				body: t("drawer.achievementsToastSub", language),
+				title: t("drawer.achievementsToast"),
+				body: t("drawer.achievementsToastSub"),
 			});
 		}
 	};
@@ -96,7 +97,7 @@ export function MobileDrawer({ onClose }: { onClose?: () => void }) {
 			/>
 			<button
 				type="button"
-				aria-label={t("drawer.closeAria", language)}
+				aria-label={t("drawer.closeAria")}
 				onClick={onClose}
 				style={{
 					position: "absolute",
@@ -132,20 +133,18 @@ export function MobileDrawer({ onClose }: { onClose?: () => void }) {
 				>
 					<UserAvatar size={44} />
 					<div style={{ display: "flex", flexDirection: "column" }}>
-						<div style={{ fontSize: 14, fontWeight: 600 }}>{user?.name ?? t("drawer.guest", language)}</div>
-						<div style={{ fontSize: 12, color: RDS_COLORS.fgSubtle }}>
-							{user?.email ?? t("drawer.notSignedIn", language)}
-						</div>
+						<div style={{ fontSize: 14, fontWeight: 600 }}>{user?.name ?? t("drawer.guest")}</div>
+						<div style={{ fontSize: 12, color: RDS_COLORS.fgSubtle }}>{user?.email ?? t("drawer.notSignedIn")}</div>
 					</div>
 					<div style={{ flex: 1 }} />
-					<IconBtn title={t("common.close", language)} onClick={onClose}>
+					<IconBtn title={t("common.close")} onClick={onClose}>
 						<I.close size={14} />
 					</IconBtn>
 				</div>
 				{NAV.map((r) => {
 					const Icon = r.icon;
 					const isActive = r.context !== undefined && r.context === activeContext;
-					const badge = r.badgeKey ? t(r.badgeKey, language) : r.badgeText;
+					const badge = r.badgeKey ? t(r.badgeKey) : r.badgeText;
 					return (
 						<button
 							key={r.labelKey}
@@ -165,7 +164,7 @@ export function MobileDrawer({ onClose }: { onClose?: () => void }) {
 							}}
 						>
 							<Icon size={16} />
-							<span style={{ fontSize: 14, fontWeight: 500, flex: 1 }}>{t(r.labelKey, language)}</span>
+							<span style={{ fontSize: 14, fontWeight: 500, flex: 1 }}>{t(r.labelKey)}</span>
 							{badge && <Badge variant={r.accent ? "accent" : "default"}>{badge}</Badge>}
 						</button>
 					);
@@ -181,10 +180,10 @@ export function MobileDrawer({ onClose }: { onClose?: () => void }) {
 				>
 					<Btn style={{ flex: 1 }} onClick={toggleTheme}>
 						{theme === "dark" ? <I.sun size={14} /> : <I.moon size={14} />}{" "}
-						{theme === "dark" ? t("drawer.theme.light", language) : t("drawer.theme.dark", language)}
+						{theme === "dark" ? t("drawer.theme.light") : t("drawer.theme.dark")}
 					</Btn>
 					<Btn style={{ flex: 1 }} onClick={handleAlerts}>
-						<I.bell size={14} /> {t("nav.alerts", language)}
+						<I.bell size={14} /> {t("nav.alerts")}
 					</Btn>
 				</div>
 			</aside>

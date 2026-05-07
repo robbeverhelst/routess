@@ -1,4 +1,4 @@
-import { t } from "@/lib/i18n";
+import { useT } from "@/lib/i18n";
 import { useModalsStore } from "@/stores/modalsStore";
 import { type RedesignContext, useUiStore } from "@/stores/uiStore";
 import { I } from "./icons";
@@ -14,8 +14,8 @@ const NAV: { key: RedesignContext; icon: React.ComponentType<{ size?: number }>;
 ];
 
 export function RailNav() {
-	const { context, setContext, theme, toggleTheme, panelCollapsed, togglePanel, setPanelCollapsed, language } =
-		useUiStore();
+	const t = useT();
+	const { context, setContext, theme, toggleTheme, panelCollapsed, togglePanel, setPanelCollapsed } = useUiStore();
 	const openOverlay = useModalsStore((s) => s.openOverlay);
 	const overlay = useModalsStore((s) => s.overlay);
 	const closeOverlay = useModalsStore((s) => s.closeOverlay);
@@ -68,7 +68,7 @@ export function RailNav() {
 								setPanelCollapsed(false);
 							}
 						}}
-						title={on ? t("rail.togglePanel", language, { label: t(n.labelKey, language) }) : t(n.labelKey, language)}
+						title={on ? t("rail.togglePanel", { label: t(n.labelKey) }) : t(n.labelKey)}
 						style={{
 							width: 36,
 							height: 36,
@@ -106,13 +106,13 @@ export function RailNav() {
 			})}
 			<div style={{ flex: 1 }} />
 			<IconBtn
-				title={t("rail.notifications", language)}
+				title={t("rail.notifications")}
 				pressed={overlay === "notifications"}
 				onClick={() => (overlay === "notifications" ? closeOverlay() : openOverlay("notifications"))}
 			>
 				<I.bell size={18} />
 			</IconBtn>
-			<IconBtn title={t("appshell.toggleTheme", language)} onClick={toggleTheme}>
+			<IconBtn title={t("appshell.toggleTheme")} onClick={toggleTheme}>
 				{theme === "dark" ? <I.sun size={18} /> : <I.moon size={18} />}
 			</IconBtn>
 			<div style={{ marginTop: 6 }}>

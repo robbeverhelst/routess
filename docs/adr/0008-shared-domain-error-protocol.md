@@ -1,0 +1,9 @@
+# Shared DomainError protocol across API and web
+
+The API and web client share a single error protocol defined in `@routess/core/errors`. The wire shape is `{ statusCode, code, message, details? }`. `code` is one of a small, stable set (`VALIDATION_FAILED`, `NOT_FOUND`, `UNAUTHORIZED`, `FORBIDDEN`, `CONFLICT`, `RATE_LIMITED`, `INTERNAL`); semantic specifics live under structured `details` rather than spawning new codes. The API uses a `DomainException` to throw coded errors; the `GlobalExceptionFilter` passes those through verbatim and infers a `code` for raw NestJS `HttpException`s. The api-client `FetchHttpClient` parses error bodies and throws `ApiDomainError` carrying the payload; the web `errorHandler.handleAPIError` derives category and severity from `code` so callers don't have to thread that context through.
+
+## Considered options
+
+- **Keep the prior `{ statusCode, timestamp, path, method, error, message[] }` shape with a `code` field bolted on** — rejected: `path`/`method`/`timestamp` are debugging noise the client already has, and `error` is derivable from `statusCode`. The cleanup point of this protocol is to stop emitting fields no one needs.
+- **One code per concrete domain failure (`INVALID_WAYPOINT_TYPE`, `DUPLICATE_ROUTE_NAME`, `SESSION_LIMIT_EXCEEDED`, …)** — rejected: codes proliferate as the domain grows and clients end up with a giant switch. Two-layer (broad code + structured `details`) keeps the code enum small and stable while still carrying full information.
+- **Translate the wire payload into a web-side error type inside the React error handler** — rejected: the api-client already knows it's parsing HTTP responses; throwing a typed `ApiDomainError` at the wire boundary keeps wire-format knowledge in one place and lets non-React callers (any future worker, mobile client) reuse it.

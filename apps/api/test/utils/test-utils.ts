@@ -27,6 +27,7 @@ export async function createTestApp(): Promise<INestApplication> {
 	configureApplication(app, getAppConfig());
 
 	await app.init();
+	await clearDatabase(app);
 	return app;
 }
 

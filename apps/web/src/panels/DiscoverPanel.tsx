@@ -1,10 +1,9 @@
-import { t } from "@/lib/i18n";
-import { useUiStore } from "@/stores/uiStore";
+import { useT } from "@/lib/i18n";
 import { ComingSoonState } from "../components/ComingSoonState";
 import { RDS_COLORS, SecTitle } from "../components/primitives";
 
 export function DiscoverPanel() {
-	const language = useUiStore((s) => s.language);
+	const t = useT();
 	return (
 		<div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
 			<div
@@ -13,14 +12,10 @@ export function DiscoverPanel() {
 					borderBottom: `1px solid ${RDS_COLORS.border}`,
 				}}
 			>
-				<SecTitle>{t("nav.discover", language)}</SecTitle>
+				<SecTitle>{t("nav.discover")}</SecTitle>
 			</div>
 			<div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
-				<ComingSoonState
-					icon="explore"
-					title={t("stub.discover.title", language)}
-					body={t("stub.discover.body", language)}
-				/>
+				<ComingSoonState icon="explore" title={t("stub.discover.title")} body={t("stub.discover.body")} />
 			</div>
 		</div>
 	);

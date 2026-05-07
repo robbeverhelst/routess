@@ -1,7 +1,9 @@
 import type { Logger } from "@routess/core";
 
 // Re-export for convenience
-export type { StorageAdapter } from "@routess/core";
+export type { Coordinate, Waypoint, WaypointType } from "@routess/core";
+
+import type { Waypoint } from "@routess/core";
 
 // API Response Types
 export type ApiActivity = "run" | "cycle" | "walk";
@@ -48,13 +50,6 @@ export interface AuthResponse {
 
 export interface GoogleAuthRequest {
 	credential: string;
-}
-
-export interface Waypoint {
-	lat: number;
-	lng: number;
-	type: "routed" | "direct";
-	name?: string;
 }
 
 export interface ApiRoute {

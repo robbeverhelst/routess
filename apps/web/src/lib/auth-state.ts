@@ -1,3 +1,5 @@
+import type { ApiUser } from "./api";
+
 const ACCESS_TOKEN_KEY = "access_token";
 const USER_KEY = "user";
 
@@ -10,6 +12,26 @@ export const clearStoredAuthState = () => {
 	localStorage.removeItem(ACCESS_TOKEN_KEY);
 	localStorage.removeItem(USER_KEY);
 };
+
+export const storeUser = (user: ApiUser) => {
+	localStorage.setItem(USER_KEY, JSON.stringify(user));
+};
+
+export const getStoredUser = (): ApiUser | null => {
+	const userJson = localStorage.getItem(USER_KEY);
+	if (!userJson) {
+		return null;
+	}
+
+	try {
+		return JSON.parse(userJson) as ApiUser;
+	} catch {
+		clearStoredAuthState();
+		return null;
+	}
+};
+
+export const hasStoredUser = () => !!localStorage.getItem(USER_KEY);
 
 export const notifyAuthStateChange = () => {
 	window.dispatchEvent(new CustomEvent("auth-change"));

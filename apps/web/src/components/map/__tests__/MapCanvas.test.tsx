@@ -3,26 +3,24 @@ import React from "react";
 import { type Mock, vi } from "vitest";
 import { useMapInitialization } from "@/components/hooks/useMapInitialization";
 import { useMapPositioning } from "@/components/hooks/useMapPositioning";
-import { useMapConfiguration } from "@/components/providers/MapConfigurationProvider";
+import { useMapViewBindings } from "@/components/hooks/useMapViewBindings";
 import { useUserLocation } from "@/components/providers/UserLocationProvider";
+import { useServiceWorker } from "@/hooks/useServiceWorker";
 import { useErrorHandler } from "@/lib/errors";
 import type { SupportedLanguage } from "@/lib/i18n";
+import { useMapViewStore } from "@/stores/mapViewStore";
+import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
+import { useRoutingStore } from "@/stores/routingStore";
 import { MapCanvas } from "../MapCanvas";
 
-// Mock all dependencies
 vi.mock("react-map-gl/mapbox", () => ({
 	__esModule: true,
 	default: React.forwardRef(
 		({ children, onLoad, style, mapStyle, initialViewState, minPitch, maxPitch }: any, ref: any) => {
-			React.useImperativeHandle(ref, () => ({
-				getMap: () => mockMapInstance,
-			}));
+			React.useImperativeHandle(ref, () => ({ getMap: () => mockMapInstance }));
 
-			// Simulate map load
 			React.useEffect(() => {
-				if (onLoad) {
-					onLoad({ target: mockMapInstance });
-				}
+				if (onLoad) onLoad({ target: mockMapInstance });
 			}, [onLoad]);
 
 			return (
@@ -41,10 +39,14 @@ vi.mock("react-map-gl/mapbox", () => ({
 	),
 }));
 
-vi.mock("@/components/providers/MapConfigurationProvider");
 vi.mock("@/components/providers/UserLocationProvider");
 vi.mock("@/components/hooks/useMapInitialization");
 vi.mock("@/components/hooks/useMapPositioning");
+vi.mock("@/components/hooks/useMapViewBindings");
+vi.mock("@/hooks/useServiceWorker");
+vi.mock("@/stores/mapViewStore");
+vi.mock("@/stores/redesignSettingsStore");
+vi.mock("@/stores/routingStore");
 vi.mock("@/lib/errors");
 vi.mock("@/components/ui/MapPopup", () => ({
 	MapPopup: ({ popupInfo }: any) => (
@@ -57,10 +59,10 @@ vi.mock("@/components/ui/SunPositionIndicator", () => ({
 	SunPositionIndicator: ({ azimuth }: any) => <div data-testid="sun-indicator">Azimuth: {azimuth}</div>,
 }));
 
-// Mock Mapbox instance
 const mockMapInstance = {
 	on: vi.fn(),
 	off: vi.fn(),
+	resize: vi.fn(),
 	remove: vi.fn(),
 	getCanvas: vi.fn(() => ({ style: { cursor: "" } })),
 	getSource: vi.fn(),
@@ -79,15 +81,22 @@ const mockMapInstance = {
 	project: vi.fn(),
 	unproject: vi.fn(),
 	getLayer: vi.fn(() => true),
+	setConfigProperty: vi.fn(),
 };
 
+// Selector-aware Zustand mock: each store's mock returns a snapshot that the
+// selector function picks values from, so component code keeps the same
+// `useStore((s) => s.field)` shape.
+function mockStoreSelector<T>(mock: Mock, snapshot: T) {
+	mock.mockImplementation((selector: ((state: T) => unknown) | undefined) =>
+		selector ? selector(snapshot) : snapshot,
+	);
+}
+
 describe("MapCanvas", () => {
-	const mockSetRouteDistance = vi.fn();
-	const mockSetRouteDuration = vi.fn();
-	const mockSetHasRoute = vi.fn();
+	const mockSetEditor = vi.fn();
 	const mockSetPopup = vi.fn();
 	const mockHandleWaypointError = vi.fn();
-	const mockHandleRouteInfoError = vi.fn();
 	const mockOnAddDirectWaypoint = vi.fn();
 	const mockOnRemoveWaypoint = vi.fn();
 	const mockOnAddWaypointOnRoute = vi.fn();
@@ -100,9 +109,7 @@ describe("MapCanvas", () => {
 		mapRef: React.createRef<any>(),
 		mapboxToken: "test-token-123456789",
 		currentLanguage: "en" as SupportedLanguage,
-		setRouteDistance: mockSetRouteDistance,
-		setRouteDuration: mockSetRouteDuration,
-		setHasRoute: mockSetHasRoute,
+		setEditor: mockSetEditor,
 		hasRoute: false,
 		popup: null,
 		setPopup: mockSetPopup,
@@ -110,41 +117,37 @@ describe("MapCanvas", () => {
 		onRemoveWaypoint: mockOnRemoveWaypoint,
 		onAddWaypointOnRoute: mockOnAddWaypointOnRoute,
 		handleWaypointError: mockHandleWaypointError,
-		handleRouteInfoError: mockHandleRouteInfoError,
 		lastKnownLocationFromStorage: null,
 		detectedRouteInLocalStorageOnInit: false,
 		lastSavedMapView: null,
 	};
 
+	const setStyleKey = (mapStyle: "streets" | "satellite" | "outdoors") => {
+		mockStoreSelector(useRedesignSettingsStore as unknown as Mock, { mapStyle });
+	};
+
 	beforeEach(() => {
 		vi.clearAllMocks();
 
-		// Mock provider values
-		(useMapConfiguration as Mock).mockReturnValue({
-			currentMapStyle: "standard",
-			currentMapStyleKey: "streets",
-			isMapLocked: false,
-			currentLightPreset: "day",
-			currentBearing: 0,
-			setCurrentBearing: mockSetCurrentBearing,
+		setStyleKey("streets");
+		mockStoreSelector(useRoutingStore as unknown as Mock, { isMapLocked: false });
+		mockStoreSelector(useMapViewStore as unknown as Mock, {
+			lightPreset: "day",
+			bearing: 0,
+			setBearing: mockSetCurrentBearing,
 			showSunDirection: false,
-			currentSunPosition: null,
-			onMapStyleLoaded: mockOnMapStyleLoaded,
+			sunPosition: null,
 		});
 
-		(useUserLocation as Mock).mockReturnValue({
-			location: null,
-			error: null,
-			isLoading: false,
-		});
+		(useMapViewBindings as Mock).mockReturnValue({ onMapStyleLoaded: mockOnMapStyleLoaded });
 
-		(useErrorHandler as Mock).mockReturnValue({
-			handleMapError: mockHandleMapError,
-		});
+		(useUserLocation as Mock).mockReturnValue({ location: null, error: null, isLoading: false });
 
-		(useMapInitialization as Mock).mockReturnValue({
-			handleMapLoad: mockHandleMapLoad,
-		});
+		(useServiceWorker as Mock).mockReturnValue({ isOnline: true });
+
+		(useErrorHandler as Mock).mockReturnValue({ handleMapError: mockHandleMapError });
+
+		(useMapInitialization as Mock).mockReturnValue({ handleMapLoad: mockHandleMapLoad });
 
 		(useMapPositioning as Mock).mockReturnValue({});
 	});
@@ -162,17 +165,7 @@ describe("MapCanvas", () => {
 		});
 
 		it("should use satellite style when configured", () => {
-			(useMapConfiguration as Mock).mockReturnValue({
-				currentMapStyle: "satellite",
-				currentMapStyleKey: "satellite",
-				isMapLocked: false,
-				currentLightPreset: "day",
-				currentBearing: 0,
-				setCurrentBearing: mockSetCurrentBearing,
-				showSunDirection: false,
-				currentSunPosition: null,
-				onMapStyleLoaded: mockOnMapStyleLoaded,
-			});
+			setStyleKey("satellite");
 
 			render(<MapCanvas {...defaultProps} />);
 			const map = screen.getByTestId("mock-map");
@@ -198,7 +191,6 @@ describe("MapCanvas", () => {
 
 		it("should call handleMapLoad when map loads", async () => {
 			render(<MapCanvas {...defaultProps} />);
-
 			await waitFor(() => {
 				expect(mockHandleMapLoad).toHaveBeenCalled();
 			});
@@ -207,7 +199,6 @@ describe("MapCanvas", () => {
 		it("should set mapRef when map loads", async () => {
 			const mapRef = React.createRef<any>();
 			render(<MapCanvas {...defaultProps} mapRef={mapRef} />);
-
 			await waitFor(() => {
 				expect(mapRef.current).toBe(mockMapInstance);
 			});
@@ -217,14 +208,9 @@ describe("MapCanvas", () => {
 	describe("Initial View State", () => {
 		it("should use initial center and zoom when provided", () => {
 			render(<MapCanvas {...defaultProps} initialCenter={[13.405, 52.52]} initialZoom={12} />);
-
 			const map = screen.getByTestId("mock-map");
 			const initialViewState = JSON.parse(map.getAttribute("data-initial-view-state") || "{}");
-			expect(initialViewState).toMatchObject({
-				longitude: 13.405,
-				latitude: 52.52,
-				zoom: 12,
-			});
+			expect(initialViewState).toMatchObject({ longitude: 13.405, latitude: 52.52, zoom: 12 });
 			expect(useMapInitialization).toHaveBeenCalled();
 		});
 
@@ -236,31 +222,19 @@ describe("MapCanvas", () => {
 			});
 
 			render(<MapCanvas {...defaultProps} />);
-
-			// Verify the map component receives the location data
 			expect(useUserLocation).toHaveBeenCalled();
-			expect(useMapPositioning).toHaveBeenCalledWith(
-				expect.objectContaining({
-					userLocation: [2.3522, 48.8566],
-				}),
-			);
+			expect(useMapPositioning).toHaveBeenCalledWith(expect.objectContaining({ userLocation: [2.3522, 48.8566] }));
 		});
 
 		it("should use last known location when available", () => {
 			render(<MapCanvas {...defaultProps} lastKnownLocationFromStorage={[-0.1276, 51.5074]} />);
-
-			// Verify the location is passed to positioning hook
 			expect(useMapPositioning).toHaveBeenCalledWith(
-				expect.objectContaining({
-					lastKnownLocationFromStorage: [-0.1276, 51.5074],
-				}),
+				expect.objectContaining({ lastKnownLocationFromStorage: [-0.1276, 51.5074] }),
 			);
 		});
 
 		it("should use default view state when no location data available", () => {
 			render(<MapCanvas {...defaultProps} />);
-
-			// Verify component renders without location data
 			expect(screen.getByTestId("mock-map")).toBeInTheDocument();
 			expect(useMapInitialization).toHaveBeenCalled();
 		});
@@ -272,17 +246,8 @@ describe("MapCanvas", () => {
 		});
 
 		it("should use saved map view when available", () => {
-			const savedView = {
-				longitude: 8.5,
-				latitude: 47.3,
-				zoom: 10,
-				bearing: 45,
-				pitch: 30,
-			};
-
+			const savedView = { longitude: 8.5, latitude: 47.3, zoom: 10, bearing: 45, pitch: 30 };
 			render(<MapCanvas {...defaultProps} lastSavedMapView={savedView} />);
-
-			// Verify the saved view is used in initialization
 			expect(useMapInitialization).toHaveBeenCalled();
 			expect(screen.getByTestId("mock-map")).toBeInTheDocument();
 		});
@@ -305,12 +270,10 @@ describe("MapCanvas", () => {
 			const mapRef = React.createRef<any>();
 			const { rerender } = render(<MapCanvas {...defaultProps} mapRef={mapRef} popup={popupInfo} />);
 
-			// Wait for map to load and set ref
 			await waitFor(() => {
 				expect(mapRef.current).toBe(mockMapInstance);
 			});
 
-			// Re-render with ref set
 			rerender(<MapCanvas {...defaultProps} mapRef={mapRef} popup={popupInfo} />);
 
 			expect(screen.getByTestId("map-popup")).toBeInTheDocument();
@@ -325,20 +288,12 @@ describe("MapCanvas", () => {
 		});
 
 		it("should render sun indicator when all conditions are met", () => {
-			(useMapConfiguration as Mock).mockReturnValue({
-				currentMapStyle: "standard",
-				currentMapStyleKey: "streets",
-				isMapLocked: false,
-				currentLightPreset: "day",
-				currentBearing: 0,
-				setCurrentBearing: mockSetCurrentBearing,
+			mockStoreSelector(useMapViewStore as unknown as Mock, {
+				lightPreset: "day",
+				bearing: 0,
+				setBearing: mockSetCurrentBearing,
 				showSunDirection: true,
-				currentSunPosition: {
-					azimuth: 180,
-					elevation: 45,
-					isUp: true,
-				},
-				onMapStyleLoaded: mockOnMapStyleLoaded,
+				sunPosition: { azimuth: 180, elevation: 45, isUp: true },
 			});
 
 			(useUserLocation as Mock).mockReturnValue({
@@ -356,21 +311,12 @@ describe("MapCanvas", () => {
 	describe("Error Handling", () => {
 		it("should handle invalid mapbox token on mount", () => {
 			render(<MapCanvas {...defaultProps} mapboxToken="__VITE_INVALID__" />);
-
 			expect(mockHandleMapError).toHaveBeenCalledWith(expect.any(Error), "mapbox-config");
 			expect(mockHandleMapError.mock.calls[0][0].message).toContain("Mapbox access token");
 		});
 
 		it("should handle map load errors through onError prop", () => {
-			// The error handling is built into the Map component's onError prop
-			// We can verify the component renders with error handling capability
 			render(<MapCanvas {...defaultProps} />);
-
-			const map = screen.getByTestId("mock-map");
-			expect(map).toBeInTheDocument();
-
-			// Verify that the mock map component would receive onError props
-			// (this is handled by our mock implementation)
 			expect(screen.getByTestId("mock-map")).toBeInTheDocument();
 		});
 	});
@@ -380,11 +326,7 @@ describe("MapCanvas", () => {
 			const mapRef = React.createRef<any>();
 			const userLocation: [number, number] = [2.3522, 48.8566];
 
-			(useUserLocation as Mock).mockReturnValue({
-				location: userLocation,
-				error: null,
-				isLoading: true,
-			});
+			(useUserLocation as Mock).mockReturnValue({ location: userLocation, error: null, isLoading: true });
 
 			render(
 				<MapCanvas
@@ -414,7 +356,6 @@ describe("MapCanvas", () => {
 	describe("Map Configuration", () => {
 		it("should respect map pitch settings", () => {
 			render(<MapCanvas {...defaultProps} />);
-
 			const map = screen.getByTestId("mock-map");
 			expect(map).toHaveAttribute("data-min-pitch", "30");
 			expect(map).toHaveAttribute("data-max-pitch", "30");
@@ -422,7 +363,6 @@ describe("MapCanvas", () => {
 
 		it("should set bearing from initial view state", async () => {
 			render(<MapCanvas {...defaultProps} initialCenter={[13.405, 52.52]} initialZoom={12} />);
-
 			await waitFor(() => {
 				expect(mockSetCurrentBearing).not.toHaveBeenCalled();
 			});

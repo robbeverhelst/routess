@@ -1,6 +1,7 @@
 import type { INestApplication } from "@nestjs/common";
 import { ValidationPipe, VersioningType } from "@nestjs/common";
 import { DocumentBuilder, type OpenAPIObject, SwaggerModule } from "@nestjs/swagger";
+import type { Request, Response } from "express";
 import helmet from "helmet";
 import { GlobalExceptionFilter } from "../common/filters/global-exception.filter";
 import type { AppConfig } from "../config/app-config";
@@ -12,7 +13,7 @@ const compression = require("compression");
 export function configureApplication(app: INestApplication, config: AppConfig = getAppConfig()): void {
 	app.use(
 		compression({
-			filter: (req, res) => {
+			filter: (req: Request, res: Response) => {
 				if (req.headers["x-no-compression"]) {
 					return false;
 				}
@@ -53,7 +54,7 @@ export function configureApplication(app: INestApplication, config: AppConfig = 
 	const allowedOrigins = new Set(config.app.frontendUrls);
 
 	app.enableCors({
-		origin: (origin, callback) => {
+		origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
 			if (!origin || allowedOrigins.has(origin)) {
 				callback(null, true);
 				return;
