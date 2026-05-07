@@ -1,11 +1,12 @@
 import type { Coordinate } from "@routess/core";
 import { Logger } from "@/lib/logger";
+import { getRuntimeConfig } from "@/lib/runtime-config";
 import type { ValhallaCosting } from "./routingMode";
 
 // Prefer Stadia Maps when VITE_STADIA_API_KEY is set (reliable, free tier).
 // Fall back to the public FOSSGIS Valhalla instance otherwise; fine for local
 // hacking but frequently slow or unreachable.
-const STADIA_API_KEY = (import.meta.env.VITE_STADIA_API_KEY as string | undefined)?.trim();
+const STADIA_API_KEY = getRuntimeConfig("VITE_STADIA_API_KEY")?.trim();
 const VALHALLA_TRACE_ATTRIBUTES_URL = STADIA_API_KEY
 	? `https://api.stadiamaps.com/trace_attributes/v1?api_key=${encodeURIComponent(STADIA_API_KEY)}`
 	: "https://valhalla1.openstreetmap.de/trace_attributes";

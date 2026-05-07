@@ -11,6 +11,7 @@ import {
 	saveLightPresetToLocalStorage,
 	saveSunDirectionSettingToLocalStorage,
 } from "@/features/routing/services/LocalStorageService";
+import { onAppEvent } from "@/lib/app-events";
 import { Logger } from "@/lib/logger";
 import { getSolarPositionForTimeOfDay, type SolarPosition } from "@/lib/solar";
 import { type RedesignMapStyle, useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
@@ -257,27 +258,27 @@ export const MapConfigurationProvider: React.FC<MapConfigurationProviderProps> =
 	useEffect(() => {
 		const onZoomIn = () => mapRef.current?.zoomIn();
 		const onZoomOut = () => mapRef.current?.zoomOut();
-		const onSetStyle = (event: Event) => {
-			const styleKey = (event as CustomEvent<{ styleKey?: RedesignMapStyle }>).detail?.styleKey;
+		const onSetStyle = (detail: { styleKey?: RedesignMapStyle }) => {
+			const styleKey = detail?.styleKey;
 			if (styleKey) {
 				setMapStyle(styleKey);
 			}
 		};
-		const onSetPois = (event: Event) => {
-			const visible = (event as CustomEvent<{ visible?: boolean }>).detail?.visible;
+		const onSetPois = (detail: { visible?: boolean }) => {
+			const visible = detail?.visible;
 			if (typeof visible === "boolean") setShowPois(visible);
 		};
 
-		window.addEventListener("routess:zoom-in", onZoomIn);
-		window.addEventListener("routess:zoom-out", onZoomOut);
-		window.addEventListener("routess:set-map-style", onSetStyle);
-		window.addEventListener("routess:set-pois", onSetPois);
-
+		const unsubscribers = [
+			onAppEvent("routess:zoom-in", onZoomIn),
+			onAppEvent("routess:zoom-out", onZoomOut),
+			onAppEvent("routess:set-map-style", onSetStyle),
+			onAppEvent("routess:set-pois", onSetPois),
+		];
 		return () => {
-			window.removeEventListener("routess:zoom-in", onZoomIn);
-			window.removeEventListener("routess:zoom-out", onZoomOut);
-			window.removeEventListener("routess:set-map-style", onSetStyle);
-			window.removeEventListener("routess:set-pois", onSetPois);
+			for (const unsubscribe of unsubscribers) {
+				unsubscribe();
+			}
 		};
 	}, [mapRef, setMapStyle, setShowPois]);
 

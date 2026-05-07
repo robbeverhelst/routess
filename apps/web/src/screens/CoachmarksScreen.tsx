@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { t } from "@/lib/i18n";
-import { useUiStore } from "@/stores/uiStore";
+import { useT } from "@/lib/i18n";
 import { I } from "../components/icons";
 import { MapBackdrop } from "../components/MapBackdrop";
 import { Badge, Btn, RDS_COLORS } from "../components/primitives";
@@ -41,7 +40,7 @@ const STOPS: Stop[] = [
 
 export function CoachmarksScreen({ onComplete }: { onComplete?: () => void }) {
 	const [step, setStep] = useState(0);
-	const language = useUiStore((s) => s.language);
+	const t = useT();
 	const stop = STOPS[step];
 
 	return (
@@ -85,10 +84,10 @@ export function CoachmarksScreen({ onComplete }: { onComplete?: () => void }) {
 			>
 				<div style={{ marginBottom: 10 }}>
 					<Badge variant="accent" dot>
-						{t("coach.stepFraction", language, { n: String(step + 1), total: String(STOPS.length) })}
+						{t("coach.stepFraction", { n: String(step + 1), total: String(STOPS.length) })}
 					</Badge>
 				</div>
-				<div style={{ fontSize: 15, fontWeight: 600 }}>{t(stop.titleKey, language)}</div>
+				<div style={{ fontSize: 15, fontWeight: 600 }}>{t(stop.titleKey)}</div>
 				<p
 					style={{
 						fontSize: 13,
@@ -97,14 +96,14 @@ export function CoachmarksScreen({ onComplete }: { onComplete?: () => void }) {
 						lineHeight: 1.5,
 					}}
 				>
-					{t(stop.bodyKey, language)}
+					{t(stop.bodyKey)}
 				</p>
 				<div style={{ display: "flex", alignItems: "center", gap: 8 }}>
 					<Btn variant="ghost" onClick={onComplete} style={{ color: RDS_COLORS.fgMuted }}>
-						{t("coach.skipTour", language)}
+						{t("coach.skipTour")}
 					</Btn>
 					<div style={{ flex: 1 }} />
-					{step > 0 && <Btn onClick={() => setStep(step - 1)}>{t("common.back", language)}</Btn>}
+					{step > 0 && <Btn onClick={() => setStep(step - 1)}>{t("common.back")}</Btn>}
 					<Btn
 						variant="primary"
 						onClick={() => {
@@ -114,10 +113,10 @@ export function CoachmarksScreen({ onComplete }: { onComplete?: () => void }) {
 					>
 						{step < STOPS.length - 1 ? (
 							<>
-								{t("coach.next", language)} <I.chevronR size={12} />
+								{t("coach.next")} <I.chevronR size={12} />
 							</>
 						) : (
-							t("coach.done", language)
+							t("coach.done")
 						)}
 					</Btn>
 				</div>

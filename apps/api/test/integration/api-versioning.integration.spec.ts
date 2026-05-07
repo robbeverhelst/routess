@@ -58,8 +58,8 @@ describe("API Versioning Integration", () => {
 					name: "Test Route",
 					description: "A test route",
 					waypoints: [
-						{ lat: 50.8503, lng: 4.3517, type: "routed" },
-						{ lat: 50.8463, lng: 4.3517, type: "direct" },
+						{ coord: [4.3517, 50.8503], type: "routed" },
+						{ coord: [4.3517, 50.8463], type: "direct" },
 					],
 				})
 				.expect(201);

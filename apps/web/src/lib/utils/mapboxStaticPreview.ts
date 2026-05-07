@@ -1,3 +1,4 @@
+import { getRuntimeConfig } from "@/lib/runtime-config";
 import type { RedesignMapStyle } from "@/stores/redesignSettingsStore";
 
 type Coordinate = [number, number];
@@ -63,7 +64,7 @@ export interface StaticPreviewOptions {
 }
 
 export function buildMapboxStaticPreviewUrl(points: Coordinate[], options: StaticPreviewOptions): string | null {
-	const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN as string | undefined;
+	const token = getRuntimeConfig("VITE_MAPBOX_ACCESS_TOKEN");
 	if (!token || points.length === 0) return null;
 
 	const {

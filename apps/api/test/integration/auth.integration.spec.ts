@@ -138,18 +138,18 @@ describe("Auth Integration Tests", () => {
 
 		it("should access protected route with valid JWT", async () => {
 			await supertest(app.getHttpServer())
-				.get("/api/v1/auth/me")
+				.get("/api/v1/users/me")
 				.set("Authorization", `Bearer ${validToken}`)
 				.expect(200);
 		});
 
 		it("should fail to access protected route without JWT", async () => {
-			await supertest(app.getHttpServer()).get("/api/v1/auth/me").expect(401);
+			await supertest(app.getHttpServer()).get("/api/v1/users/me").expect(401);
 		});
 
 		it("should fail to access protected route with invalid JWT", async () => {
 			await supertest(app.getHttpServer())
-				.get("/api/v1/auth/me")
+				.get("/api/v1/users/me")
 				.set("Authorization", "Bearer invalid-token")
 				.expect(401);
 		});

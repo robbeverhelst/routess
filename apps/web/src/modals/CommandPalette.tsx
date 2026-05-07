@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import type { ApiRoute } from "@/lib/api";
 import { useUserRoutes } from "@/lib/api-queries";
+import { emitAppEvent, routeToLoadDetail } from "@/lib/app-events";
 import { t } from "@/lib/i18n";
 import { useModalsStore } from "@/stores/modalsStore";
 import type { RedesignContext } from "@/stores/uiStore";
@@ -18,17 +19,7 @@ interface CmdItem {
 }
 
 function loadRouteIntoPlan(route: ApiRoute, setContext: (value: RedesignContext) => void) {
-	const directFlags = (route.waypoints ?? []).map((w) => w.type === "direct");
-	window.dispatchEvent(
-		new CustomEvent("routess:load-route", {
-			detail: {
-				routeId: route.id,
-				name: route.name,
-				waypoints: route.waypoints,
-				directFlags,
-			},
-		}),
-	);
+	emitAppEvent("routess:load-route", routeToLoadDetail(route));
 	setContext("plan");
 }
 
@@ -37,7 +28,7 @@ export function CommandPalette() {
 	const openModal = useModalsStore((s) => s.openModal);
 	const setContext = useUiStore((s) => s.setContext);
 	const toggleTheme = useUiStore((s) => s.toggleTheme);
-	const language = useUiStore((s) => s.language);
+	const _language = useUiStore((s) => s.language);
 	const { data: routes = [] } = useUserRoutes();
 	const [query, setQuery] = useState("");
 	const [activeIndex, setActiveIndex] = useState(0);
@@ -45,87 +36,87 @@ export function CommandPalette() {
 	const groups = useMemo<{ title: string; items: CmdItem[] }[]>(
 		() => [
 			{
-				title: t("cmd.group.navigate", language),
+				title: t("cmd.group.navigate"),
 				items: [
 					{
 						id: "nav-plan",
 						icon: I.route,
-						label: t("cmd.nav.plan", language),
+						label: t("cmd.nav.plan"),
 						kbd: "G P",
 						run: () => setContext("plan"),
 					},
 					{
 						id: "nav-lib",
 						icon: I.library,
-						label: t("cmd.nav.library", language),
+						label: t("cmd.nav.library"),
 						kbd: "G L",
 						run: () => setContext("library"),
 					},
 					{
 						id: "nav-dis",
 						icon: I.explore,
-						label: t("cmd.nav.discover", language),
+						label: t("cmd.nav.discover"),
 						kbd: "G D",
 						run: () => setContext("discover"),
 					},
 					{
 						id: "nav-soc",
 						icon: I.social,
-						label: t("cmd.nav.social", language),
+						label: t("cmd.nav.social"),
 						kbd: "G S",
 						run: () => setContext("social"),
 					},
 				],
 			},
 			{
-				title: t("cmd.group.actions", language),
+				title: t("cmd.group.actions"),
 				items: [
 					{
 						id: "act-save",
 						icon: I.save,
-						label: t("cmd.action.save", language),
+						label: t("cmd.action.save"),
 						kbd: "S",
 						run: () => openModal("save"),
 					},
 					{
 						id: "act-loop",
 						icon: I.compass,
-						label: t("cmd.action.loop", language),
+						label: t("cmd.action.loop"),
 						kbd: "L",
 						run: () => openModal("loop"),
 					},
 					{
 						id: "act-routing",
 						icon: I.sliders,
-						label: t("cmd.action.routing", language),
+						label: t("cmd.action.routing"),
 						kbd: "R",
 						run: () => openModal("routing"),
 					},
 					{
 						id: "act-import",
 						icon: I.upload,
-						label: t("cmd.action.import", language),
+						label: t("cmd.action.import"),
 						kbd: "I",
 						run: () => openModal("import"),
 					},
 					{
 						id: "act-share",
 						icon: I.share,
-						label: t("cmd.action.share", language),
+						label: t("cmd.action.share"),
 						kbd: "⇧ S",
 						run: () => openModal("share"),
 					},
 					{
 						id: "act-account",
 						icon: I.user,
-						label: t("cmd.action.account", language),
-						run: () => window.dispatchEvent(new CustomEvent("routess:open-account")),
+						label: t("cmd.action.account"),
+						run: () => emitAppEvent("routess:open-account"),
 					},
-					{ id: "act-theme", icon: I.moon, label: t("cmd.action.theme", language), kbd: "⌘ D", run: toggleTheme },
+					{ id: "act-theme", icon: I.moon, label: t("cmd.action.theme"), kbd: "⌘ D", run: toggleTheme },
 				],
 			},
 			{
-				title: t("cmd.group.recent", language),
+				title: t("cmd.group.recent"),
 				items: routes.slice(0, 5).map((r) => ({
 					id: `route-${r.id}`,
 					icon: I.pin,
@@ -135,7 +126,7 @@ export function CommandPalette() {
 				})),
 			},
 		],
-		[routes, openModal, setContext, toggleTheme, language],
+		[routes, openModal, setContext, toggleTheme],
 	);
 
 	const filtered = useMemo(() => {
@@ -180,7 +171,7 @@ export function CommandPalette() {
 		>
 			<button
 				type="button"
-				aria-label={t("cmd.closeAria", language)}
+				aria-label={t("cmd.closeAria")}
 				onClick={close}
 				style={{
 					position: "absolute",
@@ -223,7 +214,7 @@ export function CommandPalette() {
 							setActiveIndex(0);
 						}}
 						onKeyDown={onKeyDown}
-						placeholder={t("cmd.placeholder", language)}
+						placeholder={t("cmd.placeholder")}
 						style={{
 							flex: 1,
 							background: "transparent",
@@ -233,7 +224,7 @@ export function CommandPalette() {
 							color: "inherit",
 						}}
 					/>
-					<Kbd>{t("search.esc", language)}</Kbd>
+					<Kbd>{t("search.esc")}</Kbd>
 				</div>
 				<div style={{ padding: 6, flex: 1, minHeight: 0, overflow: "auto" }}>
 					{filtered.length === 0 && (
@@ -245,7 +236,7 @@ export function CommandPalette() {
 								color: RDS_COLORS.fgSubtle,
 							}}
 						>
-							{t("cmd.noResults", language, { query })}
+							{t("cmd.noResults", { query })}
 						</div>
 					)}
 					{filtered.map((g, gi) => {
@@ -322,15 +313,15 @@ export function CommandPalette() {
 				>
 					<span>
 						<Kbd>↑</Kbd>
-						<Kbd>↓</Kbd> {t("cmd.kbd.navigate", language)}
+						<Kbd>↓</Kbd> {t("cmd.kbd.navigate")}
 					</span>
 					<span>
-						<Kbd>↵</Kbd> {t("cmd.kbd.run", language)}
+						<Kbd>↵</Kbd> {t("cmd.kbd.run")}
 					</span>
 					<div style={{ flex: 1 }} />
 					<span>
 						<Kbd>⌘</Kbd>
-						<Kbd>K</Kbd> {t("cmd.kbd.toggle", language)}
+						<Kbd>K</Kbd> {t("cmd.kbd.toggle")}
 					</span>
 				</div>
 			</div>

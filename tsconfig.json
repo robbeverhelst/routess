@@ -1,11 +1,35 @@
 {
+	"compilerOptions": {
+		"target": "ES2022",
+		"lib": ["ES2023"],
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"resolveJsonModule": true,
+		"esModuleInterop": true,
+		"isolatedModules": true,
+		"verbatimModuleSyntax": false,
+		"forceConsistentCasingInFileNames": true,
+		"skipLibCheck": true,
+		"strict": true,
+		"noUncheckedIndexedAccess": true,
+		"noImplicitOverride": true,
+		"noFallthroughCasesInSwitch": true,
+		"noPropertyAccessFromIndexSignature": true,
+		"exactOptionalPropertyTypes": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"useUnknownInCatchVariables": true,
+		"allowUnreachableCode": false,
+		"allowUnusedLabels": false
+	},
 	"files": [],
 	"references": [
-		{
-			"path": "./apps/api"
-		},
-		{
-			"path": "./apps/web"
-		}
+		{ "path": "./apps/api" },
+		{ "path": "./apps/docs" },
+		{ "path": "./apps/web" },
+		{ "path": "./packages/api-client" },
+		{ "path": "./packages/core" },
+		{ "path": "./packages/design-tokens" },
+		{ "path": "./packages/i18n" }
 	]
 }

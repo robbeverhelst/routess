@@ -1,14 +1,33 @@
-import { createI18nService, createTranslationFunction } from "@routess/i18n";
+import { createI18nService, type SupportedLanguage } from "@routess/i18n";
+import { useCallback } from "react";
 import { Logger } from "@/lib/logger";
+import { useUiStore } from "@/stores/uiStore";
 
-// Create the i18n service with logger
 const i18nService = createI18nService(Logger);
 
-// Create the translation function for backward compatibility
-export const t = createTranslationFunction(i18nService);
+// React hook: subscribes to the current language and returns a translate
+// function bound to it. Components re-render automatically when the user
+// switches language.
+export const useT = () => {
+	const language = useUiStore((s) => s.language);
+	return useCallback(
+		(key: string, replacements?: Record<string, string>): string => i18nService.t(key, language, replacements),
+		[language],
+	);
+};
 
-// Re-export types for components
-export type { SupportedLanguage } from "@routess/i18n";
+// Plain function: usable from anywhere (event handlers, app events, modules
+// outside React). Reads the current language from the UI store at call time;
+// does not subscribe, so callers in React components should use useT() instead
+// to re-render on language changes.
+export const t = (key: string, replacements?: Record<string, string>): string =>
+	i18nService.t(key, useUiStore.getState().language, replacements);
 
-// Export the service for advanced usage
+// Translate against an explicit language, regardless of the user's current
+// locale. Used when persisting human-readable strings that must stay stable
+// across UI-language switches (e.g. storing the canonical English sport name).
+export const tIn = (language: SupportedLanguage, key: string, replacements?: Record<string, string>): string =>
+	i18nService.t(key, language, replacements);
+
+export type { SupportedLanguage };
 export { i18nService };

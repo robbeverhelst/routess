@@ -5,7 +5,8 @@ import { resolveValhallaCosting } from "@/features/routing/services/routingMode"
 import { fetchSurfaceBreakdown, type SurfaceBreakdown } from "@/features/routing/services/SurfaceService";
 import type { ApiRoute } from "@/lib/api";
 import { useSaveRoute, useUpdateRoute } from "@/lib/api-queries";
-import { t } from "@/lib/i18n";
+import { emitAppEvent, routeToLoadDetail } from "@/lib/app-events";
+import { useT } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
 import { useUnits } from "@/lib/units";
 import { useModalsStore } from "@/stores/modalsStore";
@@ -114,7 +115,7 @@ function TagChip({ label }: { label: string }) {
 }
 
 export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: () => void }) {
-	const language = useUiStore((s) => s.language);
+	const t = useT();
 	const { formatDistanceParts, formatSpeedParts, formatElevationParts } = useUnits();
 	const distanceParts = route.distance ? formatDistanceParts(route.distance / 1000) : null;
 	const elevParts = route.elevationGain ? formatElevationParts(route.elevationGain) : null;
@@ -147,7 +148,7 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 	// waypoint coords for legacy routes saved before geometry persistence.
 	const elevationGeometry = useMemo<Coordinate[]>(() => {
 		if (route.geometry && route.geometry.length >= 2) return route.geometry;
-		return (route.waypoints ?? []).map((w) => [w.lng, w.lat] as Coordinate);
+		return (route.waypoints ?? []).map((w) => w.coord);
 	}, [route.geometry, route.waypoints]);
 	const { profile: computedProfile, loading: elevationLoading } = useComputedElevationProfile(
 		elevationGeometry,
@@ -209,23 +210,11 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 	}, [moreOpen]);
 
 	const dispatchLoadRoute = () => {
-		window.dispatchEvent(
-			new CustomEvent("routess:load-route", {
-				detail: {
-					routeId: route.id,
-					name: route.name,
-					waypoints: route.waypoints,
-					geometry: route.geometry,
-					distance: route.distance,
-					duration: route.duration,
-					elevationGain: route.elevationGain,
-				},
-			}),
-		);
+		emitAppEvent("routess:load-route", routeToLoadDetail(route));
 		setContext("plan");
 		pushToast({
 			kind: "success",
-			title: t("route.loaded", language),
+			title: t("route.loaded"),
 			body: route.name,
 		});
 	};
@@ -234,19 +223,7 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 		// ShareModal reads from the routing store; load the saved route there
 		// first so the share URL encodes this route's waypoints rather than
 		// whatever was last on the map.
-		window.dispatchEvent(
-			new CustomEvent("routess:load-route", {
-				detail: {
-					routeId: route.id,
-					name: route.name,
-					waypoints: route.waypoints,
-					geometry: route.geometry,
-					distance: route.distance,
-					duration: route.duration,
-					elevationGain: route.elevationGain,
-				},
-			}),
-		);
+		emitAppEvent("routess:load-route", routeToLoadDetail(route));
 		openModal("share");
 	};
 
@@ -268,7 +245,7 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 				onSuccess: (newRoute) => {
 					pushToast({
 						kind: "success",
-						title: t("route.duplicated", language),
+						title: t("route.duplicated"),
 						body: newRoute.name,
 					});
 					setMoreOpen(false);
@@ -276,8 +253,8 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 				onError: () => {
 					pushToast({
 						kind: "danger",
-						title: t("route.duplicateFailed", language),
-						body: t("common.tryAgain", language),
+						title: t("route.duplicateFailed"),
+						body: t("common.tryAgain"),
 					});
 				},
 			},
@@ -290,7 +267,7 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 	};
 
 	const dispatchExport = () => {
-		window.dispatchEvent(new CustomEvent("routess:export-gpx", { detail: { routeId: route.id } }));
+		emitAppEvent("routess:export-gpx", { routeId: route.id });
 	};
 
 	const renameWaypoint = (index: number, next: string | undefined) => {
@@ -307,8 +284,8 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 				onError: () => {
 					pushToast({
 						kind: "danger",
-						title: t("route.renameFailed", language),
-						body: t("common.tryAgain", language),
+						title: t("route.renameFailed"),
+						body: t("common.tryAgain"),
 					});
 				},
 			},
@@ -316,10 +293,10 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 	};
 
 	const stats = [
-		{ label: t("route.distance", language), value: distanceStr, unit: distanceUnit },
-		{ label: t("route.duration", language), value: durationStr, unit: "" },
-		{ label: t("route.elev", language), value: elevStr, unit: elevUnit },
-		{ label: t("route.avgSpeed", language), value: paceStr, unit: paceUnit },
+		{ label: t("route.distance"), value: distanceStr, unit: distanceUnit },
+		{ label: t("route.duration"), value: durationStr, unit: "" },
+		{ label: t("route.elev"), value: elevStr, unit: elevUnit },
+		{ label: t("route.avgSpeed"), value: paceStr, unit: paceUnit },
 	];
 
 	return (
@@ -333,10 +310,10 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 					borderBottom: `1px solid ${RDS_COLORS.border}`,
 				}}
 			>
-				<IconBtn title={t("route.back", language)} onClick={onBack}>
+				<IconBtn title={t("route.back")} onClick={onBack}>
 					<I.chevronL size={16} />
 				</IconBtn>
-				<span style={{ fontSize: 13, color: RDS_COLORS.fgMuted }}>{t("route.library", language)}</span>
+				<span style={{ fontSize: 13, color: RDS_COLORS.fgMuted }}>{t("route.library")}</span>
 				<I.chevronR size={12} />
 				<span
 					style={{
@@ -350,17 +327,14 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 					{route.name}
 				</span>
 				<div style={{ flex: 1 }} />
-				<IconBtn
-					title={favorited ? t("route.removeFavourite", language) : t("route.makeFavourite", language)}
-					onClick={dispatchFavorite}
-				>
+				<IconBtn title={favorited ? t("route.removeFavourite") : t("route.makeFavourite")} onClick={dispatchFavorite}>
 					<I.heart size={14} style={favorited ? { color: RDS_COLORS.danger, fill: "currentColor" } : undefined} />
 				</IconBtn>
-				<IconBtn title={t("route.share", language)} onClick={dispatchShare}>
+				<IconBtn title={t("route.share")} onClick={dispatchShare}>
 					<I.share size={14} />
 				</IconBtn>
 				<div ref={moreRef} style={{ position: "relative" }}>
-					<IconBtn title={t("route.more", language)} onClick={() => setMoreOpen((v) => !v)} pressed={moreOpen}>
+					<IconBtn title={t("route.more")} onClick={() => setMoreOpen((v) => !v)} pressed={moreOpen}>
 						<I.more size={14} />
 					</IconBtn>
 					{moreOpen && (
@@ -403,8 +377,7 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 									e.currentTarget.style.background = "transparent";
 								}}
 							>
-								<I.copy size={14} />{" "}
-								{saveRoute.isPending ? t("route.duplicating", language) : t("route.duplicate", language)}
+								<I.copy size={14} /> {saveRoute.isPending ? t("route.duplicating") : t("route.duplicate")}
 							</button>
 							<button
 								type="button"
@@ -430,7 +403,7 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 									e.currentTarget.style.background = "transparent";
 								}}
 							>
-								<I.trash size={14} /> {t("route.delete", language)}
+								<I.trash size={14} /> {t("route.delete")}
 							</button>
 						</div>
 					)}
@@ -440,7 +413,7 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 			<div style={{ flex: 1, overflow: "auto", padding: 20 }}>
 				<h2 style={{ margin: "0 0 4px", fontSize: 22, fontWeight: 600, letterSpacing: -0.4 }}>{route.name}</h2>
 				<p className="rds-mono" style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle, margin: 0 }}>
-					{t("route.created", language, {
+					{t("route.created", {
 						date: new Date(route.createdAt).toLocaleDateString(),
 						count: String(route.waypoints?.length ?? 0),
 					})}
@@ -448,8 +421,8 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 
 				{hasMetaChips && (
 					<div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 12 }}>
-						{activityMeta && <MetaChip icon={activityMeta.icon} label={t(activityMeta.labelKey, language)} />}
-						{privacyMeta && <MetaChip icon={privacyMeta.icon} label={t(privacyMeta.labelKey, language)} />}
+						{activityMeta && <MetaChip icon={activityMeta.icon} label={t(activityMeta.labelKey)} />}
+						{privacyMeta && <MetaChip icon={privacyMeta.icon} label={t(privacyMeta.labelKey)} />}
 						{parsedDescription.tags.map((tag) => (
 							<TagChip key={tag} label={tag} />
 						))}
@@ -504,7 +477,7 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 
 				{elevationGeometry.length >= 2 && (
 					<div style={{ marginTop: 18 }}>
-						<SecTitle style={{ marginBottom: 8 }}>{t("route.elevation", language)}</SecTitle>
+						<SecTitle style={{ marginBottom: 8 }}>{t("route.elevation")}</SecTitle>
 						<ElevationSparkline
 							profile={computedProfile}
 							loading={elevationLoading}
@@ -518,7 +491,7 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 				{route.waypoints && route.waypoints.length > 0 && (
 					<div style={{ marginTop: 18 }}>
 						<SecTitle style={{ marginBottom: 10 }}>
-							{t("route.waypointsCount", language, { count: String(route.waypoints.length) })}
+							{t("route.waypointsCount", { count: String(route.waypoints.length) })}
 						</SecTitle>
 						<div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
 							{route.waypoints.map((w, i) => {
@@ -526,15 +499,16 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 								const isEnd = i === route.waypoints.length - 1;
 								const dot = isStart ? RDS_COLORS.success : isEnd ? RDS_COLORS.danger : RDS_COLORS.accent;
 								const label = isStart
-									? t("common.start", language)
+									? t("common.start")
 									: isEnd
-										? t("common.end", language)
-										: t("common.waypoint", language, { n: String(i) });
-								const coordStr = `${w.lat.toFixed(5)}, ${w.lng.toFixed(5)}`;
+										? t("common.end")
+										: t("common.waypoint", { n: String(i) });
+								const [lng, lat] = w.coord;
+								const coordStr = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
 								return (
 									<div
 										// biome-ignore lint/suspicious/noArrayIndexKey: same coord can repeat; combine with index for stable key
-										key={`${w.lng}-${w.lat}-${i}`}
+										key={`${lng}-${lat}-${i}`}
 										style={{
 											display: "flex",
 											alignItems: "center",
@@ -583,7 +557,7 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 															fontWeight: 400,
 														}}
 													>
-														{t("route.direct", language)}
+														{t("route.direct")}
 													</span>
 												)}
 											</div>
@@ -600,7 +574,7 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 
 				{(route.startAddress || route.endAddress) && (
 					<div style={{ marginTop: 18 }}>
-						<SecTitle style={{ marginBottom: 8 }}>{t("route.routeLabel", language)}</SecTitle>
+						<SecTitle style={{ marginBottom: 8 }}>{t("route.routeLabel")}</SecTitle>
 						<div
 							style={{
 								background: RDS_COLORS.bgPanel,
@@ -621,7 +595,7 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 								>
 									<I.pin size={14} style={{ color: RDS_COLORS.fgSubtle }} />
 									<div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
-										<div style={{ fontSize: 11, color: RDS_COLORS.fgSubtle }}>{t("common.start", language)}</div>
+										<div style={{ fontSize: 11, color: RDS_COLORS.fgSubtle }}>{t("common.start")}</div>
 										<div style={{ fontSize: 13, color: RDS_COLORS.fg, overflow: "hidden", textOverflow: "ellipsis" }}>
 											{route.startAddress}
 										</div>
@@ -632,7 +606,7 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 								<div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px" }}>
 									<I.flag size={14} style={{ color: RDS_COLORS.fgSubtle }} />
 									<div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
-										<div style={{ fontSize: 11, color: RDS_COLORS.fgSubtle }}>{t("common.end", language)}</div>
+										<div style={{ fontSize: 11, color: RDS_COLORS.fgSubtle }}>{t("common.end")}</div>
 										<div style={{ fontSize: 13, color: RDS_COLORS.fg, overflow: "hidden", textOverflow: "ellipsis" }}>
 											{route.endAddress}
 										</div>
@@ -653,12 +627,12 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 				}}
 			>
 				<Btn variant="primary" style={{ flex: 1 }} onClick={dispatchLoadRoute}>
-					<I.play size={12} /> {t("route.loadOnMap", language)}
+					<I.play size={12} /> {t("route.loadOnMap")}
 				</Btn>
-				<Btn onClick={dispatchExport} title={t("route.downloadGpx", language)}>
+				<Btn onClick={dispatchExport} title={t("route.downloadGpx")}>
 					<I.download size={14} />
 				</Btn>
-				<Btn onClick={dispatchShare} title={t("route.share", language)}>
+				<Btn onClick={dispatchShare} title={t("route.share")}>
 					<I.share size={14} />
 				</Btn>
 			</div>

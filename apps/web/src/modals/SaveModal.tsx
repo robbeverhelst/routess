@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useIsAuthenticated } from "@/hooks/useAuthState";
 import { useSaveRoute } from "@/lib/api-queries";
-import { t } from "@/lib/i18n";
+import { emitAppEvent } from "@/lib/app-events";
+import { useT } from "@/lib/i18n";
 import { useModalsStore } from "@/stores/modalsStore";
 import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 import { useElevationGain, useRouteDistance, useRouteDuration, useWaypoints } from "@/stores/routingStore";
@@ -24,12 +25,13 @@ const PRIVACY_OPTS = [
 ] as const;
 
 export function SaveModal() {
+	const t = useT();
 	const closeModal = useModalsStore((s) => s.closeModal);
 	const waypoints = useWaypoints();
 	const distance = useRouteDistance();
 	const duration = useRouteDuration();
 	const elevationGain = useElevationGain();
-	const { activityType, setActivityType, language } = useUiStore();
+	const { activityType, setActivityType } = useUiStore();
 	const selectedSports = useRedesignSettingsStore((s) => s.selectedSports);
 	const saveRoute = useSaveRoute();
 	const pushToast = useToastStore((s) => s.push);
@@ -75,12 +77,7 @@ export function SaveModal() {
 				description: tags.length
 					? `Activity: ${activityType}; Privacy: ${privacy}; Tags: ${tags.join(", ")}`
 					: `Activity: ${activityType}; Privacy: ${privacy}`,
-				waypoints: waypoints.map((wp) => ({
-					lng: wp.coord[0],
-					lat: wp.coord[1],
-					type: wp.type,
-					...(wp.name ? { name: wp.name } : {}),
-				})),
+				waypoints,
 				distance: distanceMeters,
 				elevationGain: elevationGain != null ? Math.round(elevationGain) : 0,
 			},
@@ -88,7 +85,7 @@ export function SaveModal() {
 				onSuccess: () => {
 					pushToast({
 						kind: "success",
-						title: t("save.toast.saved", language),
+						title: t("save.toast.saved"),
 						body: `${name.trim()} · ${distance || "—"}`,
 					});
 					closeModal();
@@ -96,8 +93,8 @@ export function SaveModal() {
 				onError: () => {
 					pushToast({
 						kind: "danger",
-						title: t("save.toast.failed", language),
-						body: t("common.tryAgain", language),
+						title: t("save.toast.failed"),
+						body: t("common.tryAgain"),
 					});
 				},
 			},
@@ -113,8 +110,8 @@ export function SaveModal() {
 
 	return (
 		<ModalShell
-			title={t("save.title", language)}
-			sub={t("save.waypointsCount", language, {
+			title={t("save.title")}
+			sub={t("save.waypointsCount", {
 				distance: distance || "—",
 				duration: duration || "—",
 				count: String(wpCount),
@@ -124,20 +121,20 @@ export function SaveModal() {
 			footer={
 				<>
 					<div style={{ flex: 1 }} />
-					<Btn onClick={closeModal}>{t("common.cancel", language)}</Btn>
+					<Btn onClick={closeModal}>{t("common.cancel")}</Btn>
 					<Btn variant="primary" onClick={handleSave} disabled={!name.trim() || wpCount < 2 || saveRoute.isPending}>
-						<I.save size={14} /> {saveRoute.isPending ? t("save.saving", language) : t("save.title", language)}
+						<I.save size={14} /> {saveRoute.isPending ? t("save.saving") : t("save.title")}
 					</Btn>
 				</>
 			}
 		>
 			<div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 				<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-					<SecTitle>{t("save.name", language)}</SecTitle>
+					<SecTitle>{t("save.name")}</SecTitle>
 					<input
 						value={name}
 						onChange={(e) => setName(e.target.value)}
-						placeholder={t("save.namePlaceholder", language)}
+						placeholder={t("save.namePlaceholder")}
 						style={{
 							height: 36,
 							padding: "0 12px",
@@ -154,7 +151,7 @@ export function SaveModal() {
 				</div>
 
 				<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-					<SecTitle>{t("save.activity", language)}</SecTitle>
+					<SecTitle>{t("save.activity")}</SecTitle>
 					<div style={{ display: "flex", gap: 8 }}>
 						{availableActivities.map((a) => {
 							const Icon = a.icon;
@@ -180,7 +177,7 @@ export function SaveModal() {
 										cursor: "pointer",
 									}}
 								>
-									<Icon size={14} /> {t(a.labelKey, language)}
+									<Icon size={14} /> {t(a.labelKey)}
 								</button>
 							);
 						})}
@@ -188,7 +185,7 @@ export function SaveModal() {
 				</div>
 
 				<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-					<SecTitle>{t("save.privacyLabel", language)}</SecTitle>
+					<SecTitle>{t("save.privacyLabel")}</SecTitle>
 					<div
 						style={{
 							background: RDS_COLORS.bgInput,
@@ -217,8 +214,8 @@ export function SaveModal() {
 										cursor: "pointer",
 									}}
 								>
-									<div style={{ fontSize: 12.5, fontWeight: 600, color: RDS_COLORS.fg }}>{t(p.labelKey, language)}</div>
-									<div style={{ fontSize: 11, color: RDS_COLORS.fgSubtle, marginTop: 2 }}>{t(p.subKey, language)}</div>
+									<div style={{ fontSize: 12.5, fontWeight: 600, color: RDS_COLORS.fg }}>{t(p.labelKey)}</div>
+									<div style={{ fontSize: 11, color: RDS_COLORS.fgSubtle, marginTop: 2 }}>{t(p.subKey)}</div>
 								</button>
 							);
 						})}
@@ -226,7 +223,7 @@ export function SaveModal() {
 				</div>
 
 				<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-					<SecTitle>{t("save.tags", language)}</SecTitle>
+					<SecTitle>{t("save.tags")}</SecTitle>
 					<div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
 						{tags.map((tag) => (
 							<span
@@ -248,7 +245,7 @@ export function SaveModal() {
 									type="button"
 									onClick={() => setTags(tags.filter((x) => x !== tag))}
 									style={{ background: "transparent", border: 0, color: "inherit", cursor: "pointer", padding: 0 }}
-									aria-label={t("save.removeTag", language, { tag })}
+									aria-label={t("save.removeTag", { tag })}
 								>
 									<I.close size={10} />
 								</button>
@@ -263,7 +260,7 @@ export function SaveModal() {
 									addTag();
 								}
 							}}
-							placeholder={t("save.addTag", language)}
+							placeholder={t("save.addTag")}
 							style={{
 								flex: 1,
 								minWidth: 100,
@@ -295,21 +292,21 @@ function SignInToSave({
 	wpCount: number;
 	onClose: () => void;
 }) {
-	const language = useUiStore((s) => s.language);
+	const t = useT();
 	const goToSignIn = () => {
 		onClose();
-		window.dispatchEvent(new CustomEvent("routess:open-login"));
+		emitAppEvent("routess:open-login");
 	};
 
 	const goToSignUp = () => {
 		onClose();
-		window.dispatchEvent(new CustomEvent("routess:open-signup"));
+		emitAppEvent("routess:open-signup");
 	};
 
 	return (
 		<ModalShell
-			title={t("save.gate.title", language)}
-			sub={t("save.waypointsCount", language, {
+			title={t("save.gate.title")}
+			sub={t("save.waypointsCount", {
 				distance: distance || "—",
 				duration: duration || "—",
 				count: String(wpCount),
@@ -318,22 +315,18 @@ function SignInToSave({
 			onClose={onClose}
 			footer={
 				<>
-					<Btn onClick={onClose}>{t("common.cancel", language)}</Btn>
+					<Btn onClick={onClose}>{t("common.cancel")}</Btn>
 					<div style={{ flex: 1 }} />
-					<Btn onClick={goToSignUp}>{t("save.createAccount", language)}</Btn>
+					<Btn onClick={goToSignUp}>{t("save.createAccount")}</Btn>
 					<Btn variant="primary" onClick={goToSignIn}>
-						<I.user size={14} /> {t("common.signIn", language)}
+						<I.user size={14} /> {t("common.signIn")}
 					</Btn>
 				</>
 			}
 		>
 			<div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-				<p style={{ margin: 0, fontSize: 13.5, color: RDS_COLORS.fg, lineHeight: 1.5 }}>
-					{t("save.gate.subtitle", language)}
-				</p>
-				<p style={{ margin: 0, fontSize: 12.5, color: RDS_COLORS.fgMuted, lineHeight: 1.5 }}>
-					{t("save.gate.body", language)}
-				</p>
+				<p style={{ margin: 0, fontSize: 13.5, color: RDS_COLORS.fg, lineHeight: 1.5 }}>{t("save.gate.subtitle")}</p>
+				<p style={{ margin: 0, fontSize: 12.5, color: RDS_COLORS.fgMuted, lineHeight: 1.5 }}>{t("save.gate.body")}</p>
 
 				<ul
 					style={{
@@ -348,13 +341,13 @@ function SignInToSave({
 					}}
 				>
 					<li style={{ display: "flex", alignItems: "center", gap: 8 }}>
-						<I.save size={12} /> {t("save.gate.benefit.unlimited", language)}
+						<I.save size={12} /> {t("save.gate.benefit.unlimited")}
 					</li>
 					<li style={{ display: "flex", alignItems: "center", gap: 8 }}>
-						<I.library size={12} /> {t("save.gate.benefit.sync", language)}
+						<I.library size={12} /> {t("save.gate.benefit.sync")}
 					</li>
 					<li style={{ display: "flex", alignItems: "center", gap: 8 }}>
-						<I.share size={12} /> {t("save.gate.benefit.share", language)}
+						<I.share size={12} /> {t("save.gate.benefit.share")}
 					</li>
 				</ul>
 			</div>

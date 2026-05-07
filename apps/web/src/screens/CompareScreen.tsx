@@ -1,11 +1,10 @@
-import { t } from "@/lib/i18n";
-import { useUiStore } from "@/stores/uiStore";
+import { useT } from "@/lib/i18n";
 import { ComingSoonState } from "../components/ComingSoonState";
 import { I } from "../components/icons";
 import { IconBtn, RDS_COLORS } from "../components/primitives";
 
 export function CompareScreen({ onClose }: { onClose?: () => void }) {
-	const language = useUiStore((s) => s.language);
+	const t = useT();
 	return (
 		<div
 			style={{
@@ -26,14 +25,14 @@ export function CompareScreen({ onClose }: { onClose?: () => void }) {
 						borderBottom: `1px solid ${RDS_COLORS.border}`,
 					}}
 				>
-					<IconBtn title={t("common.close", language)} onClick={onClose}>
+					<IconBtn title={t("common.close")} onClick={onClose}>
 						<I.close size={16} />
 					</IconBtn>
-					<span style={{ fontSize: 14, fontWeight: 600 }}>{t("compare.heading", language)}</span>
+					<span style={{ fontSize: 14, fontWeight: 600 }}>{t("compare.heading")}</span>
 				</div>
 			)}
 			<div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
-				<ComingSoonState icon="layers" title={t("compare.title", language)} body={t("compare.body", language)} />
+				<ComingSoonState icon="layers" title={t("compare.title")} body={t("compare.body")} />
 			</div>
 		</div>
 	);

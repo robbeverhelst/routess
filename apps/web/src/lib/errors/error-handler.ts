@@ -2,8 +2,25 @@
  * Centralized error handling system
  */
 
+import { ApiDomainError } from "@routess/api-client";
+import { type DomainErrorCode, severityForCode } from "@routess/core";
 import { Logger } from "@/lib/logger";
 import type { AppError, ErrorCategory, ErrorHandlerOptions, ErrorSeverity } from "./types";
+
+const categoryForCode = (code: DomainErrorCode): ErrorCategory => {
+	switch (code) {
+		case "UNAUTHORIZED":
+		case "FORBIDDEN":
+			return "auth" as ErrorCategory;
+		case "VALIDATION_FAILED":
+			return "validation" as ErrorCategory;
+		case "NOT_FOUND":
+		case "CONFLICT":
+		case "RATE_LIMITED":
+		case "INTERNAL":
+			return "api" as ErrorCategory;
+	}
+};
 
 class ErrorHandlerService {
 	private errorListeners: Array<(error: AppError) => void> = [];
@@ -185,13 +202,23 @@ export const handleNetworkError = (error: Error, context?: string, retry?: () =>
 		retry,
 	});
 
-export const handleAPIError = (error: Error, context?: string, retry?: () => void) =>
-	errorHandler.handleError(error, {
+export const handleAPIError = (error: Error, context?: string, retry?: () => void) => {
+	if (error instanceof ApiDomainError) {
+		return errorHandler.handleError(error, {
+			category: categoryForCode(error.payload.code),
+			severity: severityForCode(error.payload.code) as ErrorSeverity,
+			context,
+			retry,
+			metadata: { code: error.payload.code, ...(error.payload.details ? { details: error.payload.details } : {}) },
+		});
+	}
+	return errorHandler.handleError(error, {
 		category: "api" as ErrorCategory,
 		severity: "medium" as ErrorSeverity,
 		context,
 		retry,
 	});
+};
 
 export const handleLocationError = (error: Error, context?: string) =>
 	errorHandler.handleError(error, {

@@ -12,24 +12,24 @@ interface Field {
 	managedKey?: string;
 }
 
-function buildFields(language: SupportedLanguage, name: string | null, email: string | null): Field[] {
-	const dash = t("account.dash", language);
-	const username = email?.split("@")[0] ?? t("account.guest", language);
+function buildFields(_language: SupportedLanguage, name: string | null, email: string | null): Field[] {
+	const dash = t("account.dash");
+	const username = email?.split("@")[0] ?? t("account.guest");
 	return [
 		{ labelKey: "account.field.name", value: name ?? dash, managedKey: "account.managedByGoogle" },
 		{ labelKey: "account.field.email", value: email ?? dash, managedKey: "account.managedByGoogle" },
 		{ labelKey: "account.field.username", value: username, editable: true },
 		{
 			labelKey: "account.field.password",
-			value: t("account.passwordManaged", language),
+			value: t("account.passwordManaged"),
 			managedKey: "account.managedByGoogle",
 		},
 		{
 			labelKey: "account.field.twofactor",
-			value: t("account.passwordManaged", language),
+			value: t("account.passwordManaged"),
 			managedKey: "account.managedByGoogle",
 		},
-		{ labelKey: "account.field.connected", value: t("account.connectedNone", language), editable: true },
+		{ labelKey: "account.field.connected", value: t("account.connectedNone"), editable: true },
 	];
 }
 
@@ -53,18 +53,16 @@ export function AccountScreen() {
 	const handleEdit = (index: number) => {
 		const field = fields[index];
 		if (!field) return;
-		const label = t(field.labelKey, language);
+		const label = t(field.labelKey);
 		if (!field.editable) {
 			pushToast({
 				kind: "info",
-				title: t("account.readonly", language, { label }),
-				body: field.managedKey
-					? t("account.readonlySub", language, { managed: t(field.managedKey, language) })
-					: undefined,
+				title: t("account.readonly", { label }),
+				body: field.managedKey ? t("account.readonlySub", { managed: t(field.managedKey) }) : undefined,
 			});
 			return;
 		}
-		const next = window.prompt(t("account.editPrompt", language, { label }), field.value);
+		const next = window.prompt(t("account.editPrompt", { label }), field.value);
 		if (next == null) return;
 		const trimmed = next.trim();
 		if (!trimmed) return;
@@ -72,12 +70,12 @@ export function AccountScreen() {
 	};
 
 	const handleDeleteAccount = () => {
-		const confirmed = window.confirm(t("account.deleteConfirm", language));
+		const confirmed = window.confirm(t("account.deleteConfirm"));
 		if (!confirmed) return;
 		pushToast({
 			kind: "info",
-			title: t("account.deleteToast.title", language),
-			body: t("account.deleteToast.body", language),
+			title: t("account.deleteToast.title"),
+			body: t("account.deleteToast.body"),
 		});
 	};
 
@@ -91,9 +89,9 @@ export function AccountScreen() {
 			}}
 		>
 			<div style={{ maxWidth: 720, margin: "0 auto", padding: "40px 24px" }}>
-				<SecTitle>{t("nav.settings", language)}</SecTitle>
+				<SecTitle>{t("nav.settings")}</SecTitle>
 				<h1 style={{ fontSize: 26, fontWeight: 600, margin: "4px 0 0", letterSpacing: -0.5 }}>
-					{t("account.heading", language)}
+					{t("account.heading")}
 				</h1>
 
 				<div
@@ -105,7 +103,7 @@ export function AccountScreen() {
 						borderRadius: 12,
 					}}
 				>
-					<SecTitle style={{ marginBottom: 14 }}>{t("account.title", language)}</SecTitle>
+					<SecTitle style={{ marginBottom: 14 }}>{t("account.title")}</SecTitle>
 					{fields.map((f, i) => (
 						<div
 							key={f.labelKey}
@@ -117,16 +115,16 @@ export function AccountScreen() {
 								borderBottom: i < fields.length - 1 ? `1px solid ${RDS_COLORS.border}` : "none",
 							}}
 						>
-							<div style={{ fontSize: 13, color: RDS_COLORS.fgMuted, width: 110 }}>{t(f.labelKey, language)}</div>
+							<div style={{ fontSize: 13, color: RDS_COLORS.fgMuted, width: 110 }}>{t(f.labelKey)}</div>
 							<div style={{ flex: 1, fontSize: 13 }}>{f.value}</div>
 							<Btn
 								variant="ghost"
 								style={{ height: 28, padding: "0 10px", fontSize: 12 }}
 								onClick={() => handleEdit(i)}
 								disabled={f.editable}
-								title={f.editable ? t("common.comingSoon", language) : undefined}
+								title={f.editable ? t("common.comingSoon") : undefined}
 							>
-								{f.editable ? t("account.soon", language) : t("common.edit", language)}
+								{f.editable ? t("account.soon") : t("common.edit")}
 							</Btn>
 						</div>
 					))}
@@ -140,25 +138,25 @@ export function AccountScreen() {
 						borderRadius: 12,
 					}}
 				>
-					<SecTitle style={{ marginBottom: 12, color: RDS_COLORS.danger }}>{t("account.danger", language)}</SecTitle>
+					<SecTitle style={{ marginBottom: 12, color: RDS_COLORS.danger }}>{t("account.danger")}</SecTitle>
 					<div style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 0" }}>
 						<div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
-							<div style={{ fontSize: 13, fontWeight: 500 }}>{t("account.deleteAccount", language)}</div>
+							<div style={{ fontSize: 13, fontWeight: 500 }}>{t("account.deleteAccount")}</div>
 							<div style={{ fontSize: 12, color: RDS_COLORS.fgMuted, marginTop: 2 }}>
-								{t("account.deleteAccountSub", language)}
+								{t("account.deleteAccountSub")}
 							</div>
 						</div>
 						<Btn
 							onClick={handleDeleteAccount}
 							disabled
-							title={t("common.comingSoon", language)}
+							title={t("common.comingSoon")}
 							style={{
 								background: "transparent",
 								color: RDS_COLORS.danger,
 								borderColor: `color-mix(in oklch, ${RDS_COLORS.danger} 40%, ${RDS_COLORS.border})`,
 							}}
 						>
-							{t("common.delete", language)}
+							{t("common.delete")}
 						</Btn>
 					</div>
 				</div>

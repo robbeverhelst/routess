@@ -5,10 +5,11 @@ import { Inject, Injectable } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import type { AppConfig } from "../config/app-config";
 import { APP_CONFIG } from "../config/config.module";
-import { Route } from "../entities/route.entity";
 import { Session } from "../entities/session.entity";
 import { User } from "../entities/user.entity";
 import { MetricsService } from "../telemetry/metrics.service";
+
+const LAST_ACTIVITY_UPDATE_INTERVAL_MS = 5 * 60 * 1000;
 
 @Injectable()
 export class SessionService {
@@ -17,8 +18,6 @@ export class SessionService {
 		private readonly sessionRepository: EntityRepository<Session>,
 		@InjectRepository(User)
 		private readonly userRepository: EntityRepository<User>,
-		@InjectRepository(Route)
-		private readonly routeRepository: EntityRepository<Route>,
 		private readonly em: EntityManager,
 		private readonly jwtService: JwtService,
 		@Inject(APP_CONFIG)
@@ -60,12 +59,39 @@ export class SessionService {
 		});
 
 		if (session) {
-			// Update last activity
-			session.lastActivity = new Date();
-			await this.em.persistAndFlush(session);
+			const now = new Date();
+			const lastActivityAt = session.lastActivity?.getTime() ?? 0;
+			if (now.getTime() - lastActivityAt >= LAST_ACTIVITY_UPDATE_INTERVAL_MS) {
+				session.lastActivity = now;
+				await this.em.persistAndFlush(session);
+			}
 		}
 
 		return session;
+	}
+
+	// Single-query variant used on the auth-guard hot path: validates the
+	// session and returns the owning User (skipping soft-deleted users) in
+	// one populated load.
+	async resolveAuthenticatedUser(jti: string): Promise<User | null> {
+		const session = await this.sessionRepository.findOne(
+			{ jti, expiresAt: { $gt: new Date() }, deletedAt: null },
+			{ populate: ["user"] },
+		);
+		if (!session) return null;
+
+		const now = new Date();
+		const lastActivityAt = session.lastActivity?.getTime() ?? 0;
+		if (now.getTime() - lastActivityAt >= LAST_ACTIVITY_UPDATE_INTERVAL_MS) {
+			session.lastActivity = now;
+			await this.em.persistAndFlush(session);
+		}
+
+		// Populated Ref behaves as the entity at runtime; cast through unknown
+		// because the Ref<T> type-level wrapper lies about that shape.
+		const user = session.user as unknown as User;
+		if (!user || user.deletedAt) return null;
+		return user;
 	}
 
 	async invalidateSession(jti: string): Promise<void> {
@@ -118,15 +144,6 @@ export class SessionService {
 
 		await this.em.flush();
 		await this.syncActiveUsersMetric();
-	}
-
-	async getUserStatistics(userId: number): Promise<{ totalRoutes: number; totalDistance: number }> {
-		const routes = await this.routeRepository.find({ user: userId, deletedAt: null });
-
-		return {
-			totalRoutes: routes.length,
-			totalDistance: routes.reduce((total, route) => total + (route.distance || 0), 0),
-		};
 	}
 
 	private async syncActiveUsersMetric(): Promise<void> {

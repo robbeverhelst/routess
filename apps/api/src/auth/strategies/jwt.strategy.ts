@@ -1,9 +1,9 @@
 import { Inject, Injectable, UnauthorizedException } from "@nestjs/common";
 import { PassportStrategy } from "@nestjs/passport";
+import type { Request } from "express";
 import { ExtractJwt, Strategy } from "passport-jwt";
 import type { AppConfig } from "../../config/app-config";
 import { APP_CONFIG } from "../../config/config.module";
-import { AuthService } from "../auth.service";
 import type { AuthenticatedUser } from "../authenticated-user";
 import { SessionService } from "../session.service";
 
@@ -15,15 +15,31 @@ export interface JwtPayload {
 	exp?: number;
 }
 
+function tokenFromCookie(cookieName: string) {
+	return (request: Request): string | null => {
+		const cookieHeader = request.headers.cookie;
+		if (!cookieHeader) {
+			return null;
+		}
+
+		const cookies = cookieHeader.split(";").map((part) => part.trim());
+		const prefix = `${cookieName}=`;
+		const match = cookies.find((cookie) => cookie.startsWith(prefix));
+		return match ? decodeURIComponent(match.slice(prefix.length)) : null;
+	};
+}
+
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
 	constructor(
 		@Inject(APP_CONFIG) config: AppConfig,
-		private authService: AuthService,
 		private sessionService: SessionService,
 	) {
 		super({
-			jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+			jwtFromRequest: ExtractJwt.fromExtractors([
+				ExtractJwt.fromAuthHeaderAsBearerToken(),
+				tokenFromCookie(config.auth.cookieName),
+			]),
 			ignoreExpiration: false,
 			secretOrKey: config.auth.jwtSecret,
 		});
@@ -34,14 +50,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 			throw new UnauthorizedException("Session is invalid");
 		}
 
-		const session = await this.sessionService.validateSession(payload.jti);
-		if (!session) {
-			throw new UnauthorizedException("Session expired or revoked");
-		}
-
-		const user = await this.authService.validateUserById(payload.sub);
+		// Single populated lookup: validates the session and resolves the
+		// owning user in one query (was two: validateSession + validateUserById).
+		const user = await this.sessionService.resolveAuthenticatedUser(payload.jti);
 		if (!user) {
-			throw new UnauthorizedException("User not found");
+			throw new UnauthorizedException("Session expired or user not found");
 		}
 
 		return {

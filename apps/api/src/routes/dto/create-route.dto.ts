@@ -1,6 +1,7 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Type } from "class-transformer";
 import {
+	ArrayMaxSize,
 	ArrayMinSize,
 	IsArray,
 	IsIn,
@@ -8,34 +9,63 @@ import {
 	IsNumber,
 	IsOptional,
 	IsString,
+	Validate,
 	ValidateNested,
+	ValidatorConstraint,
+	type ValidatorConstraintInterface,
 } from "class-validator";
+
+const MAX_WAYPOINTS = 100;
+const MAX_GEOMETRY_POINTS = 20_000;
+
+const isValidCoord = (value: unknown): value is [number, number] => {
+	if (!Array.isArray(value) || value.length !== 2) return false;
+	const [lng, lat] = value;
+	return (
+		typeof lng === "number" &&
+		Number.isFinite(lng) &&
+		lng >= -180 &&
+		lng <= 180 &&
+		typeof lat === "number" &&
+		Number.isFinite(lat) &&
+		lat >= -90 &&
+		lat <= 90
+	);
+};
+
+@ValidatorConstraint({ name: "Coordinate", async: false })
+class CoordinateConstraint implements ValidatorConstraintInterface {
+	validate(value: unknown): boolean {
+		return isValidCoord(value);
+	}
+	defaultMessage(): string {
+		return "coord must be a [lng, lat] pair with lng in [-180,180] and lat in [-90,90]";
+	}
+}
+
+@ValidatorConstraint({ name: "CoordinatePairs", async: false })
+class CoordinatePairsConstraint implements ValidatorConstraintInterface {
+	validate(value: unknown): boolean {
+		if (value === undefined || value === null) return true;
+		if (!Array.isArray(value) || value.length > MAX_GEOMETRY_POINTS) return false;
+		return value.every(isValidCoord);
+	}
+	defaultMessage(): string {
+		return `geometry must contain at most ${MAX_GEOMETRY_POINTS} [lng, lat] coordinate pairs`;
+	}
+}
 
 class WaypointDto {
 	@ApiProperty({
-		description: "Latitude coordinate of the waypoint",
-		example: 40.7128,
-		type: "number",
+		description: "Waypoint coordinate as a [lng, lat] pair",
+		example: [-74.006, 40.7128],
+		type: "array",
+		items: { type: "number" },
+		minItems: 2,
+		maxItems: 2,
 	})
-	@IsNumber()
-	lat!: number;
-
-	@ApiProperty({
-		description: "Longitude coordinate of the waypoint",
-		example: -74.006,
-		type: "number",
-	})
-	@IsNumber()
-	lng!: number;
-
-	@ApiProperty({
-		description: "Timestamp when the waypoint was recorded",
-		example: "2024-01-15T10:30:00Z",
-		required: false,
-	})
-	@IsOptional()
-	@IsString()
-	timestamp?: string;
+	@Validate(CoordinateConstraint)
+	coord!: [number, number];
 
 	@ApiProperty({
 		description: "Type of waypoint routing",
@@ -54,6 +84,15 @@ class WaypointDto {
 	@IsOptional()
 	@IsString()
 	name?: string;
+
+	@ApiProperty({
+		description: "Timestamp when the waypoint was recorded",
+		example: "2024-01-15T10:30:00Z",
+		required: false,
+	})
+	@IsOptional()
+	@IsString()
+	timestamp?: string;
 }
 
 export class CreateRouteDto {
@@ -80,22 +119,13 @@ export class CreateRouteDto {
 		type: [WaypointDto],
 		minItems: 1,
 		example: [
-			{
-				lat: 40.7128,
-				lng: -74.006,
-				timestamp: "2024-01-15T10:00:00Z",
-				type: "routed",
-			},
-			{
-				lat: 40.7589,
-				lng: -73.9851,
-				timestamp: "2024-01-15T10:30:00Z",
-				type: "direct",
-			},
+			{ coord: [-74.006, 40.7128], type: "routed", timestamp: "2024-01-15T10:00:00Z" },
+			{ coord: [-73.9851, 40.7589], type: "direct", timestamp: "2024-01-15T10:30:00Z" },
 		],
 	})
 	@IsArray()
 	@ArrayMinSize(1)
+	@ArrayMaxSize(MAX_WAYPOINTS)
 	@ValidateNested({ each: true })
 	@Type(() => WaypointDto)
 	waypoints!: WaypointDto[];
@@ -110,6 +140,7 @@ export class CreateRouteDto {
 	})
 	@IsOptional()
 	@IsArray()
+	@Validate(CoordinatePairsConstraint)
 	geometry?: [number, number][];
 
 	@ApiProperty({

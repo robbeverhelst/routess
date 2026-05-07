@@ -1,10 +1,34 @@
-import { EntityManager, EntityRepository } from "@mikro-orm/core";
+import { EntityManager, EntityRepository, wrap } from "@mikro-orm/core";
 import { InjectRepository } from "@mikro-orm/nestjs";
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { Route } from "../entities/route.entity";
+import type { User } from "../entities/user.entity";
 import { MetricsService } from "../telemetry/metrics.service";
+import { toUserResponseDto } from "../users/user.mapper";
 import type { CreateRouteDto } from "./dto/create-route.dto";
+import type { RouteResponseDto } from "./dto/route-response.dto";
 import type { UpdateRouteDto } from "./dto/update-route.dto";
+
+type SerializableUser = Pick<User, "id" | "email" | "name" | "avatar" | "isEmailVerified" | "preferences">;
+
+const toResponseDto = (route: Route): RouteResponseDto => {
+	const serializedUser = wrap(route.user).toJSON() as SerializableUser;
+	return {
+		id: route.id,
+		name: route.name,
+		description: route.description,
+		waypoints: route.waypoints,
+		geometry: route.geometry,
+		distance: route.distance,
+		duration: route.duration,
+		elevationGain: route.elevationGain,
+		startAddress: route.startAddress,
+		endAddress: route.endAddress,
+		user: toUserResponseDto(serializedUser),
+		createdAt: route.createdAt.toISOString(),
+		updatedAt: route.updatedAt.toISOString(),
+	};
+};
 
 @Injectable()
 export class RoutesService {
@@ -15,58 +39,39 @@ export class RoutesService {
 		private readonly metricsService: MetricsService,
 	) {}
 
-	async create(createRouteDto: CreateRouteDto, userId: number): Promise<Route> {
-		const route = this.routeRepository.create({
-			...createRouteDto,
-			user: userId,
-		});
-
+	async create(createRouteDto: CreateRouteDto, userId: number): Promise<RouteResponseDto> {
+		const route = this.routeRepository.create({ ...createRouteDto, user: userId });
 		await this.em.persistAndFlush(route);
 		await this.em.populate(route, ["user"]);
-
-		// Record route creation metric
 		this.metricsService.recordRouteCreated(userId);
-
-		return route;
+		return toResponseDto(route);
 	}
 
-	async findAll(userId: number): Promise<Route[]> {
-		return this.routeRepository.find(
+	async findAll(userId: number): Promise<RouteResponseDto[]> {
+		const routes = await this.routeRepository.find(
 			{ user: userId, deletedAt: null },
-			{
-				populate: ["user"],
-				orderBy: { createdAt: "DESC" }, // Most recent routes first
-				limit: 100, // Prevent loading too many routes at once
-			},
+			{ populate: ["user"], orderBy: { createdAt: "DESC" }, limit: 100 },
 		);
+		return routes.map(toResponseDto);
 	}
 
-	async findOne(id: number, userId: number): Promise<Route> {
-		const route = await this.routeRepository.findOne({ id, user: userId, deletedAt: null }, { populate: ["user"] });
-
-		if (!route) {
-			throw new NotFoundException(`Route with ID ${id} not found`);
-		}
-
-		return route;
+	async findOne(id: number, userId: number): Promise<RouteResponseDto> {
+		const route = await this.findOwnedRouteOrFail(id, userId);
+		return toResponseDto(route);
 	}
 
-	async update(id: number, updateRouteDto: UpdateRouteDto, userId: number): Promise<Route> {
-		const route = await this.findOne(id, userId);
-
+	async update(id: number, updateRouteDto: UpdateRouteDto, userId: number): Promise<RouteResponseDto> {
+		const route = await this.findOwnedRouteOrFail(id, userId);
 		this.routeRepository.assign(route, updateRouteDto);
 		await this.em.persistAndFlush(route);
 		await this.em.populate(route, ["user"]);
-
-		return route;
+		return toResponseDto(route);
 	}
 
 	async remove(id: number, userId: number): Promise<void> {
-		const route = await this.findOne(id, userId);
+		const route = await this.findOwnedRouteOrFail(id, userId);
 		route.deletedAt = new Date();
 		await this.em.persistAndFlush(route);
-
-		// Record route deletion metric
 		this.metricsService.recordRouteDeleted(userId);
 	}
 
@@ -76,5 +81,13 @@ export class RoutesService {
 			throw new NotFoundException(`Route with ID ${id} not found`);
 		}
 		await this.em.removeAndFlush(route);
+	}
+
+	private async findOwnedRouteOrFail(id: number, userId: number): Promise<Route> {
+		const route = await this.routeRepository.findOne({ id, user: userId, deletedAt: null }, { populate: ["user"] });
+		if (!route) {
+			throw new NotFoundException(`Route with ID ${id} not found`);
+		}
+		return route;
 	}
 }

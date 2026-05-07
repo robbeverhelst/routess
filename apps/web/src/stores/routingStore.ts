@@ -16,10 +16,6 @@ export const useIsComputingElevation = () => useRoutingStore((s) => s.isComputin
 export const useIsMapLocked = () => useRoutingStore((s) => s.isMapLocked);
 export const useCanUndo = () => useRoutingStore((s) => s.canUndo);
 export const useCanRedo = () => useRoutingStore((s) => s.canRedo);
-export const useShareNotification = () => useRoutingStore((s) => s.shareNotification);
-export const useDisplayedShareUrl = () => useRoutingStore((s) => s.displayedShareUrl);
-export const useShowRouteInfoError = () => useRoutingStore((s) => s.showRouteInfoError);
-export const useRouteInfoErrorMessage = () => useRoutingStore((s) => s.routeInfoErrorMessage);
 
 // Action selectors (Zustand action references are stable across renders)
 export const useAddWaypoint = () => useRoutingStore((s) => s.addWaypoint);
@@ -39,10 +35,5 @@ export const useSaveSnapshot = () => useRoutingStore((s) => s.saveSnapshot);
 export const useUndo = () => useRoutingStore((s) => s.undo);
 export const useRedo = () => useRoutingStore((s) => s.redo);
 export const useClearHistory = () => useRoutingStore((s) => s.clearHistory);
-export const useSetShareNotification = () => useRoutingStore((s) => s.setShareNotification);
-export const useSetDisplayedShareUrl = () => useRoutingStore((s) => s.setDisplayedShareUrl);
-export const useSetShowRouteInfoError = () => useRoutingStore((s) => s.setShowRouteInfoError);
-export const useSetRouteInfoErrorMessage = () => useRoutingStore((s) => s.setRouteInfoErrorMessage);
-export const useClearShareState = () => useRoutingStore((s) => s.clearShareState);
 
 export type { RouteActions, RouteState, RoutingStore } from "@routess/core";

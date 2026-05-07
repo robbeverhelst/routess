@@ -11,10 +11,10 @@
 		"preview": "vite preview",
 		"clean": "rm -rf dist && rm -rf node_modules/.vite",
 		"docker:build": "docker build -f Dockerfile -t routess-web ../..",
-		"test": "vitest run --passWithNoTests",
+		"test": "vitest run",
 		"test:watch": "vitest",
 		"test:coverage": "vitest run --coverage",
-		"test:ci": "vitest run --coverage --passWithNoTests"
+		"test:ci": "vitest run --coverage"
 	},
 	"dependencies": {
 		"@routess/api-client": "workspace:*",
@@ -59,6 +59,7 @@
 		"@types/react-dom": "^19.1.6",
 		"@vitest/coverage-v8": "^4.0.0",
 		"@vitejs/plugin-react": "^6.0.0",
+		"happy-dom": "^20.9.0",
 		"identity-obj-proxy": "^3.0.0",
 		"import-local": "^3.2.0",
 		"jsdom": "^29.0.0",

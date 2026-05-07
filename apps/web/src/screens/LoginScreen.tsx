@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { type CredentialResponse, googleAuth, hasValidGoogleClientId } from "@/lib/google-auth";
-import { t } from "@/lib/i18n";
+import { useT } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
 import { useToastStore } from "@/stores/toastStore";
-import { useUiStore } from "@/stores/uiStore";
 import {
 	AUTH_CARD_STYLE,
 	AuthBackdrop,
@@ -17,7 +16,7 @@ import { Btn, RDS_COLORS } from "../components/primitives";
 export function LoginScreen({ onSuccess }: { onSuccess?: () => void }) {
 	const [isLoading, setIsLoading] = useState(false);
 	const pushToast = useToastStore((s) => s.push);
-	const language = useUiStore((s) => s.language);
+	const t = useT();
 	const oauthConfigured = hasValidGoogleClientId();
 
 	const handleSuccess = async (cred: CredentialResponse) => {
@@ -25,14 +24,14 @@ export function LoginScreen({ onSuccess }: { onSuccess?: () => void }) {
 		try {
 			const user = await googleAuth.handleGoogleSuccess(cred);
 			Logger.info("Google login success", { email: user.email });
-			pushToast({ kind: "success", title: t("login.toast.welcomeBack", language), body: user.name ?? user.email });
+			pushToast({ kind: "success", title: t("login.toast.welcomeBack"), body: user.name ?? user.email });
 			onSuccess?.();
 		} catch (error) {
 			Logger.error("Google login failed", error);
 			pushToast({
 				kind: "danger",
-				title: t("login.toast.failed", language),
-				body: t("login.toast.failedSub", language),
+				title: t("login.toast.failed"),
+				body: t("login.toast.failedSub"),
 			});
 		} finally {
 			setIsLoading(false);
@@ -41,7 +40,7 @@ export function LoginScreen({ onSuccess }: { onSuccess?: () => void }) {
 
 	const handleError = () => {
 		googleAuth.handleGoogleError();
-		pushToast({ kind: "danger", title: t("login.toast.cancelled", language) });
+		pushToast({ kind: "danger", title: t("login.toast.cancelled") });
 	};
 
 	return (
@@ -92,7 +91,7 @@ export function LoginScreen({ onSuccess }: { onSuccess?: () => void }) {
 							lineHeight: 1.15,
 						}}
 					>
-						{t("login.welcomeBack", language)}
+						{t("login.welcomeBack")}
 					</h1>
 					<p
 						style={{
@@ -103,7 +102,7 @@ export function LoginScreen({ onSuccess }: { onSuccess?: () => void }) {
 							lineHeight: 1.5,
 						}}
 					>
-						{t("login.subtitle", language)}
+						{t("login.subtitle")}
 					</p>
 
 					<div style={{ minHeight: 46 }}>
@@ -122,9 +121,9 @@ export function LoginScreen({ onSuccess }: { onSuccess?: () => void }) {
 								}}
 							>
 								<div style={{ fontWeight: 600, color: RDS_COLORS.warn, marginBottom: 4 }}>
-									{t("login.googleNotConfigured", language)}
+									{t("login.googleNotConfigured")}
 								</div>
-								<div style={{ color: RDS_COLORS.fgMuted }}>{t("login.googleNotConfiguredHint", language)}</div>
+								<div style={{ color: RDS_COLORS.fgMuted }}>{t("login.googleNotConfiguredHint")}</div>
 							</div>
 						)}
 					</div>
@@ -146,7 +145,7 @@ export function LoginScreen({ onSuccess }: { onSuccess?: () => void }) {
 								letterSpacing: 0.6,
 							}}
 						>
-							{t("common.or", language)}
+							{t("common.or")}
 						</span>
 						<div style={{ flex: 1, height: 1, background: RDS_COLORS.border }} />
 					</div>
@@ -161,7 +160,7 @@ export function LoginScreen({ onSuccess }: { onSuccess?: () => void }) {
 							borderColor: RDS_COLORS.borderStrong,
 						}}
 					>
-						{t("login.continueGuest", language)}
+						{t("login.continueGuest")}
 					</Btn>
 
 					{isLoading && (
@@ -186,7 +185,7 @@ export function LoginScreen({ onSuccess }: { onSuccess?: () => void }) {
 									animation: "rds-pulse 1s linear infinite",
 								}}
 							/>
-							<span>{t("common.signingIn", language)}</span>
+							<span>{t("common.signingIn")}</span>
 						</div>
 					)}
 
@@ -202,13 +201,13 @@ export function LoginScreen({ onSuccess }: { onSuccess?: () => void }) {
 						}}
 					>
 						<I.compass size={11} style={{ verticalAlign: "middle", marginRight: 4 }} />
-						{t("login.legal", language)}{" "}
+						{t("login.legal")}{" "}
 						<a href="/terms" style={{ color: RDS_COLORS.fgMuted, fontWeight: 500 }}>
-							{t("login.terms", language)}
+							{t("login.terms")}
 						</a>{" "}
 						&{" "}
 						<a href="/privacy" style={{ color: RDS_COLORS.fgMuted, fontWeight: 500 }}>
-							{t("login.privacy", language)}
+							{t("login.privacy")}
 						</a>
 						.
 					</div>

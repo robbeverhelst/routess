@@ -1,4 +1,5 @@
 import { useAuthStatus } from "@/lib/api-queries";
+import { emitAppEvent } from "@/lib/app-events";
 import { I } from "./icons";
 import { RDS_COLORS } from "./primitives";
 
@@ -41,9 +42,9 @@ export function UserAvatar({ size = 30, onClick, title, compact = false }: UserA
 			return;
 		}
 		if (isAuthenticated) {
-			window.dispatchEvent(new CustomEvent("routess:open-account"));
+			emitAppEvent("routess:open-account");
 		} else {
-			window.dispatchEvent(new CustomEvent("routess:open-login"));
+			emitAppEvent("routess:open-login");
 		}
 	};
 

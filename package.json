@@ -16,14 +16,11 @@
 		"test": "bun run --filter '*' test",
 		"format": "biome format --write .",
 		"format:check": "biome format .",
-		"ci": "docker-compose up -d postgres && bun run format && bun run lint && bun run build && bun run check-types && bun run test",
-		"clean": "sh -c '((command -v docker-compose >/dev/null 2>&1 && docker-compose down -v --remove-orphans) || (command -v docker >/dev/null 2>&1 && docker compose down -v --remove-orphans) || true) && rm -rf node_modules apps/*/node_modules packages/*/node_modules apps/*/dist packages/*/dist apps/*/tsconfig.tsbuildinfo packages/*/tsconfig.tsbuildinfo coverage apps/*/coverage apps/api/.nest apps/api/node_modules/.cache apps/docs/.next apps/docs/.source apps/web/node_modules/.vite .turbo pgadmin /tmp/esbuild*'",
-		"docker:build:web": "docker build -f apps/web/Dockerfile -t routess-web .",
-		"docker:build:api": "docker build -f apps/api/Dockerfile -t routess-api .",
-		"docker:build:docs": "docker build -f apps/docs/Dockerfile -t routess-docs .",
+		"ci": "docker compose up -d postgres && bun run format:check && bun run lint && bun run check-types && bun run build && bun run test",
+		"clean": "bun ./scripts/clean.ts",
+		"build:images": "docker buildx bake -f docker/docker-bake.hcl",
 		"docs:generate-api": "bun run --filter './apps/api' openapi:generate && bun run --filter './apps/docs' openapi:generate",
-		"docs:sync-translations": "bun run --filter './apps/docs' guide:sync-translations",
-		"ls": "node -e \"const pkg = require('./package.json'); console.log('\\n📋 Available Scripts:\\n'); Object.entries(pkg.scripts).forEach(([name, cmd]) => console.log('  ' + name.padEnd(25) + ' ' + cmd)); console.log('\\n💡 Usage: bun run <script-name>\\n');\""
+		"docs:sync-translations": "bun run --filter './apps/docs' guide:sync-translations"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.4.8",
@@ -32,11 +29,81 @@
 		"@semantic-release/github": "^12.0.0",
 		"@semantic-release/npm": "^13.0.0",
 		"@semantic-release/release-notes-generator": "^14.0.1",
-		"@types/node": "^25.0.0",
+		"@types/node": "^22.0.0",
 		"semantic-release": "^25.0.0",
 		"typescript": "~6.0.0"
 	},
 	"overrides": {
 		"brace-expansion": "^5.0.0"
+	},
+	"release": {
+		"branches": [
+			"main"
+		],
+		"tagFormat": "${version}",
+		"plugins": [
+			[
+				"@semantic-release/commit-analyzer",
+				{
+					"preset": "angular",
+					"releaseRules": [
+						{
+							"type": "refactor",
+							"release": "patch"
+						},
+						{
+							"type": "perf",
+							"release": "patch"
+						}
+					],
+					"parserOpts": {
+						"noteKeywords": [
+							"BREAKING CHANGE",
+							"BREAKING CHANGES"
+						]
+					}
+				}
+			],
+			[
+				"@semantic-release/release-notes-generator",
+				{
+					"preset": "angular",
+					"parserOpts": {
+						"noteKeywords": [
+							"BREAKING CHANGE",
+							"BREAKING CHANGES"
+						]
+					},
+					"writerOpts": {
+						"commitsSort": [
+							"subject",
+							"scope"
+						]
+					}
+				}
+			],
+			[
+				"@semantic-release/npm",
+				{
+					"npmPublish": false
+				}
+			],
+			[
+				"@semantic-release/github",
+				{
+					"successComment": false,
+					"failComment": false
+				}
+			],
+			[
+				"@semantic-release/git",
+				{
+					"assets": [
+						"package.json"
+					],
+					"message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
+				}
+			]
+		]
 	}
 }

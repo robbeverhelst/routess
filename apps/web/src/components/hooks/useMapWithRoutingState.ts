@@ -4,55 +4,37 @@ import { useRouteActions } from "@/components/hooks/useRouteActions";
 import { useWaypointError } from "@/components/hooks/useWaypointError";
 import { useMapInteraction } from "@/components/providers/MapInteractionProvider";
 import type { PopupInfo as MapPopupInfo } from "@/features/routing/managers/MapInteractionManager";
-import { useRouteData } from "@/hooks/useRouteData";
+import type { RouteDraftEditor } from "@/features/routing/RouteDraftEditor";
 import { useServiceWorker } from "@/hooks/useServiceWorker";
 import { useUndoRedoState } from "@/hooks/useUndoRedoState";
+import { useHasRoute, useRouteDistance, useRouteDuration } from "@/stores/routingStore";
 import { useUiStore } from "@/stores/uiStore";
 
 interface UseMapWithRoutingStateOptions {
 	mapboxToken: string;
 }
 
-export const useMapWithRoutingState = ({ mapboxToken }: UseMapWithRoutingStateOptions) => {
+export const useMapWithRoutingState = ({ mapboxToken: _mapboxToken }: UseMapWithRoutingStateOptions) => {
 	const mapRef = useRef<mapboxgl.Map | null>(null);
 	const [popup, setPopup] = useState<MapPopupInfo | null>(null);
+	const [editor, setEditor] = useState<RouteDraftEditor | null>(null);
 	const currentLanguage = useUiStore((s) => s.language);
 	const setCurrentLanguage = useUiStore((s) => s.setLanguage);
 	const { waypointError, handleWaypointError } = useWaypointError();
-	const {
-		routeDistance,
-		routeDuration,
-		hasRoute,
-		shareNotification,
-		displayedShareUrl,
-		showRouteInfoError,
-		routeInfoErrorMessage,
-		setRouteDistance,
-		setRouteDuration,
-		setHasRoute,
-		handleShareRoute,
-		handleCopySharedUrl,
-		handleRouteInfoError,
-		clearShareState,
-		setShareNotification,
-	} = useRouteData();
+	const routeDistance = useRouteDistance();
+	const routeDuration = useRouteDuration();
+	const hasRoute = useHasRoute();
 	const { canUndo, canRedo } = useUndoRedoState();
 	const { isOnline } = useServiceWorker();
 	const { handleKeyboardShortcuts } = useMapInteraction();
 
 	const routeActions = useRouteActions({
+		editor,
 		mapRef,
-		mapboxToken,
 		hasRoute,
 		popup,
 		setPopup,
-		setRouteDistance,
-		setRouteDuration,
-		setHasRoute,
 		handleWaypointError,
-		handleRouteInfoError,
-		clearShareState,
-		setShareNotification,
 	});
 
 	useMapViewPersistence(mapRef);
@@ -66,6 +48,8 @@ export const useMapWithRoutingState = ({ mapboxToken }: UseMapWithRoutingStateOp
 		mapRef,
 		popup,
 		setPopup,
+		editor,
+		setEditor,
 		currentLanguage,
 		setCurrentLanguage,
 		waypointError,
@@ -73,18 +57,6 @@ export const useMapWithRoutingState = ({ mapboxToken }: UseMapWithRoutingStateOp
 		routeDistance,
 		routeDuration,
 		hasRoute,
-		shareNotification,
-		displayedShareUrl,
-		showRouteInfoError,
-		routeInfoErrorMessage,
-		setRouteDistance,
-		setRouteDuration,
-		setHasRoute,
-		handleShareRoute,
-		handleCopySharedUrl,
-		handleRouteInfoError,
-		clearShareState,
-		setShareNotification,
 		canUndo,
 		canRedo,
 		isOnline,

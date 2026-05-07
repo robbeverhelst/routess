@@ -6,9 +6,8 @@
 echo "Starting entrypoint script for runtime configuration..."
 
 # Define the files to process
-HTML_FILE="/usr/share/nginx/html/index.html"
+CONFIG_FILE="/usr/share/nginx/html/env-config.js"
 SW_FILE="/usr/share/nginx/html/sw.js"
-JS_FILES="/usr/share/nginx/html/assets/*.js"
 
 replace_token() {
     local file="$1"
@@ -55,17 +54,10 @@ replace_placeholders() {
     echo "Processed: $file"
 }
 
-# Process HTML file if it exists
-if [ -f "$HTML_FILE" ]; then
-    replace_placeholders "$HTML_FILE"
+# Process the tiny runtime config file. The hashed JS bundles remain immutable.
+if [ -f "$CONFIG_FILE" ]; then
+    replace_placeholders "$CONFIG_FILE"
 fi
-
-# Process all JavaScript files
-for js_file in $JS_FILES; do
-    if [ -f "$js_file" ]; then
-        replace_placeholders "$js_file"
-    fi
-done
 
 # Process service worker file
 if [ -f "$SW_FILE" ]; then

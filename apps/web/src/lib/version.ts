@@ -1,4 +1,5 @@
 import { Logger } from "@/lib/logger";
+import { getRuntimeConfig } from "@/lib/runtime-config";
 
 interface VersionInfo {
 	current: string;
@@ -12,7 +13,7 @@ const VERSION_STORAGE_KEY = "maps-app-version";
  * Get the current app version from environment variables
  */
 export function getCurrentVersion(): string {
-	return import.meta.env.VITE_APP_VERSION || "__VITE_APP_VERSION__";
+	return getRuntimeConfig("VITE_APP_VERSION") ?? "dev";
 }
 
 /**

@@ -1,9 +1,9 @@
 import { useMemo } from "react";
 import { loadLastMapViewFromLocalStorage } from "@/features/routing/services/LocalStorageService";
-import { t } from "@/lib/i18n";
+import { useT } from "@/lib/i18n";
+import { getRuntimeConfig } from "@/lib/runtime-config";
 import { useModalsStore } from "@/stores/modalsStore";
 import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
-import { useUiStore } from "@/stores/uiStore";
 import { I } from "../components/icons";
 import { IconBtn, RDS_COLORS, SecTitle } from "../components/primitives";
 import { useViewport } from "../hooks/useViewport";
@@ -42,11 +42,11 @@ export function LayerPicker() {
 	const close = useModalsStore((s) => s.closeOverlay);
 	const styleKey = useRedesignSettingsStore((s) => s.mapStyle as MapStyleKey);
 	const setMapStyle = useRedesignSettingsStore((s) => s.setMapStyle);
-	const language = useUiStore((s) => s.language);
+	const t = useT();
 	const { isMobile } = useViewport();
 
 	const previews = useMemo(() => {
-		const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN as string | undefined;
+		const token = getRuntimeConfig("VITE_MAPBOX_ACCESS_TOKEN");
 		if (!token) return null;
 		const view = loadLastMapViewFromLocalStorage();
 		const lng = view?.longitude ?? PREVIEW_FALLBACK.lng;
@@ -100,9 +100,9 @@ export function LayerPicker() {
 				}}
 			>
 				<I.layers size={16} />
-				<div style={{ fontSize: 14, fontWeight: 600 }}>{t("settings.map.styleLabel", language)}</div>
+				<div style={{ fontSize: 14, fontWeight: 600 }}>{t("settings.map.styleLabel")}</div>
 				<div style={{ flex: 1 }} />
-				<IconBtn title={t("common.close", language)} onClick={close}>
+				<IconBtn title={t("common.close")} onClick={close}>
 					<I.close size={14} />
 				</IconBtn>
 			</div>
@@ -143,7 +143,7 @@ export function LayerPicker() {
 										background: RDS_COLORS.bgPanel,
 									}}
 								>
-									{t(s.labelKey, language)}
+									{t(s.labelKey)}
 								</div>
 							</button>
 						);
@@ -151,7 +151,7 @@ export function LayerPicker() {
 				</div>
 			</div>
 			<div style={{ borderTop: `1px solid ${RDS_COLORS.border}`, padding: "10px 14px 14px" }}>
-				<SecTitle style={{ padding: "0 0 6px" }}>{t("layers.overlays", language)}</SecTitle>
+				<SecTitle style={{ padding: "0 0 6px" }}>{t("layers.overlays")}</SecTitle>
 				<div
 					style={{
 						display: "flex",
@@ -179,9 +179,9 @@ export function LayerPicker() {
 						<I.layers size={13} />
 					</div>
 					<div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
-						<span style={{ fontSize: 12.5, fontWeight: 500 }}>{t("layers.overlaysComingSoon", language)}</span>
+						<span style={{ fontSize: 12.5, fontWeight: 500 }}>{t("layers.overlaysComingSoon")}</span>
 						<span style={{ fontSize: 10.5, color: RDS_COLORS.fgSubtle, marginTop: 2, lineHeight: 1.4 }}>
-							{t("layers.overlaysSub", language)}
+							{t("layers.overlaysSub")}
 						</span>
 					</div>
 				</div>

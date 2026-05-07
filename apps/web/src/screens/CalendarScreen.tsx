@@ -1,10 +1,9 @@
-import { t } from "@/lib/i18n";
-import { useUiStore } from "@/stores/uiStore";
+import { useT } from "@/lib/i18n";
 import { ComingSoonState } from "../components/ComingSoonState";
 import { RDS_COLORS } from "../components/primitives";
 
 export function CalendarScreen() {
-	const language = useUiStore((s) => s.language);
+	const t = useT();
 	return (
 		<div
 			style={{
@@ -16,7 +15,7 @@ export function CalendarScreen() {
 				justifyContent: "center",
 			}}
 		>
-			<ComingSoonState icon="activity" title={t("calendar.title", language)} body={t("calendar.body", language)} />
+			<ComingSoonState icon="activity" title={t("calendar.title")} body={t("calendar.body")} />
 		</div>
 	);
 }

@@ -36,9 +36,9 @@ describe("User Flows E2E Tests", () => {
 				name: "My Morning Run",
 				description: "Daily running route through the park",
 				waypoints: [
-					{ lat: 52.52, lng: 13.405, timestamp: new Date().toISOString(), type: "routed" },
-					{ lat: 52.522, lng: 13.407, timestamp: new Date().toISOString(), type: "routed" },
-					{ lat: 52.524, lng: 13.409, timestamp: new Date().toISOString(), type: "routed" },
+					{ coord: [13.405, 52.52], timestamp: new Date().toISOString(), type: "routed" },
+					{ coord: [13.407, 52.522], timestamp: new Date().toISOString(), type: "routed" },
+					{ coord: [13.409, 52.524], timestamp: new Date().toISOString(), type: "routed" },
 				],
 				distance: 3500,
 				duration: 1200,
@@ -131,8 +131,8 @@ describe("User Flows E2E Tests", () => {
 					.send({
 						name: `User ${i + 1} Route`,
 						waypoints: [
-							{ lat: 52.52 + i * 0.01, lng: 13.405 + i * 0.01, type: "routed" },
-							{ lat: 52.53 + i * 0.01, lng: 13.415 + i * 0.01, type: "routed" },
+							{ coord: [13.405 + i * 0.01, 52.52 + i * 0.01], type: "routed" },
+							{ coord: [13.415 + i * 0.01, 52.53 + i * 0.01], type: "routed" },
 						],
 						distance: 1000 * (i + 1),
 						duration: 600 * (i + 1),
@@ -235,8 +235,7 @@ describe("User Flows E2E Tests", () => {
 					name: `Route ${i + 1}`,
 					description: `Performance test route ${i + 1}`,
 					waypoints: Array.from({ length: 5 }, (_, j) => ({
-						lat: 52.52 + j * 0.001,
-						lng: 13.405 + j * 0.001,
+						coord: [13.405 + j * 0.001, 52.52 + j * 0.001],
 						timestamp: new Date(Date.now() + j * 1000).toISOString(),
 						type: "routed",
 					})),

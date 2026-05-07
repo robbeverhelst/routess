@@ -1,11 +1,17 @@
-import type { Waypoint } from "@routess/core";
+import type { Coordinate, Waypoint } from "@routess/core";
 import pako from "pako";
 import { Logger } from "@/lib/logger";
-import type { Coordinate } from "@/types/map";
 
-// Wire format kept stable so existing share links keep working.
-// w = waypoint coordinates, f = direct-segment flags, l = optional locked.
-interface WireRouteShareData {
+// Wire format v1: canonical Waypoint[]. Compact under gzip; readers pass it
+// straight to the rest of the app without translation.
+interface WireRouteShareV1 {
+	waypoints: Waypoint[];
+	locked?: boolean;
+}
+
+// Legacy wire format v0: parallel coordinate + boolean-flag arrays.
+// Read-only — preserved so old links keep resolving. New shares always emit v1.
+interface WireRouteShareV0 {
 	w: Coordinate[];
 	f: boolean[];
 	l?: boolean;
@@ -36,16 +42,20 @@ function urlSafeBase64ToUint8Array(base64String: string): Uint8Array {
 	return bytes;
 }
 
+const isLegacyV0 = (parsed: unknown): parsed is WireRouteShareV0 =>
+	typeof parsed === "object" &&
+	parsed !== null &&
+	Array.isArray((parsed as WireRouteShareV0).w) &&
+	Array.isArray((parsed as WireRouteShareV0).f);
+
+const isV1 = (parsed: unknown): parsed is WireRouteShareV1 =>
+	typeof parsed === "object" && parsed !== null && Array.isArray((parsed as WireRouteShareV1).waypoints);
+
 export function serializeAndCompress(waypoints: Waypoint[], isLocked: boolean): string | null {
 	try {
-		const data: WireRouteShareData = {
-			w: waypoints.map((wp) => wp.coord),
-			f: waypoints.map((wp) => wp.type === "direct"),
-			l: isLocked,
-		};
-		const jsonString = JSON.stringify(data);
-		const compressedData = pako.deflate(jsonString);
-		return uint8ArrayToUrlSafeBase64(compressedData);
+		const data: WireRouteShareV1 = { waypoints, locked: isLocked };
+		const compressed = pako.deflate(JSON.stringify(data));
+		return uint8ArrayToUrlSafeBase64(compressed);
 	} catch (error) {
 		Logger.error("[ShareUtils] Error serializing/compressing data:", error);
 		return null;
@@ -54,20 +64,24 @@ export function serializeAndCompress(waypoints: Waypoint[], isLocked: boolean): 
 
 export function decompressAndParse(encodedData: string): SharedRoute | null {
 	try {
-		const compressedData = urlSafeBase64ToUint8Array(encodedData);
-		const jsonString = pako.inflate(compressedData, { to: "string" });
-		const parsed = JSON.parse(jsonString) as WireRouteShareData;
+		const compressed = urlSafeBase64ToUint8Array(encodedData);
+		const jsonString = pako.inflate(compressed, { to: "string" });
+		const parsed = JSON.parse(jsonString) as unknown;
 
-		if (!parsed || !Array.isArray(parsed.w) || !Array.isArray(parsed.f)) {
-			Logger.error("[ShareUtils] Decompressed data is not in the expected format.");
-			return null;
+		if (isV1(parsed)) {
+			return { waypoints: parsed.waypoints, isLocked: parsed.locked ?? false };
 		}
 
-		const waypoints: Waypoint[] = parsed.w.map((coord, i) => ({
-			coord,
-			type: parsed.f[i] ? "direct" : "routed",
-		}));
-		return { waypoints, isLocked: parsed.l ?? false };
+		if (isLegacyV0(parsed)) {
+			const waypoints: Waypoint[] = parsed.w.map((coord, i) => ({
+				coord,
+				type: parsed.f[i] ? "direct" : "routed",
+			}));
+			return { waypoints, isLocked: parsed.l ?? false };
+		}
+
+		Logger.error("[ShareUtils] Decompressed data is not in a recognized format.");
+		return null;
 	} catch (error) {
 		Logger.error("[ShareUtils] Error decompressing/parsing data:", error);
 		return null;

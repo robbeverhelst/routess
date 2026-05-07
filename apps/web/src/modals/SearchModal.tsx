@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
+import { emitAppEvent } from "@/lib/app-events";
 import { type SupportedLanguage, t } from "@/lib/i18n";
+import { getRuntimeConfig } from "@/lib/runtime-config";
 import { useModalsStore } from "@/stores/modalsStore";
 import { useUiStore } from "@/stores/uiStore";
 import { EmptySearch } from "../components/EmptyStates";
@@ -14,13 +16,13 @@ interface Suggestion {
 	coords?: [number, number];
 }
 
-function buildRecent(language: SupportedLanguage): Suggestion[] {
+function buildRecent(_language: SupportedLanguage): Suggestion[] {
 	return [
 		{
 			id: "r1",
-			name: t("search.history.title", language),
-			sub: t("search.history.body", language),
-			tag: t("search.history.hint", language),
+			name: t("search.history.title"),
+			sub: t("search.history.body"),
+			tag: t("search.history.hint"),
 		},
 	];
 }
@@ -49,7 +51,7 @@ export function SearchModal() {
 			setResults([]);
 			return;
 		}
-		const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
+		const token = getRuntimeConfig("VITE_MAPBOX_ACCESS_TOKEN");
 		if (!token) return;
 		setLoading(true);
 		debounceRef.current = setTimeout(async () => {
@@ -90,7 +92,7 @@ export function SearchModal() {
 	const handleSelect = (r: Suggestion) => {
 		if (!r.coords) return;
 		const [lng, lat] = r.coords;
-		window.dispatchEvent(new CustomEvent("routess:fly-to", { detail: { coordinates: [lng, lat], zoom: 14 } }));
+		emitAppEvent("routess:fly-to", { coordinates: [lng, lat], zoom: 14 });
 		close();
 	};
 
@@ -213,7 +215,7 @@ export function SearchModal() {
 		>
 			<button
 				type="button"
-				aria-label={t("common.close", language)}
+				aria-label={t("common.close")}
 				onClick={close}
 				style={{
 					position: "absolute",
@@ -253,7 +255,7 @@ export function SearchModal() {
 						value={query}
 						onChange={(e) => setQuery(e.target.value)}
 						onKeyDown={onKeyDown}
-						placeholder={t("search.placeholder", language)}
+						placeholder={t("search.placeholder")}
 						style={{
 							flex: 1,
 							background: "transparent",
@@ -263,12 +265,12 @@ export function SearchModal() {
 							color: "inherit",
 						}}
 					/>
-					<Kbd>{t("search.esc", language)}</Kbd>
+					<Kbd>{t("search.esc")}</Kbd>
 				</div>
 				<div style={{ padding: 8, flex: 1, minHeight: 0, overflow: "auto" }}>
 					{!query.trim() && (
 						<>
-							<SecTitle style={{ padding: "8px 12px 6px" }}>{t("search.recent", language)}</SecTitle>
+							<SecTitle style={{ padding: "8px 12px 6px" }}>{t("search.recent")}</SecTitle>
 							{RECENT.map((r, i) => (
 								<Row key={r.id} r={r} hot={i === activeIndex} index={i} />
 							))}
@@ -283,12 +285,12 @@ export function SearchModal() {
 								color: RDS_COLORS.fgSubtle,
 							}}
 						>
-							{t("search.searching", language)}
+							{t("search.searching")}
 						</div>
 					)}
 					{!loading && results.length > 0 && (
 						<>
-							<SecTitle style={{ padding: "8px 12px 6px" }}>{t("search.results", language)}</SecTitle>
+							<SecTitle style={{ padding: "8px 12px 6px" }}>{t("search.results")}</SecTitle>
 							{results.map((r, i) => (
 								<Row key={r.id} r={r} hot={i === activeIndex} index={i} />
 							))}
@@ -311,13 +313,13 @@ export function SearchModal() {
 					}}
 				>
 					<span>
-						<Kbd>↑</Kbd> <Kbd>↓</Kbd> {t("search.kbd.navigate", language)}
+						<Kbd>↑</Kbd> <Kbd>↓</Kbd> {t("search.kbd.navigate")}
 					</span>
 					<span>
-						<Kbd>↵</Kbd> {t("search.kbd.select", language)}
+						<Kbd>↵</Kbd> {t("search.kbd.select")}
 					</span>
 					<div style={{ flex: 1 }} />
-					<span>{t("search.poweredBy", language)}</span>
+					<span>{t("search.poweredBy")}</span>
 				</div>
 			</div>
 		</div>

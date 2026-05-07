@@ -84,7 +84,7 @@ export class ApiClient {
 	}
 
 	async getProfile(): Promise<ApiUser> {
-		return this.request<ApiUser>("/auth/me");
+		return this.request<ApiUser>("/users/me");
 	}
 
 	async updateCurrentUser(user: UpdateCurrentUserRequest): Promise<ApiUser> {

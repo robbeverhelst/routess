@@ -1,14 +1,11 @@
 import type { Logger } from "@routess/core";
-import { LocalStorageAuthState, StorageAdapterAuthState } from "./adapters/auth";
+import { LocalStorageAuthState } from "./adapters/auth";
 import { FetchHttpClient } from "./adapters/http";
 import { ApiClient } from "./services";
-import type { AuthStateManager, ErrorHandler, HttpClient, StorageAdapter } from "./types";
+import type { AuthStateManager, ErrorHandler, HttpClient } from "./types";
 
 export interface CreateApiClientOptions {
 	baseUrl: string;
-	platform: "web" | "mobile";
-	// Required when platform === "mobile" unless authStateManager is provided.
-	storage?: StorageAdapter;
 	httpClient?: HttpClient;
 	authStateManager?: AuthStateManager;
 	errorHandler?: ErrorHandler;
@@ -16,36 +13,24 @@ export interface CreateApiClientOptions {
 }
 
 const defaultErrorHandler: ErrorHandler = {
-	handleError(error, context) {
-		console.error(`API Error in ${context}:`, error);
+	handleError(_error, _context) {
+		// no-op: callers wire up their own logger/reporter
 	},
 };
 
-function defaultHttpClient(platform: "web" | "mobile"): HttpClient {
-	// Mobile previously defaulted to a 10s request timeout; web had none.
-	return new FetchHttpClient({ defaultTimeoutMs: platform === "mobile" ? 10_000 : undefined });
-}
+const defaultHttpClient = (): HttpClient => new FetchHttpClient({ credentials: "include" });
 
-function defaultAuthStateManager(platform: "web" | "mobile", storage?: StorageAdapter): AuthStateManager {
-	if (platform === "mobile") {
-		if (!storage) {
-			throw new Error(
-				"createApiClient: mobile platform requires a `storage` adapter or an explicit `authStateManager`.",
-			);
-		}
-		return new StorageAdapterAuthState(storage);
-	}
-	return new LocalStorageAuthState();
-}
+const defaultAuthStateManager = (): AuthStateManager => new LocalStorageAuthState();
 
-// Single entry point for both web and mobile. The previous Web/Mobile
-// PlatformAdapter classes were near-identical; the only real variation
-// point is auth-token storage.
+// Single entry point for the web client. The previous "platform" branch
+// for mobile was a one-adapter seam (no second concrete adapter ever shipped);
+// when mobile becomes real, reintroduce a `platform` parameter alongside a
+// real second adapter. See ADR-0010.
 export function createApiClient(options: CreateApiClientOptions): ApiClient {
 	return new ApiClient({
 		baseUrl: options.baseUrl,
-		httpClient: options.httpClient ?? defaultHttpClient(options.platform),
-		authStateManager: options.authStateManager ?? defaultAuthStateManager(options.platform, options.storage),
+		httpClient: options.httpClient ?? defaultHttpClient(),
+		authStateManager: options.authStateManager ?? defaultAuthStateManager(),
 		errorHandler: options.errorHandler ?? defaultErrorHandler,
 		logger: options.logger,
 	});

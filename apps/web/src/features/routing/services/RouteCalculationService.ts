@@ -1,7 +1,6 @@
 import type { Coordinate, Waypoint } from "@routess/core";
 import { formatDuration } from "@routess/core";
 import type { Map as MapboxMap } from "mapbox-gl";
-import type { Dispatch, SetStateAction } from "react";
 import { Logger } from "@/lib/logger";
 import { formatDistance } from "@/lib/units";
 import { activityKeyToLabel, getSpeedForActivity, useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
@@ -94,27 +93,22 @@ export interface RouteResult {
 	error?: string;
 }
 
-export const getRoute = async (
-	map: MapboxMap,
-	accessToken: string,
-	setRouteDistance: Dispatch<SetStateAction<string>>,
-	setRouteDuration: Dispatch<SetStateAction<string>>,
-	setHasRoute: Dispatch<SetStateAction<boolean>>,
-): Promise<RouteResult> => {
+export const getRoute = async (map: MapboxMap, accessToken: string): Promise<RouteResult> => {
 	if (!map) {
 		Logger.warn("[RCS/getRoute] Map is not available. Aborting.");
 		return { success: false, waypointsSnapped: false };
 	}
 
-	const waypoints = useRoutingStore.getState().waypoints;
+	const store = useRoutingStore.getState();
+	const waypoints = store.waypoints;
 	if (waypoints.length < 2) {
-		useRoutingStore.getState().setRoutePath([]);
-		setRouteDistance("");
-		setRouteDuration("");
-		setHasRoute(false);
+		store.setRoutePath([]);
+		store.setRouteDistance("");
+		store.setRouteDuration("");
+		store.setHasRoute(false);
 		elevationAbort?.abort();
-		useRoutingStore.getState().clearElevation();
-		useRoutingStore.getState().setIsComputingElevation(false);
+		store.clearElevation();
+		store.setIsComputingElevation(false);
 		return { success: true, waypointsSnapped: false };
 	}
 
@@ -126,22 +120,24 @@ export const getRoute = async (
 	}
 
 	if (!outcome.ok) {
-		setHasRoute(false);
-		useRoutingStore.getState().setRoutePath([]);
+		const after = useRoutingStore.getState();
+		after.setHasRoute(false);
+		after.setRoutePath([]);
 		elevationAbort?.abort();
-		useRoutingStore.getState().clearElevation();
-		useRoutingStore.getState().setIsComputingElevation(false);
+		after.clearElevation();
+		after.setIsComputingElevation(false);
 		return { success: false, waypointsSnapped: false, error: outcome.error };
 	}
 
-	useRoutingStore.getState().setRoutePath(outcome.routePath);
+	const after = useRoutingStore.getState();
+	after.setRoutePath(outcome.routePath);
 
 	const offlineSuffix = outcome.offline ? " (offline)" : "";
 	const durationSuffix = outcome.offline ? " (estimated)" : "";
 	const units = useRedesignSettingsStore.getState().units === "mi" ? "mi" : "km";
-	setRouteDistance(formatDistance(outcome.distanceKm, units) + offlineSuffix);
-	setRouteDuration(formatDuration(outcome.durationMinutes) + durationSuffix);
-	setHasRoute(true);
+	after.setRouteDistance(formatDistance(outcome.distanceKm, units) + offlineSuffix);
+	after.setRouteDuration(formatDuration(outcome.durationMinutes) + durationSuffix);
+	after.setHasRoute(true);
 
 	// Elevation runs async — distance/duration display immediately while we
 	// sample terrain. Offline routes skip sampling since we can't reach the

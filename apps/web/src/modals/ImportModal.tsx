@@ -1,8 +1,8 @@
 import { useRef, useState } from "react";
-import { t } from "@/lib/i18n";
+import { emitAppEvent } from "@/lib/app-events";
+import { useT } from "@/lib/i18n";
 import { useModalsStore } from "@/stores/modalsStore";
 import { useToastStore } from "@/stores/toastStore";
-import { useUiStore } from "@/stores/uiStore";
 import { I } from "../components/icons";
 import { ModalShell } from "../components/ModalShell";
 import { Btn, RDS_COLORS, SecTitle } from "../components/primitives";
@@ -21,7 +21,7 @@ type ActivityKey = (typeof ACTIVITY_KEYS)[number]["key"];
 export function ImportModal() {
 	const closeModal = useModalsStore((s) => s.closeModal);
 	const pushToast = useToastStore((s) => s.push);
-	const language = useUiStore((s) => s.language);
+	const t = useT();
 	const inputRef = useRef<HTMLInputElement>(null);
 	const [file, setFile] = useState<File | null>(null);
 	const [activity, setActivity] = useState<ActivityKey>("auto");
@@ -41,30 +41,26 @@ export function ImportModal() {
 		if (ext !== "gpx") {
 			pushToast({
 				kind: "warn",
-				title: t("import.gpxOnly.title", language),
-				body: t("import.gpxOnly.body", language),
+				title: t("import.gpxOnly.title"),
+				body: t("import.gpxOnly.body"),
 			});
 			return;
 		}
 		setIsImporting(true);
 		try {
 			const gpxString = await file.text();
-			window.dispatchEvent(
-				new CustomEvent("routess:import-gpx", {
-					detail: { gpxString, fileName: file.name },
-				}),
-			);
+			emitAppEvent("routess:import-gpx", { gpxString, fileName: file.name });
 			pushToast({
 				kind: "success",
-				title: t("import.toast.imported", language),
+				title: t("import.toast.imported"),
 				body: file.name,
 			});
 			closeModal();
 		} catch (err) {
 			pushToast({
 				kind: "danger",
-				title: t("import.toast.failed", language),
-				body: err instanceof Error ? err.message : t("import.toast.failedSub", language),
+				title: t("import.toast.failed"),
+				body: err instanceof Error ? err.message : t("import.toast.failedSub"),
 			});
 		} finally {
 			setIsImporting(false);
@@ -73,22 +69,22 @@ export function ImportModal() {
 
 	return (
 		<ModalShell
-			title={t("import.title", language)}
-			sub={t("import.subtitle", language)}
+			title={t("import.title")}
+			sub={t("import.subtitle")}
 			width={560}
 			onClose={closeModal}
 			footer={
 				<>
 					<div style={{ flex: 1 }} />
-					<Btn onClick={closeModal}>{t("common.cancel", language)}</Btn>
+					<Btn onClick={closeModal}>{t("common.cancel")}</Btn>
 					{!file && (
 						<Btn variant="primary" onClick={onPick}>
-							{t("import.choose", language)}
+							{t("import.choose")}
 						</Btn>
 					)}
 					{file && (
 						<Btn variant="primary" onClick={onImport} disabled={isImporting}>
-							<I.zap size={14} /> {isImporting ? t("import.importing", language) : t("import.import1", language)}
+							<I.zap size={14} /> {isImporting ? t("import.importing") : t("import.import1")}
 						</Btn>
 					)}
 				</>
@@ -141,8 +137,8 @@ export function ImportModal() {
 					>
 						<I.upload size={24} />
 					</div>
-					<div style={{ fontSize: 15, fontWeight: 600 }}>{t("import.dropHere", language)}</div>
-					<div style={{ fontSize: 12.5, color: RDS_COLORS.fgMuted, marginTop: 6 }}>{t("import.orClick", language)}</div>
+					<div style={{ fontSize: 15, fontWeight: 600 }}>{t("import.dropHere")}</div>
+					<div style={{ fontSize: 12.5, color: RDS_COLORS.fgMuted, marginTop: 6 }}>{t("import.orClick")}</div>
 					<div
 						style={{
 							display: "flex",
@@ -219,12 +215,12 @@ export function ImportModal() {
 								fontSize: 11.5,
 							}}
 						>
-							<I.zap size={11} /> {t("import.ready", language)}
+							<I.zap size={11} /> {t("import.ready")}
 						</span>
 					</div>
 
 					<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-						<SecTitle>{t("import.activityType", language)}</SecTitle>
+						<SecTitle>{t("import.activityType")}</SecTitle>
 						<div style={{ display: "flex", gap: 8 }}>
 							{ACTIVITY_KEYS.map((opt) => {
 								const on = activity === opt.key;
@@ -244,7 +240,7 @@ export function ImportModal() {
 											cursor: "pointer",
 										}}
 									>
-										{t(opt.labelKey, language)}
+										{t(opt.labelKey)}
 									</button>
 								);
 							})}
@@ -263,7 +259,7 @@ export function ImportModal() {
 							}}
 						>
 							<I.zap size={14} style={{ color: RDS_COLORS.warn }} />
-							<div style={{ fontSize: 12, color: RDS_COLORS.fgMuted }}>{t("import.note", language)}</div>
+							<div style={{ fontSize: 12, color: RDS_COLORS.fgMuted }}>{t("import.note")}</div>
 						</div>
 					)}
 				</div>

@@ -51,11 +51,10 @@ export default defineConfig({
 	},
 	test: {
 		globals: true,
-		environment: "jsdom",
+		environment: "happy-dom",
 		setupFiles: "./src/test/setup.ts",
 		include: ["src/**/*.test.{ts,tsx}", "src/**/*.spec.{ts,tsx}"],
 		exclude: ["node_modules", "dist"],
-		passWithNoTests: true,
 		coverage: {
 			provider: "v8",
 			reporter: ["text", "lcov", "html"],

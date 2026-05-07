@@ -1,18 +1,13 @@
 import { haversineDistance, type Waypoint } from "@routess/core";
 import { type CSSProperties, type ReactNode, useEffect, useMemo, useState } from "react";
+import { emitAppEvent } from "@/lib/app-events";
 import { t } from "@/lib/i18n";
 import { serializeAndCompress } from "@/lib/shareUtils";
 import { buildMapboxStaticPreviewUrl } from "@/lib/utils/mapboxStaticPreview";
 import { useModalsStore } from "@/stores/modalsStore";
 import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
-import {
-	useIsMapLocked,
-	useRouteDistance,
-	useRouteDuration,
-	useRoutePath,
-	useSetShareNotification,
-	useWaypoints,
-} from "@/stores/routingStore";
+import { useIsMapLocked, useRouteDistance, useRouteDuration, useRoutePath, useWaypoints } from "@/stores/routingStore";
+import { useToastStore } from "@/stores/toastStore";
 import { useUiStore } from "@/stores/uiStore";
 import { FacebookBrand, I, WhatsAppBrand, XBrand } from "../components/icons";
 import { ModalShell } from "../components/ModalShell";
@@ -49,11 +44,6 @@ function trimPrivacyEdges(waypoints: Waypoint[]): Waypoint[] {
 
 	if (endIdx - startIdx < 1) return waypoints;
 	return waypoints.slice(startIdx, endIdx + 1);
-}
-
-function notify(setShareNotification: (msg: string) => void, message: string) {
-	setShareNotification(message);
-	setTimeout(() => setShareNotification(""), 2000);
 }
 
 interface TargetTileProps {
@@ -110,13 +100,13 @@ function TargetTile({ label, icon, onClick, disabled, tint }: TargetTileProps) {
 
 export function ShareModal() {
 	const closeModal = useModalsStore((s) => s.closeModal);
-	const language = useUiStore((s) => s.language);
+	const _language = useUiStore((s) => s.language);
 	const waypoints = useWaypoints();
 	const routePath = useRoutePath();
 	const isMapLocked = useIsMapLocked();
 	const distance = useRouteDistance();
 	const duration = useRouteDuration();
-	const setShareNotification = useSetShareNotification();
+	const pushToast = useToastStore((s) => s.push);
 
 	const hideEdges = useRedesignSettingsStore((s) => s.hidePrivacy);
 	const setHideEdges = useRedesignSettingsStore((s) => s.setHidePrivacy);
@@ -153,64 +143,64 @@ export function ShareModal() {
 	const [failedUrl, setFailedUrl] = useState<string | null>(null);
 	const showStaticMap = staticMapUrl !== null && failedUrl !== staticMapUrl;
 	const shareText = useMemo(() => {
-		const parts: string[] = [t("share.checkOut", language)];
+		const parts: string[] = [t("share.checkOut")];
 		if (distance) parts.push(distance);
 		if (duration) parts.push(duration);
 		return parts.join(" · ");
-	}, [distance, duration, language]);
+	}, [distance, duration]);
 
 	const copy = async () => {
 		if (!hasRoute) {
-			notify(setShareNotification, t("share.empty", language));
+			pushToast({ kind: "warn", title: t("share.empty") });
 			return;
 		}
 		try {
 			await navigator.clipboard.writeText(url);
 			setCopied(true);
 			setTimeout(() => setCopied(false), 1500);
-			notify(setShareNotification, t("share.copied", language));
+			pushToast({ kind: "success", title: t("share.copied") });
 		} catch {
-			notify(setShareNotification, t("share.copyFailed", language));
+			pushToast({ kind: "danger", title: t("share.copyFailed") });
 		}
 	};
 
 	const shareNative = async () => {
 		if (!hasRoute) {
-			notify(setShareNotification, t("share.empty", language));
+			pushToast({ kind: "warn", title: t("share.empty") });
 			return;
 		}
 		try {
 			await navigator.share({
-				title: t("share.routessRoute", language),
+				title: t("share.routessRoute"),
 				text: shareText,
 				url,
 			});
-			notify(setShareNotification, t("share.shared", language));
+			pushToast({ kind: "success", title: t("share.shared") });
 			closeModal();
 		} catch (err) {
 			if (err instanceof DOMException && err.name === "AbortError") return;
-			notify(setShareNotification, t("share.cancelled", language));
+			pushToast({ kind: "warn", title: t("share.cancelled") });
 		}
 	};
 
 	const openExternal = (target: string, label: string) => {
 		if (!hasRoute) {
-			notify(setShareNotification, t("share.empty", language));
+			pushToast({ kind: "warn", title: t("share.empty") });
 			return;
 		}
 		const w = window.open(target, "_blank", "noopener,noreferrer");
 		if (w) {
-			notify(setShareNotification, t("share.opened", language, { label }));
+			pushToast({ kind: "success", title: t("share.opened", { label }) });
 			closeModal();
 		} else {
-			notify(setShareNotification, t("share.popupBlocked", language));
+			pushToast({ kind: "warn", title: t("share.popupBlocked") });
 		}
 	};
 
 	const shareEmail = () => {
-		const subject = encodeURIComponent(t("share.myRoute", language));
+		const subject = encodeURIComponent(t("share.myRoute"));
 		const body = encodeURIComponent(`${shareText}\n\n${url}`);
-		openExternal(`mailto:?subject=${subject}&body=${body}`, t("share.email", language));
+		openExternal(`mailto:?subject=${subject}&body=${body}`, t("share.email"));
 	};
 
 	const shareX = () => {
@@ -231,25 +221,25 @@ export function ShareModal() {
 
 	const downloadGpx = () => {
 		if (!hasRoute) {
-			notify(setShareNotification, t("share.exportEmpty", language));
+			pushToast({ kind: "warn", title: t("share.exportEmpty") });
 			return;
 		}
-		window.dispatchEvent(new CustomEvent("routess:export-gpx"));
+		emitAppEvent("routess:export-gpx");
 		closeModal();
 	};
 
 	return (
 		<ModalShell
-			title={t("share.title", language)}
+			title={t("share.title")}
 			sub={`${distance || "—"} · ${duration || "—"}`}
 			width={520}
 			onClose={closeModal}
 			footer={
 				<>
 					<div style={{ flex: 1 }} />
-					<Btn onClick={closeModal}>{t("common.close", language)}</Btn>
+					<Btn onClick={closeModal}>{t("common.close")}</Btn>
 					<Btn variant="primary" onClick={copy} disabled={!hasRoute}>
-						<I.copy size={14} /> {copied ? t("common.copied", language) : t("share.copyLink", language)}
+						<I.copy size={14} /> {copied ? t("common.copied") : t("share.copyLink")}
 					</Btn>
 				</>
 			}
@@ -274,7 +264,7 @@ export function ShareModal() {
 						{showStaticMap && staticMapUrl && (
 							<img
 								src={staticMapUrl}
-								alt={t("share.previewAlt", language)}
+								alt={t("share.previewAlt")}
 								onError={() => setFailedUrl(staticMapUrl)}
 								style={{
 									position: "absolute",
@@ -314,7 +304,7 @@ export function ShareModal() {
 								}}
 							>
 								<I.route size={24} />
-								<div style={{ fontSize: 12.5, fontWeight: 500 }}>{t("share.noPreview", language)}</div>
+								<div style={{ fontSize: 12.5, fontWeight: 500 }}>{t("share.noPreview")}</div>
 							</div>
 						)}
 						<div
@@ -336,11 +326,11 @@ export function ShareModal() {
 							}}
 						>
 							<I.route size={12} />
-							<span>{showStaticMap ? t("share.mapPreview", language) : t("share.sharePreview", language)}</span>
+							<span>{showStaticMap ? t("share.mapPreview") : t("share.sharePreview")}</span>
 						</div>
 					</div>
 					<div style={{ padding: 14 }}>
-						<div style={{ fontSize: 14, fontWeight: 600 }}>{t("share.currentRoute", language)}</div>
+						<div style={{ fontSize: 14, fontWeight: 600 }}>{t("share.currentRoute")}</div>
 						<div
 							className="rds-mono"
 							style={{
@@ -353,13 +343,13 @@ export function ShareModal() {
 						>
 							<span>{distance || "—"}</span>
 							<span>·</span>
-							<span>{t("share.waypointsCount", language, { count: String(waypoints.length) })}</span>
+							<span>{t("share.waypointsCount", { count: String(waypoints.length) })}</span>
 						</div>
 					</div>
 				</div>
 
 				<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-					<SecTitle>{t("share.shareLink", language)}</SecTitle>
+					<SecTitle>{t("share.shareLink")}</SecTitle>
 					<div
 						style={{
 							display: "flex",
@@ -392,17 +382,17 @@ export function ShareModal() {
 							disabled={!hasRoute}
 							style={{ height: 28, padding: "0 10px", fontSize: 11 }}
 						>
-							{copied ? t("common.copied", language) : t("common.copy", language)}
+							{copied ? t("common.copied") : t("common.copy")}
 						</Btn>
 					</div>
 				</div>
 
 				<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-					<SecTitle>{t("share.via", language)}</SecTitle>
+					<SecTitle>{t("share.via")}</SecTitle>
 					<div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
 						{canNativeShare && (
 							<TargetTile
-								label={t("share.more", language)}
+								label={t("share.more")}
 								icon={<I.share size={18} />}
 								onClick={shareNative}
 								tint={RDS_COLORS.accent}
@@ -410,33 +400,28 @@ export function ShareModal() {
 							/>
 						)}
 						<TargetTile
-							label={t("share.email", language)}
+							label={t("share.email")}
 							icon={<I.mail size={18} />}
 							onClick={shareEmail}
 							disabled={!hasRoute}
 						/>
+						<TargetTile label={t("share.x")} icon={<XBrand size={16} />} onClick={shareX} disabled={!hasRoute} />
 						<TargetTile
-							label={t("share.x", language)}
-							icon={<XBrand size={16} />}
-							onClick={shareX}
-							disabled={!hasRoute}
-						/>
-						<TargetTile
-							label={t("share.facebook", language)}
+							label={t("share.facebook")}
 							icon={<FacebookBrand size={18} />}
 							onClick={shareFacebook}
 							tint="#1877F2"
 							disabled={!hasRoute}
 						/>
 						<TargetTile
-							label={t("share.whatsapp", language)}
+							label={t("share.whatsapp")}
 							icon={<WhatsAppBrand size={18} />}
 							onClick={shareWhatsApp}
 							tint="#25D366"
 							disabled={!hasRoute}
 						/>
 						<TargetTile
-							label={t("share.gpx", language)}
+							label={t("share.gpx")}
 							icon={<I.download size={18} />}
 							onClick={downloadGpx}
 							disabled={!hasRoute}
@@ -457,10 +442,8 @@ export function ShareModal() {
 				>
 					<I.lock size={14} />
 					<div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
-						<div style={{ fontSize: 12.5, fontWeight: 500 }}>{t("share.hidePrivacy", language)}</div>
-						<div style={{ fontSize: 11, color: RDS_COLORS.fgSubtle, marginTop: 2 }}>
-							{t("share.hidePrivacyHint", language)}
-						</div>
+						<div style={{ fontSize: 12.5, fontWeight: 500 }}>{t("share.hidePrivacy")}</div>
+						<div style={{ fontSize: 11, color: RDS_COLORS.fgSubtle, marginTop: 2 }}>{t("share.hidePrivacyHint")}</div>
 					</div>
 					<Toggle on={hideEdges} onChange={setHideEdges} />
 				</div>

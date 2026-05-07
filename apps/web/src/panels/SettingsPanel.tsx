@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect, useState } from "react";
 import { useLogout, useUserProfile } from "@/lib/api-queries";
-import { type SupportedLanguage, t } from "@/lib/i18n";
+import { emitAppEvent } from "@/lib/app-events";
+import { type SupportedLanguage, t, tIn } from "@/lib/i18n";
 import { getVersionDisplay } from "@/lib/version";
 import {
 	DEFAULT_SPORT_SPEEDS_KMH,
@@ -262,7 +263,7 @@ export function SettingsPanel() {
 	const handleToggleSport = (sport: RedesignActivity) => {
 		const wasOnly = selectedSports.length === 1 && selectedSports[0] === sport;
 		if (wasOnly) {
-			pushToast({ kind: "warn", title: t("settings.sports.minimum", language) });
+			pushToast({ kind: "warn", title: t("settings.sports.minimum") });
 			return;
 		}
 		toggleSport(sport);
@@ -270,11 +271,11 @@ export function SettingsPanel() {
 			const fallback = selectedSports.find((s) => s !== sport);
 			if (fallback) {
 				setActivityType(fallback);
-				setDefaultActivity(t(SPORT_LABEL_KEYS[fallback], "en"));
+				setDefaultActivity(tIn("en", SPORT_LABEL_KEYS[fallback]));
 			}
 		} else if (!selectedSports.includes(sport) && selectedSports.length === 0) {
 			setActivityType(sport);
-			setDefaultActivity(t(SPORT_LABEL_KEYS[sport], "en"));
+			setDefaultActivity(tIn("en", SPORT_LABEL_KEYS[sport]));
 		}
 	};
 
@@ -283,18 +284,18 @@ export function SettingsPanel() {
 			toggleSport(sport);
 		}
 		setActivityType(sport);
-		setDefaultActivity(t(SPORT_LABEL_KEYS[sport], "en"));
+		setDefaultActivity(tIn("en", SPORT_LABEL_KEYS[sport]));
 	};
 
-	const userName = profile?.name ?? t("settings.profile.yourAccount", language);
-	const userEmail = profile?.email ?? t("settings.profile.signInToSync", language);
+	const userName = profile?.name ?? t("settings.profile.yourAccount");
+	const userEmail = profile?.email ?? t("settings.profile.signInToSync");
 
 	const handleEditProfile = () => {
-		window.dispatchEvent(new CustomEvent("routess:open-account"));
+		emitAppEvent("routess:open-account");
 	};
 
 	const handleExportData = () => {
-		window.dispatchEvent(new CustomEvent("routess:export-all-data"));
+		emitAppEvent("routess:export-all-data");
 	};
 
 	const handleMapStyleChange = (nextStyle: RedesignMapStyle) => {
@@ -307,25 +308,25 @@ export function SettingsPanel() {
 
 	const handleSignOut = () => {
 		if (!profile) {
-			window.dispatchEvent(new CustomEvent("routess:open-login"));
+			emitAppEvent("routess:open-login");
 			return;
 		}
 		logout.mutate(undefined, {
 			onSuccess: () => {
-				pushToast({ kind: "success", title: t("common.signedOut", language) });
+				pushToast({ kind: "success", title: t("common.signedOut") });
 			},
 		});
 	};
 
 	return (
 		<div style={{ padding: "20px 20px", overflow: "auto", height: "100%" }}>
-			<Group title={t("settings.profile", language)}>
+			<Group title={t("settings.profile")}>
 				<Row
 					label={userName}
 					sub={userEmail}
 					control={
 						<Btn variant="ghost" onClick={handleEditProfile}>
-							{t("settings.profile.edit", language)}
+							{t("settings.profile.edit")}
 						</Btn>
 					}
 				/>
@@ -335,7 +336,7 @@ export function SettingsPanel() {
 						borderBottom: `1px solid ${RDS_COLORS.border}`,
 					}}
 				>
-					<div style={{ fontSize: 13, color: RDS_COLORS.fg }}>{t("settings.sports.title", language)}</div>
+					<div style={{ fontSize: 13, color: RDS_COLORS.fg }}>{t("settings.sports.title")}</div>
 					<div
 						style={{
 							fontSize: 11.5,
@@ -345,7 +346,7 @@ export function SettingsPanel() {
 							lineHeight: 1.45,
 						}}
 					>
-						{t("settings.sports.subtitle", language)}
+						{t("settings.sports.subtitle")}
 					</div>
 					<div
 						style={{
@@ -359,7 +360,7 @@ export function SettingsPanel() {
 							const on = selectedSports.includes(s.key);
 							const isDefault = on && defaultSport === s.key;
 							const Icon = s.icon;
-							const sportLabel = t(s.labelKey, language);
+							const sportLabel = t(s.labelKey);
 							return (
 								<div
 									key={s.key}
@@ -379,8 +380,8 @@ export function SettingsPanel() {
 										aria-pressed={on}
 										title={
 											on
-												? t("settings.sports.removeAria", language, { sport: sportLabel })
-												: t("settings.sports.addAria", language, { sport: sportLabel })
+												? t("settings.sports.removeAria", { sport: sportLabel })
+												: t("settings.sports.addAria", { sport: sportLabel })
 										}
 										style={{
 											display: "inline-flex",
@@ -405,8 +406,8 @@ export function SettingsPanel() {
 										aria-pressed={isDefault}
 										title={
 											isDefault
-												? t("settings.sports.defaultTitle", language)
-												: t("settings.sports.makeDefault", language, { sport: sportLabel })
+												? t("settings.sports.defaultTitle")
+												: t("settings.sports.makeDefault", { sport: sportLabel })
 										}
 										style={{
 											width: 26,
@@ -431,14 +432,14 @@ export function SettingsPanel() {
 					</div>
 				</div>
 				<Row
-					label={t("settings.units.label", language)}
+					label={t("settings.units.label")}
 					control={
 						<Segmented
 							value={units}
 							onChange={(v) => setUnits(v as "km" | "mi")}
 							options={[
-								{ value: "km", label: t("settings.units.metric", language) },
-								{ value: "mi", label: t("settings.units.imperial", language) },
+								{ value: "km", label: t("settings.units.metric") },
+								{ value: "mi", label: t("settings.units.imperial") },
 							]}
 						/>
 					}
@@ -447,7 +448,7 @@ export function SettingsPanel() {
 			</Group>
 
 			{selectedSports.length > 0 && (
-				<Group title={t("settings.pace.title", language)}>
+				<Group title={t("settings.pace.title")}>
 					{selectedSports.map((sport, idx) => {
 						const cfg = SPORT_OPTIONS.find((s) => s.key === sport);
 						if (!cfg) return null;
@@ -456,8 +457,8 @@ export function SettingsPanel() {
 						return (
 							<SpeedRow
 								key={sport}
-								label={t(cfg.labelKey, language)}
-								sub={t("settings.pace.subtitle", language)}
+								label={t(cfg.labelKey)}
+								sub={t("settings.pace.subtitle")}
 								kmh={kmh}
 								units={units}
 								onChange={(next) => setSportSpeed(sport, next)}
@@ -470,9 +471,9 @@ export function SettingsPanel() {
 				</Group>
 			)}
 
-			<Group title={t("settings.appearance", language)}>
+			<Group title={t("settings.appearance")}>
 				<Row
-					label={t("settings.language", language)}
+					label={t("settings.language")}
 					control={
 						<select
 							value={language}
@@ -496,20 +497,20 @@ export function SettingsPanel() {
 					}
 				/>
 				<Row
-					label={t("settings.theme", language)}
+					label={t("settings.theme")}
 					control={
 						<Segmented
 							value={theme}
 							onChange={(v) => setTheme(v as "light" | "dark")}
 							options={[
-								{ value: "light", label: t("settings.theme.light", language) },
-								{ value: "dark", label: t("settings.theme.dark", language) },
+								{ value: "light", label: t("settings.theme.light") },
+								{ value: "dark", label: t("settings.theme.dark") },
 							]}
 						/>
 					}
 				/>
 				<Row
-					label={t("settings.accent.label", language)}
+					label={t("settings.accent.label")}
 					control={
 						<div style={{ display: "flex", gap: 6 }}>
 							{ACCENT_OPTIONS.map((a) => {
@@ -519,7 +520,7 @@ export function SettingsPanel() {
 										key={a.key}
 										type="button"
 										onClick={() => setAccent(a.key)}
-										title={t(a.labelKey, language)}
+										title={t(a.labelKey)}
 										style={{
 											width: 22,
 											height: 22,
@@ -538,9 +539,9 @@ export function SettingsPanel() {
 				/>
 			</Group>
 
-			<Group title={t("settings.map.label", language)}>
+			<Group title={t("settings.map.label")}>
 				<Row
-					label={t("settings.map.styleLabel", language)}
+					label={t("settings.map.styleLabel")}
 					control={
 						<select
 							value={mapStyle}
@@ -555,55 +556,51 @@ export function SettingsPanel() {
 								fontSize: 12.5,
 							}}
 						>
-							<option value="streets">{t("settings.map.streets", language)}</option>
-							<option value="outdoors">{t("settings.map.outdoors", language)}</option>
-							<option value="satellite">{t("settings.map.satellite", language)}</option>
+							<option value="streets">{t("settings.map.streets")}</option>
+							<option value="outdoors">{t("settings.map.outdoors")}</option>
+							<option value="satellite">{t("settings.map.satellite")}</option>
 						</select>
 					}
 				/>
 				<Row
-					label={t("settings.map.pois", language)}
-					sub={t("common.comingSoon", language)}
+					label={t("settings.map.pois")}
+					sub={t("common.comingSoon")}
 					control={<Toggle on={showPois} onChange={handleShowPoisChange} disabled />}
 				/>
 				<Row
-					label={t("settings.map.terrain3d", language)}
-					sub={t("common.comingSoon", language)}
+					label={t("settings.map.terrain3d")}
+					sub={t("common.comingSoon")}
 					control={<Toggle on={terrain3d} onChange={setTerrain3d} disabled />}
 				/>
-				<Row
-					label={t("settings.map.autoSnap", language)}
-					control={<Toggle on={autoSnap} onChange={setAutoSnap} />}
-					last
-				/>
+				<Row label={t("settings.map.autoSnap")} control={<Toggle on={autoSnap} onChange={setAutoSnap} />} last />
 			</Group>
 
-			<Group title={t("settings.privacy", language)}>
+			<Group title={t("settings.privacy")}>
 				<Row
-					label={t("settings.privacy.locationAccess", language)}
-					sub={t("common.comingSoon", language)}
+					label={t("settings.privacy.locationAccess")}
+					sub={t("common.comingSoon")}
 					control={
-						<Btn variant="ghost" disabled title={t("common.comingSoon", language)}>
-							{t("settings.privacy.enable", language)}
+						<Btn variant="ghost" disabled title={t("common.comingSoon")}>
+							{t("settings.privacy.enable")}
 						</Btn>
 					}
 				/>
 				<Row
-					label={t("settings.privacy.publicProfile", language)}
-					sub={t("settings.privacy.publicProfileSub", language)}
+					label={t("settings.privacy.publicProfile")}
+					sub={t("settings.privacy.publicProfileSub")}
 					control={<Toggle on={publicProfile} onChange={setPublicProfile} disabled />}
 				/>
 				<Row
-					label={t("settings.privacy.hidePrivacy", language)}
-					sub={t("settings.privacy.hidePrivacySub", language)}
+					label={t("settings.privacy.hidePrivacy")}
+					sub={t("settings.privacy.hidePrivacySub")}
 					control={<Toggle on={hidePrivacy} onChange={setHidePrivacy} />}
 					last
 				/>
 			</Group>
 
-			<Group title={t("settings.account", language)}>
+			<Group title={t("settings.account")}>
 				<Row
-					label={t("settings.account.exportAll", language)}
+					label={t("settings.account.exportAll")}
 					control={
 						<Btn variant="ghost" onClick={handleExportData}>
 							<I.download size={14} />
@@ -611,7 +608,7 @@ export function SettingsPanel() {
 					}
 				/>
 				<Row
-					label={profile ? t("common.signOut", language) : t("common.signIn", language)}
+					label={profile ? t("common.signOut") : t("common.signIn")}
 					control={
 						<Btn
 							variant={profile ? "ghost" : "primary"}
@@ -619,20 +616,16 @@ export function SettingsPanel() {
 							disabled={logout.isPending}
 							style={profile ? { color: RDS_COLORS.danger } : undefined}
 						>
-							{logout.isPending
-								? t("common.signingOut", language)
-								: profile
-									? t("common.signOut", language)
-									: t("common.signIn", language)}
+							{logout.isPending ? t("common.signingOut") : profile ? t("common.signOut") : t("common.signIn")}
 						</Btn>
 					}
 					last
 				/>
 			</Group>
 
-			<Group title={t("settings.about", language)}>
+			<Group title={t("settings.about")}>
 				<Row
-					label={t("settings.version", language)}
+					label={t("settings.version")}
 					control={
 						<span style={{ fontSize: 12.5, color: RDS_COLORS.fgMuted, fontVariantNumeric: "tabular-nums" }}>
 							{getVersionDisplay()}

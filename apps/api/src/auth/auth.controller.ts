@@ -1,8 +1,9 @@
-import { Body, Controller, Get, HttpCode, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, HttpCode, Inject, Post, Req, Res, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
-import type { Request } from "express";
+import type { Request, Response } from "express";
 import { ThrottleAuth, ThrottleModerate } from "../common/decorators/throttle.decorator";
-import { UserProfileDto } from "../users/dto/user-response.dto";
+import type { AppConfig } from "../config/app-config";
+import { APP_CONFIG } from "../config/config.module";
 import { AuthService } from "./auth.service";
 import type { AuthenticatedUser } from "./authenticated-user";
 import { CurrentUser } from "./decorators/current-user.decorator";
@@ -13,7 +14,10 @@ import { JwtAuthGuard } from "./guards/jwt-auth.guard";
 @ApiTags("auth")
 @Controller("auth")
 export class AuthController {
-	constructor(private authService: AuthService) {}
+	constructor(
+		private authService: AuthService,
+		@Inject(APP_CONFIG) private readonly config: AppConfig,
+	) {}
 
 	@ApiOperation({
 		summary: "Google OAuth authentication",
@@ -25,25 +29,17 @@ export class AuthController {
 	@ApiResponse({ status: 401, description: "Authentication failed" })
 	@ThrottleAuth() // Stricter rate limiting for authentication
 	@Post("google")
-	async googleAuth(@Body() googleAuthDto: GoogleAuthDto, @Req() req: Request): Promise<AuthResponseDto> {
-		return this.authService.googleAuth(googleAuthDto, {
+	async googleAuth(
+		@Body() googleAuthDto: GoogleAuthDto,
+		@Req() req: Request,
+		@Res({ passthrough: true }) res: Response,
+	): Promise<AuthResponseDto> {
+		const authResponse = await this.authService.googleAuth(googleAuthDto, {
 			userAgent: req.headers["user-agent"],
 			ipAddress: req.ip,
 		});
-	}
-
-	@ApiOperation({
-		summary: "Get current user profile",
-		description: "Retrieves the profile of the currently authenticated user",
-	})
-	@ApiBearerAuth("JWT-auth")
-	@ApiResponse({ status: 200, description: "Profile retrieved successfully", type: UserProfileDto })
-	@ApiResponse({ status: 401, description: "Unauthorized" })
-	@ThrottleModerate() // Moderate rate limiting for profile access
-	@UseGuards(JwtAuthGuard)
-	@Get("me")
-	async getProfile(@CurrentUser() user: AuthenticatedUser): Promise<UserProfileDto> {
-		return this.authService.getProfile(user.id);
+		this.setSessionCookie(res, authResponse.accessToken);
+		return authResponse;
 	}
 
 	@ApiOperation({
@@ -56,8 +52,31 @@ export class AuthController {
 	@ThrottleModerate()
 	@UseGuards(JwtAuthGuard)
 	@Post("logout")
-	async logout(@CurrentUser() user: AuthenticatedUser): Promise<LogoutResponseDto> {
+	async logout(
+		@CurrentUser() user: AuthenticatedUser,
+		@Res({ passthrough: true }) res: Response,
+	): Promise<LogoutResponseDto> {
 		await this.authService.logout(user.jti);
+		this.clearSessionCookie(res);
 		return { success: true };
+	}
+
+	private setSessionCookie(res: Response, accessToken: string): void {
+		res.cookie(this.config.auth.cookieName, accessToken, {
+			httpOnly: true,
+			secure: this.config.app.isProduction,
+			sameSite: this.config.app.isProduction ? "none" : "lax",
+			maxAge: this.config.auth.sessionTtlMs,
+			path: "/",
+		});
+	}
+
+	private clearSessionCookie(res: Response): void {
+		res.clearCookie(this.config.auth.cookieName, {
+			httpOnly: true,
+			secure: this.config.app.isProduction,
+			sameSite: this.config.app.isProduction ? "none" : "lax",
+			path: "/",
+		});
 	}
 }

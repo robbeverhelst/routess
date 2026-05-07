@@ -3,20 +3,19 @@ import { useLocalStorageInit } from "@/components/hooks/useLocalStorageInit";
 import { useMapWithRoutingState } from "@/components/hooks/useMapWithRoutingState";
 import { MapCanvas } from "@/components/map/MapCanvas";
 import { MapShortcutBindings } from "@/components/map/MapShortcutBindings";
-import { MapConfigurationProvider } from "@/components/providers/MapConfigurationProvider";
 import { MapInteractionProvider } from "@/components/providers/MapInteractionProvider";
 import { UserLocationProvider, useUserLocation } from "@/components/providers/UserLocationProvider";
 import type { PopupInfo as MapPopupInfo } from "@/features/routing/managers/MapInteractionManager";
-import {
-	exportCurrentRouteToGPXFile,
-	importRouteFromGPXString,
-	loadRouteIntoMap,
-} from "@/features/routing/services/RouteIOService";
+import type { RouteDraftEditor } from "@/features/routing/RouteDraftEditor";
+import { RouteDraftEditorProvider } from "@/features/routing/RouteDraftEditorProvider";
+import { type AppEventMap, onAppEvent } from "@/lib/app-events";
 import { ErrorBoundary } from "@/lib/errors";
 import type { SupportedLanguage } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
+import { getRuntimeConfig } from "@/lib/runtime-config";
+import { useToastStore } from "@/stores/toastStore";
 
-const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN || "__VITE_MAPBOX_ACCESS_TOKEN__";
+const MAPBOX_TOKEN = getRuntimeConfig("VITE_MAPBOX_ACCESS_TOKEN") ?? "";
 const HAS_INVALID_MAPBOX_TOKEN =
 	!MAPBOX_TOKEN ||
 	MAPBOX_TOKEN.includes("__VITE_") ||
@@ -26,7 +25,6 @@ const HAS_INVALID_MAPBOX_TOKEN =
 if (import.meta.env.DEV && HAS_INVALID_MAPBOX_TOKEN) {
 	Logger.error(
 		`[MapWithRouting] Mapbox token issue:
-    Raw import.meta.env.VITE_MAPBOX_ACCESS_TOKEN: '${import.meta.env.VITE_MAPBOX_ACCESS_TOKEN || "__VITE_MAPBOX_ACCESS_TOKEN__"}',
     Assigned MAPBOX_TOKEN value: '${MAPBOX_TOKEN}',
     Type of MAPBOX_TOKEN: '${typeof MAPBOX_TOKEN}'.
     Please verify VITE_MAPBOX_ACCESS_TOKEN in your .env file or CI secrets.`,
@@ -60,16 +58,13 @@ interface MapConfigurationContentProps {
 	routeId?: string;
 	mapTheme?: "light" | "dark";
 	currentLanguage: SupportedLanguage;
-	setRouteDistance: React.Dispatch<React.SetStateAction<string>>;
-	setRouteDuration: React.Dispatch<React.SetStateAction<string>>;
-	setHasRoute: React.Dispatch<React.SetStateAction<boolean>>;
+	setEditor: (editor: RouteDraftEditor | null) => void;
 	popup: MapPopupInfo | null;
 	setPopup: React.Dispatch<React.SetStateAction<MapPopupInfo | null>>;
 	onAddDirectWaypoint: () => void;
 	onRemoveWaypoint: () => void;
 	onAddWaypointOnRoute: () => Promise<void>;
 	handleWaypointError: (message: string | null) => void;
-	handleRouteInfoError: (message: string) => void;
 	lastKnownLocationFromStorage: [number, number] | null;
 	detectedRouteInLocalStorageOnInit: boolean;
 	lastSavedMapView: unknown;
@@ -85,18 +80,17 @@ const MapWithRoutingContent: React.FC<MapboxMapProps> = ({
 	mapTheme,
 }) => {
 	const { detectedRouteInLocalStorageOnInit, lastKnownLocationFromStorage, lastSavedMapView } = useLocalStorageInit();
+	const pushToast = useToastStore((s) => s.push);
 	const {
 		mapRef,
 		popup,
 		setPopup,
+		editor,
+		setEditor,
 		currentLanguage,
 		waypointError: _waypointError,
 		handleWaypointError,
 		hasRoute,
-		setRouteDistance,
-		setRouteDuration,
-		setHasRoute,
-		handleRouteInfoError,
 		handleUndo,
 		handleRedo,
 		handleReverseRoute,
@@ -126,8 +120,7 @@ const MapWithRoutingContent: React.FC<MapboxMapProps> = ({
 		const onFocusRoute = () => {
 			handleZoomToRoute();
 		};
-		const onFlyTo = (event: Event) => {
-			const detail = (event as CustomEvent<{ coordinates?: [number, number]; zoom?: number }>).detail;
+		const onFlyTo = (detail: { coordinates?: [number, number]; zoom?: number }) => {
 			if (!detail?.coordinates || !mapRef.current) return;
 			mapRef.current.flyTo({
 				center: detail.coordinates,
@@ -135,48 +128,37 @@ const MapWithRoutingContent: React.FC<MapboxMapProps> = ({
 				essential: true,
 			});
 		};
-		const onLoadRoute = (event: Event) => {
-			const detail = (
-				event as CustomEvent<{
-					waypoints?: Array<{ lat: number; lng: number; type: "routed" | "direct"; name?: string }>;
-					geometry?: [number, number][];
-				}>
-			).detail;
+		const onLoadRoute = (detail: AppEventMap["routess:load-route"]) => {
 			if (!detail?.waypoints || detail.waypoints.length === 0) {
 				Logger.warn("[MapWithRouting] routess:load-route received with no waypoints");
 				return;
 			}
-			if (!mapRef.current) {
+			if (!editor) {
 				Logger.warn("[MapWithRouting] routess:load-route received before map ready");
 				return;
 			}
-			const waypoints = detail.waypoints.map((wp) => ({
-				coord: [wp.lng, wp.lat] as [number, number],
-				type: (wp.type === "direct" ? "direct" : "routed") as "direct" | "routed",
-				...(wp.name ? { name: wp.name } : {}),
-			}));
-			void loadRouteIntoMap({
-				map: mapRef.current,
-				accessToken: MAPBOX_TOKEN,
-				waypoints,
-				exactRoutePath: detail.geometry && detail.geometry.length >= 2 ? detail.geometry : undefined,
-				setRouteDistance,
-				setRouteDuration,
-				setHasRoute,
-				saveSnapshot: true,
-			}).then((result) => {
-				if (!result.success) {
-					Logger.warn("[MapWithRouting] load-route failed:", result.message);
-				}
-			});
+			void editor
+				.loadWaypoints(detail.waypoints, {
+					exactRoutePath: detail.geometry && detail.geometry.length >= 2 ? detail.geometry : undefined,
+					saveSnapshot: true,
+				})
+				.then((result) => {
+					if (!result.success) {
+						Logger.warn("[MapWithRouting] load-route failed:", result.message);
+					}
+				});
 		};
 		const onShareRoute = () => {
 			handleCopyShareLinkToClipboard();
 		};
 		const onExportGpx = () => {
-			const result = exportCurrentRouteToGPXFile();
+			if (!editor) {
+				pushToast({ kind: "warn", title: "Map is not ready yet, try again in a moment." });
+				return;
+			}
+			const result = editor.exportGpx();
 			if (!result.success) {
-				handleRouteInfoError(result.message ?? "Failed to export GPX.");
+				pushToast({ kind: "danger", title: result.message ?? "Failed to export GPX." });
 			}
 		};
 		const onReroute = () => {
@@ -185,159 +167,123 @@ const MapWithRoutingContent: React.FC<MapboxMapProps> = ({
 		const onRecalculate = () => {
 			void handleRecalculateRoute();
 		};
-		const onImportGpx = (event: Event) => {
-			const detail = (event as CustomEvent<{ gpxString?: string; fileName?: string }>).detail;
+		const onImportGpx = (detail: { gpxString?: string; fileName?: string }) => {
 			if (!detail?.gpxString) {
-				handleRouteInfoError("No file content received for import.");
+				pushToast({ kind: "danger", title: "No file content received for import." });
 				return;
 			}
-			if (!mapRef.current) {
-				handleRouteInfoError("Map is not ready yet, try again in a moment.");
+			if (!editor) {
+				pushToast({ kind: "warn", title: "Map is not ready yet, try again in a moment." });
 				return;
 			}
-			void importRouteFromGPXString({
-				map: mapRef.current,
-				accessToken: MAPBOX_TOKEN,
-				gpxString: detail.gpxString,
-				setRouteDistance,
-				setRouteDuration,
-				setHasRoute,
-			}).then((result) => {
+			void editor.loadFromGpx(detail.gpxString).then((result) => {
 				if (!result.success) {
 					handleImportError(result.message ?? "Failed to import GPX file.");
 				}
 			});
 		};
 
-		window.addEventListener("routess:undo", onUndo);
-		window.addEventListener("routess:redo", onRedo);
-		window.addEventListener("routess:reset-route", onResetRoute);
-		window.addEventListener("routess:focus-route", onFocusRoute);
-		window.addEventListener("routess:fly-to", onFlyTo);
-		window.addEventListener("routess:load-route", onLoadRoute);
-		window.addEventListener("routess:share-route", onShareRoute);
-		window.addEventListener("routess:export-gpx", onExportGpx);
-		window.addEventListener("routess:import-gpx", onImportGpx);
-		window.addEventListener("routess:reroute", onReroute);
-		window.addEventListener("routess:recalculate-route", onRecalculate);
+		const unsubscribers = [
+			onAppEvent("routess:undo", onUndo),
+			onAppEvent("routess:redo", onRedo),
+			onAppEvent("routess:reset-route", onResetRoute),
+			onAppEvent("routess:focus-route", onFocusRoute),
+			onAppEvent("routess:fly-to", onFlyTo),
+			onAppEvent("routess:load-route", onLoadRoute),
+			onAppEvent("routess:share-route", onShareRoute),
+			onAppEvent("routess:export-gpx", onExportGpx),
+			onAppEvent("routess:import-gpx", onImportGpx),
+			onAppEvent("routess:reroute", onReroute),
+			onAppEvent("routess:recalculate-route", onRecalculate),
+		];
 		return () => {
-			window.removeEventListener("routess:undo", onUndo);
-			window.removeEventListener("routess:redo", onRedo);
-			window.removeEventListener("routess:reset-route", onResetRoute);
-			window.removeEventListener("routess:focus-route", onFocusRoute);
-			window.removeEventListener("routess:fly-to", onFlyTo);
-			window.removeEventListener("routess:load-route", onLoadRoute);
-			window.removeEventListener("routess:share-route", onShareRoute);
-			window.removeEventListener("routess:export-gpx", onExportGpx);
-			window.removeEventListener("routess:import-gpx", onImportGpx);
-			window.removeEventListener("routess:reroute", onReroute);
-			window.removeEventListener("routess:recalculate-route", onRecalculate);
+			for (const unsubscribe of unsubscribers) {
+				unsubscribe();
+			}
 		};
 	}, [
+		editor,
 		handleRedo,
 		handleReset,
 		handleUndo,
 		handleZoomToRoute,
 		handleCopyShareLinkToClipboard,
-		handleRouteInfoError,
 		handleImportError,
 		handleReverseRoute,
 		handleRecalculateRoute,
-		setRouteDistance,
-		setRouteDuration,
-		setHasRoute,
 		mapRef,
+		pushToast,
 	]);
 
 	return (
-		<UserLocationProvider mapRef={mapRef} hasRoute={hasRoute} isMapReady={mapRef.current !== null}>
-			<MapConfigurationContent
-				mapRef={mapRef}
-				hasRoute={hasRoute}
-				isOnline={isOnline}
-				initialBearing={0}
-				width={width}
-				height={height}
-				initialCenter={initialCenter}
-				initialZoom={initialZoom}
-				routeId={routeId}
-				mapTheme={mapTheme}
-				currentLanguage={currentLanguage}
-				setRouteDistance={setRouteDistance}
-				setRouteDuration={setRouteDuration}
-				setHasRoute={setHasRoute}
-				popup={popup}
-				setPopup={setPopup}
-				onAddDirectWaypoint={handleAddDirectWaypoint}
-				onRemoveWaypoint={handleRemoveWaypoint}
-				onAddWaypointOnRoute={handleAddWaypointOnRoute}
-				handleWaypointError={handleWaypointError}
-				handleRouteInfoError={handleRouteInfoError}
-				lastKnownLocationFromStorage={lastKnownLocationFromStorage}
-				detectedRouteInLocalStorageOnInit={detectedRouteInLocalStorageOnInit}
-				lastSavedMapView={lastSavedMapView}
-				onImportError={handleImportError}
-			/>
-		</UserLocationProvider>
+		<RouteDraftEditorProvider editor={editor}>
+			<UserLocationProvider mapRef={mapRef} hasRoute={hasRoute} isMapReady={mapRef.current !== null}>
+				<MapConfigurationContent
+					mapRef={mapRef}
+					hasRoute={hasRoute}
+					isOnline={isOnline}
+					initialBearing={0}
+					width={width}
+					height={height}
+					initialCenter={initialCenter}
+					initialZoom={initialZoom}
+					routeId={routeId}
+					mapTheme={mapTheme}
+					currentLanguage={currentLanguage}
+					setEditor={setEditor}
+					popup={popup}
+					setPopup={setPopup}
+					onAddDirectWaypoint={handleAddDirectWaypoint}
+					onRemoveWaypoint={handleRemoveWaypoint}
+					onAddWaypointOnRoute={handleAddWaypointOnRoute}
+					handleWaypointError={handleWaypointError}
+					lastKnownLocationFromStorage={lastKnownLocationFromStorage}
+					detectedRouteInLocalStorageOnInit={detectedRouteInLocalStorageOnInit}
+					lastSavedMapView={lastSavedMapView}
+					onImportError={handleImportError}
+				/>
+			</UserLocationProvider>
+		</RouteDraftEditorProvider>
 	);
 };
 
 const MapConfigurationContent: React.FC<MapConfigurationContentProps> = (props) => {
-	const { location: userLocation, handleLocateButtonClick } = useUserLocation();
+	const { handleLocateButtonClick } = useUserLocation();
 
 	useEffect(() => {
 		const onLocate = () => {
 			void handleLocateButtonClick();
 		};
-		window.addEventListener("routess:locate", onLocate);
-		return () => window.removeEventListener("routess:locate", onLocate);
+		return onAppEvent("routess:locate", onLocate);
 	}, [handleLocateButtonClick]);
 
 	return (
 		<>
-			<MapShortcutBindings
-				mapRef={props.mapRef}
-				mapboxToken={MAPBOX_TOKEN}
-				setRouteDistance={props.setRouteDistance}
-				setRouteDuration={props.setRouteDuration}
-				setHasRoute={props.setHasRoute}
-				onImportError={props.onImportError}
-			/>
-			<MapConfigurationProvider
-				mapRef={props.mapRef}
-				userLocation={userLocation}
-				hasRoute={props.hasRoute}
-				isOnline={props.isOnline}
-				initialBearing={props.initialBearing}
-			>
-				<div className="w-full h-full relative">
-					<MapCanvas
-						mapRef={props.mapRef}
-						mapboxToken={MAPBOX_TOKEN}
-						width={props.width}
-						height={props.height}
-						initialCenter={props.initialCenter}
-						initialZoom={props.initialZoom}
-						routeId={props.routeId}
-						mapTheme={props.mapTheme}
-						currentLanguage={props.currentLanguage}
-						setRouteDistance={props.setRouteDistance}
-						setRouteDuration={props.setRouteDuration}
-						setHasRoute={props.setHasRoute}
-						hasRoute={props.hasRoute}
-						popup={props.popup}
-						setPopup={props.setPopup}
-						onAddDirectWaypoint={props.onAddDirectWaypoint}
-						onRemoveWaypoint={props.onRemoveWaypoint}
-						onAddWaypointOnRoute={props.onAddWaypointOnRoute}
-						handleWaypointError={props.handleWaypointError}
-						handleRouteInfoError={props.handleRouteInfoError}
-						lastKnownLocationFromStorage={props.lastKnownLocationFromStorage}
-						detectedRouteInLocalStorageOnInit={props.detectedRouteInLocalStorageOnInit}
-						lastSavedMapView={props.lastSavedMapView}
-					/>
-				</div>
-			</MapConfigurationProvider>
+			<MapShortcutBindings onImportError={props.onImportError} />
+			<div className="w-full h-full relative">
+				<MapCanvas
+					mapRef={props.mapRef}
+					mapboxToken={MAPBOX_TOKEN}
+					width={props.width}
+					height={props.height}
+					initialCenter={props.initialCenter}
+					initialZoom={props.initialZoom}
+					routeId={props.routeId}
+					mapTheme={props.mapTheme}
+					currentLanguage={props.currentLanguage}
+					setEditor={props.setEditor}
+					hasRoute={props.hasRoute}
+					popup={props.popup}
+					setPopup={props.setPopup}
+					onAddDirectWaypoint={props.onAddDirectWaypoint}
+					onRemoveWaypoint={props.onRemoveWaypoint}
+					onAddWaypointOnRoute={props.onAddWaypointOnRoute}
+					handleWaypointError={props.handleWaypointError}
+					lastKnownLocationFromStorage={props.lastKnownLocationFromStorage}
+					detectedRouteInLocalStorageOnInit={props.detectedRouteInLocalStorageOnInit}
+					lastSavedMapView={props.lastSavedMapView}
+				/>
+			</div>
 		</>
 	);
 };

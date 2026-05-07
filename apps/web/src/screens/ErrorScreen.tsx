@@ -1,5 +1,4 @@
-import { t } from "@/lib/i18n";
-import { useUiStore } from "@/stores/uiStore";
+import { useT } from "@/lib/i18n";
 import { I } from "../components/icons";
 import { MapBackdrop } from "../components/MapBackdrop";
 import { Btn, RDS_COLORS } from "../components/primitives";
@@ -48,7 +47,7 @@ export function ErrorScreen({
 	onAction?: () => void;
 	onFallback?: () => void;
 }) {
-	const language = useUiStore((s) => s.language);
+	const t = useT();
 	const v = VARIANTS[kind];
 	const Icon = v.icon;
 	return (
@@ -98,7 +97,7 @@ export function ErrorScreen({
 					>
 						<Icon size={26} />
 					</div>
-					<h2 style={{ margin: 0, fontSize: 20, fontWeight: 600, letterSpacing: -0.3 }}>{t(v.titleKey, language)}</h2>
+					<h2 style={{ margin: 0, fontSize: 20, fontWeight: 600, letterSpacing: -0.3 }}>{t(v.titleKey)}</h2>
 					<p
 						style={{
 							fontSize: 13.5,
@@ -107,13 +106,13 @@ export function ErrorScreen({
 							lineHeight: 1.55,
 						}}
 					>
-						{t(v.bodyKey, language)}
+						{t(v.bodyKey)}
 					</p>
 					<Btn variant="primary" onClick={onAction} style={{ width: "100%", height: 42 }}>
-						{t(v.actionKey, language)}
+						{t(v.actionKey)}
 					</Btn>
 					<Btn variant="ghost" onClick={onFallback} style={{ width: "100%", marginTop: 8, color: RDS_COLORS.fgMuted }}>
-						{t(v.fallbackKey, language)}
+						{t(v.fallbackKey)}
 					</Btn>
 				</div>
 			</div>

@@ -1,5 +1,6 @@
 import { type ArgumentsHost, HttpException, HttpStatus } from "@nestjs/common";
 import type { Response } from "express";
+import { DomainException } from "../../../src/common/exceptions/domain.exception";
 import { GlobalExceptionFilter } from "../../../src/common/filters/global-exception.filter";
 
 describe("GlobalExceptionFilter", () => {
@@ -10,14 +11,10 @@ describe("GlobalExceptionFilter", () => {
 	const originalEnv = process.env.NODE_ENV;
 
 	beforeEach(() => {
-		// Set to test mode to avoid stack traces in most tests
 		process.env.NODE_ENV = "test";
 		filter = new GlobalExceptionFilter();
 
-		mockRequest = {
-			method: "GET",
-			url: "/test",
-		};
+		mockRequest = { method: "GET", url: "/test" };
 
 		mockResponse = {
 			status: jest.fn().mockReturnThis(),
@@ -33,7 +30,6 @@ describe("GlobalExceptionFilter", () => {
 	});
 
 	afterAll(() => {
-		// Restore original NODE_ENV
 		process.env.NODE_ENV = originalEnv;
 	});
 
@@ -41,97 +37,85 @@ describe("GlobalExceptionFilter", () => {
 		expect(filter).toBeDefined();
 	});
 
-	it("should handle HttpException correctly", () => {
-		const exception = new HttpException("Test error", HttpStatus.BAD_REQUEST);
-
-		filter.catch(exception, mockArgumentsHost);
+	it("infers VALIDATION_FAILED for a 400 HttpException with a string body", () => {
+		filter.catch(new HttpException("Test error", HttpStatus.BAD_REQUEST), mockArgumentsHost);
 
 		expect(mockResponse.status).toHaveBeenCalledWith(400);
 		expect(mockResponse.json).toHaveBeenCalledWith({
 			statusCode: 400,
-			timestamp: expect.any(String),
-			path: "/test",
-			method: "GET",
-			error: "Bad Request",
-			message: ["Test error"],
+			code: "VALIDATION_FAILED",
+			message: "Test error",
 		});
 	});
 
-	it("should handle generic Error correctly", () => {
-		const exception = new Error("Generic error");
-
-		filter.catch(exception, mockArgumentsHost);
+	it("infers INTERNAL for a generic Error", () => {
+		filter.catch(new Error("Generic error"), mockArgumentsHost);
 
 		expect(mockResponse.status).toHaveBeenCalledWith(500);
 		expect(mockResponse.json).toHaveBeenCalledWith({
 			statusCode: 500,
-			timestamp: expect.any(String),
-			path: "/test",
-			method: "GET",
-			error: "Internal Server Error",
-			message: ["Internal server error"],
+			code: "INTERNAL",
+			message: "Internal server error",
 		});
 	});
 
-	it("should handle HttpException with object response", () => {
+	it("collapses a multi-message validation body into details.messages", () => {
 		const exceptionResponse = {
 			message: ["Validation failed", "Name is required"],
 			error: "Bad Request",
 		};
-		const exception = new HttpException(exceptionResponse, HttpStatus.BAD_REQUEST);
-
-		filter.catch(exception, mockArgumentsHost);
+		filter.catch(new HttpException(exceptionResponse, HttpStatus.BAD_REQUEST), mockArgumentsHost);
 
 		expect(mockResponse.json).toHaveBeenCalledWith({
 			statusCode: 400,
-			timestamp: expect.any(String),
-			path: "/test",
-			method: "GET",
-			error: "Bad Request",
-			message: ["Validation failed", "Name is required"],
+			code: "VALIDATION_FAILED",
+			message: "Validation failed",
+			details: { messages: ["Validation failed", "Name is required"] },
 		});
 	});
 
-	it("should include stack trace in development mode", () => {
-		const originalEnv = process.env.NODE_ENV;
+	it("passes through a DomainException payload verbatim", () => {
+		filter.catch(new DomainException(409, "CONFLICT", "Route name taken", { name: "weekend ride" }), mockArgumentsHost);
+
+		expect(mockResponse.status).toHaveBeenCalledWith(409);
+		expect(mockResponse.json).toHaveBeenCalledWith({
+			statusCode: 409,
+			code: "CONFLICT",
+			message: "Route name taken",
+			details: { name: "weekend ride" },
+		});
+	});
+
+	it("includes a stack trace under details.stack in development", () => {
 		process.env.NODE_ENV = "development";
 
-		const exception = new Error("Test error");
-
-		filter.catch(exception, mockArgumentsHost);
+		filter.catch(new Error("Test error"), mockArgumentsHost);
 
 		expect(mockResponse.json).toHaveBeenCalledWith(
-			expect.objectContaining({
-				stack: expect.any(String),
-			}),
+			expect.objectContaining({ details: expect.objectContaining({ stack: expect.any(String) }) }),
 		);
 
-		process.env.NODE_ENV = originalEnv;
+		process.env.NODE_ENV = "test";
 	});
 
-	it("should not include stack trace in production mode", () => {
-		const originalEnv = process.env.NODE_ENV;
+	it("does not include a stack trace in production", () => {
 		process.env.NODE_ENV = "production";
 
-		const exception = new Error("Test error");
-
-		filter.catch(exception, mockArgumentsHost);
+		filter.catch(new Error("Test error"), mockArgumentsHost);
 
 		const callArgs = (mockResponse.json as jest.Mock).mock.calls[0][0];
-		expect(callArgs.stack).toBeUndefined();
+		expect(callArgs.details).toBeUndefined();
 
-		process.env.NODE_ENV = originalEnv;
+		process.env.NODE_ENV = "test";
 	});
 
-	it("should convert single message to array", () => {
-		const exception = new HttpException("Single message", HttpStatus.NOT_FOUND);
+	it("infers NOT_FOUND for a 404", () => {
+		filter.catch(new HttpException("Single message", HttpStatus.NOT_FOUND), mockArgumentsHost);
 
-		filter.catch(exception, mockArgumentsHost);
-
-		expect(mockResponse.json).toHaveBeenCalledWith(
-			expect.objectContaining({
-				message: ["Single message"],
-			}),
-		);
+		expect(mockResponse.json).toHaveBeenCalledWith({
+			statusCode: 404,
+			code: "NOT_FOUND",
+			message: "Single message",
+		});
 	});
 });

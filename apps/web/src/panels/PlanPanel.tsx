@@ -1,7 +1,8 @@
 import { calculatePathDistance } from "@routess/core";
 import { useEffect, useMemo, useState } from "react";
 import { useSurfaceBreakdown } from "@/features/routing/services/useSurfaceBreakdown";
-import { t } from "@/lib/i18n";
+import { emitAppEvent } from "@/lib/app-events";
+import { useT } from "@/lib/i18n";
 import { formatSpeedParts, useUnits } from "@/lib/units";
 import { useModalsStore } from "@/stores/modalsStore";
 import { getSpeedForActivity, useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
@@ -53,6 +54,7 @@ function PlanElevationSparkline() {
 }
 
 export function PlanPanel() {
+	const t = useT();
 	const waypoints = useWaypoints();
 	const routePath = useRoutePath();
 	const distance = useRouteDistance();
@@ -69,16 +71,16 @@ export function PlanPanel() {
 	const handleRemoveWaypoint = (index: number) => {
 		saveSnapshot();
 		removeWaypoint(index);
-		window.dispatchEvent(new CustomEvent("routess:recalculate-route"));
+		emitAppEvent("routess:recalculate-route");
 	};
 
 	const handleReorderWaypoints = (next: typeof waypoints) => {
 		saveSnapshot();
 		setWaypoints(next);
-		window.dispatchEvent(new CustomEvent("routess:recalculate-route"));
+		emitAppEvent("routess:recalculate-route");
 	};
 
-	const { activityType, setActivityType, language } = useUiStore();
+	const { activityType, setActivityType } = useUiStore();
 	const openModal = useModalsStore((s) => s.openModal);
 	const elevationGain = useElevationGain();
 	const isComputingElevation = useIsComputingElevation();
@@ -124,14 +126,14 @@ export function PlanPanel() {
 
 	const stats = [
 		{
-			label: t("plan.distance", language),
+			label: t("plan.distance"),
 			val: distance ? distance.split(" ")[0] : "—",
 			unit: distance ? distance.split(" ")[1] || "km" : units === "mi" ? "mi" : "km",
 		},
-		{ label: t("plan.time", language), val: duration || "—", unit: "" },
-		{ label: t("plan.elev", language), val: elevationVal, unit: elevationUnit },
+		{ label: t("plan.time"), val: duration || "—", unit: "" },
+		{ label: t("plan.elev"), val: elevationVal, unit: elevationUnit },
 		{
-			label: t("plan.pace", language),
+			label: t("plan.pace"),
 			val: paceParts?.value ?? "—",
 			unit: paceParts?.unit ?? (units === "mi" ? "mph" : "km/h"),
 		},
@@ -161,7 +163,7 @@ export function PlanPanel() {
 									if (activityType === a.key) return;
 									setActivityType(a.key);
 									if (hasRoute) {
-										window.dispatchEvent(new CustomEvent("routess:recalculate-route"));
+										emitAppEvent("routess:recalculate-route");
 									}
 								}}
 								style={{
@@ -179,15 +181,15 @@ export function PlanPanel() {
 									cursor: "pointer",
 								}}
 							>
-								<Icon size={14} /> {t(a.labelKey, language)}
+								<Icon size={14} /> {t(a.labelKey)}
 							</button>
 						);
 					})}
 					<div style={{ flex: 1 }} />
-					<IconBtn title={t("plan.routingPrefs", language)} onClick={() => openModal("routing")}>
+					<IconBtn title={t("plan.routingPrefs")} onClick={() => openModal("routing")}>
 						<I.sliders size={16} />
 					</IconBtn>
-					<IconBtn title={t("plan.generateLoop", language)} onClick={() => openModal("loop")}>
+					<IconBtn title={t("plan.generateLoop")} onClick={() => openModal("loop")}>
 						<I.compass size={16} />
 					</IconBtn>
 				</div>
@@ -195,11 +197,11 @@ export function PlanPanel() {
 				<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 6 }}>
 					<EndpointInput
 						dotColor={RDS_COLORS.success}
-						label={startWp ? formatCoord(startWp.coord) : t("plan.addStart", language)}
+						label={startWp ? formatCoord(startWp.coord) : t("plan.addStart")}
 					/>
 					<EndpointInput
 						dotColor={RDS_COLORS.danger}
-						label={endWp && waypoints.length > 1 ? formatCoord(endWp.coord) : t("plan.addEnd", language)}
+						label={endWp && waypoints.length > 1 ? formatCoord(endWp.coord) : t("plan.addEnd")}
 					/>
 				</div>
 
@@ -222,7 +224,7 @@ export function PlanPanel() {
 						cursor: "pointer",
 					}}
 				>
-					<I.plus size={14} /> {t("plan.addWaypoint", language)}
+					<I.plus size={14} /> {t("plan.addWaypoint")}
 					<span style={{ flex: 1 }} />
 					<Kbd>⌘</Kbd>
 					<Kbd>K</Kbd>
@@ -261,7 +263,7 @@ export function PlanPanel() {
 			{/* Waypoints list */}
 			<div style={{ padding: "14px 20px", overflow: "auto", flex: 1 }}>
 				<SecTitle style={{ marginBottom: 10 }}>
-					{t("plan.waypointsCount", language, { count: String(waypoints.length) })}
+					{t("plan.waypointsCount", { count: String(waypoints.length) })}
 				</SecTitle>
 				{waypoints.length === 0 ? (
 					<div
@@ -273,7 +275,7 @@ export function PlanPanel() {
 							lineHeight: 1.55,
 						}}
 					>
-						{t("plan.tapMapToAdd", language)} <Kbd>⌘</Kbd>
+						{t("plan.tapMapToAdd")} <Kbd>⌘</Kbd>
 						<Kbd>K</Kbd>.
 					</div>
 				) : (
@@ -283,10 +285,10 @@ export function PlanPanel() {
 							const isEnd = i === waypoints.length - 1;
 							const dot = isStart ? RDS_COLORS.success : isEnd ? RDS_COLORS.danger : RDS_COLORS.accent;
 							const label = isStart
-								? t("common.start", language)
+								? t("common.start")
 								: isEnd
-									? t("common.end", language)
-									: t("common.waypoint", language, { n: String(i) });
+									? t("common.end")
+									: t("common.waypoint", { n: String(i) });
 							const isDragging = draggingIdx === i;
 							const isDragTarget = dragOverIdx === i && draggingIdx !== null && draggingIdx !== i;
 							return (
@@ -366,7 +368,7 @@ export function PlanPanel() {
 									</div>
 									<div style={{ display: "flex", alignItems: "center", gap: 2 }}>
 										<IconBtn
-											title={t("plan.dragToReorder", language)}
+											title={t("plan.dragToReorder")}
 											draggable
 											onDragStart={(e) => {
 												e.dataTransfer.effectAllowed = "move";
@@ -381,7 +383,7 @@ export function PlanPanel() {
 											<I.grip size={14} />
 										</IconBtn>
 										<IconBtn
-											title={t("plan.removeWaypoint", language)}
+											title={t("plan.removeWaypoint")}
 											onClick={() => handleRemoveWaypoint(i)}
 											style={{ color: RDS_COLORS.fgSubtle }}
 										>
@@ -411,10 +413,10 @@ export function PlanPanel() {
 					disabled={!hasRoute}
 					onClick={() => openModal("save")}
 				>
-					<I.save size={14} /> {t("common.save", language)}
+					<I.save size={14} /> {t("common.save")}
 				</Btn>
 				<Btn
-					title={t("plan.shareRoute", language)}
+					title={t("plan.shareRoute")}
 					disabled={!hasRoute}
 					onClick={() => openModal("share")}
 					style={{ padding: "0 10px" }}
@@ -422,7 +424,7 @@ export function PlanPanel() {
 					<I.share size={14} />
 				</Btn>
 				<Btn
-					title={t("plan.importGpx", language)}
+					title={t("plan.importGpx")}
 					disabled={routePath.length === 0 && waypoints.length === 0}
 					onClick={() => openModal("import")}
 					style={{ padding: "0 10px" }}
@@ -430,7 +432,7 @@ export function PlanPanel() {
 					<I.download size={14} />
 				</Btn>
 				<Btn
-					title={t("plan.clear", language)}
+					title={t("plan.clear")}
 					variant="ghost"
 					onClick={clear}
 					disabled={waypoints.length === 0}

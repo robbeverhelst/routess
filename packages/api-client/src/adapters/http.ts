@@ -1,7 +1,9 @@
+import { errorFromResponse } from "../errors";
 import type { HttpClient, RequestOptions } from "../types";
 
 interface FetchHttpClientOptions {
 	defaultTimeoutMs?: number;
+	credentials?: "omit" | "same-origin" | "include";
 }
 
 // Single fetch-based HttpClient. Works in both browser and React Native
@@ -9,9 +11,11 @@ interface FetchHttpClientOptions {
 // while mobile had 10s; the default here is opt-in via constructor.
 export class FetchHttpClient implements HttpClient {
 	private readonly defaultTimeoutMs: number | undefined;
+	private readonly credentials: "omit" | "same-origin" | "include" | undefined;
 
 	constructor(options: FetchHttpClientOptions = {}) {
 		this.defaultTimeoutMs = options.defaultTimeoutMs;
+		this.credentials = options.credentials;
 	}
 
 	async get<T>(url: string, options: RequestOptions = {}): Promise<T> {
@@ -48,18 +52,11 @@ export class FetchHttpClient implements HttpClient {
 				headers,
 				body: body !== undefined ? JSON.stringify(body) : undefined,
 				signal: controller.signal,
+				credentials: this.credentials,
 			});
 
 			if (!response.ok) {
-				let errorDetails = "";
-				try {
-					errorDetails = await response.text();
-				} catch {
-					// ignore
-				}
-				throw new Error(
-					`API Error: ${response.status} ${response.statusText}${errorDetails ? ` - ${errorDetails}` : ""}`,
-				);
+				throw await errorFromResponse(response);
 			}
 
 			return await response.json();

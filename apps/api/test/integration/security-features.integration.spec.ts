@@ -55,7 +55,7 @@ describe("Security Features Integration", () => {
 				name: "", // Invalid: empty name
 				description: "Test route",
 				waypoints: [
-					{ lat: "invalid", lng: 0 }, // Invalid: lat should be number
+					{ coord: ["invalid", 0], type: "routed" }, // Invalid: coord must be [lng, lat] numbers
 				],
 			};
 
@@ -65,8 +65,12 @@ describe("Security Features Integration", () => {
 				.send(invalidRouteData)
 				.expect(400);
 
-			expect(response.body.message).toBeDefined();
-			expect(Array.isArray(response.body.message)).toBe(true);
+			expect(response.body).toMatchObject({
+				statusCode: 400,
+				code: "VALIDATION_FAILED",
+				message: expect.any(String),
+			});
+			expect(Array.isArray(response.body.details?.messages)).toBe(true);
 		});
 
 		it("should accept valid data", async () => {
@@ -74,8 +78,8 @@ describe("Security Features Integration", () => {
 				name: "Test Route",
 				description: "A test route",
 				waypoints: [
-					{ lat: 50.8503, lng: 4.3517, type: "routed" },
-					{ lat: 50.8463, lng: 4.3517, type: "direct" },
+					{ coord: [4.3517, 50.8503], type: "routed" },
+					{ coord: [4.3517, 50.8463], type: "direct" },
 				],
 			};
 
@@ -96,11 +100,8 @@ describe("Security Features Integration", () => {
 
 			expect(response.body).toMatchObject({
 				statusCode: 404,
-				timestamp: expect.any(String),
-				path: "/api/v1/routes/99999",
-				method: "GET",
-				error: expect.any(String),
-				message: expect.any(Array),
+				code: "NOT_FOUND",
+				message: expect.any(String),
 			});
 		});
 

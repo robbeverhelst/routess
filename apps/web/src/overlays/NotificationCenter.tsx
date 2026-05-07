@@ -1,6 +1,5 @@
-import { t } from "@/lib/i18n";
+import { useT } from "@/lib/i18n";
 import { useModalsStore } from "@/stores/modalsStore";
-import { useUiStore } from "@/stores/uiStore";
 import { ComingSoonState } from "../components/ComingSoonState";
 import { I } from "../components/icons";
 import { IconBtn, RDS_COLORS } from "../components/primitives";
@@ -8,7 +7,7 @@ import { useViewport } from "../hooks/useViewport";
 
 export function NotificationCenter() {
 	const close = useModalsStore((s) => s.closeOverlay);
-	const language = useUiStore((s) => s.language);
+	const t = useT();
 	const { isMobile } = useViewport();
 
 	return (
@@ -55,13 +54,13 @@ export function NotificationCenter() {
 				}}
 			>
 				<I.bell size={16} />
-				<div style={{ fontSize: 14, fontWeight: 600 }}>{t("rail.notifications", language)}</div>
+				<div style={{ fontSize: 14, fontWeight: 600 }}>{t("rail.notifications")}</div>
 				<div style={{ flex: 1 }} />
-				<IconBtn title={t("common.close", language)} onClick={close}>
+				<IconBtn title={t("common.close")} onClick={close}>
 					<I.close size={14} />
 				</IconBtn>
 			</div>
-			<ComingSoonState icon="bell" title={t("rail.notifications", language)} body={t("notifications.body", language)} />
+			<ComingSoonState icon="bell" title={t("rail.notifications")} body={t("notifications.body")} />
 		</div>
 	);
 }

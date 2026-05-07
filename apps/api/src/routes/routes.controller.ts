@@ -7,7 +7,6 @@ import { ThrottleModerate, ThrottleStrict } from "../common/decorators/throttle.
 import { CreateRouteDto } from "./dto/create-route.dto";
 import { RouteResponseDto } from "./dto/route-response.dto";
 import { UpdateRouteDto } from "./dto/update-route.dto";
-import { toRouteResponseDto } from "./route.mapper";
 import { RoutesService } from "./routes.service";
 
 @ApiTags("routes")
@@ -27,11 +26,8 @@ export class RoutesController {
 	@ApiResponse({ status: 401, description: "Unauthorized" })
 	@ThrottleModerate()
 	@Post()
-	async create(
-		@Body() createRouteDto: CreateRouteDto,
-		@CurrentUser() user: AuthenticatedUser,
-	): Promise<RouteResponseDto> {
-		return toRouteResponseDto(await this.routesService.create(createRouteDto, user.id));
+	create(@Body() createRouteDto: CreateRouteDto, @CurrentUser() user: AuthenticatedUser): Promise<RouteResponseDto> {
+		return this.routesService.create(createRouteDto, user.id);
 	}
 
 	@ApiOperation({
@@ -42,8 +38,8 @@ export class RoutesController {
 	@ApiResponse({ status: 401, description: "Unauthorized" })
 	@ThrottleModerate()
 	@Get()
-	async findAll(@CurrentUser() user: AuthenticatedUser): Promise<RouteResponseDto[]> {
-		return (await this.routesService.findAll(user.id)).map(toRouteResponseDto);
+	findAll(@CurrentUser() user: AuthenticatedUser): Promise<RouteResponseDto[]> {
+		return this.routesService.findAll(user.id);
 	}
 
 	@ApiOperation({
@@ -56,11 +52,8 @@ export class RoutesController {
 	@ApiResponse({ status: 404, description: "Route not found" })
 	@ThrottleModerate()
 	@Get(":id")
-	async findOne(
-		@Param("id", ParseIntPipe) id: number,
-		@CurrentUser() user: AuthenticatedUser,
-	): Promise<RouteResponseDto> {
-		return toRouteResponseDto(await this.routesService.findOne(id, user.id));
+	findOne(@Param("id", ParseIntPipe) id: number, @CurrentUser() user: AuthenticatedUser): Promise<RouteResponseDto> {
+		return this.routesService.findOne(id, user.id);
 	}
 
 	@ApiOperation({
@@ -75,12 +68,12 @@ export class RoutesController {
 	@ApiResponse({ status: 404, description: "Route not found" })
 	@ThrottleModerate()
 	@Patch(":id")
-	async update(
+	update(
 		@Param("id", ParseIntPipe) id: number,
 		@Body() updateRouteDto: UpdateRouteDto,
 		@CurrentUser() user: AuthenticatedUser,
 	): Promise<RouteResponseDto> {
-		return toRouteResponseDto(await this.routesService.update(id, updateRouteDto, user.id));
+		return this.routesService.update(id, updateRouteDto, user.id);
 	}
 
 	@ApiOperation({

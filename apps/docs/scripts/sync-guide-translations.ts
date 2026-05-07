@@ -1204,5 +1204,3 @@ for (const locale of Object.keys(pages) as Locale[]) {
 		await writePage(locale, page);
 	}
 }
-
-console.log("Synchronized nl/fr/de guide translation drafts.");

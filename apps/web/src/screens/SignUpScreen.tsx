@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { type CredentialResponse, googleAuth, hasValidGoogleClientId } from "@/lib/google-auth";
-import { t } from "@/lib/i18n";
+import { useT } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
 import { useToastStore } from "@/stores/toastStore";
-import { useUiStore } from "@/stores/uiStore";
 import {
 	AUTH_CARD_STYLE,
 	AuthBackdrop,
@@ -36,21 +35,21 @@ export function SignUpScreen({ onSwitchToLogin }: { onSwitchToLogin?: () => void
 	const [password, setPassword] = useState("");
 	const [isLoading, setIsLoading] = useState(false);
 	const pushToast = useToastStore((s) => s.push);
-	const language = useUiStore((s) => s.language);
+	const t = useT();
 	const oauthConfigured = hasValidGoogleClientId();
 
 	const strength = passwordStrength(password);
-	const strengthLabel = t(STRENGTH_KEYS[strength], language);
+	const strengthLabel = t(STRENGTH_KEYS[strength]);
 	const strengthColor = strength >= 3 ? RDS_COLORS.success : strength === 2 ? RDS_COLORS.warn : RDS_COLORS.danger;
 
 	const handleGoogle = async (cred: CredentialResponse) => {
 		setIsLoading(true);
 		try {
 			const user = await googleAuth.handleGoogleSuccess(cred);
-			pushToast({ kind: "success", title: t("signup.toast.created", language), body: user.name ?? user.email });
+			pushToast({ kind: "success", title: t("signup.toast.created"), body: user.name ?? user.email });
 		} catch (e) {
 			Logger.error(e);
-			pushToast({ kind: "danger", title: t("signup.toast.failed", language) });
+			pushToast({ kind: "danger", title: t("signup.toast.failed") });
 		} finally {
 			setIsLoading(false);
 		}
@@ -59,8 +58,8 @@ export function SignUpScreen({ onSwitchToLogin }: { onSwitchToLogin?: () => void
 	const handleEmailSignup = () => {
 		pushToast({
 			kind: "info",
-			title: t("signup.toast.emailComingSoon", language),
-			body: t("signup.toast.useGoogleForNow", language),
+			title: t("signup.toast.emailComingSoon"),
+			body: t("signup.toast.useGoogleForNow"),
 		});
 	};
 
@@ -95,17 +94,17 @@ export function SignUpScreen({ onSwitchToLogin }: { onSwitchToLogin?: () => void
 					</div>
 
 					<h1 style={{ fontSize: 26, fontWeight: 600, margin: 0, letterSpacing: -0.5, lineHeight: 1.15 }}>
-						{t("signup.title", language)}
+						{t("signup.title")}
 					</h1>
 					<p style={{ fontSize: 14, color: RDS_COLORS.fgMuted, marginTop: 8, marginBottom: 24, lineHeight: 1.5 }}>
-						{t("signup.subtitle", language)}
+						{t("signup.subtitle")}
 					</p>
 
 					<div style={{ minHeight: 46 }}>
 						{oauthConfigured ? (
 							<CustomGoogleButton
 								onSuccess={handleGoogle}
-								onError={() => pushToast({ kind: "danger", title: t("signup.toast.cancelled", language) })}
+								onError={() => pushToast({ kind: "danger", title: t("signup.toast.cancelled") })}
 								isLoading={isLoading}
 								text="signup_with"
 							/>
@@ -122,9 +121,9 @@ export function SignUpScreen({ onSwitchToLogin }: { onSwitchToLogin?: () => void
 								}}
 							>
 								<div style={{ fontWeight: 600, color: RDS_COLORS.warn, marginBottom: 4 }}>
-									{t("signup.googleNotConfigured", language)}
+									{t("signup.googleNotConfigured")}
 								</div>
-								<div style={{ color: RDS_COLORS.fgMuted }}>{t("signup.googleNotConfiguredHint", language)}</div>
+								<div style={{ color: RDS_COLORS.fgMuted }}>{t("signup.googleNotConfiguredHint")}</div>
 							</div>
 						)}
 					</div>
@@ -146,18 +145,18 @@ export function SignUpScreen({ onSwitchToLogin }: { onSwitchToLogin?: () => void
 								letterSpacing: 0.6,
 							}}
 						>
-							{t("signup.orWithEmail", language)}
+							{t("signup.orWithEmail")}
 						</span>
 						<div style={{ flex: 1, height: 1, background: RDS_COLORS.border }} />
 					</div>
 
 					<div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
 						<div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-							<SecTitle>{t("signup.name", language)}</SecTitle>
+							<SecTitle>{t("signup.name")}</SecTitle>
 							<input
 								value={name}
 								onChange={(e) => setName(e.target.value)}
-								placeholder={t("signup.namePlaceholder", language)}
+								placeholder={t("signup.namePlaceholder")}
 								style={{
 									height: 40,
 									padding: "0 12px",
@@ -171,11 +170,11 @@ export function SignUpScreen({ onSwitchToLogin }: { onSwitchToLogin?: () => void
 							/>
 						</div>
 						<div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-							<SecTitle>{t("signup.email", language)}</SecTitle>
+							<SecTitle>{t("signup.email")}</SecTitle>
 							<input
 								value={email}
 								onChange={(e) => setEmail(e.target.value)}
-								placeholder={t("signup.emailPlaceholder", language)}
+								placeholder={t("signup.emailPlaceholder")}
 								style={{
 									height: 40,
 									padding: "0 12px",
@@ -189,12 +188,12 @@ export function SignUpScreen({ onSwitchToLogin }: { onSwitchToLogin?: () => void
 							/>
 						</div>
 						<div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-							<SecTitle>{t("signup.password", language)}</SecTitle>
+							<SecTitle>{t("signup.password")}</SecTitle>
 							<input
 								value={password}
 								type="password"
 								onChange={(e) => setPassword(e.target.value)}
-								placeholder={t("signup.passwordPlaceholder", language)}
+								placeholder={t("signup.passwordPlaceholder")}
 								style={{
 									height: 40,
 									padding: "0 12px",
@@ -221,9 +220,7 @@ export function SignUpScreen({ onSwitchToLogin }: { onSwitchToLogin?: () => void
 								))}
 							</div>
 							<div style={{ fontSize: 11, color: RDS_COLORS.fgSubtle }}>
-								{password
-									? t("signup.passwordHintWith", language, { label: strengthLabel })
-									: t("signup.passwordHint", language)}
+								{password ? t("signup.passwordHintWith", { label: strengthLabel }) : t("signup.passwordHint")}
 							</div>
 						</div>
 					</div>
@@ -233,9 +230,9 @@ export function SignUpScreen({ onSwitchToLogin }: { onSwitchToLogin?: () => void
 						onClick={handleEmailSignup}
 						disabled={!name || !email || strength < 2}
 						style={{ width: "100%", marginTop: 20, height: 44 }}
-						title={t("signup.title.tooltip", language)}
+						title={t("signup.title.tooltip")}
 					>
-						{t("signup.createSoon", language)}
+						{t("signup.createSoon")}
 					</Btn>
 
 					<div
@@ -248,7 +245,7 @@ export function SignUpScreen({ onSwitchToLogin }: { onSwitchToLogin?: () => void
 							textAlign: "center",
 						}}
 					>
-						{t("signup.haveAccount", language)}{" "}
+						{t("signup.haveAccount")}{" "}
 						<button
 							type="button"
 							onClick={onSwitchToLogin}
@@ -262,7 +259,7 @@ export function SignUpScreen({ onSwitchToLogin }: { onSwitchToLogin?: () => void
 								font: "inherit",
 							}}
 						>
-							{t("common.signIn", language)}
+							{t("common.signIn")}
 						</button>
 					</div>
 				</div>

@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useIsAuthenticated } from "@/hooks/useAuthState";
 import type { ApiRoute } from "@/lib/api";
 import { useUserRoutes } from "@/lib/api-queries";
-import { t } from "@/lib/i18n";
+import { t, useT } from "@/lib/i18n";
 import { useUnits } from "@/lib/units";
 import { buildMapboxStaticPreviewUrl } from "@/lib/utils/mapboxStaticPreview";
 import { useModalsStore } from "@/stores/modalsStore";
@@ -59,9 +59,7 @@ function MiniRouteSvg({ route, color }: { route: ApiRoute; color: string }) {
 
 	const projected = useMemo(() => {
 		const coords: [number, number][] =
-			route.geometry && route.geometry.length >= 2
-				? route.geometry
-				: (route.waypoints ?? []).map((w) => [w.lng, w.lat] as [number, number]);
+			route.geometry && route.geometry.length >= 2 ? route.geometry : (route.waypoints ?? []).map((w) => w.coord);
 		if (coords.length < 2) return null;
 		// Web Mercator y-projection so latitude bands at higher latitudes don't
 		// look squashed; mini preview should resemble the real map shape.
@@ -145,7 +143,7 @@ function RouteThumb({ route, color }: { route: ApiRoute; color: string }) {
 	const mapStyle = useRedesignSettingsStore((s) => s.mapStyle);
 	const points = useMemo<[number, number][]>(() => {
 		if (route.geometry && route.geometry.length >= 2) return route.geometry;
-		return (route.waypoints ?? []).map((w) => [w.lng, w.lat] as [number, number]);
+		return (route.waypoints ?? []).map((w) => w.coord);
 	}, [route]);
 	const staticUrl = useMemo(
 		() =>
@@ -179,7 +177,6 @@ function RouteThumb({ route, color }: { route: ApiRoute; color: string }) {
 function RouteCard({
 	route,
 	fav,
-	language,
 	formatDistance,
 	onOpen,
 	onToggleFavourite,
@@ -187,7 +184,6 @@ function RouteCard({
 }: {
 	route: ApiRoute;
 	fav: boolean;
-	language: string;
 	formatDistance: (km: number) => string;
 	onOpen: () => void;
 	onToggleFavourite: () => void;
@@ -269,12 +265,12 @@ function RouteCard({
 					}}
 				>
 					<Badge variant={TAG_BADGE_VARIANT[tag]} dot style={{ flexShrink: 0 }}>
-						{t(TAG_LABEL_KEY[tag], language)}
+						{t(TAG_LABEL_KEY[tag])}
 					</Badge>
 					<span>{dist}</span>
 					<span style={{ opacity: 0.5 }}>·</span>
 					<span>
-						{route.waypoints?.length ?? 0} {t("library.wp", language)}
+						{route.waypoints?.length ?? 0} {t("library.wp")}
 					</span>
 					<span style={{ opacity: 0.5 }}>·</span>
 					<span>{date}</span>
@@ -300,7 +296,7 @@ function RouteCard({
 					}}
 				>
 					<IconBtn
-						title={fav ? t("route.removeFavourite", language) : t("library.markFavourite", language)}
+						title={fav ? t("route.removeFavourite") : t("library.markFavourite")}
 						onClick={onToggleFavourite}
 						pressed={fav}
 					>
@@ -315,7 +311,7 @@ function RouteCard({
 					}}
 				>
 					<IconBtn
-						title={t("library.deleteRoute", language)}
+						title={t("library.deleteRoute")}
 						onClick={onDelete}
 						style={{ color: RDS_COLORS.fgSubtle, opacity: 0.72 }}
 					>
@@ -336,7 +332,7 @@ function EmptyLibrary({
 	onLoop?: () => void;
 	onImport?: () => void;
 }) {
-	const language = useUiStore((s) => s.language);
+	const t = useT();
 	return (
 		<div
 			style={{
@@ -382,7 +378,7 @@ function EmptyLibrary({
 						<I.plus size={14} />
 					</div>
 				</div>
-				<h3 style={{ margin: 0, fontSize: 17, fontWeight: 600 }}>{t("library.empty.title", language)}</h3>
+				<h3 style={{ margin: 0, fontSize: 17, fontWeight: 600 }}>{t("library.empty.title")}</h3>
 				<p
 					style={{
 						fontSize: 13,
@@ -391,17 +387,17 @@ function EmptyLibrary({
 						lineHeight: 1.55,
 					}}
 				>
-					{t("library.empty.subtitle", language)}
+					{t("library.empty.subtitle")}
 				</p>
 				<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
 					<Btn variant="primary" style={{ width: "100%" }} onClick={onPlan}>
-						<I.plus size={14} /> {t("library.empty.plan", language)}
+						<I.plus size={14} /> {t("library.empty.plan")}
 					</Btn>
 					<Btn style={{ width: "100%" }} onClick={onLoop}>
-						<I.compass size={14} /> {t("library.empty.loop", language)}
+						<I.compass size={14} /> {t("library.empty.loop")}
 					</Btn>
 					<Btn variant="ghost" style={{ width: "100%", color: RDS_COLORS.fgMuted }} onClick={onImport}>
-						<I.upload size={14} /> {t("library.empty.import", language)}
+						<I.upload size={14} /> {t("library.empty.import")}
 					</Btn>
 				</div>
 			</div>
@@ -411,15 +407,11 @@ function EmptyLibrary({
 
 export function LibraryPanel() {
 	const isAuthenticated = useIsAuthenticated();
-	const language = useUiStore((s) => s.language);
+	const t = useT();
 	if (!isAuthenticated) {
 		return (
 			<div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-				<SignInGate
-					title={t("library.gate.title", language)}
-					description={t("library.gate.body", language)}
-					icon={I.library}
-				/>
+				<SignInGate title={t("library.gate.title")} description={t("library.gate.body")} icon={I.library} />
 			</div>
 		);
 	}
@@ -427,8 +419,9 @@ export function LibraryPanel() {
 }
 
 function LibraryPanelInner() {
+	const t = useT();
 	const { data: routes = [], isLoading } = useUserRoutes();
-	const { favouriteRouteIds, toggleFavourite, setContext, language } = useUiStore();
+	const { favouriteRouteIds, toggleFavourite, setContext } = useUiStore();
 	const openModal = useModalsStore((s) => s.openModal);
 	const openDelete = useModalsStore((s) => s.openDelete);
 	const { formatDistance } = useUnits();
@@ -508,12 +501,12 @@ function LibraryPanelInner() {
 								fontSize: 13,
 								color: "inherit",
 							}}
-							placeholder={t("library.searchPlaceholder", language)}
+							placeholder={t("library.searchPlaceholder")}
 						/>
 						<Kbd>/</Kbd>
 					</div>
 					<Btn variant="primary" onClick={() => setContext("plan")}>
-						<I.plus size={14} /> {t("common.new", language)}
+						<I.plus size={14} /> {t("common.new")}
 					</Btn>
 				</div>
 				<div
@@ -539,15 +532,14 @@ function LibraryPanelInner() {
 										cursor: "pointer",
 									}}
 								>
-									{t(f.labelKey, language)}
+									{t(f.labelKey)}
 									{f.key !== "favourites" && ` · ${count}`}
 								</button>
 							);
 						})}
 					</div>
 					<div className="rds-mono" style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle }}>
-						{filtered.length}{" "}
-						{filtered.length === 1 ? t("library.routeSingular", language) : t("library.routePlural", language)}
+						{filtered.length} {filtered.length === 1 ? t("library.routeSingular") : t("library.routePlural")}
 					</div>
 				</div>
 			</div>
@@ -562,7 +554,7 @@ function LibraryPanelInner() {
 							color: RDS_COLORS.fgSubtle,
 						}}
 					>
-						{t("library.loading", language)}
+						{t("library.loading")}
 					</div>
 				)}
 				{!isLoading && filtered.length === 0 && (
@@ -574,7 +566,7 @@ function LibraryPanelInner() {
 							color: RDS_COLORS.fgSubtle,
 						}}
 					>
-						<div style={{ marginBottom: hasActiveFilters ? 12 : 0 }}>{t("library.noMatch", language)}</div>
+						<div style={{ marginBottom: hasActiveFilters ? 12 : 0 }}>{t("library.noMatch")}</div>
 						{hasActiveFilters && (
 							<Btn
 								variant="ghost"
@@ -584,7 +576,7 @@ function LibraryPanelInner() {
 								}}
 								style={{ color: RDS_COLORS.fgMuted, margin: "0 auto" }}
 							>
-								{t("library.clearFilters", language)}
+								{t("library.clearFilters")}
 							</Btn>
 						)}
 					</div>
@@ -594,7 +586,6 @@ function LibraryPanelInner() {
 						key={r.id}
 						route={r}
 						fav={favouriteRouteIds.includes(r.id)}
-						language={language}
 						formatDistance={formatDistance}
 						onOpen={() => setOpenedRouteId(r.id)}
 						onToggleFavourite={() => toggleFavourite(r.id)}

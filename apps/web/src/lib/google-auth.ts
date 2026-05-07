@@ -1,9 +1,10 @@
 import { type ApiUser, type AuthResponse, apiService } from "./api";
-import { authStorageKeys, clearStoredAuthState, notifyAuthStateChange } from "./auth-state";
+import { authStorageKeys, clearStoredAuthState, getStoredUser, notifyAuthStateChange, storeUser } from "./auth-state";
 import { Logger } from "./logger";
+import { getRuntimeConfig } from "./runtime-config";
 
 // Google OAuth Configuration
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "__VITE_GOOGLE_CLIENT_ID__";
+const GOOGLE_CLIENT_ID = getRuntimeConfig("VITE_GOOGLE_CLIENT_ID") ?? "";
 
 // Detect missing / placeholder client IDs so we can fail loudly with a clear
 // message instead of letting Google's "Access blocked" page swallow the error.
@@ -50,11 +51,7 @@ class GoogleAuthService {
 			// Send credential to backend for verification and user creation/login
 			const authResponse: AuthResponse = await apiService.googleAuth(credentialResponse.credential);
 
-			// Store access token and user data
-			localStorage.setItem(authStorageKeys.accessToken, authResponse.accessToken);
-			localStorage.setItem(authStorageKeys.user, JSON.stringify(authResponse.user));
-
-			// The new API client automatically manages token state
+			storeUser(authResponse.user);
 
 			// Trigger auth state change event
 			notifyAuthStateChange();
@@ -80,7 +77,6 @@ class GoogleAuthService {
 	async signOut(): Promise<void> {
 		try {
 			await apiService.logout();
-			this.clearAuthState();
 
 			Logger.info("Google Sign-Out successful");
 		} catch (error) {
@@ -93,15 +89,13 @@ class GoogleAuthService {
 
 	getAuthState(): AuthState {
 		try {
-			const accessToken = localStorage.getItem(authStorageKeys.accessToken);
-			const userJson = localStorage.getItem(authStorageKeys.user);
+			const user = getStoredUser();
 
-			if (accessToken && userJson) {
-				const user = JSON.parse(userJson) as ApiUser;
+			if (user) {
 				return {
 					isAuthenticated: true,
 					user,
-					accessToken,
+					accessToken: null,
 				};
 			}
 		} catch (error) {
@@ -118,13 +112,8 @@ class GoogleAuthService {
 	// Validate if current session is actually valid
 	async validateSession(): Promise<boolean> {
 		try {
-			const accessToken = localStorage.getItem(authStorageKeys.accessToken);
-			if (!accessToken) {
-				return false;
-			}
-
-			// Try to get user profile to validate token
-			await apiService.getProfile();
+			const user = await apiService.getProfile();
+			storeUser(user);
 			return true;
 		} catch {
 			// If validation fails, clear auth state
@@ -136,8 +125,6 @@ class GoogleAuthService {
 	// Clear all auth state
 	clearAuthState(): void {
 		clearStoredAuthState();
-		// Use the new API client's logout method
-		apiService.logout();
 
 		// Trigger auth state change event
 		notifyAuthStateChange();
