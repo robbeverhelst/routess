@@ -13,8 +13,9 @@ import { Badge, Btn, IconBtn, Kbd, RDS_COLORS } from "../components/primitives";
 import { SignInGate } from "../components/SignInGate";
 import { RouteDetailPanel } from "./RouteDetailPanel";
 
-const THUMB_WIDTH = 80;
-const THUMB_HEIGHT = 56;
+const THUMB_DISPLAY = 48;
+const THUMB_WIDTH = 96;
+const THUMB_HEIGHT = 96;
 
 type Filter = "all" | RedesignActivity | "favourites";
 
@@ -51,8 +52,8 @@ function getActivityType(route: ApiRoute): RedesignActivity {
 }
 
 function MiniRouteSvg({ route, color }: { route: ApiRoute; color: string }) {
-	const VIEW_W = 80;
-	const VIEW_H = 56;
+	const VIEW_W = THUMB_WIDTH;
+	const VIEW_H = THUMB_HEIGHT;
 	const PAD_X = 8;
 	const PAD_Y = 8;
 
@@ -173,6 +174,157 @@ function RouteThumb({ route, color }: { route: ApiRoute; color: string }) {
 		);
 	}
 	return <MiniRouteSvg route={route} color={color} />;
+}
+
+function RouteCard({
+	route,
+	fav,
+	language,
+	formatDistance,
+	onOpen,
+	onToggleFavourite,
+	onDelete,
+}: {
+	route: ApiRoute;
+	fav: boolean;
+	language: string;
+	formatDistance: (km: number) => string;
+	onOpen: () => void;
+	onToggleFavourite: () => void;
+	onDelete: () => void;
+}) {
+	const [hover, setHover] = useState(false);
+	const tag = getActivityType(route);
+	const dist = route.distance ? formatDistance(route.distance / 1000) : "—";
+	const date = new Date(route.createdAt).toLocaleDateString(undefined, {
+		month: "short",
+		day: "numeric",
+	});
+
+	return (
+		// biome-ignore lint/a11y/noStaticElementInteractions: hover-only visual feedback; primary actions are inside as buttons
+		<div
+			onClick={onOpen}
+			onKeyDown={(e) => e.key === "Enter" && onOpen()}
+			onMouseEnter={() => setHover(true)}
+			onMouseLeave={() => setHover(false)}
+			style={{
+				position: "relative",
+				display: "flex",
+				alignItems: "flex-start",
+				gap: 12,
+				padding: 12,
+				borderRadius: 14,
+				cursor: "pointer",
+				border: `1px solid ${hover ? RDS_COLORS.borderStrong : RDS_COLORS.border}`,
+				background: hover ? RDS_COLORS.bgHover : RDS_COLORS.bgPanel,
+				marginBottom: 8,
+				transition: "background 120ms, border-color 120ms, transform 120ms",
+				transform: hover ? "translateY(-1px)" : "translateY(0)",
+			}}
+		>
+			<div
+				style={{
+					width: THUMB_DISPLAY,
+					height: THUMB_DISPLAY,
+					borderRadius: 10,
+					background: RDS_COLORS.bgInput,
+					border: `1px solid ${RDS_COLORS.border}`,
+					flexShrink: 0,
+					overflow: "hidden",
+					position: "relative",
+				}}
+			>
+				<RouteThumb route={route} color={TAG_COLOR[tag]} />
+			</div>
+			<div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0, gap: 6 }}>
+				<div
+					style={{
+						fontSize: 14,
+						fontWeight: 600,
+						color: RDS_COLORS.fg,
+						lineHeight: 1.3,
+						display: "-webkit-box",
+						WebkitLineClamp: 2,
+						WebkitBoxOrient: "vertical",
+						overflow: "hidden",
+						wordBreak: "break-word",
+						paddingRight: 56,
+					}}
+				>
+					{route.name}
+				</div>
+				<div
+					className="rds-mono"
+					style={{
+						display: "flex",
+						alignItems: "center",
+						gap: 6,
+						fontSize: 11.5,
+						color: RDS_COLORS.fgSubtle,
+						minWidth: 0,
+						overflow: "hidden",
+						whiteSpace: "nowrap",
+						textOverflow: "ellipsis",
+					}}
+				>
+					<Badge variant={TAG_BADGE_VARIANT[tag]} dot style={{ flexShrink: 0 }}>
+						{t(TAG_LABEL_KEY[tag], language)}
+					</Badge>
+					<span>{dist}</span>
+					<span style={{ opacity: 0.5 }}>·</span>
+					<span>
+						{route.waypoints?.length ?? 0} {t("library.wp", language)}
+					</span>
+					<span style={{ opacity: 0.5 }}>·</span>
+					<span>{date}</span>
+				</div>
+			</div>
+			{/* biome-ignore lint/a11y/noStaticElementInteractions: container only stops click bubbling so action buttons don't open detail */}
+			<div
+				style={{
+					position: "absolute",
+					top: 8,
+					right: 8,
+					display: "flex",
+					gap: 4,
+				}}
+				onClick={(e) => e.stopPropagation()}
+				onKeyDown={(e) => e.stopPropagation()}
+			>
+				<div
+					style={{
+						opacity: fav || hover ? 1 : 0,
+						transition: "opacity 120ms",
+						pointerEvents: fav || hover ? "auto" : "none",
+					}}
+				>
+					<IconBtn
+						title={fav ? t("route.removeFavourite", language) : t("library.markFavourite", language)}
+						onClick={onToggleFavourite}
+						pressed={fav}
+					>
+						<I.heart size={14} style={fav ? { color: RDS_COLORS.danger, fill: "currentColor" } : undefined} />
+					</IconBtn>
+				</div>
+				<div
+					style={{
+						opacity: hover ? 1 : 0,
+						transition: "opacity 120ms",
+						pointerEvents: hover ? "auto" : "none",
+					}}
+				>
+					<IconBtn
+						title={t("library.deleteRoute", language)}
+						onClick={onDelete}
+						style={{ color: RDS_COLORS.fgSubtle, opacity: 0.72 }}
+					>
+						<I.trash size={14} />
+					</IconBtn>
+				</div>
+			</div>
+		</div>
+	);
 }
 
 function EmptyLibrary({
@@ -437,122 +589,18 @@ function LibraryPanelInner() {
 						)}
 					</div>
 				)}
-				{filtered.map((r) => {
-					const tag = getActivityType(r);
-					const fav = favouriteRouteIds.includes(r.id);
-					const dist = r.distance ? formatDistance(r.distance / 1000) : "—";
-					const date = new Date(r.createdAt).toLocaleDateString(undefined, {
-						month: "short",
-						day: "numeric",
-					});
-					return (
-						// biome-ignore lint/a11y/noStaticElementInteractions: hover-only visual feedback; primary actions are inside as buttons
-						<div
-							key={r.id}
-							onClick={() => setOpenedRouteId(r.id)}
-							onKeyDown={(e) => e.key === "Enter" && setOpenedRouteId(r.id)}
-							style={{
-								display: "flex",
-								alignItems: "stretch",
-								gap: 12,
-								padding: 12,
-								borderRadius: 14,
-								cursor: "pointer",
-								border: `1px solid ${RDS_COLORS.border}`,
-								background: RDS_COLORS.bgPanel,
-								marginBottom: 8,
-								transition: "background 120ms, border-color 120ms, transform 120ms",
-							}}
-							onMouseEnter={(e) => {
-								e.currentTarget.style.background = RDS_COLORS.bgHover;
-								e.currentTarget.style.borderColor = RDS_COLORS.borderStrong;
-								e.currentTarget.style.transform = "translateY(-1px)";
-							}}
-							onMouseLeave={(e) => {
-								e.currentTarget.style.background = RDS_COLORS.bgPanel;
-								e.currentTarget.style.borderColor = RDS_COLORS.border;
-								e.currentTarget.style.transform = "translateY(0)";
-							}}
-						>
-							<div
-								style={{
-									width: THUMB_WIDTH,
-									height: THUMB_HEIGHT,
-									borderRadius: 10,
-									background: RDS_COLORS.bgInput,
-									border: `1px solid ${RDS_COLORS.border}`,
-									flexShrink: 0,
-									overflow: "hidden",
-									position: "relative",
-								}}
-							>
-								<RouteThumb route={r} color={TAG_COLOR[tag]} />
-							</div>
-							<div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
-								<div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-									<div
-										style={{
-											fontSize: 14,
-											fontWeight: 600,
-											color: RDS_COLORS.fg,
-											overflow: "hidden",
-											textOverflow: "ellipsis",
-											whiteSpace: "nowrap",
-										}}
-									>
-										{r.name}
-									</div>
-									<Badge variant={TAG_BADGE_VARIANT[tag]} dot style={{ flexShrink: 0 }}>
-										{t(TAG_LABEL_KEY[tag], language)}
-									</Badge>
-								</div>
-								<div
-									className="rds-mono"
-									style={{
-										display: "flex",
-										alignItems: "center",
-										gap: 6,
-										marginTop: 6,
-										fontSize: 11.5,
-										color: RDS_COLORS.fgSubtle,
-										overflow: "hidden",
-										whiteSpace: "nowrap",
-										textOverflow: "ellipsis",
-									}}
-								>
-									<span>{date}</span>
-									<span style={{ opacity: 0.5 }}>·</span>
-									<span>{dist}</span>
-									<span style={{ opacity: 0.5 }}>·</span>
-									<span>
-										{r.waypoints?.length ?? 0} {t("library.wp", language)}
-									</span>
-								</div>
-							</div>
-							{/* biome-ignore lint/a11y/noStaticElementInteractions: container only stops click bubbling so action buttons don't open detail */}
-							<div
-								style={{ display: "flex", alignItems: "center", gap: 4, alignSelf: "flex-start" }}
-								onClick={(e) => e.stopPropagation()}
-								onKeyDown={(e) => e.stopPropagation()}
-							>
-								<IconBtn
-									title={fav ? t("route.removeFavourite", language) : t("library.markFavourite", language)}
-									onClick={() => toggleFavourite(r.id)}
-									pressed={fav}
-								>
-									<I.heart size={14} style={fav ? { color: RDS_COLORS.danger, fill: "currentColor" } : undefined} />
-								</IconBtn>
-								<IconBtn
-									title={t("library.deleteRoute", language)}
-									onClick={() => openDelete(r.id)}
-									style={{ color: RDS_COLORS.fgSubtle, opacity: 0.72 }}
-								>
-									<I.trash size={14} />
-								</IconBtn>
-							</div>
-						</div>
-					);
-				})}
+				{filtered.map((r) => (
+					<RouteCard
+						key={r.id}
+						route={r}
+						fav={favouriteRouteIds.includes(r.id)}
+						language={language}
+						formatDistance={formatDistance}
+						onOpen={() => setOpenedRouteId(r.id)}
+						onToggleFavourite={() => toggleFavourite(r.id)}
+						onDelete={() => openDelete(r.id)}
+					/>
+				))}
 			</div>
 		</div>
 	);
