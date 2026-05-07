@@ -48,14 +48,14 @@ vi.mock("@/stores/mapViewStore");
 vi.mock("@/stores/redesignSettingsStore");
 vi.mock("@/stores/routingStore");
 vi.mock("@/lib/errors");
-vi.mock("@/components/ui/MapPopup", () => ({
+vi.mock("@/components/map/MapPopup", () => ({
 	MapPopup: ({ popupInfo }: any) => (
 		<div data-testid="map-popup">
 			{popupInfo.longitude},{popupInfo.latitude}
 		</div>
 	),
 }));
-vi.mock("@/components/ui/SunPositionIndicator", () => ({
+vi.mock("@/components/map/SunPositionIndicator", () => ({
 	SunPositionIndicator: ({ azimuth }: any) => <div data-testid="sun-indicator">Azimuth: {azimuth}</div>,
 }));
 
