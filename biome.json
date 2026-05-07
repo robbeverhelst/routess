@@ -108,6 +108,16 @@
 					}
 				}
 			}
+		},
+		{
+			"includes": ["apps/web/src/lib/logger.ts"],
+			"linter": {
+				"rules": {
+					"suspicious": {
+						"noConsole": "off"
+					}
+				}
+			}
 		}
 	],
 	"files": {

@@ -5,6 +5,7 @@
 import type React from "react";
 import type { ErrorInfo, ReactNode } from "react";
 import { Component } from "react";
+import { isDev } from "@/lib/utils/env";
 import { errorHandler } from "./error-handler";
 import type { AppError } from "./types";
 import { ErrorCategory, ErrorSeverity } from "./types";
@@ -126,7 +127,7 @@ const DefaultErrorFallback: React.FC<DefaultErrorFallbackProps> = ({ error, rese
 					</button>
 				</div>
 
-				{process.env.NODE_ENV === "development" && error.originalError && (
+				{isDev() && error.originalError && (
 					<details className="mt-4">
 						<summary className="text-xs text-gray-500 cursor-pointer">Technical Details (Development)</summary>
 						<pre className="mt-2 text-xs text-gray-600 bg-gray-100 p-2 rounded overflow-auto max-h-32">
