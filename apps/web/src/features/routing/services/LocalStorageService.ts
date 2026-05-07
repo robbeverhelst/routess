@@ -1,3 +1,4 @@
+import { supportedLanguages } from "@routess/i18n";
 import type { SupportedLanguage } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
 import { isDev } from "@/lib/utils/env";
@@ -15,7 +16,6 @@ const LANGUAGE_STORAGE_KEY = "routingAppLanguage";
 const SUN_DIRECTION_STORAGE_KEY = "routingAppShowSunDirection";
 
 const KNOWN_TIME_OF_DAY: TimeOfDay[] = ["dawn", "day", "dusk", "night"];
-const KNOWN_LANGUAGES: SupportedLanguage[] = ["en", "nl", "fr", "de"];
 
 export type MapStyle = "standard" | "satellite";
 
@@ -100,7 +100,7 @@ export function saveLastMapViewToLocalStorage(viewState: MapViewState): void {
 // --- Language ---
 
 export function loadLanguageFromLocalStorage(): SupportedLanguage {
-	const stored = readEnum(LANGUAGE_STORAGE_KEY, KNOWN_LANGUAGES);
+	const stored = readEnum(LANGUAGE_STORAGE_KEY, supportedLanguages);
 	if (stored) {
 		Logger.info(`[LocalStorageService] Loaded language from localStorage: ${stored}`);
 		return stored;
@@ -109,7 +109,7 @@ export function loadLanguageFromLocalStorage(): SupportedLanguage {
 	let languageToSet: SupportedLanguage = "en";
 	if (typeof navigator !== "undefined" && navigator.language) {
 		const browserLang = navigator.language.split("-")[0].toLowerCase();
-		if ((KNOWN_LANGUAGES as readonly string[]).includes(browserLang)) {
+		if ((supportedLanguages as readonly string[]).includes(browserLang)) {
 			languageToSet = browserLang as SupportedLanguage;
 			Logger.info(`[LocalStorageService] Using browser language: ${languageToSet}`);
 		}

@@ -115,6 +115,26 @@ export const estimateDuration = (distanceKm: number, speedKmh: number): number =
 export const estimateWalkingDuration = (distanceKm: number): number => estimateDuration(distanceKm, 5);
 
 /**
+ * Finds the closest point on a 2D segment to a given point in lon/lat space.
+ * Treats coordinates as Euclidean (no spherical correction); accurate enough
+ * for short segments, which is what waypoint insertion needs.
+ *
+ * @param p - The query point [lon, lat]
+ * @param v - Segment start [lon, lat]
+ * @param w - Segment end [lon, lat]
+ * @returns The closest point on the segment, clamped to its endpoints
+ */
+export const closestPointOnSegment = (p: Coordinate, v: Coordinate, w: Coordinate): Coordinate => {
+	const l2 = (v[0] - w[0]) ** 2 + (v[1] - w[1]) ** 2;
+	if (l2 === 0) return v;
+
+	let t = ((p[0] - v[0]) * (w[0] - v[0]) + (p[1] - v[1]) * (w[1] - v[1])) / l2;
+	t = Math.max(0, Math.min(1, t));
+
+	return [v[0] + t * (w[0] - v[0]), v[1] + t * (w[1] - v[1])];
+};
+
+/**
  * Calculates the bearing between two coordinates
  *
  * @param coord1 - Start coordinate [longitude, latitude]

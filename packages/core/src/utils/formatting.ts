@@ -2,6 +2,18 @@
  * Distance and duration formatting utilities
  */
 
+export const KMH_TO_MPH = 0.621371;
+
+export const toDisplaySpeed = (kmh: number, units: "km" | "mi"): number => (units === "mi" ? kmh * KMH_TO_MPH : kmh);
+
+export const fromDisplaySpeed = (value: number, units: "km" | "mi"): number =>
+	units === "mi" ? value / KMH_TO_MPH : value;
+
+export const formatDisplaySpeed = (kmh: number, units: "km" | "mi"): string => {
+	const display = toDisplaySpeed(kmh, units);
+	return Number.isFinite(display) ? String(Math.round(display * 10) / 10) : "";
+};
+
 /**
  * Formats distance in kilometers with appropriate precision
  *
