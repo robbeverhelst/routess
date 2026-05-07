@@ -32,6 +32,9 @@ bin
 # TypeScript incremental build info
 *.tsbuildinfo
 
+# Generated route tree (TanStack Router)
+apps/web/src/routeTree.gen.ts
+
 coverage/
 **/coverage/
 

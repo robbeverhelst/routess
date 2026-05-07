@@ -13,8 +13,7 @@
 		"docker:build": "docker build -f Dockerfile -t routess-web ../..",
 		"test": "vitest run",
 		"test:watch": "vitest",
-		"test:coverage": "vitest run --coverage",
-		"test:ci": "vitest run --coverage"
+		"test:coverage": "vitest run --coverage"
 	},
 	"dependencies": {
 		"@routess/api-client": "workspace:*",

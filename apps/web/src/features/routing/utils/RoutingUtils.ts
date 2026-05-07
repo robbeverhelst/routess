@@ -97,8 +97,6 @@ export const closestPointOnSegment = (p: Coordinate, v: Coordinate, w: Coordinat
 	return [v[0] + t * (w[0] - v[0]), v[1] + t * (w[1] - v[1])];
 };
 
-// Route generation functions removed - will be implemented in backend
-
 /**
  * Fits the map view to a given set of coordinates.
  * @param map - The Mapbox map instance.
