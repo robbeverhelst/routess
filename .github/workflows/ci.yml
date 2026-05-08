@@ -220,7 +220,8 @@ jobs:
           SHA: ${{ steps.version.outputs.sha }}
           OWNER: ${{ github.repository_owner }}
           REGISTRY: ${{ env.REGISTRY }}
-        run: docker buildx bake --allow=fs.read=.. --push -f docker/docker-bake.hcl default
+        working-directory: docker
+        run: docker buildx bake --allow=fs.read=.. --push default
 
   publish-helm:
     needs:
