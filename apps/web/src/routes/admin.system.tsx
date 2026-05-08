@@ -1,7 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import type { ReactNode } from "react";
+import { I } from "@/components/icons";
+import { Badge, RDS_COLORS, SecTitle } from "@/components/primitives";
 import { apiService } from "@/lib/api";
-import { PageError, PageSkeleton } from "./admin.index";
+import { Card, PageError, PageHeader, PageSkeleton } from "./admin.index";
 
 export const Route = createFileRoute("/admin/system")({
 	component: AdminSystemPage,
@@ -28,80 +31,200 @@ function AdminSystemPage() {
 	const grafanaEntries = Object.entries(config.grafanaUrls).filter(([, url]) => Boolean(url));
 
 	return (
-		<div className="max-w-4xl">
-			<h1 className="mb-6 text-2xl font-semibold">System</h1>
+		<div>
+			<PageHeader eyebrow="Admin" title="System" subtitle="Health, configuration, and operational dashboards." />
 
-			<section className="mb-8">
-				<h2 className="mb-3 text-sm font-medium uppercase tracking-wide text-neutral-500">Health</h2>
-				<div className="grid grid-cols-2 gap-4 rounded-lg border border-neutral-200 bg-white p-4 text-sm sm:grid-cols-4">
-					<KV label="Status" value={<StatusPill status={health.status} />} />
-					<KV label="Version" value={health.version} />
-					<KV label="Environment" value={health.nodeEnv} />
-					<KV label="Uptime" value={formatDuration(health.uptimeSeconds)} />
-					<KV label="Database" value={health.databaseReachable ? "reachable" : "unreachable"} />
-				</div>
+			<section style={{ marginTop: 28 }}>
+				<SecTitle style={{ marginBottom: 10 }}>Health</SecTitle>
+				<Card>
+					<div
+						style={{
+							display: "grid",
+							gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+							gap: 16,
+						}}
+					>
+						<KV label="Status" value={<StatusBadge status={health.status} />} />
+						<KV label="Version" value={<span style={{ fontFamily: "monospace" }}>{health.version}</span>} />
+						<KV label="Environment" value={health.nodeEnv} />
+						<KV label="Uptime" value={formatDuration(health.uptimeSeconds)} />
+						<KV
+							label="Database"
+							value={
+								<Badge variant={health.databaseReachable ? "success" : "warn"} dot>
+									{health.databaseReachable ? "reachable" : "unreachable"}
+								</Badge>
+							}
+						/>
+					</div>
+				</Card>
 			</section>
 
-			<section className="mb-8">
-				<h2 className="mb-3 text-sm font-medium uppercase tracking-wide text-neutral-500">Configuration</h2>
-				<div className="grid grid-cols-2 gap-4 rounded-lg border border-neutral-200 bg-white p-4 text-sm sm:grid-cols-3">
-					<KV label="Telemetry" value={config.telemetryEnabled ? "enabled" : "disabled"} />
-					<KV label="Metrics endpoint" value={config.metricsEnabled ? "enabled" : "disabled"} />
-					<KV label="OTLP traces" value={config.otlpExportConfigured ? "configured" : "off"} />
-					<KV label="Admin emails" value={`${config.adminEmailsCount} configured`} />
-				</div>
+			<section style={{ marginTop: 22 }}>
+				<SecTitle style={{ marginBottom: 10 }}>Configuration</SecTitle>
+				<Card>
+					<div
+						style={{
+							display: "grid",
+							gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+							gap: 16,
+						}}
+					>
+						<KV
+							label="Telemetry"
+							value={
+								<Badge variant={config.telemetryEnabled ? "success" : "default"} dot>
+									{config.telemetryEnabled ? "enabled" : "disabled"}
+								</Badge>
+							}
+						/>
+						<KV
+							label="Metrics endpoint"
+							value={
+								<Badge variant={config.metricsEnabled ? "success" : "default"} dot>
+									{config.metricsEnabled ? "enabled" : "disabled"}
+								</Badge>
+							}
+						/>
+						<KV
+							label="OTLP traces"
+							value={
+								<Badge variant={config.otlpExportConfigured ? "success" : "default"} dot>
+									{config.otlpExportConfigured ? "configured" : "off"}
+								</Badge>
+							}
+						/>
+						<KV label="Admin emails" value={`${config.adminEmailsCount} configured`} />
+					</div>
+				</Card>
 			</section>
 
-			<section className="mb-8">
-				<h2 className="mb-3 text-sm font-medium uppercase tracking-wide text-neutral-500">Dashboards</h2>
-				<div className="rounded-lg border border-neutral-200 bg-white p-4">
+			<section style={{ marginTop: 22 }}>
+				<SecTitle style={{ marginBottom: 10 }}>Dashboards</SecTitle>
+				<Card>
 					{grafanaEntries.length === 0 ? (
-						<p className="text-sm text-neutral-600">
-							Set <code className="rounded bg-neutral-100 px-1">monitoring.grafanaUrls.*</code> in your Helm values to
-							surface Grafana dashboards here.
-						</p>
+						<div style={{ fontSize: 13, color: RDS_COLORS.fgMuted, lineHeight: 1.55 }}>
+							Set{" "}
+							<code
+								style={{
+									background: RDS_COLORS.bgInput,
+									padding: "1px 6px",
+									borderRadius: 4,
+									fontSize: 12,
+								}}
+							>
+								monitoring.grafanaUrls.*
+							</code>{" "}
+							in your Helm values to surface Grafana dashboards here.
+						</div>
 					) : (
-						<ul className="flex flex-col gap-2 text-sm">
+						<ul
+							style={{
+								margin: 0,
+								padding: 0,
+								listStyle: "none",
+								display: "flex",
+								flexDirection: "column",
+								gap: 8,
+							}}
+						>
 							{grafanaEntries.map(([key, url]) => (
 								<li key={key}>
-									<a href={url} target="_blank" rel="noreferrer" className="text-blue-700 hover:underline">
-										{prettify(key)} ↗
+									<a
+										href={url}
+										target="_blank"
+										rel="noreferrer"
+										style={{
+											display: "inline-flex",
+											alignItems: "center",
+											gap: 8,
+											fontSize: 13,
+											color: RDS_COLORS.accent,
+											textDecoration: "none",
+										}}
+										onMouseEnter={(e) => {
+											e.currentTarget.style.textDecoration = "underline";
+										}}
+										onMouseLeave={(e) => {
+											e.currentTarget.style.textDecoration = "none";
+										}}
+									>
+										<I.trend size={14} />
+										{prettify(key)}
+										<I.chevronR size={12} />
 									</a>
 								</li>
 							))}
 						</ul>
 					)}
-				</div>
+				</Card>
 			</section>
 
-			<section>
-				<h2 className="mb-3 text-sm font-medium uppercase tracking-wide text-neutral-500">Errors</h2>
-				<div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-					Browser + API error reporting is not yet wired. Tracked as a follow-up issue. For now, errors live in the API
-					logs (Pino) and the app console (frontend Logger).
+			<section style={{ marginTop: 22 }}>
+				<SecTitle style={{ marginBottom: 10 }}>Errors</SecTitle>
+				<div
+					role="note"
+					style={{
+						display: "flex",
+						alignItems: "flex-start",
+						gap: 10,
+						padding: "12px 14px",
+						background: `color-mix(in oklch, ${RDS_COLORS.warn} 14%, transparent)`,
+						color: RDS_COLORS.warn,
+						border: `1px solid color-mix(in oklch, ${RDS_COLORS.warn} 35%, transparent)`,
+						borderRadius: 10,
+						fontSize: 12.5,
+						lineHeight: 1.5,
+					}}
+				>
+					<span
+						aria-hidden="true"
+						style={{
+							display: "inline-flex",
+							alignItems: "center",
+							justifyContent: "center",
+							width: 18,
+							height: 18,
+							borderRadius: 999,
+							background: "currentColor",
+							color: RDS_COLORS.bgPanel,
+							fontSize: 11,
+							fontWeight: 700,
+							flexShrink: 0,
+							marginTop: 1,
+						}}
+					>
+						!
+					</span>
+					<div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+						<div style={{ fontWeight: 600 }}>Error reporting not yet configured</div>
+						<div style={{ color: RDS_COLORS.fgMuted, fontWeight: 400 }}>
+							Tracked as a follow-up issue. For now, errors live in the API logs (Pino) and the app console (frontend
+							Logger).
+						</div>
+					</div>
 				</div>
 			</section>
 		</div>
 	);
 }
 
-function KV({ label, value }: { label: string; value: React.ReactNode }) {
+function KV({ label, value }: { label: string; value: ReactNode }) {
 	return (
 		<div>
-			<div className="text-xs text-neutral-500">{label}</div>
-			<div className="mt-0.5 text-neutral-900">{value}</div>
+			<div style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle }}>{label}</div>
+			<div style={{ marginTop: 4, fontSize: 13, color: RDS_COLORS.fg }}>{value}</div>
 		</div>
 	);
 }
 
-function StatusPill({ status }: { status: "ok" | "degraded" | "down" }) {
-	const colour =
-		status === "ok"
-			? "bg-green-100 text-green-800"
-			: status === "degraded"
-				? "bg-amber-100 text-amber-800"
-				: "bg-red-100 text-red-800";
-	return <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${colour}`}>{status}</span>;
+function StatusBadge({ status }: { status: "ok" | "degraded" | "down" }) {
+	const variant = status === "ok" ? "success" : status === "degraded" ? "warn" : "default";
+	return (
+		<Badge variant={variant} dot>
+			{status}
+		</Badge>
+	);
 }
 
 function formatDuration(seconds: number): string {

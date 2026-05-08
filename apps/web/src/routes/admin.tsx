@@ -1,4 +1,6 @@
 import { createFileRoute, Link, Outlet, redirect } from "@tanstack/react-router";
+import { I } from "@/components/icons";
+import { RDS_COLORS, SecTitle } from "@/components/primitives";
 import { getStoredUser } from "@/lib/auth-state";
 
 export const Route = createFileRoute("/admin")({
@@ -14,40 +16,113 @@ export const Route = createFileRoute("/admin")({
 	component: AdminLayout,
 });
 
+const NAV: { to: string; label: string; icon: keyof typeof I; exact?: boolean }[] = [
+	{ to: "/admin", label: "Overview", icon: "trend", exact: true },
+	{ to: "/admin/users", label: "Users", icon: "social" },
+	{ to: "/admin/routes", label: "Routes", icon: "route" },
+	{ to: "/admin/system", label: "System", icon: "sliders" },
+];
+
 function AdminLayout() {
 	return (
-		<div className="flex h-svh w-full bg-neutral-50">
-			<aside className="w-56 border-r border-neutral-200 bg-white p-4">
-				<div className="mb-6 px-2 py-1 text-sm font-semibold uppercase tracking-wide text-neutral-500">
-					routess admin
+		<div
+			style={{
+				position: "absolute",
+				inset: 0,
+				display: "flex",
+				background: RDS_COLORS.bgCanvas,
+				color: RDS_COLORS.fg,
+				overflow: "hidden",
+			}}
+		>
+			<aside
+				style={{
+					width: 220,
+					flexShrink: 0,
+					background: RDS_COLORS.bgRail,
+					borderRight: `1px solid ${RDS_COLORS.border}`,
+					display: "flex",
+					flexDirection: "column",
+					padding: "20px 14px",
+				}}
+			>
+				<div style={{ display: "flex", alignItems: "center", gap: 10, padding: "0 6px 16px" }}>
+					<I.shield size={18} />
+					<SecTitle>Admin</SecTitle>
 				</div>
-				<nav className="flex flex-col gap-1 text-sm">
-					<AdminNavLink to="/admin">Overview</AdminNavLink>
-					<AdminNavLink to="/admin/users">Users</AdminNavLink>
-					<AdminNavLink to="/admin/routes">Routes</AdminNavLink>
-					<AdminNavLink to="/admin/system">System</AdminNavLink>
+				<nav style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+					{NAV.map((item) => {
+						const Icon = I[item.icon];
+						return (
+							<Link
+								key={item.to}
+								to={item.to}
+								activeOptions={{ exact: item.exact ?? false }}
+								style={{
+									display: "flex",
+									alignItems: "center",
+									gap: 10,
+									padding: "8px 10px",
+									borderRadius: "var(--rds-radius-sm)",
+									fontSize: 13,
+									fontWeight: 500,
+									color: RDS_COLORS.fgMuted,
+									textDecoration: "none",
+									transition: "background 120ms, color 120ms",
+								}}
+								activeProps={{
+									style: {
+										background: RDS_COLORS.accentSoft,
+										color: RDS_COLORS.accent,
+									},
+								}}
+								onMouseEnter={(e) => {
+									e.currentTarget.style.background = RDS_COLORS.bgHover;
+									e.currentTarget.style.color = RDS_COLORS.fg;
+								}}
+								onMouseLeave={(e) => {
+									const isActive = e.currentTarget.dataset.status === "active";
+									if (!isActive) {
+										e.currentTarget.style.background = "transparent";
+										e.currentTarget.style.color = RDS_COLORS.fgMuted;
+									}
+								}}
+							>
+								<Icon size={16} />
+								{item.label}
+							</Link>
+						);
+					})}
 				</nav>
-				<div className="mt-8 border-t border-neutral-200 pt-4">
-					<Link to="/" className="text-xs text-neutral-500 hover:text-neutral-700">
-						← Back to app
-					</Link>
-				</div>
+				<div style={{ flex: 1 }} />
+				<Link
+					to="/"
+					style={{
+						display: "inline-flex",
+						alignItems: "center",
+						gap: 8,
+						padding: "8px 10px",
+						borderRadius: "var(--rds-radius-sm)",
+						fontSize: 12,
+						color: RDS_COLORS.fgSubtle,
+						textDecoration: "none",
+					}}
+					onMouseEnter={(e) => {
+						e.currentTarget.style.color = RDS_COLORS.fg;
+					}}
+					onMouseLeave={(e) => {
+						e.currentTarget.style.color = RDS_COLORS.fgSubtle;
+					}}
+				>
+					<I.chevronL size={14} />
+					Back to app
+				</Link>
 			</aside>
-			<main className="flex-1 overflow-auto p-8">
-				<Outlet />
+			<main style={{ flex: 1, overflow: "auto" }}>
+				<div style={{ maxWidth: 1100, margin: "0 auto", padding: "40px 32px" }}>
+					<Outlet />
+				</div>
 			</main>
 		</div>
-	);
-}
-
-function AdminNavLink({ to, children }: { to: string; children: React.ReactNode }) {
-	return (
-		<Link
-			to={to}
-			activeOptions={{ exact: to === "/admin" }}
-			className="rounded-md px-2 py-1.5 text-neutral-700 hover:bg-neutral-100 [&.active]:bg-neutral-900 [&.active]:text-white"
-		>
-			{children}
-		</Link>
 	);
 }

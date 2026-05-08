@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { I } from "@/components/icons";
+import { Badge, Btn, RDS_COLORS, SecTitle } from "@/components/primitives";
 import { apiService } from "@/lib/api";
-import { PageError, PageSkeleton } from "./admin.index";
+import { Card, PageError, PageHeader, PageSkeleton } from "./admin.index";
 import { formatDate, formatRelative } from "./admin.users";
 
 export const Route = createFileRoute("/admin/users/$userId")({
@@ -37,140 +39,255 @@ function AdminUserDetailPage() {
 	if (error || !data) return <PageError title="User" error={error} />;
 
 	return (
-		<div className="max-w-4xl">
-			<Link to="/admin/users" className="text-sm text-neutral-500 hover:text-neutral-700">
-				← All users
+		<div>
+			<Link
+				to="/admin/users"
+				style={{
+					display: "inline-flex",
+					alignItems: "center",
+					gap: 4,
+					fontSize: 12.5,
+					color: RDS_COLORS.fgSubtle,
+					textDecoration: "none",
+					marginBottom: 12,
+				}}
+				onMouseEnter={(e) => {
+					e.currentTarget.style.color = RDS_COLORS.fg;
+				}}
+				onMouseLeave={(e) => {
+					e.currentTarget.style.color = RDS_COLORS.fgSubtle;
+				}}
+			>
+				<I.chevronL size={14} /> All users
 			</Link>
-			<div className="mt-4 mb-8 flex items-start justify-between">
-				<div>
-					<h1 className="text-2xl font-semibold">{data.name}</h1>
-					<div className="mt-1 text-neutral-500">{data.email}</div>
-					<div className="mt-2 flex gap-2 text-xs">
-						<span
-							className={
-								data.role === "admin"
-									? "rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-800"
-									: "rounded-full bg-neutral-100 px-2 py-0.5 font-medium text-neutral-700"
+
+			<PageHeader
+				eyebrow="User"
+				title={data.name}
+				subtitle={data.email}
+				right={
+					<Btn
+						variant="danger"
+						onClick={() => {
+							if (
+								confirm(
+									`Soft-delete ${data.email}? Their routes and sessions will be hidden. They can recover by logging in again.`,
+								)
+							) {
+								softDelete.mutate();
 							}
-						>
-							{data.role}
-						</span>
-						<span className="rounded-full bg-neutral-100 px-2 py-0.5 text-neutral-700">
-							{data.isEmailVerified ? "verified" : "unverified"}
-						</span>
-					</div>
-				</div>
-				<button
-					type="button"
-					onClick={() => {
-						if (
-							confirm(
-								`Soft-delete ${data.email}? Their routes and sessions will be hidden. They can recover by logging in again.`,
-							)
-						) {
-							softDelete.mutate();
-						}
+						}}
+						disabled={softDelete.isPending}
+						style={{
+							background: "transparent",
+							color: RDS_COLORS.danger,
+							border: `1px solid color-mix(in oklch, ${RDS_COLORS.danger} 40%, ${RDS_COLORS.border})`,
+						}}
+					>
+						<I.trash size={14} />
+						{softDelete.isPending ? "Deleting…" : "Soft-delete"}
+					</Btn>
+				}
+			/>
+
+			<div style={{ marginTop: 12, display: "flex", gap: 8 }}>
+				<Badge variant={data.role === "admin" ? "accent" : "default"}>{data.role}</Badge>
+				<Badge variant={data.isEmailVerified ? "success" : "warn"}>
+					{data.isEmailVerified ? "verified" : "unverified"}
+				</Badge>
+			</div>
+
+			<div
+				style={{
+					marginTop: 22,
+					display: "grid",
+					gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+					gap: 14,
+				}}
+			>
+				<Card padding={16}>
+					<KV label="Joined" value={formatDate(data.createdAt)} />
+				</Card>
+				<Card padding={16}>
+					<KV label="Last active" value={data.lastActiveAt ? formatRelative(data.lastActiveAt) : "Never"} />
+				</Card>
+				<Card padding={16}>
+					<KV label="Total routes" value={data.routeCount.toString()} />
+				</Card>
+			</div>
+
+			<section style={{ marginTop: 28 }}>
+				<div
+					style={{
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "space-between",
+						marginBottom: 10,
 					}}
-					disabled={softDelete.isPending}
-					className="rounded-md border border-red-300 bg-white px-3 py-1.5 text-sm text-red-700 hover:bg-red-50 disabled:opacity-50"
 				>
-					{softDelete.isPending ? "Deleting…" : "Soft-delete user"}
-				</button>
-			</div>
-
-			<div className="mb-8 grid grid-cols-3 gap-4 rounded-lg border border-neutral-200 bg-white p-4 text-sm">
-				<div>
-					<div className="text-xs text-neutral-500">Joined</div>
-					<div className="mt-0.5 text-neutral-900">{formatDate(data.createdAt)}</div>
+					<SecTitle>Active sessions ({data.activeSessions.length})</SecTitle>
 				</div>
-				<div>
-					<div className="text-xs text-neutral-500">Last active</div>
-					<div className="mt-0.5 text-neutral-900">
-						{data.lastActiveAt ? formatRelative(data.lastActiveAt) : "Never"}
-					</div>
-				</div>
-				<div>
-					<div className="text-xs text-neutral-500">Total routes</div>
-					<div className="mt-0.5 text-neutral-900">{data.routeCount}</div>
-				</div>
-			</div>
-
-			<section className="mb-8">
-				<h2 className="mb-3 text-lg font-medium">Active sessions ({data.activeSessions.length})</h2>
-				<div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
-					<table className="w-full text-sm">
-						<thead className="bg-neutral-50 text-left text-xs uppercase tracking-wide text-neutral-500">
-							<tr>
-								<th className="px-4 py-2">User agent</th>
-								<th className="px-4 py-2">IP</th>
-								<th className="px-4 py-2">Last activity</th>
-								<th className="px-4 py-2">Expires</th>
-								<th className="px-4 py-2"></th>
+				<Card padding={0}>
+					<table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+						<thead>
+							<tr style={{ background: RDS_COLORS.bgPanelElev }}>
+								<Th>User agent</Th>
+								<Th>IP</Th>
+								<Th>Last activity</Th>
+								<Th>Expires</Th>
+								<Th align="right" />
 							</tr>
 						</thead>
 						<tbody>
 							{data.activeSessions.length === 0 && (
 								<tr>
-									<td colSpan={5} className="px-4 py-4 text-center text-neutral-500">
+									<td
+										colSpan={5}
+										style={{
+											padding: "24px 16px",
+											textAlign: "center",
+											color: RDS_COLORS.fgSubtle,
+										}}
+									>
 										No active sessions.
 									</td>
 								</tr>
 							)}
-							{data.activeSessions.map((s) => (
-								<tr key={s.id} className="border-t border-neutral-100">
-									<td className="max-w-xs truncate px-4 py-2 text-neutral-700">{s.userAgent ?? "—"}</td>
-									<td className="px-4 py-2 text-neutral-500">{s.ipAddress ?? "—"}</td>
-									<td className="px-4 py-2 text-neutral-500">
-										{s.lastActivity ? formatRelative(s.lastActivity) : "—"}
-									</td>
-									<td className="px-4 py-2 text-neutral-500">{formatDate(s.expiresAt)}</td>
-									<td className="px-4 py-2 text-right">
+							{data.activeSessions.map((s, idx) => (
+								<tr
+									key={s.id}
+									style={{
+										borderTop: idx === 0 ? "none" : `1px solid ${RDS_COLORS.border}`,
+									}}
+								>
+									<Td muted>
+										<span
+											style={{
+												display: "inline-block",
+												maxWidth: 280,
+												whiteSpace: "nowrap",
+												overflow: "hidden",
+												textOverflow: "ellipsis",
+												verticalAlign: "middle",
+											}}
+											title={s.userAgent ?? undefined}
+										>
+											{s.userAgent ?? "—"}
+										</span>
+									</Td>
+									<Td muted>{s.ipAddress ?? "—"}</Td>
+									<Td muted>{s.lastActivity ? formatRelative(s.lastActivity) : "—"}</Td>
+									<Td muted>{formatDate(s.expiresAt)}</Td>
+									<Td align="right">
 										<button
 											type="button"
 											onClick={() => revoke.mutate(s.id)}
 											disabled={revoke.isPending}
-											className="text-xs text-red-700 hover:underline disabled:opacity-50"
+											style={{
+												border: 0,
+												background: "transparent",
+												color: RDS_COLORS.danger,
+												fontSize: 12,
+												cursor: revoke.isPending ? "not-allowed" : "pointer",
+												opacity: revoke.isPending ? 0.5 : 1,
+												padding: 0,
+											}}
 										>
 											Revoke
 										</button>
-									</td>
+									</Td>
 								</tr>
 							))}
 						</tbody>
 					</table>
-				</div>
+				</Card>
 			</section>
 
-			<section>
-				<h2 className="mb-3 text-lg font-medium">Recent routes</h2>
-				<div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
-					<table className="w-full text-sm">
-						<thead className="bg-neutral-50 text-left text-xs uppercase tracking-wide text-neutral-500">
-							<tr>
-								<th className="px-4 py-2">Name</th>
-								<th className="px-4 py-2">Activity</th>
-								<th className="px-4 py-2">Created</th>
+			<section style={{ marginTop: 28 }}>
+				<SecTitle style={{ marginBottom: 10 }}>Recent routes</SecTitle>
+				<Card padding={0}>
+					<table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+						<thead>
+							<tr style={{ background: RDS_COLORS.bgPanelElev }}>
+								<Th>Name</Th>
+								<Th>Activity</Th>
+								<Th>Created</Th>
 							</tr>
 						</thead>
 						<tbody>
 							{data.recentRoutes.length === 0 && (
 								<tr>
-									<td colSpan={3} className="px-4 py-4 text-center text-neutral-500">
+									<td
+										colSpan={3}
+										style={{
+											padding: "24px 16px",
+											textAlign: "center",
+											color: RDS_COLORS.fgSubtle,
+										}}
+									>
 										No routes.
 									</td>
 								</tr>
 							)}
-							{data.recentRoutes.map((r) => (
-								<tr key={r.id} className="border-t border-neutral-100">
-									<td className="px-4 py-2 text-neutral-900">{r.name}</td>
-									<td className="px-4 py-2 text-neutral-500">{r.activity ?? "—"}</td>
-									<td className="px-4 py-2 text-neutral-500">{formatDate(r.createdAt)}</td>
+							{data.recentRoutes.map((r, idx) => (
+								<tr
+									key={r.id}
+									style={{
+										borderTop: idx === 0 ? "none" : `1px solid ${RDS_COLORS.border}`,
+									}}
+								>
+									<Td>{r.name}</Td>
+									<Td muted>{r.activity ?? "—"}</Td>
+									<Td muted>{formatDate(r.createdAt)}</Td>
 								</tr>
 							))}
 						</tbody>
 					</table>
-				</div>
+				</Card>
 			</section>
 		</div>
+	);
+}
+
+function KV({ label, value }: { label: string; value: string }) {
+	return (
+		<div>
+			<div style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle }}>{label}</div>
+			<div style={{ marginTop: 4, fontSize: 14, fontWeight: 500, color: RDS_COLORS.fg }}>{value}</div>
+		</div>
+	);
+}
+
+function Th({ children, align }: { children?: React.ReactNode; align?: "right" }) {
+	return (
+		<th
+			style={{
+				textAlign: align ?? "left",
+				padding: "10px 16px",
+				fontSize: 11,
+				fontWeight: 600,
+				textTransform: "uppercase",
+				letterSpacing: "0.06em",
+				color: RDS_COLORS.fgSubtle,
+				borderBottom: `1px solid ${RDS_COLORS.border}`,
+			}}
+		>
+			{children}
+		</th>
+	);
+}
+
+function Td({ children, muted, align }: { children: React.ReactNode; muted?: boolean; align?: "right" }) {
+	return (
+		<td
+			style={{
+				padding: "12px 16px",
+				color: muted ? RDS_COLORS.fgMuted : RDS_COLORS.fg,
+				textAlign: align ?? "left",
+				verticalAlign: "middle",
+			}}
+		>
+			{children}
+		</td>
 	);
 }

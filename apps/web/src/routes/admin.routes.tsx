@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { RDS_COLORS, SecTitle } from "@/components/primitives";
 import { apiService } from "@/lib/api";
-import { MetricCard, PageError, PageSkeleton, TimeseriesCard } from "./admin.index";
+import { Card, MetricCard, PageError, PageHeader, PageSkeleton, TimeseriesCard } from "./admin.index";
 
 export const Route = createFileRoute("/admin/routes")({
 	component: AdminRoutesPage,
@@ -17,71 +18,184 @@ function AdminRoutesPage() {
 	if (isLoading) return <PageSkeleton title="Routes" />;
 	if (error || !data) return <PageError title="Routes" error={error} />;
 
+	const totalActive = data.byActivity.reduce((acc, x) => acc + x.count, 0);
+
 	return (
 		<div>
-			<h1 className="mb-6 text-2xl font-semibold">Routes</h1>
+			<PageHeader eyebrow="Admin" title="Routes" subtitle="What people are creating, by whom, and when." />
 
-			<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-				<MetricCard label="Total routes" value={data.totalRoutes} />
+			<div
+				style={{
+					display: "grid",
+					gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+					gap: 14,
+					marginTop: 28,
+				}}
+			>
+				<MetricCard label="Total" value={data.totalRoutes} />
 				{data.byActivity.slice(0, 3).map((entry) => (
 					<MetricCard
 						key={entry.activity ?? "unspecified"}
-						label={entry.activity ? `${entry.activity} routes` : "unspecified activity"}
+						label={entry.activity ? entry.activity : "unspecified"}
 						value={entry.count}
 					/>
 				))}
 			</div>
 
-			<div className="mt-8 grid grid-cols-1 gap-4 lg:grid-cols-2">
-				<TimeseriesCard title="Routes created (last 30 days)" series={data.createdLast30Days} />
-				<div className="rounded-lg border border-neutral-200 bg-white p-4">
-					<div className="mb-3 text-sm font-medium text-neutral-700">By activity</div>
-					{data.byActivity.length === 0 && <div className="text-sm text-neutral-500">No routes yet.</div>}
-					{data.byActivity.map((entry) => (
-						<div key={entry.activity ?? "_"} className="flex items-center justify-between py-1.5 text-sm">
-							<span className="text-neutral-700">{entry.activity ?? "(unspecified)"}</span>
-							<span className="font-medium text-neutral-900">{entry.count}</span>
-						</div>
-					))}
-				</div>
+			<div
+				style={{
+					display: "grid",
+					gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))",
+					gap: 14,
+					marginTop: 14,
+				}}
+			>
+				<TimeseriesCard title="Routes created, last 30 days" series={data.createdLast30Days} />
+				<Card>
+					<div
+						style={{
+							display: "flex",
+							alignItems: "baseline",
+							justifyContent: "space-between",
+							marginBottom: 14,
+						}}
+					>
+						<div style={{ fontSize: 13, fontWeight: 500, color: RDS_COLORS.fg }}>By activity</div>
+						<div style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle }}>{totalActive} routes</div>
+					</div>
+					{data.byActivity.length === 0 && (
+						<div style={{ fontSize: 13, color: RDS_COLORS.fgMuted }}>No routes yet.</div>
+					)}
+					{data.byActivity.map((entry) => {
+						const pct = totalActive > 0 ? (entry.count / totalActive) * 100 : 0;
+						return (
+							<div key={entry.activity ?? "_"} style={{ marginBottom: 10 }}>
+								<div
+									style={{
+										display: "flex",
+										justifyContent: "space-between",
+										fontSize: 12.5,
+										marginBottom: 4,
+									}}
+								>
+									<span style={{ color: RDS_COLORS.fg }}>{entry.activity ?? "(unspecified)"}</span>
+									<span style={{ color: RDS_COLORS.fgMuted }}>{entry.count}</span>
+								</div>
+								<div
+									style={{
+										height: 6,
+										background: RDS_COLORS.bgInput,
+										borderRadius: 999,
+										overflow: "hidden",
+									}}
+								>
+									<div
+										style={{
+											width: `${pct}%`,
+											height: "100%",
+											background: RDS_COLORS.accent,
+											borderRadius: 999,
+										}}
+									/>
+								</div>
+							</div>
+						);
+					})}
+				</Card>
 			</div>
 
-			<div className="mt-8 rounded-lg border border-neutral-200 bg-white p-4">
-				<div className="mb-3 text-sm font-medium text-neutral-700">Top creators</div>
-				<table className="w-full text-sm">
-					<thead className="text-left text-xs uppercase tracking-wide text-neutral-500">
-						<tr>
-							<th className="py-2">Email</th>
-							<th className="py-2">Name</th>
-							<th className="py-2 text-right">Routes</th>
-						</tr>
-					</thead>
-					<tbody>
-						{data.topCreators.length === 0 && (
-							<tr>
-								<td colSpan={3} className="py-4 text-center text-neutral-500">
-									No data yet.
-								</td>
+			<section style={{ marginTop: 28 }}>
+				<SecTitle style={{ marginBottom: 10 }}>Top creators</SecTitle>
+				<Card padding={0}>
+					<table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+						<thead>
+							<tr style={{ background: RDS_COLORS.bgPanelElev }}>
+								<Th>Email</Th>
+								<Th>Name</Th>
+								<Th align="right">Routes</Th>
 							</tr>
-						)}
-						{data.topCreators.map((creator) => (
-							<tr key={creator.userId} className="border-t border-neutral-100">
-								<td className="py-2">
-									<Link
-										to="/admin/users/$userId"
-										params={{ userId: creator.userId.toString() }}
-										className="text-neutral-900 hover:underline"
+						</thead>
+						<tbody>
+							{data.topCreators.length === 0 && (
+								<tr>
+									<td
+										colSpan={3}
+										style={{
+											padding: "24px 16px",
+											textAlign: "center",
+											color: RDS_COLORS.fgSubtle,
+										}}
 									>
-										{creator.email}
-									</Link>
-								</td>
-								<td className="py-2 text-neutral-700">{creator.name}</td>
-								<td className="py-2 text-right font-medium text-neutral-900">{creator.routeCount}</td>
-							</tr>
-						))}
-					</tbody>
-				</table>
-			</div>
+										No data yet.
+									</td>
+								</tr>
+							)}
+							{data.topCreators.map((creator, idx) => (
+								<tr
+									key={creator.userId}
+									style={{
+										borderTop: idx === 0 ? "none" : `1px solid ${RDS_COLORS.border}`,
+									}}
+									onMouseEnter={(e) => {
+										e.currentTarget.style.background = RDS_COLORS.bgHover;
+									}}
+									onMouseLeave={(e) => {
+										e.currentTarget.style.background = "transparent";
+									}}
+								>
+									<Td>
+										<Link
+											to="/admin/users/$userId"
+											params={{ userId: creator.userId.toString() }}
+											style={{ color: RDS_COLORS.fg, textDecoration: "none", fontWeight: 500 }}
+										>
+											{creator.email}
+										</Link>
+									</Td>
+									<Td muted>{creator.name}</Td>
+									<Td muted align="right">
+										<span style={{ fontWeight: 500, color: RDS_COLORS.fg }}>{creator.routeCount}</span>
+									</Td>
+								</tr>
+							))}
+						</tbody>
+					</table>
+				</Card>
+			</section>
 		</div>
+	);
+}
+
+function Th({ children, align }: { children?: React.ReactNode; align?: "right" }) {
+	return (
+		<th
+			style={{
+				textAlign: align ?? "left",
+				padding: "10px 16px",
+				fontSize: 11,
+				fontWeight: 600,
+				textTransform: "uppercase",
+				letterSpacing: "0.06em",
+				color: RDS_COLORS.fgSubtle,
+				borderBottom: `1px solid ${RDS_COLORS.border}`,
+			}}
+		>
+			{children}
+		</th>
+	);
+}
+
+function Td({ children, muted, align }: { children: React.ReactNode; muted?: boolean; align?: "right" }) {
+	return (
+		<td
+			style={{
+				padding: "12px 16px",
+				color: muted ? RDS_COLORS.fgMuted : RDS_COLORS.fg,
+				textAlign: align ?? "left",
+				verticalAlign: "middle",
+			}}
+		>
+			{children}
+		</td>
 	);
 }

@@ -1,8 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
+import { I } from "@/components/icons";
+import { Badge, Btn, RDS_COLORS } from "@/components/primitives";
 import { apiService } from "@/lib/api";
-import { PageError, PageSkeleton } from "./admin.index";
+import { Card, PageError, PageHeader, PageSkeleton } from "./admin.index";
 
 export const Route = createFileRoute("/admin/users")({
 	component: AdminUsersPage,
@@ -27,110 +29,207 @@ function AdminUsersPage() {
 
 	return (
 		<div>
-			<div className="mb-6 flex items-center justify-between">
-				<h1 className="text-2xl font-semibold">Users ({data.total})</h1>
-				<form
-					onSubmit={(e) => {
-						e.preventDefault();
-						setSearch(searchInput);
-						setPage(1);
-					}}
-					className="flex gap-2"
-				>
-					<input
-						type="text"
-						value={searchInput}
-						onChange={(e) => setSearchInput(e.target.value)}
-						placeholder="Search email or name…"
-						className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm focus:border-neutral-500 focus:outline-none"
-					/>
-					<button
-						type="submit"
-						className="rounded-md bg-neutral-900 px-3 py-1.5 text-sm text-white hover:bg-neutral-700"
+			<PageHeader
+				eyebrow="Admin"
+				title={`Users (${data.total})`}
+				subtitle="Search, drill in, and manage individual users."
+				right={
+					<form
+						onSubmit={(e) => {
+							e.preventDefault();
+							setSearch(searchInput);
+							setPage(1);
+						}}
+						style={{
+							display: "flex",
+							alignItems: "center",
+							gap: 8,
+							background: RDS_COLORS.bgInput,
+							border: `1px solid ${RDS_COLORS.border}`,
+							borderRadius: 8,
+							padding: "0 10px",
+							height: 36,
+							minWidth: 280,
+						}}
 					>
-						Search
-					</button>
-				</form>
-			</div>
-
-			<div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
-				<table className="w-full text-sm">
-					<thead className="bg-neutral-50 text-left text-xs uppercase tracking-wide text-neutral-500">
-						<tr>
-							<th className="px-4 py-3">Email</th>
-							<th className="px-4 py-3">Name</th>
-							<th className="px-4 py-3">Role</th>
-							<th className="px-4 py-3">Routes</th>
-							<th className="px-4 py-3">Joined</th>
-							<th className="px-4 py-3">Last active</th>
-						</tr>
-					</thead>
-					<tbody>
-						{data.items.length === 0 && (
-							<tr>
-								<td colSpan={6} className="px-4 py-6 text-center text-neutral-500">
-									No users match.
-								</td>
-							</tr>
+						<I.search size={14} />
+						<input
+							type="text"
+							value={searchInput}
+							onChange={(e) => setSearchInput(e.target.value)}
+							placeholder="Search email or name…"
+							style={{
+								flex: 1,
+								border: 0,
+								outline: 0,
+								background: "transparent",
+								color: RDS_COLORS.fg,
+								fontSize: 13,
+							}}
+						/>
+						{searchInput && (
+							<button
+								type="button"
+								onClick={() => {
+									setSearchInput("");
+									setSearch("");
+									setPage(1);
+								}}
+								style={{
+									border: 0,
+									background: "transparent",
+									color: RDS_COLORS.fgSubtle,
+									cursor: "pointer",
+									padding: 0,
+									display: "inline-flex",
+								}}
+								aria-label="Clear"
+							>
+								<I.close size={14} />
+							</button>
 						)}
-						{data.items.map((user) => (
-							<tr key={user.id} className="border-t border-neutral-100 hover:bg-neutral-50">
-								<td className="px-4 py-3 font-medium">
-									<Link
-										to="/admin/users/$userId"
-										params={{ userId: user.id.toString() }}
-										className="text-neutral-900 hover:underline"
-									>
-										{user.email}
-									</Link>
-								</td>
-								<td className="px-4 py-3 text-neutral-700">{user.name}</td>
-								<td className="px-4 py-3">
-									<span
-										className={
-											user.role === "admin"
-												? "rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800"
-												: "rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-700"
-										}
-									>
-										{user.role}
-									</span>
-								</td>
-								<td className="px-4 py-3 text-neutral-700">{user.routeCount}</td>
-								<td className="px-4 py-3 text-neutral-500">{formatDate(user.createdAt)}</td>
-								<td className="px-4 py-3 text-neutral-500">
-									{user.lastActiveAt ? formatRelative(user.lastActiveAt) : "—"}
-								</td>
+					</form>
+				}
+			/>
+
+			<div style={{ marginTop: 22 }}>
+				<Card padding={0}>
+					<table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+						<thead>
+							<tr style={{ background: RDS_COLORS.bgPanelElev }}>
+								<HeaderCell>Email</HeaderCell>
+								<HeaderCell>Name</HeaderCell>
+								<HeaderCell>Role</HeaderCell>
+								<HeaderCell align="right">Routes</HeaderCell>
+								<HeaderCell>Joined</HeaderCell>
+								<HeaderCell>Last active</HeaderCell>
 							</tr>
-						))}
-					</tbody>
-				</table>
+						</thead>
+						<tbody>
+							{data.items.length === 0 && (
+								<tr>
+									<td
+										colSpan={6}
+										style={{
+											padding: "32px 18px",
+											textAlign: "center",
+											color: RDS_COLORS.fgSubtle,
+											fontSize: 13,
+										}}
+									>
+										No users match.
+									</td>
+								</tr>
+							)}
+							{data.items.map((user, idx) => (
+								<tr
+									key={user.id}
+									style={{
+										borderTop: idx === 0 ? "none" : `1px solid ${RDS_COLORS.border}`,
+									}}
+									onMouseEnter={(e) => {
+										e.currentTarget.style.background = RDS_COLORS.bgHover;
+									}}
+									onMouseLeave={(e) => {
+										e.currentTarget.style.background = "transparent";
+									}}
+								>
+									<Cell>
+										<Link
+											to="/admin/users/$userId"
+											params={{ userId: user.id.toString() }}
+											style={{
+												color: RDS_COLORS.fg,
+												textDecoration: "none",
+												fontWeight: 500,
+											}}
+										>
+											{user.email}
+										</Link>
+									</Cell>
+									<Cell muted>{user.name}</Cell>
+									<Cell>
+										<Badge variant={user.role === "admin" ? "accent" : "default"}>{user.role}</Badge>
+									</Cell>
+									<Cell align="right" muted>
+										{user.routeCount}
+									</Cell>
+									<Cell muted>{formatDate(user.createdAt)}</Cell>
+									<Cell muted>{user.lastActiveAt ? formatRelative(user.lastActiveAt) : "—"}</Cell>
+								</tr>
+							))}
+						</tbody>
+					</table>
+				</Card>
 			</div>
 
-			<div className="mt-4 flex items-center justify-between text-sm text-neutral-600">
+			<div
+				style={{
+					display: "flex",
+					justifyContent: "space-between",
+					alignItems: "center",
+					marginTop: 14,
+					fontSize: 12.5,
+					color: RDS_COLORS.fgSubtle,
+				}}
+			>
 				<span>
 					Page {data.page} of {totalPages}
 				</span>
-				<div className="flex gap-2">
-					<button
-						type="button"
+				<div style={{ display: "flex", gap: 8 }}>
+					<Btn
+						variant="default"
 						disabled={page <= 1}
 						onClick={() => setPage((p) => Math.max(1, p - 1))}
-						className="rounded-md border border-neutral-300 px-3 py-1.5 disabled:opacity-50"
+						style={{ height: 32, padding: "0 12px", fontSize: 12.5 }}
 					>
-						Previous
-					</button>
-					<button
-						type="button"
+						<I.chevronL size={14} /> Previous
+					</Btn>
+					<Btn
+						variant="default"
 						disabled={page >= totalPages}
 						onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-						className="rounded-md border border-neutral-300 px-3 py-1.5 disabled:opacity-50"
+						style={{ height: 32, padding: "0 12px", fontSize: 12.5 }}
 					>
-						Next
-					</button>
+						Next <I.chevronR size={14} />
+					</Btn>
 				</div>
 			</div>
 		</div>
+	);
+}
+
+function HeaderCell({ children, align }: { children: React.ReactNode; align?: "right" }) {
+	return (
+		<th
+			style={{
+				textAlign: align ?? "left",
+				padding: "10px 16px",
+				fontSize: 11,
+				fontWeight: 600,
+				textTransform: "uppercase",
+				letterSpacing: "0.06em",
+				color: RDS_COLORS.fgSubtle,
+				borderBottom: `1px solid ${RDS_COLORS.border}`,
+			}}
+		>
+			{children}
+		</th>
+	);
+}
+
+function Cell({ children, muted, align }: { children: React.ReactNode; muted?: boolean; align?: "right" }) {
+	return (
+		<td
+			style={{
+				padding: "12px 16px",
+				color: muted ? RDS_COLORS.fgMuted : RDS_COLORS.fg,
+				textAlign: align ?? "left",
+				verticalAlign: "middle",
+			}}
+		>
+			{children}
+		</td>
 	);
 }
 
