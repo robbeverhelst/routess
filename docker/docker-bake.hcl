@@ -11,7 +11,7 @@ group "default" {
 }
 
 target "common" {
-  context = "."
+  context = ".."
   args = {
     DEPS_IMAGE = "${DEPS_IMAGE}"
   }

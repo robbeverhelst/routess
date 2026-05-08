@@ -220,7 +220,7 @@ jobs:
           SHA: ${{ steps.version.outputs.sha }}
           OWNER: ${{ github.repository_owner }}
           REGISTRY: ${{ env.REGISTRY }}
-        run: docker buildx bake --push -f docker-bake.hcl default
+        run: docker buildx bake --push -f docker/docker-bake.hcl default
 
   publish-helm:
     needs:
