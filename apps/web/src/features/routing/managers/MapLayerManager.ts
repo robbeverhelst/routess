@@ -1,4 +1,5 @@
 import type { Waypoint } from "@routess/core";
+import { haversineDistance } from "@routess/core";
 import type { GeoJSONSource, Map as MapboxMap } from "mapbox-gl";
 import type { SurfaceSegment } from "@/features/routing/services/SurfaceService";
 import { Logger } from "@/lib/logger";
@@ -25,6 +26,9 @@ export const ROUTE_ARROWS_LAYER_ID = "route-arrows";
 export const ROUTE_SURFACE_COMPACTED_LAYER_ID = "route-surface-compacted";
 export const ROUTE_SURFACE_UNPAVED_LAYER_ID = "route-surface-unpaved";
 export const ROUTE_SURFACE_PATH_LAYER_ID = "route-surface-path";
+export const ROUTE_SCRUB_SOURCE_ID = "route-scrub";
+export const ROUTE_SCRUB_HALO_LAYER_ID = "route-scrub-halo";
+export const ROUTE_SCRUB_LAYER_ID = "route-scrub";
 
 // Dasharrays are not data-driven in mapbox-gl, so each bucket gets its own
 // filtered layer. Patterns chosen to read intuitively: solid-ish long dash
@@ -311,6 +315,34 @@ export const initializeSourcesAndLayers = (map: MapboxMap, palette?: MapPalette)
 		],
 	});
 
+	if (!map.getSource(ROUTE_SCRUB_SOURCE_ID)) {
+		map.addSource(ROUTE_SCRUB_SOURCE_ID, {
+			type: "geojson",
+			data: { type: "FeatureCollection", features: [] },
+		});
+		map.addLayer({
+			id: ROUTE_SCRUB_HALO_LAYER_ID,
+			type: "circle",
+			source: ROUTE_SCRUB_SOURCE_ID,
+			paint: {
+				"circle-radius": 8,
+				"circle-color": p.waypointStroke,
+				"circle-opacity": 0.95,
+				"circle-emissive-strength": 1,
+			},
+		});
+		map.addLayer({
+			id: ROUTE_SCRUB_LAYER_ID,
+			type: "circle",
+			source: ROUTE_SCRUB_SOURCE_ID,
+			paint: {
+				"circle-radius": 5,
+				"circle-color": p.routeMain,
+				"circle-emissive-strength": 1,
+			},
+		});
+	}
+
 	if (!map.getSource(TEMP_DRAG_LINES_SOURCE_ID)) {
 		map.addSource(TEMP_DRAG_LINES_SOURCE_ID, {
 			type: "geojson",
@@ -388,6 +420,12 @@ export const applyMapPalette = (map: MapboxMap, palette: MapPalette): void => {
 		}
 		if (map.getLayer(TEMP_DRAG_LINES_LAYER_ID)) {
 			map.setPaintProperty(TEMP_DRAG_LINES_LAYER_ID, "line-color", palette.dragLine);
+		}
+		if (map.getLayer(ROUTE_SCRUB_HALO_LAYER_ID)) {
+			map.setPaintProperty(ROUTE_SCRUB_HALO_LAYER_ID, "circle-color", palette.waypointStroke);
+		}
+		if (map.getLayer(ROUTE_SCRUB_LAYER_ID)) {
+			map.setPaintProperty(ROUTE_SCRUB_LAYER_ID, "circle-color", palette.routeMain);
 		}
 	} catch (err) {
 		Logger.warn("[MapLayerManager] Failed to apply palette", err);
@@ -497,4 +535,47 @@ export const clearKilometerMarkersLayer = (map: MapboxMap): void => {
 	if (!map?.getSource(KM_MARKERS_SOURCE_ID)) return;
 	const source = map.getSource(KM_MARKERS_SOURCE_ID) as GeoJSONSource;
 	source.setData({ type: "FeatureCollection" as const, features: [] });
+};
+
+// Walk routePath summing haversine segments until we reach distanceMeters,
+// then linearly interpolate within the straddling segment. Returns null when
+// the path is too short or the distance is out of range.
+export const interpolateOnRoutePath = (routePath: Coordinate[], distanceMeters: number): Coordinate | null => {
+	if (routePath.length < 2 || !Number.isFinite(distanceMeters) || distanceMeters < 0) return null;
+	let covered = 0;
+	for (let i = 0; i < routePath.length - 1; i++) {
+		const a = routePath[i];
+		const b = routePath[i + 1];
+		const segLen = haversineDistance(a, b) * 1000;
+		if (segLen <= 0) continue;
+		if (covered + segLen >= distanceMeters) {
+			const t = (distanceMeters - covered) / segLen;
+			return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+		}
+		covered += segLen;
+	}
+	return routePath[routePath.length - 1];
+};
+
+export const updateRouteScrubLayer = (map: MapboxMap, coord: Coordinate | null): void => {
+	if (!map?.getSource(ROUTE_SCRUB_SOURCE_ID)) return;
+	const source = map.getSource(ROUTE_SCRUB_SOURCE_ID) as GeoJSONSource;
+	if (!coord) {
+		source.setData({ type: "FeatureCollection" as const, features: [] });
+		return;
+	}
+	source.setData({
+		type: "FeatureCollection" as const,
+		features: [
+			{
+				type: "Feature" as const,
+				properties: {},
+				geometry: { type: "Point" as const, coordinates: coord },
+			},
+		],
+	});
+};
+
+export const clearRouteScrubLayer = (map: MapboxMap): void => {
+	updateRouteScrubLayer(map, null);
 };
