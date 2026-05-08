@@ -1,7 +1,8 @@
 import { createFileRoute, Link, Outlet, redirect } from "@tanstack/react-router";
 import { I } from "@/components/icons";
-import { RDS_COLORS, SecTitle } from "@/components/primitives";
+import { IconBtn, RDS_COLORS, SecTitle } from "@/components/primitives";
 import { getStoredUser } from "@/lib/auth-state";
+import { useUiStore } from "@/stores/uiStore";
 
 export const Route = createFileRoute("/admin")({
 	beforeLoad: () => {
@@ -24,10 +25,15 @@ const NAV: { to: string; label: string; icon: keyof typeof I; exact?: boolean }[
 ];
 
 function AdminLayout() {
+	const { theme, accent, toggleTheme } = useUiStore();
+
 	return (
 		<div
+			data-redesign
+			data-accent={accent}
+			className={theme === "dark" ? "dark" : undefined}
 			style={{
-				position: "absolute",
+				position: "fixed",
 				inset: 0,
 				display: "flex",
 				background: RDS_COLORS.bgCanvas,
@@ -95,28 +101,42 @@ function AdminLayout() {
 					})}
 				</nav>
 				<div style={{ flex: 1 }} />
-				<Link
-					to="/"
+				<div
 					style={{
-						display: "inline-flex",
+						display: "flex",
 						alignItems: "center",
+						justifyContent: "space-between",
 						gap: 8,
-						padding: "8px 10px",
-						borderRadius: "var(--rds-radius-sm)",
-						fontSize: 12,
-						color: RDS_COLORS.fgSubtle,
-						textDecoration: "none",
-					}}
-					onMouseEnter={(e) => {
-						e.currentTarget.style.color = RDS_COLORS.fg;
-					}}
-					onMouseLeave={(e) => {
-						e.currentTarget.style.color = RDS_COLORS.fgSubtle;
+						paddingTop: 12,
+						borderTop: `1px solid ${RDS_COLORS.border}`,
 					}}
 				>
-					<I.chevronL size={14} />
-					Back to app
-				</Link>
+					<Link
+						to="/"
+						style={{
+							display: "inline-flex",
+							alignItems: "center",
+							gap: 6,
+							padding: "6px 8px",
+							borderRadius: "var(--rds-radius-sm)",
+							fontSize: 12,
+							color: RDS_COLORS.fgSubtle,
+							textDecoration: "none",
+						}}
+						onMouseEnter={(e) => {
+							e.currentTarget.style.color = RDS_COLORS.fg;
+						}}
+						onMouseLeave={(e) => {
+							e.currentTarget.style.color = RDS_COLORS.fgSubtle;
+						}}
+					>
+						<I.chevronL size={14} />
+						Back to app
+					</Link>
+					<IconBtn title="Toggle theme" onClick={toggleTheme} style={{ width: 28, height: 28 }}>
+						{theme === "dark" ? <I.sun size={15} /> : <I.moon size={15} />}
+					</IconBtn>
+				</div>
 			</aside>
 			<main style={{ flex: 1, overflow: "auto" }}>
 				<div style={{ maxWidth: 1100, margin: "0 auto", padding: "40px 32px" }}>
