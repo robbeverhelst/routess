@@ -8,7 +8,7 @@ on:
       - package.json
       - apps/*/package.json
       - packages/*/package.json
-      - Dockerfile.deps
+      - docker/Dockerfile.deps
       - .github/workflows/deps-base.yml
   workflow_dispatch:
 
@@ -56,7 +56,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
-          file: Dockerfile.deps
+          file: docker/Dockerfile.deps
           platforms: linux/amd64
           push: true
           tags: |
