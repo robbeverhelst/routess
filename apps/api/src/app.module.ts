@@ -1,6 +1,7 @@
 import { MikroOrmModule } from "@mikro-orm/nestjs";
 import { type MiddlewareConsumer, Module, type NestModule } from "@nestjs/common";
 import { APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
+import { EventEmitterModule } from "@nestjs/event-emitter";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { LoggerModule } from "nestjs-pino";
 import { AppController } from "./app.controller";
@@ -20,6 +21,7 @@ import { UsersModule } from "./users/users.module";
 @Module({
 	imports: [
 		ConfigModule,
+		EventEmitterModule.forRoot(),
 		MikroOrmModule.forRoot(config),
 		LoggerModule.forRootAsync({
 			imports: [ConfigModule],

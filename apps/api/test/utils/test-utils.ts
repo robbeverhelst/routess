@@ -1,13 +1,17 @@
 import { MikroORM, RequestContext } from "@mikro-orm/core";
 import type { INestApplication } from "@nestjs/common";
-import { Test, type TestingModule } from "@nestjs/testing";
+import { Test, type TestingModule, type TestingModuleBuilder } from "@nestjs/testing";
 import { configureApplication } from "../../src/app/app-setup";
 import { SessionService } from "../../src/auth/session.service";
 import { getAppConfig, loadEnvironment } from "../../src/config/app-config";
 import { User } from "../../src/entities/user.entity";
 import { initializeOpenTelemetry } from "../../src/telemetry/tracing";
 
-export async function createTestApp(): Promise<INestApplication> {
+type TestAppOptions = {
+	configure?: (builder: TestingModuleBuilder) => TestingModuleBuilder;
+};
+
+export async function createTestApp(options: TestAppOptions = {}): Promise<INestApplication> {
 	process.env.NODE_ENV = "test";
 	process.env.DB_NAME = "routess_db_test"; // Use test database
 	process.env.GOOGLE_CLIENT_ID = "test-google-client-id"; // Mock Google Client ID
@@ -19,9 +23,11 @@ export async function createTestApp(): Promise<INestApplication> {
 	initializeOpenTelemetry(getAppConfig());
 	const { AppModule } = await import("../../src/app.module");
 
-	const moduleFixture: TestingModule = await Test.createTestingModule({
+	const builder = Test.createTestingModule({
 		imports: [AppModule],
-	}).compile();
+	});
+	const configuredBuilder = options.configure ? options.configure(builder) : builder;
+	const moduleFixture: TestingModule = await configuredBuilder.compile();
 
 	const app = moduleFixture.createNestApplication();
 	configureApplication(app, getAppConfig());

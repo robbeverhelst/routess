@@ -1,5 +1,8 @@
-import { OptionalProps, Property } from "@mikro-orm/core";
+import { Filter, OptionalProps, Property } from "@mikro-orm/core";
 
+export const SOFT_DELETE_FILTER = "softDelete";
+
+@Filter({ name: SOFT_DELETE_FILTER, cond: { deletedAt: null }, default: true })
 export abstract class BaseEntity {
 	[OptionalProps]?: "createdAt" | "updatedAt" | "deletedAt";
 

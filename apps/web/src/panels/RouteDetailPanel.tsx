@@ -1,4 +1,4 @@
-import type { Coordinate } from "@routess/core";
+import type { Coordinate, RouteActivity, RoutePrivacy } from "@routess/core";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useComputedElevationProfile } from "@/features/routing/services/elevation";
 import { resolveValhallaCosting } from "@/features/routing/services/routingMode";
@@ -20,50 +20,13 @@ import { I, type IconKey } from "../components/icons";
 import { Btn, IconBtn, RDS_COLORS, SecTitle } from "../components/primitives";
 import { SurfaceBreakdownBar } from "../components/SurfaceBreakdownBar";
 
-// SaveModal serializes activity + privacy + tags into the description string,
-// e.g. "Activity: cycle; Privacy: private" or
-//      "Activity: run; Privacy: link; Tags: hilly, scenic".
-// Anything that doesn't match this shape is treated as user-written prose.
-const PARSED_DESCRIPTION_RE = /^Activity:\s*(\w+);\s*Privacy:\s*(\w+)(?:;\s*Tags:\s*(.*?))?(?:\s*\.)?$/i;
-
-interface ParsedDescription {
-	activity: string | null;
-	privacy: string | null;
-	tags: string[];
-	freeText: string | null;
-}
-
-const parseRouteDescription = (desc: string | null | undefined): ParsedDescription => {
-	const empty: ParsedDescription = { activity: null, privacy: null, tags: [], freeText: null };
-	if (!desc) return empty;
-	const trimmed = desc.trim();
-	if (!trimmed) return empty;
-	const match = trimmed.match(PARSED_DESCRIPTION_RE);
-	if (!match) return { ...empty, freeText: trimmed };
-	const tagsList = match[3]
-		? match[3]
-				.split(",")
-				.map((t) => t.trim())
-				.filter(Boolean)
-		: [];
-	return {
-		activity: match[1].toLowerCase(),
-		privacy: match[2].toLowerCase(),
-		tags: tagsList,
-		freeText: null,
-	};
-};
-
-const ACTIVITY_LABEL: Record<string, { labelKey: string; icon: IconKey }> = {
+const ACTIVITY_LABEL: Record<RouteActivity, { labelKey: string; icon: IconKey }> = {
 	cycle: { labelKey: "sport.cycle", icon: "bike" },
-	cycling: { labelKey: "sport.cycle", icon: "bike" },
 	run: { labelKey: "sport.run", icon: "run" },
-	running: { labelKey: "sport.run", icon: "run" },
 	walk: { labelKey: "sport.walk", icon: "walk" },
-	walking: { labelKey: "sport.walk", icon: "walk" },
 };
 
-const PRIVACY_LABEL: Record<string, { labelKey: string; icon: IconKey }> = {
+const PRIVACY_LABEL: Record<RoutePrivacy, { labelKey: string; icon: IconKey }> = {
 	private: { labelKey: "save.privacy.private", icon: "lock" },
 	link: { labelKey: "save.privacy.linkSub", icon: "share" },
 	public: { labelKey: "save.privacy.public", icon: "globe" },
@@ -193,10 +156,10 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 		};
 	}, [elevationGeometry, costing]);
 
-	const parsedDescription = useMemo(() => parseRouteDescription(route.description), [route.description]);
-	const activityMeta = parsedDescription.activity ? ACTIVITY_LABEL[parsedDescription.activity] : null;
-	const privacyMeta = parsedDescription.privacy ? PRIVACY_LABEL[parsedDescription.privacy] : null;
-	const hasMetaChips = Boolean(activityMeta) || Boolean(privacyMeta) || parsedDescription.tags.length > 0;
+	const activityMeta = route.activity ? ACTIVITY_LABEL[route.activity] : null;
+	const privacyMeta = route.privacy ? PRIVACY_LABEL[route.privacy] : null;
+	const tags = route.tags ?? [];
+	const hasMetaChips = Boolean(activityMeta) || Boolean(privacyMeta) || tags.length > 0;
 
 	useEffect(() => {
 		if (!moreOpen) return;
@@ -423,15 +386,15 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 					<div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 12 }}>
 						{activityMeta && <MetaChip icon={activityMeta.icon} label={t(activityMeta.labelKey)} />}
 						{privacyMeta && <MetaChip icon={privacyMeta.icon} label={t(privacyMeta.labelKey)} />}
-						{parsedDescription.tags.map((tag) => (
+						{tags.map((tag) => (
 							<TagChip key={tag} label={tag} />
 						))}
 					</div>
 				)}
 
-				{parsedDescription.freeText && (
+				{route.description && (
 					<p style={{ fontSize: 13, color: RDS_COLORS.fgMuted, margin: "12px 0 0", lineHeight: 1.5 }}>
-						{parsedDescription.freeText}
+						{route.description}
 					</p>
 				)}
 

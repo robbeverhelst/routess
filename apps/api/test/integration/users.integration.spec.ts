@@ -135,8 +135,9 @@ describe("Users Integration Tests", () => {
 				.expect(200);
 
 			orm.em.clear();
-			const deletedUser = await orm.em.findOneOrFail(User, { id: testUser.id });
-			const deletedRoute = await orm.em.findOneOrFail(Route, { id: route.id });
+			const fork = orm.em.fork();
+			const deletedUser = await fork.findOneOrFail(User, { id: testUser.id }, { filters: { softDelete: false } });
+			const deletedRoute = await fork.findOneOrFail(Route, { id: route.id }, { filters: { softDelete: false } });
 
 			expect(deletedUser.deletedAt).toBeDefined();
 			expect(deletedRoute.deletedAt).toBeDefined();

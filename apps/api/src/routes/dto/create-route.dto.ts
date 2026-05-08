@@ -1,4 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
+import { ROUTE_ACTIVITIES, ROUTE_PRIVACIES, type RouteActivity, type RoutePrivacy } from "@routess/core";
 import { Type } from "class-transformer";
 import {
 	ArrayMaxSize,
@@ -113,6 +114,39 @@ export class CreateRouteDto {
 	@IsOptional()
 	@IsString()
 	description?: string;
+
+	@ApiProperty({
+		description: "Activity associated with the route",
+		enum: ROUTE_ACTIVITIES,
+		required: false,
+	})
+	@IsOptional()
+	@IsString()
+	@IsIn(ROUTE_ACTIVITIES)
+	activity?: RouteActivity;
+
+	@ApiProperty({
+		description: "Visibility of the route",
+		enum: ROUTE_PRIVACIES,
+		required: false,
+		default: "private",
+	})
+	@IsOptional()
+	@IsString()
+	@IsIn(ROUTE_PRIVACIES)
+	privacy?: RoutePrivacy;
+
+	@ApiProperty({
+		description: "Free-form tags for the route",
+		type: [String],
+		required: false,
+		example: ["hilly", "scenic"],
+	})
+	@IsOptional()
+	@IsArray()
+	@IsString({ each: true })
+	@ArrayMaxSize(20)
+	tags?: string[];
 
 	@ApiProperty({
 		description: "Array of waypoints that define the route",

@@ -1,9 +1,9 @@
 import { Entity, Index, ManyToOne, PrimaryKey, Property, type Ref } from "@mikro-orm/core";
-import type { Waypoint } from "@routess/core";
+import type { RouteActivity, RoutePrivacy, Waypoint } from "@routess/core";
 import { BaseEntity } from "./base.entity";
 import { User } from "./user.entity";
 
-export type { Waypoint } from "@routess/core";
+export type { RouteActivity, RoutePrivacy, Waypoint } from "@routess/core";
 
 @Entity()
 @Index({ properties: ["user"] }) // Index for user-based route lookups
@@ -18,6 +18,15 @@ export class Route extends BaseEntity {
 
 	@Property({ nullable: true })
 	description?: string;
+
+	@Property({ type: "string", nullable: true })
+	activity?: RouteActivity;
+
+	@Property({ type: "string", default: "private" })
+	privacy: RoutePrivacy = "private";
+
+	@Property({ type: "json" })
+	tags: string[] = [];
 
 	@Property({ type: "json" })
 	waypoints!: Waypoint[];

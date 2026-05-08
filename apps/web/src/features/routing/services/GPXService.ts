@@ -23,10 +23,6 @@ export interface ParsedGpxWaypoint {
 	name?: string;
 }
 
-// Re-export the heuristic so callers that imported it from GPXService keep working.
-export const convertTrackToSmartWaypoints = (trackPoints: Coordinate[]): Coordinate[] =>
-	selectSmartWaypoints(trackPoints);
-
 /**
  * Generates a GPX data string from waypoints and route path.
  * Embeds the Waypoint Type in a Routess-namespaced extension so round-trips
@@ -163,7 +159,7 @@ export const parseGPXFile = async (
 			if (allTrackPoints.length === 0) {
 				return { error: "Could not extract any valid track points from the GPX file." };
 			}
-			const smartCoords = convertTrackToSmartWaypoints(allTrackPoints);
+			const smartCoords = selectSmartWaypoints(allTrackPoints);
 			const waypoints: ParsedGpxWaypoint[] = smartCoords.map((coord) => ({ coord }));
 			Logger.info(`[GPXService] Converted ${allTrackPoints.length} track points to ${waypoints.length} waypoints.`);
 			return { waypoints };

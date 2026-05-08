@@ -11,6 +11,15 @@ export interface Waypoint {
 	timestamp?: string;
 }
 
+// Route metadata enums — single source of truth shared across api and web.
+// The `*_VALUES` arrays exist for runtime validation (class-validator @IsIn,
+// SQL CHECK constraints, etc.); the literal types derive from them.
+export const ROUTE_ACTIVITIES = ["run", "cycle", "walk"] as const;
+export type RouteActivity = (typeof ROUTE_ACTIVITIES)[number];
+
+export const ROUTE_PRIVACIES = ["private", "link", "public"] as const;
+export type RoutePrivacy = (typeof ROUTE_PRIVACIES)[number];
+
 // Map style types
 export type MapStyle = "standard" | "satellite";
 

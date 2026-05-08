@@ -1,49 +1,65 @@
 import { MikroORM } from "@mikro-orm/core";
-import type { INestApplication } from "@nestjs/common";
-import { OAuth2Client } from "google-auth-library";
+import { type INestApplication, UnauthorizedException } from "@nestjs/common";
+import {
+	GOOGLE_IDENTITY_VERIFIER,
+	type GoogleIdentity,
+	type GoogleIdentityVerifier,
+} from "src/auth/google-identity-verifier";
 import { User } from "src/entities/user.entity";
 import supertest from "supertest";
 import { clearDatabase, closeTestApp, createTestApp, createTestUserWithAuth, withRequestContext } from "../utils";
 
+class FakeGoogleVerifier implements GoogleIdentityVerifier {
+	private next: GoogleIdentity | Error | null = null;
+
+	resolveNext(identity: GoogleIdentity) {
+		this.next = identity;
+	}
+
+	rejectNext(error: Error) {
+		this.next = error;
+	}
+
+	clear() {
+		this.next = null;
+	}
+
+	async verify(): Promise<GoogleIdentity> {
+		if (this.next instanceof Error) throw this.next;
+		if (!this.next) throw new UnauthorizedException("Failed to authenticate with Google");
+		return this.next;
+	}
+}
+
 describe("Auth Integration Tests", () => {
 	let app: INestApplication;
 	let orm: MikroORM;
-	let mockVerifyIdToken: jest.Mock;
+	let verifier: FakeGoogleVerifier;
 
 	beforeAll(async () => {
-		// Setup OAuth2Client mock by overriding the prototype
-		mockVerifyIdToken = jest.fn();
-
-		// Override the prototype method directly
-		OAuth2Client.prototype.verifyIdToken = mockVerifyIdToken;
-
-		app = await createTestApp();
+		verifier = new FakeGoogleVerifier();
+		app = await createTestApp({
+			configure: (builder) => builder.overrideProvider(GOOGLE_IDENTITY_VERIFIER).useValue(verifier),
+		});
 		orm = app.get(MikroORM);
 	});
 
 	beforeEach(async () => {
 		await clearDatabase(app);
-		mockVerifyIdToken.mockClear();
+		verifier.clear();
 	});
 
 	afterAll(async () => {
 		await closeTestApp(app);
-		jest.restoreAllMocks();
 	});
 
 	describe("POST /auth/google", () => {
 		it("should create a new user when valid Google token is provided", async () => {
-			// Mock Google OAuth verification
-			const mockGooglePayload = {
-				sub: "google-user-123",
+			verifier.resolveNext({
+				googleId: "google-user-123",
 				email: "test@example.com",
 				name: "Test User",
 				picture: "https://example.com/picture.jpg",
-			};
-
-			// Set up the mock response
-			mockVerifyIdToken.mockResolvedValue({
-				getPayload: () => mockGooglePayload,
 			});
 
 			const response = await supertest(app.getHttpServer())
@@ -77,15 +93,11 @@ describe("Auth Integration Tests", () => {
 				existingUserId = existingUser.id;
 			});
 
-			const mockGooglePayload = {
-				sub: "google-existing-123",
+			verifier.resolveNext({
+				googleId: "google-existing-123",
 				email: "existing@example.com",
 				name: "Existing User",
 				picture: "https://example.com/existing.jpg",
-			};
-
-			mockVerifyIdToken.mockResolvedValue({
-				getPayload: () => mockGooglePayload,
 			});
 
 			const response = await supertest(app.getHttpServer())
@@ -104,10 +116,7 @@ describe("Auth Integration Tests", () => {
 		});
 
 		it("should fail with invalid Google token", async () => {
-			// Use a more controlled error approach that doesn't throw during test execution
-			mockVerifyIdToken.mockImplementation(() => {
-				return Promise.reject(new Error("Invalid token"));
-			});
+			verifier.rejectNext(new UnauthorizedException("Failed to authenticate with Google"));
 
 			const response = await supertest(app.getHttpServer())
 				.post("/api/v1/auth/google")

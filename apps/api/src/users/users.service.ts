@@ -19,7 +19,7 @@ export class UsersService {
 	) {}
 
 	async findOne(id: number): Promise<User> {
-		const user = await this.userRepository.findOne({ id, deletedAt: null });
+		const user = await this.userRepository.findOne({ id });
 		if (!user) {
 			throw new NotFoundException(`User with ID ${id} not found`);
 		}
@@ -43,20 +43,12 @@ export class UsersService {
 		return user;
 	}
 
-	async getStatistics(userId: number): Promise<{ totalRoutes: number; totalDistance: number }> {
-		const routes = await this.routeRepository.find({ user: userId, deletedAt: null });
-		return {
-			totalRoutes: routes.length,
-			totalDistance: routes.reduce((total, route) => total + (route.distance || 0), 0),
-		};
-	}
-
 	async remove(id: number): Promise<void> {
 		const user = await this.findOne(id);
 		const deletedAt = new Date();
 		user.deletedAt = deletedAt;
 
-		const routes = await this.routeRepository.find({ user: id, deletedAt: null });
+		const routes = await this.routeRepository.find({ user: id });
 		for (const route of routes) {
 			route.deletedAt = deletedAt;
 		}

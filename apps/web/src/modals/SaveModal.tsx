@@ -1,3 +1,4 @@
+import type { RoutePrivacy } from "@routess/core";
 import { useEffect, useMemo, useState } from "react";
 import { useIsAuthenticated } from "@/hooks/useAuthState";
 import { useSaveRoute } from "@/lib/api-queries";
@@ -5,7 +6,13 @@ import { emitAppEvent } from "@/lib/app-events";
 import { useT } from "@/lib/i18n";
 import { useModalsStore } from "@/stores/modalsStore";
 import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
-import { useElevationGain, useRouteDistance, useRouteDuration, useWaypoints } from "@/stores/routingStore";
+import {
+	useDistanceMeters,
+	useElevationGain,
+	useRouteDistance,
+	useRouteDuration,
+	useWaypoints,
+} from "@/stores/routingStore";
 import { useToastStore } from "@/stores/toastStore";
 import { type RedesignActivity, useUiStore } from "@/stores/uiStore";
 import { I } from "../components/icons";
@@ -18,11 +25,11 @@ const ACTIVITIES: { key: RedesignActivity; icon: React.ComponentType<{ size?: nu
 	{ key: "walk", icon: I.walk, labelKey: "sport.short.walk" },
 ];
 
-const PRIVACY_OPTS = [
+const PRIVACY_OPTS: { key: RoutePrivacy; labelKey: string; subKey: string }[] = [
 	{ key: "private", labelKey: "save.privacy.private", subKey: "save.privacy.privateSub" },
 	{ key: "link", labelKey: "save.privacy.link", subKey: "save.privacy.linkSub" },
 	{ key: "public", labelKey: "save.privacy.public", subKey: "save.privacy.publicSub" },
-] as const;
+];
 
 export function SaveModal() {
 	const t = useT();
@@ -30,6 +37,7 @@ export function SaveModal() {
 	const waypoints = useWaypoints();
 	const distance = useRouteDistance();
 	const duration = useRouteDuration();
+	const distanceMeters = useDistanceMeters();
 	const elevationGain = useElevationGain();
 	const { activityType, setActivityType } = useUiStore();
 	const selectedSports = useRedesignSettingsStore((s) => s.selectedSports);
@@ -50,19 +58,10 @@ export function SaveModal() {
 	}, [selectedSports, activityType, setActivityType]);
 
 	const [name, setName] = useState("");
-	const [privacy, setPrivacy] = useState<(typeof PRIVACY_OPTS)[number]["key"]>("private");
+	const [privacy, setPrivacy] = useState<RoutePrivacy>("private");
 	const [tags, setTags] = useState<string[]>([]);
 	const [tagDraft, setTagDraft] = useState("");
 
-	const distanceMeters = (() => {
-		const value = parseFloat(distance) || 0;
-		if (!value) return 0;
-		if (distance.includes("mi")) return Math.round(value * 1609.344);
-		if (distance.includes("ft")) return Math.round(value * 0.3048);
-		const unit = distance.split(" ")[1] || "km";
-		if (unit.startsWith("m") && !unit.startsWith("mi")) return Math.round(value);
-		return Math.round(value * 1000);
-	})();
 	const wpCount = waypoints.length;
 
 	if (!isAuthenticated) {
@@ -74,11 +73,11 @@ export function SaveModal() {
 		saveRoute.mutate(
 			{
 				name: name.trim(),
-				description: tags.length
-					? `Activity: ${activityType}; Privacy: ${privacy}; Tags: ${tags.join(", ")}`
-					: `Activity: ${activityType}; Privacy: ${privacy}`,
+				activity: activityType,
+				privacy,
+				tags,
 				waypoints,
-				distance: distanceMeters,
+				distance: distanceMeters ?? 0,
 				elevationGain: elevationGain != null ? Math.round(elevationGain) : 0,
 			},
 			{

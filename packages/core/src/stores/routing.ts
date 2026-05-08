@@ -18,12 +18,19 @@ export interface ElevationProfilePoint {
 	elevationMeters: number;
 }
 
+export interface RouteMetrics {
+	distanceMeters: number | null;
+	durationSeconds: number | null;
+	isOffline: boolean;
+}
+
 export interface RouteState {
 	waypoints: Waypoint[];
 	routePath: Coordinate[];
 
-	routeDistance: string;
-	routeDuration: string;
+	distanceMeters: number | null;
+	durationSeconds: number | null;
+	isOfflineRoute: boolean;
 	hasRoute: boolean;
 
 	elevationGain?: number;
@@ -50,8 +57,8 @@ export interface RouteActions {
 	setRoutePath: (routePath: Coordinate[]) => void;
 	clearRoutePath: () => void;
 
-	setRouteDistance: (distance: string) => void;
-	setRouteDuration: (duration: string) => void;
+	setRouteMetrics: (metrics: RouteMetrics) => void;
+	clearRouteMetrics: () => void;
 	setHasRoute: (hasRoute: boolean) => void;
 
 	setElevation: (data: { gainMeters: number; lossMeters: number; profile: ElevationProfilePoint[] }) => void;
@@ -73,8 +80,9 @@ export type RoutingStore = RouteState & RouteActions;
 const initialState: RouteState = {
 	waypoints: [],
 	routePath: [],
-	routeDistance: "",
-	routeDuration: "",
+	distanceMeters: null,
+	durationSeconds: null,
+	isOfflineRoute: false,
 	hasRoute: false,
 	elevationGain: undefined,
 	elevationLoss: undefined,
@@ -91,6 +99,9 @@ const initialState: RouteState = {
 // v0 stored waypoints as Coordinate[] alongside a parallel directFlags: boolean[].
 // v1 collapses both into Waypoint[] = { coord, type }[]. Pre-existing undo/redo
 // stacks are dropped on migration; history is no longer persisted.
+// v2 replaces the formatted-string routeDistance/routeDuration with canonical
+// distanceMeters / durationSeconds + isOfflineRoute. The cached display strings
+// are dropped on migration; the next route calculation repopulates them.
 type LegacyPersistedRoute = {
 	waypoints?: Coordinate[];
 	directFlags?: boolean[];
@@ -108,15 +119,29 @@ const migrateLegacyPersistedState = (persisted: LegacyPersistedRoute): Partial<R
 	};
 };
 
+const dropLegacyMetricStrings = (persisted: Record<string, unknown> & Partial<RouteState>): Partial<RouteState> => {
+	const { routeDistance: _rd, routeDuration: _rdur, ...rest } = persisted as Record<string, unknown>;
+	return rest as Partial<RouteState>;
+};
+
 // ===== STORE FACTORY =====
 
 export function createRoutingStore(logger: Logger) {
 	const persistConfig: PersistOptions<RoutingStore, Partial<RouteState>> = {
 		name: "routing-store",
-		version: 1,
+		version: 2,
 		migrate: (persisted, version) => {
-			if (version >= 1) return persisted as Partial<RouteState>;
-			return migrateLegacyPersistedState((persisted ?? {}) as LegacyPersistedRoute);
+			let next = (persisted ?? {}) as Record<string, unknown>;
+			if (version < 1) {
+				next = migrateLegacyPersistedState(next as LegacyPersistedRoute) as Record<string, unknown>;
+			}
+			if (version < 2) {
+				next = dropLegacyMetricStrings(next as Record<string, unknown> & Partial<RouteState>) as Record<
+					string,
+					unknown
+				>;
+			}
+			return next as Partial<RouteState>;
 		},
 		// History (undo/redo stacks) is persisted so undo still works after a
 		// page refresh — users expect that. Bounded growth is enforced by the
@@ -125,8 +150,9 @@ export function createRoutingStore(logger: Logger) {
 		partialize: (state) => ({
 			waypoints: state.waypoints,
 			routePath: state.routePath,
-			routeDistance: state.routeDistance,
-			routeDuration: state.routeDuration,
+			distanceMeters: state.distanceMeters,
+			durationSeconds: state.durationSeconds,
+			isOfflineRoute: state.isOfflineRoute,
 			hasRoute: state.hasRoute,
 			elevationGain: state.elevationGain,
 			elevationLoss: state.elevationLoss,
@@ -186,8 +212,9 @@ export function createRoutingStore(logger: Logger) {
 					set({
 						waypoints: [],
 						routePath: [],
-						routeDistance: "",
-						routeDuration: "",
+						distanceMeters: null,
+						durationSeconds: null,
+						isOfflineRoute: false,
 						hasRoute: false,
 						elevationGain: undefined,
 						elevationLoss: undefined,
@@ -206,12 +233,12 @@ export function createRoutingStore(logger: Logger) {
 				},
 
 				// === ROUTE INFO ===
-				setRouteDistance: (distance) => {
-					set({ routeDistance: distance });
+				setRouteMetrics: ({ distanceMeters, durationSeconds, isOffline }) => {
+					set({ distanceMeters, durationSeconds, isOfflineRoute: isOffline });
 				},
 
-				setRouteDuration: (duration) => {
-					set({ routeDuration: duration });
+				clearRouteMetrics: () => {
+					set({ distanceMeters: null, durationSeconds: null, isOfflineRoute: false });
 				},
 
 				setHasRoute: (hasRoute) => {

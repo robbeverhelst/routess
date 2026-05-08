@@ -1,13 +1,16 @@
-import { createRoutingStore } from "@routess/core";
+import { createRoutingStore, formatDuration } from "@routess/core";
 import { Logger } from "@/lib/logger";
+import { formatDistance, type UnitSystem } from "@/lib/units";
+import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 
 export const useRoutingStore = createRoutingStore(Logger);
 
 // State selectors
 export const useWaypoints = () => useRoutingStore((s) => s.waypoints);
 export const useRoutePath = () => useRoutingStore((s) => s.routePath);
-export const useRouteDistance = () => useRoutingStore((s) => s.routeDistance);
-export const useRouteDuration = () => useRoutingStore((s) => s.routeDuration);
+export const useDistanceMeters = () => useRoutingStore((s) => s.distanceMeters);
+export const useDurationSeconds = () => useRoutingStore((s) => s.durationSeconds);
+export const useIsOfflineRoute = () => useRoutingStore((s) => s.isOfflineRoute);
 export const useHasRoute = () => useRoutingStore((s) => s.hasRoute);
 export const useElevationGain = () => useRoutingStore((s) => s.elevationGain);
 export const useElevationLoss = () => useRoutingStore((s) => s.elevationLoss);
@@ -16,6 +19,25 @@ export const useIsComputingElevation = () => useRoutingStore((s) => s.isComputin
 export const useIsMapLocked = () => useRoutingStore((s) => s.isMapLocked);
 export const useCanUndo = () => useRoutingStore((s) => s.canUndo);
 export const useCanRedo = () => useRoutingStore((s) => s.canRedo);
+
+// Display-formatted selectors derived from canonical numeric state. Consumers
+// that need raw numbers use useDistanceMeters/useDurationSeconds instead.
+export const useRouteDistance = (): string => {
+	const meters = useDistanceMeters();
+	const isOffline = useIsOfflineRoute();
+	const units = useRedesignSettingsStore((s) => s.units) as UnitSystem;
+	if (meters == null) return "";
+	const formatted = formatDistance(meters / 1000, units);
+	return isOffline ? `${formatted} (offline)` : formatted;
+};
+
+export const useRouteDuration = (): string => {
+	const seconds = useDurationSeconds();
+	const isOffline = useIsOfflineRoute();
+	if (seconds == null) return "";
+	const formatted = formatDuration(seconds / 60);
+	return isOffline ? `${formatted} (estimated)` : formatted;
+};
 
 // Action selectors (Zustand action references are stable across renders)
 export const useAddWaypoint = () => useRoutingStore((s) => s.addWaypoint);
@@ -27,8 +49,8 @@ export const useUpdateWaypointCoords = () => useRoutingStore((s) => s.updateWayp
 export const useClearWaypoints = () => useRoutingStore((s) => s.clearWaypoints);
 export const useSetRoutePath = () => useRoutingStore((s) => s.setRoutePath);
 export const useClearRoutePath = () => useRoutingStore((s) => s.clearRoutePath);
-export const useSetRouteDistance = () => useRoutingStore((s) => s.setRouteDistance);
-export const useSetRouteDuration = () => useRoutingStore((s) => s.setRouteDuration);
+export const useSetRouteMetrics = () => useRoutingStore((s) => s.setRouteMetrics);
+export const useClearRouteMetrics = () => useRoutingStore((s) => s.clearRouteMetrics);
 export const useSetHasRoute = () => useRoutingStore((s) => s.setHasRoute);
 export const useSetIsMapLocked = () => useRoutingStore((s) => s.setIsMapLocked);
 export const useSaveSnapshot = () => useRoutingStore((s) => s.saveSnapshot);
@@ -36,4 +58,4 @@ export const useUndo = () => useRoutingStore((s) => s.undo);
 export const useRedo = () => useRoutingStore((s) => s.redo);
 export const useClearHistory = () => useRoutingStore((s) => s.clearHistory);
 
-export type { RouteActions, RouteState, RoutingStore } from "@routess/core";
+export type { RouteActions, RouteMetrics, RouteState, RoutingStore } from "@routess/core";
