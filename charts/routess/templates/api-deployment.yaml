@@ -57,6 +57,20 @@ spec:
               value: {{ .Values.api.env.swaggerEnabled | quote }}
             - name: SWAGGER_PATH
               value: {{ .Values.api.env.swaggerPath | quote }}
+            {{- with .Values.api.adminEmails }}
+            - name: ADMIN_EMAILS
+              value: {{ join "," . | quote }}
+            {{- end }}
+            {{- $grafana := dict }}
+            {{- range $k, $v := .Values.monitoring.grafanaUrls }}
+            {{- if $v }}
+            {{- $_ := set $grafana $k $v }}
+            {{- end }}
+            {{- end }}
+            {{- if $grafana }}
+            - name: GRAFANA_URLS
+              value: {{ $grafana | toJson | quote }}
+            {{- end }}
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:

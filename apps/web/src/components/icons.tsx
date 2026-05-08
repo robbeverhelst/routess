@@ -38,6 +38,7 @@ import {
 	Search,
 	Settings,
 	Share2,
+	Shield,
 	SlidersHorizontal,
 	Sun,
 	Target,
@@ -105,6 +106,7 @@ export const I = {
 	run: Footprints,
 	walk: Footprints,
 	check: Check,
+	shield: Shield,
 };
 
 export type IconKey = keyof typeof I;

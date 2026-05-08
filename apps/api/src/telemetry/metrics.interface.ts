@@ -5,11 +5,17 @@
  * instead of depending on MetricsService and (transitively) on
  * OpenTelemetry's Histogram/Counter types, which are awkward to mock.
  */
+import type { AuthLoginResult, AuthProvider, SessionRevocationReason } from "./domain-events";
+
 export interface Metrics {
 	recordHttpRequest(method: string, route: string, statusCode: number, duration: number): void;
 	recordUserRegistration(registrationType: "google" | "email"): void;
-	recordRouteCreated(userId: number): void;
-	recordRouteDeleted(userId: number): void;
+	recordUserUndeleted(): void;
+	recordRouteCreated(): void;
+	recordRouteDeleted(): void;
 	setActiveUsers(count: number): void;
 	recordDbQuery(operation: string, duration: number): void;
+	recordLoginAttempt(provider: AuthProvider, result: AuthLoginResult): void;
+	recordSessionRevoked(reason: SessionRevocationReason, count: number): void;
+	recordExternalRequest(provider: string, status: "success" | "error", duration: number): void;
 }

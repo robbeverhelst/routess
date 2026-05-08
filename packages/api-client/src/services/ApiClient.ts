@@ -1,4 +1,13 @@
 import type {
+	AdminConfigSummary,
+	AdminOverview,
+	AdminRouteDetail,
+	AdminRouteList,
+	AdminRouteStats,
+	AdminSystemHealth,
+	AdminUserDetail,
+	AdminUserList,
+	AdminUserStats,
 	ApiClientConfig,
 	ApiRoute,
 	ApiUser,
@@ -132,5 +141,70 @@ export class ApiClient {
 		await this.request<{ success: boolean; message: string }>(`/routes/${id}`, {
 			method: "DELETE",
 		});
+	}
+
+	// Admin methods (gated server-side by JwtAuthGuard + RolesGuard)
+
+	async adminGetOverview(): Promise<AdminOverview> {
+		return this.request<AdminOverview>("/admin/stats/overview");
+	}
+
+	async adminGetUserStats(): Promise<AdminUserStats> {
+		return this.request<AdminUserStats>("/admin/stats/users");
+	}
+
+	async adminGetRouteStats(): Promise<AdminRouteStats> {
+		return this.request<AdminRouteStats>("/admin/stats/routes");
+	}
+
+	async adminListUsers(params: { page?: number; pageSize?: number; search?: string } = {}): Promise<AdminUserList> {
+		const query = new URLSearchParams();
+		if (params.page) query.set("page", params.page.toString());
+		if (params.pageSize) query.set("pageSize", params.pageSize.toString());
+		if (params.search) query.set("search", params.search);
+		const qs = query.toString();
+		return this.request<AdminUserList>(`/admin/users${qs ? `?${qs}` : ""}`);
+	}
+
+	async adminGetUserDetail(userId: number): Promise<AdminUserDetail> {
+		return this.request<AdminUserDetail>(`/admin/users/${userId}`);
+	}
+
+	async adminRevokeSession(userId: number, sessionId: string): Promise<void> {
+		await this.request<void>(`/admin/users/${userId}/sessions/${encodeURIComponent(sessionId)}`, {
+			method: "DELETE",
+		});
+	}
+
+	async adminSoftDeleteUser(userId: number): Promise<void> {
+		await this.request<void>(`/admin/users/${userId}`, { method: "DELETE" });
+	}
+
+	async adminListRoutes(
+		params: { page?: number; pageSize?: number; search?: string; userId?: number } = {},
+	): Promise<AdminRouteList> {
+		const query = new URLSearchParams();
+		if (params.page) query.set("page", params.page.toString());
+		if (params.pageSize) query.set("pageSize", params.pageSize.toString());
+		if (params.search) query.set("search", params.search);
+		if (params.userId !== undefined) query.set("userId", params.userId.toString());
+		const qs = query.toString();
+		return this.request<AdminRouteList>(`/admin/routes${qs ? `?${qs}` : ""}`);
+	}
+
+	async adminGetRouteDetail(routeId: number): Promise<AdminRouteDetail> {
+		return this.request<AdminRouteDetail>(`/admin/routes/${routeId}`);
+	}
+
+	async adminSoftDeleteRoute(routeId: number): Promise<void> {
+		await this.request<void>(`/admin/routes/${routeId}`, { method: "DELETE" });
+	}
+
+	async adminGetSystemHealth(): Promise<AdminSystemHealth> {
+		return this.request<AdminSystemHealth>("/admin/system/health");
+	}
+
+	async adminGetConfigSummary(): Promise<AdminConfigSummary> {
+		return this.request<AdminConfigSummary>("/admin/system/config-summary");
 	}
 }

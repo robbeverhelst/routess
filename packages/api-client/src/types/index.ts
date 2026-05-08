@@ -29,17 +29,149 @@ export type ApiSportSpeeds = UserPreferenceSportSpeeds;
 
 export type ApiUserPreferences = UserPreferences;
 
+export type ApiUserRole = "user" | "admin";
+
 export interface ApiUser {
 	id: number;
 	email: string;
 	name: string;
 	avatar?: string;
 	isEmailVerified: boolean;
+	role: ApiUserRole;
 	preferences?: ApiUserPreferences | null;
 	statistics?: {
 		totalRoutes: number;
 		totalDistance: number;
 	};
+}
+
+// ========== Admin types (mirror apps/api/src/admin/dto) ==========
+
+export interface AdminTimeseriesPoint {
+	date: string;
+	count: number;
+}
+
+export interface AdminOverview {
+	totalUsers: number;
+	totalRoutes: number;
+	activeSessions: number;
+	signupsToday: number;
+	signupsLast30Days: AdminTimeseriesPoint[];
+	routesCreatedLast30Days: AdminTimeseriesPoint[];
+}
+
+export interface AdminUserStats {
+	totalUsers: number;
+	verifiedUsers: number;
+	deletedUsers: number;
+	activeLast7Days: number;
+	signupsLast30Days: AdminTimeseriesPoint[];
+}
+
+export interface AdminTopCreator {
+	userId: number;
+	email: string;
+	name: string;
+	routeCount: number;
+}
+
+export interface AdminRouteStats {
+	totalRoutes: number;
+	byActivity: Array<{ activity: string | null; count: number }>;
+	createdLast30Days: AdminTimeseriesPoint[];
+	topCreators: AdminTopCreator[];
+}
+
+export interface AdminUserListItem {
+	id: number;
+	email: string;
+	name: string;
+	role: ApiUserRole;
+	isEmailVerified: boolean;
+	routeCount: number;
+	createdAt: string;
+	lastActiveAt: string | null;
+}
+
+export interface AdminUserList {
+	items: AdminUserListItem[];
+	total: number;
+	page: number;
+	pageSize: number;
+}
+
+export interface AdminUserSession {
+	id: string;
+	userAgent: string | null;
+	ipAddress: string | null;
+	createdAt: string;
+	expiresAt: string;
+	lastActivity: string | null;
+}
+
+export interface AdminUserRoute {
+	id: number;
+	name: string;
+	activity: string | null;
+	createdAt: string;
+}
+
+export interface AdminUserDetail extends AdminUserListItem {
+	activeSessions: AdminUserSession[];
+	recentRoutes: AdminUserRoute[];
+}
+
+export interface AdminRouteOwner {
+	id: number;
+	email: string;
+	name: string;
+}
+
+export interface AdminRouteListItem {
+	id: number;
+	name: string;
+	activity: string | null;
+	privacy: string;
+	distance: number | null;
+	duration: number | null;
+	elevationGain: number | null;
+	owner: AdminRouteOwner;
+	createdAt: string;
+}
+
+export interface AdminRouteList {
+	items: AdminRouteListItem[];
+	total: number;
+	page: number;
+	pageSize: number;
+}
+
+export interface AdminRouteDetail extends AdminRouteListItem {
+	description: string | null;
+	tags: string[];
+	waypointCount: number;
+	hasGeometry: boolean;
+	startAddress: string | null;
+	endAddress: string | null;
+	updatedAt: string;
+	deletedAt: string | null;
+}
+
+export interface AdminSystemHealth {
+	status: "ok" | "degraded" | "down";
+	version: string;
+	nodeEnv: string;
+	uptimeSeconds: number;
+	databaseReachable: boolean;
+}
+
+export interface AdminConfigSummary {
+	telemetryEnabled: boolean;
+	metricsEnabled: boolean;
+	otlpExportConfigured: boolean;
+	adminEmailsCount: number;
+	grafanaUrls: Record<string, string>;
 }
 
 export interface AuthResponse {

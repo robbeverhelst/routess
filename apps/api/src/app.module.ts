@@ -4,6 +4,7 @@ import { APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
 import { EventEmitterModule } from "@nestjs/event-emitter";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { LoggerModule } from "nestjs-pino";
+import { AdminModule } from "./admin/admin.module";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { AuthModule } from "./auth/auth.module";
@@ -62,6 +63,7 @@ import { UsersModule } from "./users/users.module";
 		RoutesModule,
 		HealthModule,
 		TelemetryModule,
+		AdminModule,
 	],
 	controllers: [AppController],
 	providers: [

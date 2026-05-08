@@ -40,6 +40,12 @@ export class UserResponseDto {
 	})
 	isEmailVerified!: boolean;
 
+	@ApiProperty({
+		example: "user",
+		enum: ["user", "admin"],
+	})
+	role!: "user" | "admin";
+
 	@ApiPropertyOptional({
 		type: UserPreferencesDto,
 		nullable: true,

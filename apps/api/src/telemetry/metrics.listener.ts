@@ -2,12 +2,17 @@ import { EntityManager } from "@mikro-orm/core";
 import { Injectable } from "@nestjs/common";
 import { OnEvent } from "@nestjs/event-emitter";
 import {
+	AUTH_LOGIN_ATTEMPTED,
+	AUTH_SESSION_REVOKED,
+	type AuthLoginAttemptedEvent,
+	type AuthSessionRevokedEvent,
 	ROUTE_CREATED,
 	ROUTE_DELETED,
 	type RouteCreatedEvent,
 	type RouteDeletedEvent,
 	SESSION_ACTIVITY_CHANGED,
 	USER_REGISTERED,
+	USER_UNDELETED,
 	type UserRegisteredEvent,
 } from "./domain-events";
 import { MetricsService } from "./metrics.service";
@@ -20,18 +25,33 @@ export class MetricsListener {
 	) {}
 
 	@OnEvent(ROUTE_CREATED)
-	onRouteCreated(event: RouteCreatedEvent) {
-		this.metrics.recordRouteCreated(event.userId);
+	onRouteCreated(_event: RouteCreatedEvent) {
+		this.metrics.recordRouteCreated();
 	}
 
 	@OnEvent(ROUTE_DELETED)
-	onRouteDeleted(event: RouteDeletedEvent) {
-		this.metrics.recordRouteDeleted(event.userId);
+	onRouteDeleted(_event: RouteDeletedEvent) {
+		this.metrics.recordRouteDeleted();
 	}
 
 	@OnEvent(USER_REGISTERED)
 	onUserRegistered(event: UserRegisteredEvent) {
 		this.metrics.recordUserRegistration(event.source);
+	}
+
+	@OnEvent(USER_UNDELETED)
+	onUserUndeleted() {
+		this.metrics.recordUserUndeleted();
+	}
+
+	@OnEvent(AUTH_LOGIN_ATTEMPTED)
+	onAuthLoginAttempted(event: AuthLoginAttemptedEvent) {
+		this.metrics.recordLoginAttempt(event.provider, event.result);
+	}
+
+	@OnEvent(AUTH_SESSION_REVOKED)
+	onAuthSessionRevoked(event: AuthSessionRevokedEvent) {
+		this.metrics.recordSessionRevoked(event.reason, event.count);
 	}
 
 	@OnEvent(SESSION_ACTIVITY_CHANGED)

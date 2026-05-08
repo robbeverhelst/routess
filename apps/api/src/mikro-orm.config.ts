@@ -4,6 +4,7 @@ import { getAppConfig } from "./config/app-config";
 import { Route } from "./entities/route.entity";
 import { Session } from "./entities/session.entity";
 import { User } from "./entities/user.entity";
+import { MikroOrmMetricsLogger } from "./telemetry/mikro-orm-metrics.logger";
 
 const appConfig = getAppConfig();
 
@@ -23,6 +24,7 @@ const config: Options = {
 		...(appConfig.app.isProduction ? {} : { pathTs: "./src/migrations" }),
 	},
 	debug: appConfig.database.debug,
+	loggerFactory: (options) => new MikroOrmMetricsLogger(options),
 	allowGlobalContext: appConfig.app.isTest,
 	connect: process.env.OPENAPI_GENERATE !== "true",
 };

@@ -63,6 +63,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 			name: user.name,
 			avatar: user.avatar,
 			isEmailVerified: user.isEmailVerified,
+			role: user.role,
 			jti: payload.jti,
 		};
 	}

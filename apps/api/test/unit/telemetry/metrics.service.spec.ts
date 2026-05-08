@@ -177,10 +177,10 @@ describe("MetricsService", () => {
 			};
 			(service as any).routesCreated = mockRoutesCreatedCounter;
 
-			service.recordRouteCreated(123);
+			service.recordRouteCreated();
 
 			expect(callCount).toBe(1);
-			expect(callArgs[0]).toEqual([1, { user_id: "123" }]);
+			expect(callArgs[0]).toEqual([1]);
 		});
 
 		it("should record route deletion metrics", () => {
@@ -195,10 +195,10 @@ describe("MetricsService", () => {
 			};
 			(service as any).routesDeleted = mockRoutesDeletedCounter;
 
-			service.recordRouteDeleted(123);
+			service.recordRouteDeleted();
 
 			expect(callCount).toBe(1);
-			expect(callArgs[0]).toEqual([1, { user_id: "123" }]);
+			expect(callArgs[0]).toEqual([1]);
 		});
 
 		it("should update active users by delta", () => {

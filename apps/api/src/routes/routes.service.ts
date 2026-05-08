@@ -15,7 +15,7 @@ import type { CreateRouteDto } from "./dto/create-route.dto";
 import type { RouteResponseDto } from "./dto/route-response.dto";
 import type { UpdateRouteDto } from "./dto/update-route.dto";
 
-type SerializableUser = Pick<User, "id" | "email" | "name" | "avatar" | "isEmailVerified" | "preferences">;
+type SerializableUser = Pick<User, "id" | "email" | "name" | "avatar" | "isEmailVerified" | "role" | "preferences">;
 
 const toResponseDto = (route: Route): RouteResponseDto => {
 	const serializedUser = wrap(route.user).toJSON() as SerializableUser;

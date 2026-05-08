@@ -1,3 +1,5 @@
+import { Link } from "@tanstack/react-router";
+import { useAuthStatus } from "@/lib/api-queries";
 import { useT } from "@/lib/i18n";
 import { useModalsStore } from "@/stores/modalsStore";
 import { type RedesignContext, useUiStore } from "@/stores/uiStore";
@@ -19,6 +21,8 @@ export function RailNav() {
 	const openOverlay = useModalsStore((s) => s.openOverlay);
 	const overlay = useModalsStore((s) => s.overlay);
 	const closeOverlay = useModalsStore((s) => s.closeOverlay);
+	const { data: auth } = useAuthStatus();
+	const isAdmin = auth?.user?.role === "admin";
 
 	return (
 		<div
@@ -105,6 +109,39 @@ export function RailNav() {
 				);
 			})}
 			<div style={{ flex: 1 }} />
+			{isAdmin && (
+				<Link
+					to="/admin"
+					title="Admin"
+					style={{
+						display: "inline-flex",
+						alignItems: "center",
+						justifyContent: "center",
+						width: 32,
+						height: 32,
+						borderRadius: "var(--rds-radius-sm)",
+						color: RDS_COLORS.fgMuted,
+						textDecoration: "none",
+						transition: "background 120ms, color 120ms",
+					}}
+					activeProps={{
+						style: {
+							background: RDS_COLORS.accentSoft,
+							color: RDS_COLORS.accent,
+						},
+					}}
+					onMouseEnter={(e) => {
+						e.currentTarget.style.background = RDS_COLORS.bgHover;
+						e.currentTarget.style.color = RDS_COLORS.fg;
+					}}
+					onMouseLeave={(e) => {
+						e.currentTarget.style.background = "transparent";
+						e.currentTarget.style.color = RDS_COLORS.fgMuted;
+					}}
+				>
+					<I.shield size={18} />
+				</Link>
+			)}
 			<IconBtn
 				title={t("rail.notifications")}
 				pressed={overlay === "notifications"}

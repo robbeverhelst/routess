@@ -76,8 +76,12 @@ The collection of Routes a User has saved. Surfaced in the UI as "My Routes."
 ## Identity
 
 **User**:
-An authenticated person who owns Routes. Authentication is via Google OAuth.
+An authenticated person who owns Routes. Authentication is via Google OAuth. Carries a `role` of either `user` or `admin`.
 _Avoid_: account, profile (no separate Profile entity exists in the domain).
+
+**Admin**:
+A User with `role = 'admin'`, authorised to view aggregate user/route data and perform destructive actions (revoke session, soft-delete user) via the admin API. Admin status is reconciled from the `ADMIN_EMAILS` env var on every login; the env var is the source of truth, the DB column is a cache.
+_Avoid_: superuser, staff, operator, root.
 
 ## Relationships
 
@@ -88,6 +92,7 @@ _Avoid_: account, profile (no separate Profile entity exists in the domain).
 - A **RouteGeneration** produces a **Route** from **RouteType** + **SurfaceType** + **LoopDirection** + target distance, without manual Waypoint placement.
 - A **User** owns zero or more **Routes**, accessed through their **RouteLibrary**.
 - A **RouteDraft** is an unsaved, in-progress **Route** held in `routingStore`.
+- An **Admin** is a **User** with elevated access; admin status is derived from the `ADMIN_EMAILS` env var at login time, not granted in-app.
 
 ## Example dialogue
 
@@ -108,3 +113,4 @@ _Avoid_: account, profile (no separate Profile entity exists in the domain).
 - **"Loop"** is a **RouteType** value, not a synonym for "cycle" or "ride". A Route's RouteType is either `a-to-b` or `loop`.
 - **"Account" / "Profile"** are not Routess concepts. The domain only has **User**.
 - **"Surface"** is overloaded: **SurfaceType** is a routing *preference* (3 values, an input), **SurfaceBucket** is a per-segment *classification* (4 values, an observation on the resulting RoutePath). Don't conflate them; in conversation, name the specific term.
+- **"Metric"** is overloaded across three distinct uses. The **Metrics** section above defines _route metrics_, properties of a Route (Distance, Duration, ElevationGain). Separately the API exposes _operational metrics_ (HTTP request rate, route-generation latency, event loop lag) via Prometheus at `/metrics`. The admin API surfaces _business analytics_ (signup counts, top creators, retention) computed from Postgres queries. Route metrics are properties of a domain entity; operational metrics are time-series ops data scraped by Prometheus and visualised in Grafana; business analytics are aggregate product KPIs rendered in the admin UI. In ambiguous conversations, qualify: **route metric**, **operational metric**, or **business analytic**.

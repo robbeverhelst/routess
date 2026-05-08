@@ -64,7 +64,7 @@ describe("Observability Features Integration", () => {
 		it("should include custom business metrics", async () => {
 			// Generate some metrics
 			metricsService.recordUserRegistration("google");
-			metricsService.recordRouteCreated(1);
+			metricsService.recordRouteCreated();
 
 			// Wait a bit for metrics to be processed
 			await new Promise((resolve) => setTimeout(resolve, 100));

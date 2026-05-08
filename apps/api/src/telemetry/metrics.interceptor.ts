@@ -1,4 +1,10 @@
-import { type CallHandler, type ExecutionContext, Injectable, type NestInterceptor } from "@nestjs/common";
+import {
+	type CallHandler,
+	type ExecutionContext,
+	type HttpException,
+	Injectable,
+	type NestInterceptor,
+} from "@nestjs/common";
 import type { Request, Response } from "express";
 import type { Observable } from "rxjs";
 import { tap } from "rxjs/operators";
@@ -14,14 +20,21 @@ export class MetricsInterceptor implements NestInterceptor {
 		const request = ctx.getRequest<Request>();
 		const response = ctx.getResponse<Response>();
 
-		return next.handle().pipe(
-			tap(() => {
-				const duration = Date.now() - startTime;
-				const route = request.route?.path || request.path;
-				const method = request.method;
-				const statusCode = response.statusCode;
+		const record = (statusCode: number) => {
+			const duration = Date.now() - startTime;
+			const route = request.route?.path || request.path;
+			this.metricsService.recordHttpRequest(request.method, route, statusCode, duration);
+		};
 
-				this.metricsService.recordHttpRequest(method, route, statusCode, duration);
+		return next.handle().pipe(
+			tap({
+				next: () => record(response.statusCode),
+				error: (err) => {
+					// Status code lives on HttpException; fall back to whatever the response holds (or 500).
+					const fromException = (err as HttpException)?.getStatus?.();
+					const status = typeof fromException === "number" ? fromException : response.statusCode || 500;
+					record(status);
+				},
 			}),
 		);
 	}
