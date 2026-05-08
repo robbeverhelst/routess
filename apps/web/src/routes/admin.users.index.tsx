@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { I } from "@/components/icons";
 import { Badge, Btn, RDS_COLORS } from "@/components/primitives";
@@ -11,6 +11,7 @@ export const Route = createFileRoute("/admin/users/")({
 });
 
 function AdminUsersPage() {
+	const navigate = useNavigate();
 	const [page, setPage] = useState(1);
 	const [search, setSearch] = useState("");
 	const [searchInput, setSearchInput] = useState("");
@@ -126,7 +127,9 @@ function AdminUsersPage() {
 									key={user.id}
 									style={{
 										borderTop: idx === 0 ? "none" : `1px solid ${RDS_COLORS.border}`,
+										cursor: "pointer",
 									}}
+									onClick={() => navigate({ to: "/admin/users/$userId", params: { userId: user.id.toString() } })}
 									onMouseEnter={(e) => {
 										e.currentTarget.style.background = RDS_COLORS.bgHover;
 									}}
@@ -135,17 +138,7 @@ function AdminUsersPage() {
 									}}
 								>
 									<Cell>
-										<Link
-											to="/admin/users/$userId"
-											params={{ userId: user.id.toString() }}
-											style={{
-												color: RDS_COLORS.fg,
-												textDecoration: "none",
-												fontWeight: 500,
-											}}
-										>
-											{user.email}
-										</Link>
+										<span style={{ color: RDS_COLORS.fg, fontWeight: 500 }}>{user.email}</span>
 									</Cell>
 									<Cell muted>{user.name}</Cell>
 									<Cell>

@@ -234,7 +234,14 @@ function AdminUserDetailPage() {
 									key={r.id}
 									style={{
 										borderTop: idx === 0 ? "none" : `1px solid ${RDS_COLORS.border}`,
+										cursor: "pointer",
 									}}
+									onClick={() =>
+										navigate({
+											to: "/admin/routes/$routeId",
+											params: { routeId: r.id.toString() },
+										})
+									}
 									onMouseEnter={(e) => {
 										e.currentTarget.style.background = RDS_COLORS.bgHover;
 									}}
@@ -243,13 +250,7 @@ function AdminUserDetailPage() {
 									}}
 								>
 									<Td>
-										<Link
-											to="/admin/routes/$routeId"
-											params={{ routeId: r.id.toString() }}
-											style={{ color: RDS_COLORS.fg, textDecoration: "none", fontWeight: 500 }}
-										>
-											{r.name}
-										</Link>
+										<span style={{ color: RDS_COLORS.fg, fontWeight: 500 }}>{r.name}</span>
 									</Td>
 									<Td muted>{r.activity ?? "—"}</Td>
 									<Td muted>{formatDate(r.createdAt)}</Td>

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { I } from "@/components/icons";
 import { Badge, Btn, RDS_COLORS, SecTitle } from "@/components/primitives";
@@ -12,6 +12,7 @@ export const Route = createFileRoute("/admin/routes/")({
 });
 
 function AdminRoutesPage() {
+	const navigate = useNavigate();
 	const [routesPage, setRoutesPage] = useState(1);
 	const [searchInput, setSearchInput] = useState("");
 	const [search, setSearch] = useState("");
@@ -217,7 +218,16 @@ function AdminRoutesPage() {
 							{list?.items.map((route, idx) => (
 								<tr
 									key={route.id}
-									style={{ borderTop: idx === 0 ? "none" : `1px solid ${RDS_COLORS.border}` }}
+									style={{
+										borderTop: idx === 0 ? "none" : `1px solid ${RDS_COLORS.border}`,
+										cursor: "pointer",
+									}}
+									onClick={() =>
+										navigate({
+											to: "/admin/routes/$routeId",
+											params: { routeId: route.id.toString() },
+										})
+									}
 									onMouseEnter={(e) => {
 										e.currentTarget.style.background = RDS_COLORS.bgHover;
 									}}
@@ -226,13 +236,7 @@ function AdminRoutesPage() {
 									}}
 								>
 									<Td>
-										<Link
-											to="/admin/routes/$routeId"
-											params={{ routeId: route.id.toString() }}
-											style={{ color: RDS_COLORS.fg, textDecoration: "none", fontWeight: 500 }}
-										>
-											{route.name}
-										</Link>
+										<span style={{ color: RDS_COLORS.fg, fontWeight: 500 }}>{route.name}</span>
 									</Td>
 									<Td muted>{route.activity ?? "—"}</Td>
 									<Td>
@@ -245,6 +249,7 @@ function AdminRoutesPage() {
 										<Link
 											to="/admin/users/$userId"
 											params={{ userId: route.owner.id.toString() }}
+											onClick={(e) => e.stopPropagation()}
 											style={{ color: RDS_COLORS.fgMuted, textDecoration: "none" }}
 										>
 											{route.owner.email}
@@ -323,7 +328,14 @@ function AdminRoutesPage() {
 									key={creator.userId}
 									style={{
 										borderTop: idx === 0 ? "none" : `1px solid ${RDS_COLORS.border}`,
+										cursor: "pointer",
 									}}
+									onClick={() =>
+										navigate({
+											to: "/admin/users/$userId",
+											params: { userId: creator.userId.toString() },
+										})
+									}
 									onMouseEnter={(e) => {
 										e.currentTarget.style.background = RDS_COLORS.bgHover;
 									}}
@@ -332,13 +344,7 @@ function AdminRoutesPage() {
 									}}
 								>
 									<Td>
-										<Link
-											to="/admin/users/$userId"
-											params={{ userId: creator.userId.toString() }}
-											style={{ color: RDS_COLORS.fg, textDecoration: "none", fontWeight: 500 }}
-										>
-											{creator.email}
-										</Link>
+										<span style={{ color: RDS_COLORS.fg, fontWeight: 500 }}>{creator.email}</span>
 									</Td>
 									<Td muted>{creator.name}</Td>
 									<Td muted align="right">
