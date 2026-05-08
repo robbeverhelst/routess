@@ -101,10 +101,9 @@ export class AdminService {
 		}
 		const whereSql = whereClauses.join(" and ");
 
-		const totalRows = (await this.em.getConnection().execute(
-			`select count(*)::int as count from "user" u where ${whereSql}`,
-			args,
-		)) as RawCount[];
+		const totalRows = (await this.em
+			.getConnection()
+			.execute(`select count(*)::int as count from "user" u where ${whereSql}`, args)) as RawCount[];
 		const total = Number(totalRows[0]?.count ?? 0);
 
 		const offset = (page - 1) * pageSize;
@@ -234,9 +233,11 @@ export class AdminService {
 	}
 
 	private async countSignupsToday(): Promise<number> {
-		const rows = (await this.em.getConnection().execute(
-			`select count(*)::int as count from "user" where "created_at" >= date_trunc('day', now())`,
-		)) as RawCount[];
+		const rows = (await this.em
+			.getConnection()
+			.execute(
+				`select count(*)::int as count from "user" where "created_at" >= date_trunc('day', now())`,
+			)) as RawCount[];
 		return Number(rows[0]?.count ?? 0);
 	}
 

@@ -1,6 +1,6 @@
 import { type CallHandler, type ExecutionContext, Injectable, type NestInterceptor } from "@nestjs/common";
-import { PinoLogger } from "nestjs-pino";
 import type { Request } from "express";
+import { PinoLogger } from "nestjs-pino";
 import type { Observable } from "rxjs";
 import { tap } from "rxjs/operators";
 import type { AuthenticatedUser } from "../auth/authenticated-user";
@@ -39,9 +39,7 @@ export class AuditInterceptor implements NestInterceptor {
 		path: string,
 		error?: unknown,
 	) {
-		const actor = request.user
-			? { id: request.user.id, email: request.user.email, role: request.user.role }
-			: null;
+		const actor = request.user ? { id: request.user.id, email: request.user.email, role: request.user.role } : null;
 		this.logger.info(
 			{
 				audit: true,

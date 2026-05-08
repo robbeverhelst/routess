@@ -16,11 +16,7 @@ import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
 import { AdminService } from "./admin.service";
 import { AuditInterceptor } from "./audit.interceptor";
-import {
-	AdminOverviewDto,
-	AdminRouteStatsDto,
-	AdminUserStatsDto,
-} from "./dto/admin-stats.dto";
+import { AdminOverviewDto, AdminRouteStatsDto, AdminUserStatsDto } from "./dto/admin-stats.dto";
 import { AdminConfigSummaryDto, AdminSystemHealthDto } from "./dto/admin-system.dto";
 import { AdminUserDetailDto, AdminUserListDto } from "./dto/admin-user.dto";
 
@@ -74,10 +70,7 @@ export class AdminController {
 	@Delete("users/:id/sessions/:sessionId")
 	@HttpCode(HttpStatus.NO_CONTENT)
 	@ApiOperation({ summary: "Revoke a single session for a user" })
-	revokeSession(
-		@Param("id", ParseIntPipe) userId: number,
-		@Param("sessionId") sessionId: string,
-	): Promise<void> {
+	revokeSession(@Param("id", ParseIntPipe) userId: number, @Param("sessionId") sessionId: string): Promise<void> {
 		return this.admin.revokeSession(userId, sessionId);
 	}
 

@@ -16,7 +16,7 @@ import {
 } from "../telemetry/domain-events";
 import { toUserResponseDto } from "../users/user.mapper";
 import type { AuthResponseDto, GoogleAuthDto } from "./dto";
-import { GOOGLE_IDENTITY_VERIFIER, type GoogleIdentityVerifier } from "./google-identity-verifier";
+import { GOOGLE_IDENTITY_VERIFIER, type GoogleIdentity, type GoogleIdentityVerifier } from "./google-identity-verifier";
 import { SessionService } from "./session.service";
 
 @Injectable()
@@ -40,7 +40,7 @@ export class AuthService {
 			ipAddress?: string;
 		},
 	): Promise<AuthResponseDto> {
-		let identity;
+		let identity: GoogleIdentity;
 		try {
 			identity = await this.googleIdentityVerifier.verify(googleAuthDto.credential);
 		} catch (error) {
@@ -135,9 +135,7 @@ export class AuthService {
 	}
 
 	private async undeleteUser(userId: number): Promise<void> {
-		await this.entityManager
-			.getConnection()
-			.execute(`update "user" set "deleted_at" = null where "id" = ?`, [userId]);
+		await this.entityManager.getConnection().execute(`update "user" set "deleted_at" = null where "id" = ?`, [userId]);
 		await this.entityManager
 			.getConnection()
 			.execute(`update "route" set "deleted_at" = null where "user_id" = ?`, [userId]);

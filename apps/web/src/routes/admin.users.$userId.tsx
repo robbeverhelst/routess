@@ -63,7 +63,11 @@ function AdminUserDetailPage() {
 				<button
 					type="button"
 					onClick={() => {
-						if (confirm(`Soft-delete ${data.email}? Their routes and sessions will be hidden. They can recover by logging in again.`)) {
+						if (
+							confirm(
+								`Soft-delete ${data.email}? Their routes and sessions will be hidden. They can recover by logging in again.`,
+							)
+						) {
 							softDelete.mutate();
 						}
 					}}
@@ -114,9 +118,7 @@ function AdminUserDetailPage() {
 							)}
 							{data.activeSessions.map((s) => (
 								<tr key={s.id} className="border-t border-neutral-100">
-									<td className="max-w-xs truncate px-4 py-2 text-neutral-700">
-										{s.userAgent ?? "—"}
-									</td>
+									<td className="max-w-xs truncate px-4 py-2 text-neutral-700">{s.userAgent ?? "—"}</td>
 									<td className="px-4 py-2 text-neutral-500">{s.ipAddress ?? "—"}</td>
 									<td className="px-4 py-2 text-neutral-500">
 										{s.lastActivity ? formatRelative(s.lastActivity) : "—"}

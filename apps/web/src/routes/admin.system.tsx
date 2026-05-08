@@ -57,19 +57,14 @@ function AdminSystemPage() {
 				<div className="rounded-lg border border-neutral-200 bg-white p-4">
 					{grafanaEntries.length === 0 ? (
 						<p className="text-sm text-neutral-600">
-							Set <code className="rounded bg-neutral-100 px-1">monitoring.grafanaUrls.*</code> in your Helm values
-							to surface Grafana dashboards here.
+							Set <code className="rounded bg-neutral-100 px-1">monitoring.grafanaUrls.*</code> in your Helm values to
+							surface Grafana dashboards here.
 						</p>
 					) : (
 						<ul className="flex flex-col gap-2 text-sm">
 							{grafanaEntries.map(([key, url]) => (
 								<li key={key}>
-									<a
-										href={url}
-										target="_blank"
-										rel="noreferrer"
-										className="text-blue-700 hover:underline"
-									>
+									<a href={url} target="_blank" rel="noreferrer" className="text-blue-700 hover:underline">
 										{prettify(key)} ↗
 									</a>
 								</li>
@@ -82,8 +77,8 @@ function AdminSystemPage() {
 			<section>
 				<h2 className="mb-3 text-sm font-medium uppercase tracking-wide text-neutral-500">Errors</h2>
 				<div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-					Browser + API error reporting is not yet wired. Tracked as a follow-up issue. For now, errors live in the
-					API logs (Pino) and the app console (frontend Logger).
+					Browser + API error reporting is not yet wired. Tracked as a follow-up issue. For now, errors live in the API
+					logs (Pino) and the app console (frontend Logger).
 				</div>
 			</section>
 		</div>
