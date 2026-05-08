@@ -1,6 +1,8 @@
 import type {
 	AdminConfigSummary,
 	AdminOverview,
+	AdminRouteDetail,
+	AdminRouteList,
 	AdminRouteStats,
 	AdminSystemHealth,
 	AdminUserDetail,
@@ -176,6 +178,26 @@ export class ApiClient {
 
 	async adminSoftDeleteUser(userId: number): Promise<void> {
 		await this.request<void>(`/admin/users/${userId}`, { method: "DELETE" });
+	}
+
+	async adminListRoutes(
+		params: { page?: number; pageSize?: number; search?: string; userId?: number } = {},
+	): Promise<AdminRouteList> {
+		const query = new URLSearchParams();
+		if (params.page) query.set("page", params.page.toString());
+		if (params.pageSize) query.set("pageSize", params.pageSize.toString());
+		if (params.search) query.set("search", params.search);
+		if (params.userId !== undefined) query.set("userId", params.userId.toString());
+		const qs = query.toString();
+		return this.request<AdminRouteList>(`/admin/routes${qs ? `?${qs}` : ""}`);
+	}
+
+	async adminGetRouteDetail(routeId: number): Promise<AdminRouteDetail> {
+		return this.request<AdminRouteDetail>(`/admin/routes/${routeId}`);
+	}
+
+	async adminSoftDeleteRoute(routeId: number): Promise<void> {
+		await this.request<void>(`/admin/routes/${routeId}`, { method: "DELETE" });
 	}
 
 	async adminGetSystemHealth(): Promise<AdminSystemHealth> {

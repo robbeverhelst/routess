@@ -122,6 +122,42 @@ export interface AdminUserDetail extends AdminUserListItem {
 	recentRoutes: AdminUserRoute[];
 }
 
+export interface AdminRouteOwner {
+	id: number;
+	email: string;
+	name: string;
+}
+
+export interface AdminRouteListItem {
+	id: number;
+	name: string;
+	activity: string | null;
+	privacy: string;
+	distance: number | null;
+	duration: number | null;
+	elevationGain: number | null;
+	owner: AdminRouteOwner;
+	createdAt: string;
+}
+
+export interface AdminRouteList {
+	items: AdminRouteListItem[];
+	total: number;
+	page: number;
+	pageSize: number;
+}
+
+export interface AdminRouteDetail extends AdminRouteListItem {
+	description: string | null;
+	tags: string[];
+	waypointCount: number;
+	hasGeometry: boolean;
+	startAddress: string | null;
+	endAddress: string | null;
+	updatedAt: string;
+	deletedAt: string | null;
+}
+
 export interface AdminSystemHealth {
 	status: "ok" | "degraded" | "down";
 	version: string;

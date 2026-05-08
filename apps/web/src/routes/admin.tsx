@@ -1,4 +1,5 @@
 import { createFileRoute, Link, Outlet, redirect } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { I } from "@/components/icons";
 import { IconBtn, RDS_COLORS, SecTitle } from "@/components/primitives";
 import { getStoredUser } from "@/lib/auth-state";
@@ -26,6 +27,10 @@ const NAV: { to: string; label: string; icon: keyof typeof I; exact?: boolean }[
 
 function AdminLayout() {
 	const { theme, accent, toggleTheme } = useUiStore();
+
+	useEffect(() => {
+		document.documentElement.classList.toggle("dark", theme === "dark");
+	}, [theme]);
 
 	return (
 		<div

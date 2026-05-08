@@ -8,6 +8,7 @@ import { Route } from "../entities/route.entity";
 import { Session } from "../entities/session.entity";
 import { User } from "../entities/user.entity";
 import { TtlCache } from "./admin-cache";
+import type { AdminRouteDetailDto, AdminRouteListDto, AdminRouteListItemDto } from "./dto/admin-route.dto";
 import type {
 	AdminOverviewDto,
 	AdminRouteStatsDto,
@@ -189,6 +190,107 @@ export class AdminService {
 		const session = await this.sessions.findOne({ jti: sessionJti, user: userId });
 		if (!session) throw new NotFoundException("Session not found");
 		await this.sessionService.invalidateSession(sessionJti, "admin_revoked");
+		this.statsCache.invalidate();
+	}
+
+	async listRoutes(params: {
+		page: number;
+		pageSize: number;
+		search?: string;
+		userId?: number;
+	}): Promise<AdminRouteListDto> {
+		const page = Math.max(1, params.page);
+		const pageSize = Math.min(100, Math.max(1, params.pageSize));
+		const search = params.search?.trim();
+
+		const whereClauses: string[] = [`r."deleted_at" is null`];
+		const args: Array<string | number> = [];
+		if (search) {
+			whereClauses.push(`r."name" ilike ?`);
+			args.push(`%${search}%`);
+		}
+		if (params.userId !== undefined) {
+			whereClauses.push(`r."user_id" = ?`);
+			args.push(params.userId);
+		}
+		const whereSql = whereClauses.join(" and ");
+
+		const totalRows = (await this.em
+			.getConnection()
+			.execute(`select count(*)::int as count from "route" r where ${whereSql}`, args)) as RawCount[];
+		const total = Number(totalRows[0]?.count ?? 0);
+
+		const offset = (page - 1) * pageSize;
+		const rows = (await this.em.getConnection().execute(
+			`select r."id", r."name", r."activity", r."privacy",
+			        r."distance", r."duration", r."elevation_gain" as "elevationGain",
+			        r."created_at" as "createdAt",
+			        u."id" as "ownerId", u."email" as "ownerEmail", u."name" as "ownerName"
+			 from "route" r
+			 join "user" u on u."id" = r."user_id"
+			 where ${whereSql}
+			 order by r."created_at" desc
+			 limit ? offset ?`,
+			[...args, pageSize, offset],
+		)) as Array<{
+			id: number;
+			name: string;
+			activity: string | null;
+			privacy: string;
+			distance: number | string | null;
+			duration: number | string | null;
+			elevationGain: number | string | null;
+			createdAt: Date | string;
+			ownerId: number;
+			ownerEmail: string;
+			ownerName: string;
+		}>;
+
+		const items: AdminRouteListItemDto[] = rows.map((row) => ({
+			id: row.id,
+			name: row.name,
+			activity: row.activity,
+			privacy: row.privacy,
+			distance: row.distance == null ? null : Number(row.distance),
+			duration: row.duration == null ? null : Number(row.duration),
+			elevationGain: row.elevationGain == null ? null : Number(row.elevationGain),
+			owner: { id: row.ownerId, email: row.ownerEmail, name: row.ownerName },
+			createdAt: new Date(row.createdAt).toISOString(),
+		}));
+
+		return { items, total, page, pageSize };
+	}
+
+	async getRouteDetail(id: number): Promise<AdminRouteDetailDto> {
+		const route = await this.routes.findOne({ id }, { populate: ["user"], filters: { softDelete: false } });
+		if (!route) throw new NotFoundException(`Route ${id} not found`);
+		const owner = route.user as unknown as User;
+		return {
+			id: route.id,
+			name: route.name,
+			activity: route.activity ?? null,
+			privacy: route.privacy,
+			distance: route.distance ?? null,
+			duration: route.duration ?? null,
+			elevationGain: route.elevationGain ?? null,
+			owner: { id: owner.id, email: owner.email, name: owner.name },
+			createdAt: route.createdAt.toISOString(),
+			description: route.description ?? null,
+			tags: route.tags ?? [],
+			waypointCount: Array.isArray(route.waypoints) ? route.waypoints.length : 0,
+			hasGeometry: Array.isArray(route.geometry) && route.geometry.length > 0,
+			startAddress: route.startAddress ?? null,
+			endAddress: route.endAddress ?? null,
+			updatedAt: route.updatedAt.toISOString(),
+			deletedAt: route.deletedAt ? route.deletedAt.toISOString() : null,
+		};
+	}
+
+	async softDeleteRoute(id: number): Promise<void> {
+		const route = await this.routes.findOne({ id });
+		if (!route) throw new NotFoundException(`Route ${id} not found`);
+		route.deletedAt = new Date();
+		await this.em.persistAndFlush(route);
 		this.statsCache.invalidate();
 	}
 
