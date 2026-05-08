@@ -308,11 +308,9 @@ describe("Routes Integration Tests", () => {
 				.set("Authorization", `Bearer ${authToken}`)
 				.expect(200);
 
-			// Verify soft delete
-			await orm.em.refresh(testRoute);
-			expect(testRoute.deletedAt).toBeDefined();
+			const refreshed = await orm.em.fork().findOne(Route, { id: testRoute.id }, { filters: { softDelete: false } });
+			expect(refreshed?.deletedAt).toBeDefined();
 
-			// Verify route is not returned in list
 			const response = await supertest(app.getHttpServer())
 				.get("/api/v1/routes")
 				.set("Authorization", `Bearer ${authToken}`)

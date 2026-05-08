@@ -79,16 +79,16 @@ export class MetricsService implements OnModuleInit, Metrics {
 
 	private async initializeBusinessMetrics() {
 		try {
-			// Initialize routes created counter with total routes in database
-			const totalRoutes = await this.routeRepository.count({ deletedAt: null });
+			const totalRoutes = await this.routeRepository.count({});
 			this.routesCreated.add(totalRoutes);
 
-			// Initialize user registrations counter with total users
-			const totalUsers = await this.userRepository.count();
+			const totalUsers = await this.userRepository.count({}, { filters: { softDelete: false } });
 			this.userRegistrations.add(totalUsers);
 
-			// Initialize routes deleted counter with soft-deleted routes
-			const deletedRoutes = await this.routeRepository.count({ deletedAt: { $ne: null } });
+			const deletedRoutes = await this.routeRepository.count(
+				{ deletedAt: { $ne: null } },
+				{ filters: { softDelete: false } },
+			);
 			this.routesDeleted.add(deletedRoutes);
 
 			this.setActiveUsers(0);

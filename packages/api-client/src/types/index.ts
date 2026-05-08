@@ -1,5 +1,7 @@
 import type {
 	Logger,
+	RouteActivity,
+	RoutePrivacy,
 	UserPreferenceActivity,
 	UserPreferenceLocationPermission,
 	UserPreferenceMapStyle,
@@ -12,7 +14,7 @@ import type {
 } from "@routess/core";
 
 // Re-export for convenience
-export type { Coordinate, Waypoint, WaypointType } from "@routess/core";
+export type { Coordinate, RouteActivity, RoutePrivacy, Waypoint, WaypointType } from "@routess/core";
 
 // API Response Types — aliases of the canonical preference types in @routess/core.
 // Kept as Api* names so callers that already import them keep working.
@@ -53,6 +55,9 @@ export interface ApiRoute {
 	id: number;
 	name: string;
 	description?: string;
+	activity?: RouteActivity;
+	privacy: RoutePrivacy;
+	tags: string[];
 	waypoints: Waypoint[];
 	geometry?: [number, number][];
 	distance?: number;
@@ -68,6 +73,9 @@ export interface ApiRoute {
 export interface CreateRouteRequest {
 	name: string;
 	description?: string;
+	activity?: RouteActivity;
+	privacy?: RoutePrivacy;
+	tags?: string[];
 	waypoints: Waypoint[];
 	geometry?: [number, number][];
 	distance?: number;
@@ -80,6 +88,9 @@ export interface CreateRouteRequest {
 export interface UpdateRouteRequest {
 	name?: string;
 	description?: string;
+	activity?: RouteActivity;
+	privacy?: RoutePrivacy;
+	tags?: string[];
 	waypoints?: Waypoint[];
 	geometry?: [number, number][];
 	distance?: number;

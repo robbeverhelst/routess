@@ -1,3 +1,4 @@
+import type { RouteActivity } from "@routess/core";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import {
@@ -9,7 +10,7 @@ import type { SupportedLanguage } from "@/lib/i18n";
 export type RedesignContext = "plan" | "library" | "discover" | "social" | "settings";
 export type RedesignAccent = "violet" | "cobalt" | "forest" | "ember";
 export type RedesignTheme = "light" | "dark";
-export type RedesignActivity = "run" | "cycle" | "walk";
+export type RedesignActivity = RouteActivity;
 
 interface UiState {
 	context: RedesignContext;

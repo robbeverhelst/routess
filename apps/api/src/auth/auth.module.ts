@@ -10,8 +10,8 @@ import { Session } from "../entities/session.entity";
 import { User } from "../entities/user.entity";
 import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
+import { GOOGLE_IDENTITY_VERIFIER, GoogleOAuth2Verifier } from "./google-identity-verifier";
 import { SessionService } from "./session.service";
-import { SessionCleanupService } from "./session-cleanup.service";
 import { JwtStrategy } from "./strategies/jwt.strategy";
 
 @Module({
@@ -34,7 +34,12 @@ import { JwtStrategy } from "./strategies/jwt.strategy";
 		}),
 	],
 	controllers: [AuthController],
-	providers: [AuthService, SessionService, SessionCleanupService, JwtStrategy],
+	providers: [
+		AuthService,
+		SessionService,
+		JwtStrategy,
+		{ provide: GOOGLE_IDENTITY_VERIFIER, useClass: GoogleOAuth2Verifier },
+	],
 	exports: [AuthService, SessionService, JwtStrategy],
 })
 export class AuthModule {}

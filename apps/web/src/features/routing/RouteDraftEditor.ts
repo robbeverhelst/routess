@@ -1,5 +1,5 @@
 import type { Coordinate, Waypoint, WaypointType } from "@routess/core";
-import { calculatePathDistance, estimateWalkingDuration, formatDistance, formatDuration } from "@routess/core";
+import { calculatePathDistance, estimateWalkingDuration } from "@routess/core";
 import type { GeoJSONSource, Map as MapboxMap } from "mapbox-gl";
 import type { ApiRoute } from "@/lib/api";
 import { Logger } from "@/lib/logger";
@@ -79,8 +79,7 @@ const setWaypoints = (waypoints: Waypoint[]) => useRoutingStore.getState().setWa
 const saveSnapshot = () => useRoutingStore.getState().saveSnapshot();
 const clearComputedRouteUi = () => {
 	const store = useRoutingStore.getState();
-	store.setRouteDistance("");
-	store.setRouteDuration("");
+	store.clearRouteMetrics();
 	store.setHasRoute(false);
 	clearCurrentRoutePath();
 };
@@ -288,8 +287,11 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 		const distanceKm = calculatePathDistance(exactRoutePath);
 		const durationMinutes = estimateWalkingDuration(distanceKm);
 		const store = useRoutingStore.getState();
-		store.setRouteDistance(formatDistance(distanceKm));
-		store.setRouteDuration(formatDuration(durationMinutes));
+		store.setRouteMetrics({
+			distanceMeters: distanceKm * 1000,
+			durationSeconds: durationMinutes * 60,
+			isOffline: false,
+		});
 		store.setHasRoute(exactRoutePath.length >= 2);
 	};
 

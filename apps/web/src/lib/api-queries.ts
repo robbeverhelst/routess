@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { track } from "./analytics";
-import { type ApiRoute, apiService, type Waypoint } from "./api";
+import { type ApiRoute, apiService, type CreateRouteRequest } from "./api";
 import { hasStoredUser, storeUser } from "./auth-state";
 import { googleAuth } from "./google-auth";
 import { Logger } from "./logger";
@@ -57,28 +57,22 @@ export function useSaveRoute() {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: async (routeData: {
-			name: string;
-			description?: string;
-			waypoints: Waypoint[];
-			distance: number;
-			elevationGain: number;
-		}) => {
+		mutationFn: async (routeData: CreateRouteRequest) => {
 			Logger.info("Saving route:", routeData.name);
 			return apiService.createRoute(routeData);
 		},
 		onSuccess: (newRoute, vars) => {
-			// Invalidate and refetch routes list
 			queryClient.invalidateQueries({ queryKey: queryKeys.routes.list() });
-
-			// Add the new route to the cache
 			queryClient.setQueryData(queryKeys.routes.detail(newRoute.id.toString()), newRoute);
 
 			track("route_saved", {
 				waypoint_count: vars.waypoints.length,
-				distance_m: Math.round(vars.distance),
-				elevation_gain_m: Math.round(vars.elevationGain),
+				distance_m: Math.round(vars.distance ?? 0),
+				elevation_gain_m: Math.round(vars.elevationGain ?? 0),
 				has_description: !!vars.description,
+				activity: vars.activity ?? null,
+				privacy: vars.privacy ?? "private",
+				tag_count: vars.tags?.length ?? 0,
 			});
 
 			Logger.info("Route saved successfully:", newRoute.id);

@@ -18,8 +18,9 @@ describe("RoutingStore", () => {
 		useRoutingStore.setState({
 			waypoints: [],
 			routePath: [],
-			routeDistance: "",
-			routeDuration: "",
+			distanceMeters: null,
+			durationSeconds: null,
+			isOfflineRoute: false,
 			hasRoute: false,
 			isMapLocked: false,
 			history: emptyHistory<Waypoint[]>(),
@@ -64,8 +65,8 @@ describe("RoutingStore", () => {
 			const state = useRoutingStore.getState();
 			expect(state.waypoints).toHaveLength(0);
 			expect(state.routePath).toHaveLength(0);
-			expect(state.routeDistance).toBe("");
-			expect(state.routeDuration).toBe("");
+			expect(state.distanceMeters).toBeNull();
+			expect(state.durationSeconds).toBeNull();
 			expect(state.hasRoute).toBe(false);
 		});
 
@@ -115,14 +116,26 @@ describe("RoutingStore", () => {
 		it("should set route info correctly", () => {
 			const store = useRoutingStore.getState();
 
-			store.setRouteDistance("15.2 km");
-			store.setRouteDuration("32 min");
+			store.setRouteMetrics({ distanceMeters: 15200, durationSeconds: 1920, isOffline: false });
 			store.setHasRoute(true);
 
 			const state = useRoutingStore.getState();
-			expect(state.routeDistance).toBe("15.2 km");
-			expect(state.routeDuration).toBe("32 min");
+			expect(state.distanceMeters).toBe(15200);
+			expect(state.durationSeconds).toBe(1920);
+			expect(state.isOfflineRoute).toBe(false);
 			expect(state.hasRoute).toBe(true);
+		});
+
+		it("should clear route metrics correctly", () => {
+			const store = useRoutingStore.getState();
+
+			store.setRouteMetrics({ distanceMeters: 15200, durationSeconds: 1920, isOffline: true });
+			store.clearRouteMetrics();
+
+			const state = useRoutingStore.getState();
+			expect(state.distanceMeters).toBeNull();
+			expect(state.durationSeconds).toBeNull();
+			expect(state.isOfflineRoute).toBe(false);
 		});
 	});
 

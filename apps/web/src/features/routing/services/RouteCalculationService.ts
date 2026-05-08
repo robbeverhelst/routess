@@ -1,8 +1,6 @@
 import type { Coordinate, Waypoint } from "@routess/core";
-import { formatDuration } from "@routess/core";
 import type { Map as MapboxMap } from "mapbox-gl";
 import { Logger } from "@/lib/logger";
-import { formatDistance } from "@/lib/units";
 import { activityKeyToLabel, getSpeedForActivity, useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 import { getRoutingPreferences } from "@/stores/routingPreferencesStore";
 import { useRoutingStore } from "@/stores/routingStore";
@@ -103,8 +101,7 @@ export const getRoute = async (map: MapboxMap, accessToken: string): Promise<Rou
 	const waypoints = store.waypoints;
 	if (waypoints.length < 2) {
 		store.setRoutePath([]);
-		store.setRouteDistance("");
-		store.setRouteDuration("");
+		store.clearRouteMetrics();
 		store.setHasRoute(false);
 		elevationAbort?.abort();
 		store.clearElevation();
@@ -132,11 +129,11 @@ export const getRoute = async (map: MapboxMap, accessToken: string): Promise<Rou
 	const after = useRoutingStore.getState();
 	after.setRoutePath(outcome.routePath);
 
-	const offlineSuffix = outcome.offline ? " (offline)" : "";
-	const durationSuffix = outcome.offline ? " (estimated)" : "";
-	const units = useRedesignSettingsStore.getState().units === "mi" ? "mi" : "km";
-	after.setRouteDistance(formatDistance(outcome.distanceKm, units) + offlineSuffix);
-	after.setRouteDuration(formatDuration(outcome.durationMinutes) + durationSuffix);
+	after.setRouteMetrics({
+		distanceMeters: outcome.distanceKm * 1000,
+		durationSeconds: outcome.durationMinutes * 60,
+		isOffline: !!outcome.offline,
+	});
 	after.setHasRoute(true);
 
 	// Elevation runs async — distance/duration display immediately while we

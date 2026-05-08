@@ -129,7 +129,10 @@
 			"!**/bin",
 			"!**/build",
 			"!**/bun.lockb",
-			"!**/routeTree.gen.ts"
+			"!**/routeTree.gen.ts",
+			"!.agents",
+			"!.claude",
+			"!skills-lock.json"
 		]
 	},
 	"css": {

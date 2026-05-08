@@ -4,6 +4,7 @@ import type { AuthenticatedUser } from "../auth/authenticated-user";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { ThrottleModerate, ThrottleStrict } from "../common/decorators/throttle.decorator";
+import { RouteLibraryService } from "../route-library/route-library.service";
 import { UpdateCurrentUserDto } from "./dto/update-current-user.dto";
 import { UserProfileDto } from "./dto/user-response.dto";
 import { toUserProfileDto } from "./user.mapper";
@@ -14,7 +15,10 @@ import { UsersService } from "./users.service";
 @UseGuards(JwtAuthGuard)
 @Controller("users")
 export class UsersController {
-	constructor(private readonly usersService: UsersService) {}
+	constructor(
+		private readonly usersService: UsersService,
+		private readonly routeLibrary: RouteLibraryService,
+	) {}
 
 	@ApiOperation({
 		summary: "Get current user profile",
@@ -24,7 +28,7 @@ export class UsersController {
 	@Get(["me", "profile"])
 	async getProfile(@CurrentUser() currentUser: AuthenticatedUser) {
 		const user = await this.usersService.findOne(currentUser.id);
-		const statistics = await this.usersService.getStatistics(currentUser.id);
+		const statistics = await this.routeLibrary.statisticsFor(currentUser.id);
 		return toUserProfileDto(user, statistics);
 	}
 
@@ -36,7 +40,7 @@ export class UsersController {
 	@Patch("me")
 	async update(@CurrentUser() currentUser: AuthenticatedUser, @Body() updateUserDto: UpdateCurrentUserDto) {
 		const user = await this.usersService.update(currentUser.id, updateUserDto);
-		const statistics = await this.usersService.getStatistics(currentUser.id);
+		const statistics = await this.routeLibrary.statisticsFor(currentUser.id);
 		return toUserProfileDto(user, statistics);
 	}
 

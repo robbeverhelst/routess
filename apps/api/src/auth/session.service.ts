@@ -1,18 +1,22 @@
 import { randomUUID } from "node:crypto";
 import { EntityManager, EntityRepository } from "@mikro-orm/core";
 import { InjectRepository } from "@mikro-orm/nestjs";
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
+import { EventEmitter2 } from "@nestjs/event-emitter";
 import { JwtService } from "@nestjs/jwt";
+import { Cron, CronExpression } from "@nestjs/schedule";
 import type { AppConfig } from "../config/app-config";
 import { APP_CONFIG } from "../config/config.module";
 import { Session } from "../entities/session.entity";
 import { User } from "../entities/user.entity";
-import { MetricsService } from "../telemetry/metrics.service";
+import { SESSION_ACTIVITY_CHANGED } from "../telemetry/domain-events";
 
 const LAST_ACTIVITY_UPDATE_INTERVAL_MS = 5 * 60 * 1000;
 
 @Injectable()
 export class SessionService {
+	private readonly logger = new Logger(SessionService.name);
+
 	constructor(
 		@InjectRepository(Session)
 		private readonly sessionRepository: EntityRepository<Session>,
@@ -22,8 +26,20 @@ export class SessionService {
 		private readonly jwtService: JwtService,
 		@Inject(APP_CONFIG)
 		private readonly config: AppConfig,
-		private readonly metricsService: MetricsService,
+		private readonly events: EventEmitter2,
 	) {}
+
+	@Cron(CronExpression.EVERY_HOUR)
+	async cleanupExpiredSessionsHourly(): Promise<void> {
+		try {
+			const cleanedCount = await this.cleanupExpiredSessions();
+			if (cleanedCount > 0) {
+				this.logger.log(`Cleaned up ${cleanedCount} expired sessions`);
+			}
+		} catch (error) {
+			this.logger.error("Failed to cleanup expired sessions", error);
+		}
+	}
 
 	async createSession(
 		userId: number,
@@ -46,7 +62,7 @@ export class SessionService {
 		});
 
 		await this.em.persistAndFlush(session);
-		await this.syncActiveUsersMetric();
+		this.events.emit(SESSION_ACTIVITY_CHANGED);
 
 		return this.jwtService.sign({ sub: userId, email: user.email, jti });
 	}
@@ -55,7 +71,6 @@ export class SessionService {
 		const session = await this.sessionRepository.findOne({
 			jti,
 			expiresAt: { $gt: new Date() },
-			deletedAt: null,
 		});
 
 		if (session) {
@@ -75,7 +90,7 @@ export class SessionService {
 	// one populated load.
 	async resolveAuthenticatedUser(jti: string): Promise<User | null> {
 		const session = await this.sessionRepository.findOne(
-			{ jti, expiresAt: { $gt: new Date() }, deletedAt: null },
+			{ jti, expiresAt: { $gt: new Date() } },
 			{ populate: ["user"] },
 		);
 		if (!session) return null;
@@ -95,18 +110,17 @@ export class SessionService {
 	}
 
 	async invalidateSession(jti: string): Promise<void> {
-		const session = await this.sessionRepository.findOne({ jti, deletedAt: null });
+		const session = await this.sessionRepository.findOne({ jti });
 		if (session) {
 			session.deletedAt = new Date();
 			await this.em.persistAndFlush(session);
-			await this.syncActiveUsersMetric();
+			this.events.emit(SESSION_ACTIVITY_CHANGED);
 		}
 	}
 
 	async cleanupExpiredSessions(): Promise<number> {
 		const expiredSessions = await this.sessionRepository.find({
 			expiresAt: { $lt: new Date() },
-			deletedAt: null,
 		});
 
 		for (const session of expiredSessions) {
@@ -114,7 +128,7 @@ export class SessionService {
 		}
 
 		await this.em.flush();
-		await this.syncActiveUsersMetric();
+		this.events.emit(SESSION_ACTIVITY_CHANGED);
 
 		return expiredSessions.length;
 	}
@@ -122,7 +136,6 @@ export class SessionService {
 	async getActiveSessionsCount(): Promise<number> {
 		return this.sessionRepository.count({
 			expiresAt: { $gt: new Date() },
-			deletedAt: null,
 		});
 	}
 
@@ -130,12 +143,11 @@ export class SessionService {
 		return this.sessionRepository.find({
 			user: userId,
 			expiresAt: { $gt: new Date() },
-			deletedAt: null,
 		});
 	}
 
 	async invalidateUserSessions(userId: number): Promise<void> {
-		const sessions = await this.sessionRepository.find({ user: userId, deletedAt: null });
+		const sessions = await this.sessionRepository.find({ user: userId });
 		const deletedAt = new Date();
 
 		for (const session of sessions) {
@@ -143,16 +155,6 @@ export class SessionService {
 		}
 
 		await this.em.flush();
-		await this.syncActiveUsersMetric();
-	}
-
-	private async syncActiveUsersMetric(): Promise<void> {
-		const result = (await this.em.getConnection().execute<{ count: number }[]>(
-			`select count(distinct("user_id"))::int as count
-			 from "session"
-			 where "expires_at" > now() and "deleted_at" is null`,
-		)) as Array<{ count: number | string }>;
-
-		this.metricsService.setActiveUsers(Number(result[0]?.count || 0));
+		this.events.emit(SESSION_ACTIVITY_CHANGED);
 	}
 }
