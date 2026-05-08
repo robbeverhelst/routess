@@ -1,16 +1,20 @@
-export type UserPreferenceActivity = "run" | "cycle" | "walk";
-export type UserPreferenceUnits = "km" | "mi";
-export type UserPreferenceMapStyle = "streets" | "outdoors" | "satellite";
-export type UserPreferenceLocationPermission = "unknown" | "granted" | "denied" | "skipped";
-export type UserPreferenceOverlayKey = "heatmap" | "contour" | "bike" | "surface" | "wind";
+export const ACTIVITIES = ["run", "cycle", "walk"] as const;
+export type UserPreferenceActivity = (typeof ACTIVITIES)[number];
+
+export const UNITS = ["km", "mi"] as const;
+export type UserPreferenceUnits = (typeof UNITS)[number];
+
+export const MAP_STYLES = ["streets", "outdoors", "satellite"] as const;
+export type UserPreferenceMapStyle = (typeof MAP_STYLES)[number];
+
+export const LOCATION_PERMISSIONS = ["unknown", "granted", "denied", "skipped"] as const;
+export type UserPreferenceLocationPermission = (typeof LOCATION_PERMISSIONS)[number];
+
+export const OVERLAY_KEYS = ["heatmap", "contour", "bike", "surface", "wind"] as const;
+export type UserPreferenceOverlayKey = (typeof OVERLAY_KEYS)[number];
 
 export type UserPreferenceOverlays = Record<UserPreferenceOverlayKey, boolean>;
 export type UserPreferenceSportSpeeds = Partial<Record<UserPreferenceActivity, number>>;
-
-export interface UserPreferencesUpdate extends Omit<Partial<UserPreferences>, "overlays" | "sportSpeeds"> {
-	overlays?: Partial<UserPreferenceOverlays>;
-	sportSpeeds?: Partial<UserPreferenceSportSpeeds>;
-}
 
 export interface UserPreferences {
 	units: UserPreferenceUnits;
@@ -25,6 +29,11 @@ export interface UserPreferences {
 	mapStyle: UserPreferenceMapStyle;
 	overlays: UserPreferenceOverlays;
 	locationPermission: UserPreferenceLocationPermission;
+}
+
+export interface UserPreferencesUpdate extends Omit<Partial<UserPreferences>, "overlays" | "sportSpeeds"> {
+	overlays?: Partial<UserPreferenceOverlays>;
+	sportSpeeds?: Partial<UserPreferenceSportSpeeds>;
 }
 
 const ACTIVITY_LABELS: Record<UserPreferenceActivity, string> = {
@@ -60,20 +69,20 @@ export const DEFAULT_USER_PREFERENCES: UserPreferences = {
 	locationPermission: "unknown",
 };
 
-function isActivity(value: unknown): value is UserPreferenceActivity {
-	return value === "run" || value === "cycle" || value === "walk";
+export function isActivity(value: unknown): value is UserPreferenceActivity {
+	return ACTIVITIES.includes(value as UserPreferenceActivity);
 }
 
-function isUnits(value: unknown): value is UserPreferenceUnits {
-	return value === "km" || value === "mi";
+export function isUnits(value: unknown): value is UserPreferenceUnits {
+	return UNITS.includes(value as UserPreferenceUnits);
 }
 
-function isMapStyle(value: unknown): value is UserPreferenceMapStyle {
-	return value === "streets" || value === "outdoors" || value === "satellite";
+export function isMapStyle(value: unknown): value is UserPreferenceMapStyle {
+	return MAP_STYLES.includes(value as UserPreferenceMapStyle);
 }
 
-function isLocationPermission(value: unknown): value is UserPreferenceLocationPermission {
-	return value === "unknown" || value === "granted" || value === "denied" || value === "skipped";
+export function isLocationPermission(value: unknown): value is UserPreferenceLocationPermission {
+	return LOCATION_PERMISSIONS.includes(value as UserPreferenceLocationPermission);
 }
 
 function isFiniteNumber(value: unknown): value is number {
@@ -121,7 +130,7 @@ function normalizeSportSpeeds(input: unknown): UserPreferenceSportSpeeds {
 	const source = input as Record<string, unknown>;
 	const next: UserPreferenceSportSpeeds = {};
 
-	for (const activity of ["run", "cycle", "walk"] as const) {
+	for (const activity of ACTIVITIES) {
 		const value = source[activity];
 		if (isFiniteNumber(value) && value > 0) {
 			next[activity] = value;
@@ -133,14 +142,16 @@ function normalizeSportSpeeds(input: unknown): UserPreferenceSportSpeeds {
 
 function normalizeOverlays(input: unknown): UserPreferenceOverlays {
 	const source = input && typeof input === "object" ? (input as Record<string, unknown>) : {};
+	const result = { ...DEFAULT_USER_PREFERENCES.overlays };
 
-	return {
-		heatmap: typeof source.heatmap === "boolean" ? source.heatmap : DEFAULT_USER_PREFERENCES.overlays.heatmap,
-		contour: typeof source.contour === "boolean" ? source.contour : DEFAULT_USER_PREFERENCES.overlays.contour,
-		bike: typeof source.bike === "boolean" ? source.bike : DEFAULT_USER_PREFERENCES.overlays.bike,
-		surface: typeof source.surface === "boolean" ? source.surface : DEFAULT_USER_PREFERENCES.overlays.surface,
-		wind: typeof source.wind === "boolean" ? source.wind : DEFAULT_USER_PREFERENCES.overlays.wind,
-	};
+	for (const key of OVERLAY_KEYS) {
+		const value = source[key];
+		if (typeof value === "boolean") {
+			result[key] = value;
+		}
+	}
+
+	return result;
 }
 
 export function normalizeUserPreferences(input?: Partial<UserPreferences> | null): UserPreferences {

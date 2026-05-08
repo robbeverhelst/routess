@@ -1,5 +1,5 @@
 import { Entity, Index, PrimaryKey, Property } from "@mikro-orm/core";
-import type { UserPreferences } from "../users/user-preferences";
+import type { UserPreferences } from "@routess/core";
 import { BaseEntity } from "./base.entity";
 
 @Entity()

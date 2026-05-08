@@ -6,7 +6,7 @@
 	"private": true,
 	"license": "UNLICENSED",
 	"scripts": {
-		"prebuild": "rimraf dist",
+		"prebuild": "rimraf dist tsconfig.build.tsbuildinfo tsconfig.tsbuildinfo",
 		"build": "nest build",
 		"format": "biome format --write src/ test/",
 		"start": "nest start",
@@ -25,7 +25,7 @@
 		"test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
 		"check-types": "tsc --noEmit",
 		"ci": "bun run check-types && bun run lint:check && bun run build && bun run test",
-		"clean": "rimraf dist coverage .nest node_modules/.cache",
+		"clean": "rimraf dist coverage .nest node_modules/.cache tsconfig.build.tsbuildinfo tsconfig.tsbuildinfo",
 		"docker:build": "docker build -f Dockerfile -t routess-api ../..",
 		"db:up": "cd ../.. && docker-compose up -d postgres",
 		"db:down": "cd ../.. && docker-compose down",

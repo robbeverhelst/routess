@@ -1,3 +1,4 @@
+import { formatDisplaySpeed, fromDisplaySpeed, KMH_TO_MPH } from "@routess/core";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { loadLastMapViewFromLocalStorage } from "@/features/routing/services/LocalStorageService";
 import { t, tIn } from "@/lib/i18n";
@@ -82,21 +83,6 @@ const STEPS: StepDef[] = [
 		whyKey: "welcome.steps.location.help",
 	},
 ];
-
-const KMH_TO_MPH = 0.621371;
-
-function toDisplaySpeed(kmh: number, units: RedesignUnits): number {
-	return units === "mi" ? kmh * KMH_TO_MPH : kmh;
-}
-
-function fromDisplaySpeed(value: number, units: RedesignUnits): number {
-	return units === "mi" ? value / KMH_TO_MPH : value;
-}
-
-function formatDisplaySpeed(kmh: number, units: RedesignUnits): string {
-	const display = toDisplaySpeed(kmh, units);
-	return Number.isFinite(display) ? String(Math.round(display * 10) / 10) : "";
-}
 
 const SPORTS: {
 	key: RedesignActivity;

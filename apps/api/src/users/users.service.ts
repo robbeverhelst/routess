@@ -1,11 +1,11 @@
 import { EntityManager, EntityRepository } from "@mikro-orm/core";
 import { InjectRepository } from "@mikro-orm/nestjs";
 import { Injectable, NotFoundException } from "@nestjs/common";
+import { mergeUserPreferences } from "@routess/core";
 import { SessionService } from "../auth/session.service";
 import { Route } from "../entities/route.entity";
 import { User } from "../entities/user.entity";
 import type { UpdateCurrentUserDto } from "./dto/update-current-user.dto";
-import { mergeUserPreferences } from "./user-preferences";
 
 @Injectable()
 export class UsersService {

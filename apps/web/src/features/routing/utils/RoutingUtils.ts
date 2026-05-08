@@ -73,33 +73,6 @@ export const checkNearRoad = async (
 };
 
 /**
- * Finds the closest point on a line segment to a given point.
- * @param p - The point [lon, lat] to find the closest point to.
- * @param v - The start point [lon, lat] of the line segment.
- * @param w - The end point [lon, lat] of the line segment.
- * @returns The closest point [lon, lat] on the segment to point p.
- */
-export const closestPointOnSegment = (p: Coordinate, v: Coordinate, w: Coordinate): Coordinate => {
-	// Note: haversine is not directly used here for finding the point,
-	// but this function is often used in conjunction with haversine
-	// to calculate the distance to this closest point.
-	const l2 = (v[0] - w[0]) ** 2 + (v[1] - w[1]) ** 2; // Squared Euclidean distance
-	if (l2 === 0) return v; // v and w are the same point
-
-	// Calculate the projection of P onto the line VW
-	// t = [(P - V) . (W - V)] / |W - V|^2
-	let t = ((p[0] - v[0]) * (w[0] - v[0]) + (p[1] - v[1]) * (w[1] - v[1])) / l2;
-
-	// Clamp t to the range [0, 1] to ensure the point is on the segment
-	t = Math.max(0, Math.min(1, t));
-
-	// Calculate the closest point: V + t * (W - V)
-	return [v[0] + t * (w[0] - v[0]), v[1] + t * (w[1] - v[1])];
-};
-
-// Route generation functions removed - will be implemented in backend
-
-/**
  * Fits the map view to a given set of coordinates.
  * @param map - The Mapbox map instance.
  * @param coordinates - An array of coordinates to fit the bounds to.
@@ -170,54 +143,3 @@ export const zoomToRoute = (map: MapboxMap, coordinates: Coordinate[]): void => 
 		Logger.error("[RoutingUtils.zoomToRoute] Error fitting bounds:", error);
 	}
 };
-
-/**
- * Calculates the bounding box of a list of coordinates.
- * @param coordinates An array of coordinates [longitude, latitude].
- * @returns An object with minLng, minLat, maxLng, maxLat, or null if input is empty.
- */
-export interface BoundingBox {
-	minLng: number;
-	minLat: number;
-	maxLng: number;
-	maxLat: number;
-}
-
-export function calculateBoundingBox(coordinates: Coordinate[]): BoundingBox | null {
-	if (!coordinates || coordinates.length === 0) {
-		return null;
-	}
-
-	let minLng = coordinates[0][0];
-	let minLat = coordinates[0][1];
-	let maxLng = coordinates[0][0];
-	let maxLat = coordinates[0][1];
-
-	for (let i = 1; i < coordinates.length; i++) {
-		const [lng, lat] = coordinates[i];
-		if (lng < minLng) minLng = lng;
-		if (lat < minLat) minLat = lat;
-		if (lng > maxLng) maxLng = lng;
-		if (lat > maxLat) maxLat = lat;
-	}
-	return { minLng, minLat, maxLng, maxLat };
-}
-
-/**
- * Calculates the aspect ratio of a bounding box.
- * The aspect ratio is defined as min_dimension / max_dimension, so it's always <= 1.
- * A value of 1 indicates a square.
- * @param bbox The bounding box object.
- * @returns The aspect ratio (between 0 and 1), or 0 if width/height is zero.
- */
-export function calculateAspectRatio(bbox: BoundingBox): number {
-	const width = bbox.maxLng - bbox.minLng;
-	const height = bbox.maxLat - bbox.minLat;
-
-	if (width === 0 || height === 0) {
-		return 0; // Avoid division by zero, and a line has zero aspect ratio in this context
-	}
-	// Note: This doesn't account for spherical distortion (degrees of longitude
-	// cover less distance at higher latitudes). For a simple heuristic, it's often sufficient.
-	return Math.min(width, height) / Math.max(width, height);
-}

@@ -1,6 +1,6 @@
 import type { Coordinate, Waypoint, WaypointType } from "@routess/core";
-import { haversineDistance } from "@routess/core";
-import { checkNearRoad, closestPointOnSegment } from "@/features/routing/utils/RoutingUtils";
+import { closestPointOnSegment, haversineDistance } from "@routess/core";
+import { checkNearRoad } from "@/features/routing/utils/RoutingUtils";
 
 // Pure decision functions for waypoint mutations. No store reads, no map
 // mutations, no localStorage, no snapshots — those orchestration concerns

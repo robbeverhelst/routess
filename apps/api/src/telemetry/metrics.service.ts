@@ -4,10 +4,11 @@ import { Injectable, type OnModuleInit } from "@nestjs/common";
 import type { Counter, Histogram, UpDownCounter } from "@opentelemetry/api";
 import { Route } from "../entities/route.entity";
 import { User } from "../entities/user.entity";
+import type { Metrics } from "./metrics.interface";
 import { getMeter } from "./tracing";
 
 @Injectable()
-export class MetricsService implements OnModuleInit {
+export class MetricsService implements OnModuleInit, Metrics {
 	private meter = getMeter();
 
 	constructor(

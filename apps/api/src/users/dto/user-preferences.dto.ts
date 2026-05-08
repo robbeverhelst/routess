@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { ACTIVITIES, LOCATION_PERMISSIONS, MAP_STYLES, UNITS } from "@routess/core";
 import { Type } from "class-transformer";
 import {
 	ArrayUnique,
@@ -11,11 +12,6 @@ import {
 	IsString,
 	ValidateNested,
 } from "class-validator";
-
-const ACTIVITIES = ["run", "cycle", "walk"] as const;
-const UNITS = ["km", "mi"] as const;
-const MAP_STYLES = ["streets", "outdoors", "satellite"] as const;
-const LOCATION_PERMISSIONS = ["unknown", "granted", "denied", "skipped"] as const;
 
 export class UserPreferenceSportSpeedsDto {
 	@ApiPropertyOptional({ example: 10 })

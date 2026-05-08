@@ -1,6 +1,6 @@
+import { normalizeUserPreferences } from "@routess/core";
 import type { User } from "../entities/user.entity";
 import { UserProfileDto, UserResponseDto } from "./dto/user-response.dto";
-import { normalizeUserPreferences } from "./user-preferences";
 
 type SerializableUser = Pick<User, "id" | "email" | "name" | "avatar" | "isEmailVerified" | "preferences">;
 
