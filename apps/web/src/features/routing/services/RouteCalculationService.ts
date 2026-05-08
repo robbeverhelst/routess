@@ -10,11 +10,18 @@ import { type ComputeRouteOptions, computeRoute, type DirectionsOptions } from "
 import { resolveMapboxProfile } from "./routingMode";
 
 const sameCoord = (a: Coordinate, b: Coordinate) => a[0] === b[0] && a[1] === b[1];
-const sameWaypoint = (a: Waypoint, b: Waypoint) => sameCoord(a.coord, b.coord) && a.type === b.type;
 
 let elevationAbort: AbortController | null = null;
 
-const computeElevationInBackground = (routePath: Coordinate[], waypoints: Waypoint[], accessToken: string): void => {
+const samePath = (a: Coordinate[], b: Coordinate[]): boolean => {
+	if (a.length !== b.length) return false;
+	for (let i = 0; i < a.length; i++) {
+		if (!sameCoord(a[i], b[i])) return false;
+	}
+	return true;
+};
+
+const computeElevationInBackground = (routePath: Coordinate[], accessToken: string): void => {
 	if (!accessToken || routePath.length < 2) {
 		useRoutingStore.getState().clearElevation();
 		useRoutingStore.getState().setIsComputingElevation(false);
@@ -27,12 +34,16 @@ const computeElevationInBackground = (routePath: Coordinate[], waypoints: Waypoi
 
 	useRoutingStore.getState().setIsComputingElevation(true);
 
+	// Elevation is computed for a specific RoutePath. The staleness check
+	// compares against routePath in the store, not waypoints — waypoints
+	// can mutate via snap-writeback after getRoute returns without
+	// invalidating the elevation result we computed for this exact path.
 	getDefaultElevationService(accessToken)
 		.sampleAndCompute(routePath, { signal: controller.signal })
 		.then((result) => {
 			if (controller.signal.aborted) return;
-			if (!routeInputsMatch(waypoints)) {
-				Logger.info("[RCS/elevation] Inputs changed during sampling; discarding stale elevation.");
+			if (!samePath(useRoutingStore.getState().routePath, routePath)) {
+				Logger.info("[RCS/elevation] RoutePath changed during sampling; discarding stale elevation.");
 				return;
 			}
 			useRoutingStore.getState().setElevation(result);
@@ -70,6 +81,8 @@ function buildComputeOptions(): ComputeRouteOptions {
 	const speedKmh = getSpeedForActivity(sportKey, settings.sportSpeeds);
 	return { directions, snap: prefs.snap, speedKmh };
 }
+
+const sameWaypoint = (a: Waypoint, b: Waypoint) => sameCoord(a.coord, b.coord) && a.type === b.type;
 
 const routeInputsMatch = (waypoints: Waypoint[]): boolean => {
 	const state = useRoutingStore.getState();
@@ -143,7 +156,7 @@ export const getRoute = async (map: MapboxMap, accessToken: string): Promise<Rou
 		useRoutingStore.getState().clearElevation();
 		useRoutingStore.getState().setIsComputingElevation(false);
 	} else {
-		computeElevationInBackground(outcome.routePath, waypoints, accessToken);
+		computeElevationInBackground(outcome.routePath, accessToken);
 	}
 
 	if (!outcome.offline && "serviceWorker" in navigator) {

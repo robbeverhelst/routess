@@ -14,18 +14,14 @@ export interface PreAddSnap {
 	checkNearRoadFailed: boolean;
 }
 
-// Decide what coord/type to push when adding a waypoint. For initial or
-// "direct" adds, returns the input as-is. For routed subsequent points,
-// snaps via checkNearRoad (49m); on failure, returns the raw coord with
-// checkNearRoadFailed = true so the caller can react if route calculation
-// later fails too.
-export async function resolveAddCoord(
-	coord: Coordinate,
-	type: WaypointType,
-	isFirstWaypoint: boolean,
-	accessToken: string,
-): Promise<PreAddSnap> {
-	if (type === "direct" || isFirstWaypoint) {
+// Decide what coord/type to push when adding a Waypoint. For `direct` adds,
+// returns the input as-is. For `routed` adds (including the first one),
+// tries the fast pre-snap via checkNearRoad (49m). On failure returns the
+// raw coord with checkNearRoadFailed = true so the caller can react when
+// the next Directions call also can't snap. The first Waypoint has no
+// special-case here: snap policy is uniform across all routed Waypoints.
+export async function resolveAddCoord(coord: Coordinate, type: WaypointType, accessToken: string): Promise<PreAddSnap> {
+	if (type === "direct") {
 		return { coord, type, checkNearRoadFailed: false };
 	}
 	const roadCheck = await checkNearRoad(coord, accessToken);

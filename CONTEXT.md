@@ -14,6 +14,7 @@ _Avoid_: point, stop, marker, pin, node.
 
 **Type** (of a Waypoint segment):
 Either `routed` (the segment between this waypoint and the previous one snaps to the road network) or `direct` (the segment is a straight line). On the web side this is sometimes carried as a parallel `directFlags: boolean[]` array; the canonical wire-protocol form is `type: "routed" | "direct"`.
+The Type is user-chosen and the system never silently converts between them. If a `routed` segment can't be snapped to the road network, the offending Waypoint is rejected with an error, not silently downgraded to `direct`.
 _Avoid_: mode, kind. Do not use the bare boolean `isDirect` outside the routing internals.
 
 **RoutePath**:

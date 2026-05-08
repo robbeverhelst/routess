@@ -3,7 +3,6 @@ import type React from "react";
 import { createContext, useCallback, useContext, useEffect } from "react";
 import { updateUserLocationLayer } from "@/features/routing/managers/MapLayerManager";
 import { useEnhancedLocation } from "@/hooks/useEnhancedLocation";
-import { useErrorHandler } from "@/lib/errors";
 import { Logger } from "@/lib/logger";
 
 interface UserLocationContextType {
@@ -57,7 +56,6 @@ export const UserLocationProvider: React.FC<UserLocationProviderProps> = ({
 	hasRoute,
 	isMapReady,
 }) => {
-	const { handleLocationError } = useErrorHandler();
 	const {
 		location: userLocation,
 		error: locationError,
@@ -88,13 +86,6 @@ export const UserLocationProvider: React.FC<UserLocationProviderProps> = ({
 			startLocationTracking();
 		}
 	}, [isMapReady, hasRoute, isLocationTracking, startLocationTracking]);
-
-	// Handle location errors with centralized error system
-	useEffect(() => {
-		if (locationError) {
-			handleLocationError(new Error(locationError), "location-tracking");
-		}
-	}, [locationError, handleLocationError]);
 
 	// Auto-stop tracking display when there are persistent errors
 	useEffect(() => {
