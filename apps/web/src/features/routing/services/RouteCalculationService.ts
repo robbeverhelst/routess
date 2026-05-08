@@ -1,6 +1,7 @@
 import type { Coordinate, Waypoint } from "@routess/core";
 import type { Map as MapboxMap } from "mapbox-gl";
 import { Logger } from "@/lib/logger";
+import serviceWorkerManager from "@/lib/serviceWorker";
 import { activityKeyToLabel, getSpeedForActivity, useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 import { getRoutingPreferences } from "@/stores/routingPreferencesStore";
 import { useRoutingStore } from "@/stores/routingStore";
@@ -161,21 +162,12 @@ export const getRoute = async (map: MapboxMap, accessToken: string): Promise<Rou
 
 	if (!outcome.offline && "serviceWorker" in navigator) {
 		try {
-			navigator.serviceWorker.ready.then((registration) => {
-				if (registration.active) {
-					registration.active.postMessage({
-						type: "PRECACHE_ROUTE",
-						data: {
-							routeData: {
-								waypoints: waypoints.map((wp) => wp.coord),
-								geometry: outcome.routePath,
-								distance: outcome.distanceKm * 1000,
-								duration: outcome.durationMinutes * 60,
-								url: `directions_api_request_${Date.now()}`,
-							},
-						},
-					});
-				}
+			void serviceWorkerManager.precacheRoute({
+				waypoints: waypoints.map((wp) => wp.coord),
+				geometry: outcome.routePath,
+				distance: outcome.distanceKm * 1000,
+				duration: outcome.durationMinutes * 60,
+				url: `directions_api_request_${Date.now()}`,
 			});
 		} catch (error) {
 			Logger.warn("[RCS/getRoute] Failed to precache route:", error);

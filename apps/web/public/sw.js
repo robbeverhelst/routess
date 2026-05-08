@@ -67,6 +67,8 @@ const MAX_CACHE_ENTRIES = {
 	RUNTIME: 50,
 };
 
+const ROUTE_CACHE_PREFIX = "/__routess_route_cache__/";
+
 // Install event - Cache app shell
 self.addEventListener("install", (event) => {
 	event.waitUntil(
@@ -360,34 +362,52 @@ async function cleanupCache(cacheName) {
 	}
 }
 
-// Message handling for cache management from the app
+// Message handling for cache management from the app. Messages may be
+// fire-and-forget or request/response via MessageChannel; both are valid.
 self.addEventListener("message", (event) => {
-	const { type, data } = event.data;
+	const message = event.data;
+	if (!message || typeof message.type !== "string") return;
 
-	switch (type) {
-		case "SKIP_WAITING":
-			self.skipWaiting();
-			break;
-
-		case "GET_CACHE_STATUS":
-			getCacheStatus().then((status) => {
-				event.ports[0].postMessage({ type: "CACHE_STATUS", data: status });
-			});
-			break;
-
-		case "CLEAR_CACHE":
-			clearSpecificCache(data.cacheName).then(() => {
-				event.ports[0].postMessage({ type: "CACHE_CLEARED", data: { cacheName: data.cacheName } });
-			});
-			break;
-
-		case "PRECACHE_ROUTE":
-			precacheRoute(data.routeData).then(() => {
-				event.ports[0].postMessage({ type: "ROUTE_PRECACHED", data: data.routeData });
-			});
-			break;
-	}
+	event.waitUntil(handleMessage(message, event.ports?.[0]));
 });
+
+async function handleMessage(message, responsePort) {
+	const { type, data } = message;
+
+	try {
+		switch (type) {
+			case "SKIP_WAITING":
+				await self.skipWaiting();
+				break;
+
+			case "GET_CACHE_STATUS": {
+				const status = await getCacheStatus();
+				postMessageResponse(responsePort, { type: "CACHE_STATUS", data: status });
+				break;
+			}
+
+			case "CLEAR_CACHE":
+				await clearSpecificCache(data?.cacheName);
+				postMessageResponse(responsePort, { type: "CACHE_CLEARED", data: { cacheName: data?.cacheName } });
+				break;
+
+			case "PRECACHE_ROUTE":
+				await precacheRoute(data?.routeData);
+				postMessageResponse(responsePort, { type: "ROUTE_PRECACHED", data: data?.routeData });
+				break;
+		}
+	} catch (error) {
+		postMessageResponse(responsePort, {
+			type: "SERVICE_WORKER_ERROR",
+			data: { requestType: type, message: error instanceof Error ? error.message : "Service worker request failed" },
+		});
+	}
+}
+
+function postMessageResponse(port, payload) {
+	if (!port) return;
+	port.postMessage(payload);
+}
 
 // Utility functions for cache management
 async function getCacheStatus() {
@@ -429,6 +449,32 @@ async function clearSpecificCache(cacheName) {
 	}
 }
 
-async function precacheRoute(_routeData) {
-	// Implementation would depend on your specific route data structure
+async function precacheRoute(routeData) {
+	if (!routeData || typeof routeData !== "object") {
+		throw new Error("Route data is required");
+	}
+
+	const cacheKey = getRouteCacheKey(routeData);
+	const cache = await caches.open(CACHE_NAMES.RUNTIME);
+	await cache.put(
+		cacheKey,
+		new Response(
+			JSON.stringify({
+				cachedAt: new Date().toISOString(),
+				routeData,
+			}),
+			{
+				headers: {
+					"content-type": "application/json",
+					date: new Date().toUTCString(),
+				},
+			},
+		),
+	);
+	await cleanupCache(CACHE_NAMES.RUNTIME);
+}
+
+function getRouteCacheKey(routeData) {
+	const rawKey = typeof routeData.url === "string" && routeData.url ? routeData.url : `route_${Date.now()}`;
+	return new Request(`${ROUTE_CACHE_PREFIX}${encodeURIComponent(rawKey)}`);
 }
