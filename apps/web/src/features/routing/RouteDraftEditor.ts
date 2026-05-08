@@ -100,57 +100,35 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 	};
 
 	const addWaypoint = async (coord: Coordinate, type: WaypointType = "routed"): Promise<EditResult> => {
-		const initialCount = getWaypoints().length;
 		saveSnapshot();
 
-		const resolved = await resolveAddCoord(coord, type, initialCount === 0, accessToken);
+		const resolved = await resolveAddCoord(coord, type, accessToken);
 		useRoutingStore.getState().addWaypoint(resolved.coord, resolved.type);
 
-		// First routed waypoint: also try to snap it.
-		if (getWaypoints().length === 1 && initialCount === 0 && type === "routed") {
-			const first = getWaypoints()[0];
-			const check = await checkNearRoad(first.coord, accessToken);
-			if (check.isValid && check.snappedCoords) {
-				setWaypoints([{ coord: check.snappedCoords, type: "routed" }]);
-				return ok();
-			}
-			Logger.warn("[RouteDraftEditor] First routed waypoint failed checkNearRoad. Rejecting.");
-			reportError("Point is too far from any road or path.");
-			useRoutingStore.getState().removeWaypoint(0);
-			return fail("Point is too far from any road or path.");
-		}
-
-		if (getWaypoints().length >= 2) {
-			const result = await recompute();
-			if (result.success) return ok();
-
-			const last = getWaypoints().length - 1;
-			const wasRawDueToFailure =
-				resolved.checkNearRoadFailed &&
-				last >= 0 &&
-				getWaypoints()[last].coord[0] === coord[0] &&
-				getWaypoints()[last].coord[1] === coord[1];
-
-			if (wasRawDueToFailure) {
-				const message = "Point is too far from any road for routing. Please click closer to a road or path.";
-				reportError(message);
-				useRoutingStore.getState().removeWaypoint(last);
-				if (getWaypoints().length >= 2) await recompute();
-				else clearComputedRouteUi();
-				return fail(message);
-			}
-
-			reportError(result.message ?? "Could not calculate route.");
-			return ok();
-		}
-
-		// First "direct" waypoint placed on its own — nothing to compute.
-		if (getWaypoints().length === 1 && initialCount === 0 && type === "direct") {
+		// Single Waypoint: nothing to route yet. The first Waypoint can't be
+		// validated against the road network until the second one arrives;
+		// any rejection happens at the first Directions call below.
+		if (getWaypoints().length < 2) {
 			clearComputedRouteUi();
 			return ok();
 		}
 
-		return fail("No waypoint added.");
+		const result = await recompute();
+		if (result.success) return ok();
+
+		// Directions could not compute a route. Roll back the just-added
+		// Waypoint so the route stays in a valid state, and surface a clear
+		// error. This is uniform: same behavior whether the offending
+		// Waypoint is the first or the Nth.
+		const last = getWaypoints().length - 1;
+		const message = resolved.checkNearRoadFailed
+			? "Point is too far from any road for routing. Please click closer to a road or path."
+			: (result.message ?? "Could not calculate route.");
+		reportError(message);
+		useRoutingStore.getState().removeWaypoint(last);
+		if (getWaypoints().length >= 2) await recompute();
+		else clearComputedRouteUi();
+		return fail(message);
 	};
 
 	const removeWaypoint = async (index: number): Promise<EditResult> => {
@@ -167,7 +145,6 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 		if (getWaypoints().length >= 2) await recompute();
 		else clearComputedRouteUi();
 
-		saveSnapshot();
 		return ok();
 	};
 
@@ -185,18 +162,16 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 		const check = await checkNearRoad(coord, accessToken);
 		if (check.isValid && check.snappedCoords) target = check.snappedCoords;
 
+		// Snapshot pre-mutation state so a single undo press reverts the move.
+		saveSnapshot();
 		setWaypoints(setWaypointCoord(getWaypoints(), index, target));
 		const result = await recompute();
 
-		if (result.success) {
-			saveSnapshot();
-			return ok();
-		}
+		if (result.success) return ok();
 
 		const message = result.message ?? "Failed to calculate route. Waypoint may be too far from any road or path.";
 		reportError(message);
 		setWaypoints(setWaypointCoord(getWaypoints(), index, oldCoord));
-		saveSnapshot();
 		return fail(message);
 	};
 
@@ -231,6 +206,10 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 			return { success: false, message };
 		}
 
+		// Snapshot pre-mutation state so a single undo press reverts the
+		// insert. With skipRouteCalc the caller (drag handler) owns the
+		// commit; the snapshot still belongs to the insert itself.
+		saveSnapshot();
 		setWaypoints(decision.waypoints);
 
 		if (options?.skipRouteCalc) {
@@ -240,7 +219,6 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 		if (getWaypoints().length >= 2) await recompute();
 		else clearComputedRouteUi();
 
-		saveSnapshot();
 		return { success: true, newIndex: decision.insertIndex };
 	};
 
@@ -248,9 +226,10 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 		const current = getWaypoints();
 		if (current.length < 2) return ok();
 
+		// Snapshot pre-reverse state so a single undo press restores it.
+		saveSnapshot();
 		setWaypoints(reverseWaypoints(current));
 		await recompute();
-		saveSnapshot();
 		return ok();
 	};
 

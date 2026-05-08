@@ -45,11 +45,17 @@ const baseDirectionsOptions = (overrides?: DirectionsOptions): DirectionsOptions
 	...overrides,
 });
 
-interface MixedRouteResult {
-	coordsAccum: Coordinate[];
-	totalDistKm: number;
-	snappedWaypoints: Waypoint[] | null;
-}
+type MixedRouteResult =
+	| {
+			ok: true;
+			coordsAccum: Coordinate[];
+			totalDistKm: number;
+			snappedWaypoints: Waypoint[] | null;
+	  }
+	| {
+			ok: false;
+			error: string;
+	  };
 
 async function buildMixedRoute(
 	waypoints: Waypoint[],
@@ -65,7 +71,7 @@ async function buildMixedRoute(
 		const from = working[i].coord;
 		const to = working[i + 1].coord;
 
-		const pushDirect = () => {
+		if (working[i + 1].type === "direct") {
 			if (
 				coordsAccum.length === 0 ||
 				coordsAccum[coordsAccum.length - 1][0] !== from[0] ||
@@ -75,24 +81,16 @@ async function buildMixedRoute(
 			}
 			coordsAccum.push(to);
 			totalDistKm += haversineDistance(from, to);
-		};
-
-		if (working[i + 1].type === "direct") {
-			pushDirect();
 			continue;
 		}
 
 		const result = await getDirections([from, to], accessToken, directions);
 		if (!result.success || !result.data?.routes?.[0]) {
-			Logger.warn(
-				`[RoutingEngine/mixed] No route for segment ${i}-${i + 1}: ${result.error || "Unknown error"}. Falling back to direct.`,
-			);
-			if (working[i + 1].type !== "direct") {
-				working[i + 1] = { ...working[i + 1], type: "direct" };
-				modified = true;
-			}
-			pushDirect();
-			continue;
+			// A `routed` segment that can't be snapped is surfaced as a
+			// failure. The user picked `routed`; the engine never silently
+			// rewrites the Type. The editor handles the failure by rolling
+			// back the offending Waypoint with a clear error.
+			return { ok: false, error: result.error ?? `No route for segment ${i}-${i + 1}` };
 		}
 
 		const route = result.data.routes[0];
@@ -125,7 +123,7 @@ async function buildMixedRoute(
 		}
 	}
 
-	return { coordsAccum, totalDistKm, snappedWaypoints: modified ? working : null };
+	return { ok: true, coordsAccum, totalDistKm, snappedWaypoints: modified ? working : null };
 }
 
 function classifySegments(waypoints: Waypoint[]): "all-direct" | "all-routed" | "mixed" {
@@ -172,13 +170,16 @@ export async function computeRoute(
 	}
 
 	if (segments === "mixed") {
-		const { coordsAccum, totalDistKm, snappedWaypoints } = await buildMixedRoute(waypoints, accessToken, directions);
+		const mixed = await buildMixedRoute(waypoints, accessToken, directions);
+		if (!mixed.ok) {
+			return { ok: false, error: mixed.error };
+		}
 		return {
 			ok: true,
-			routePath: coordsAccum,
-			distanceKm: totalDistKm,
-			durationMinutes: estimateDuration(totalDistKm, speedKmh),
-			snappedWaypoints: snap ? (snappedWaypoints ?? undefined) : undefined,
+			routePath: mixed.coordsAccum,
+			distanceKm: mixed.totalDistKm,
+			durationMinutes: estimateDuration(mixed.totalDistKm, speedKmh),
+			snappedWaypoints: snap ? (mixed.snappedWaypoints ?? undefined) : undefined,
 		};
 	}
 

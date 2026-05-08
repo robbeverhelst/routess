@@ -25,6 +25,14 @@ export interface PopupInfo {
 const LONG_PRESS_DURATION = 750;
 const MAX_MOVE_THRESHOLD = 10;
 
+// Mapbox doesn't auto-wrap event.lngLat — panning the world east a few
+// times yields lng > 180, which the Directions API rejects with 422.
+// Normalize before any coord leaves this manager.
+const wrappedLngLat = (lngLat: { lng: number; lat: number }): Coordinate => {
+	const wrappedLng = ((((lngLat.lng + 180) % 360) + 360) % 360) - 180;
+	return [wrappedLng, lngLat.lat];
+};
+
 type PointerPoint = { x: number; y: number };
 type HitTarget = { kind: "waypoint"; index: number } | { kind: "route" } | { kind: "empty" };
 type DragMode = "mouse" | "touch";
@@ -277,7 +285,7 @@ export const initializeMapInteractions = (
 		}
 
 		setPopup(null);
-		const result = await editor.addWaypoint([event.lngLat.lng, event.lngLat.lat], "routed");
+		const result = await editor.addWaypoint(wrappedLngLat(event.lngLat), "routed");
 
 		if (!result.success) {
 			Logger.warn("[MapInteractionManager] Waypoint addition failed - action cancelled");
@@ -307,11 +315,11 @@ export const initializeMapInteractions = (
 
 		event.preventDefault();
 		if (hitTarget.kind === "waypoint") {
-			startDrag(hitTarget.index, [event.lngLat.lng, event.lngLat.lat], "mouse");
+			startDrag(hitTarget.index, wrappedLngLat(event.lngLat), "mouse");
 			return;
 		}
 
-		await insertAndStartDrag([event.lngLat.lng, event.lngLat.lat], "mouse");
+		await insertAndStartDrag(wrappedLngLat(event.lngLat), "mouse");
 	};
 
 	const handleTouchStart = async (event: MapTouchEvent) => {
@@ -322,13 +330,13 @@ export const initializeMapInteractions = (
 
 		if (hitTarget.kind === "waypoint") {
 			event.preventDefault();
-			startDrag(hitTarget.index, [event.lngLat.lng, event.lngLat.lat], "touch");
+			startDrag(hitTarget.index, wrappedLngLat(event.lngLat), "touch");
 			return;
 		}
 
 		if (hitTarget.kind === "route") {
 			event.preventDefault();
-			await insertAndStartDrag([event.lngLat.lng, event.lngLat.lat], "touch");
+			await insertAndStartDrag(wrappedLngLat(event.lngLat), "touch");
 			return;
 		}
 
@@ -339,7 +347,7 @@ export const initializeMapInteractions = (
 		if (isMapLockedRef.current || !state.isDragging) return;
 
 		event.preventDefault();
-		renderDragPreview([event.lngLat.lng, event.lngLat.lat]);
+		renderDragPreview(wrappedLngLat(event.lngLat));
 	};
 
 	const handleWindowMouseUp = async () => {
@@ -357,7 +365,7 @@ export const initializeMapInteractions = (
 			}
 
 			event.preventDefault();
-			renderDragPreview([event.lngLat.lng, event.lngLat.lat]);
+			renderDragPreview(wrappedLngLat(event.lngLat));
 			return;
 		}
 
