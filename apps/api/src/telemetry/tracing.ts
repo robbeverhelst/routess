@@ -2,6 +2,7 @@ import { metrics, trace } from "@opentelemetry/api";
 import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node";
 import { PrometheusExporter } from "@opentelemetry/exporter-prometheus";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
+import { RuntimeNodeInstrumentation } from "@opentelemetry/instrumentation-runtime-node";
 import { MeterProvider } from "@opentelemetry/sdk-metrics";
 import { NodeSDK } from "@opentelemetry/sdk-node";
 import type { AppConfig } from "../config/app-config";
@@ -39,6 +40,7 @@ export function initializeOpenTelemetry(config: AppConfig) {
 					enabled: false,
 				},
 			}),
+			new RuntimeNodeInstrumentation(),
 		],
 		traceExporter: config.telemetry.otlpEndpoint
 			? new OTLPTraceExporter({

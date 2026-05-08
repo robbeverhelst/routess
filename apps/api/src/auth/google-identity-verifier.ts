@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger, UnauthorizedException } from "@nestjs/commo
 import { OAuth2Client, type TokenPayload } from "google-auth-library";
 import type { AppConfig } from "../config/app-config";
 import { APP_CONFIG } from "../config/config.module";
+import { MetricsService } from "../telemetry/metrics.service";
 
 export interface GoogleIdentity {
 	googleId: string;
@@ -21,11 +22,26 @@ export class GoogleOAuth2Verifier implements GoogleIdentityVerifier {
 	private readonly logger = new Logger(GoogleOAuth2Verifier.name);
 	private readonly client: OAuth2Client;
 
-	constructor(@Inject(APP_CONFIG) private readonly config: AppConfig) {
+	constructor(
+		@Inject(APP_CONFIG) private readonly config: AppConfig,
+		private readonly metrics: MetricsService,
+	) {
 		this.client = new OAuth2Client(this.config.auth.googleClientId);
 	}
 
 	async verify(credential: string): Promise<GoogleIdentity> {
+		const start = Date.now();
+		let status: "success" | "error" = "error";
+		try {
+			const identity = await this.callGoogle(credential);
+			status = "success";
+			return identity;
+		} finally {
+			this.metrics.recordExternalRequest("google", status, Date.now() - start);
+		}
+	}
+
+	private async callGoogle(credential: string): Promise<GoogleIdentity> {
 		let payload: TokenPayload | undefined;
 		try {
 			const ticket = await this.client.verifyIdToken({

@@ -1,14 +1,16 @@
 import { EntityRepository } from "@mikro-orm/core";
 import { InjectRepository } from "@mikro-orm/nestjs";
-import { Injectable, type OnModuleInit } from "@nestjs/common";
+import { Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
 import type { Counter, Histogram, UpDownCounter } from "@opentelemetry/api";
 import { Route } from "../entities/route.entity";
 import { User } from "../entities/user.entity";
+import { setDbMetricsRecorder } from "./db-metrics-recorder";
+import type { AuthLoginResult, AuthProvider, SessionRevocationReason } from "./domain-events";
 import type { Metrics } from "./metrics.interface";
 import { getMeter } from "./tracing";
 
 @Injectable()
-export class MetricsService implements OnModuleInit, Metrics {
+export class MetricsService implements OnModuleInit, OnModuleDestroy, Metrics {
 	private meter = getMeter();
 
 	constructor(
@@ -25,6 +27,7 @@ export class MetricsService implements OnModuleInit, Metrics {
 
 	// Business metrics
 	private userRegistrations!: Counter;
+	private userUndeletes!: Counter;
 	private routesCreated!: Counter;
 	private routesDeleted!: Counter;
 	private activeUsers!: UpDownCounter;
@@ -32,8 +35,20 @@ export class MetricsService implements OnModuleInit, Metrics {
 
 	private dbQueryDuration!: Histogram;
 
+	// Auth metrics
+	private loginAttempts!: Counter;
+	private sessionsRevoked!: Counter;
+
+	// External request metrics
+	private externalRequestDuration!: Histogram;
+
 	async onModuleInit() {
 		await this.initializeMetrics();
+		setDbMetricsRecorder((operation, duration) => this.recordDbQuery(operation, duration));
+	}
+
+	onModuleDestroy() {
+		setDbMetricsRecorder(null);
 	}
 
 	private async initializeMetrics() {
@@ -70,6 +85,23 @@ export class MetricsService implements OnModuleInit, Metrics {
 
 		this.dbQueryDuration = this.meter.createHistogram("db_query_duration_ms", {
 			description: "Duration of database queries in milliseconds",
+			unit: "ms",
+		});
+
+		this.userUndeletes = this.meter.createCounter("user_undeletes_total", {
+			description: "Total number of soft-deleted users restored on relogin",
+		});
+
+		this.loginAttempts = this.meter.createCounter("auth_login_total", {
+			description: "Total number of authentication attempts",
+		});
+
+		this.sessionsRevoked = this.meter.createCounter("auth_session_revoked_total", {
+			description: "Total number of revoked sessions",
+		});
+
+		this.externalRequestDuration = this.meter.createHistogram("external_request_duration_ms", {
+			description: "Duration of outbound requests to third-party providers",
 			unit: "ms",
 		});
 
@@ -114,12 +146,12 @@ export class MetricsService implements OnModuleInit, Metrics {
 		this.userRegistrations.add(1, { type: registrationType });
 	}
 
-	recordRouteCreated(userId: number) {
-		this.routesCreated.add(1, { user_id: userId.toString() });
+	recordRouteCreated() {
+		this.routesCreated.add(1);
 	}
 
-	recordRouteDeleted(userId: number) {
-		this.routesDeleted.add(1, { user_id: userId.toString() });
+	recordRouteDeleted() {
+		this.routesDeleted.add(1);
 	}
 
 	setActiveUsers(count: number) {
@@ -132,5 +164,22 @@ export class MetricsService implements OnModuleInit, Metrics {
 
 	recordDbQuery(operation: string, duration: number) {
 		this.dbQueryDuration.record(duration, { operation });
+	}
+
+	recordUserUndeleted() {
+		this.userUndeletes.add(1);
+	}
+
+	recordLoginAttempt(provider: AuthProvider, result: AuthLoginResult) {
+		this.loginAttempts.add(1, { provider, result });
+	}
+
+	recordSessionRevoked(reason: SessionRevocationReason, count: number) {
+		if (count <= 0) return;
+		this.sessionsRevoked.add(count, { reason });
+	}
+
+	recordExternalRequest(provider: string, status: "success" | "error", duration: number) {
+		this.externalRequestDuration.record(duration, { provider, status });
 	}
 }

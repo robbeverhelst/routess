@@ -5,9 +5,16 @@ metadata:
   namespace: {{ .Values.global.namespace }}
   labels:
     {{- include "routess.api.labels" . | nindent 4 }}
-  {{- with .Values.api.service.annotations }}
+  {{- if or .Values.api.service.annotations .Values.monitoring.serviceMonitor.scrapeAnnotations }}
   annotations:
+    {{- if .Values.monitoring.serviceMonitor.scrapeAnnotations }}
+    prometheus.io/scrape: "true"
+    prometheus.io/path: {{ .Values.monitoring.serviceMonitor.path | quote }}
+    prometheus.io/port: {{ .Values.api.service.port | quote }}
+    {{- end }}
+    {{- with .Values.api.service.annotations }}
     {{- toYaml . | nindent 4 }}
+    {{- end }}
   {{- end }}
 spec:
   type: {{ .Values.api.service.type }}

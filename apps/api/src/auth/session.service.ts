@@ -9,7 +9,12 @@ import type { AppConfig } from "../config/app-config";
 import { APP_CONFIG } from "../config/config.module";
 import { Session } from "../entities/session.entity";
 import { User } from "../entities/user.entity";
-import { SESSION_ACTIVITY_CHANGED } from "../telemetry/domain-events";
+import {
+	AUTH_SESSION_REVOKED,
+	type AuthSessionRevokedEvent,
+	SESSION_ACTIVITY_CHANGED,
+	type SessionRevocationReason,
+} from "../telemetry/domain-events";
 
 const LAST_ACTIVITY_UPDATE_INTERVAL_MS = 5 * 60 * 1000;
 
@@ -109,12 +114,13 @@ export class SessionService {
 		return user;
 	}
 
-	async invalidateSession(jti: string): Promise<void> {
+	async invalidateSession(jti: string, reason: SessionRevocationReason = "logout"): Promise<void> {
 		const session = await this.sessionRepository.findOne({ jti });
 		if (session) {
 			session.deletedAt = new Date();
 			await this.em.persistAndFlush(session);
 			this.events.emit(SESSION_ACTIVITY_CHANGED);
+			this.emitRevoked(reason, 1);
 		}
 	}
 
@@ -128,7 +134,11 @@ export class SessionService {
 		}
 
 		await this.em.flush();
-		this.events.emit(SESSION_ACTIVITY_CHANGED);
+
+		if (expiredSessions.length > 0) {
+			this.events.emit(SESSION_ACTIVITY_CHANGED);
+			this.emitRevoked("expired", expiredSessions.length);
+		}
 
 		return expiredSessions.length;
 	}
@@ -146,7 +156,7 @@ export class SessionService {
 		});
 	}
 
-	async invalidateUserSessions(userId: number): Promise<void> {
+	async invalidateUserSessions(userId: number, reason: SessionRevocationReason = "invalidated"): Promise<void> {
 		const sessions = await this.sessionRepository.find({ user: userId });
 		const deletedAt = new Date();
 
@@ -155,6 +165,17 @@ export class SessionService {
 		}
 
 		await this.em.flush();
-		this.events.emit(SESSION_ACTIVITY_CHANGED);
+
+		if (sessions.length > 0) {
+			this.events.emit(SESSION_ACTIVITY_CHANGED);
+			this.emitRevoked(reason, sessions.length);
+		}
+	}
+
+	private emitRevoked(reason: SessionRevocationReason, count: number) {
+		this.events.emit(AUTH_SESSION_REVOKED, {
+			reason,
+			count,
+		} satisfies AuthSessionRevokedEvent);
 	}
 }

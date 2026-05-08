@@ -94,6 +94,11 @@ api:
     dbName: routess
     swaggerEnabled: "true"
     swaggerPath: "/api"
+  # Email allowlist for admin role. Source of truth for User.role; reconciled at
+  # login via AuthService. Empty list disables reconciliation entirely (existing
+  # roles are preserved). See ADR-0015.
+  adminEmails: []
+  #   - admin@example.com
   secrets:
     # These are set via --set in CI from 1Password
     jwtSecret: ""
@@ -249,6 +254,27 @@ networkPolicies:
     enabled: true
     host: ""  # set via --set from 1Password
     port: 5432
+
+monitoring:
+  serviceMonitor:
+    # When true, renders a Prometheus Operator ServiceMonitor for the API.
+    # Requires the monitoring.coreos.com CRDs in the cluster.
+    enabled: false
+    interval: 30s
+    scrapeTimeout: 10s
+    path: /metrics
+    # Extra labels to match your Prometheus Operator's serviceMonitorSelector.
+    labels: {}
+    relabelings: []
+    metricRelabelings: []
+    # When true, also adds prometheus.io/scrape annotations to the API Service
+    # for clusters using annotation-based scrape discovery (no Operator).
+    scrapeAnnotations: false
+  # Optional Grafana dashboard URLs surfaced in the admin UI's system panel.
+  grafanaUrls:
+    apiOverview: ""
+    apiLatency: ""
+    runtime: ""
 
 imagePullSecrets: []
 # - name: ghcr-secret

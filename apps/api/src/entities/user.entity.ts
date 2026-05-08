@@ -2,6 +2,8 @@ import { Entity, Index, PrimaryKey, Property } from "@mikro-orm/core";
 import type { UserPreferences } from "@routess/core";
 import { BaseEntity } from "./base.entity";
 
+export type UserRole = "user" | "admin";
+
 @Entity()
 @Index({ properties: ["email"] }) // Index for email lookups
 @Index({ properties: ["googleId"] }) // Index for Google authentication
@@ -23,6 +25,9 @@ export class User extends BaseEntity {
 
 	@Property({ default: false })
 	isEmailVerified = false;
+
+	@Property({ type: "string", default: "user" })
+	role: UserRole = "user";
 
 	@Property({ type: "json", nullable: true })
 	preferences?: UserPreferences | null;

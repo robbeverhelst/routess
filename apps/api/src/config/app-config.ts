@@ -21,6 +21,7 @@ export interface AppConfig {
 		googleClientId: string;
 		sessionTtlMs: number;
 		cookieName: string;
+		adminEmails: string[];
 	};
 	database: {
 		host: string;
@@ -37,6 +38,9 @@ export interface AppConfig {
 		metricsPort: number;
 		otlpEndpoint?: string;
 		otlpHeaders?: Record<string, string>;
+	};
+	monitoring: {
+		grafanaUrls: Record<string, string>;
 	};
 	docs: {
 		enabled: boolean;
@@ -168,6 +172,7 @@ export function getAppConfig(): AppConfig {
 			googleClientId: process.env.GOOGLE_CLIENT_ID || "",
 			sessionTtlMs,
 			cookieName: process.env.SESSION_COOKIE_NAME || DEFAULTS.sessionCookieName,
+			adminEmails: parseStringList(process.env.ADMIN_EMAILS).map((email) => email.toLowerCase()),
 		},
 		database: {
 			host: process.env.DB_HOST || "localhost",
@@ -188,6 +193,9 @@ export function getAppConfig(): AppConfig {
 		docs: {
 			enabled: parseBoolean(process.env.SWAGGER_ENABLED, !isProduction),
 			path: process.env.SWAGGER_PATH || "/api",
+		},
+		monitoring: {
+			grafanaUrls: parseJsonObject(process.env.GRAFANA_URLS) ?? {},
 		},
 	};
 }
