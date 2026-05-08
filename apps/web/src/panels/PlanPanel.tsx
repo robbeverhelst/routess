@@ -23,10 +23,9 @@ import {
 } from "@/stores/routingStore";
 import { type RedesignActivity, useUiStore } from "@/stores/uiStore";
 import { EditableLabel } from "../components/EditableLabel";
-import { ElevationSparkline } from "../components/ElevationSparkline";
 import { I } from "../components/icons";
 import { Btn, IconBtn, Kbd, RDS_COLORS, SecTitle } from "../components/primitives";
-import { SurfaceBreakdownBar } from "../components/SurfaceBreakdownBar";
+import { RouteProfileChart } from "../components/RouteProfileChart";
 
 // Parses durations produced by @routess/core formatDuration: "X min", "X h", or "X.X h"
 // (with optional " (estimated)" / " (offline)" suffix). Returns minutes or null.
@@ -46,11 +45,20 @@ const ACTIVITIES: { key: RedesignActivity; icon: React.ComponentType<{ size?: nu
 	{ key: "walk", icon: I.walk, labelKey: "sport.short.walk" },
 ];
 
-function PlanElevationSparkline() {
+function PlanRouteProfileChart() {
 	const profile = useElevationProfile();
 	const isComputing = useIsComputingElevation();
 	const hasRoute = useHasRoute();
-	return <ElevationSparkline profile={profile} loading={hasRoute && isComputing} style={{ marginTop: 14 }} />;
+	const { breakdown, loading: surfaceLoading } = useSurfaceBreakdown();
+	return (
+		<RouteProfileChart
+			profile={profile}
+			breakdown={breakdown}
+			elevationLoading={hasRoute && isComputing}
+			surfaceLoading={surfaceLoading}
+			style={{ marginTop: 14 }}
+		/>
+	);
 }
 
 export function PlanPanel() {
@@ -84,7 +92,6 @@ export function PlanPanel() {
 	const openModal = useModalsStore((s) => s.openModal);
 	const elevationGain = useElevationGain();
 	const isComputingElevation = useIsComputingElevation();
-	const { breakdown: surfaceBreakdown, loading: surfaceLoading } = useSurfaceBreakdown();
 	const { formatElevationParts, units } = useUnits();
 
 	const elevParts = elevationGain != null ? formatElevationParts(elevationGain) : null;
@@ -256,8 +263,7 @@ export function PlanPanel() {
 						</div>
 					))}
 				</div>
-				<PlanElevationSparkline />
-				<SurfaceBreakdownBar breakdown={surfaceBreakdown} loading={surfaceLoading} />
+				<PlanRouteProfileChart />
 			</div>
 
 			{/* Waypoints list */}

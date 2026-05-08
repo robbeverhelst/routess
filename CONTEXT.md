@@ -29,8 +29,12 @@ _Avoid_: AI route, auto route, suggested route.
 Either `a-to-b` (start ≠ end) or `loop` (start = end). A property of a generated or saved Route.
 
 **SurfaceType**:
-Routing preference: `paved`, `mixed`, or `unpaved`. Used by RouteGeneration and routing requests.
+Routing *preference* (an input): `paved`, `mixed`, or `unpaved`. Used by RouteGeneration and routing requests to bias the chosen RoutePath. Distinct from **SurfaceBucket**.
 _Avoid_: terrain, surface preference.
+
+**SurfaceBucket**:
+Per-segment *classification* (an observation): `paved`, `compacted`, `unpaved`, or `path`. The result of analysing the actual RoutePath's edges (via Valhalla `trace_attributes`). Used to render surface composition along the route. Distinct from **SurfaceType** (which is what the user asked for, not what the route turned out to be).
+_Avoid_: surface, surface kind.
 
 **LoopDirection**:
 For loop routes, either `clockwise` or `counter-clockwise`.
@@ -103,3 +107,4 @@ _Avoid_: account, profile (no separate Profile entity exists in the domain).
 - **"Snap"** is implementation jargon for "find the nearest road and adjust the Waypoint to lie on it." Use it for engineering conversation, not for user-facing copy or domain modelling.
 - **"Loop"** is a **RouteType** value, not a synonym for "cycle" or "ride". A Route's RouteType is either `a-to-b` or `loop`.
 - **"Account" / "Profile"** are not Routess concepts. The domain only has **User**.
+- **"Surface"** is overloaded: **SurfaceType** is a routing *preference* (3 values, an input), **SurfaceBucket** is a per-segment *classification* (4 values, an observation on the resulting RoutePath). Don't conflate them; in conversation, name the specific term.

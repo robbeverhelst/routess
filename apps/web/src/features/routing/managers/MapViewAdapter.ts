@@ -1,14 +1,18 @@
 import type { Coordinate, Waypoint } from "@routess/core";
 import { haversineDistance } from "@routess/core";
 import type { Map as MapboxMap } from "mapbox-gl";
+import { useRouteScrubStore } from "@/stores/routeScrubStore";
 import { useRouteSurfaceStore } from "@/stores/routeSurfaceStore";
 import { useRoutingStore } from "@/stores/routingStore";
 import {
 	clearKilometerMarkersLayer,
 	clearRouteLayer,
+	clearRouteScrubLayer,
 	clearRouteSurfaceLayer,
+	interpolateOnRoutePath,
 	updateKilometerMarkersLayer,
 	updateRouteLayer,
+	updateRouteScrubLayer,
 	updateRouteSurfaceLayer,
 	updateWaypointsLayer,
 } from "./MapLayerManager";
@@ -55,10 +59,19 @@ const renderRoute = (map: MapboxMap, routePath: Coordinate[]) => {
 		clearRouteLayer(map);
 		clearRouteSurfaceLayer(map);
 		clearKilometerMarkersLayer(map);
+		clearRouteScrubLayer(map);
 		return;
 	}
 	updateRouteLayer(map, routePath);
 	updateKilometerMarkersLayer(map, buildKmMarkerFeatures(routePath));
+};
+
+const renderScrub = (map: MapboxMap, routePath: Coordinate[], distanceMeters: number | null) => {
+	if (distanceMeters == null || routePath.length < 2) {
+		clearRouteScrubLayer(map);
+		return;
+	}
+	updateRouteScrubLayer(map, interpolateOnRoutePath(routePath, distanceMeters));
 };
 
 const renderSurface = (map: MapboxMap) => {
@@ -73,6 +86,7 @@ export function attachMapViewAdapter(map: MapboxMap): () => void {
 	renderWaypoints(map, initial.waypoints, initial.isMapLocked);
 	renderRoute(map, initial.routePath);
 	renderSurface(map);
+	renderScrub(map, initial.routePath, useRouteScrubStore.getState().hoveredDistanceMeters);
 
 	const unsubWaypoints = useRoutingStore.subscribe((state, prev) => {
 		if (state.waypoints !== prev.waypoints || state.isMapLocked !== prev.isMapLocked) {
@@ -80,6 +94,7 @@ export function attachMapViewAdapter(map: MapboxMap): () => void {
 		}
 		if (state.routePath !== prev.routePath) {
 			renderRoute(map, state.routePath);
+			renderScrub(map, state.routePath, useRouteScrubStore.getState().hoveredDistanceMeters);
 		}
 	});
 
@@ -89,9 +104,16 @@ export function attachMapViewAdapter(map: MapboxMap): () => void {
 		}
 	});
 
+	const unsubScrub = useRouteScrubStore.subscribe((state, prev) => {
+		if (state.hoveredDistanceMeters !== prev.hoveredDistanceMeters) {
+			renderScrub(map, useRoutingStore.getState().routePath, state.hoveredDistanceMeters);
+		}
+	});
+
 	return () => {
 		unsubWaypoints();
 		unsubSurface();
+		unsubScrub();
 	};
 }
 

@@ -30,6 +30,8 @@ const SURFACE_BUCKETS: Record<string, SurfaceBucket> = {
 export interface SurfaceSegment {
 	surface: SurfaceBucket;
 	coordinates: Coordinate[];
+	distanceStartMeters: number;
+	distanceEndMeters: number;
 }
 
 export interface SurfaceBreakdown {
@@ -112,32 +114,66 @@ export async function fetchSurfaceBreakdown(
 
 // Group consecutive edges sharing the same surface bucket into one polyline segment
 // using each edge's [begin_shape_index, end_shape_index] range against the matched shape.
+// Distance ranges are summed from edge.length (km) so the strip and chart-hover lookups
+// agree with what Valhalla itself measured.
 function buildSurfaceSegments(edges: ValhallaEdge[], shape: Coordinate[]): SurfaceSegment[] {
 	if (shape.length < 2) return [];
 	const segments: SurfaceSegment[] = [];
-	let current: { bucket: SurfaceBucket; begin: number; end: number } | null = null;
+	let current: {
+		bucket: SurfaceBucket;
+		begin: number;
+		end: number;
+		distanceStartMeters: number;
+		distanceEndMeters: number;
+	} | null = null;
+	let cumulativeMeters = 0;
 
 	for (const edge of edges) {
 		const begin = edge.begin_shape_index;
 		const end = edge.end_shape_index;
 		if (typeof begin !== "number" || typeof end !== "number" || end <= begin) continue;
 		const bucket = SURFACE_BUCKETS[edge.surface ?? ""] ?? "unpaved";
+		const edgeMeters = typeof edge.length === "number" ? edge.length * 1000 : 0;
+		const edgeStart = cumulativeMeters;
+		const edgeEnd = cumulativeMeters + edgeMeters;
+		cumulativeMeters = edgeEnd;
 
 		if (current && current.bucket === bucket && begin <= current.end) {
 			current.end = Math.max(current.end, end);
+			current.distanceEndMeters = edgeEnd;
 		} else {
-			if (current) segments.push(sliceSegment(current.bucket, current.begin, current.end, shape));
-			current = { bucket, begin, end };
+			if (current) segments.push(sliceSegment(current, shape));
+			current = {
+				bucket,
+				begin,
+				end,
+				distanceStartMeters: edgeStart,
+				distanceEndMeters: edgeEnd,
+			};
 		}
 	}
-	if (current) segments.push(sliceSegment(current.bucket, current.begin, current.end, shape));
+	if (current) segments.push(sliceSegment(current, shape));
 	return segments.filter((s) => s.coordinates.length >= 2);
 }
 
-function sliceSegment(bucket: SurfaceBucket, begin: number, end: number, shape: Coordinate[]): SurfaceSegment {
-	const lo = Math.max(0, Math.min(begin, shape.length - 1));
-	const hi = Math.max(0, Math.min(end, shape.length - 1));
-	return { surface: bucket, coordinates: shape.slice(lo, hi + 1) };
+function sliceSegment(
+	current: {
+		bucket: SurfaceBucket;
+		begin: number;
+		end: number;
+		distanceStartMeters: number;
+		distanceEndMeters: number;
+	},
+	shape: Coordinate[],
+): SurfaceSegment {
+	const lo = Math.max(0, Math.min(current.begin, shape.length - 1));
+	const hi = Math.max(0, Math.min(current.end, shape.length - 1));
+	return {
+		surface: current.bucket,
+		coordinates: shape.slice(lo, hi + 1),
+		distanceStartMeters: current.distanceStartMeters,
+		distanceEndMeters: current.distanceEndMeters,
+	};
 }
 
 // Valhalla returns shape as a polyline encoded with precision 1e6 (vs Google's 1e5).

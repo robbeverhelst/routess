@@ -15,10 +15,9 @@ import { useRoutingPreferencesStore } from "@/stores/routingPreferencesStore";
 import { useToastStore } from "@/stores/toastStore";
 import { useUiStore } from "@/stores/uiStore";
 import { EditableLabel } from "../components/EditableLabel";
-import { ElevationSparkline } from "../components/ElevationSparkline";
 import { I, type IconKey } from "../components/icons";
 import { Btn, IconBtn, RDS_COLORS, SecTitle } from "../components/primitives";
-import { SurfaceBreakdownBar } from "../components/SurfaceBreakdownBar";
+import { RouteProfileChart } from "../components/RouteProfileChart";
 
 const ACTIVITY_LABEL: Record<RouteActivity, { labelKey: string; icon: IconKey }> = {
 	cycle: { labelKey: "sport.cycle", icon: "bike" },
@@ -441,15 +440,16 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 				{elevationGeometry.length >= 2 && (
 					<div style={{ marginTop: 18 }}>
 						<SecTitle style={{ marginBottom: 8 }}>{t("route.elevation")}</SecTitle>
-						<ElevationSparkline
+						<RouteProfileChart
 							profile={computedProfile}
-							loading={elevationLoading}
+							breakdown={surfaceBreakdown}
+							elevationLoading={elevationLoading}
+							surfaceLoading={surfaceLoading}
 							gradientId={`rds-elev-${route.id}`}
+							style={{ marginTop: 0 }}
 						/>
 					</div>
 				)}
-
-				{elevationGeometry.length >= 2 && <SurfaceBreakdownBar breakdown={surfaceBreakdown} loading={surfaceLoading} />}
 
 				{route.waypoints && route.waypoints.length > 0 && (
 					<div style={{ marginTop: 18 }}>
