@@ -13,8 +13,8 @@ export class MikroOrmMetricsLogger extends DefaultLogger {
 	// MikroORM 6 routes every query through logQuery (not log). Capture the
 	// timing here directly so the metric is independent of the `debug` config:
 	// without this, a production deploy with debug=false would emit nothing.
-	override logQuery(context: LogContext) {
-		if (typeof context.took === "number" && typeof context.query === "string") {
+	override logQuery(context: { query: string } & LogContext) {
+		if (typeof context.took === "number") {
 			recordDbQueryIfEnabled(classifyOperation(context.query), context.took);
 		}
 		super.logQuery(context);
