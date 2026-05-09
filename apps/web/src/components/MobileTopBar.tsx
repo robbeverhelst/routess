@@ -1,3 +1,5 @@
+import { Link } from "@tanstack/react-router";
+import { useAuthStatus } from "@/lib/api-queries";
 import { useT } from "@/lib/i18n";
 import { useModalsStore } from "@/stores/modalsStore";
 import { useUiStore } from "@/stores/uiStore";
@@ -13,6 +15,8 @@ export function MobileTopBar() {
 	const closeOverlay = useModalsStore((s) => s.closeOverlay);
 	const overlay = useModalsStore((s) => s.overlay);
 	const alertsActive = overlay === "notifications";
+	const { data: auth } = useAuthStatus();
+	const isAdmin = auth?.user?.role === "admin";
 
 	return (
 		<header
@@ -58,6 +62,32 @@ export function MobileTopBar() {
 			<IconBtn title={t("appshell.toggleTheme")} onClick={toggleTheme}>
 				{theme === "dark" ? <I.sun size={18} /> : <I.moon size={18} />}
 			</IconBtn>
+			{isAdmin && (
+				<Link
+					to="/admin"
+					title="Admin"
+					aria-label="Admin"
+					style={{
+						display: "inline-flex",
+						alignItems: "center",
+						justifyContent: "center",
+						width: 32,
+						height: 32,
+						borderRadius: "var(--rds-radius-sm)",
+						color: RDS_COLORS.fgMuted,
+						textDecoration: "none",
+						flexShrink: 0,
+					}}
+					activeProps={{
+						style: {
+							background: RDS_COLORS.accentSoft,
+							color: RDS_COLORS.accent,
+						},
+					}}
+				>
+					<I.shield size={18} />
+				</Link>
+			)}
 			<UserAvatar size={30} compact />
 		</header>
 	);
