@@ -59,11 +59,19 @@ const WAYPOINT_SCALING_CONFIG = {
 	],
 };
 
-const interpolateZoomStops = (column: 1 | 2 | 3 | 4): unknown[] => [
+// Mapbox requires "zoom" to sit directly under a top-level "interpolate" or
+// "step", so we embed the hover branch in each output value instead of
+// wrapping the whole interpolate in a "case".
+const interpolateZoomStops = (column: 1 | 2 | 3 | 4, hoverMultiplier = 1): unknown[] => [
 	"interpolate",
 	["linear"],
 	["zoom"],
-	...WAYPOINT_SCALING_CONFIG.zoomStops.flatMap((stop) => [stop[0], stop[column]]),
+	...WAYPOINT_SCALING_CONFIG.zoomStops.flatMap((stop) => [
+		stop[0],
+		hoverMultiplier === 1
+			? stop[column]
+			: ["case", ["boolean", ["feature-state", "hover"], false], stop[column] * hoverMultiplier, stop[column]],
+	]),
 ];
 
 export const initializeSourcesAndLayers = (map: MapboxMap, palette?: MapPalette): void => {
@@ -191,7 +199,8 @@ export const initializeSourcesAndLayers = (map: MapboxMap, palette?: MapPalette)
 			type: "circle",
 			source: WAYPOINTS_SOURCE_ID,
 			paint: {
-				"circle-radius": interpolateZoomStops(2),
+				"circle-radius": interpolateZoomStops(2, 1.35),
+				"circle-radius-transition": { duration: 180, delay: 0 },
 				"circle-color": p.waypointShadow,
 				"circle-blur": 0.6,
 			},
@@ -201,7 +210,8 @@ export const initializeSourcesAndLayers = (map: MapboxMap, palette?: MapPalette)
 			type: "circle",
 			source: WAYPOINTS_SOURCE_ID,
 			paint: {
-				"circle-radius": interpolateZoomStops(1),
+				"circle-radius": interpolateZoomStops(1, 1.35),
+				"circle-radius-transition": { duration: 180, delay: 0 },
 				"circle-color": [
 					"match",
 					["get", "pointType"],
@@ -213,7 +223,8 @@ export const initializeSourcesAndLayers = (map: MapboxMap, palette?: MapPalette)
 					p.waypointDirect,
 					p.waypointInter,
 				],
-				"circle-stroke-width": interpolateZoomStops(4),
+				"circle-stroke-width": interpolateZoomStops(4, 1.75),
+				"circle-stroke-width-transition": { duration: 180, delay: 0 },
 				"circle-stroke-color": p.waypointStroke,
 			},
 		});
@@ -223,7 +234,8 @@ export const initializeSourcesAndLayers = (map: MapboxMap, palette?: MapPalette)
 			source: WAYPOINTS_SOURCE_ID,
 			filter: ["match", ["get", "pointType"], ["start", "end", "direct"], true, false],
 			paint: {
-				"circle-radius": interpolateZoomStops(3),
+				"circle-radius": interpolateZoomStops(3, 1.35),
+				"circle-radius-transition": { duration: 180, delay: 0 },
 				"circle-color": p.waypointStroke,
 			},
 		});
@@ -432,6 +444,21 @@ export const applyMapPalette = (map: MapboxMap, palette: MapPalette): void => {
 	}
 };
 
+// Mapbox setFeatureState needs a stable feature id. We derive it from the
+// original waypoint index (offset by 1, since some Mapbox internals treat 0
+// as missing). Inverse: index = id - 1.
+export const waypointFeatureIdFromIndex = (index: number): number => index + 1;
+
+export const setHoveredWaypoint = (map: MapboxMap, previousIndex: number | null, nextIndex: number | null): void => {
+	if (!map?.getSource(WAYPOINTS_SOURCE_ID)) return;
+	if (previousIndex !== null) {
+		map.removeFeatureState({ source: WAYPOINTS_SOURCE_ID, id: waypointFeatureIdFromIndex(previousIndex) }, "hover");
+	}
+	if (nextIndex !== null) {
+		map.setFeatureState({ source: WAYPOINTS_SOURCE_ID, id: waypointFeatureIdFromIndex(nextIndex) }, { hover: true });
+	}
+};
+
 export const updateWaypointsLayer = (map: MapboxMap, waypoints: Waypoint[], isMapLocked: boolean): void => {
 	if (!map?.getSource(WAYPOINTS_SOURCE_ID)) return;
 
@@ -451,6 +478,7 @@ export const updateWaypointsLayer = (map: MapboxMap, waypoints: Waypoint[], isMa
 
 		return {
 			type: "Feature" as const,
+			id: waypointFeatureIdFromIndex(originalIndex),
 			properties: { pointType, waypointIndex: originalIndex },
 			geometry: { type: "Point" as const, coordinates: wp.coord },
 		};

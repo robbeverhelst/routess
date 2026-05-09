@@ -12,6 +12,7 @@ import {
 import type { RouteDraftEditor } from "@/features/routing/RouteDraftEditor";
 import { Logger } from "@/lib/logger";
 import { useRoutingStore } from "@/stores/routingStore";
+import { useWaypointHoverStore } from "@/stores/waypointHoverStore";
 import type { Coordinate } from "@/types/map";
 
 export interface PopupInfo {
@@ -423,6 +424,42 @@ export const initializeMapInteractions = (
 		clearRouteHover();
 	};
 
+	// Pulls the hovered waypoint index from a layer-bound event's preloaded
+	// `features` array. Avoids calling queryRenderedFeatures, which throws
+	// "The layer 'points' does not exist" if a style swap has briefly torn
+	// the layer down.
+	const setWaypointHoverFromEvent = (event: MapLayerMouseEvent) => {
+		if (state.isDragging) return;
+		const feature = event.features?.[0];
+		const index = feature
+			? parseWaypointIndex(feature.properties?.waypointIndex, useRoutingStore.getState().waypoints.length)
+			: null;
+		const current = useWaypointHoverStore.getState().hoveredWaypointIndex;
+		if (current !== index) {
+			useWaypointHoverStore.getState().setHover(index);
+		}
+	};
+
+	const handleWaypointMouseEnter = (event: MapLayerMouseEvent) => {
+		if (isMapLockedRef.current || state.isDragging) return;
+		mapCanvas.style.cursor = "pointer";
+		setWaypointHoverFromEvent(event);
+	};
+
+	const handleWaypointMouseMove = (event: MapLayerMouseEvent) => {
+		if (isMapLockedRef.current || state.isDragging) return;
+		setWaypointHoverFromEvent(event);
+	};
+
+	const handleWaypointMouseLeave = () => {
+		if (useWaypointHoverStore.getState().hoveredWaypointIndex !== null) {
+			useWaypointHoverStore.getState().clearHover();
+		}
+		if (!state.isDragging && state.hoveredRouteFeatureId === undefined) {
+			mapCanvas.style.cursor = "";
+		}
+	};
+
 	map.on("click", handleMapClick);
 	map.on("contextmenu", handleContextMenu);
 	map.on("mousedown", handleMouseDown);
@@ -433,6 +470,9 @@ export const initializeMapInteractions = (
 	map.on("touchcancel", handleTouchEnd);
 	map.on("mouseenter", ROUTE_LAYER_ID, handleRouteMouseEnter);
 	map.on("mouseleave", ROUTE_LAYER_ID, handleRouteMouseLeave);
+	map.on("mouseenter", WAYPOINTS_LAYER_ID, handleWaypointMouseEnter);
+	map.on("mousemove", WAYPOINTS_LAYER_ID, handleWaypointMouseMove);
+	map.on("mouseleave", WAYPOINTS_LAYER_ID, handleWaypointMouseLeave);
 	window.addEventListener("mouseup", handleWindowMouseUp);
 
 	return () => {
@@ -447,7 +487,11 @@ export const initializeMapInteractions = (
 		map.off("touchcancel", handleTouchEnd);
 		map.off("mouseenter", ROUTE_LAYER_ID, handleRouteMouseEnter);
 		map.off("mouseleave", ROUTE_LAYER_ID, handleRouteMouseLeave);
+		map.off("mouseenter", WAYPOINTS_LAYER_ID, handleWaypointMouseEnter);
+		map.off("mousemove", WAYPOINTS_LAYER_ID, handleWaypointMouseMove);
+		map.off("mouseleave", WAYPOINTS_LAYER_ID, handleWaypointMouseLeave);
 		window.removeEventListener("mouseup", handleWindowMouseUp);
+		useWaypointHoverStore.getState().clearHover();
 		resetLongPress();
 		clearRouteHover();
 		resetDragState();
