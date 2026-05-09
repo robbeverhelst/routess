@@ -80,3 +80,8 @@ Distributed tracing is wired through `@opentelemetry/sdk-node` with auto-instrum
 - `requestId` — generated or propagated from `X-Request-ID`
 - `level` — pino levels
 - `audit: true` — admin-mutating actions; filter on this to get an audit trail without a dedicated table (see [ADR-0015](../adr/0015-admin-role-reconciled-from-env-var.md))
+
+Browser logs default to warnings and errors. For local browser debugging, set
+`localStorage["routess:log-level"]` to `debug`, `info`, `warn`, `error`, or
+`none` and reload; use `VITE_LOG_LEVEL` for build- or deployment-wide browser
+log verbosity.

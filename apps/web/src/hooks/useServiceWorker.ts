@@ -46,7 +46,7 @@ export function useServiceWorker(): UseServiceWorkerReturn {
 		const online = !serviceWorkerManager.isOffline();
 		setIsOnline(online);
 		setNetworkStatus(serviceWorkerManager.getNetworkStatus());
-		Logger.info("[useServiceWorker] Network status changed:", { online });
+		Logger.debug("[useServiceWorker] Network status changed:", { online });
 	}, []);
 
 	// Refresh cache status
@@ -55,7 +55,7 @@ export function useServiceWorker(): UseServiceWorkerReturn {
 		try {
 			const status = await serviceWorkerManager.getCacheStatus();
 			setCacheStatus(status);
-			Logger.info("[useServiceWorker] Cache status refreshed:", status);
+			Logger.debug("[useServiceWorker] Cache status refreshed:", status);
 		} catch (error) {
 			Logger.error("[useServiceWorker] Failed to refresh cache status:", error);
 		} finally {
@@ -67,7 +67,7 @@ export function useServiceWorker(): UseServiceWorkerReturn {
 	const updateServiceWorker = useCallback(async () => {
 		try {
 			await serviceWorkerManager.skipWaiting();
-			Logger.info("[useServiceWorker] Service worker update initiated");
+			Logger.debug("[useServiceWorker] Service worker update initiated");
 		} catch (error) {
 			Logger.error("[useServiceWorker] Failed to update service worker:", error);
 		}
@@ -79,7 +79,7 @@ export function useServiceWorker(): UseServiceWorkerReturn {
 			try {
 				const success = await serviceWorkerManager.clearCache(cacheName);
 				if (success) {
-					Logger.info("[useServiceWorker] Cache cleared:", cacheName);
+					Logger.debug("[useServiceWorker] Cache cleared:", cacheName);
 					// Refresh cache status after clearing
 					await refreshCacheStatus();
 				}
@@ -101,7 +101,7 @@ export function useServiceWorker(): UseServiceWorkerReturn {
 			const clearPromises = cacheNames.map((cacheName) => serviceWorkerManager.clearCache(cacheName));
 
 			await Promise.all(clearPromises);
-			Logger.info("[useServiceWorker] All caches cleared");
+			Logger.debug("[useServiceWorker] All caches cleared");
 
 			// Refresh cache status
 			await refreshCacheStatus();
@@ -116,7 +116,7 @@ export function useServiceWorker(): UseServiceWorkerReturn {
 			try {
 				const success = await serviceWorkerManager.precacheRoute(routeData);
 				if (success) {
-					Logger.info("[useServiceWorker] Route precached successfully");
+					Logger.debug("[useServiceWorker] Route precached successfully");
 					// Refresh cache status after precaching
 					await refreshCacheStatus();
 				}
@@ -156,12 +156,12 @@ export function useServiceWorker(): UseServiceWorkerReturn {
 		};
 
 		const handleUpdateAvailable = () => {
-			Logger.info("[useServiceWorker] Service worker update available");
+			Logger.debug("[useServiceWorker] Service worker update available");
 			updateSwState();
 		};
 
 		const handleControlling = () => {
-			Logger.info("[useServiceWorker] Service worker now controlling");
+			Logger.debug("[useServiceWorker] Service worker now controlling");
 			updateSwState();
 		};
 
@@ -215,7 +215,7 @@ export function useServiceWorker(): UseServiceWorkerReturn {
 						);
 					}
 
-					Logger.info("[useServiceWorker] Disabled service workers and cleared Routess caches in development.");
+					Logger.debug("[useServiceWorker] Disabled service workers and cleared Routess caches in development.");
 				})
 				.catch((error) => {
 					Logger.error("[useServiceWorker] Development cleanup failed:", error);

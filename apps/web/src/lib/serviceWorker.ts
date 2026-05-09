@@ -28,6 +28,8 @@ type EventCallback = (data?: unknown) => void;
 
 const CONTROLLER_RELOAD_GUARD_KEY = "routess:sw-controller-reload-at";
 const CONTROLLER_RELOAD_GUARD_WINDOW_MS = 30_000;
+const SERVICE_WORKER_REQUEST_TIMEOUT_MS = 10_000;
+const ROUTE_PRECACHE_TIMEOUT_MS = 30_000;
 
 class ServiceWorkerManager {
 	private registration: ServiceWorkerRegistration | null = null;
@@ -107,18 +109,18 @@ class ServiceWorkerManager {
 	// Register the service worker
 	async register(): Promise<ServiceWorkerRegistration | null> {
 		if (!this.isSupported()) {
-			Logger.warn("[SW Manager] Service workers not supported");
+			Logger.debug("[SW Manager] Service workers not supported");
 			return null;
 		}
 
 		try {
-			Logger.info("[SW Manager] Registering service worker...");
+			Logger.debug("[SW Manager] Registering service worker...");
 
 			this.registration = await navigator.serviceWorker.register("/sw.js", {
 				scope: "/",
 			});
 
-			Logger.info("[SW Manager] Service worker registered successfully");
+			Logger.debug("[SW Manager] Service worker registered successfully");
 
 			// Set up event listeners
 			this.setupEventListeners();
@@ -140,14 +142,14 @@ class ServiceWorkerManager {
 
 		// Listen for service worker updates
 		this.registration.addEventListener("updatefound", () => {
-			Logger.info("[SW Manager] Service worker update found");
+			Logger.debug("[SW Manager] Service worker update found");
 			const newWorker = this.registration?.installing;
 
 			if (newWorker) {
 				this.emit("statechange", this.getState());
 
 				newWorker.addEventListener("statechange", () => {
-					Logger.info("[SW Manager] New service worker state:", newWorker.state);
+					Logger.debug("[SW Manager] New service worker state:", newWorker.state);
 
 					if (newWorker.state === "installed" && this.getController()) {
 						// New service worker is installed and ready
@@ -162,7 +164,7 @@ class ServiceWorkerManager {
 
 		// Listen for controller changes
 		navigator.serviceWorker.addEventListener("controllerchange", () => {
-			Logger.info("[SW Manager] Service worker controller changed");
+			Logger.debug("[SW Manager] Service worker controller changed");
 			this.emit("controlling");
 			this.emit("statechange", this.getState());
 
@@ -180,7 +182,7 @@ class ServiceWorkerManager {
 
 	private handleServiceWorkerMessage(event: MessageEvent) {
 		const { type, data } = event.data;
-		Logger.info("[SW Manager] Received message from service worker:", type, data);
+		Logger.debug("[SW Manager] Received message from service worker:", type, data);
 
 		switch (type) {
 			case "CACHE_STATUS":
@@ -201,7 +203,7 @@ class ServiceWorkerManager {
 
 		try {
 			await this.registration.update();
-			Logger.info("[SW Manager] Checked for service worker updates");
+			Logger.debug("[SW Manager] Checked for service worker updates");
 		} catch (error) {
 			Logger.error("[SW Manager] Failed to check for updates:", error);
 		}
@@ -217,7 +219,7 @@ class ServiceWorkerManager {
 		try {
 			// Send skip waiting message to the waiting service worker
 			this.registration.waiting.postMessage({ type: "SKIP_WAITING" });
-			Logger.info("[SW Manager] Sent skip waiting message to service worker");
+			Logger.debug("[SW Manager] Sent skip waiting message to service worker");
 		} catch (error) {
 			Logger.error("[SW Manager] Failed to skip waiting:", error);
 		}
@@ -239,69 +241,86 @@ class ServiceWorkerManager {
 	async getCacheStatus(): Promise<CacheStatus | null> {
 		const controller = this.getController();
 		if (!controller) {
-			Logger.warn("[SW Manager] No service worker controller available");
+			Logger.debug("[SW Manager] No service worker controller available");
 			return null;
 		}
 
-		return new Promise((resolve) => {
-			const messageChannel = new MessageChannel();
-
-			messageChannel.port1.onmessage = (event) => {
-				if (event.data.type === "CACHE_STATUS") {
-					resolve(event.data.data);
-				}
-			};
-
-			controller.postMessage({ type: "GET_CACHE_STATUS" }, [messageChannel.port2]);
-
-			// Timeout after 5 seconds
-			setTimeout(() => resolve(null), 5000);
-		});
+		return this.requestServiceWorker<CacheStatus>("GET_CACHE_STATUS", undefined, "CACHE_STATUS", 5000);
 	}
 
 	async clearCache(cacheName: string): Promise<boolean> {
 		const controller = this.getController();
 		if (!controller) {
-			Logger.warn("[SW Manager] No service worker controller available");
+			Logger.debug("[SW Manager] No service worker controller available");
 			return false;
 		}
 
-		return new Promise((resolve) => {
-			const messageChannel = new MessageChannel();
-
-			messageChannel.port1.onmessage = (event) => {
-				if (event.data.type === "CACHE_CLEARED") {
-					resolve(true);
-				}
-			};
-
-			controller.postMessage({ type: "CLEAR_CACHE", data: { cacheName } }, [messageChannel.port2]);
-
-			// Timeout after 10 seconds
-			setTimeout(() => resolve(false), 10000);
-		});
+		const response = await this.requestServiceWorker<{ cacheName: string }>(
+			"CLEAR_CACHE",
+			{ cacheName },
+			"CACHE_CLEARED",
+			SERVICE_WORKER_REQUEST_TIMEOUT_MS,
+		);
+		return response?.cacheName === cacheName;
 	}
 
 	async precacheRoute(routeData: Record<string, unknown>): Promise<boolean> {
 		const controller = this.getController();
 		if (!controller) {
-			Logger.warn("[SW Manager] No service worker controller available");
+			Logger.debug("[SW Manager] No service worker controller available");
 			return false;
 		}
 
+		const response = await this.requestServiceWorker<Record<string, unknown>>(
+			"PRECACHE_ROUTE",
+			{ routeData },
+			"ROUTE_PRECACHED",
+			ROUTE_PRECACHE_TIMEOUT_MS,
+		);
+		return !!response;
+	}
+
+	private requestServiceWorker<T>(
+		type: string,
+		data: Record<string, unknown> | undefined,
+		responseType: string,
+		timeoutMs: number,
+	): Promise<T | null> {
+		const controller = this.getController();
+		if (!controller) return Promise.resolve(null);
+
 		return new Promise((resolve) => {
 			const messageChannel = new MessageChannel();
+			let settled = false;
+
+			const finish = (value: T | null) => {
+				if (settled) return;
+				settled = true;
+				window.clearTimeout(timeoutId);
+				messageChannel.port1.close();
+				resolve(value);
+			};
+
+			const timeoutId = window.setTimeout(() => finish(null), timeoutMs);
 
 			messageChannel.port1.onmessage = (event) => {
-				if (event.data.type === "ROUTE_PRECACHED") {
-					resolve(true);
+				if (event.data?.type === responseType) {
+					finish((event.data.data ?? null) as T | null);
+					return;
+				}
+
+				if (event.data?.type === "SERVICE_WORKER_ERROR") {
+					Logger.warn("[SW Manager] Service worker request failed:", type, event.data.data);
+					finish(null);
 				}
 			};
 
-			controller.postMessage({ type: "PRECACHE_ROUTE", data: { routeData } }, [messageChannel.port2]);
-
-			// Timeout after 30 seconds
-			setTimeout(() => resolve(false), 30000);
+			try {
+				controller.postMessage(data ? { type, data } : { type }, [messageChannel.port2]);
+			} catch (error) {
+				Logger.warn("[SW Manager] Failed to send service worker message:", type, error);
+				finish(null);
+			}
 		});
 	}
 
@@ -314,7 +333,7 @@ class ServiceWorkerManager {
 
 		try {
 			const result = await this.registration.unregister();
-			Logger.info("[SW Manager] Service worker unregistered:", result);
+			Logger.debug("[SW Manager] Service worker unregistered:", result);
 			this.registration = null;
 			this.updateAvailable = false;
 			this.emit("statechange", this.getState());
