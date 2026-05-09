@@ -258,19 +258,15 @@ export const initializeSourcesAndLayers = (map: MapboxMap, palette?: MapPalette)
 				"circle-stroke-width": 0,
 			},
 		});
-		// Inverted styling vs. waypoints — waypoints are coloured fill with a
-		// white stroke; the user-location dot is white fill with a coloured
-		// stroke, so the two never read as the same shape.
 		map.addLayer({
 			id: USER_LOCATION_POINT_LAYER_ID,
 			type: "circle",
 			source: USER_LOCATION_SOURCE_ID,
 			paint: {
 				"circle-radius": 7,
-				"circle-color": p.userLocationStroke,
-				"circle-stroke-width": 3.5,
-				"circle-stroke-color": p.userLocation,
-				"circle-emissive-strength": 1,
+				"circle-color": p.userLocation,
+				"circle-stroke-width": 2.5,
+				"circle-stroke-color": p.userLocationStroke,
 			},
 		});
 	}
@@ -427,8 +423,8 @@ export const applyMapPalette = (map: MapboxMap, palette: MapPalette): void => {
 			map.setPaintProperty(USER_LOCATION_HALO_LAYER_ID, "circle-color", palette.userLocation);
 		}
 		if (map.getLayer(USER_LOCATION_POINT_LAYER_ID)) {
-			map.setPaintProperty(USER_LOCATION_POINT_LAYER_ID, "circle-color", palette.userLocationStroke);
-			map.setPaintProperty(USER_LOCATION_POINT_LAYER_ID, "circle-stroke-color", palette.userLocation);
+			map.setPaintProperty(USER_LOCATION_POINT_LAYER_ID, "circle-color", palette.userLocation);
+			map.setPaintProperty(USER_LOCATION_POINT_LAYER_ID, "circle-stroke-color", palette.userLocationStroke);
 		}
 		if (map.getLayer(KM_MARKERS_LAYER_ID)) {
 			map.setPaintProperty(KM_MARKERS_LAYER_ID, "text-color", palette.kmText);

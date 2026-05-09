@@ -35,7 +35,7 @@ const FALLBACK: MapPalette = {
 	waypointStroke: "rgb(255, 255, 255)",
 	kmText: "rgb(70, 70, 80)",
 	kmHalo: "rgba(255, 255, 255, 0.95)",
-	userLocation: "rgb(102, 56, 207)",
+	userLocation: "rgb(30, 132, 240)",
 	userLocationStroke: "rgb(255, 255, 255)",
 	dragLine: "rgb(102, 56, 207)",
 };
@@ -120,7 +120,9 @@ export function readMapPalette(): MapPalette {
 			waypointStroke: panelBg,
 			kmText: fg,
 			kmHalo,
-			userLocation: accent,
+			// Fixed blue, not the app accent — keeps the user-location dot
+			// distinct from intermediate waypoints (which use the accent).
+			userLocation: dark ? resolve("oklch(0.72 0.16 250)") : resolve("oklch(0.62 0.2 250)"),
 			userLocationStroke: panelBg,
 			dragLine: accent,
 		};
