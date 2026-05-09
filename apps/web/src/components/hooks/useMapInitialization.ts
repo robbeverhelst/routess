@@ -3,7 +3,11 @@ import type { Dispatch, SetStateAction } from "react";
 import { useCallback, useEffect, useRef } from "react";
 import type { PopupInfo as MIMPopupInfo } from "@/features/routing/managers/MapInteractionManager";
 import { initializeMapInteractions } from "@/features/routing/managers/MapInteractionManager";
-import { applyMapPalette, initializeSourcesAndLayers } from "@/features/routing/managers/MapLayerManager";
+import {
+	applyMapPalette,
+	initializeSourcesAndLayers,
+	startUserLocationPulse,
+} from "@/features/routing/managers/MapLayerManager";
 import { attachMapViewAdapter } from "@/features/routing/managers/MapViewAdapter";
 import { readMapPalette, subscribeMapPalette } from "@/features/routing/managers/mapPalette";
 import { createRouteDraftEditor, type RouteDraftEditor } from "@/features/routing/RouteDraftEditor";
@@ -33,6 +37,7 @@ export const useMapInitialization = ({
 	const routingDisposerRef = useRef<(() => void) | null>(null);
 	const mapViewAdapterDisposerRef = useRef<(() => void) | null>(null);
 	const paletteDisposerRef = useRef<(() => void) | null>(null);
+	const userLocationPulseDisposerRef = useRef<(() => void) | null>(null);
 	const routeInitTimeoutRef = useRef<number | null>(null);
 
 	const handleMapLoad = useCallback(
@@ -58,6 +63,9 @@ export const useMapInitialization = ({
 			setEditor(editor);
 
 			routingDisposerRef.current = initializeMapInteractions(map, editor, setPopup, isMapLockedRef);
+
+			userLocationPulseDisposerRef.current?.();
+			userLocationPulseDisposerRef.current = startUserLocationPulse(map);
 
 			map.setConfigProperty("basemap", "lightPreset", currentLightPreset);
 
@@ -105,6 +113,11 @@ export const useMapInitialization = ({
 			if (paletteDisposerRef.current) {
 				paletteDisposerRef.current();
 				paletteDisposerRef.current = null;
+			}
+
+			if (userLocationPulseDisposerRef.current) {
+				userLocationPulseDisposerRef.current();
+				userLocationPulseDisposerRef.current = null;
 			}
 		};
 	}, []);

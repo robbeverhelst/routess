@@ -15,6 +15,7 @@ export const WAYPOINTS_LAYER_ID = "points";
 export const WAYPOINTS_CORE_LAYER_ID = "points-core";
 export const USER_LOCATION_SOURCE_ID = "user-location-point";
 export const USER_LOCATION_HALO_LAYER_ID = "user-location-halo";
+export const USER_LOCATION_PULSE_LAYER_ID = "user-location-pulse";
 export const USER_LOCATION_POINT_LAYER_ID = "user-location-point";
 export const KM_MARKERS_SOURCE_ID = "km-markers";
 export const KM_MARKERS_LAYER_ID = "km-markers";
@@ -251,25 +252,38 @@ export const initializeSourcesAndLayers = (map: MapboxMap, palette?: MapPalette)
 			type: "circle",
 			source: USER_LOCATION_SOURCE_ID,
 			paint: {
-				"circle-radius": 18,
+				"circle-radius": 16,
 				"circle-color": p.userLocation,
-				"circle-opacity": 0.18,
-				"circle-blur": 0.4,
+				"circle-opacity": 0.22,
+				"circle-blur": 0.5,
 				"circle-stroke-width": 0,
 			},
 		});
-		// Inverted styling vs. waypoints — waypoints are coloured fill with a
-		// white stroke; the user-location dot is white fill with a coloured
-		// stroke, so the two never read as the same shape.
+		// Animated outward pulse — startUserLocationPulse drives circle-radius
+		// and circle-opacity on this layer; the layer's transitions interpolate.
+		map.addLayer({
+			id: USER_LOCATION_PULSE_LAYER_ID,
+			type: "circle",
+			source: USER_LOCATION_SOURCE_ID,
+			paint: {
+				"circle-radius": 10,
+				"circle-color": p.userLocation,
+				"circle-opacity": 0.45,
+				"circle-blur": 0.2,
+				"circle-stroke-width": 0,
+				"circle-radius-transition": { duration: 1600, delay: 0 },
+				"circle-opacity-transition": { duration: 1600, delay: 0 },
+			},
+		});
 		map.addLayer({
 			id: USER_LOCATION_POINT_LAYER_ID,
 			type: "circle",
 			source: USER_LOCATION_SOURCE_ID,
 			paint: {
-				"circle-radius": 7,
-				"circle-color": p.userLocationStroke,
-				"circle-stroke-width": 3.5,
-				"circle-stroke-color": p.userLocation,
+				"circle-radius": 5.5,
+				"circle-color": p.userLocation,
+				"circle-stroke-width": 3,
+				"circle-stroke-color": p.userLocationStroke,
 				"circle-emissive-strength": 1,
 			},
 		});
@@ -426,9 +440,12 @@ export const applyMapPalette = (map: MapboxMap, palette: MapPalette): void => {
 		if (map.getLayer(USER_LOCATION_HALO_LAYER_ID)) {
 			map.setPaintProperty(USER_LOCATION_HALO_LAYER_ID, "circle-color", palette.userLocation);
 		}
+		if (map.getLayer(USER_LOCATION_PULSE_LAYER_ID)) {
+			map.setPaintProperty(USER_LOCATION_PULSE_LAYER_ID, "circle-color", palette.userLocation);
+		}
 		if (map.getLayer(USER_LOCATION_POINT_LAYER_ID)) {
-			map.setPaintProperty(USER_LOCATION_POINT_LAYER_ID, "circle-color", palette.userLocationStroke);
-			map.setPaintProperty(USER_LOCATION_POINT_LAYER_ID, "circle-stroke-color", palette.userLocation);
+			map.setPaintProperty(USER_LOCATION_POINT_LAYER_ID, "circle-color", palette.userLocation);
+			map.setPaintProperty(USER_LOCATION_POINT_LAYER_ID, "circle-stroke-color", palette.userLocationStroke);
 		}
 		if (map.getLayer(KM_MARKERS_LAYER_ID)) {
 			map.setPaintProperty(KM_MARKERS_LAYER_ID, "text-color", palette.kmText);
@@ -504,6 +521,28 @@ export const updateUserLocationLayer = (map: MapboxMap, coordinates: Coordinate 
 	}
 	const source = map.getSource(USER_LOCATION_SOURCE_ID) as GeoJSONSource;
 	source.setData({ type: "FeatureCollection" as const, features });
+};
+
+// Drives the outward pulse on the user-location ring. Toggles the pulse
+// layer's circle-radius/opacity between a "small/visible" and a
+// "large/transparent" state every PULSE_INTERVAL_MS; the layer's own
+// transitions interpolate between the two, producing a smooth ripple.
+const PULSE_INTERVAL_MS = 1600;
+const PULSE_SMALL = { radius: 10, opacity: 0.45 };
+const PULSE_LARGE = { radius: 32, opacity: 0 };
+
+export const startUserLocationPulse = (map: MapboxMap): (() => void) => {
+	let expanded = false;
+	const tick = () => {
+		if (!map?.getLayer(USER_LOCATION_PULSE_LAYER_ID)) return;
+		expanded = !expanded;
+		const target = expanded ? PULSE_LARGE : PULSE_SMALL;
+		map.setPaintProperty(USER_LOCATION_PULSE_LAYER_ID, "circle-radius", target.radius);
+		map.setPaintProperty(USER_LOCATION_PULSE_LAYER_ID, "circle-opacity", target.opacity);
+	};
+	tick();
+	const intervalId = window.setInterval(tick, PULSE_INTERVAL_MS);
+	return () => window.clearInterval(intervalId);
 };
 
 export const updateRouteLayer = (map: MapboxMap, routeCoordinates: Coordinate[]): void => {
