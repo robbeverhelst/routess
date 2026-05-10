@@ -490,10 +490,15 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
 					minPitch={MAP_PITCH}
 					maxPitch={MAP_PITCH}
 					onLoad={(evt) => {
-						// Set the external mapRef to the map instance
-						if (internalMapRef.current) {
-							mapRef.current = internalMapRef.current.getMap();
-						}
+						// `evt.target` is the underlying mapbox-gl Map. Prefer it
+						// over `internalMapRef.current.getMap()` because react-map-gl
+						// fires a synthetic `load` synchronously inside `Mapbox.reuse`
+						// (when `reuseMaps` recycles the map on remount), before
+						// `useImperativeHandle` has assigned `internalMapRef.current`.
+						// Using the ref here would leave `mapRef.current` null on
+						// every remount, silently breaking flyTo-based buttons
+						// (locate, zoom-to-route) until a full page reload.
+						mapRef.current = evt.target;
 						setIsMapLoaded(true);
 						if (supportsBasemapLightPreset) {
 							try {

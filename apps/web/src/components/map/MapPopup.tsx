@@ -62,7 +62,11 @@ function PopupButton({ icon, label, onClick, tone = "accent" }: PopupButtonProps
 	return (
 		<button
 			type="button"
-			onClick={onClick}
+			onPointerDown={(e) => e.stopPropagation()}
+			onClick={(e) => {
+				e.stopPropagation();
+				onClick();
+			}}
 			style={{
 				display: "inline-flex",
 				alignItems: "center",
