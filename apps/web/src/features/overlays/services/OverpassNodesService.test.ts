@@ -80,7 +80,7 @@ describe("OverpassNodesService", () => {
 						[4.4329184, 51.194116],
 					],
 				},
-				properties: { kind: "cycling", ref: "04-40", name: undefined },
+				properties: { kind: "cycling", ref: "04-40", fromRef: "04", toRef: "40", name: undefined },
 			},
 		]);
 

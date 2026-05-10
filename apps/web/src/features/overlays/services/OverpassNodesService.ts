@@ -50,6 +50,8 @@ interface OverpassResponse {
 export type NodeFeatureProps = {
 	kind: NodeNetworkKind;
 	ref?: string;
+	fromRef?: string;
+	toRef?: string;
 	name?: string;
 };
 
@@ -83,6 +85,16 @@ function classifyNode(tags: Record<string, string>): NodeNetworkKind | null {
 
 function pickRef(tags: Record<string, string>): string | undefined {
 	return tags.rwn_ref ?? tags.lwn_ref ?? tags.rcn_ref ?? tags.lcn_ref ?? tags.ref;
+}
+
+function parseConnectionRef(ref: string | undefined): Pick<NodeFeatureProps, "fromRef" | "toRef"> {
+	if (!ref) return {};
+	const parts = ref
+		.split(/[-–—>/]/)
+		.map((part) => part.trim())
+		.filter(Boolean);
+	if (parts.length < 2) return {};
+	return { fromRef: parts[0], toRef: parts[parts.length - 1] };
 }
 
 function buildQuery(bbox: NodeNetworkBbox): string {
@@ -270,7 +282,7 @@ async function fetchNodeNetworkFromOverpass(
 						type: "LineString",
 						coordinates: member.geometry.map((p) => [p.lon, p.lat]),
 					},
-					properties: { kind, ref: tags.ref, name: tags.name },
+					properties: { kind, ref: tags.ref, ...parseConnectionRef(tags.ref), name: tags.name },
 				});
 			}
 		}
