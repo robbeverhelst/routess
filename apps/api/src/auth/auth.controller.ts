@@ -8,7 +8,15 @@ import { AuthService } from "./auth.service";
 import type { AuthenticatedUser } from "./authenticated-user";
 import { CurrentUser } from "./decorators/current-user.decorator";
 import { AuthResponseDto, GoogleAuthDto } from "./dto";
+import {
+	EmailLoginDto,
+	EmailSignupDto,
+	RequestPasswordResetDto,
+	ResetPasswordDto,
+	VerifyEmailDto,
+} from "./dto/email-auth.dto";
 import { LogoutResponseDto } from "./dto/logout-response.dto";
+import { EmailAuthService } from "./email-auth.service";
 import { JwtAuthGuard } from "./guards/jwt-auth.guard";
 
 @ApiTags("auth")
@@ -16,6 +24,7 @@ import { JwtAuthGuard } from "./guards/jwt-auth.guard";
 export class AuthController {
 	constructor(
 		private authService: AuthService,
+		private emailAuth: EmailAuthService,
 		@Inject(APP_CONFIG) private readonly config: AppConfig,
 	) {}
 
@@ -40,6 +49,100 @@ export class AuthController {
 		});
 		this.setSessionCookie(res, authResponse.accessToken);
 		return authResponse;
+	}
+
+	@ApiOperation({
+		summary: "Email + password signup (request)",
+		description:
+			"Step 1 of email+password signup. Validates the password (length 12-128, HIBP breach check) and emails a verification link. The User row is NOT created until the verification link is clicked. Rejected with 409 if an account with this email already exists.",
+	})
+	@ApiBody({ type: EmailSignupDto })
+	@ApiResponse({ status: 200, description: "Verification email sent" })
+	@ApiResponse({ status: 400, description: "Invalid password (too short, too long, or breached)" })
+	@ApiResponse({ status: 409, description: "Email already in use" })
+	@HttpCode(200)
+	@ThrottleAuth()
+	@Post("signup-email")
+	async signupEmail(@Body() dto: EmailSignupDto): Promise<{ success: true }> {
+		await this.emailAuth.signupRequest(dto.email, dto.name ?? "", dto.password);
+		return { success: true };
+	}
+
+	@ApiOperation({
+		summary: "Email + password signup (verify)",
+		description: "Step 2: consume the verification token, create the User and password method, and start a session.",
+	})
+	@ApiBody({ type: VerifyEmailDto })
+	@ApiResponse({ status: 200, type: AuthResponseDto })
+	@ApiResponse({ status: 400, description: "Token invalid or expired" })
+	@ApiResponse({ status: 409, description: "Email was claimed by another signup in the meantime" })
+	@HttpCode(200)
+	@ThrottleAuth()
+	@Post("verify-email")
+	async verifyEmail(
+		@Body() dto: VerifyEmailDto,
+		@Req() req: Request,
+		@Res({ passthrough: true }) res: Response,
+	): Promise<AuthResponseDto> {
+		const result = await this.emailAuth.verifyEmail(dto.token, {
+			userAgent: req.headers["user-agent"],
+			ipAddress: req.ip,
+		});
+		this.setSessionCookie(res, result.accessToken);
+		return result;
+	}
+
+	@ApiOperation({
+		summary: "Email + password login",
+		description: "Authenticates with email + password. Returns a session JWT. Generic error message on failure.",
+	})
+	@ApiBody({ type: EmailLoginDto })
+	@ApiResponse({ status: 200, type: AuthResponseDto })
+	@ApiResponse({ status: 401, description: "Email or password is incorrect" })
+	@HttpCode(200)
+	@ThrottleAuth()
+	@Post("login-email")
+	async loginEmail(
+		@Body() dto: EmailLoginDto,
+		@Req() req: Request,
+		@Res({ passthrough: true }) res: Response,
+	): Promise<AuthResponseDto> {
+		const result = await this.emailAuth.login(dto.email, dto.password, {
+			userAgent: req.headers["user-agent"],
+			ipAddress: req.ip,
+		});
+		this.setSessionCookie(res, result.accessToken);
+		return result;
+	}
+
+	@ApiOperation({
+		summary: "Request a password reset email",
+		description:
+			"Always returns 200 to avoid email enumeration. If a user with this email and a password method exists, a reset email is sent.",
+	})
+	@ApiBody({ type: RequestPasswordResetDto })
+	@ApiResponse({ status: 200, description: "Request accepted (always 200)" })
+	@HttpCode(200)
+	@ThrottleAuth()
+	@Post("request-password-reset")
+	async requestPasswordReset(@Body() dto: RequestPasswordResetDto): Promise<{ success: true }> {
+		await this.emailAuth.requestPasswordReset(dto.email);
+		return { success: true };
+	}
+
+	@ApiOperation({
+		summary: "Reset password using a token",
+		description: "Consumes a reset token, sets a new password, and revokes ALL sessions for the user.",
+	})
+	@ApiBody({ type: ResetPasswordDto })
+	@ApiResponse({ status: 200, description: "Password reset" })
+	@ApiResponse({ status: 400, description: "Token invalid or expired, or password failed validation" })
+	@HttpCode(200)
+	@ThrottleAuth()
+	@Post("reset-password")
+	async resetPassword(@Body() dto: ResetPasswordDto): Promise<{ success: true }> {
+		await this.emailAuth.resetPassword(dto.token, dto.password);
+		return { success: true };
 	}
 
 	@ApiOperation({

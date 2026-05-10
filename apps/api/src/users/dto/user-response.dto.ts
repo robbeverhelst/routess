@@ -57,6 +57,21 @@ export class UserResponseDto {
 		description: "Pseudonymous user identifier for client-side ProductEvent tracking. See ADR-0020.",
 	})
 	idHash!: string;
+
+	@ApiProperty({
+		example: "active",
+		enum: ["active", "pending_hard_delete"],
+		description:
+			"Deletion lifecycle. 'pending_hard_delete' means the user has requested self-deletion and is in the 30-day grace window before permanent erasure. The web app should redirect such users to a cancel screen.",
+	})
+	deletionStatus!: "active" | "pending_hard_delete";
+
+	@ApiPropertyOptional({
+		example: "2026-05-09T08:00:00.000Z",
+		nullable: true,
+		description: "When self-deletion was requested. Hard-delete fires 30 days after this timestamp.",
+	})
+	deletionRequestedAt?: string | null;
 }
 
 export class UserProfileDto extends UserResponseDto {

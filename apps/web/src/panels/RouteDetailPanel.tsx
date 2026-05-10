@@ -1,4 +1,4 @@
-import type { Coordinate, RouteActivity, RoutePrivacy } from "@routess/core";
+import type { Coordinate, RouteActivity, RouteVisibility } from "@routess/core";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useComputedElevationProfile } from "@/features/routing/services/elevation";
 import { resolveValhallaCosting } from "@/features/routing/services/routingMode";
@@ -25,10 +25,10 @@ const ACTIVITY_LABEL: Record<RouteActivity, { labelKey: string; icon: IconKey }>
 	walk: { labelKey: "sport.walk", icon: "walk" },
 };
 
-const PRIVACY_LABEL: Record<RoutePrivacy, { labelKey: string; icon: IconKey }> = {
-	private: { labelKey: "save.privacy.private", icon: "lock" },
-	link: { labelKey: "save.privacy.linkSub", icon: "share" },
-	public: { labelKey: "save.privacy.public", icon: "globe" },
+const VISIBILITY_LABEL: Record<RouteVisibility, { labelKey: string; icon: IconKey }> = {
+	private: { labelKey: "save.visibility.private", icon: "lock" },
+	unlisted: { labelKey: "save.visibility.unlistedSub", icon: "share" },
+	public: { labelKey: "save.visibility.public", icon: "globe" },
 };
 
 function MetaChip({ icon, label }: { icon: IconKey; label: string }) {
@@ -156,9 +156,9 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 	}, [elevationGeometry, costing]);
 
 	const activityMeta = route.activity ? ACTIVITY_LABEL[route.activity] : null;
-	const privacyMeta = route.privacy ? PRIVACY_LABEL[route.privacy] : null;
+	const visibilityMeta = route.visibility ? VISIBILITY_LABEL[route.visibility] : null;
 	const tags = route.tags ?? [];
-	const hasMetaChips = Boolean(activityMeta) || Boolean(privacyMeta) || tags.length > 0;
+	const hasMetaChips = Boolean(activityMeta) || Boolean(visibilityMeta) || tags.length > 0;
 
 	useEffect(() => {
 		if (!moreOpen) return;
@@ -384,7 +384,7 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 				{hasMetaChips && (
 					<div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 12 }}>
 						{activityMeta && <MetaChip icon={activityMeta.icon} label={t(activityMeta.labelKey)} />}
-						{privacyMeta && <MetaChip icon={privacyMeta.icon} label={t(privacyMeta.labelKey)} />}
+						{visibilityMeta && <MetaChip icon={visibilityMeta.icon} label={t(visibilityMeta.labelKey)} />}
 						{tags.map((tag) => (
 							<TagChip key={tag} label={tag} />
 						))}

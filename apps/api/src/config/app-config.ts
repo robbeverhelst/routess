@@ -53,6 +53,13 @@ export interface AppConfig {
 		enabled: boolean;
 		path: string;
 	};
+	email: {
+		// When provider is 'console', emails are logged instead of sent. Useful
+		// in dev/test where no Resend API key is configured.
+		provider: "resend" | "console";
+		resendApiKey: string;
+		from: string;
+	};
 }
 
 const DEFAULTS = {
@@ -210,6 +217,11 @@ export function getAppConfig(): AppConfig {
 		},
 		analytics: {
 			salt: analyticsSalt,
+		},
+		email: {
+			provider: process.env.RESEND_API_KEY ? "resend" : "console",
+			resendApiKey: process.env.RESEND_API_KEY ?? "",
+			from: process.env.EMAIL_FROM || "Routess <noreply@routess.app>",
 		},
 	};
 }

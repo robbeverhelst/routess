@@ -4,6 +4,8 @@ import { getAppConfig } from "./config/app-config";
 import { Route } from "./entities/route.entity";
 import { Session } from "./entities/session.entity";
 import { User } from "./entities/user.entity";
+import { UserAuthMethod } from "./entities/user-auth-method.entity";
+import { VerificationToken } from "./entities/verification-token.entity";
 import { MikroOrmMetricsLogger } from "./telemetry/mikro-orm-metrics.logger";
 
 const appConfig = getAppConfig();
@@ -15,7 +17,7 @@ const config: Options = {
 	user: appConfig.database.user,
 	password: appConfig.database.password,
 	dbName: appConfig.database.name,
-	entities: [User, Route, Session],
+	entities: [User, Route, Session, UserAuthMethod, VerificationToken],
 	migrations: {
 		// Production runs compiled JS migrations from dist, while local tooling still uses TS sources.
 		// pathTs is only included outside production: the production image ships dist only, and mikro-orm

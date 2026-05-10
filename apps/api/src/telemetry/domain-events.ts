@@ -24,7 +24,7 @@ export interface UserUndeletedEvent {
 
 export type SessionActivityChangedEvent = Record<string, never>;
 
-export type AuthProvider = "google";
+export type AuthProvider = "google" | "email";
 
 export type AuthLoginResult = "success" | "invalid_token" | "email_missing" | "verification_error";
 
@@ -33,7 +33,13 @@ export interface AuthLoginAttemptedEvent {
 	result: AuthLoginResult;
 }
 
-export type SessionRevocationReason = "logout" | "admin_revoked" | "expired" | "invalidated";
+export type SessionRevocationReason =
+	| "logout"
+	| "admin_revoked"
+	| "expired"
+	| "invalidated"
+	| "revoked"
+	| "logout_everywhere";
 
 export interface AuthSessionRevokedEvent {
 	reason: SessionRevocationReason;

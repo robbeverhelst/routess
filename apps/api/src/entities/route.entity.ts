@@ -1,14 +1,14 @@
 import { Entity, Index, ManyToOne, PrimaryKey, Property, type Ref } from "@mikro-orm/core";
-import type { RouteActivity, RoutePrivacy, Waypoint } from "@routess/core";
+import type { RouteActivity, RouteVisibility, Waypoint } from "@routess/core";
 import { BaseEntity } from "./base.entity";
 import { User } from "./user.entity";
 
-export type { RouteActivity, RoutePrivacy, Waypoint } from "@routess/core";
+export type { RouteActivity, RouteVisibility, Waypoint } from "@routess/core";
 
 @Entity()
-@Index({ properties: ["user"] }) // Index for user-based route lookups
-@Index({ properties: ["createdAt"] }) // Index for chronological sorting
-@Index({ properties: ["user", "createdAt"] }) // Composite index for user routes by date
+@Index({ properties: ["user"] })
+@Index({ properties: ["createdAt"] })
+@Index({ properties: ["user", "createdAt"] })
 export class Route extends BaseEntity {
 	@PrimaryKey()
 	id!: number;
@@ -23,7 +23,7 @@ export class Route extends BaseEntity {
 	activity?: RouteActivity;
 
 	@Property({ type: "string", default: "private" })
-	privacy: RoutePrivacy = "private";
+	visibility: RouteVisibility = "private";
 
 	@Property({ type: "json" })
 	tags: string[] = [];
@@ -35,13 +35,13 @@ export class Route extends BaseEntity {
 	geometry?: [number, number][];
 
 	@Property({ type: "float", nullable: true })
-	distance?: number; // in meters
+	distance?: number;
 
 	@Property({ type: "integer", nullable: true })
-	duration?: number; // in seconds
+	duration?: number;
 
 	@Property({ type: "float", nullable: true })
-	elevationGain?: number; // in meters
+	elevationGain?: number;
 
 	@Property({ nullable: true })
 	startAddress?: string;

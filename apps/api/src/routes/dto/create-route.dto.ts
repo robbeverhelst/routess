@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { ROUTE_ACTIVITIES, ROUTE_PRIVACIES, type RouteActivity, type RoutePrivacy } from "@routess/core";
+import { ROUTE_ACTIVITIES, ROUTE_VISIBILITIES, type RouteActivity, type RouteVisibility } from "@routess/core";
 import { Type } from "class-transformer";
 import {
 	ArrayMaxSize,
@@ -127,14 +127,14 @@ export class CreateRouteDto {
 
 	@ApiProperty({
 		description: "Visibility of the route",
-		enum: ROUTE_PRIVACIES,
+		enum: ROUTE_VISIBILITIES,
 		required: false,
 		default: "private",
 	})
 	@IsOptional()
 	@IsString()
-	@IsIn(ROUTE_PRIVACIES)
-	privacy?: RoutePrivacy;
+	@IsIn(ROUTE_VISIBILITIES)
+	visibility?: RouteVisibility;
 
 	@ApiProperty({
 		description: "Free-form tags for the route",

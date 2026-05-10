@@ -27,14 +27,12 @@ export function useAccountPreferencesSync(auth: AuthStatusSnapshot | undefined) 
 	const showPois = useRedesignSettingsStore((state) => state.showPois);
 	const terrain3d = useRedesignSettingsStore((state) => state.terrain3d);
 	const autoSnap = useRedesignSettingsStore((state) => state.autoSnap);
-	const publicProfile = useRedesignSettingsStore((state) => state.publicProfile);
-	const hidePrivacy = useRedesignSettingsStore((state) => state.hidePrivacy);
 	const defaultActivity = useRedesignSettingsStore((state) => state.defaultActivity);
 	const selectedSports = useRedesignSettingsStore((state) => state.selectedSports);
 	const sportSpeeds = useRedesignSettingsStore((state) => state.sportSpeeds);
 	const mapStyle = useRedesignSettingsStore((state) => state.mapStyle);
 	const overlays = useRedesignSettingsStore((state) => state.overlays);
-	const locationPermission = useRedesignSettingsStore((state) => state.locationPermission);
+	const defaultRouteVisibility = useRedesignSettingsStore((state) => state.defaultRouteVisibility);
 	const replaceAllSettings = useRedesignSettingsStore((state) => state.replaceAllSettings);
 
 	const applyingServerStateRef = useRef(false);
@@ -49,23 +47,19 @@ export function useAccountPreferencesSync(auth: AuthStatusSnapshot | undefined) 
 				showPois,
 				terrain3d,
 				autoSnap,
-				publicProfile,
-				hidePrivacy,
 				defaultActivity,
 				selectedSports,
 				sportSpeeds,
 				mapStyle,
 				overlays,
-				locationPermission,
+				defaultRouteVisibility,
 			}),
 		[
 			autoSnap,
 			defaultActivity,
-			hidePrivacy,
-			locationPermission,
+			defaultRouteVisibility,
 			mapStyle,
 			overlays,
-			publicProfile,
 			selectedSports,
 			showPois,
 			sportSpeeds,

@@ -1,4 +1,4 @@
-import type { RoutePrivacy } from "@routess/core";
+import type { RouteVisibility } from "@routess/core";
 import { useEffect, useMemo, useState } from "react";
 import { applySavedRoute } from "@/features/routing/applySavedRoute";
 import { useIsAuthenticated } from "@/hooks/useAuthState";
@@ -27,10 +27,10 @@ const ACTIVITIES: { key: RedesignActivity; icon: React.ComponentType<{ size?: nu
 	{ key: "walk", icon: I.walk, labelKey: "sport.short.walk" },
 ];
 
-const PRIVACY_OPTS: { key: RoutePrivacy; labelKey: string; subKey: string }[] = [
-	{ key: "private", labelKey: "save.privacy.private", subKey: "save.privacy.privateSub" },
-	{ key: "link", labelKey: "save.privacy.link", subKey: "save.privacy.linkSub" },
-	{ key: "public", labelKey: "save.privacy.public", subKey: "save.privacy.publicSub" },
+const VISIBILITY_OPTS: { key: RouteVisibility; labelKey: string; subKey: string }[] = [
+	{ key: "private", labelKey: "save.visibility.private", subKey: "save.visibility.privateSub" },
+	{ key: "unlisted", labelKey: "save.visibility.unlisted", subKey: "save.visibility.unlistedSub" },
+	{ key: "public", labelKey: "save.visibility.public", subKey: "save.visibility.publicSub" },
 ];
 
 export function SaveModal() {
@@ -61,7 +61,7 @@ export function SaveModal() {
 	}, [selectedSports, activityType, setActivityType]);
 
 	const [name, setName] = useState("");
-	const [privacy, setPrivacy] = useState<RoutePrivacy>("private");
+	const [visibility, setVisibility] = useState<RouteVisibility>("private");
 	const [tags, setTags] = useState<string[]>([]);
 	const [tagDraft, setTagDraft] = useState("");
 
@@ -78,7 +78,7 @@ export function SaveModal() {
 			{
 				name: trimmedName,
 				activity: activityType,
-				privacy,
+				visibility,
 				tags,
 				waypoints,
 				distance: distanceMeters ?? 0,
@@ -190,7 +190,7 @@ export function SaveModal() {
 				</div>
 
 				<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-					<SecTitle>{t("save.privacyLabel")}</SecTitle>
+					<SecTitle>{t("save.visibilityLabel")}</SecTitle>
 					<div
 						style={{
 							background: RDS_COLORS.bgInput,
@@ -202,13 +202,13 @@ export function SaveModal() {
 							gap: 4,
 						}}
 					>
-						{PRIVACY_OPTS.map((p) => {
-							const on = privacy === p.key;
+						{VISIBILITY_OPTS.map((p) => {
+							const on = visibility === p.key;
 							return (
 								<button
 									key={p.key}
 									type="button"
-									onClick={() => setPrivacy(p.key)}
+									onClick={() => setVisibility(p.key)}
 									style={{
 										padding: "8px 10px",
 										borderRadius: 6,

@@ -5,6 +5,7 @@ import { EventEmitter2 } from "@nestjs/event-emitter";
 import type { AppConfig } from "../config/app-config";
 import { APP_CONFIG } from "../config/config.module";
 import { User, type UserRole } from "../entities/user.entity";
+import { UserAuthMethod } from "../entities/user-auth-method.entity";
 import {
 	AUTH_LOGIN_ATTEMPTED,
 	type AuthLoginAttemptedEvent,
@@ -24,6 +25,8 @@ export class AuthService {
 	constructor(
 		@InjectRepository(User)
 		private userRepository: EntityRepository<User>,
+		@InjectRepository(UserAuthMethod)
+		private authMethodRepository: EntityRepository<UserAuthMethod>,
 		private entityManager: EntityManager,
 		@Inject(GOOGLE_IDENTITY_VERIFIER)
 		private readonly googleIdentityVerifier: GoogleIdentityVerifier,
@@ -50,38 +53,58 @@ export class AuthService {
 		}
 
 		const { googleId, email, name, picture } = identity;
-
-		// Find any matching user, including soft-deleted, so we can run the relogin-undelete flow.
-		let user = await this.userRepository.findOne(
-			{ $or: [{ googleId }, { email }] },
-			{ filters: { softDelete: false } },
-		);
-
 		const desiredRole = this.resolveDesiredRole(email);
+
+		// Look up by Google identity first (provider+providerId is the canonical
+		// auth-method match), falling back to email so users who already have an
+		// 'email' method get linked to the same User when they later sign in via
+		// Google.
+		const existingMethod = await this.authMethodRepository.findOne(
+			{ provider: "google", providerId: googleId },
+			{ populate: ["user"], filters: { softDelete: false } },
+		);
+		let user = existingMethod ? (existingMethod.user as unknown as User) : null;
+		if (!user) {
+			user = await this.userRepository.findOne({ email }, { filters: { softDelete: false } });
+		}
 
 		if (!user) {
 			user = this.userRepository.create({
 				email,
 				name: name || email,
-				googleId,
 				avatar: picture,
 				isEmailVerified: true,
 				role: desiredRole ?? "user",
+				deletionStatus: "active",
 			});
 			await this.entityManager.persistAndFlush(user);
+			await this.upsertGoogleAuthMethod(user, googleId);
 			this.events.emit(USER_REGISTERED, { source: "google" } satisfies UserRegisteredEvent);
 		} else {
 			let mutated = false;
-			if (user.deletedAt) {
+			// ADR 0017: a user in 'pending_hard_delete' has explicitly asked to be
+			// erased. Don't undelete the cascade; do clear the User row's deletedAt
+			// so JWT works. Frontend reads deletionStatus and shows cancel screen.
+			const isPendingHardDelete = user.deletionStatus === "pending_hard_delete";
+			if (user.deletedAt && !isPendingHardDelete) {
 				await this.undeleteUser(user.id);
 				user.deletedAt = undefined;
 				mutated = true;
 				this.events.emit(USER_UNDELETED, { userId: user.id } satisfies UserUndeletedEvent);
+			} else if (user.deletedAt && isPendingHardDelete) {
+				await this.entityManager
+					.getConnection()
+					.execute(`update "user" set "deleted_at" = null where "id" = ?`, [user.id]);
+				user.deletedAt = undefined;
+				mutated = true;
 			}
-			if (!user.googleId) {
-				user.googleId = googleId;
-				user.avatar = picture;
+			if (!user.isEmailVerified) {
+				// Google verifies the email; trust that.
 				user.isEmailVerified = true;
+				mutated = true;
+			}
+			if (!user.avatar && picture) {
+				user.avatar = picture;
 				mutated = true;
 			}
 			if (desiredRole && user.role !== desiredRole) {
@@ -91,6 +114,7 @@ export class AuthService {
 			if (mutated) {
 				await this.entityManager.persistAndFlush(user);
 			}
+			await this.upsertGoogleAuthMethod(user, googleId);
 		}
 
 		const accessToken = await this.sessionService.createSession(user.id, {
@@ -107,6 +131,25 @@ export class AuthService {
 			accessToken,
 			user: toUserResponseDto(user, this.config.analytics.salt),
 		};
+	}
+
+	// Idempotent: if the (provider, providerId) row already exists, just bump
+	// lastUsedAt; otherwise create it pointing at the User. Used both during
+	// fresh signup and on every subsequent Google login.
+	private async upsertGoogleAuthMethod(user: User, googleId: string): Promise<void> {
+		const existing = await this.authMethodRepository.findOne({ provider: "google", providerId: googleId });
+		if (existing) {
+			existing.lastUsedAt = new Date();
+			await this.entityManager.persistAndFlush(existing);
+			return;
+		}
+		const method = this.authMethodRepository.create({
+			user: user.id,
+			provider: "google",
+			providerId: googleId,
+			lastUsedAt: new Date(),
+		});
+		await this.entityManager.persistAndFlush(method);
 	}
 
 	// Returns the role this user should have based on ADMIN_EMAILS, or null if

@@ -28,7 +28,6 @@ export const apiService = createApiClient({
 
 export type {
 	ApiActivity,
-	ApiLocationPermission,
 	ApiMapStyle,
 	ApiOverlays,
 	ApiRoute,

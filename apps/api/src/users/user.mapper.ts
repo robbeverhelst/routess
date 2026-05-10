@@ -3,7 +3,18 @@ import { normalizeUserPreferences } from "@routess/core";
 import type { User } from "../entities/user.entity";
 import { UserProfileDto, UserResponseDto } from "./dto/user-response.dto";
 
-type SerializableUser = Pick<User, "id" | "email" | "name" | "avatar" | "isEmailVerified" | "role" | "preferences">;
+type SerializableUser = Pick<
+	User,
+	| "id"
+	| "email"
+	| "name"
+	| "avatar"
+	| "isEmailVerified"
+	| "role"
+	| "preferences"
+	| "deletionStatus"
+	| "deletionRequestedAt"
+>;
 
 function hashUserId(salt: string, userId: number): string {
 	return createHash("sha256").update(`${salt}:${userId}`).digest("hex");
@@ -19,6 +30,8 @@ export function toUserResponseDto(user: SerializableUser, analyticsSalt: string)
 		role: user.role,
 		preferences: user.preferences ? normalizeUserPreferences(user.preferences) : null,
 		idHash: hashUserId(analyticsSalt, user.id),
+		deletionStatus: user.deletionStatus,
+		deletionRequestedAt: user.deletionRequestedAt ? user.deletionRequestedAt.toISOString() : null,
 	};
 }
 

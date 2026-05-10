@@ -7,8 +7,9 @@ export type UserPreferenceUnits = (typeof UNITS)[number];
 export const MAP_STYLES = ["streets", "outdoors", "satellite"] as const;
 export type UserPreferenceMapStyle = (typeof MAP_STYLES)[number];
 
-export const LOCATION_PERMISSIONS = ["unknown", "granted", "denied", "skipped"] as const;
-export type UserPreferenceLocationPermission = (typeof LOCATION_PERMISSIONS)[number];
+import { ROUTE_VISIBILITIES, type RouteVisibility } from "../types";
+
+export { ROUTE_VISIBILITIES, type RouteVisibility };
 
 export const OVERLAY_KEYS = ["heatmap", "contour", "bike", "surface", "wind"] as const;
 export type UserPreferenceOverlayKey = (typeof OVERLAY_KEYS)[number];
@@ -21,14 +22,12 @@ export interface UserPreferences {
 	showPois: boolean;
 	terrain3d: boolean;
 	autoSnap: boolean;
-	publicProfile: boolean;
-	hidePrivacy: boolean;
 	defaultActivity: string;
 	selectedSports: UserPreferenceActivity[];
 	sportSpeeds: UserPreferenceSportSpeeds;
 	mapStyle: UserPreferenceMapStyle;
 	overlays: UserPreferenceOverlays;
-	locationPermission: UserPreferenceLocationPermission;
+	defaultRouteVisibility: RouteVisibility;
 }
 
 export interface UserPreferencesUpdate extends Omit<Partial<UserPreferences>, "overlays" | "sportSpeeds"> {
@@ -53,8 +52,6 @@ export const DEFAULT_USER_PREFERENCES: UserPreferences = {
 	showPois: true,
 	terrain3d: false,
 	autoSnap: true,
-	publicProfile: false,
-	hidePrivacy: true,
 	defaultActivity: "Cycling",
 	selectedSports: [],
 	sportSpeeds: {},
@@ -66,7 +63,7 @@ export const DEFAULT_USER_PREFERENCES: UserPreferences = {
 		surface: false,
 		wind: false,
 	},
-	locationPermission: "unknown",
+	defaultRouteVisibility: "private",
 };
 
 export function isActivity(value: unknown): value is UserPreferenceActivity {
@@ -81,8 +78,8 @@ export function isMapStyle(value: unknown): value is UserPreferenceMapStyle {
 	return MAP_STYLES.includes(value as UserPreferenceMapStyle);
 }
 
-export function isLocationPermission(value: unknown): value is UserPreferenceLocationPermission {
-	return LOCATION_PERMISSIONS.includes(value as UserPreferenceLocationPermission);
+export function isRouteVisibility(value: unknown): value is RouteVisibility {
+	return ROUTE_VISIBILITIES.includes(value as RouteVisibility);
 }
 
 function isFiniteNumber(value: unknown): value is number {
@@ -162,17 +159,14 @@ export function normalizeUserPreferences(input?: Partial<UserPreferences> | null
 		showPois: typeof input?.showPois === "boolean" ? input.showPois : DEFAULT_USER_PREFERENCES.showPois,
 		terrain3d: typeof input?.terrain3d === "boolean" ? input.terrain3d : DEFAULT_USER_PREFERENCES.terrain3d,
 		autoSnap: typeof input?.autoSnap === "boolean" ? input.autoSnap : DEFAULT_USER_PREFERENCES.autoSnap,
-		publicProfile:
-			typeof input?.publicProfile === "boolean" ? input.publicProfile : DEFAULT_USER_PREFERENCES.publicProfile,
-		hidePrivacy: typeof input?.hidePrivacy === "boolean" ? input.hidePrivacy : DEFAULT_USER_PREFERENCES.hidePrivacy,
 		defaultActivity: normalizeDefaultActivity(input?.defaultActivity, selectedSports),
 		selectedSports,
 		sportSpeeds: normalizeSportSpeeds(input?.sportSpeeds),
 		mapStyle: isMapStyle(input?.mapStyle) ? input.mapStyle : DEFAULT_USER_PREFERENCES.mapStyle,
 		overlays: normalizeOverlays(input?.overlays),
-		locationPermission: isLocationPermission(input?.locationPermission)
-			? input.locationPermission
-			: DEFAULT_USER_PREFERENCES.locationPermission,
+		defaultRouteVisibility: isRouteVisibility(input?.defaultRouteVisibility)
+			? input.defaultRouteVisibility
+			: DEFAULT_USER_PREFERENCES.defaultRouteVisibility,
 	};
 }
 

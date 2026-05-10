@@ -77,7 +77,7 @@ export function useSaveRoute() {
 					elevation_gain_m: Math.round(vars.elevationGain ?? 0),
 					has_description: !!vars.description,
 					activity: vars.activity ?? null,
-					privacy: vars.privacy ?? "private",
+					visibility: vars.visibility ?? "private",
 					tag_count: vars.tags?.length ?? 0,
 					is_first_route: isFirstRoute,
 					// RouteDraft does not yet track origin; revisit when route

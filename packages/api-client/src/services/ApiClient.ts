@@ -114,6 +114,87 @@ export class ApiClient {
 		}
 	}
 
+	// Email + password auth (issue #134)
+
+	async signupEmail(args: { email: string; name?: string; password: string }): Promise<void> {
+		await this.request<{ success: true }>("/auth/signup-email", { method: "POST", body: args });
+	}
+
+	async verifyEmail(token: string): Promise<AuthResponse> {
+		const response = await this.request<AuthResponse>("/auth/verify-email", { method: "POST", body: { token } });
+		this.config.authStateManager.setToken(response.accessToken);
+		return response;
+	}
+
+	async loginEmail(email: string, password: string): Promise<AuthResponse> {
+		const response = await this.request<AuthResponse>("/auth/login-email", {
+			method: "POST",
+			body: { email, password },
+		});
+		this.config.authStateManager.setToken(response.accessToken);
+		return response;
+	}
+
+	async requestPasswordReset(email: string): Promise<void> {
+		await this.request<{ success: true }>("/auth/request-password-reset", { method: "POST", body: { email } });
+	}
+
+	async resetPassword(token: string, password: string): Promise<void> {
+		await this.request<{ success: true }>("/auth/reset-password", { method: "POST", body: { token, password } });
+	}
+
+	async setPassword(args: { newPassword: string; currentPassword?: string }): Promise<void> {
+		await this.request<{ success: true }>("/users/me/password", { method: "POST", body: args });
+	}
+
+	// Sessions (issue #134)
+
+	async listSessions(): Promise<
+		Array<{
+			id: number;
+			isCurrent: boolean;
+			userAgent?: string;
+			ipAddress?: string;
+			lastActivity?: string;
+			expiresAt: string;
+			createdAt: string;
+		}>
+	> {
+		return this.request("/me/sessions");
+	}
+
+	async revokeSession(id: number): Promise<void> {
+		await this.request<{ success: true }>(`/me/sessions/${id}`, { method: "DELETE" });
+	}
+
+	async logoutEverywhere(): Promise<void> {
+		try {
+			await this.request<{ success: true }>("/me/sessions/logout-everywhere", { method: "POST" });
+		} finally {
+			this.config.authStateManager.clearToken();
+			this.config.authStateManager.clearAuthState?.();
+		}
+	}
+
+	// Account lifecycle (issue #134)
+
+	async deleteAccount(): Promise<void> {
+		try {
+			await this.request<{ success: true }>("/users/me", { method: "DELETE" });
+		} finally {
+			this.config.authStateManager.clearToken();
+			this.config.authStateManager.clearAuthState?.();
+		}
+	}
+
+	async cancelDeletion(): Promise<ApiUser> {
+		return this.request<ApiUser>("/users/me/cancel-deletion", { method: "POST" });
+	}
+
+	exportDataUrl(): string {
+		return `${this.config.baseUrl}/api/v1/users/me/export`;
+	}
+
 	// Route management methods
 	async createRoute(route: CreateRouteRequest): Promise<ApiRoute> {
 		return this.request<ApiRoute>("/routes", {

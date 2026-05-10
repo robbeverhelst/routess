@@ -22,7 +22,7 @@ export class AdminRouteListItemDto {
 	activity!: string | null;
 
 	@ApiProperty({ example: "private" })
-	privacy!: string;
+	visibility!: string;
 
 	@ApiPropertyOptional({ example: 24300, nullable: true, description: "Distance in meters" })
 	distance!: number | null;

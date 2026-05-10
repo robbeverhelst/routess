@@ -5,7 +5,7 @@
 // Naming convention: <object>_<verb_past> in snake_case. Properties are
 // snake_case. Adding an event: extend the union and add a row to the doc.
 
-import type { RouteActivity, RoutePrivacy } from "@routess/core";
+import type { RouteActivity, RouteVisibility } from "@routess/core";
 
 type EmptyProps = Record<string, never>;
 
@@ -32,7 +32,7 @@ export type ProductEvent =
 				elevation_gain_m: number;
 				has_description: boolean;
 				activity: RouteActivity | null;
-				privacy: RoutePrivacy;
+				visibility: RouteVisibility;
 				tag_count: number;
 				is_first_route: boolean;
 				creation_source: CreationSource;
