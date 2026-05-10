@@ -1,11 +1,13 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { confirmDiscardIfDirty } from "@/features/routing/confirmDiscardIfDirty";
+import { useRouteDraftEditor } from "@/features/routing/RouteDraftEditorProvider";
 import type { ApiRoute } from "@/lib/api";
 import { useUserRoutes } from "@/lib/api-queries";
-import { emitAppEvent, routeToLoadDetail } from "@/lib/app-events";
+import { emitAppEvent } from "@/lib/app-events";
 import { t } from "@/lib/i18n";
 import { useModalsStore } from "@/stores/modalsStore";
-import type { LoadedRoute, RedesignContext } from "@/stores/uiStore";
-import { apiRouteToLoadedRoute, useUiStore } from "@/stores/uiStore";
+import { useDraftActivity, useDraftMode, useWaypoints } from "@/stores/routingStore";
+import { useUiStore } from "@/stores/uiStore";
 import { I } from "../components/icons";
 import { Kbd, RDS_COLORS, SecTitle } from "../components/primitives";
 
@@ -18,26 +20,38 @@ interface CmdItem {
 	run: () => void;
 }
 
-function loadRouteIntoPlan(
-	route: ApiRoute,
-	setContext: (value: RedesignContext) => void,
-	setLoadedRoute: (route: LoadedRoute | null) => void,
-) {
-	emitAppEvent("routess:load-route", routeToLoadDetail(route));
-	setLoadedRoute(apiRouteToLoadedRoute(route));
-	setContext("plan");
-}
-
 export function CommandPalette() {
 	const close = useModalsStore((s) => s.closeModal);
 	const openModal = useModalsStore((s) => s.openModal);
 	const setContext = useUiStore((s) => s.setContext);
-	const setLoadedRoute = useUiStore((s) => s.setLoadedRoute);
 	const toggleTheme = useUiStore((s) => s.toggleTheme);
 	const _language = useUiStore((s) => s.language);
+	const editor = useRouteDraftEditor();
+	const mode = useDraftMode();
+	const waypoints = useWaypoints();
+	const draftActivity = useDraftActivity();
 	const { data: routes = [] } = useUserRoutes();
 	const [query, setQuery] = useState("");
 	const [activeIndex, setActiveIndex] = useState(0);
+
+	const loadRouteIntoPlan = useCallback(
+		(route: ApiRoute) => {
+			if (!editor) return;
+			if (!confirmDiscardIfDirty(mode, draftActivity, waypoints)) return;
+			void editor.loadFromApiRoute(route);
+			setContext("plan");
+		},
+		[editor, mode, draftActivity, waypoints, setContext],
+	);
+
+	const triggerSave = useCallback(() => {
+		if (mode.kind === "editing") {
+			setContext("plan");
+			emitAppEvent("routess:save-draft");
+		} else {
+			openModal("save");
+		}
+	}, [mode, setContext, openModal]);
 
 	const groups = useMemo<{ title: string; items: CmdItem[] }[]>(
 		() => [
@@ -82,7 +96,7 @@ export function CommandPalette() {
 						icon: I.save,
 						label: t("cmd.action.save"),
 						kbd: "S",
-						run: () => openModal("save"),
+						run: triggerSave,
 					},
 					{
 						id: "act-loop",
@@ -128,11 +142,11 @@ export function CommandPalette() {
 					icon: I.pin,
 					label: r.name,
 					hint: r.distance ? `${(r.distance / 1000).toFixed(1)} km` : undefined,
-					run: () => loadRouteIntoPlan(r, setContext, setLoadedRoute),
+					run: () => loadRouteIntoPlan(r),
 				})),
 			},
 		],
-		[routes, openModal, setContext, setLoadedRoute, toggleTheme],
+		[routes, openModal, setContext, toggleTheme, loadRouteIntoPlan, triggerSave],
 	);
 
 	const filtered = useMemo(() => {

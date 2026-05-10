@@ -396,6 +396,10 @@ export const nl: Record<string, string> = {
 	"plan.duplicate": "Opslaan als kopie",
 	"plan.unloadRoute": "Stop met deze route bewerken",
 	"plan.routeName": "Routenaam",
+	"plan.bindingDropped": "Bewerking ontkoppeld",
+	"plan.bindingDroppedSignedOut":
+		"Meld je aan om deze opgeslagen route te blijven bewerken. Je waypoints blijven behouden.",
+	"plan.bindingDroppedMissing": "De route die je bewerkte is niet meer beschikbaar. Je waypoints blijven behouden.",
 
 	// RouteDetailPanel
 	"route.loaded": "Route geladen",

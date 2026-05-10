@@ -1,19 +1,22 @@
 import type { Coordinate, RouteActivity, RoutePrivacy } from "@routess/core";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { confirmDiscardIfDirty } from "@/features/routing/confirmDiscardIfDirty";
+import { useRouteDraftEditor } from "@/features/routing/RouteDraftEditorProvider";
 import { useComputedElevationProfile } from "@/features/routing/services/elevation";
 import { resolveValhallaCosting } from "@/features/routing/services/routingMode";
 import { fetchSurfaceBreakdown, type SurfaceBreakdown } from "@/features/routing/services/SurfaceService";
 import type { ApiRoute } from "@/lib/api";
 import { useSaveRoute, useUpdateRoute } from "@/lib/api-queries";
-import { emitAppEvent, routeToLoadDetail } from "@/lib/app-events";
+import { emitAppEvent } from "@/lib/app-events";
 import { useT } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
 import { useUnits } from "@/lib/units";
 import { useModalsStore } from "@/stores/modalsStore";
 import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 import { useRoutingPreferencesStore } from "@/stores/routingPreferencesStore";
+import { useDraftActivity, useDraftMode, useWaypoints } from "@/stores/routingStore";
 import { useToastStore } from "@/stores/toastStore";
-import { apiRouteToLoadedRoute, useUiStore } from "@/stores/uiStore";
+import { useUiStore } from "@/stores/uiStore";
 import { EditableLabel } from "../components/EditableLabel";
 import { I, type IconKey } from "../components/icons";
 import { Btn, IconBtn, RDS_COLORS, SecTitle } from "../components/primitives";
@@ -101,7 +104,10 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 	const favouriteRouteIds = useUiStore((s) => s.favouriteRouteIds);
 	const toggleFavourite = useUiStore((s) => s.toggleFavourite);
 	const setContext = useUiStore((s) => s.setContext);
-	const setLoadedRoute = useUiStore((s) => s.setLoadedRoute);
+	const editor = useRouteDraftEditor();
+	const draftMode = useDraftMode();
+	const draftWaypoints = useWaypoints();
+	const draftActivity = useDraftActivity();
 	const favorited = favouriteRouteIds.includes(route.id);
 	const defaultActivity = useRedesignSettingsStore((s) => s.defaultActivity);
 	const routingProfile = useRoutingPreferencesStore((s) => s.profile);
@@ -172,13 +178,15 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 		return () => document.removeEventListener("mousedown", onDocClick);
 	}, [moreOpen]);
 
-	const markRouteLoaded = () => {
-		setLoadedRoute(apiRouteToLoadedRoute(route));
+	const loadIntoDraft = (): boolean => {
+		if (!editor) return false;
+		if (!confirmDiscardIfDirty(draftMode, draftActivity, draftWaypoints)) return false;
+		void editor.loadFromApiRoute(route);
+		return true;
 	};
 
 	const dispatchLoadRoute = () => {
-		emitAppEvent("routess:load-route", routeToLoadDetail(route));
-		markRouteLoaded();
+		if (!loadIntoDraft()) return;
 		setContext("plan");
 		pushToast({
 			kind: "success",
@@ -191,8 +199,7 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 		// ShareModal reads from the routing store; load the saved route there
 		// first so the share URL encodes this route's waypoints rather than
 		// whatever was last on the map.
-		emitAppEvent("routess:load-route", routeToLoadDetail(route));
-		markRouteLoaded();
+		if (!loadIntoDraft()) return;
 		openModal("share");
 	};
 

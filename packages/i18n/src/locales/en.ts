@@ -393,6 +393,9 @@ export const en: Record<string, string> = {
 	"plan.duplicate": "Save as copy",
 	"plan.unloadRoute": "Stop editing this route",
 	"plan.routeName": "Route name",
+	"plan.bindingDropped": "Editing link dropped",
+	"plan.bindingDroppedSignedOut": "Sign in to keep editing this saved route. Your waypoints are preserved.",
+	"plan.bindingDroppedMissing": "The route you were editing is no longer available. Your waypoints are preserved.",
 
 	// RouteDetailPanel
 	"route.loaded": "Route loaded",

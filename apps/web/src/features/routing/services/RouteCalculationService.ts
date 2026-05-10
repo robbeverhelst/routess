@@ -63,10 +63,10 @@ const computeElevationInBackground = (routePath: Coordinate[], accessToken: stri
 function buildComputeOptions(): ComputeRouteOptions {
 	const prefs = getRoutingPreferences();
 	const settings = useRedesignSettingsStore.getState();
-	// Active sport in the planner UI drives routing + duration so switching the
-	// activity tab actually re-routes and re-estimates. The persisted
-	// defaultActivity only seeds the initial activityType on first load.
-	const sportKey = useUiStore.getState().activityType;
+	// The active draft's activity drives routing + duration so switching the
+	// activity tab actually re-routes and re-estimates. Falls back to the
+	// global preference when the draft has no activity (fresh start).
+	const sportKey = useRoutingStore.getState().activity ?? useUiStore.getState().activityType;
 	const profile = resolveMapboxProfile(activityKeyToLabel(sportKey), prefs.profile);
 	const directions: DirectionsOptions = {
 		profile,

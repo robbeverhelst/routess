@@ -4,7 +4,7 @@ import { Logger } from "@/lib/logger";
 import { activityKeyToLabel } from "@/stores/redesignSettingsStore";
 import { useRouteSurfaceStore } from "@/stores/routeSurfaceStore";
 import { useRoutingPreferencesStore } from "@/stores/routingPreferencesStore";
-import { useHasRoute, useRoutePath } from "@/stores/routingStore";
+import { useDraftActivity, useHasRoute, useRoutePath } from "@/stores/routingStore";
 import { useUiStore } from "@/stores/uiStore";
 import { resolveValhallaCosting, type ValhallaCosting } from "./routingMode";
 import { fetchSurfaceBreakdown, type SurfaceBreakdown } from "./SurfaceService";
@@ -25,14 +25,16 @@ export function buildSurfaceBreakdownKey(routePath: Coordinate[], hasRoute: bool
 export function useRouteSurfaceSync(): void {
 	const routePath = useRoutePath();
 	const hasRoute = useHasRoute();
-	const activityType = useUiStore((s) => s.activityType);
+	const draftActivity = useDraftActivity();
+	const globalActivity = useUiStore((s) => s.activityType);
 	const routingProfile = useRoutingPreferencesStore((s) => s.profile);
 	const setBreakdown = useRouteSurfaceStore((s) => s.setBreakdown);
 	const setLoading = useRouteSurfaceStore((s) => s.setLoading);
 
+	const activeActivity = draftActivity ?? globalActivity;
 	const costing = useMemo(
-		() => resolveValhallaCosting(activityKeyToLabel(activityType), routingProfile),
-		[activityType, routingProfile],
+		() => resolveValhallaCosting(activityKeyToLabel(activeActivity), routingProfile),
+		[activeActivity, routingProfile],
 	);
 	const key = useMemo(() => buildSurfaceBreakdownKey(routePath, hasRoute, costing), [routePath, hasRoute, costing]);
 

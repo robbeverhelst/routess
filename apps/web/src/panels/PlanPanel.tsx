@@ -1,8 +1,10 @@
 import { calculatePathDistance } from "@routess/core";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { isDraftDirty } from "@/features/routing/draftDirty";
+import { useRouteDraftEditor } from "@/features/routing/RouteDraftEditorProvider";
 import { useSurfaceBreakdown } from "@/features/routing/services/useSurfaceBreakdown";
 import { useSaveRoute, useUpdateRoute } from "@/lib/api-queries";
-import { emitAppEvent } from "@/lib/app-events";
+import { emitAppEvent, onAppEvent } from "@/lib/app-events";
 import { useT } from "@/lib/i18n";
 import { formatSpeedParts, useUnits } from "@/lib/units";
 import { useModalsStore } from "@/stores/modalsStore";
@@ -10,6 +12,8 @@ import { getSpeedForActivity, useRedesignSettingsStore } from "@/stores/redesign
 import {
 	useClearWaypoints,
 	useDistanceMeters,
+	useDraftActivity,
+	useDraftMode,
 	useDurationSeconds,
 	useElevationGain,
 	useElevationProfile,
@@ -20,12 +24,13 @@ import {
 	useRouteDuration,
 	useRoutePath,
 	useSaveSnapshot,
+	useSetEditingName,
 	useSetWaypointName,
 	useSetWaypoints,
 	useWaypoints,
 } from "@/stores/routingStore";
 import { useToastStore } from "@/stores/toastStore";
-import { apiRouteToLoadedRoute, type RedesignActivity, useUiStore } from "@/stores/uiStore";
+import { type RedesignActivity, useUiStore } from "@/stores/uiStore";
 import { EditableLabel } from "../components/EditableLabel";
 import { I } from "../components/icons";
 import { Btn, IconBtn, Kbd, RDS_COLORS, SecTitle } from "../components/primitives";
@@ -92,10 +97,13 @@ export function PlanPanel() {
 		emitAppEvent("routess:recalculate-route");
 	};
 
-	const { activityType, setActivityType } = useUiStore();
-	const loadedRoute = useUiStore((s) => s.loadedRoute);
-	const setLoadedRoute = useUiStore((s) => s.setLoadedRoute);
-	const setLoadedRouteName = useUiStore((s) => s.setLoadedRouteName);
+	const editor = useRouteDraftEditor();
+	const mode = useDraftMode();
+	const draftActivity = useDraftActivity();
+	const setEditingName = useSetEditingName();
+	const globalActivity = useUiStore((s) => s.activityType);
+	const setGlobalActivity = useUiStore((s) => s.setActivityType);
+	const activityType: RedesignActivity = draftActivity ?? globalActivity;
 	const openModal = useModalsStore((s) => s.openModal);
 	const pushToast = useToastStore((s) => s.push);
 	const distanceMeters = useDistanceMeters();
@@ -106,55 +114,49 @@ export function PlanPanel() {
 	const saveRoute = useSaveRoute();
 	const updateRoute = useUpdateRoute();
 
-	// When a different saved route is loaded, sync the activity tabs to its
-	// stored activity. Only fires on id change so user edits to activity
-	// after load count as dirty rather than getting reset on every render.
-	const syncedRouteIdRef = useRef<number | null>(null);
-	useEffect(() => {
-		if (!loadedRoute) {
-			syncedRouteIdRef.current = null;
-			return;
-		}
-		if (syncedRouteIdRef.current === loadedRoute.id) return;
-		syncedRouteIdRef.current = loadedRoute.id;
-		if (loadedRoute.activity && loadedRoute.activity !== activityType) {
-			setActivityType(loadedRoute.activity);
-		}
-	}, [loadedRoute, activityType, setActivityType]);
+	const isDirty = useMemo(
+		() => isDraftDirty({ mode, activity: draftActivity, waypoints }),
+		[mode, draftActivity, waypoints],
+	);
 
-	// Compare current waypoints to the loaded baseline. Memoized so the JSON
-	// stringify only runs when one side actually changes.
-	const waypointsDirty = useMemo(() => {
-		if (!loadedRoute) return false;
-		if (loadedRoute.waypoints.length !== waypoints.length) return true;
-		return JSON.stringify(loadedRoute.waypoints) !== JSON.stringify(waypoints);
-	}, [loadedRoute, waypoints]);
-
-	const isDirty =
-		!!loadedRoute &&
-		(loadedRoute.name !== loadedRoute.baselineName ||
-			(loadedRoute.activity ?? activityType) !== activityType ||
-			waypointsDirty);
+	const editingName = mode.kind === "editing" ? mode.name : null;
+	const editingRouteId = mode.kind === "editing" ? mode.routeId : null;
+	const editingBaseline = mode.kind === "editing" ? mode.baseline : null;
 
 	const handleClear = () => {
 		clearWaypoints();
-		setLoadedRoute(null);
+	};
+
+	const handleUnload = () => {
+		editor?.unload();
+	};
+
+	const handleActivityChange = (activity: RedesignActivity) => {
+		if (activity === activityType) return;
+		// Always update the per-draft activity. Only mirror the change to the
+		// global default when this is a fresh draft; for an editing draft, the
+		// activity is a per-route choice that should not bleed into the
+		// user's global preference.
+		editor?.setActivity(activity);
+		if (mode.kind === "unsaved") setGlobalActivity(activity);
+		if (hasRoute) emitAppEvent("routess:recalculate-route");
 	};
 
 	const handleSaveClick = () => {
-		if (!loadedRoute) {
+		if (mode.kind === "unsaved") {
 			openModal("save");
 			return;
 		}
+		if (!editingRouteId || !editingBaseline) return;
 		if (!isDirty || waypoints.length < 2 || updateRoute.isPending) return;
 		updateRoute.mutate(
 			{
-				routeId: loadedRoute.id,
+				routeId: editingRouteId,
 				updates: {
-					name: loadedRoute.name,
-					activity: activityType,
-					privacy: loadedRoute.privacy,
-					tags: loadedRoute.tags,
+					name: editingName ?? editingBaseline.name,
+					activity: draftActivity ?? editingBaseline.activity,
+					privacy: editingBaseline.privacy,
+					tags: editingBaseline.tags,
 					waypoints,
 					distance: distanceMeters ?? 0,
 					duration: durationSeconds ?? undefined,
@@ -163,7 +165,7 @@ export function PlanPanel() {
 			},
 			{
 				onSuccess: (updated) => {
-					setLoadedRoute(apiRouteToLoadedRoute(updated));
+					editor?.applySaved(updated);
 					pushToast({
 						kind: "success",
 						title: t("save.toast.updated"),
@@ -182,15 +184,15 @@ export function PlanPanel() {
 	};
 
 	const handleDuplicate = () => {
-		if (!loadedRoute || waypoints.length < 2) return;
-		const baseName = loadedRoute.name || t("save.title");
+		if (mode.kind !== "editing" || !editingBaseline || waypoints.length < 2) return;
+		const baseName = (editingName ?? editingBaseline.name) || t("save.title");
 		saveRoute.mutate(
 			{
 				name: `${baseName} (copy)`,
-				description: loadedRoute.description,
-				activity: activityType,
-				privacy: loadedRoute.privacy,
-				tags: loadedRoute.tags,
+				description: editingBaseline.description,
+				activity: draftActivity ?? editingBaseline.activity,
+				privacy: editingBaseline.privacy,
+				tags: editingBaseline.tags,
 				waypoints,
 				distance: distanceMeters ?? 0,
 				duration: durationSeconds ?? undefined,
@@ -203,7 +205,7 @@ export function PlanPanel() {
 						title: t("route.duplicated"),
 						body: newRoute.name,
 					});
-					setLoadedRoute(apiRouteToLoadedRoute(newRoute));
+					editor?.applySaved(newRoute);
 				},
 				onError: () => {
 					pushToast({
@@ -234,12 +236,22 @@ export function PlanPanel() {
 
 	// If the active sport gets removed in Settings, snap to a still-selected one
 	// so we never route or estimate against a sport the user has hidden.
+	// handleActivityChange closes over mode/editor/hasRoute so it changes
+	// every render; only the sport-list change is the actual trigger here.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: handler stable for our purposes
 	useEffect(() => {
 		if (selectedSports.length === 0) return;
 		if (!selectedSports.includes(activityType)) {
-			setActivityType(selectedSports[0]);
+			handleActivityChange(selectedSports[0]);
 		}
-	}, [selectedSports, activityType, setActivityType]);
+	}, [selectedSports, activityType]);
+
+	// External Save triggers (command palette, future menu items) fire this
+	// event so the same Save semantics live here. handleSaveClick reads a lot
+	// of state, so route through a ref instead of re-binding the listener.
+	const handleSaveClickRef = useRef(handleSaveClick);
+	handleSaveClickRef.current = handleSaveClick;
+	useEffect(() => onAppEvent("routess:save-draft", () => handleSaveClickRef.current()), []);
 
 	const paceParts = useMemo(() => {
 		if (hasRoute && routePath.length >= 2) {
@@ -273,7 +285,7 @@ export function PlanPanel() {
 
 	return (
 		<div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-			{loadedRoute && (
+			{mode.kind === "editing" && (
 				<div
 					style={{
 						display: "flex",
@@ -285,10 +297,10 @@ export function PlanPanel() {
 				>
 					<div style={{ flex: 1, minWidth: 0 }}>
 						<EditableLabel
-							value={loadedRoute.name}
+							value={mode.name}
 							placeholder={t("plan.routeName")}
 							onSave={(next) => {
-								if (next) setLoadedRouteName(next);
+								if (next) setEditingName(next);
 							}}
 							ariaLabel={t("plan.routeName")}
 							style={{
@@ -299,7 +311,7 @@ export function PlanPanel() {
 							}}
 						/>
 					</div>
-					<IconBtn title={t("plan.unloadRoute")} onClick={() => setLoadedRoute(null)}>
+					<IconBtn title={t("plan.unloadRoute")} onClick={handleUnload}>
 						<I.close size={14} />
 					</IconBtn>
 				</div>
@@ -319,13 +331,7 @@ export function PlanPanel() {
 							<button
 								key={a.key}
 								type="button"
-								onClick={() => {
-									if (activityType === a.key) return;
-									setActivityType(a.key);
-									if (hasRoute) {
-										emitAppEvent("routess:recalculate-route");
-									}
-								}}
+								onClick={() => handleActivityChange(a.key)}
 								style={{
 									display: "inline-flex",
 									alignItems: "center",
@@ -569,12 +575,12 @@ export function PlanPanel() {
 				<Btn
 					variant="primary"
 					style={{ flex: 1, minWidth: 0, padding: "0 10px" }}
-					disabled={loadedRoute ? !isDirty || waypoints.length < 2 || updateRoute.isPending : !hasRoute}
+					disabled={mode.kind === "editing" ? !isDirty || waypoints.length < 2 || updateRoute.isPending : !hasRoute}
 					onClick={handleSaveClick}
 				>
-					<I.save size={14} /> {loadedRoute && updateRoute.isPending ? t("save.saving") : t("common.save")}
+					<I.save size={14} /> {mode.kind === "editing" && updateRoute.isPending ? t("save.saving") : t("common.save")}
 				</Btn>
-				{loadedRoute && (
+				{mode.kind === "editing" && (
 					<Btn
 						title={t("plan.duplicate")}
 						disabled={!hasRoute || saveRoute.isPending}

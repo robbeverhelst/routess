@@ -8,6 +8,7 @@ export interface AppEventMap {
 	"routess:undo": NoDetail;
 	"routess:redo": NoDetail;
 	"routess:reset-route": NoDetail;
+	"routess:save-draft": NoDetail;
 	"routess:focus-route": NoDetail;
 	"routess:share-route": NoDetail;
 	"routess:export-gpx": { routeId?: number } | undefined;

@@ -19,6 +19,8 @@ export const useIsComputingElevation = () => useRoutingStore((s) => s.isComputin
 export const useIsMapLocked = () => useRoutingStore((s) => s.isMapLocked);
 export const useCanUndo = () => useRoutingStore((s) => s.canUndo);
 export const useCanRedo = () => useRoutingStore((s) => s.canRedo);
+export const useDraftMode = () => useRoutingStore((s) => s.mode);
+export const useDraftActivity = () => useRoutingStore((s) => s.activity);
 
 // Display-formatted selectors derived from canonical numeric state. Consumers
 // that need raw numbers use useDistanceMeters/useDurationSeconds instead.
@@ -57,5 +59,16 @@ export const useSaveSnapshot = () => useRoutingStore((s) => s.saveSnapshot);
 export const useUndo = () => useRoutingStore((s) => s.undo);
 export const useRedo = () => useRoutingStore((s) => s.redo);
 export const useClearHistory = () => useRoutingStore((s) => s.clearHistory);
+export const useSetMode = () => useRoutingStore((s) => s.setMode);
+export const useSetEditingName = () => useRoutingStore((s) => s.setEditingName);
+export const useSetBaseline = () => useRoutingStore((s) => s.setBaseline);
+export const useSetActivity = () => useRoutingStore((s) => s.setActivity);
 
-export type { RouteActions, RouteMetrics, RouteState, RoutingStore } from "@routess/core";
+export type {
+	RouteActions,
+	RouteBaseline,
+	RouteDraftMode,
+	RouteMetrics,
+	RouteState,
+	RoutingStore,
+} from "@routess/core";

@@ -9,7 +9,7 @@ import {
 	redoStep,
 	undoStep,
 } from "../history";
-import type { Coordinate, Logger, Waypoint, WaypointType } from "../types";
+import type { Coordinate, Logger, RouteActivity, RoutePrivacy, Waypoint, WaypointType } from "../types";
 
 // ===== STATE & ACTIONS =====
 
@@ -23,6 +23,23 @@ export interface RouteMetrics {
 	durationSeconds: number | null;
 	isOffline: boolean;
 }
+
+// Snapshot of a saved Route's editable fields. Held inside `mode.editing` and
+// compared against the live draft to compute dirty state.
+export interface RouteBaseline {
+	name: string;
+	activity: RouteActivity | undefined;
+	privacy: RoutePrivacy;
+	tags: string[];
+	description: string | undefined;
+	waypoints: Waypoint[];
+}
+
+// RouteDraft lifecycle. `unsaved` = composing fresh, save will POST a new
+// Route. `editing` = bound to a saved Route, save will PATCH that Route.
+export type RouteDraftMode =
+	| { kind: "unsaved" }
+	| { kind: "editing"; routeId: number; name: string; baseline: RouteBaseline };
 
 export interface RouteState {
 	waypoints: Waypoint[];
@@ -39,6 +56,15 @@ export interface RouteState {
 	isComputingElevation: boolean;
 
 	isMapLocked: boolean;
+
+	// RouteDraft binding state (see RouteDraftMode). Persisted across reloads
+	// so an in-progress edit-in-place survives a refresh.
+	mode: RouteDraftMode;
+
+	// Current activity for this draft. The user toggles it via the activity
+	// tabs; loading a saved Route copies its `activity` into here. The global
+	// activity preference (`uiStore`) is only the default for fresh drafts.
+	activity: RouteActivity | undefined;
 
 	history: HistoryStacks<Waypoint[]>;
 	canUndo: boolean;
@@ -67,6 +93,11 @@ export interface RouteActions {
 
 	setIsMapLocked: (isLocked: boolean) => void;
 
+	setMode: (mode: RouteDraftMode) => void;
+	setEditingName: (name: string) => void;
+	setBaseline: (baseline: RouteBaseline) => void;
+	setActivity: (activity: RouteActivity | undefined) => void;
+
 	saveSnapshot: () => void;
 	undo: () => void;
 	redo: () => void;
@@ -89,6 +120,8 @@ const initialState: RouteState = {
 	elevationProfile: undefined,
 	isComputingElevation: false,
 	isMapLocked: false,
+	mode: { kind: "unsaved" },
+	activity: undefined,
 	history: emptyHistory<Waypoint[]>(),
 	canUndo: false,
 	canRedo: false,
@@ -102,6 +135,9 @@ const initialState: RouteState = {
 // v2 replaces the formatted-string routeDistance/routeDuration with canonical
 // distanceMeters / durationSeconds + isOfflineRoute. The cached display strings
 // are dropped on migration; the next route calculation repopulates them.
+// v3 adds the RouteDraftMode lifecycle (unsaved | editing) and per-draft
+// activity. Pre-v3 state had no mode/activity, so they default to
+// `unsaved`/`undefined` on migration.
 type LegacyPersistedRoute = {
 	waypoints?: Coordinate[];
 	directFlags?: boolean[];
@@ -129,7 +165,7 @@ const dropLegacyMetricStrings = (persisted: Record<string, unknown> & Partial<Ro
 export function createRoutingStore(logger: Logger) {
 	const persistConfig: PersistOptions<RoutingStore, Partial<RouteState>> = {
 		name: "routing-store",
-		version: 2,
+		version: 3,
 		migrate: (persisted, version) => {
 			let next = (persisted ?? {}) as Record<string, unknown>;
 			if (version < 1) {
@@ -144,9 +180,11 @@ export function createRoutingStore(logger: Logger) {
 			return next as Partial<RouteState>;
 		},
 		// History (undo/redo stacks) is persisted so undo still works after a
-		// page refresh — users expect that. Bounded growth is enforced by the
+		// page refresh - users expect that. Bounded growth is enforced by the
 		// 50-snapshot cap inside HistoryManager.recordSnapshot, so localStorage
-		// stays small.
+		// stays small. The RouteDraft mode + activity persist alongside, so an
+		// edit-in-place binding survives refresh; the editor re-validates the
+		// routeId on rehydration and falls back to `unsaved` if it has gone.
 		partialize: (state) => ({
 			waypoints: state.waypoints,
 			routePath: state.routePath,
@@ -158,6 +196,8 @@ export function createRoutingStore(logger: Logger) {
 			elevationLoss: state.elevationLoss,
 			elevationProfile: state.elevationProfile,
 			isMapLocked: state.isMapLocked,
+			mode: state.mode,
+			activity: state.activity,
 			history: state.history,
 			canUndo: state.canUndo,
 			canRedo: state.canRedo,
@@ -220,6 +260,7 @@ export function createRoutingStore(logger: Logger) {
 						elevationLoss: undefined,
 						elevationProfile: undefined,
 						isComputingElevation: false,
+						mode: { kind: "unsaved" },
 					});
 				},
 
@@ -269,6 +310,31 @@ export function createRoutingStore(logger: Logger) {
 				// === MAP CONFIG ===
 				setIsMapLocked: (isLocked) => {
 					set({ isMapLocked: isLocked });
+				},
+
+				// === DRAFT MODE / ACTIVITY ===
+				setMode: (mode) => {
+					set({ mode });
+				},
+
+				setEditingName: (name) => {
+					const trimmed = name.trim();
+					if (!trimmed) return;
+					set((state) => {
+						if (state.mode.kind !== "editing" || state.mode.name === trimmed) return state;
+						return { mode: { ...state.mode, name: trimmed } };
+					});
+				},
+
+				setBaseline: (baseline) => {
+					set((state) => {
+						if (state.mode.kind !== "editing") return state;
+						return { mode: { ...state.mode, name: baseline.name, baseline } };
+					});
+				},
+
+				setActivity: (activity) => {
+					set({ activity });
 				},
 
 				// === HISTORY ===
