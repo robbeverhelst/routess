@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { type CredentialResponse, googleAuth, hasValidGoogleClientId } from "@/lib/google-auth";
+import { type GoogleCodeResponse, googleAuth, hasValidGoogleClientId } from "@/lib/google-auth";
 import { useT } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
 import { useToastStore } from "@/stores/toastStore";
@@ -42,10 +42,10 @@ export function SignUpScreen({ onSwitchToLogin }: { onSwitchToLogin?: () => void
 	const strengthLabel = t(STRENGTH_KEYS[strength]);
 	const strengthColor = strength >= 3 ? RDS_COLORS.success : strength === 2 ? RDS_COLORS.warn : RDS_COLORS.danger;
 
-	const handleGoogle = async (cred: CredentialResponse) => {
+	const handleGoogle = async (response: GoogleCodeResponse) => {
 		setIsLoading(true);
 		try {
-			const user = await googleAuth.handleGoogleSuccess(cred);
+			const user = await googleAuth.handleGoogleSuccess(response);
 			pushToast({ kind: "success", title: t("signup.toast.created"), body: user.name ?? user.email });
 		} catch (e) {
 			Logger.error(e);

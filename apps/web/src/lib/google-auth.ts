@@ -32,24 +32,20 @@ export interface AuthState {
 	accessToken: string | null;
 }
 
-// Google Credential Response (from @react-oauth/google)
-export interface CredentialResponse {
-	credential?: string;
-	select_by?: string;
-	clientId?: string;
+export interface GoogleCodeResponse {
+	code?: string;
 }
 
 // Google Auth Service Class
 class GoogleAuthService {
 	// Handle successful Google login
-	async handleGoogleSuccess(credentialResponse: CredentialResponse): Promise<ApiUser> {
+	async handleGoogleSuccess(codeResponse: GoogleCodeResponse): Promise<ApiUser> {
 		try {
-			if (!credentialResponse.credential) {
-				throw new Error("No credential received from Google");
+			if (!codeResponse.code) {
+				throw new Error("No authorization code received from Google");
 			}
 
-			// Send credential to backend for verification and user creation/login
-			const authResponse: AuthResponse = await apiService.googleAuth(credentialResponse.credential);
+			const authResponse: AuthResponse = await apiService.googleAuth(codeResponse.code);
 
 			storeUser(authResponse.user);
 

@@ -12,10 +12,12 @@ export interface GoogleIdentity {
 }
 
 export interface GoogleIdentityVerifier {
-	verify(credential: string): Promise<GoogleIdentity>;
+	verify(authCode: string): Promise<GoogleIdentity>;
 }
 
 export const GOOGLE_IDENTITY_VERIFIER = Symbol("GOOGLE_IDENTITY_VERIFIER");
+
+const POPUP_REDIRECT_URI = "postmessage";
 
 @Injectable()
 export class GoogleOAuth2Verifier implements GoogleIdentityVerifier {
@@ -26,14 +28,19 @@ export class GoogleOAuth2Verifier implements GoogleIdentityVerifier {
 		@Inject(APP_CONFIG) private readonly config: AppConfig,
 		private readonly metrics: MetricsService,
 	) {
-		this.client = new OAuth2Client(this.config.auth.googleClientId);
+		this.client = new OAuth2Client({
+			clientId: this.config.auth.googleClientId,
+			clientSecret: this.config.auth.googleClientSecret,
+			redirectUri: POPUP_REDIRECT_URI,
+		});
 	}
 
-	async verify(credential: string): Promise<GoogleIdentity> {
+	async verify(authCode: string): Promise<GoogleIdentity> {
 		const start = Date.now();
 		let status: "success" | "error" = "error";
 		try {
-			const identity = await this.callGoogle(credential);
+			const idToken = await this.exchangeCode(authCode);
+			const identity = await this.verifyIdToken(idToken);
 			status = "success";
 			return identity;
 		} finally {
@@ -41,11 +48,28 @@ export class GoogleOAuth2Verifier implements GoogleIdentityVerifier {
 		}
 	}
 
-	private async callGoogle(credential: string): Promise<GoogleIdentity> {
+	private async exchangeCode(code: string): Promise<string> {
+		try {
+			const { tokens } = await this.client.getToken({
+				code,
+				redirect_uri: POPUP_REDIRECT_URI,
+			});
+			if (!tokens.id_token) {
+				throw new UnauthorizedException("Google did not return an ID token");
+			}
+			return tokens.id_token;
+		} catch (error) {
+			if (error instanceof UnauthorizedException) throw error;
+			this.logger.warn(`Google code exchange failed: ${error instanceof Error ? error.message : String(error)}`);
+			throw new UnauthorizedException("Failed to authenticate with Google");
+		}
+	}
+
+	private async verifyIdToken(idToken: string): Promise<GoogleIdentity> {
 		let payload: TokenPayload | undefined;
 		try {
 			const ticket = await this.client.verifyIdToken({
-				idToken: credential,
+				idToken,
 				audience: this.config.auth.googleClientId,
 			});
 			payload = ticket.getPayload();

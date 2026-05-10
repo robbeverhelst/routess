@@ -77,10 +77,10 @@ export class ApiClient {
 	}
 
 	// Auth methods
-	async googleAuth(credential: string): Promise<AuthResponse> {
+	async googleAuth(code: string): Promise<AuthResponse> {
 		const response = await this.request<AuthResponse>("/auth/google", {
 			method: "POST",
-			body: { credential },
+			body: { code },
 		});
 
 		this.config.authStateManager.setToken(response.accessToken);

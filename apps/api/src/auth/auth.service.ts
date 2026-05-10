@@ -42,7 +42,7 @@ export class AuthService {
 	): Promise<AuthResponseDto> {
 		let identity: GoogleIdentity;
 		try {
-			identity = await this.googleIdentityVerifier.verify(googleAuthDto.credential);
+			identity = await this.googleIdentityVerifier.verify(googleAuthDto.code);
 		} catch (error) {
 			const result = this.classifyVerificationError(error);
 			this.emitLoginAttempt(result);
