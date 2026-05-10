@@ -319,6 +319,8 @@ export const initializeMapInteractions = (
 	const handleMouseDown = async (event: MapMouseEvent) => {
 		if (isMapLockedRef.current || event.originalEvent.button !== 0) return;
 
+		state.suppressNextClick = false;
+
 		const hitTarget = getHitTarget(event.point);
 		if (hitTarget.kind === "empty") {
 			return;
@@ -335,6 +337,8 @@ export const initializeMapInteractions = (
 
 	const handleTouchStart = async (event: MapTouchEvent) => {
 		if (isMapLockedRef.current || event.points.length !== 1) return;
+
+		state.suppressNextClick = false;
 
 		const point = event.points[0];
 		const hitTarget = getHitTarget(point);
