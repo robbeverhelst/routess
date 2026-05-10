@@ -5,8 +5,8 @@ import {
 	type GoogleIdentity,
 	type GoogleIdentityVerifier,
 } from "src/auth/google-identity-verifier";
-import { UserAuthMethod } from "src/entities/user-auth-method.entity";
 import { User } from "src/entities/user.entity";
+import { UserAuthMethod } from "src/entities/user-auth-method.entity";
 import supertest from "supertest";
 import { clearDatabase, closeTestApp, createTestApp, createTestUserWithAuth, withRequestContext } from "../utils";
 
