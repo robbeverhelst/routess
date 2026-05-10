@@ -46,6 +46,7 @@ interface InteractionState {
 	touchStartPos: PointerPoint | null;
 	currentLongPressId: number | null;
 	hoveredRouteFeatureId: string | number | undefined;
+	suppressNextClick: boolean;
 }
 
 const createInitialState = (): InteractionState => ({
@@ -56,6 +57,7 @@ const createInitialState = (): InteractionState => ({
 	touchStartPos: null,
 	currentLongPressId: null,
 	hoveredRouteFeatureId: undefined,
+	suppressNextClick: false,
 });
 
 const parseWaypointIndex = (rawIndex: unknown, waypointCount: number): number | null => {
@@ -263,6 +265,10 @@ export const initializeMapInteractions = (
 		state.longPressTimeoutId = window.setTimeout(() => {
 			if (state.currentLongPressId === pressId && state.touchStartPos) {
 				setPopup(getPopupInfo(lngLat, state.touchStartPos));
+				// Touch end after a long-press can synthesize a click on the
+				// canvas. Swallow that one click so we don't add a stray
+				// `routed` waypoint at the spot the user opened the popup.
+				state.suppressNextClick = true;
 			}
 			state.longPressTimeoutId = null;
 		}, LONG_PRESS_DURATION);
@@ -271,6 +277,11 @@ export const initializeMapInteractions = (
 	const handleMapClick = async (event: MapMouseEvent) => {
 		if (isMapLockedRef.current) return;
 		resetLongPress();
+
+		if (state.suppressNextClick) {
+			state.suppressNextClick = false;
+			return;
+		}
 
 		if (event.defaultPrevented) {
 			Logger.info("[MapInteractionManager] Click event default prevented, likely due to drag. Ignoring.");
@@ -309,6 +320,8 @@ export const initializeMapInteractions = (
 	const handleMouseDown = async (event: MapMouseEvent) => {
 		if (isMapLockedRef.current || event.originalEvent.button !== 0) return;
 
+		state.suppressNextClick = false;
+
 		const hitTarget = getHitTarget(event.point);
 		if (hitTarget.kind === "empty") {
 			return;
@@ -325,6 +338,8 @@ export const initializeMapInteractions = (
 
 	const handleTouchStart = async (event: MapTouchEvent) => {
 		if (isMapLockedRef.current || event.points.length !== 1) return;
+
+		state.suppressNextClick = false;
 
 		const point = event.points[0];
 		const hitTarget = getHitTarget(point);

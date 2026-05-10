@@ -293,7 +293,14 @@ export function PlanPanel() {
 						{waypoints.map((w, i) => {
 							const isStart = i === 0;
 							const isEnd = i === waypoints.length - 1;
-							const dot = isStart ? RDS_COLORS.success : isEnd ? RDS_COLORS.danger : RDS_COLORS.accent;
+							const isDirect = w.type === "direct";
+							const dot = isDirect
+								? RDS_COLORS.warn
+								: isStart
+									? RDS_COLORS.success
+									: isEnd
+										? RDS_COLORS.danger
+										: RDS_COLORS.accent;
 							const label = isStart
 								? t("common.start")
 								: isEnd
