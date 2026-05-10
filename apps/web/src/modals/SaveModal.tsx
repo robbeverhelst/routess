@@ -1,6 +1,6 @@
 import type { RoutePrivacy } from "@routess/core";
 import { useEffect, useMemo, useState } from "react";
-import { useRouteDraftEditor } from "@/features/routing/RouteDraftEditorProvider";
+import { applySavedRoute } from "@/features/routing/applySavedRoute";
 import { useIsAuthenticated } from "@/hooks/useAuthState";
 import { useSaveRoute } from "@/lib/api-queries";
 import { emitAppEvent } from "@/lib/app-events";
@@ -43,7 +43,6 @@ export function SaveModal() {
 	const durationSeconds = useDurationSeconds();
 	const elevationGain = useElevationGain();
 	const { activityType, setActivityType } = useUiStore();
-	const editor = useRouteDraftEditor();
 	const selectedSports = useRedesignSettingsStore((s) => s.selectedSports);
 	const saveRoute = useSaveRoute();
 	const pushToast = useToastStore((s) => s.push);
@@ -88,7 +87,7 @@ export function SaveModal() {
 			},
 			{
 				onSuccess: (created) => {
-					editor?.applySaved(created);
+					applySavedRoute(created);
 					pushToast({
 						kind: "success",
 						title: t("save.toast.saved"),

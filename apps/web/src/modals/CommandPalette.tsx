@@ -1,12 +1,10 @@
 import { useCallback, useMemo, useState } from "react";
-import { confirmDiscardIfDirty } from "@/features/routing/confirmDiscardIfDirty";
-import { useRouteDraftEditor } from "@/features/routing/RouteDraftEditorProvider";
 import type { ApiRoute } from "@/lib/api";
 import { useUserRoutes } from "@/lib/api-queries";
-import { emitAppEvent } from "@/lib/app-events";
+import { emitAppEvent, routeToLoadDetail } from "@/lib/app-events";
 import { t } from "@/lib/i18n";
 import { useModalsStore } from "@/stores/modalsStore";
-import { useDraftActivity, useDraftMode, useWaypoints } from "@/stores/routingStore";
+import { useDraftMode } from "@/stores/routingStore";
 import { useUiStore } from "@/stores/uiStore";
 import { I } from "../components/icons";
 import { Kbd, RDS_COLORS, SecTitle } from "../components/primitives";
@@ -26,22 +24,19 @@ export function CommandPalette() {
 	const setContext = useUiStore((s) => s.setContext);
 	const toggleTheme = useUiStore((s) => s.toggleTheme);
 	const _language = useUiStore((s) => s.language);
-	const editor = useRouteDraftEditor();
 	const mode = useDraftMode();
-	const waypoints = useWaypoints();
-	const draftActivity = useDraftActivity();
 	const { data: routes = [] } = useUserRoutes();
 	const [query, setQuery] = useState("");
 	const [activeIndex, setActiveIndex] = useState(0);
 
 	const loadRouteIntoPlan = useCallback(
 		(route: ApiRoute) => {
-			if (!editor) return;
-			if (!confirmDiscardIfDirty(mode, draftActivity, waypoints)) return;
-			void editor.loadFromApiRoute(route);
+			// Confirm-on-dirty + the actual load run inside MapWithRouting's
+			// listener (it owns the editor reference).
+			emitAppEvent("routess:load-route", routeToLoadDetail(route));
 			setContext("plan");
 		},
-		[editor, mode, draftActivity, waypoints, setContext],
+		[setContext],
 	);
 
 	const triggerSave = useCallback(() => {

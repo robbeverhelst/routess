@@ -19,18 +19,28 @@ export interface AppEventMap {
 	"routess:zoom-in": NoDetail;
 	"routess:zoom-out": NoDetail;
 	"routess:fly-to": { coordinates: [number, number]; zoom?: number };
-	"routess:load-route": {
-		routeId?: number;
-		name?: string;
-		waypoints: Waypoint[];
-		geometry?: [number, number][];
-		distance?: number;
-		duration?: number;
-		elevationGain?: number;
-		privacy?: RoutePrivacy;
-		tags?: string[];
-		description?: string;
-	};
+	"routess:load-route": // Full saved Route: editor.loadFromApiRoute sets mode + baseline +
+	// activity in addition to loading waypoints/geometry. Used by the
+	// library, command palette, and any other "open this saved Route"
+	// surface. The listener lives in MapWithRouting because the editor is
+	// only visible inside that subtree, and is also where confirm-on-dirty
+	// gating happens before the destructive load.
+		| { source: "saved"; route: ApiRoute }
+		// Legacy unsaved-waypoints payload used by share-link / GPX paths;
+		// loads waypoints without binding to a saved Route. Currently only
+		// emitted by external code paths if any survive; kept for safety.
+		| {
+				source: "waypoints";
+				name?: string;
+				waypoints: Waypoint[];
+				geometry?: [number, number][];
+				distance?: number;
+				duration?: number;
+				elevationGain?: number;
+				privacy?: RoutePrivacy;
+				tags?: string[];
+				description?: string;
+		  };
 	"routess:set-map-style": { styleKey: RedesignMapStyle };
 	"routess:set-pois": { visible: boolean };
 	"routess:open-account": NoDetail;
@@ -67,16 +77,5 @@ export function onAppEvent<K extends EventName>(
 }
 
 export function routeToLoadDetail(route: ApiRoute): AppEventMap["routess:load-route"] {
-	return {
-		routeId: route.id,
-		name: route.name,
-		waypoints: route.waypoints,
-		geometry: route.geometry,
-		distance: route.distance,
-		duration: route.duration,
-		elevationGain: route.elevationGain,
-		privacy: route.privacy,
-		tags: route.tags,
-		description: route.description,
-	};
+	return { source: "saved", route };
 }

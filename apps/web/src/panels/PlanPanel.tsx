@@ -1,7 +1,7 @@
 import { calculatePathDistance } from "@routess/core";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { applySavedRoute } from "@/features/routing/applySavedRoute";
 import { isDraftDirty } from "@/features/routing/draftDirty";
-import { useRouteDraftEditor } from "@/features/routing/RouteDraftEditorProvider";
 import { useSurfaceBreakdown } from "@/features/routing/services/useSurfaceBreakdown";
 import { useSaveRoute, useUpdateRoute } from "@/lib/api-queries";
 import { emitAppEvent, onAppEvent } from "@/lib/app-events";
@@ -24,7 +24,9 @@ import {
 	useRouteDuration,
 	useRoutePath,
 	useSaveSnapshot,
+	useSetActivity,
 	useSetEditingName,
+	useSetMode,
 	useSetWaypointName,
 	useSetWaypoints,
 	useWaypoints,
@@ -97,10 +99,11 @@ export function PlanPanel() {
 		emitAppEvent("routess:recalculate-route");
 	};
 
-	const editor = useRouteDraftEditor();
 	const mode = useDraftMode();
 	const draftActivity = useDraftActivity();
 	const setEditingName = useSetEditingName();
+	const setMode = useSetMode();
+	const setActivity = useSetActivity();
 	const globalActivity = useUiStore((s) => s.activityType);
 	const setGlobalActivity = useUiStore((s) => s.setActivityType);
 	const activityType: RedesignActivity = draftActivity ?? globalActivity;
@@ -128,7 +131,7 @@ export function PlanPanel() {
 	};
 
 	const handleUnload = () => {
-		editor?.unload();
+		setMode({ kind: "unsaved" });
 	};
 
 	const handleActivityChange = (activity: RedesignActivity) => {
@@ -137,7 +140,7 @@ export function PlanPanel() {
 		// global default when this is a fresh draft; for an editing draft, the
 		// activity is a per-route choice that should not bleed into the
 		// user's global preference.
-		editor?.setActivity(activity);
+		setActivity(activity);
 		if (mode.kind === "unsaved") setGlobalActivity(activity);
 		if (hasRoute) emitAppEvent("routess:recalculate-route");
 	};
@@ -165,7 +168,7 @@ export function PlanPanel() {
 			},
 			{
 				onSuccess: (updated) => {
-					editor?.applySaved(updated);
+					applySavedRoute(updated);
 					pushToast({
 						kind: "success",
 						title: t("save.toast.updated"),
@@ -205,7 +208,7 @@ export function PlanPanel() {
 						title: t("route.duplicated"),
 						body: newRoute.name,
 					});
-					editor?.applySaved(newRoute);
+					applySavedRoute(newRoute);
 				},
 				onError: () => {
 					pushToast({
