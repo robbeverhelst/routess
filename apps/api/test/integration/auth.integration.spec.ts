@@ -5,6 +5,7 @@ import {
 	type GoogleIdentity,
 	type GoogleIdentityVerifier,
 } from "src/auth/google-identity-verifier";
+import { UserAuthMethod } from "src/entities/user-auth-method.entity";
 import { User } from "src/entities/user.entity";
 import supertest from "supertest";
 import { clearDatabase, closeTestApp, createTestApp, createTestUserWithAuth, withRequestContext } from "../utils";
@@ -71,11 +72,15 @@ describe("Auth Integration Tests", () => {
 			expect(response.body).toHaveProperty("user");
 			expect(response.body.user.email).toBe("test@example.com");
 
-			// Verify user was created in database
+			// Verify user was created in database with a Google auth method.
+			// Provider-specific identifiers live on UserAuthMethod (not User) since
+			// the auth refactor in #134.
 			await withRequestContext(app, async () => {
 				const user = await orm.em.findOne(User, { email: "test@example.com" });
 				expect(user).toBeDefined();
-				expect(user?.googleId).toBe("google-user-123");
+				const method = await orm.em.findOne(UserAuthMethod, { provider: "google", providerId: "google-user-123" });
+				expect(method).toBeDefined();
+				expect((method?.user as unknown as { id: number } | undefined)?.id).toBe(user?.id);
 			});
 		});
 
