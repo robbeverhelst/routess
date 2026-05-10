@@ -4,12 +4,14 @@ import type { Map as MapboxMap } from "mapbox-gl";
 import { useRouteScrubStore } from "@/stores/routeScrubStore";
 import { useRouteSurfaceStore } from "@/stores/routeSurfaceStore";
 import { useRoutingStore } from "@/stores/routingStore";
+import { useWaypointHoverStore } from "@/stores/waypointHoverStore";
 import {
 	clearKilometerMarkersLayer,
 	clearRouteLayer,
 	clearRouteScrubLayer,
 	clearRouteSurfaceLayer,
 	interpolateOnRoutePath,
+	setHoveredWaypoint,
 	updateKilometerMarkersLayer,
 	updateRouteLayer,
 	updateRouteScrubLayer,
@@ -88,9 +90,20 @@ export function attachMapViewAdapter(map: MapboxMap): () => void {
 	renderSurface(map);
 	renderScrub(map, initial.routePath, useRouteScrubStore.getState().hoveredDistanceMeters);
 
+	const initialHover = useWaypointHoverStore.getState().hoveredWaypointIndex;
+	if (initialHover !== null) {
+		setHoveredWaypoint(map, null, initialHover);
+	}
+
 	const unsubWaypoints = useRoutingStore.subscribe((state, prev) => {
 		if (state.waypoints !== prev.waypoints || state.isMapLocked !== prev.isMapLocked) {
 			renderWaypoints(map, state.waypoints, state.isMapLocked);
+			// Hover index can become stale when waypoints change (delete/reorder).
+			// Drop it so the next mouseenter sets a fresh, valid one.
+			const hovered = useWaypointHoverStore.getState().hoveredWaypointIndex;
+			if (hovered !== null && hovered >= state.waypoints.length) {
+				useWaypointHoverStore.getState().clearHover();
+			}
 		}
 		if (state.routePath !== prev.routePath) {
 			renderRoute(map, state.routePath);
@@ -110,10 +123,17 @@ export function attachMapViewAdapter(map: MapboxMap): () => void {
 		}
 	});
 
+	const unsubHover = useWaypointHoverStore.subscribe((state, prev) => {
+		if (state.hoveredWaypointIndex !== prev.hoveredWaypointIndex) {
+			setHoveredWaypoint(map, prev.hoveredWaypointIndex, state.hoveredWaypointIndex);
+		}
+	});
+
 	return () => {
 		unsubWaypoints();
 		unsubSurface();
 		unsubScrub();
+		unsubHover();
 	};
 }
 

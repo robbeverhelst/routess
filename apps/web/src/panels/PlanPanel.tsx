@@ -22,6 +22,7 @@ import {
 	useWaypoints,
 } from "@/stores/routingStore";
 import { type RedesignActivity, useUiStore } from "@/stores/uiStore";
+import { useWaypointHoverStore } from "@/stores/waypointHoverStore";
 import { EditableLabel } from "../components/EditableLabel";
 import { I } from "../components/icons";
 import { Btn, IconBtn, Kbd, RDS_COLORS, SecTitle } from "../components/primitives";
@@ -75,6 +76,9 @@ export function PlanPanel() {
 	const saveSnapshot = useSaveSnapshot();
 	const [draggingIdx, setDraggingIdx] = useState<number | null>(null);
 	const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+	const hoveredWaypointIndex = useWaypointHoverStore((s) => s.hoveredWaypointIndex);
+	const setWaypointHover = useWaypointHoverStore((s) => s.setHover);
+	const clearWaypointHover = useWaypointHoverStore((s) => s.clearHover);
 
 	const handleRemoveWaypoint = (index: number) => {
 		saveSnapshot();
@@ -297,11 +301,17 @@ export function PlanPanel() {
 									: t("common.waypoint", { n: String(i) });
 							const isDragging = draggingIdx === i;
 							const isDragTarget = dragOverIdx === i && draggingIdx !== null && draggingIdx !== i;
+							const isHovered = hoveredWaypointIndex === i;
+							const rowBackground = isDragTarget ? RDS_COLORS.bgHover : isHovered ? RDS_COLORS.bgHover : "transparent";
 							return (
 								// biome-ignore lint/a11y/noStaticElementInteractions: drag-drop row is a non-interactive container; the grip button inside is the keyboard-actionable control
 								<div
 									// biome-ignore lint/suspicious/noArrayIndexKey: waypoints can repeat coords; combine coord with index for stable key
 									key={`${w.coord[0]}-${w.coord[1]}-${i}`}
+									onMouseEnter={() => setWaypointHover(i)}
+									onMouseLeave={() => {
+										if (hoveredWaypointIndex === i) clearWaypointHover();
+									}}
 									onDragOver={(e) => {
 										if (draggingIdx === null) return;
 										e.preventDefault();
@@ -327,8 +337,8 @@ export function PlanPanel() {
 										padding: "8px 10px",
 										borderRadius: 8,
 										opacity: isDragging ? 0.4 : 1,
-										background: isDragTarget ? RDS_COLORS.bgHover : "transparent",
-										transition: "background 100ms",
+										background: rowBackground,
+										transition: "background 180ms ease-out",
 									}}
 								>
 									<div
