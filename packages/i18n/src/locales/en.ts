@@ -1031,8 +1031,13 @@ export const en: Record<string, string> = {
 		"Mentions, social activity and system messages will land here once the notifications backend ships.",
 	"layers.overlays": "Overlays",
 	"layers.overlaysComingSoon": "Overlays coming soon",
-	"layers.overlaysSub":
-		"Heatmaps, contour lines, cycling infrastructure and surface colouring land with the layer pipeline.",
+	"layers.overlaysSub": "More overlays land soon: heatmaps, contour lines, surface colouring, wind.",
+	"layers.nodes": "Hike & cycle nodes",
+	"layers.nodesSub": "Belgian and Dutch numbered junction networks. Zoom in to see numbers.",
+	"layers.hikingNodes": "Walking nodes",
+	"layers.hikingNodesSub": "Red numbered walking and hiking junction routes.",
+	"layers.cyclingNodes": "Cycling nodes",
+	"layers.cyclingNodesSub": "Blue numbered cycling junction routes.",
 
 	// CommandPalette
 	"cmd.placeholder": "Type a command, search, or jump…",

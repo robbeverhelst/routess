@@ -14,8 +14,9 @@ export type RedesignUnits = "km" | "mi";
 export type RedesignMapStyle = "streets" | "outdoors" | "satellite";
 export type LocationPermission = "unknown" | "granted" | "denied" | "skipped";
 
-export type OverlayKey = "heatmap" | "contour" | "bike" | "surface" | "wind";
+export type OverlayKey = "heatmap" | "contour" | "bike" | "surface" | "wind" | "hikingNodes" | "cyclingNodes";
 export type MapOverlays = Record<OverlayKey, boolean>;
+type PersistedMapOverlays = Partial<Record<OverlayKey | "nodes", boolean>>;
 
 export type SportSpeeds = Partial<Record<RedesignActivity, number>>;
 
@@ -112,6 +113,8 @@ export const DEFAULT_OVERLAYS: MapOverlays = {
 	bike: true,
 	surface: false,
 	wind: false,
+	hikingNodes: false,
+	cyclingNodes: false,
 };
 
 export const DEFAULT_REDESIGN_SETTINGS: RedesignSettingsSnapshot = {
@@ -169,7 +172,8 @@ export function normalizeRedesignSettings(input?: Partial<RedesignSettingsSnapsh
 		}
 	}
 
-	const rawOverlays = input?.overlays ?? {};
+	const rawOverlays = (input?.overlays ?? {}) as PersistedMapOverlays;
+	const legacyNodesEnabled = rawOverlays.nodes === true;
 
 	return {
 		units: isUnits(input?.units) ? input.units : DEFAULT_REDESIGN_SETTINGS.units,
@@ -190,6 +194,14 @@ export function normalizeRedesignSettings(input?: Partial<RedesignSettingsSnapsh
 			surface:
 				typeof rawOverlays.surface === "boolean" ? rawOverlays.surface : DEFAULT_REDESIGN_SETTINGS.overlays.surface,
 			wind: typeof rawOverlays.wind === "boolean" ? rawOverlays.wind : DEFAULT_REDESIGN_SETTINGS.overlays.wind,
+			hikingNodes:
+				typeof rawOverlays.hikingNodes === "boolean"
+					? rawOverlays.hikingNodes
+					: legacyNodesEnabled || DEFAULT_REDESIGN_SETTINGS.overlays.hikingNodes,
+			cyclingNodes:
+				typeof rawOverlays.cyclingNodes === "boolean"
+					? rawOverlays.cyclingNodes
+					: legacyNodesEnabled || DEFAULT_REDESIGN_SETTINGS.overlays.cyclingNodes,
 		},
 		defaultRouteVisibility: isRouteVisibility(input?.defaultRouteVisibility)
 			? input.defaultRouteVisibility
@@ -275,7 +287,7 @@ export const useRedesignSettingsStore = create<SettingsState>()(
 		}),
 		{
 			name: "routess.redesign.settings",
-			version: 7,
+			version: 8,
 			migrate: (persisted, version) => {
 				const state = persisted as
 					| (Partial<RedesignSettingsSnapshot> & {

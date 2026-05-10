@@ -51,6 +51,14 @@ export class UserPreferenceOverlaysDto {
 	@ApiProperty({ example: false })
 	@IsBoolean()
 	wind!: boolean;
+
+	@ApiProperty({ example: false })
+	@IsBoolean()
+	hikingNodes!: boolean;
+
+	@ApiProperty({ example: false })
+	@IsBoolean()
+	cyclingNodes!: boolean;
 }
 
 export class UpdateUserPreferenceOverlaysDto {
@@ -78,6 +86,16 @@ export class UpdateUserPreferenceOverlaysDto {
 	@IsOptional()
 	@IsBoolean()
 	wind?: boolean;
+
+	@ApiPropertyOptional({ example: false })
+	@IsOptional()
+	@IsBoolean()
+	hikingNodes?: boolean;
+
+	@ApiPropertyOptional({ example: false })
+	@IsOptional()
+	@IsBoolean()
+	cyclingNodes?: boolean;
 }
 
 export class UserPreferencesDto {

@@ -3,7 +3,7 @@ import { loadLastMapViewFromLocalStorage } from "@/features/routing/services/Loc
 import { useT } from "@/lib/i18n";
 import { getRuntimeConfig } from "@/lib/runtime-config";
 import { useModalsStore } from "@/stores/modalsStore";
-import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
+import { type OverlayKey, useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 import { I } from "../components/icons";
 import { IconBtn, RDS_COLORS, SecTitle } from "../components/primitives";
 import { useViewport } from "../hooks/useViewport";
@@ -38,10 +38,24 @@ function buildPreviewUrl(styleId: string, lng: number, lat: number, zoom: number
 	return `https://api.mapbox.com/styles/v1/mapbox/${styleId}/static/${lng.toFixed(4)},${lat.toFixed(4)},${safeZoom}/200x120@2x?access_token=${token}&logo=false&attribution=false`;
 }
 
+type OverlayRow = {
+	key: OverlayKey;
+	labelKey: string;
+	subKey: string;
+	color: string;
+};
+
+const OVERLAY_ROWS: OverlayRow[] = [
+	{ key: "hikingNodes", labelKey: "layers.hikingNodes", subKey: "layers.hikingNodesSub", color: "#dc2626" },
+	{ key: "cyclingNodes", labelKey: "layers.cyclingNodes", subKey: "layers.cyclingNodesSub", color: "#1d4ed8" },
+];
+
 export function LayerPicker() {
 	const close = useModalsStore((s) => s.closeOverlay);
 	const styleKey = useRedesignSettingsStore((s) => s.mapStyle as MapStyleKey);
 	const setMapStyle = useRedesignSettingsStore((s) => s.setMapStyle);
+	const overlays = useRedesignSettingsStore((s) => s.overlays);
+	const setOverlay = useRedesignSettingsStore((s) => s.setOverlay);
 	const t = useT();
 	const { isMobile } = useViewport();
 
@@ -152,37 +166,88 @@ export function LayerPicker() {
 			</div>
 			<div style={{ borderTop: `1px solid ${RDS_COLORS.border}`, padding: "10px 14px 14px" }}>
 				<SecTitle style={{ padding: "0 0 6px" }}>{t("layers.overlays")}</SecTitle>
-				<div
-					style={{
-						display: "flex",
-						alignItems: "center",
-						gap: 10,
-						padding: "10px 12px",
-						borderRadius: 8,
-						background: RDS_COLORS.bgInput,
-						border: `1px solid ${RDS_COLORS.border}`,
-					}}
-				>
+				<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+					{OVERLAY_ROWS.map((row) => {
+						const on = overlays?.[row.key] ?? false;
+						return (
+							<button
+								key={row.key}
+								type="button"
+								onClick={() => setOverlay(row.key, !on)}
+								style={{
+									display: "flex",
+									alignItems: "center",
+									gap: 10,
+									padding: "10px 12px",
+									borderRadius: 8,
+									background: on ? RDS_COLORS.accentSoft : RDS_COLORS.bgInput,
+									border: `1px solid ${on ? RDS_COLORS.accent : RDS_COLORS.border}`,
+									cursor: "pointer",
+									textAlign: "left",
+									width: "100%",
+								}}
+							>
+								<div
+									style={{
+										width: 26,
+										height: 26,
+										borderRadius: 6,
+										background: on ? row.color : RDS_COLORS.bgPanel,
+										color: on ? "#fff" : row.color,
+										border: `1px solid ${row.color}`,
+										display: "flex",
+										alignItems: "center",
+										justifyContent: "center",
+										flexShrink: 0,
+									}}
+								>
+									<I.layers size={13} />
+								</div>
+								<div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
+									<span style={{ fontSize: 12.5, fontWeight: 600, color: on ? RDS_COLORS.accent : RDS_COLORS.fg }}>
+										{t(row.labelKey)}
+									</span>
+									<span style={{ fontSize: 10.5, color: RDS_COLORS.fgSubtle, marginTop: 2, lineHeight: 1.4 }}>
+										{t(row.subKey)}
+									</span>
+								</div>
+								<div
+									aria-hidden
+									style={{
+										width: 30,
+										height: 18,
+										borderRadius: 999,
+										background: on ? RDS_COLORS.accent : RDS_COLORS.border,
+										position: "relative",
+										transition: "background 120ms ease",
+										flexShrink: 0,
+									}}
+								>
+									<div
+										style={{
+											position: "absolute",
+											top: 2,
+											left: on ? 14 : 2,
+											width: 14,
+											height: 14,
+											borderRadius: "50%",
+											background: "#fff",
+											transition: "left 120ms ease",
+										}}
+									/>
+								</div>
+							</button>
+						);
+					})}
 					<div
 						style={{
-							width: 26,
-							height: 26,
-							borderRadius: 6,
-							background: RDS_COLORS.accentSoft,
-							color: RDS_COLORS.accent,
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "center",
-							flexShrink: 0,
+							fontSize: 10.5,
+							color: RDS_COLORS.fgSubtle,
+							lineHeight: 1.4,
+							padding: "4px 4px 0",
 						}}
 					>
-						<I.layers size={13} />
-					</div>
-					<div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
-						<span style={{ fontSize: 12.5, fontWeight: 500 }}>{t("layers.overlaysComingSoon")}</span>
-						<span style={{ fontSize: 10.5, color: RDS_COLORS.fgSubtle, marginTop: 2, lineHeight: 1.4 }}>
-							{t("layers.overlaysSub")}
-						</span>
+						{t("layers.overlaysSub")}
 					</div>
 				</div>
 			</div>
