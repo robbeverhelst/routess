@@ -13,7 +13,7 @@ import { useModalsStore } from "@/stores/modalsStore";
 import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 import { useRoutingPreferencesStore } from "@/stores/routingPreferencesStore";
 import { useToastStore } from "@/stores/toastStore";
-import { useUiStore } from "@/stores/uiStore";
+import { apiRouteToLoadedRoute, useUiStore } from "@/stores/uiStore";
 import { EditableLabel } from "../components/EditableLabel";
 import { I, type IconKey } from "../components/icons";
 import { Btn, IconBtn, RDS_COLORS, SecTitle } from "../components/primitives";
@@ -101,6 +101,7 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 	const favouriteRouteIds = useUiStore((s) => s.favouriteRouteIds);
 	const toggleFavourite = useUiStore((s) => s.toggleFavourite);
 	const setContext = useUiStore((s) => s.setContext);
+	const setLoadedRoute = useUiStore((s) => s.setLoadedRoute);
 	const favorited = favouriteRouteIds.includes(route.id);
 	const defaultActivity = useRedesignSettingsStore((s) => s.defaultActivity);
 	const routingProfile = useRoutingPreferencesStore((s) => s.profile);
@@ -171,8 +172,13 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 		return () => document.removeEventListener("mousedown", onDocClick);
 	}, [moreOpen]);
 
+	const markRouteLoaded = () => {
+		setLoadedRoute(apiRouteToLoadedRoute(route));
+	};
+
 	const dispatchLoadRoute = () => {
 		emitAppEvent("routess:load-route", routeToLoadDetail(route));
+		markRouteLoaded();
 		setContext("plan");
 		pushToast({
 			kind: "success",
@@ -186,6 +192,7 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 		// first so the share URL encodes this route's waypoints rather than
 		// whatever was last on the map.
 		emitAppEvent("routess:load-route", routeToLoadDetail(route));
+		markRouteLoaded();
 		openModal("share");
 	};
 

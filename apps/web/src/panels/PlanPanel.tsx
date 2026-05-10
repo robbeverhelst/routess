@@ -1,6 +1,7 @@
 import { calculatePathDistance } from "@routess/core";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSurfaceBreakdown } from "@/features/routing/services/useSurfaceBreakdown";
+import { useSaveRoute, useUpdateRoute } from "@/lib/api-queries";
 import { emitAppEvent } from "@/lib/app-events";
 import { useT } from "@/lib/i18n";
 import { formatSpeedParts, useUnits } from "@/lib/units";
@@ -8,6 +9,8 @@ import { useModalsStore } from "@/stores/modalsStore";
 import { getSpeedForActivity, useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 import {
 	useClearWaypoints,
+	useDistanceMeters,
+	useDurationSeconds,
 	useElevationGain,
 	useElevationProfile,
 	useHasRoute,
@@ -21,7 +24,8 @@ import {
 	useSetWaypoints,
 	useWaypoints,
 } from "@/stores/routingStore";
-import { type RedesignActivity, useUiStore } from "@/stores/uiStore";
+import { useToastStore } from "@/stores/toastStore";
+import { apiRouteToLoadedRoute, type RedesignActivity, useUiStore } from "@/stores/uiStore";
 import { EditableLabel } from "../components/EditableLabel";
 import { I } from "../components/icons";
 import { Btn, IconBtn, Kbd, RDS_COLORS, SecTitle } from "../components/primitives";
@@ -68,7 +72,7 @@ export function PlanPanel() {
 	const distance = useRouteDistance();
 	const duration = useRouteDuration();
 	const hasRoute = useHasRoute();
-	const clear = useClearWaypoints();
+	const clearWaypoints = useClearWaypoints();
 	const removeWaypoint = useRemoveWaypoint();
 	const setWaypoints = useSetWaypoints();
 	const setWaypointName = useSetWaypointName();
@@ -89,10 +93,128 @@ export function PlanPanel() {
 	};
 
 	const { activityType, setActivityType } = useUiStore();
+	const loadedRoute = useUiStore((s) => s.loadedRoute);
+	const setLoadedRoute = useUiStore((s) => s.setLoadedRoute);
+	const setLoadedRouteName = useUiStore((s) => s.setLoadedRouteName);
 	const openModal = useModalsStore((s) => s.openModal);
+	const pushToast = useToastStore((s) => s.push);
+	const distanceMeters = useDistanceMeters();
+	const durationSeconds = useDurationSeconds();
 	const elevationGain = useElevationGain();
 	const isComputingElevation = useIsComputingElevation();
 	const { formatElevationParts, units } = useUnits();
+	const saveRoute = useSaveRoute();
+	const updateRoute = useUpdateRoute();
+
+	// When a different saved route is loaded, sync the activity tabs to its
+	// stored activity. Only fires on id change so user edits to activity
+	// after load count as dirty rather than getting reset on every render.
+	const syncedRouteIdRef = useRef<number | null>(null);
+	useEffect(() => {
+		if (!loadedRoute) {
+			syncedRouteIdRef.current = null;
+			return;
+		}
+		if (syncedRouteIdRef.current === loadedRoute.id) return;
+		syncedRouteIdRef.current = loadedRoute.id;
+		if (loadedRoute.activity && loadedRoute.activity !== activityType) {
+			setActivityType(loadedRoute.activity);
+		}
+	}, [loadedRoute, activityType, setActivityType]);
+
+	// Compare current waypoints to the loaded baseline. Memoized so the JSON
+	// stringify only runs when one side actually changes.
+	const waypointsDirty = useMemo(() => {
+		if (!loadedRoute) return false;
+		if (loadedRoute.waypoints.length !== waypoints.length) return true;
+		return JSON.stringify(loadedRoute.waypoints) !== JSON.stringify(waypoints);
+	}, [loadedRoute, waypoints]);
+
+	const isDirty =
+		!!loadedRoute &&
+		(loadedRoute.name !== loadedRoute.baselineName ||
+			(loadedRoute.activity ?? activityType) !== activityType ||
+			waypointsDirty);
+
+	const handleClear = () => {
+		clearWaypoints();
+		setLoadedRoute(null);
+	};
+
+	const handleSaveClick = () => {
+		if (!loadedRoute) {
+			openModal("save");
+			return;
+		}
+		if (!isDirty || waypoints.length < 2 || updateRoute.isPending) return;
+		updateRoute.mutate(
+			{
+				routeId: loadedRoute.id,
+				updates: {
+					name: loadedRoute.name,
+					activity: activityType,
+					privacy: loadedRoute.privacy,
+					tags: loadedRoute.tags,
+					waypoints,
+					distance: distanceMeters ?? 0,
+					duration: durationSeconds ?? undefined,
+					elevationGain: elevationGain != null ? Math.round(elevationGain) : 0,
+				},
+			},
+			{
+				onSuccess: (updated) => {
+					setLoadedRoute(apiRouteToLoadedRoute(updated));
+					pushToast({
+						kind: "success",
+						title: t("save.toast.updated"),
+						body: `${updated.name} · ${distance || "—"}`,
+					});
+				},
+				onError: () => {
+					pushToast({
+						kind: "danger",
+						title: t("save.toast.updateFailed"),
+						body: t("common.tryAgain"),
+					});
+				},
+			},
+		);
+	};
+
+	const handleDuplicate = () => {
+		if (!loadedRoute || waypoints.length < 2) return;
+		const baseName = loadedRoute.name || t("save.title");
+		saveRoute.mutate(
+			{
+				name: `${baseName} (copy)`,
+				description: loadedRoute.description,
+				activity: activityType,
+				privacy: loadedRoute.privacy,
+				tags: loadedRoute.tags,
+				waypoints,
+				distance: distanceMeters ?? 0,
+				duration: durationSeconds ?? undefined,
+				elevationGain: elevationGain != null ? Math.round(elevationGain) : 0,
+			},
+			{
+				onSuccess: (newRoute) => {
+					pushToast({
+						kind: "success",
+						title: t("route.duplicated"),
+						body: newRoute.name,
+					});
+					setLoadedRoute(apiRouteToLoadedRoute(newRoute));
+				},
+				onError: () => {
+					pushToast({
+						kind: "danger",
+						title: t("route.duplicateFailed"),
+						body: t("common.tryAgain"),
+					});
+				},
+			},
+		);
+	};
 
 	const elevParts = elevationGain != null ? formatElevationParts(elevationGain) : null;
 	const elevationVal = (() => {
@@ -151,6 +273,37 @@ export function PlanPanel() {
 
 	return (
 		<div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+			{loadedRoute && (
+				<div
+					style={{
+						display: "flex",
+						alignItems: "center",
+						gap: 8,
+						padding: "14px 20px 10px",
+						borderBottom: `1px solid ${RDS_COLORS.border}`,
+					}}
+				>
+					<div style={{ flex: 1, minWidth: 0 }}>
+						<EditableLabel
+							value={loadedRoute.name}
+							placeholder={t("plan.routeName")}
+							onSave={(next) => {
+								if (next) setLoadedRouteName(next);
+							}}
+							ariaLabel={t("plan.routeName")}
+							style={{
+								fontSize: 16,
+								fontWeight: 600,
+								letterSpacing: -0.2,
+								width: "100%",
+							}}
+						/>
+					</div>
+					<IconBtn title={t("plan.unloadRoute")} onClick={() => setLoadedRoute(null)}>
+						<I.close size={14} />
+					</IconBtn>
+				</div>
+			)}
 			{/* Activity tabs + start/end */}
 			<div
 				style={{
@@ -416,11 +569,21 @@ export function PlanPanel() {
 				<Btn
 					variant="primary"
 					style={{ flex: 1, minWidth: 0, padding: "0 10px" }}
-					disabled={!hasRoute}
-					onClick={() => openModal("save")}
+					disabled={loadedRoute ? !isDirty || waypoints.length < 2 || updateRoute.isPending : !hasRoute}
+					onClick={handleSaveClick}
 				>
-					<I.save size={14} /> {t("common.save")}
+					<I.save size={14} /> {loadedRoute && updateRoute.isPending ? t("save.saving") : t("common.save")}
 				</Btn>
+				{loadedRoute && (
+					<Btn
+						title={t("plan.duplicate")}
+						disabled={!hasRoute || saveRoute.isPending}
+						onClick={handleDuplicate}
+						style={{ padding: "0 10px" }}
+					>
+						<I.copy size={14} />
+					</Btn>
+				)}
 				<Btn
 					title={t("plan.shareRoute")}
 					disabled={!hasRoute}
@@ -440,7 +603,7 @@ export function PlanPanel() {
 				<Btn
 					title={t("plan.clear")}
 					variant="ghost"
-					onClick={clear}
+					onClick={handleClear}
 					disabled={waypoints.length === 0}
 					style={{ padding: "0 10px" }}
 				>

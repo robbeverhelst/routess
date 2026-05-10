@@ -4,8 +4,8 @@ import { useUserRoutes } from "@/lib/api-queries";
 import { emitAppEvent, routeToLoadDetail } from "@/lib/app-events";
 import { t } from "@/lib/i18n";
 import { useModalsStore } from "@/stores/modalsStore";
-import type { RedesignContext } from "@/stores/uiStore";
-import { useUiStore } from "@/stores/uiStore";
+import type { LoadedRoute, RedesignContext } from "@/stores/uiStore";
+import { apiRouteToLoadedRoute, useUiStore } from "@/stores/uiStore";
 import { I } from "../components/icons";
 import { Kbd, RDS_COLORS, SecTitle } from "../components/primitives";
 
@@ -18,8 +18,13 @@ interface CmdItem {
 	run: () => void;
 }
 
-function loadRouteIntoPlan(route: ApiRoute, setContext: (value: RedesignContext) => void) {
+function loadRouteIntoPlan(
+	route: ApiRoute,
+	setContext: (value: RedesignContext) => void,
+	setLoadedRoute: (route: LoadedRoute | null) => void,
+) {
 	emitAppEvent("routess:load-route", routeToLoadDetail(route));
+	setLoadedRoute(apiRouteToLoadedRoute(route));
 	setContext("plan");
 }
 
@@ -27,6 +32,7 @@ export function CommandPalette() {
 	const close = useModalsStore((s) => s.closeModal);
 	const openModal = useModalsStore((s) => s.openModal);
 	const setContext = useUiStore((s) => s.setContext);
+	const setLoadedRoute = useUiStore((s) => s.setLoadedRoute);
 	const toggleTheme = useUiStore((s) => s.toggleTheme);
 	const _language = useUiStore((s) => s.language);
 	const { data: routes = [] } = useUserRoutes();
@@ -122,11 +128,11 @@ export function CommandPalette() {
 					icon: I.pin,
 					label: r.name,
 					hint: r.distance ? `${(r.distance / 1000).toFixed(1)} km` : undefined,
-					run: () => loadRouteIntoPlan(r, setContext),
+					run: () => loadRouteIntoPlan(r, setContext, setLoadedRoute),
 				})),
 			},
 		],
-		[routes, openModal, setContext, toggleTheme],
+		[routes, openModal, setContext, setLoadedRoute, toggleTheme],
 	);
 
 	const filtered = useMemo(() => {

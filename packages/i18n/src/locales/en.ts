@@ -390,6 +390,9 @@ export const en: Record<string, string> = {
 	"plan.shareRoute": "Share route",
 	"plan.importGpx": "Import GPX",
 	"plan.clear": "Clear",
+	"plan.duplicate": "Save as copy",
+	"plan.unloadRoute": "Stop editing this route",
+	"plan.routeName": "Route name",
 
 	// RouteDetailPanel
 	"route.loaded": "Route loaded",
@@ -459,6 +462,8 @@ export const en: Record<string, string> = {
 	"save.privacy.publicSub": "Discoverable",
 	"save.toast.saved": "Route saved",
 	"save.toast.failed": "Save failed",
+	"save.toast.updated": "Route updated",
+	"save.toast.updateFailed": "Update failed",
 	"save.title": "Save route",
 	"save.name": "Name",
 	"save.namePlaceholder": "Schelde loop, long",

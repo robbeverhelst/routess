@@ -8,13 +8,14 @@ import { useModalsStore } from "@/stores/modalsStore";
 import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 import {
 	useDistanceMeters,
+	useDurationSeconds,
 	useElevationGain,
 	useRouteDistance,
 	useRouteDuration,
 	useWaypoints,
 } from "@/stores/routingStore";
 import { useToastStore } from "@/stores/toastStore";
-import { type RedesignActivity, useUiStore } from "@/stores/uiStore";
+import { apiRouteToLoadedRoute, type RedesignActivity, useUiStore } from "@/stores/uiStore";
 import { I } from "../components/icons";
 import { ModalShell } from "../components/ModalShell";
 import { Btn, RDS_COLORS, SecTitle } from "../components/primitives";
@@ -38,8 +39,10 @@ export function SaveModal() {
 	const distance = useRouteDistance();
 	const duration = useRouteDuration();
 	const distanceMeters = useDistanceMeters();
+	const durationSeconds = useDurationSeconds();
 	const elevationGain = useElevationGain();
 	const { activityType, setActivityType } = useUiStore();
+	const setLoadedRoute = useUiStore((s) => s.setLoadedRoute);
 	const selectedSports = useRedesignSettingsStore((s) => s.selectedSports);
 	const saveRoute = useSaveRoute();
 	const pushToast = useToastStore((s) => s.push);
@@ -70,22 +73,25 @@ export function SaveModal() {
 
 	const handleSave = () => {
 		if (!name.trim() || waypoints.length < 2) return;
+		const trimmedName = name.trim();
 		saveRoute.mutate(
 			{
-				name: name.trim(),
+				name: trimmedName,
 				activity: activityType,
 				privacy,
 				tags,
 				waypoints,
 				distance: distanceMeters ?? 0,
+				duration: durationSeconds ?? undefined,
 				elevationGain: elevationGain != null ? Math.round(elevationGain) : 0,
 			},
 			{
-				onSuccess: () => {
+				onSuccess: (created) => {
+					setLoadedRoute(apiRouteToLoadedRoute(created));
 					pushToast({
 						kind: "success",
 						title: t("save.toast.saved"),
-						body: `${name.trim()} · ${distance || "—"}`,
+						body: `${trimmedName} · ${distance || "—"}`,
 					});
 					closeModal();
 				},

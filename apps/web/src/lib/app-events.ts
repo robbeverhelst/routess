@@ -1,3 +1,4 @@
+import type { RoutePrivacy } from "@routess/core";
 import type { RedesignMapStyle } from "@/stores/redesignSettingsStore";
 import type { ApiRoute, Waypoint } from "./api";
 
@@ -25,6 +26,9 @@ export interface AppEventMap {
 		distance?: number;
 		duration?: number;
 		elevationGain?: number;
+		privacy?: RoutePrivacy;
+		tags?: string[];
+		description?: string;
 	};
 	"routess:set-map-style": { styleKey: RedesignMapStyle };
 	"routess:set-pois": { visible: boolean };
@@ -70,5 +74,8 @@ export function routeToLoadDetail(route: ApiRoute): AppEventMap["routess:load-ro
 		distance: route.distance,
 		duration: route.duration,
 		elevationGain: route.elevationGain,
+		privacy: route.privacy,
+		tags: route.tags,
+		description: route.description,
 	};
 }
