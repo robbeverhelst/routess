@@ -1,13 +1,20 @@
 import { calculatePathDistance } from "@routess/core";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { applySavedRoute } from "@/features/routing/applySavedRoute";
+import { isDraftDirty } from "@/features/routing/draftDirty";
 import { useSurfaceBreakdown } from "@/features/routing/services/useSurfaceBreakdown";
-import { emitAppEvent } from "@/lib/app-events";
+import { useSaveRoute, useUpdateRoute } from "@/lib/api-queries";
+import { emitAppEvent, onAppEvent } from "@/lib/app-events";
 import { useT } from "@/lib/i18n";
 import { formatSpeedParts, useUnits } from "@/lib/units";
 import { useModalsStore } from "@/stores/modalsStore";
 import { getSpeedForActivity, useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 import {
 	useClearWaypoints,
+	useDistanceMeters,
+	useDraftActivity,
+	useDraftMode,
+	useDurationSeconds,
 	useElevationGain,
 	useElevationProfile,
 	useHasRoute,
@@ -17,10 +24,14 @@ import {
 	useRouteDuration,
 	useRoutePath,
 	useSaveSnapshot,
+	useSetActivity,
+	useSetEditingName,
+	useSetMode,
 	useSetWaypointName,
 	useSetWaypoints,
 	useWaypoints,
 } from "@/stores/routingStore";
+import { useToastStore } from "@/stores/toastStore";
 import { type RedesignActivity, useUiStore } from "@/stores/uiStore";
 import { useWaypointHoverStore } from "@/stores/waypointHoverStore";
 import { EditableLabel } from "../components/EditableLabel";
@@ -69,7 +80,7 @@ export function PlanPanel() {
 	const distance = useRouteDistance();
 	const duration = useRouteDuration();
 	const hasRoute = useHasRoute();
-	const clear = useClearWaypoints();
+	const clearWaypoints = useClearWaypoints();
 	const removeWaypoint = useRemoveWaypoint();
 	const setWaypoints = useSetWaypoints();
 	const setWaypointName = useSetWaypointName();
@@ -92,11 +103,127 @@ export function PlanPanel() {
 		emitAppEvent("routess:recalculate-route");
 	};
 
-	const { activityType, setActivityType } = useUiStore();
+	const mode = useDraftMode();
+	const draftActivity = useDraftActivity();
+	const setEditingName = useSetEditingName();
+	const setMode = useSetMode();
+	const setActivity = useSetActivity();
+	const globalActivity = useUiStore((s) => s.activityType);
+	const setGlobalActivity = useUiStore((s) => s.setActivityType);
+	const activityType: RedesignActivity = draftActivity ?? globalActivity;
 	const openModal = useModalsStore((s) => s.openModal);
+	const pushToast = useToastStore((s) => s.push);
+	const distanceMeters = useDistanceMeters();
+	const durationSeconds = useDurationSeconds();
 	const elevationGain = useElevationGain();
 	const isComputingElevation = useIsComputingElevation();
 	const { formatElevationParts, units } = useUnits();
+	const saveRoute = useSaveRoute();
+	const updateRoute = useUpdateRoute();
+
+	const isDirty = useMemo(
+		() => isDraftDirty({ mode, activity: draftActivity, waypoints }),
+		[mode, draftActivity, waypoints],
+	);
+
+	const editingName = mode.kind === "editing" ? mode.name : null;
+	const editingRouteId = mode.kind === "editing" ? mode.routeId : null;
+	const editingBaseline = mode.kind === "editing" ? mode.baseline : null;
+
+	const handleClear = () => {
+		clearWaypoints();
+	};
+
+	const handleUnload = () => {
+		setMode({ kind: "unsaved" });
+	};
+
+	const handleActivityChange = (activity: RedesignActivity) => {
+		if (activity === activityType) return;
+		// Always update the per-draft activity. Only mirror the change to the
+		// global default when this is a fresh draft; for an editing draft, the
+		// activity is a per-route choice that should not bleed into the
+		// user's global preference.
+		setActivity(activity);
+		if (mode.kind === "unsaved") setGlobalActivity(activity);
+		if (hasRoute) emitAppEvent("routess:recalculate-route");
+	};
+
+	const handleSaveClick = () => {
+		if (mode.kind === "unsaved") {
+			openModal("save");
+			return;
+		}
+		if (!editingRouteId || !editingBaseline) return;
+		if (!isDirty || waypoints.length < 2 || updateRoute.isPending) return;
+		updateRoute.mutate(
+			{
+				routeId: editingRouteId,
+				updates: {
+					name: editingName ?? editingBaseline.name,
+					activity: draftActivity ?? editingBaseline.activity,
+					privacy: editingBaseline.privacy,
+					tags: editingBaseline.tags,
+					waypoints,
+					distance: distanceMeters ?? 0,
+					duration: durationSeconds ?? undefined,
+					elevationGain: elevationGain != null ? Math.round(elevationGain) : 0,
+				},
+			},
+			{
+				onSuccess: (updated) => {
+					applySavedRoute(updated);
+					pushToast({
+						kind: "success",
+						title: t("save.toast.updated"),
+						body: `${updated.name} · ${distance || "—"}`,
+					});
+				},
+				onError: () => {
+					pushToast({
+						kind: "danger",
+						title: t("save.toast.updateFailed"),
+						body: t("common.tryAgain"),
+					});
+				},
+			},
+		);
+	};
+
+	const handleDuplicate = () => {
+		if (mode.kind !== "editing" || !editingBaseline || waypoints.length < 2) return;
+		const baseName = (editingName ?? editingBaseline.name) || t("save.title");
+		saveRoute.mutate(
+			{
+				name: `${baseName} (copy)`,
+				description: editingBaseline.description,
+				activity: draftActivity ?? editingBaseline.activity,
+				privacy: editingBaseline.privacy,
+				tags: editingBaseline.tags,
+				waypoints,
+				distance: distanceMeters ?? 0,
+				duration: durationSeconds ?? undefined,
+				elevationGain: elevationGain != null ? Math.round(elevationGain) : 0,
+			},
+			{
+				onSuccess: (newRoute) => {
+					pushToast({
+						kind: "success",
+						title: t("route.duplicated"),
+						body: newRoute.name,
+					});
+					applySavedRoute(newRoute);
+				},
+				onError: () => {
+					pushToast({
+						kind: "danger",
+						title: t("route.duplicateFailed"),
+						body: t("common.tryAgain"),
+					});
+				},
+			},
+		);
+	};
 
 	const elevParts = elevationGain != null ? formatElevationParts(elevationGain) : null;
 	const elevationVal = (() => {
@@ -116,12 +243,22 @@ export function PlanPanel() {
 
 	// If the active sport gets removed in Settings, snap to a still-selected one
 	// so we never route or estimate against a sport the user has hidden.
+	// handleActivityChange closes over mode/editor/hasRoute so it changes
+	// every render; only the sport-list change is the actual trigger here.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: handler stable for our purposes
 	useEffect(() => {
 		if (selectedSports.length === 0) return;
 		if (!selectedSports.includes(activityType)) {
-			setActivityType(selectedSports[0]);
+			handleActivityChange(selectedSports[0]);
 		}
-	}, [selectedSports, activityType, setActivityType]);
+	}, [selectedSports, activityType]);
+
+	// External Save triggers (command palette, future menu items) fire this
+	// event so the same Save semantics live here. handleSaveClick reads a lot
+	// of state, so route through a ref instead of re-binding the listener.
+	const handleSaveClickRef = useRef(handleSaveClick);
+	handleSaveClickRef.current = handleSaveClick;
+	useEffect(() => onAppEvent("routess:save-draft", () => handleSaveClickRef.current()), []);
 
 	const paceParts = useMemo(() => {
 		if (hasRoute && routePath.length >= 2) {
@@ -155,6 +292,37 @@ export function PlanPanel() {
 
 	return (
 		<div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+			{mode.kind === "editing" && (
+				<div
+					style={{
+						display: "flex",
+						alignItems: "center",
+						gap: 8,
+						padding: "14px 20px 10px",
+						borderBottom: `1px solid ${RDS_COLORS.border}`,
+					}}
+				>
+					<div style={{ flex: 1, minWidth: 0 }}>
+						<EditableLabel
+							value={mode.name}
+							placeholder={t("plan.routeName")}
+							onSave={(next) => {
+								if (next) setEditingName(next);
+							}}
+							ariaLabel={t("plan.routeName")}
+							style={{
+								fontSize: 16,
+								fontWeight: 600,
+								letterSpacing: -0.2,
+								width: "100%",
+							}}
+						/>
+					</div>
+					<IconBtn title={t("plan.unloadRoute")} onClick={handleUnload}>
+						<I.close size={14} />
+					</IconBtn>
+				</div>
+			)}
 			{/* Activity tabs + start/end */}
 			<div
 				style={{
@@ -170,13 +338,7 @@ export function PlanPanel() {
 							<button
 								key={a.key}
 								type="button"
-								onClick={() => {
-									if (activityType === a.key) return;
-									setActivityType(a.key);
-									if (hasRoute) {
-										emitAppEvent("routess:recalculate-route");
-									}
-								}}
+								onClick={() => handleActivityChange(a.key)}
 								style={{
 									display: "inline-flex",
 									alignItems: "center",
@@ -433,11 +595,21 @@ export function PlanPanel() {
 				<Btn
 					variant="primary"
 					style={{ flex: 1, minWidth: 0, padding: "0 10px" }}
-					disabled={!hasRoute}
-					onClick={() => openModal("save")}
+					disabled={mode.kind === "editing" ? !isDirty || waypoints.length < 2 || updateRoute.isPending : !hasRoute}
+					onClick={handleSaveClick}
 				>
-					<I.save size={14} /> {t("common.save")}
+					<I.save size={14} /> {mode.kind === "editing" && updateRoute.isPending ? t("save.saving") : t("common.save")}
 				</Btn>
+				{mode.kind === "editing" && (
+					<Btn
+						title={t("plan.duplicate")}
+						disabled={!hasRoute || saveRoute.isPending}
+						onClick={handleDuplicate}
+						style={{ padding: "0 10px" }}
+					>
+						<I.copy size={14} />
+					</Btn>
+				)}
 				<Btn
 					title={t("plan.shareRoute")}
 					disabled={!hasRoute}
@@ -457,7 +629,7 @@ export function PlanPanel() {
 				<Btn
 					title={t("plan.clear")}
 					variant="ghost"
-					onClick={clear}
+					onClick={handleClear}
 					disabled={waypoints.length === 0}
 					style={{ padding: "0 10px" }}
 				>

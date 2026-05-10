@@ -397,6 +397,13 @@ export const nl: Record<string, string> = {
 	"plan.shareRoute": "Route delen",
 	"plan.importGpx": "GPX importeren",
 	"plan.clear": "Wissen",
+	"plan.duplicate": "Opslaan als kopie",
+	"plan.unloadRoute": "Stop met deze route bewerken",
+	"plan.routeName": "Routenaam",
+	"plan.bindingDropped": "Bewerking ontkoppeld",
+	"plan.bindingDroppedSignedOut":
+		"Meld je aan om deze opgeslagen route te blijven bewerken. Je waypoints blijven behouden.",
+	"plan.bindingDroppedMissing": "De route die je bewerkte is niet meer beschikbaar. Je waypoints blijven behouden.",
 
 	// RouteDetailPanel
 	"route.loaded": "Route geladen",
@@ -467,6 +474,8 @@ export const nl: Record<string, string> = {
 	"save.privacy.publicSub": "Vindbaar",
 	"save.toast.saved": "Route opgeslagen",
 	"save.toast.failed": "Opslaan mislukt",
+	"save.toast.updated": "Route bijgewerkt",
+	"save.toast.updateFailed": "Bijwerken mislukt",
 	"save.title": "Route opslaan",
 	"save.name": "Naam",
 	"save.namePlaceholder": "Schelde lus, lang",

@@ -1,5 +1,6 @@
 import type { RoutePrivacy } from "@routess/core";
 import { useEffect, useMemo, useState } from "react";
+import { applySavedRoute } from "@/features/routing/applySavedRoute";
 import { useIsAuthenticated } from "@/hooks/useAuthState";
 import { useSaveRoute } from "@/lib/api-queries";
 import { emitAppEvent } from "@/lib/app-events";
@@ -8,6 +9,7 @@ import { useModalsStore } from "@/stores/modalsStore";
 import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 import {
 	useDistanceMeters,
+	useDurationSeconds,
 	useElevationGain,
 	useRouteDistance,
 	useRouteDuration,
@@ -38,6 +40,7 @@ export function SaveModal() {
 	const distance = useRouteDistance();
 	const duration = useRouteDuration();
 	const distanceMeters = useDistanceMeters();
+	const durationSeconds = useDurationSeconds();
 	const elevationGain = useElevationGain();
 	const { activityType, setActivityType } = useUiStore();
 	const selectedSports = useRedesignSettingsStore((s) => s.selectedSports);
@@ -70,22 +73,25 @@ export function SaveModal() {
 
 	const handleSave = () => {
 		if (!name.trim() || waypoints.length < 2) return;
+		const trimmedName = name.trim();
 		saveRoute.mutate(
 			{
-				name: name.trim(),
+				name: trimmedName,
 				activity: activityType,
 				privacy,
 				tags,
 				waypoints,
 				distance: distanceMeters ?? 0,
+				duration: durationSeconds ?? undefined,
 				elevationGain: elevationGain != null ? Math.round(elevationGain) : 0,
 			},
 			{
-				onSuccess: () => {
+				onSuccess: (created) => {
+					applySavedRoute(created);
 					pushToast({
 						kind: "success",
 						title: t("save.toast.saved"),
-						body: `${name.trim()} · ${distance || "—"}`,
+						body: `${trimmedName} · ${distance || "—"}`,
 					});
 					closeModal();
 				},

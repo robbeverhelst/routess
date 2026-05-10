@@ -57,7 +57,7 @@ Compass direction (0 to 360°) of a Waypoint or segment. Used by GPX import for 
 ## Editing & state
 
 **RouteDraft**:
-The in-progress Route currently being edited in the UI, the working state of `routingStore` (waypoints, directFlags, routePath, distance, duration). Saved drafts become Routes.
+The in-progress Route currently being edited in the UI, the working state of `routingStore` (waypoints, directFlags, routePath, distance, duration). A RouteDraft has a **mode**: `unsaved` (composing fresh; on save becomes a new Route) or `editing(routeId, baseline)` (bound to a saved Route; carries a snapshot of the saved fields and on save PATCHes that Route). The current **activity** is a property of the RouteDraft; the global activity setting is just a default applied when starting a new draft, never overwritten by loading a Route.
 
 **HistoryManager**:
 The undo/redo stack over RouteDraft mutations. _(Implementation term, included here because the store explicitly models it as a first-class concept.)_
@@ -91,7 +91,7 @@ _Avoid_: superuser, staff, operator, root.
 - A **Route** has computed **Distance**, **Duration**, and **ElevationGain** metrics derived from its **RoutePath**.
 - A **RouteGeneration** produces a **Route** from **RouteType** + **SurfaceType** + **LoopDirection** + target distance, without manual Waypoint placement.
 - A **User** owns zero or more **Routes**, accessed through their **RouteLibrary**.
-- A **RouteDraft** is an unsaved, in-progress **Route** held in `routingStore`.
+- A **RouteDraft** is an in-progress **Route** held in `routingStore`. Its mode is either `unsaved` (will become a new Route on save) or `editing(routeId)` (bound to a saved Route, will PATCH it on save).
 - An **Admin** is a **User** with elevated access; admin status is derived from the `ADMIN_EMAILS` env var at login time, not granted in-app.
 
 ## Example dialogue

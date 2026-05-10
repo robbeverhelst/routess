@@ -16,6 +16,10 @@ interface UiState {
 	context: RedesignContext;
 	accent: RedesignAccent;
 	theme: RedesignTheme;
+	// Default activity used when there's no per-draft activity yet (fresh
+	// drafts, the SaveModal "Activity" picker, the welcome screen). Loading a
+	// saved Route does not overwrite this; per-route activity lives on the
+	// RouteDraft (see packages/core RouteDraftMode).
 	activityType: RedesignActivity;
 	language: SupportedLanguage;
 	panelCollapsed: boolean;
@@ -36,6 +40,7 @@ interface UiState {
 
 type PersistedUiState = Partial<UiState> & {
 	context?: string;
+	loadedRoute?: unknown;
 };
 
 export const useUiStore = create<UiState>()(
@@ -71,7 +76,7 @@ export const useUiStore = create<UiState>()(
 		}),
 		{
 			name: "routess-redesign-ui",
-			version: 3,
+			version: 4,
 			migrate: (persistedState) => {
 				const state = (persistedState ?? {}) as PersistedUiState;
 				if (state.context === "activity") {
@@ -80,6 +85,8 @@ export const useUiStore = create<UiState>()(
 				if (state.context === "explore") {
 					state.context = "discover";
 				}
+				// v4 drops loadedRoute (moved into routingStore as RouteDraftMode).
+				delete state.loadedRoute;
 				return state as UiState;
 			},
 		},

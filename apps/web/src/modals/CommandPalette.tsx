@@ -1,10 +1,10 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { ApiRoute } from "@/lib/api";
 import { useUserRoutes } from "@/lib/api-queries";
 import { emitAppEvent, routeToLoadDetail } from "@/lib/app-events";
 import { t } from "@/lib/i18n";
 import { useModalsStore } from "@/stores/modalsStore";
-import type { RedesignContext } from "@/stores/uiStore";
+import { useDraftMode } from "@/stores/routingStore";
 import { useUiStore } from "@/stores/uiStore";
 import { I } from "../components/icons";
 import { Kbd, RDS_COLORS, SecTitle } from "../components/primitives";
@@ -18,20 +18,35 @@ interface CmdItem {
 	run: () => void;
 }
 
-function loadRouteIntoPlan(route: ApiRoute, setContext: (value: RedesignContext) => void) {
-	emitAppEvent("routess:load-route", routeToLoadDetail(route));
-	setContext("plan");
-}
-
 export function CommandPalette() {
 	const close = useModalsStore((s) => s.closeModal);
 	const openModal = useModalsStore((s) => s.openModal);
 	const setContext = useUiStore((s) => s.setContext);
 	const toggleTheme = useUiStore((s) => s.toggleTheme);
 	const _language = useUiStore((s) => s.language);
+	const mode = useDraftMode();
 	const { data: routes = [] } = useUserRoutes();
 	const [query, setQuery] = useState("");
 	const [activeIndex, setActiveIndex] = useState(0);
+
+	const loadRouteIntoPlan = useCallback(
+		(route: ApiRoute) => {
+			// Confirm-on-dirty + the actual load run inside MapWithRouting's
+			// listener (it owns the editor reference).
+			emitAppEvent("routess:load-route", routeToLoadDetail(route));
+			setContext("plan");
+		},
+		[setContext],
+	);
+
+	const triggerSave = useCallback(() => {
+		if (mode.kind === "editing") {
+			setContext("plan");
+			emitAppEvent("routess:save-draft");
+		} else {
+			openModal("save");
+		}
+	}, [mode, setContext, openModal]);
 
 	const groups = useMemo<{ title: string; items: CmdItem[] }[]>(
 		() => [
@@ -76,7 +91,7 @@ export function CommandPalette() {
 						icon: I.save,
 						label: t("cmd.action.save"),
 						kbd: "S",
-						run: () => openModal("save"),
+						run: triggerSave,
 					},
 					{
 						id: "act-loop",
@@ -122,11 +137,11 @@ export function CommandPalette() {
 					icon: I.pin,
 					label: r.name,
 					hint: r.distance ? `${(r.distance / 1000).toFixed(1)} km` : undefined,
-					run: () => loadRouteIntoPlan(r, setContext),
+					run: () => loadRouteIntoPlan(r),
 				})),
 			},
 		],
-		[routes, openModal, setContext, toggleTheme],
+		[routes, openModal, setContext, toggleTheme, loadRouteIntoPlan, triggerSave],
 	);
 
 	const filtered = useMemo(() => {

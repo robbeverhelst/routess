@@ -5,6 +5,7 @@ import { MapCanvas } from "@/components/map/MapCanvas";
 import { MapShortcutBindings } from "@/components/map/MapShortcutBindings";
 import { MapInteractionProvider } from "@/components/providers/MapInteractionProvider";
 import { UserLocationProvider, useUserLocation } from "@/components/providers/UserLocationProvider";
+import { confirmDiscardIfDirty } from "@/features/routing/confirmDiscardIfDirty";
 import type { PopupInfo as MapPopupInfo } from "@/features/routing/managers/MapInteractionManager";
 import type { RouteDraftEditor } from "@/features/routing/RouteDraftEditor";
 import { RouteDraftEditorProvider } from "@/features/routing/RouteDraftEditorProvider";
@@ -13,6 +14,7 @@ import { ErrorBoundary } from "@/lib/errors";
 import type { SupportedLanguage } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
 import { getRuntimeConfig } from "@/lib/runtime-config";
+import { useRoutingStore } from "@/stores/routingStore";
 import { useToastStore } from "@/stores/toastStore";
 
 const MAPBOX_TOKEN = getRuntimeConfig("VITE_MAPBOX_ACCESS_TOKEN") ?? "";
@@ -129,12 +131,23 @@ const MapWithRoutingContent: React.FC<MapboxMapProps> = ({
 			});
 		};
 		const onLoadRoute = (detail: AppEventMap["routess:load-route"]) => {
-			if (!detail?.waypoints || detail.waypoints.length === 0) {
-				Logger.warn("[MapWithRouting] routess:load-route received with no waypoints");
-				return;
-			}
 			if (!editor) {
 				Logger.warn("[MapWithRouting] routess:load-route received before map ready");
+				return;
+			}
+			const state = useRoutingStore.getState();
+			if (!confirmDiscardIfDirty(state.mode, state.activity, state.waypoints)) return;
+
+			if (detail.source === "saved") {
+				void editor.loadFromApiRoute(detail.route).then((result) => {
+					if (!result.success) {
+						Logger.warn("[MapWithRouting] load-route failed:", result.message);
+					}
+				});
+				return;
+			}
+			if (!detail.waypoints || detail.waypoints.length === 0) {
+				Logger.warn("[MapWithRouting] routess:load-route received with no waypoints");
 				return;
 			}
 			void editor

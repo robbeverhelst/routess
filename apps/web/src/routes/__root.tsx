@@ -17,7 +17,7 @@ export const Route = createRootRoute({
 						<Outlet />
 					</div>
 					<ErrorToast position="bottom-left" maxVisible={2} autoHideDuration={4000} />
-					{isDev() && (
+					{isDev() && import.meta.env.VITE_DEVTOOLS === "1" && (
 						<>
 							<ReactQueryDevtools initialIsOpen={false} />
 							<TanStackRouterDevtools />

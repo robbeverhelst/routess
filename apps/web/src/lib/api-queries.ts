@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRoutingStore } from "@/stores/routingStore";
 import { track } from "./analytics";
 import { type ApiRoute, apiService, type CreateRouteRequest } from "./api";
 import { hasStoredUser, storeUser } from "./auth-state";
@@ -100,6 +101,13 @@ export function useDeleteRoute() {
 
 			// Remove specific route from cache
 			queryClient.removeQueries({ queryKey: queryKeys.routes.detail(routeId.toString()) });
+
+			// If the deleted route was the one currently being edited in the
+			// plan panel, drop the binding so the next save creates a new route.
+			const routing = useRoutingStore.getState();
+			if (routing.mode.kind === "editing" && routing.mode.routeId === routeId) {
+				routing.setMode({ kind: "unsaved" });
+			}
 
 			track("route_deleted");
 
