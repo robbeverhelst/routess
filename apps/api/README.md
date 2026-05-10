@@ -24,6 +24,7 @@ Required variables:
 - `DB_NAME`
 - `JWT_SECRET`
 - `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
 
 Optional variables:
 

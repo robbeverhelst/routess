@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { type CredentialResponse, googleAuth, hasValidGoogleClientId } from "@/lib/google-auth";
+import { type GoogleCodeResponse, googleAuth, hasValidGoogleClientId } from "@/lib/google-auth";
 import { useT } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
 import { useToastStore } from "@/stores/toastStore";
@@ -19,10 +19,10 @@ export function LoginScreen({ onSuccess }: { onSuccess?: () => void }) {
 	const t = useT();
 	const oauthConfigured = hasValidGoogleClientId();
 
-	const handleSuccess = async (cred: CredentialResponse) => {
+	const handleSuccess = async (response: GoogleCodeResponse) => {
 		setIsLoading(true);
 		try {
-			const user = await googleAuth.handleGoogleSuccess(cred);
+			const user = await googleAuth.handleGoogleSuccess(response);
 			Logger.info("Google login success", { email: user.email });
 			pushToast({ kind: "success", title: t("login.toast.welcomeBack"), body: user.name ?? user.email });
 			onSuccess?.();

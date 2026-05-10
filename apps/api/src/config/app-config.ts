@@ -19,6 +19,7 @@ export interface AppConfig {
 		jwtSecret: string;
 		jwtExpiresIn: string;
 		googleClientId: string;
+		googleClientSecret: string;
 		sessionTtlMs: number;
 		cookieName: string;
 		adminEmails: string[];
@@ -170,6 +171,7 @@ export function getAppConfig(): AppConfig {
 			jwtSecret,
 			jwtExpiresIn: process.env.JWT_EXPIRES_IN || DEFAULTS.jwtExpiresIn,
 			googleClientId: process.env.GOOGLE_CLIENT_ID || "",
+			googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
 			sessionTtlMs,
 			cookieName: process.env.SESSION_COOKIE_NAME || DEFAULTS.sessionCookieName,
 			adminEmails: parseStringList(process.env.ADMIN_EMAILS).map((email) => email.toLowerCase()),

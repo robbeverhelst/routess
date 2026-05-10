@@ -64,7 +64,7 @@ describe("Auth Integration Tests", () => {
 
 			const response = await supertest(app.getHttpServer())
 				.post("/api/v1/auth/google")
-				.send({ credential: "mock-google-token" })
+				.send({ code: "mock-google-code" })
 				.expect(201);
 
 			expect(response.body).toHaveProperty("accessToken");
@@ -102,7 +102,7 @@ describe("Auth Integration Tests", () => {
 
 			const response = await supertest(app.getHttpServer())
 				.post("/api/v1/auth/google")
-				.send({ credential: "mock-google-token" })
+				.send({ code: "mock-google-code" })
 				.expect(201);
 
 			expect(existingUserId).toBeDefined();
@@ -118,14 +118,12 @@ describe("Auth Integration Tests", () => {
 		it("should fail with invalid Google token", async () => {
 			verifier.rejectNext(new UnauthorizedException("Failed to authenticate with Google"));
 
-			const response = await supertest(app.getHttpServer())
-				.post("/api/v1/auth/google")
-				.send({ credential: "invalid-token" });
+			const response = await supertest(app.getHttpServer()).post("/api/v1/auth/google").send({ code: "invalid-code" });
 
 			expect(response.status).toBe(401);
 		});
 
-		it("should fail without credential", async () => {
+		it("should fail without code", async () => {
 			await supertest(app.getHttpServer()).post("/api/v1/auth/google").send({}).expect(400);
 		});
 	});

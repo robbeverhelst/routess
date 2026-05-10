@@ -180,7 +180,7 @@ export interface AuthResponse {
 }
 
 export interface GoogleAuthRequest {
-	credential: string;
+	code: string;
 }
 
 export interface ApiRoute {

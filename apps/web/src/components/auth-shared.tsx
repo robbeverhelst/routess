@@ -1,6 +1,7 @@
-import { GoogleLogin } from "@react-oauth/google";
-import { type ReactNode, useEffect, useRef, useState } from "react";
-import type { CredentialResponse } from "@/lib/google-auth";
+import { useGoogleLogin } from "@react-oauth/google";
+import type { ReactNode } from "react";
+import type { GoogleCodeResponse } from "@/lib/google-auth";
+import { useT } from "@/lib/i18n";
 import { useUiStore } from "@/stores/uiStore";
 import { useViewport } from "../hooks/useViewport";
 import { I } from "./icons";
@@ -31,7 +32,7 @@ export function GoogleIcon({ size = 18 }: { size?: number }) {
 }
 
 interface CustomGoogleButtonProps {
-	onSuccess: (cred: CredentialResponse) => void | Promise<void>;
+	onSuccess: (response: GoogleCodeResponse) => void | Promise<void>;
 	onError: () => void;
 	isLoading?: boolean;
 	text?: "continue_with" | "signup_with" | "signin_with" | "signin";
@@ -43,53 +44,58 @@ export function CustomGoogleButton({
 	isLoading = false,
 	text = "continue_with",
 }: CustomGoogleButtonProps) {
-	const containerRef = useRef<HTMLDivElement | null>(null);
-	const [buttonWidth, setButtonWidth] = useState(400);
+	const t = useT();
+	const login = useGoogleLogin({
+		flow: "auth-code",
+		ux_mode: "popup",
+		onSuccess: (response) => onSuccess({ code: response.code }),
+		onError,
+		onNonOAuthError: onError,
+	});
 
-	useEffect(() => {
-		const node = containerRef.current;
-		if (!node) return;
-
-		const updateWidth = () => {
-			const nextWidth = Math.max(220, Math.round(node.getBoundingClientRect().width));
-			setButtonWidth((currentWidth) => (currentWidth === nextWidth ? currentWidth : nextWidth));
-		};
-
-		updateWidth();
-
-		if (typeof ResizeObserver === "undefined") return;
-
-		const observer = new ResizeObserver(() => updateWidth());
-		observer.observe(node);
-		return () => observer.disconnect();
-	}, []);
+	const label = t(
+		text === "signup_with"
+			? "auth.google.signupWith"
+			: text === "signin_with"
+				? "auth.google.signinWith"
+				: text === "signin"
+					? "auth.google.signin"
+					: "auth.google.continueWith",
+	);
 
 	return (
-		<div
-			ref={containerRef}
-			className="rds-google-btn"
+		<button
+			type="button"
+			onClick={() => login()}
+			disabled={isLoading}
 			style={{
 				width: "100%",
-				minHeight: 40,
-				display: "flex",
+				minHeight: 44,
+				display: "inline-flex",
+				alignItems: "center",
 				justifyContent: "center",
+				gap: 12,
+				padding: "0 16px",
+				background: RDS_COLORS.bgPanel,
+				border: `1px solid ${RDS_COLORS.borderStrong}`,
+				borderRadius: 10,
+				color: RDS_COLORS.fg,
+				fontSize: 14,
+				fontWeight: 500,
+				cursor: isLoading ? "not-allowed" : "pointer",
 				opacity: isLoading ? 0.6 : 1,
-				pointerEvents: isLoading ? "none" : "auto",
-				transition: "opacity 120ms",
+				transition: "background 120ms, border-color 120ms, opacity 120ms",
+			}}
+			onMouseEnter={(e) => {
+				if (!isLoading) e.currentTarget.style.background = RDS_COLORS.bgHover;
+			}}
+			onMouseLeave={(e) => {
+				e.currentTarget.style.background = RDS_COLORS.bgPanel;
 			}}
 		>
-			<div style={{ colorScheme: "light" }}>
-				<GoogleLogin
-					onSuccess={onSuccess}
-					onError={onError}
-					auto_select={false}
-					theme="outline"
-					size="large"
-					width={String(buttonWidth)}
-					text={text}
-				/>
-			</div>
-		</div>
+			<GoogleIcon size={18} />
+			<span>{label}</span>
+		</button>
 	);
 }
 

@@ -103,6 +103,7 @@ api:
     # These are set via --set in CI from 1Password
     jwtSecret: ""
     googleClientId: ""
+    googleClientSecret: ""
     dbHost: ""
     dbUser: ""
     dbPassword: ""

@@ -21,11 +21,11 @@ export class AuthController {
 
 	@ApiOperation({
 		summary: "Google OAuth authentication",
-		description: "Authenticates user using Google OAuth2 credential token",
+		description: "Authenticates user using a Google OAuth2 authorization code from the popup auth-code flow",
 	})
 	@ApiBody({ type: GoogleAuthDto })
 	@ApiResponse({ status: 200, description: "Authentication successful", type: AuthResponseDto })
-	@ApiResponse({ status: 400, description: "Invalid Google credential" })
+	@ApiResponse({ status: 400, description: "Invalid Google authorization code" })
 	@ApiResponse({ status: 401, description: "Authentication failed" })
 	@ThrottleAuth() // Stricter rate limiting for authentication
 	@Post("google")

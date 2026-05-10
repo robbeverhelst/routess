@@ -81,6 +81,11 @@ spec:
                 secretKeyRef:
                   name: {{ include "routess.fullname" . }}-api
                   key: google-client-id
+            - name: GOOGLE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "routess.fullname" . }}-api
+                  key: google-client-secret
             - name: DB_HOST
               valueFrom:
                 secretKeyRef:
