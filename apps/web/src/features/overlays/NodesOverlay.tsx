@@ -26,6 +26,11 @@ type ActiveNode = {
 	ref: string;
 };
 
+type ActiveNodePair = {
+	from: ActiveNode;
+	to: ActiveNode;
+};
+
 const BASE_LINE_WIDTH = ["interpolate", ["linear"], ["zoom"], 11, 1.4, 14, 2.4, 17, 3.4];
 const HIGHLIGHT_LINE_WIDTH = ["interpolate", ["linear"], ["zoom"], 11, 4, 14, 6, 17, 8];
 const NODE_RADIUS = ["interpolate", ["linear"], ["zoom"], 11, 6.5, 14, 10, 17, 13];
@@ -55,12 +60,23 @@ function activePointFilter(node: ActiveNode): unknown[] {
 	];
 }
 
-function connectedLineFilter(node: ActiveNode): unknown[] {
+function sameNode(a: ActiveNode | null, b: ActiveNode | null): boolean {
+	return Boolean(a && b && a.kind === b.kind && a.ref === b.ref);
+}
+
+function connectedLineFilter(pair: ActiveNodePair): unknown[] {
+	const { from, to } = pair;
 	return [
 		"all",
 		["==", ["geometry-type"], "LineString"],
-		["==", ["get", "kind"], node.kind],
-		["any", ["==", ["get", "fromRef"], node.ref], ["==", ["get", "toRef"], node.ref], ["==", ["get", "ref"], node.ref]],
+		["==", ["get", "kind"], to.kind],
+		[
+			"any",
+			["all", ["==", ["get", "fromRef"], from.ref], ["==", ["get", "toRef"], to.ref]],
+			["all", ["==", ["get", "fromRef"], to.ref], ["==", ["get", "toRef"], from.ref]],
+			["==", ["get", "ref"], `${from.ref}-${to.ref}`],
+			["==", ["get", "ref"], `${to.ref}-${from.ref}`],
+		],
 	];
 }
 
@@ -104,14 +120,29 @@ function ActiveNodesOverlay({ showHiking, showCycling }: { showHiking: boolean; 
 	const [data, setData] = useState<NodeFeatureCollection>(EMPTY_DATA);
 	const [hoveredNode, setHoveredNode] = useState<ActiveNode | null>(null);
 	const [selectedNode, setSelectedNode] = useState<ActiveNode | null>(null);
+	const [previousNode, setPreviousNode] = useState<ActiveNode | null>(null);
 	const lastKeyRef = useRef<string | null>(null);
 	const loadedBboxRef = useRef<NodeNetworkBbox | null>(null);
 	const abortRef = useRef<AbortController | null>(null);
 	const splitKinds = showHiking && showCycling;
 	const activeNode = hoveredNode ?? selectedNode;
+	const activePair =
+		activeNode && selectedNode && activeNode.kind === selectedNode.kind && !sameNode(activeNode, selectedNode)
+			? { from: selectedNode, to: activeNode }
+			: selectedNode && previousNode && selectedNode.kind === previousNode.kind && !sameNode(selectedNode, previousNode)
+				? { from: previousNode, to: selectedNode }
+				: null;
 	const activeNodeColor = activeNode ? kindColor(activeNode.kind) : HIKING_COLOR;
 	const activeTranslate =
 		activeNode && splitKinds ? (activeNode.kind === "hiking" ? HIKING_TRANSLATE : CYCLING_TRANSLATE) : [0, 0];
+	const previousEndpoint = activePair?.from ?? null;
+	const previousNodeColor = previousEndpoint ? kindColor(previousEndpoint.kind) : HIKING_COLOR;
+	const previousTranslate =
+		previousEndpoint && splitKinds
+			? previousEndpoint.kind === "hiking"
+				? HIKING_TRANSLATE
+				: CYCLING_TRANSLATE
+			: [0, 0];
 
 	useEffect(() => {
 		const map = mapRef?.getMap();
@@ -204,6 +235,9 @@ function ActiveNodesOverlay({ showHiking, showCycling }: { showHiking: boolean; 
 		setSelectedNode((node) =>
 			node && ((node.kind === "hiking" && showHiking) || (node.kind === "cycling" && showCycling)) ? node : null,
 		);
+		setPreviousNode((node) =>
+			node && ((node.kind === "hiking" && showHiking) || (node.kind === "cycling" && showCycling)) ? node : null,
+		);
 	}, [showHiking, showCycling]);
 
 	useEffect(() => {
@@ -233,7 +267,14 @@ function ActiveNodesOverlay({ showHiking, showCycling }: { showHiking: boolean; 
 			const node = nodeFromEvent(event);
 			if (!node) return;
 			event.preventDefault();
-			setSelectedNode((current) => (current?.kind === node.kind && current.ref === node.ref ? null : node));
+			setSelectedNode((current) => {
+				if (sameNode(current, node)) {
+					setPreviousNode(null);
+					return null;
+				}
+				setPreviousNode(current?.kind === node.kind ? current : null);
+				return node;
+			});
 		};
 
 		const attachedLayerIds = layerIds.filter((layerId) => map.getLayer(layerId));
@@ -285,11 +326,11 @@ function ActiveNodesOverlay({ showHiking, showCycling }: { showHiking: boolean; 
 					}}
 				/>
 			)}
-			{activeNode && (
+			{activePair && (
 				<Layer
 					id="rds-nodes-line-active"
 					type="line"
-					filter={connectedLineFilter(activeNode)}
+					filter={connectedLineFilter(activePair)}
 					layout={{ "line-join": "round", "line-cap": "round" }}
 					paint={{
 						"line-color": activeNodeColor,
@@ -327,6 +368,21 @@ function ActiveNodesOverlay({ showHiking, showCycling }: { showHiking: boolean; 
 						"circle-stroke-width": 1.5,
 						"circle-opacity": 0.95,
 						"circle-translate": splitKinds ? CYCLING_TRANSLATE : [0, 0],
+					}}
+				/>
+			)}
+			{previousEndpoint && (
+				<Layer
+					id="rds-nodes-point-previous"
+					type="circle"
+					filter={activePointFilter(previousEndpoint)}
+					paint={{
+						"circle-radius": NODE_HALO_RADIUS,
+						"circle-color": "rgba(255,255,255,0)",
+						"circle-stroke-color": previousNodeColor,
+						"circle-stroke-width": 2,
+						"circle-opacity": 0.75,
+						"circle-translate": previousTranslate,
 					}}
 				/>
 			)}
