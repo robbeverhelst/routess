@@ -107,6 +107,7 @@ api:
     dbHost: ""
     dbUser: ""
     dbPassword: ""
+    analyticsSalt: ""
   resources:
     requests:
       cpu: 250m

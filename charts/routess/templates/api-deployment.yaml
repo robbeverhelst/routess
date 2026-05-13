@@ -111,6 +111,11 @@ spec:
                 secretKeyRef:
                   name: {{ include "routess.fullname" . }}-api
                   key: db-name
+            - name: ANALYTICS_SALT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "routess.fullname" . }}-api
+                  key: analytics-salt
           securityContext:
             {{- toYaml .Values.api.containerSecurityContext | nindent 12 }}
           resources:
