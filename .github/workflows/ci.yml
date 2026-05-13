@@ -234,6 +234,9 @@ jobs:
           SHA: ${{ steps.version.outputs.sha }}
           OWNER: ${{ github.repository_owner }}
           REGISTRY: ${{ env.REGISTRY }}
+          # Pinning the build-time version makes the Sentry source-map
+          # release match the runtime release reported by env-config.js.
+          VITE_APP_VERSION: ${{ steps.version.outputs.version }}
         working-directory: docker
         run: docker buildx bake --allow=fs.read=.. --push default
 

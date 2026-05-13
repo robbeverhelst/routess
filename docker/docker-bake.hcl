@@ -20,18 +20,23 @@ target "common" {
   sbom       = true
 }
 
-variable "SENTRY_ORG"     { default = "" }
-variable "SENTRY_PROJECT" { default = "routess" }
-variable "SENTRY_URL"     { default = "" }
+variable "SENTRY_ORG"        { default = "" }
+variable "SENTRY_PROJECT"    { default = "routess" }
+variable "SENTRY_URL"        { default = "" }
+# Default keeps the runtime placeholder behaviour when CI does not pass
+# a real version (local builds, PR builds), so entrypoint.sh can still
+# substitute at container start.
+variable "VITE_APP_VERSION"  { default = "__VITE_APP_VERSION__" }
 
 target "web" {
   inherits   = ["common"]
   dockerfile = "apps/web/Dockerfile"
   args = {
-    DEPS_IMAGE     = "${DEPS_IMAGE}"
-    SENTRY_ORG     = "${SENTRY_ORG}"
-    SENTRY_PROJECT = "${SENTRY_PROJECT}"
-    SENTRY_URL     = "${SENTRY_URL}"
+    DEPS_IMAGE        = "${DEPS_IMAGE}"
+    SENTRY_ORG        = "${SENTRY_ORG}"
+    SENTRY_PROJECT    = "${SENTRY_PROJECT}"
+    SENTRY_URL        = "${SENTRY_URL}"
+    VITE_APP_VERSION  = "${VITE_APP_VERSION}"
   }
   # SENTRY_AUTH_TOKEN is consumed via BuildKit secret mount inside the
   # Dockerfile (RUN --mount=type=secret,id=sentry_auth_token). Set the env
