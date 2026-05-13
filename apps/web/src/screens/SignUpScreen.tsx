@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { trackEvent } from "@/lib/analytics/track";
+import { apiService } from "@/lib/api";
 import { type GoogleCodeResponse, googleAuth, hasValidGoogleClientId } from "@/lib/google-auth";
 import { useT } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
@@ -57,12 +58,22 @@ export function SignUpScreen({ onSwitchToLogin }: { onSwitchToLogin?: () => void
 		}
 	};
 
-	const handleEmailSignup = () => {
-		pushToast({
-			kind: "info",
-			title: t("signup.toast.emailComingSoon"),
-			body: t("signup.toast.useGoogleForNow"),
-		});
+	const [emailSent, setEmailSent] = useState(false);
+
+	const handleEmailSignup = async () => {
+		if (!email || password.length < 12) return;
+		setIsLoading(true);
+		try {
+			await apiService.signupEmail({ email: email.trim(), name: name.trim() || undefined, password });
+			setEmailSent(true);
+			pushToast({ kind: "success", title: t("login.email.signupSent") });
+		} catch (error) {
+			Logger.error("signupEmail failed", error);
+			const body = error instanceof Error ? error.message : t("login.email.genericError");
+			pushToast({ kind: "danger", title: t("login.email.failed"), body });
+		} finally {
+			setIsLoading(false);
+		}
 	};
 
 	return (
@@ -227,15 +238,31 @@ export function SignUpScreen({ onSwitchToLogin }: { onSwitchToLogin?: () => void
 						</div>
 					</div>
 
-					<Btn
-						variant="primary"
-						onClick={handleEmailSignup}
-						disabled={!name || !email || strength < 2}
-						style={{ width: "100%", marginTop: 20, height: 44 }}
-						title={t("signup.title.tooltip")}
-					>
-						{t("signup.createSoon")}
-					</Btn>
+					{emailSent ? (
+						<div
+							style={{
+								padding: 12,
+								borderRadius: 10,
+								marginTop: 20,
+								background: RDS_COLORS.bgInput,
+								border: `1px solid ${RDS_COLORS.border}`,
+								color: RDS_COLORS.fgMuted,
+								fontSize: 13,
+								lineHeight: 1.5,
+							}}
+						>
+							{t("login.email.signupSent")}
+						</div>
+					) : (
+						<Btn
+							variant="primary"
+							onClick={handleEmailSignup}
+							disabled={!email || password.length < 12 || isLoading}
+							style={{ width: "100%", marginTop: 20, height: 44 }}
+						>
+							{isLoading ? t("login.email.submitting") : t("login.email.createAccount")}
+						</Btn>
+					)}
 
 					<div
 						style={{
