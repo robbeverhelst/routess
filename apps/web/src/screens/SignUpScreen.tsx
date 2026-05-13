@@ -215,8 +215,8 @@ export function SignUpScreen({ onSwitchToLogin }: { onSwitchToLogin?: () => void
 							<input
 								value={password}
 								type="password"
+								autoComplete="new-password"
 								onChange={(e) => setPassword(e.target.value)}
-								placeholder={t("signup.passwordPlaceholder")}
 								style={{
 									height: 40,
 									padding: "0 12px",
@@ -263,8 +263,8 @@ export function SignUpScreen({ onSwitchToLogin }: { onSwitchToLogin?: () => void
 							<input
 								value={confirm}
 								type="password"
+								autoComplete="new-password"
 								onChange={(e) => setConfirm(e.target.value)}
-								placeholder={t("signup.confirmPasswordPlaceholder")}
 								style={{
 									height: 40,
 									padding: "0 12px",
@@ -299,7 +299,7 @@ export function SignUpScreen({ onSwitchToLogin }: { onSwitchToLogin?: () => void
 						</div>
 					) : (
 						<Btn
-							variant="primary"
+							variant={canSubmit ? "primary" : "default"}
 							onClick={handleEmailSignup}
 							disabled={!canSubmit}
 							style={{ width: "100%", marginTop: 20, height: 44 }}
