@@ -71,6 +71,37 @@ fi
 
 echo "Environment variable replacement completed."
 
+# Render the Sentry/GlitchTip tunnel snippet from VITE_SENTRY_DSN. When the
+# DSN is unset or still the unsubstituted placeholder, leave the snippet
+# empty so POST /__t 404s and the silent-passthrough guarantee of ADR-0019
+# holds. The file must always exist because nginx.conf includes it.
+TUNNEL_CONF="/etc/nginx/snippets/tunnel.conf"
+DSN="${VITE_SENTRY_DSN:-}"
+: > "$TUNNEL_CONF"
+case "$DSN" in
+    __VITE_SENTRY_DSN__|"")
+        echo "Tunnel: VITE_SENTRY_DSN is unset; /__t will not be served."
+        ;;
+    http*://*@*/*)
+        SENTRY_HOST="${DSN#*@}"
+        SENTRY_HOST="${SENTRY_HOST%%/*}"
+        SENTRY_PROJECT_ID="${DSN##*/}"
+        cat > "$TUNNEL_CONF" <<EOF
+location = /__t {
+    proxy_pass https://${SENTRY_HOST}/api/${SENTRY_PROJECT_ID}/envelope/;
+    proxy_set_header Host ${SENTRY_HOST};
+    proxy_set_header X-Forwarded-For "";
+    proxy_ssl_server_name on;
+    add_header Cache-Control "no-store" always;
+}
+EOF
+        echo "Tunnel: /__t -> https://${SENTRY_HOST}/api/${SENTRY_PROJECT_ID}/envelope/"
+        ;;
+    *)
+        echo "Tunnel: VITE_SENTRY_DSN does not match expected shape; /__t will not be served."
+        ;;
+esac
+
 # Start nginx
 echo "Starting nginx..."
 exec nginx -g "daemon off;"
