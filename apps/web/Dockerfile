@@ -17,7 +17,12 @@ ENV VITE_MAPBOX_ACCESS_TOKEN=__VITE_MAPBOX_ACCESS_TOKEN__
 ENV VITE_GOOGLE_CLIENT_ID=__VITE_GOOGLE_CLIENT_ID__
 ENV VITE_APP_URL=__VITE_APP_URL__
 ENV VITE_API_URL=__VITE_API_URL__
-ENV VITE_APP_VERSION=__VITE_APP_VERSION__
+# VITE_APP_VERSION is the Sentry/GlitchTip release identifier for source-map
+# upload, so it must be the actual version at build time. CI passes the
+# released version via the build arg; local builds fall back to the
+# placeholder, which the runtime entrypoint then replaces.
+ARG VITE_APP_VERSION=__VITE_APP_VERSION__
+ENV VITE_APP_VERSION=$VITE_APP_VERSION
 ENV VITE_STADIA_API_KEY=__VITE_STADIA_API_KEY__
 ENV VITE_UMAMI_URL=__VITE_UMAMI_URL__
 ENV VITE_UMAMI_WEBSITE_ID=__VITE_UMAMI_WEBSITE_ID__
