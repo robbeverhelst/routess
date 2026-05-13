@@ -36,6 +36,9 @@ export function initTelemetry(): void {
 
 	Sentry.init({
 		dsn,
+		// Same-origin tunnel for built bundles (ADR-0021). bun dev has no nginx,
+		// so leave it undefined and post directly to GlitchTip in dev.
+		tunnel: import.meta.env.PROD ? "/__t" : undefined,
 		environment,
 		release,
 		debug,
