@@ -1,12 +1,20 @@
 import { haversineDistance, type Waypoint } from "@routess/core";
 import { type CSSProperties, type ReactNode, useEffect, useMemo, useState } from "react";
+import { trackEvent } from "@/lib/analytics/track";
 import { emitAppEvent } from "@/lib/app-events";
 import { t } from "@/lib/i18n";
 import { serializeAndCompress } from "@/lib/shareUtils";
 import { buildMapboxStaticPreviewUrl } from "@/lib/utils/mapboxStaticPreview";
 import { useModalsStore } from "@/stores/modalsStore";
 import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
-import { useIsMapLocked, useRouteDistance, useRouteDuration, useRoutePath, useWaypoints } from "@/stores/routingStore";
+import {
+	useIsMapLocked,
+	useRouteDistance,
+	useRouteDuration,
+	useRoutePath,
+	useRoutingStore,
+	useWaypoints,
+} from "@/stores/routingStore";
 import { useToastStore } from "@/stores/toastStore";
 import { useUiStore } from "@/stores/uiStore";
 import { FacebookBrand, I, WhatsAppBrand, XBrand } from "../components/icons";
@@ -159,6 +167,15 @@ export function ShareModal() {
 			setCopied(true);
 			setTimeout(() => setCopied(false), 1500);
 			pushToast({ kind: "success", title: t("share.copied") });
+			const urlLengthBucket: "short" | "medium" | "long" =
+				url.length < 200 ? "short" : url.length < 500 ? "medium" : "long";
+			trackEvent({
+				name: "route_share_link_copied",
+				properties: {
+					route_was_saved: useRoutingStore.getState().mode.kind === "editing",
+					url_length_bucket: urlLengthBucket,
+				},
+			});
 		} catch {
 			pushToast({ kind: "danger", title: t("share.copyFailed") });
 		}

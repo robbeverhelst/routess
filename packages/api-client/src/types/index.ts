@@ -39,6 +39,9 @@ export interface ApiUser {
 	isEmailVerified: boolean;
 	role: ApiUserRole;
 	preferences?: ApiUserPreferences | null;
+	// Pseudonymous user identifier for ProductEvent tracking. Stable per user,
+	// computed server-side as sha256(salt + user.id). See ADR-0020.
+	idHash: string;
 	statistics?: {
 		totalRoutes: number;
 		totalDistance: number;

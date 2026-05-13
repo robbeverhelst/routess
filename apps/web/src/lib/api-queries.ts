@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRoutingStore } from "@/stores/routingStore";
-import { track } from "./analytics";
+import { trackEvent } from "./analytics/track";
 import { type ApiRoute, apiService, type CreateRouteRequest } from "./api";
 import { hasStoredUser, storeUser } from "./auth-state";
 import { googleAuth } from "./google-auth";
@@ -63,17 +63,27 @@ export function useSaveRoute() {
 			return apiService.createRoute(routeData);
 		},
 		onSuccess: (newRoute, vars) => {
+			const existingRoutes = queryClient.getQueryData<ApiRoute[]>(queryKeys.routes.list());
+			const isFirstRoute = !existingRoutes || existingRoutes.length === 0;
+
 			queryClient.invalidateQueries({ queryKey: queryKeys.routes.list() });
 			queryClient.setQueryData(queryKeys.routes.detail(newRoute.id.toString()), newRoute);
 
-			track("route_saved", {
-				waypoint_count: vars.waypoints.length,
-				distance_m: Math.round(vars.distance ?? 0),
-				elevation_gain_m: Math.round(vars.elevationGain ?? 0),
-				has_description: !!vars.description,
-				activity: vars.activity ?? null,
-				privacy: vars.privacy ?? "private",
-				tag_count: vars.tags?.length ?? 0,
+			trackEvent({
+				name: "route_created",
+				properties: {
+					waypoint_count: vars.waypoints.length,
+					distance_m: Math.round(vars.distance ?? 0),
+					elevation_gain_m: Math.round(vars.elevationGain ?? 0),
+					has_description: !!vars.description,
+					activity: vars.activity ?? null,
+					privacy: vars.privacy ?? "private",
+					tag_count: vars.tags?.length ?? 0,
+					is_first_route: isFirstRoute,
+					// RouteDraft does not yet track origin; revisit when route
+					// generation (#136) and GPX-imported drafts can be differentiated.
+					creation_source: "manual",
+				},
 			});
 
 			Logger.info("Route saved successfully:", newRoute.id);
@@ -109,7 +119,7 @@ export function useDeleteRoute() {
 				routing.setMode({ kind: "unsaved" });
 			}
 
-			track("route_deleted");
+			trackEvent({ name: "route_deleted", properties: {} });
 
 			Logger.info("Route deleted successfully:", routeId);
 		},
@@ -130,14 +140,17 @@ export function useUpdateRoute() {
 			Logger.info("Updating route:", routeId);
 			return apiService.updateRoute(routeId, updates);
 		},
-		onSuccess: (updatedRoute) => {
+		onSuccess: (updatedRoute, vars) => {
 			// Update the specific route in cache
 			queryClient.setQueryData(queryKeys.routes.detail(updatedRoute.id.toString()), updatedRoute);
 
 			// Invalidate routes list to ensure consistency
 			queryClient.invalidateQueries({ queryKey: queryKeys.routes.list() });
 
-			track("route_updated");
+			trackEvent({
+				name: "route_updated",
+				properties: { changed: Object.keys(vars.updates) },
+			});
 
 			Logger.info("Route updated successfully:", updatedRoute.id);
 		},
@@ -228,7 +241,7 @@ export function useLogout() {
 		onSuccess: () => {
 			// Clear all cached data on logout
 			queryClient.clear();
-			track("logout");
+			trackEvent({ name: "user_logged_out", properties: {} });
 			Logger.info("Cache cleared after logout");
 		},
 		onError: (error) => {
