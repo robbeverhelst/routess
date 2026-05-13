@@ -14,9 +14,14 @@ import {
 } from "../components/auth-shared";
 import { Btn, RDS_COLORS, SecTitle } from "../components/primitives";
 
+// Server enforces 12-char minimum and a HIBP breach check; the client mirrors
+// the length rule so the button doesn't enable on input that the server will
+// reject. Composition is purely a visual cue, not a gate (NIST 800-63B).
+const PASSWORD_MIN_LENGTH = 12;
+
 function passwordStrength(p: string): number {
 	let score = 0;
-	if (p.length >= 8) score++;
+	if (p.length >= PASSWORD_MIN_LENGTH) score++;
 	if (/[A-Z]/.test(p) && /[a-z]/.test(p)) score++;
 	if (/\d/.test(p)) score++;
 	if (/[^A-Za-z0-9]/.test(p)) score++;
@@ -35,6 +40,7 @@ export function SignUpScreen({ onSwitchToLogin }: { onSwitchToLogin?: () => void
 	const [name, setName] = useState("");
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
+	const [confirm, setConfirm] = useState("");
 	const [isLoading, setIsLoading] = useState(false);
 	const pushToast = useToastStore((s) => s.push);
 	const t = useT();
@@ -43,6 +49,10 @@ export function SignUpScreen({ onSwitchToLogin }: { onSwitchToLogin?: () => void
 	const strength = passwordStrength(password);
 	const strengthLabel = t(STRENGTH_KEYS[strength]);
 	const strengthColor = strength >= 3 ? RDS_COLORS.success : strength === 2 ? RDS_COLORS.warn : RDS_COLORS.danger;
+	const isLongEnough = password.length >= PASSWORD_MIN_LENGTH;
+	const passwordsMatch = confirm.length > 0 && password === confirm;
+	const showMismatch = confirm.length > 0 && !passwordsMatch;
+	const canSubmit = Boolean(email) && isLongEnough && passwordsMatch && !isLoading;
 
 	const handleGoogle = async (response: GoogleCodeResponse) => {
 		setIsLoading(true);
@@ -61,7 +71,7 @@ export function SignUpScreen({ onSwitchToLogin }: { onSwitchToLogin?: () => void
 	const [emailSent, setEmailSent] = useState(false);
 
 	const handleEmailSignup = async () => {
-		if (!email || password.length < 12) return;
+		if (!canSubmit) return;
 		setIsLoading(true);
 		try {
 			await apiService.signupEmail({ email: email.trim(), name: name.trim() || undefined, password });
@@ -232,9 +242,43 @@ export function SignUpScreen({ onSwitchToLogin }: { onSwitchToLogin?: () => void
 									/>
 								))}
 							</div>
-							<div style={{ fontSize: 11, color: RDS_COLORS.fgSubtle }}>
-								{password ? t("signup.passwordHintWith", { label: strengthLabel }) : t("signup.passwordHint")}
+							<div
+								style={{
+									fontSize: 11,
+									color: !password ? RDS_COLORS.fgSubtle : isLongEnough ? RDS_COLORS.fgMuted : RDS_COLORS.warn,
+								}}
+							>
+								{!password
+									? t("signup.passwordHint", { min: String(PASSWORD_MIN_LENGTH) })
+									: !isLongEnough
+										? t("signup.passwordTooShort", {
+												count: String(PASSWORD_MIN_LENGTH - password.length),
+												min: String(PASSWORD_MIN_LENGTH),
+											})
+										: t("signup.passwordHintWith", { label: strengthLabel })}
 							</div>
+						</div>
+						<div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+							<SecTitle>{t("signup.confirmPassword")}</SecTitle>
+							<input
+								value={confirm}
+								type="password"
+								onChange={(e) => setConfirm(e.target.value)}
+								placeholder={t("signup.confirmPasswordPlaceholder")}
+								style={{
+									height: 40,
+									padding: "0 12px",
+									borderRadius: 8,
+									background: RDS_COLORS.bgInput,
+									border: `1px solid ${showMismatch ? RDS_COLORS.danger : RDS_COLORS.borderStrong}`,
+									color: RDS_COLORS.fg,
+									fontSize: 13.5,
+									outline: "none",
+								}}
+							/>
+							{showMismatch && (
+								<div style={{ fontSize: 11, color: RDS_COLORS.danger }}>{t("signup.passwordMismatch")}</div>
+							)}
 						</div>
 					</div>
 
@@ -257,7 +301,7 @@ export function SignUpScreen({ onSwitchToLogin }: { onSwitchToLogin?: () => void
 						<Btn
 							variant="primary"
 							onClick={handleEmailSignup}
-							disabled={!email || password.length < 12 || isLoading}
+							disabled={!canSubmit}
 							style={{ width: "100%", marginTop: 20, height: 44 }}
 						>
 							{isLoading ? t("login.email.submitting") : t("login.email.createAccount")}
