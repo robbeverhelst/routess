@@ -2,6 +2,7 @@ import { type ApiUser, type AuthResponse, apiService } from "./api";
 import { authStorageKeys, clearStoredAuthState, getStoredUser, notifyAuthStateChange, storeUser } from "./auth-state";
 import { Logger } from "./logger";
 import { getRuntimeConfig } from "./runtime-config";
+import { breadcrumb } from "./telemetry";
 
 // Google OAuth Configuration
 const GOOGLE_CLIENT_ID = getRuntimeConfig("VITE_GOOGLE_CLIENT_ID") ?? "";
@@ -57,9 +58,11 @@ class GoogleAuthService {
 				name: authResponse.user.name,
 			});
 
+			breadcrumb("auth", "login_succeeded", { role: authResponse.user.role });
 			return authResponse.user;
 		} catch (error) {
 			Logger.error("Google login processing failed:", error);
+			breadcrumb("auth", "login_failed", undefined, "error");
 			throw error;
 		}
 	}
@@ -67,6 +70,7 @@ class GoogleAuthService {
 	// Handle Google login error
 	handleGoogleError(error?: unknown): void {
 		Logger.error("Google Sign-In failed:", error);
+		breadcrumb("auth", "login_failed", undefined, "error");
 	}
 
 	// Sign out
@@ -75,6 +79,7 @@ class GoogleAuthService {
 			await apiService.logout();
 
 			Logger.info("Google Sign-Out successful");
+			breadcrumb("auth", "logout");
 		} catch (error) {
 			Logger.error("Google Sign-Out failed:", error);
 			// Even if server logout fails, clear local state

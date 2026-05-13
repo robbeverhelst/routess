@@ -220,6 +220,14 @@ jobs:
           SHA: ${{ steps.version.outputs.sha }}
           OWNER: ${{ github.repository_owner }}
           REGISTRY: ${{ env.REGISTRY }}
+          # Source-map upload to GlitchTip. Token is forwarded to buildx via
+          # the `secret = ["id=sentry_auth_token,env=SENTRY_AUTH_TOKEN"]` line
+          # in docker-bake.hcl, then mounted inside the Dockerfile as a
+          # BuildKit secret — it never enters image layers.
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+          SENTRY_PROJECT: routess
+          SENTRY_URL: ${{ vars.SENTRY_URL }}
         working-directory: docker
         run: docker buildx bake --allow=fs.read=.. --push default
 

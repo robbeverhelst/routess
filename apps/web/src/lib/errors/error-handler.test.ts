@@ -23,6 +23,11 @@ vi.mock("@/lib/errors/ErrorToast", () => ({
 	showErrorToast: mockShowToast,
 }));
 
+// Mock Sentry so test runs don't try to ship events
+vi.mock("@sentry/react", () => ({
+	captureException: vi.fn(),
+}));
+
 describe("Error Handler", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();

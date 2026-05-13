@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.7
 ARG DEPS_IMAGE
 FROM ${DEPS_IMAGE} AS deps
 
@@ -23,7 +24,19 @@ ENV VITE_UMAMI_WEBSITE_ID=__VITE_UMAMI_WEBSITE_ID__
 ENV DOCKER_BUILD=true
 
 WORKDIR /app/apps/web
-RUN node node_modules/vite/bin/vite.js build
+# Sentry source-map upload runs only when the BuildKit secret is mounted.
+# When absent (local docker build), the plugin is omitted and the build
+# proceeds without uploading. The secret never enters image layers.
+ARG SENTRY_ORG
+ARG SENTRY_PROJECT=routess
+ARG SENTRY_URL
+RUN --mount=type=secret,id=sentry_auth_token \
+    set -e; \
+    if [ -s /run/secrets/sentry_auth_token ]; then \
+        export SENTRY_AUTH_TOKEN="$(cat /run/secrets/sentry_auth_token)"; \
+    fi; \
+    node node_modules/vite/bin/vite.js build; \
+    find dist -name "*.map" -type f -delete
 
 FROM nginx:alpine
 

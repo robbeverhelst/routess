@@ -40,7 +40,6 @@ export interface ErrorState {
 export interface ErrorHandlerOptions {
 	showToUser?: boolean;
 	logError?: boolean;
-	reportError?: boolean;
 	autoRetry?: boolean;
 	retryAttempts?: number;
 	retryDelay?: number;

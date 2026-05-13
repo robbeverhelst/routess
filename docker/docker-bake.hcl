@@ -20,9 +20,24 @@ target "common" {
   sbom       = true
 }
 
+variable "SENTRY_ORG"     { default = "" }
+variable "SENTRY_PROJECT" { default = "routess" }
+variable "SENTRY_URL"     { default = "" }
+
 target "web" {
   inherits   = ["common"]
   dockerfile = "apps/web/Dockerfile"
+  args = {
+    DEPS_IMAGE     = "${DEPS_IMAGE}"
+    SENTRY_ORG     = "${SENTRY_ORG}"
+    SENTRY_PROJECT = "${SENTRY_PROJECT}"
+    SENTRY_URL     = "${SENTRY_URL}"
+  }
+  # SENTRY_AUTH_TOKEN is consumed via BuildKit secret mount inside the
+  # Dockerfile (RUN --mount=type=secret,id=sentry_auth_token). Set the env
+  # var SENTRY_AUTH_TOKEN in the calling environment (CI) and buildx will
+  # forward it. The token never enters image layers.
+  secret = ["id=sentry_auth_token,env=SENTRY_AUTH_TOKEN"]
   tags = [
     "${REGISTRY}/${OWNER}/routess-web:${VERSION}",
     "${REGISTRY}/${OWNER}/routess-web:${MINOR}",
