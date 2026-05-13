@@ -4,6 +4,7 @@
 
 import { ApiDomainError } from "@routess/api-client";
 import { type DomainErrorCode, severityForCode } from "@routess/core";
+import * as Sentry from "@sentry/react";
 import { Logger } from "@/lib/logger";
 import type { AppError, ErrorCategory, ErrorHandlerOptions, ErrorSeverity } from "./types";
 
@@ -22,41 +23,23 @@ const categoryForCode = (code: DomainErrorCode): ErrorCategory => {
 	}
 };
 
+const severityToSentryLevel = (severity: ErrorSeverity): Sentry.SeverityLevel => {
+	switch (severity) {
+		case "low":
+			return "info";
+		case "medium":
+			return "warning";
+		case "high":
+			return "error";
+		case "critical":
+			return "fatal";
+		default:
+			return "error";
+	}
+};
+
 class ErrorHandlerService {
 	private errorListeners: Array<(error: AppError) => void> = [];
-	private errorReportingService?: {
-		report: (error: AppError) => void;
-	};
-
-	constructor() {
-		// Set up global error handlers
-		this.setupGlobalHandlers();
-	}
-
-	private setupGlobalHandlers() {
-		// Only set up handlers in browser environment
-		if (typeof window === "undefined") {
-			return;
-		}
-
-		// Catch unhandled promise rejections
-		window.addEventListener("unhandledrejection", (event) => {
-			this.handleError(new Error(event.reason?.message || "Unhandled promise rejection"), {
-				category: "unknown" as ErrorCategory,
-				severity: "high" as ErrorSeverity,
-				context: "unhandledrejection",
-			});
-		});
-
-		// Catch global errors
-		window.addEventListener("error", (event) => {
-			this.handleError(event.error || new Error(event.message), {
-				category: "unknown" as ErrorCategory,
-				severity: "high" as ErrorSeverity,
-				context: "global",
-			});
-		});
-	}
 
 	/**
 	 * Main error handling method
@@ -72,14 +55,7 @@ class ErrorHandlerService {
 		},
 		options: ErrorHandlerOptions = {},
 	): AppError {
-		const {
-			showToUser = true,
-			logError = true,
-			reportError = false,
-			autoRetry = false,
-			retryAttempts = 3,
-			retryDelay = 1000,
-		} = options;
+		const { showToUser = true, logError = true, autoRetry = false, retryAttempts = 3, retryDelay = 1000 } = options;
 
 		const appError: AppError = {
 			id: this.generateErrorId(),
@@ -93,7 +69,6 @@ class ErrorHandlerService {
 			metadata: context.metadata,
 		};
 
-		// Log error if requested
 		if (logError) {
 			const logLevel = this.getLogLevel(appError.severity);
 			Logger[logLevel](`[ErrorHandler] ${appError.category}:`, appError.message, {
@@ -103,17 +78,12 @@ class ErrorHandlerService {
 			});
 		}
 
-		// Report error if requested
-		if (reportError && this.errorReportingService) {
-			this.errorReportingService.report(appError);
-		}
+		this.reportToSentry(appError);
 
-		// Notify listeners (UI components)
 		if (showToUser) {
 			this.notifyListeners(appError);
 		}
 
-		// Auto-retry if requested
 		if (autoRetry && appError.retry) {
 			this.scheduleRetry(appError, retryAttempts, retryDelay);
 		}
@@ -134,11 +104,20 @@ class ErrorHandlerService {
 		};
 	}
 
-	/**
-	 * Set error reporting service (for production)
-	 */
-	setErrorReportingService(service: { report: (error: AppError) => void }) {
-		this.errorReportingService = service;
+	private reportToSentry(appError: AppError): void {
+		const captureTarget = appError.originalError ?? new Error(appError.message);
+		Sentry.captureException(captureTarget, {
+			level: severityToSentryLevel(appError.severity),
+			tags: {
+				category: appError.category,
+				severity: appError.severity,
+				...(appError.context ? { context: appError.context } : {}),
+			},
+			extra: {
+				app_error_id: appError.id,
+				...(appError.metadata ?? {}),
+			},
+		});
 	}
 
 	private notifyListeners(error: AppError) {
@@ -162,7 +141,7 @@ class ErrorHandlerService {
 			} catch (retryError) {
 				Logger.warn(`[ErrorHandler] Retry ${currentAttempt} failed for:`, error.id, retryError);
 				if (currentAttempt < attempts) {
-					this.scheduleRetry(error, attempts, delay * 2, currentAttempt + 1); // Exponential backoff
+					this.scheduleRetry(error, attempts, delay * 2, currentAttempt + 1);
 				}
 			}
 		}, delay);

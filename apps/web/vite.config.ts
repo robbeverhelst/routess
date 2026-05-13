@@ -1,8 +1,29 @@
 import path from "node:path";
+import { sentryVitePlugin } from "@sentry/vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
 import { TanStackRouterVite } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
+
+// Sentry source-map upload only runs when SENTRY_AUTH_TOKEN is provided
+// (CI build of the production image, via a BuildKit secret). Absent in
+// local builds and dev, so the plugin is omitted entirely.
+const sentryPlugins = process.env.SENTRY_AUTH_TOKEN
+	? [
+			sentryVitePlugin({
+				authToken: process.env.SENTRY_AUTH_TOKEN,
+				org: process.env.SENTRY_ORG,
+				project: process.env.SENTRY_PROJECT ?? "routess-web",
+				url: process.env.SENTRY_URL,
+				release: { name: process.env.VITE_APP_VERSION },
+				sourcemaps: {
+					assets: "./dist/**",
+					filesToDeleteAfterUpload: "./dist/**/*.map",
+				},
+				telemetry: false,
+			}),
+		]
+	: [];
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -13,6 +34,7 @@ export default defineConfig({
 		}),
 		react(),
 		tailwindcss(),
+		...sentryPlugins,
 	],
 	envDir: path.resolve(__dirname, "../../"),
 	resolve: {
@@ -32,6 +54,10 @@ export default defineConfig({
 		exclude: ["@routess/core", "@routess/api-client", "@routess/design-tokens", "@routess/i18n"],
 	},
 	build: {
+		// Emit source maps without a sourceMappingURL comment so browsers don't
+		// try to fetch them. Sentry vite plugin reads them at build time and
+		// then deletes them, so users never download .map files.
+		sourcemap: "hidden",
 		rollupOptions: {
 			output: {
 				manualChunks(id) {

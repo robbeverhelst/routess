@@ -3,7 +3,9 @@ import { createRoot } from "react-dom/client";
 import "./index.css";
 import App from "./App.tsx";
 import { runBootstrap } from "./lib/bootstrap.ts";
+import { initTelemetry } from "./lib/telemetry";
 
+initTelemetry();
 runBootstrap();
 
 const rootElement = document.getElementById("root");
