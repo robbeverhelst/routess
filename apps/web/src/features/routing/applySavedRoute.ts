@@ -11,7 +11,7 @@ export function applySavedRoute(route: ApiRoute): void {
 	const baseline: RouteBaseline = {
 		name: route.name,
 		activity: route.activity,
-		privacy: route.privacy,
+		visibility: route.visibility,
 		tags: route.tags,
 		description: route.description,
 		waypoints: route.waypoints.map((wp) => ({ ...wp })),

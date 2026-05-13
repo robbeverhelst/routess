@@ -1,4 +1,4 @@
-import type { RoutePrivacy } from "@routess/core";
+import type { RouteVisibility } from "@routess/core";
 import type { RedesignMapStyle } from "@/stores/redesignSettingsStore";
 import type { ApiRoute, Waypoint } from "./api";
 
@@ -37,7 +37,7 @@ export interface AppEventMap {
 				distance?: number;
 				duration?: number;
 				elevationGain?: number;
-				privacy?: RoutePrivacy;
+				visibility?: RouteVisibility;
 				tags?: string[];
 				description?: string;
 		  };
