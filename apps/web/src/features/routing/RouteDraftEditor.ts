@@ -1,6 +1,7 @@
 import type { Coordinate, RouteActivity, RouteBaseline, Waypoint, WaypointType } from "@routess/core";
 import { calculatePathDistance, estimateWalkingDuration } from "@routess/core";
 import type { GeoJSONSource, Map as MapboxMap } from "mapbox-gl";
+import { trackEvent } from "@/lib/analytics/track";
 import type { ApiRoute } from "@/lib/api";
 import { Logger } from "@/lib/logger";
 import { decompressAndParse, serializeAndCompress } from "@/lib/shareUtils";
@@ -329,6 +330,9 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 		const store = useRoutingStore.getState();
 		store.setMode({ kind: "editing", routeId: route.id, name: route.name, baseline });
 		store.setActivity(route.activity);
+		// RouteDraft does not yet store the creation_source of saved routes;
+		// revisit when the saved-route schema carries that field.
+		trackEvent({ name: "route_loaded_into_editor", properties: { creation_source: "unknown" } });
 		return loadWaypoints(route.waypoints, {
 			exactRoutePath: route.geometry,
 			saveSnapshot: true,
@@ -372,6 +376,19 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 			return fail("No valid waypoints were found in the GPX file.");
 		}
 
+		const hadNames = parsed.waypoints.some((wp) => !!wp.name);
+		const trackDistanceKm =
+			parsed.trackPoints && parsed.trackPoints.length >= 2 ? calculatePathDistance(parsed.trackPoints) : 0;
+		trackEvent({
+			name: "gpx_imported",
+			properties: {
+				waypoint_count: parsed.waypoints.length,
+				distance_m: Math.round(trackDistanceKm * 1000),
+				had_names: hadNames,
+				source: "file_upload",
+			},
+		});
+
 		if (parsed.trackPoints && parsed.trackPoints.length >= 2) {
 			const waypoints: Waypoint[] = parsed.waypoints.map((wp) => ({
 				coord: wp.coord,
@@ -409,6 +426,18 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 		} finally {
 			URL.revokeObjectURL(url);
 		}
+
+		const store = useRoutingStore.getState();
+		const distanceKm = calculatePathDistance(effectivePath);
+		trackEvent({
+			name: "gpx_exported",
+			properties: {
+				waypoint_count: waypoints.length,
+				distance_m: Math.round(distanceKm * 1000),
+				route_was_saved: store.mode.kind === "editing",
+			},
+		});
+
 		return ok();
 	};
 

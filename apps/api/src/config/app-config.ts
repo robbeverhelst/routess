@@ -40,6 +40,12 @@ export interface AppConfig {
 		otlpEndpoint?: string;
 		otlpHeaders?: Record<string, string>;
 	};
+	analytics: {
+		// Server-side salt for pseudonymising user IDs in ProductEvents. Never
+		// exposed to the browser; the API hashes user.id with this salt and ships
+		// the hash on the profile response. See ADR-0020.
+		salt: string;
+	};
 	monitoring: {
 		grafanaUrls: Record<string, string>;
 	};
@@ -145,6 +151,9 @@ export function getAppConfig(): AppConfig {
 	const jwtSecret = isProduction
 		? requireProductionValue("JWT_SECRET", process.env.JWT_SECRET)
 		: process.env.JWT_SECRET || "development-only-secret-change-me";
+	const analyticsSalt = isProduction
+		? requireProductionValue("ANALYTICS_SALT", process.env.ANALYTICS_SALT)
+		: process.env.ANALYTICS_SALT || "development-only-analytics-salt-change-me";
 	const explicitFrontendUrls = parseStringList(process.env.FRONTEND_URLS);
 	const fallbackFrontendUrls = parseStringList(process.env.FRONTEND_URL);
 	const allowedFrontendUrls =
@@ -198,6 +207,9 @@ export function getAppConfig(): AppConfig {
 		},
 		monitoring: {
 			grafanaUrls: parseJsonObject(process.env.GRAFANA_URLS) ?? {},
+		},
+		analytics: {
+			salt: analyticsSalt,
 		},
 	};
 }

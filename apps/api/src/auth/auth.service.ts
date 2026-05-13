@@ -105,7 +105,7 @@ export class AuthService {
 
 		return {
 			accessToken,
-			user: toUserResponseDto(user),
+			user: toUserResponseDto(user, this.config.analytics.salt),
 		};
 	}
 

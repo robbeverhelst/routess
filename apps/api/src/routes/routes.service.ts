@@ -1,7 +1,9 @@
 import { EntityManager, EntityRepository, wrap } from "@mikro-orm/core";
 import { InjectRepository } from "@mikro-orm/nestjs";
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { EventEmitter2 } from "@nestjs/event-emitter";
+import type { AppConfig } from "../config/app-config";
+import { APP_CONFIG } from "../config/config.module";
 import { Route } from "../entities/route.entity";
 import type { User } from "../entities/user.entity";
 import {
@@ -17,28 +19,6 @@ import type { UpdateRouteDto } from "./dto/update-route.dto";
 
 type SerializableUser = Pick<User, "id" | "email" | "name" | "avatar" | "isEmailVerified" | "role" | "preferences">;
 
-const toResponseDto = (route: Route): RouteResponseDto => {
-	const serializedUser = wrap(route.user).toJSON() as SerializableUser;
-	return {
-		id: route.id,
-		name: route.name,
-		description: route.description,
-		activity: route.activity,
-		privacy: route.privacy,
-		tags: route.tags,
-		waypoints: route.waypoints,
-		geometry: route.geometry,
-		distance: route.distance,
-		duration: route.duration,
-		elevationGain: route.elevationGain,
-		startAddress: route.startAddress,
-		endAddress: route.endAddress,
-		user: toUserResponseDto(serializedUser),
-		createdAt: route.createdAt.toISOString(),
-		updatedAt: route.updatedAt.toISOString(),
-	};
-};
-
 @Injectable()
 export class RoutesService {
 	constructor(
@@ -46,7 +26,31 @@ export class RoutesService {
 		private readonly routeRepository: EntityRepository<Route>,
 		private readonly em: EntityManager,
 		private readonly events: EventEmitter2,
+		@Inject(APP_CONFIG)
+		private readonly config: AppConfig,
 	) {}
+
+	private toResponseDto(route: Route): RouteResponseDto {
+		const serializedUser = wrap(route.user).toJSON() as SerializableUser;
+		return {
+			id: route.id,
+			name: route.name,
+			description: route.description,
+			activity: route.activity,
+			privacy: route.privacy,
+			tags: route.tags,
+			waypoints: route.waypoints,
+			geometry: route.geometry,
+			distance: route.distance,
+			duration: route.duration,
+			elevationGain: route.elevationGain,
+			startAddress: route.startAddress,
+			endAddress: route.endAddress,
+			user: toUserResponseDto(serializedUser, this.config.analytics.salt),
+			createdAt: route.createdAt.toISOString(),
+			updatedAt: route.updatedAt.toISOString(),
+		};
+	}
 
 	async create(createRouteDto: CreateRouteDto, userId: number): Promise<RouteResponseDto> {
 		const route = this.routeRepository.create({
@@ -58,7 +62,7 @@ export class RoutesService {
 		await this.em.persistAndFlush(route);
 		await this.em.populate(route, ["user"]);
 		this.events.emit(ROUTE_CREATED, { userId } satisfies RouteCreatedEvent);
-		return toResponseDto(route);
+		return this.toResponseDto(route);
 	}
 
 	async findAll(userId: number): Promise<RouteResponseDto[]> {
@@ -66,12 +70,12 @@ export class RoutesService {
 			{ user: userId },
 			{ populate: ["user"], orderBy: { createdAt: "DESC" }, limit: 100 },
 		);
-		return routes.map(toResponseDto);
+		return routes.map((route) => this.toResponseDto(route));
 	}
 
 	async findOne(id: number, userId: number): Promise<RouteResponseDto> {
 		const route = await this.findOwnedRouteOrFail(id, userId);
-		return toResponseDto(route);
+		return this.toResponseDto(route);
 	}
 
 	async update(id: number, updateRouteDto: UpdateRouteDto, userId: number): Promise<RouteResponseDto> {
@@ -79,7 +83,7 @@ export class RoutesService {
 		this.routeRepository.assign(route, updateRouteDto);
 		await this.em.persistAndFlush(route);
 		await this.em.populate(route, ["user"]);
-		return toResponseDto(route);
+		return this.toResponseDto(route);
 	}
 
 	async remove(id: number, userId: number): Promise<void> {

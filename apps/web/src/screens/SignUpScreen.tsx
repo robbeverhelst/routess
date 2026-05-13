@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { trackEvent } from "@/lib/analytics/track";
 import { type GoogleCodeResponse, googleAuth, hasValidGoogleClientId } from "@/lib/google-auth";
 import { useT } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
@@ -46,6 +47,7 @@ export function SignUpScreen({ onSwitchToLogin }: { onSwitchToLogin?: () => void
 		setIsLoading(true);
 		try {
 			const user = await googleAuth.handleGoogleSuccess(response);
+			trackEvent({ name: "user_logged_in", properties: { provider: "google" } });
 			pushToast({ kind: "success", title: t("signup.toast.created"), body: user.name ?? user.email });
 		} catch (e) {
 			Logger.error(e);
