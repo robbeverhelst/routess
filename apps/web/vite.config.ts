@@ -13,7 +13,7 @@ const sentryPlugins = process.env.SENTRY_AUTH_TOKEN
 			sentryVitePlugin({
 				authToken: process.env.SENTRY_AUTH_TOKEN,
 				org: process.env.SENTRY_ORG,
-				project: process.env.SENTRY_PROJECT ?? "routess-web",
+				project: process.env.SENTRY_PROJECT ?? "routess",
 				url: process.env.SENTRY_URL,
 				release: { name: process.env.VITE_APP_VERSION },
 				sourcemaps: {

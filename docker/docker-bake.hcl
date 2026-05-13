@@ -21,7 +21,7 @@ target "common" {
 }
 
 variable "SENTRY_ORG"     { default = "" }
-variable "SENTRY_PROJECT" { default = "routess-web" }
+variable "SENTRY_PROJECT" { default = "routess" }
 variable "SENTRY_URL"     { default = "" }
 
 target "web" {

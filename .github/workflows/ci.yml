@@ -226,7 +226,7 @@ jobs:
           # BuildKit secret — it never enters image layers.
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: ${{ vars.SENTRY_ORG }}
-          SENTRY_PROJECT: routess-web
+          SENTRY_PROJECT: routess
           SENTRY_URL: ${{ vars.SENTRY_URL }}
         working-directory: docker
         run: docker buildx bake --allow=fs.read=.. --push default

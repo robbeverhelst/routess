@@ -28,7 +28,7 @@ WORKDIR /app/apps/web
 # When absent (local docker build), the plugin is omitted and the build
 # proceeds without uploading. The secret never enters image layers.
 ARG SENTRY_ORG
-ARG SENTRY_PROJECT=routess-web
+ARG SENTRY_PROJECT=routess
 ARG SENTRY_URL
 RUN --mount=type=secret,id=sentry_auth_token \
     set -e; \
