@@ -1,3 +1,5 @@
+import * as Sentry from "@sentry/react";
+
 export enum LogLevel {
 	DEBUG = 0,
 	INFO = 1,
@@ -67,7 +69,42 @@ export function setLogLevelOverride(level: LogLevel | keyof typeof LOG_LEVEL_NAM
 	}
 }
 
+// WARN and ERROR logs also surface in GlitchTip so we get visibility on
+// caught failures that never bubble up to Sentry's GlobalHandlers (Mapbox
+// NoSegment, GPS timeouts, etc.). Decoupled from `currentLogLevel` so that
+// muting the console (e.g. in tests) does not mute Sentry; the test-mode
+// guard below is what keeps unit tests quiet.
+function stringifyForSentry(value: unknown): string {
+	if (typeof value === "string") return value;
+	if (value instanceof Error) return value.message;
+	try {
+		return JSON.stringify(value);
+	} catch {
+		return String(value);
+	}
+}
+
+function reportToSentry(level: LogLevel, messages: unknown[]): void {
+	if (import.meta.env.MODE === "test") return;
+	if (level !== LogLevel.WARN && level !== LogLevel.ERROR) return;
+	if (messages.length === 0) return;
+
+	const sentryLevel: Sentry.SeverityLevel = level === LogLevel.ERROR ? "error" : "warning";
+	const error = messages.find((m): m is Error => m instanceof Error);
+	const joined = messages.map(stringifyForSentry).join(" ");
+
+	if (error) {
+		Sentry.captureException(error, {
+			level: sentryLevel,
+			extra: { logMessage: joined },
+		});
+	} else {
+		Sentry.captureMessage(joined, sentryLevel);
+	}
+}
+
 function log(level: LogLevel, messages: unknown[]): void {
+	reportToSentry(level, messages);
 	if (level < currentLogLevel) return;
 
 	switch (level) {
