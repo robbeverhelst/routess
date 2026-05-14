@@ -86,11 +86,18 @@ case "$DSN" in
         SENTRY_HOST="${DSN#*@}"
         SENTRY_HOST="${SENTRY_HOST%%/*}"
         SENTRY_PROJECT_ID="${DSN##*/}"
+        SENTRY_PUBLIC_KEY="${DSN#*//}"
+        SENTRY_PUBLIC_KEY="${SENTRY_PUBLIC_KEY%@*}"
         cat > "$TUNNEL_CONF" <<EOF
 location = /__t {
     proxy_pass https://${SENTRY_HOST}/api/${SENTRY_PROJECT_ID}/envelope/;
     proxy_set_header Host ${SENTRY_HOST};
     proxy_set_header X-Forwarded-For "";
+    # Re-inject Sentry-protocol auth that the SDK drops when tunnel is set.
+    # GlitchTip versions that don't parse the envelope-body DSN field need
+    # this header (or the equivalent ?sentry_key= query) to authenticate
+    # the project. Browser never sees it; this is set server-side.
+    proxy_set_header X-Sentry-Auth "Sentry sentry_version=7, sentry_key=${SENTRY_PUBLIC_KEY}";
     proxy_ssl_server_name on;
     add_header Cache-Control "no-store" always;
 }
