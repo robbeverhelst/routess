@@ -91,6 +91,15 @@ export function AccountScreen() {
 	const [deleting, setDeleting] = useState(false);
 	const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+	const [editingPassword, setEditingPassword] = useState(false);
+	const [currentPassword, setCurrentPassword] = useState("");
+	const [newPassword, setNewPassword] = useState("");
+	const [confirmPassword, setConfirmPassword] = useState("");
+	const [savingPassword, setSavingPassword] = useState(false);
+	const [passwordError, setPasswordError] = useState<string | null>(null);
+
+	const [confirmingDelete, setConfirmingDelete] = useState(false);
+
 	const lastSyncedNameRef = useRef<string | null>(null);
 	useEffect(() => {
 		if (user?.name && user.name !== lastSyncedNameRef.current && !editingName) {
@@ -171,22 +180,48 @@ export function AccountScreen() {
 		}
 	};
 
-	const handleChangePassword = async () => {
-		const currentPassword = user ? (window.prompt(t("settings.security.currentPasswordPrompt")) ?? "") : "";
-		const newPassword = window.prompt(t("settings.security.newPasswordPrompt"));
-		if (!newPassword) return;
+	const resetPasswordForm = () => {
+		setCurrentPassword("");
+		setNewPassword("");
+		setConfirmPassword("");
+		setPasswordError(null);
+	};
+
+	const handleCancelPassword = () => {
+		setEditingPassword(false);
+		resetPasswordForm();
+	};
+
+	const handleSavePassword = async (event: React.FormEvent<HTMLFormElement>) => {
+		event.preventDefault();
+		setPasswordError(null);
+		if (newPassword.length < 12) {
+			setPasswordError(t("account.password.tooShort"));
+			return;
+		}
+		if (newPassword !== confirmPassword) {
+			setPasswordError(t("account.password.mismatch"));
+			return;
+		}
+		setSavingPassword(true);
 		try {
-			await apiService.setPassword({ newPassword, currentPassword: currentPassword || undefined });
+			await apiService.setPassword({
+				newPassword,
+				currentPassword: currentPassword || undefined,
+			});
 			pushToast({ kind: "success", title: t("settings.security.passwordUpdated") });
+			setEditingPassword(false);
+			resetPasswordForm();
 		} catch (error) {
 			Logger.error("Set password failed", error);
 			const message = error instanceof Error ? error.message : t("settings.security.passwordFailed");
-			pushToast({ kind: "danger", title: t("settings.security.passwordFailed"), body: message });
+			setPasswordError(message);
+		} finally {
+			setSavingPassword(false);
 		}
 	};
 
 	const handleDeleteAccount = async () => {
-		if (!window.confirm(t("settings.account.deleteConfirm"))) return;
 		setDeleting(true);
 		try {
 			await apiService.deleteAccount();
@@ -197,6 +232,7 @@ export function AccountScreen() {
 			pushToast({ kind: "danger", title: t("settings.account.deleteFailed") });
 		} finally {
 			setDeleting(false);
+			setConfirmingDelete(false);
 		}
 	};
 
@@ -346,14 +382,119 @@ export function AccountScreen() {
 						<span style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle }}>{t("account.emailReadonly")}</span>
 					</Row>
 
-					<Row label={t("account.field.password")} last>
-						<div style={{ flex: 1, fontSize: 13, color: RDS_COLORS.fgMuted }}>
-							{t("account.passwordManagedInSettings")}
+					{editingPassword ? (
+						<div
+							style={{
+								padding: "12px 0",
+								borderTop: `1px solid ${RDS_COLORS.border}`,
+							}}
+						>
+							<div style={{ fontSize: 13, fontWeight: 500, color: RDS_COLORS.fg, marginBottom: 4 }}>
+								{t("account.password.changeTitle")}
+							</div>
+							<div style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle, marginBottom: 12 }}>
+								{t("account.password.changeHint")}
+							</div>
+							<form onSubmit={handleSavePassword} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+								<input
+									type="password"
+									autoComplete="current-password"
+									placeholder={t("account.password.currentPlaceholder")}
+									value={currentPassword}
+									onChange={(e) => setCurrentPassword(e.target.value)}
+									style={{
+										height: 36,
+										padding: "0 12px",
+										borderRadius: 8,
+										background: RDS_COLORS.bgInput,
+										border: `1px solid ${RDS_COLORS.border}`,
+										color: RDS_COLORS.fg,
+										fontSize: 13,
+										outline: "none",
+									}}
+								/>
+								<input
+									type="password"
+									autoComplete="new-password"
+									required
+									minLength={12}
+									placeholder={t("account.password.newPlaceholder")}
+									value={newPassword}
+									onChange={(e) => setNewPassword(e.target.value)}
+									style={{
+										height: 36,
+										padding: "0 12px",
+										borderRadius: 8,
+										background: RDS_COLORS.bgInput,
+										border: `1px solid ${RDS_COLORS.border}`,
+										color: RDS_COLORS.fg,
+										fontSize: 13,
+										outline: "none",
+									}}
+								/>
+								<input
+									type="password"
+									autoComplete="new-password"
+									required
+									minLength={12}
+									placeholder={t("account.password.confirmPlaceholder")}
+									value={confirmPassword}
+									onChange={(e) => setConfirmPassword(e.target.value)}
+									style={{
+										height: 36,
+										padding: "0 12px",
+										borderRadius: 8,
+										background: RDS_COLORS.bgInput,
+										border: `1px solid ${confirmPassword && confirmPassword !== newPassword ? RDS_COLORS.danger : RDS_COLORS.border}`,
+										color: RDS_COLORS.fg,
+										fontSize: 13,
+										outline: "none",
+									}}
+								/>
+								{passwordError && (
+									<div
+										style={{
+											padding: 10,
+											borderRadius: 8,
+											background: `color-mix(in oklch, ${RDS_COLORS.danger} 14%, ${RDS_COLORS.bgPanel})`,
+											color: RDS_COLORS.fg,
+											fontSize: 12.5,
+											lineHeight: 1.5,
+										}}
+									>
+										{passwordError}
+									</div>
+								)}
+								<div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 2 }}>
+									<Btn variant="ghost" type="button" onClick={handleCancelPassword} disabled={savingPassword}>
+										{t("common.cancel")}
+									</Btn>
+									<Btn
+										type="submit"
+										variant="primary"
+										disabled={savingPassword || newPassword.length < 12 || newPassword !== confirmPassword}
+									>
+										{savingPassword ? t("account.saving") : t("common.save")}
+									</Btn>
+								</div>
+							</form>
 						</div>
-						<Btn variant="ghost" onClick={handleChangePassword}>
-							{t("settings.security.changePasswordAction")}
-						</Btn>
-					</Row>
+					) : (
+						<Row label={t("account.field.password")} last>
+							<div style={{ flex: 1, fontSize: 13, color: RDS_COLORS.fgMuted }}>
+								{t("account.password.placeholderDisplay")}
+							</div>
+							<Btn
+								variant="ghost"
+								onClick={() => {
+									resetPasswordForm();
+									setEditingPassword(true);
+								}}
+							>
+								{t("settings.security.changePasswordAction")}
+							</Btn>
+						</Row>
+					)}
 				</Card>
 
 				<div
@@ -365,25 +506,59 @@ export function AccountScreen() {
 					}}
 				>
 					<SecTitle style={{ marginBottom: 12, color: RDS_COLORS.danger }}>{t("account.danger")}</SecTitle>
-					<div style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 0" }}>
-						<div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
-							<div style={{ fontSize: 13, fontWeight: 500 }}>{t("account.deleteAccount")}</div>
-							<div style={{ fontSize: 12, color: RDS_COLORS.fgMuted, marginTop: 2 }}>
-								{t("account.deleteAccountSub")}
-							</div>
-						</div>
-						<Btn
-							onClick={handleDeleteAccount}
-							disabled={deleting || isPendingDeletion}
+					{confirmingDelete ? (
+						<div
 							style={{
-								background: "transparent",
-								color: RDS_COLORS.danger,
-								borderColor: `color-mix(in oklch, ${RDS_COLORS.danger} 40%, ${RDS_COLORS.border})`,
+								padding: 14,
+								borderRadius: 10,
+								background: `color-mix(in oklch, ${RDS_COLORS.danger} 10%, ${RDS_COLORS.bgPanel})`,
+								border: `1px solid color-mix(in oklch, ${RDS_COLORS.danger} 60%, ${RDS_COLORS.border})`,
 							}}
 						>
-							{deleting ? t("account.deleting") : t("common.delete")}
-						</Btn>
-					</div>
+							<div style={{ fontSize: 13, fontWeight: 600, color: RDS_COLORS.fg, marginBottom: 6 }}>
+								{t("account.deleteAccount")}
+							</div>
+							<div style={{ fontSize: 12.5, color: RDS_COLORS.fgMuted, marginBottom: 14, lineHeight: 1.5 }}>
+								{t("settings.account.deleteConfirm")}
+							</div>
+							<div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+								<Btn variant="ghost" onClick={() => setConfirmingDelete(false)} disabled={deleting}>
+									{t("common.cancel")}
+								</Btn>
+								<Btn
+									onClick={handleDeleteAccount}
+									disabled={deleting}
+									style={{
+										background: RDS_COLORS.danger,
+										color: "white",
+										borderColor: RDS_COLORS.danger,
+									}}
+								>
+									{deleting ? t("account.deleting") : t("account.deleteConfirmAction")}
+								</Btn>
+							</div>
+						</div>
+					) : (
+						<div style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 0" }}>
+							<div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+								<div style={{ fontSize: 13, fontWeight: 500 }}>{t("account.deleteAccount")}</div>
+								<div style={{ fontSize: 12, color: RDS_COLORS.fgMuted, marginTop: 2 }}>
+									{t("account.deleteAccountSub")}
+								</div>
+							</div>
+							<Btn
+								onClick={() => setConfirmingDelete(true)}
+								disabled={isPendingDeletion}
+								style={{
+									background: "transparent",
+									color: RDS_COLORS.danger,
+									borderColor: `color-mix(in oklch, ${RDS_COLORS.danger} 40%, ${RDS_COLORS.border})`,
+								}}
+							>
+								{t("common.delete")}
+							</Btn>
+						</div>
+					)}
 				</div>
 			</div>
 		</div>
