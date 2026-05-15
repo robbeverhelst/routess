@@ -5,7 +5,7 @@ import type { AuthenticatedUser } from "../authenticated-user";
 // Inspects the request and returns a human-readable description of the
 // destructive change about to happen, or null when the request is not
 // destructive (e.g. a PATCH that only changes the route name). The
-// description ends up in the 412 PRECONDITION_REQUIRED body so a
+// description ends up in the 428 PRECONDITION_REQUIRED body so a
 // calling agent can surface it to the user verbatim.
 export type ConfirmationCheck = (request: Request & { user?: AuthenticatedUser }) => string | null;
 

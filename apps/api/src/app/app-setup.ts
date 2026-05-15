@@ -105,7 +105,7 @@ export function createOpenApiDocument(app: INestApplication, config: AppConfig =
 					scheme: "bearer",
 					bearerFormat: "routess_pat_<random>",
 					description:
-						"Personal access token for non-browser clients. Mint at Settings → API Tokens. Carries one of two scopes: `read` (list/get Routes, export GPX, profile) or `write` (`read` plus metadata-only mutations on owned routes and on preferences). Blocked from /admin/* and from DELETE /users/me. Destructive operations require `X-Routess-Confirm: true` and return 412 PRECONDITION_REQUIRED otherwise. See ADR-0022 and ADR-0023.",
+						"Personal access token for non-browser clients. Mint at Settings → API Tokens. Carries one of two scopes: `read` (list/get Routes, export GPX, profile) or `write` (`read` plus metadata-only mutations on owned routes and on preferences). Blocked from /admin/* and from DELETE /users/me. Destructive operations require `X-Routess-Confirm: true` and return 428 PRECONDITION_REQUIRED otherwise. See ADR-0022 and ADR-0023.",
 					in: "header",
 				},
 				"PAT-auth",
