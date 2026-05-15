@@ -100,7 +100,7 @@ function AdminRouteDetailPage() {
 
 			<div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 8 }}>
 				{data.activity && <Badge variant="default">{data.activity}</Badge>}
-				<Badge variant={data.privacy === "public" ? "accent" : "default"}>{data.privacy}</Badge>
+				<Badge variant={data.visibility === "public" ? "accent" : "default"}>{data.visibility}</Badge>
 				{data.tags.map((tag) => (
 					<Badge key={tag} variant="default">
 						#{tag}

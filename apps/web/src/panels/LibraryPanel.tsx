@@ -44,6 +44,15 @@ const TAG_LABEL_KEY: Record<RedesignActivity, string> = {
 	walk: "sport.short.walk",
 };
 
+const VISIBILITY_ICON: Record<
+	"private" | "unlisted" | "public",
+	{ icon: "lock" | "share" | "globe"; titleKey: string }
+> = {
+	private: { icon: "lock", titleKey: "library.visibility.private" },
+	unlisted: { icon: "share", titleKey: "library.visibility.unlisted" },
+	public: { icon: "globe", titleKey: "library.visibility.public" },
+};
+
 // Default-data: until backend tracks activity type per route, derive a stable
 // pseudo-type from the route id so each row gets a coloured tag without churn.
 function getActivityType(route: ApiRoute): RedesignActivity {
@@ -267,6 +276,21 @@ function RouteCard({
 					<Badge variant={TAG_BADGE_VARIANT[tag]} dot style={{ flexShrink: 0 }}>
 						{t(TAG_LABEL_KEY[tag])}
 					</Badge>
+					{(() => {
+						const v = route.visibility ?? "private";
+						const meta = VISIBILITY_ICON[v];
+						const Icon = I[meta.icon];
+						return (
+							<span
+								title={t(meta.titleKey)}
+								role="img"
+								aria-label={t(meta.titleKey)}
+								style={{ display: "inline-flex", flexShrink: 0, color: RDS_COLORS.fgSubtle }}
+							>
+								<Icon size={11} />
+							</span>
+						);
+					})()}
 					<span>{dist}</span>
 					<span style={{ opacity: 0.5 }}>·</span>
 					<span>

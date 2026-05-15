@@ -222,7 +222,7 @@ export class AdminService {
 
 		const offset = (page - 1) * pageSize;
 		const rows = (await this.em.getConnection().execute(
-			`select r."id", r."name", r."activity", r."privacy",
+			`select r."id", r."name", r."activity", r."visibility",
 			        r."distance", r."duration", r."elevation_gain" as "elevationGain",
 			        r."created_at" as "createdAt",
 			        u."id" as "ownerId", u."email" as "ownerEmail", u."name" as "ownerName"
@@ -236,7 +236,7 @@ export class AdminService {
 			id: number;
 			name: string;
 			activity: string | null;
-			privacy: string;
+			visibility: string;
 			distance: number | string | null;
 			duration: number | string | null;
 			elevationGain: number | string | null;
@@ -250,7 +250,7 @@ export class AdminService {
 			id: row.id,
 			name: row.name,
 			activity: row.activity,
-			privacy: row.privacy,
+			visibility: row.visibility,
 			distance: row.distance == null ? null : Number(row.distance),
 			duration: row.duration == null ? null : Number(row.duration),
 			elevationGain: row.elevationGain == null ? null : Number(row.elevationGain),
@@ -269,7 +269,7 @@ export class AdminService {
 			id: route.id,
 			name: route.name,
 			activity: route.activity ?? null,
-			privacy: route.privacy,
+			visibility: route.visibility,
 			distance: route.distance ?? null,
 			duration: route.duration ?? null,
 			elevationGain: route.elevationGain ?? null,

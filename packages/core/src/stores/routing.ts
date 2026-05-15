@@ -9,7 +9,7 @@ import {
 	redoStep,
 	undoStep,
 } from "../history";
-import type { Coordinate, Logger, RouteActivity, RoutePrivacy, Waypoint, WaypointType } from "../types";
+import type { Coordinate, Logger, RouteActivity, RouteVisibility, Waypoint, WaypointType } from "../types";
 
 // ===== STATE & ACTIONS =====
 
@@ -29,7 +29,7 @@ export interface RouteMetrics {
 export interface RouteBaseline {
 	name: string;
 	activity: RouteActivity | undefined;
-	privacy: RoutePrivacy;
+	visibility: RouteVisibility;
 	tags: string[];
 	description: string | undefined;
 	waypoints: Waypoint[];

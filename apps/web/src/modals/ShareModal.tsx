@@ -1,4 +1,3 @@
-import { haversineDistance, type Waypoint } from "@routess/core";
 import { type CSSProperties, type ReactNode, useEffect, useMemo, useState } from "react";
 import { trackEvent } from "@/lib/analytics/track";
 import { emitAppEvent } from "@/lib/app-events";
@@ -19,40 +18,12 @@ import { useToastStore } from "@/stores/toastStore";
 import { useUiStore } from "@/stores/uiStore";
 import { FacebookBrand, I, WhatsAppBrand, XBrand } from "../components/icons";
 import { ModalShell } from "../components/ModalShell";
-import { Btn, RDS_COLORS, SecTitle, Toggle } from "../components/primitives";
+import { Btn, RDS_COLORS, SecTitle } from "../components/primitives";
 
-const PRIVACY_KM = 1;
 const PREVIEW_WIDTH = 480;
 const PREVIEW_HEIGHT = 168;
 
 type Coordinate = [number, number];
-
-function trimPrivacyEdges(waypoints: Waypoint[]): Waypoint[] {
-	if (waypoints.length < 4) return waypoints;
-
-	let startIdx = 0;
-	let cum = 0;
-	for (let i = 1; i < waypoints.length; i++) {
-		cum += haversineDistance(waypoints[i - 1].coord, waypoints[i].coord);
-		if (cum > PRIVACY_KM) {
-			startIdx = i;
-			break;
-		}
-	}
-
-	let endIdx = waypoints.length - 1;
-	cum = 0;
-	for (let i = waypoints.length - 1; i > 0; i--) {
-		cum += haversineDistance(waypoints[i].coord, waypoints[i - 1].coord);
-		if (cum > PRIVACY_KM) {
-			endIdx = i - 1;
-			break;
-		}
-	}
-
-	if (endIdx - startIdx < 1) return waypoints;
-	return waypoints.slice(startIdx, endIdx + 1);
-}
 
 interface TargetTileProps {
 	label: string;
@@ -116,8 +87,6 @@ export function ShareModal() {
 	const duration = useRouteDuration();
 	const pushToast = useToastStore((s) => s.push);
 
-	const hideEdges = useRedesignSettingsStore((s) => s.hidePrivacy);
-	const setHideEdges = useRedesignSettingsStore((s) => s.setHidePrivacy);
 	const mapStyle = useRedesignSettingsStore((s) => s.mapStyle);
 	const [copied, setCopied] = useState(false);
 	const [canNativeShare, setCanNativeShare] = useState(false);
@@ -128,21 +97,19 @@ export function ShareModal() {
 
 	const url = useMemo(() => {
 		try {
-			const wps = hideEdges ? trimPrivacyEdges(waypoints) : waypoints;
-			const encoded = serializeAndCompress(wps, isMapLocked);
+			const encoded = serializeAndCompress(waypoints, isMapLocked);
 			if (!encoded) return window.location.origin;
 			return `${window.location.origin}?route=${encoded}`;
 		} catch {
 			return window.location.origin;
 		}
-	}, [waypoints, isMapLocked, hideEdges]);
+	}, [waypoints, isMapLocked]);
 
 	const hasRoute = waypoints.length > 0;
 	const previewPoints = useMemo<Coordinate[]>(() => {
 		if (routePath.length >= 2) return routePath as Coordinate[];
-		const previewWaypoints = hideEdges ? trimPrivacyEdges(waypoints) : waypoints;
-		return previewWaypoints.map((waypoint) => waypoint.coord as Coordinate);
-	}, [routePath, waypoints, hideEdges]);
+		return waypoints.map((waypoint) => waypoint.coord as Coordinate);
+	}, [routePath, waypoints]);
 	const staticMapUrl = useMemo(
 		() => buildMapboxStaticPreviewUrl(previewPoints, { width: PREVIEW_WIDTH, height: PREVIEW_HEIGHT, mapStyle }),
 		[previewPoints, mapStyle],
@@ -444,25 +411,6 @@ export function ShareModal() {
 							disabled={!hasRoute}
 						/>
 					</div>
-				</div>
-
-				<div
-					style={{
-						display: "flex",
-						alignItems: "center",
-						gap: 12,
-						background: RDS_COLORS.bgInput,
-						border: `1px solid ${RDS_COLORS.border}`,
-						borderRadius: 8,
-						padding: 12,
-					}}
-				>
-					<I.lock size={14} />
-					<div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
-						<div style={{ fontSize: 12.5, fontWeight: 500 }}>{t("share.hidePrivacy")}</div>
-						<div style={{ fontSize: 11, color: RDS_COLORS.fgSubtle, marginTop: 2 }}>{t("share.hidePrivacyHint")}</div>
-					</div>
-					<Toggle on={hideEdges} onChange={setHideEdges} />
 				</div>
 			</div>
 		</ModalShell>

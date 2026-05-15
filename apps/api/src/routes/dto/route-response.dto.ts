@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { ROUTE_ACTIVITIES, ROUTE_PRIVACIES, type RouteActivity, type RoutePrivacy } from "@routess/core";
+import { ROUTE_ACTIVITIES, ROUTE_VISIBILITIES, type RouteActivity, type RouteVisibility } from "@routess/core";
 import { UserResponseDto } from "../../users/dto/user-response.dto";
 
 class WaypointResponseDto {
@@ -38,8 +38,8 @@ export class RouteResponseDto {
 	@ApiPropertyOptional({ enum: ROUTE_ACTIVITIES })
 	activity?: RouteActivity;
 
-	@ApiProperty({ enum: ROUTE_PRIVACIES })
-	privacy!: RoutePrivacy;
+	@ApiProperty({ enum: ROUTE_VISIBILITIES })
+	visibility!: RouteVisibility;
 
 	@ApiProperty({ type: [String] })
 	tags!: string[];

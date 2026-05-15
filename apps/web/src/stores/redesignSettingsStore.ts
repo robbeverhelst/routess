@@ -1,3 +1,4 @@
+import type { RouteVisibility } from "@routess/core";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { RedesignActivity } from "./uiStore";
@@ -11,19 +12,20 @@ export type MapOverlays = Record<OverlayKey, boolean>;
 
 export type SportSpeeds = Partial<Record<RedesignActivity, number>>;
 
+// Synced with the server-side UserPreferences. locationPermission is
+// intentionally NOT in here: it's a per-device browser permission, not a
+// preference, so it lives only in the local store below.
 export interface RedesignSettingsSnapshot {
 	units: RedesignUnits;
 	showPois: boolean;
 	terrain3d: boolean;
 	autoSnap: boolean;
-	publicProfile: boolean;
-	hidePrivacy: boolean;
 	defaultActivity: string;
 	selectedSports: RedesignActivity[];
 	sportSpeeds: SportSpeeds;
 	mapStyle: RedesignMapStyle;
 	overlays: MapOverlays;
-	locationPermission: LocationPermission;
+	defaultRouteVisibility: RouteVisibility;
 }
 
 export const DEFAULT_SPORT_SPEEDS_KMH: Record<RedesignActivity, number> = {
@@ -66,27 +68,25 @@ interface SettingsState {
 	showPois: boolean;
 	terrain3d: boolean;
 	autoSnap: boolean;
-	publicProfile: boolean;
-	hidePrivacy: boolean;
 	defaultActivity: string;
 	selectedSports: RedesignActivity[];
 	sportSpeeds: SportSpeeds;
 	mapStyle: RedesignMapStyle;
 	overlays: MapOverlays;
+	defaultRouteVisibility: RouteVisibility;
 	locationPermission: LocationPermission;
 
 	setUnits: (units: RedesignUnits) => void;
 	setShowPois: (showPois: boolean) => void;
 	setTerrain3d: (terrain3d: boolean) => void;
 	setAutoSnap: (autoSnap: boolean) => void;
-	setPublicProfile: (publicProfile: boolean) => void;
-	setHidePrivacy: (hidePrivacy: boolean) => void;
 	setDefaultActivity: (defaultActivity: string) => void;
 	setSelectedSports: (sports: RedesignActivity[]) => void;
 	toggleSport: (sport: RedesignActivity) => void;
 	setSportSpeed: (sport: RedesignActivity, kmh: number) => void;
 	setMapStyle: (mapStyle: RedesignMapStyle) => void;
 	setOverlay: (key: OverlayKey, value: boolean) => void;
+	setDefaultRouteVisibility: (visibility: RouteVisibility) => void;
 	setLocationPermission: (permission: LocationPermission) => void;
 	replaceAllSettings: (settings: RedesignSettingsSnapshot) => void;
 }
@@ -104,15 +104,15 @@ export const DEFAULT_REDESIGN_SETTINGS: RedesignSettingsSnapshot = {
 	showPois: true,
 	terrain3d: false,
 	autoSnap: true,
-	publicProfile: false,
-	hidePrivacy: true,
 	defaultActivity: "Cycling",
 	selectedSports: [],
 	sportSpeeds: {},
 	mapStyle: "outdoors",
 	overlays: DEFAULT_OVERLAYS,
-	locationPermission: "unknown",
+	defaultRouteVisibility: "private",
 };
+
+const DEFAULT_LOCATION_PERMISSION: LocationPermission = "unknown";
 
 function isActivity(value: unknown): value is RedesignActivity {
 	return value === "run" || value === "cycle" || value === "walk";
@@ -128,6 +128,10 @@ function isUnits(value: unknown): value is RedesignUnits {
 
 function isLocationPermission(value: unknown): value is LocationPermission {
 	return value === "unknown" || value === "granted" || value === "denied" || value === "skipped";
+}
+
+function isRouteVisibility(value: unknown): value is RouteVisibility {
+	return value === "private" || value === "unlisted" || value === "public";
 }
 
 function isFinitePositiveNumber(value: unknown): value is number {
@@ -154,9 +158,6 @@ export function normalizeRedesignSettings(input?: Partial<RedesignSettingsSnapsh
 		showPois: typeof input?.showPois === "boolean" ? input.showPois : DEFAULT_REDESIGN_SETTINGS.showPois,
 		terrain3d: typeof input?.terrain3d === "boolean" ? input.terrain3d : DEFAULT_REDESIGN_SETTINGS.terrain3d,
 		autoSnap: typeof input?.autoSnap === "boolean" ? input.autoSnap : DEFAULT_REDESIGN_SETTINGS.autoSnap,
-		publicProfile:
-			typeof input?.publicProfile === "boolean" ? input.publicProfile : DEFAULT_REDESIGN_SETTINGS.publicProfile,
-		hidePrivacy: typeof input?.hidePrivacy === "boolean" ? input.hidePrivacy : DEFAULT_REDESIGN_SETTINGS.hidePrivacy,
 		defaultActivity:
 			typeof input?.defaultActivity === "string" ? input.defaultActivity : DEFAULT_REDESIGN_SETTINGS.defaultActivity,
 		selectedSports,
@@ -172,9 +173,9 @@ export function normalizeRedesignSettings(input?: Partial<RedesignSettingsSnapsh
 				typeof rawOverlays.surface === "boolean" ? rawOverlays.surface : DEFAULT_REDESIGN_SETTINGS.overlays.surface,
 			wind: typeof rawOverlays.wind === "boolean" ? rawOverlays.wind : DEFAULT_REDESIGN_SETTINGS.overlays.wind,
 		},
-		locationPermission: isLocationPermission(input?.locationPermission)
-			? input.locationPermission
-			: DEFAULT_REDESIGN_SETTINGS.locationPermission,
+		defaultRouteVisibility: isRouteVisibility(input?.defaultRouteVisibility)
+			? input.defaultRouteVisibility
+			: DEFAULT_REDESIGN_SETTINGS.defaultRouteVisibility,
 	};
 }
 
@@ -185,14 +186,12 @@ export function getRedesignSettingsSnapshot(
 		| "showPois"
 		| "terrain3d"
 		| "autoSnap"
-		| "publicProfile"
-		| "hidePrivacy"
 		| "defaultActivity"
 		| "selectedSports"
 		| "sportSpeeds"
 		| "mapStyle"
 		| "overlays"
-		| "locationPermission"
+		| "defaultRouteVisibility"
 	>,
 ): RedesignSettingsSnapshot {
 	return {
@@ -200,14 +199,12 @@ export function getRedesignSettingsSnapshot(
 		showPois: state.showPois,
 		terrain3d: state.terrain3d,
 		autoSnap: state.autoSnap,
-		publicProfile: state.publicProfile,
-		hidePrivacy: state.hidePrivacy,
 		defaultActivity: state.defaultActivity,
 		selectedSports: [...state.selectedSports],
 		sportSpeeds: { ...state.sportSpeeds },
 		mapStyle: state.mapStyle,
 		overlays: { ...state.overlays },
-		locationPermission: state.locationPermission,
+		defaultRouteVisibility: state.defaultRouteVisibility,
 	};
 }
 
@@ -215,13 +212,12 @@ export const useRedesignSettingsStore = create<SettingsState>()(
 	persist(
 		(set) => ({
 			...DEFAULT_REDESIGN_SETTINGS,
+			locationPermission: DEFAULT_LOCATION_PERMISSION,
 
 			setUnits: (units) => set({ units }),
 			setShowPois: (showPois) => set({ showPois }),
 			setTerrain3d: (terrain3d) => set({ terrain3d }),
 			setAutoSnap: (autoSnap) => set({ autoSnap }),
-			setPublicProfile: (publicProfile) => set({ publicProfile }),
-			setHidePrivacy: (hidePrivacy) => set({ hidePrivacy }),
 			setDefaultActivity: (defaultActivity) => set({ defaultActivity }),
 			setSelectedSports: (selectedSports) => set({ selectedSports }),
 			toggleSport: (sport) =>
@@ -241,14 +237,18 @@ export const useRedesignSettingsStore = create<SettingsState>()(
 				set((state) => ({
 					overlays: { ...state.overlays, [key]: value },
 				})),
+			setDefaultRouteVisibility: (visibility) => set({ defaultRouteVisibility: visibility }),
 			setLocationPermission: (locationPermission) => set({ locationPermission }),
-			replaceAllSettings: (settings) => set(normalizeRedesignSettings(settings)),
+			replaceAllSettings: (settings) =>
+				set((state) => ({ ...normalizeRedesignSettings(settings), locationPermission: state.locationPermission })),
 		}),
 		{
 			name: "routess.redesign.settings",
-			version: 6,
+			version: 7,
 			migrate: (persisted, version) => {
-				const state = persisted as Partial<RedesignSettingsSnapshot> | null;
+				const state = persisted as
+					| (Partial<RedesignSettingsSnapshot> & { locationPermission?: LocationPermission })
+					| null;
 				if (state && version < 4) {
 					const stale = state.mapStyle as string | undefined;
 					if (stale === "dark" || stale === "minimal" || stale === "terrain") {
@@ -258,7 +258,10 @@ export const useRedesignSettingsStore = create<SettingsState>()(
 				if (state && version < 5 && state.locationPermission === undefined) {
 					state.locationPermission = "unknown";
 				}
-				return normalizeRedesignSettings(state);
+				const locationPermission = isLocationPermission(state?.locationPermission)
+					? state.locationPermission
+					: DEFAULT_LOCATION_PERMISSION;
+				return { ...normalizeRedesignSettings(state), locationPermission };
 			},
 		},
 	),

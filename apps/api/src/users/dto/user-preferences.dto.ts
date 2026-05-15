@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { ACTIVITIES, LOCATION_PERMISSIONS, MAP_STYLES, UNITS } from "@routess/core";
+import { ACTIVITIES, MAP_STYLES, ROUTE_VISIBILITIES, UNITS } from "@routess/core";
 import { Type } from "class-transformer";
 import {
 	ArrayUnique,
@@ -96,14 +96,6 @@ export class UserPreferencesDto {
 	@IsBoolean()
 	autoSnap!: boolean;
 
-	@ApiProperty({ example: false })
-	@IsBoolean()
-	publicProfile!: boolean;
-
-	@ApiProperty({ example: true })
-	@IsBoolean()
-	hidePrivacy!: boolean;
-
 	@ApiProperty({ example: "Cycling" })
 	@IsString()
 	defaultActivity!: string;
@@ -132,9 +124,9 @@ export class UserPreferencesDto {
 	@Type(() => UserPreferenceOverlaysDto)
 	overlays!: UserPreferenceOverlaysDto;
 
-	@ApiProperty({ enum: LOCATION_PERMISSIONS, example: "unknown" })
-	@IsIn(LOCATION_PERMISSIONS)
-	locationPermission!: (typeof LOCATION_PERMISSIONS)[number];
+	@ApiProperty({ enum: ROUTE_VISIBILITIES, example: "private" })
+	@IsIn(ROUTE_VISIBILITIES)
+	defaultRouteVisibility!: (typeof ROUTE_VISIBILITIES)[number];
 }
 
 export class UpdateUserPreferencesDto {
@@ -157,16 +149,6 @@ export class UpdateUserPreferencesDto {
 	@IsOptional()
 	@IsBoolean()
 	autoSnap?: boolean;
-
-	@ApiPropertyOptional({ example: false })
-	@IsOptional()
-	@IsBoolean()
-	publicProfile?: boolean;
-
-	@ApiPropertyOptional({ example: true })
-	@IsOptional()
-	@IsBoolean()
-	hidePrivacy?: boolean;
 
 	@ApiPropertyOptional({ example: "Cycling" })
 	@IsOptional()
@@ -201,8 +183,8 @@ export class UpdateUserPreferencesDto {
 	@Type(() => UpdateUserPreferenceOverlaysDto)
 	overlays?: UpdateUserPreferenceOverlaysDto;
 
-	@ApiPropertyOptional({ enum: LOCATION_PERMISSIONS, example: "unknown" })
+	@ApiPropertyOptional({ enum: ROUTE_VISIBILITIES, example: "private" })
 	@IsOptional()
-	@IsIn(LOCATION_PERMISSIONS)
-	locationPermission?: (typeof LOCATION_PERMISSIONS)[number];
+	@IsIn(ROUTE_VISIBILITIES)
+	defaultRouteVisibility?: (typeof ROUTE_VISIBILITIES)[number];
 }

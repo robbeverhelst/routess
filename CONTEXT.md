@@ -39,6 +39,14 @@ _Avoid_: surface, surface kind.
 **LoopDirection**:
 For loop routes, either `clockwise` or `counter-clockwise`.
 
+**RouteVisibility**:
+Who can view a Route. One of `private`, `unlisted`, or `public`.
+- `private`: owner-only; non-owners get 404.
+- `unlisted`: viewable by anyone with the URL; never appears in listings, search, or feeds; not indexable.
+- `public`: viewable by anyone with the URL _and_ eligible for future discovery surfaces (listings, search, feeds).
+The URL is the capability: changing visibility takes immediate effect for everyone, there is no separable share-token to rotate.
+_Avoid_: privacy, sharing, share level, access level.
+
 ## Metrics
 
 **Distance**:
@@ -83,6 +91,14 @@ _Avoid_: account, profile (no separate Profile entity exists in the domain).
 A User with `role = 'admin'`, authorised to view aggregate user/route data and perform destructive actions (revoke session, soft-delete user) via the admin API. Admin status is reconciled from the `ADMIN_EMAILS` env var on every login; the env var is the source of truth, the DB column is a cache.
 _Avoid_: superuser, staff, operator, root.
 
+**UserAuthMethod**:
+A way a User can prove their identity. A User has one or more, each with a `provider` (`google` or `email`) and provider-specific data. Email is the identity key across providers; signing up with an email already in use is rejected. Adding a password to a Google-authenticated User happens from settings while signed in (OAuth already proves email control); fresh email+password signups require email verification before the password becomes active.
+_Avoid_: credential, login, identity provider link.
+
+**Session**:
+An authenticated User's active login on a specific device, identified by a JWT `jti` and tracked server-side with `userAgent`, `ipAddress`, `lastActivity`, and `expiresAt`. A User can hold multiple Sessions across devices and list/revoke them from settings. Password reset and self-initiated account deletion revoke all Sessions; "logout everywhere" revokes all including the current one.
+_Avoid_: token, login, device.
+
 ## Relationships
 
 - A **Route** has one or more **Waypoints** in an ordered list.
@@ -90,6 +106,7 @@ _Avoid_: superuser, staff, operator, root.
 - A **Route** has exactly one **RoutePath**, computed from its **Waypoints** and their **Types**.
 - A **Route** has computed **Distance**, **Duration**, and **ElevationGain** metrics derived from its **RoutePath**.
 - A **RouteGeneration** produces a **Route** from **RouteType** + **SurfaceType** + **LoopDirection** + target distance, without manual Waypoint placement.
+- A **Route** has exactly one **RouteVisibility** (`private` | `unlisted` | `public`), defaulting from the owning User's preference.
 - A **User** owns zero or more **Routes**, accessed through their **RouteLibrary**.
 - A **RouteDraft** is an in-progress **Route** held in `routingStore`. Its mode is either `unsaved` (will become a new Route on save) or `editing(routeId)` (bound to a saved Route, will PATCH it on save).
 - An **Admin** is a **User** with elevated access; admin status is derived from the `ADMIN_EMAILS` env var at login time, not granted in-app.

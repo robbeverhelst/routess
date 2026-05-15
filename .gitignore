@@ -40,3 +40,6 @@ coverage/
 
 # Conductor workspace scratch
 .context
+
+# TanStack Router dev cache (regenerated per run)
+apps/web/.tanstack/

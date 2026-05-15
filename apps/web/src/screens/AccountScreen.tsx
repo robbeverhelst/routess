@@ -1,83 +1,288 @@
-import { useMemo, useState } from "react";
-import { useAuthStatus } from "@/lib/api-queries";
-import { type SupportedLanguage, t } from "@/lib/i18n";
+import { useQueryClient } from "@tanstack/react-query";
+import { type ReactNode, useEffect, useRef, useState } from "react";
+import { apiService } from "@/lib/api";
+import { useAuthStatus, useLogout } from "@/lib/api-queries";
+import { emitAppEvent } from "@/lib/app-events";
+import { storeUser } from "@/lib/auth-state";
+import { t } from "@/lib/i18n";
+import { Logger } from "@/lib/logger";
+import { queryKeys } from "@/lib/query-client";
 import { useToastStore } from "@/stores/toastStore";
-import { useUiStore } from "@/stores/uiStore";
 import { Btn, RDS_COLORS, SecTitle } from "../components/primitives";
 
-interface Field {
-	labelKey: string;
-	value: string;
-	editable?: boolean;
-	managedKey?: string;
+const dash = "—";
+
+async function resizeImageToDataUrl(file: File, maxDimension: number): Promise<string> {
+	const dataUrl = await new Promise<string>((resolve, reject) => {
+		const reader = new FileReader();
+		reader.onload = () => resolve(reader.result as string);
+		reader.onerror = () => reject(reader.error ?? new Error("read failed"));
+		reader.readAsDataURL(file);
+	});
+	const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+		const image = new Image();
+		image.onload = () => resolve(image);
+		image.onerror = () => reject(new Error("image decode failed"));
+		image.src = dataUrl;
+	});
+	const ratio = Math.min(maxDimension / img.width, maxDimension / img.height, 1);
+	const w = Math.round(img.width * ratio);
+	const h = Math.round(img.height * ratio);
+	const canvas = document.createElement("canvas");
+	canvas.width = w;
+	canvas.height = h;
+	const ctx = canvas.getContext("2d");
+	if (!ctx) throw new Error("canvas 2d not available");
+	ctx.drawImage(img, 0, 0, w, h);
+	return canvas.toDataURL("image/jpeg", 0.85);
 }
 
-function buildFields(_language: SupportedLanguage, name: string | null, email: string | null): Field[] {
-	const dash = t("account.dash");
-	const username = email?.split("@")[0] ?? t("account.guest");
-	return [
-		{ labelKey: "account.field.name", value: name ?? dash, managedKey: "account.managedByGoogle" },
-		{ labelKey: "account.field.email", value: email ?? dash, managedKey: "account.managedByGoogle" },
-		{ labelKey: "account.field.username", value: username, editable: true },
-		{
-			labelKey: "account.field.password",
-			value: t("account.passwordManaged"),
-			managedKey: "account.managedByGoogle",
-		},
-		{
-			labelKey: "account.field.twofactor",
-			value: t("account.passwordManaged"),
-			managedKey: "account.managedByGoogle",
-		},
-		{ labelKey: "account.field.connected", value: t("account.connectedNone"), editable: true },
-	];
+function initialsFromName(name: string | null | undefined, email: string | null | undefined): string {
+	const source = (name?.trim() || email?.split("@")[0] || "").trim();
+	if (!source) return "?";
+	const parts = source.split(/\s+/).slice(0, 2);
+	return parts.map((p) => p[0]?.toUpperCase() ?? "").join("") || source[0]?.toUpperCase() || "?";
+}
+
+function Card({ title, children }: { title: string; children: ReactNode }) {
+	return (
+		<div
+			style={{
+				marginTop: 20,
+				padding: 20,
+				background: RDS_COLORS.bgPanel,
+				border: `1px solid ${RDS_COLORS.border}`,
+				borderRadius: 12,
+			}}
+		>
+			<SecTitle style={{ marginBottom: 14 }}>{title}</SecTitle>
+			{children}
+		</div>
+	);
+}
+
+function Row({ label, children, last }: { label: string; children: ReactNode; last?: boolean }) {
+	return (
+		<div
+			style={{
+				display: "flex",
+				alignItems: "center",
+				gap: 12,
+				padding: "10px 0",
+				borderBottom: last ? "none" : `1px solid ${RDS_COLORS.border}`,
+			}}
+		>
+			<div style={{ fontSize: 13, color: RDS_COLORS.fgMuted, width: 110 }}>{label}</div>
+			<div style={{ flex: 1, display: "flex", alignItems: "center", gap: 8 }}>{children}</div>
+		</div>
+	);
 }
 
 export function AccountScreen() {
 	const { data: auth } = useAuthStatus();
 	const user = auth?.user ?? null;
 	const pushToast = useToastStore((s) => s.push);
-	const language = useUiStore((s) => s.language);
+	const queryClient = useQueryClient();
 
-	const initialFields = useMemo<Field[]>(
-		() => buildFields(language, user?.name ?? null, user?.email ?? null),
-		[language, user?.name, user?.email],
-	);
+	const [name, setName] = useState(user?.name ?? "");
+	const [editingName, setEditingName] = useState(false);
+	const [savingName, setSavingName] = useState(false);
+	const [avatarUploading, setAvatarUploading] = useState(false);
+	const [deleting, setDeleting] = useState(false);
+	const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-	const [fields, setFields] = useState<Field[]>(initialFields);
+	const [editingPassword, setEditingPassword] = useState(false);
+	const [currentPassword, setCurrentPassword] = useState("");
+	const [newPassword, setNewPassword] = useState("");
+	const [confirmPassword, setConfirmPassword] = useState("");
+	const [savingPassword, setSavingPassword] = useState(false);
+	const [passwordError, setPasswordError] = useState<string | null>(null);
 
-	if (fields.length > 0 && fields[0]?.value !== initialFields[0]?.value) {
-		setFields(initialFields);
-	}
+	const [confirmingDelete, setConfirmingDelete] = useState(false);
 
-	const handleEdit = (index: number) => {
-		const field = fields[index];
-		if (!field) return;
-		const label = t(field.labelKey);
-		if (!field.editable) {
-			pushToast({
-				kind: "info",
-				title: t("account.readonly", { label }),
-				body: field.managedKey ? t("account.readonlySub", { managed: t(field.managedKey) }) : undefined,
-			});
+	const lastSyncedNameRef = useRef<string | null>(null);
+	useEffect(() => {
+		if (user?.name && user.name !== lastSyncedNameRef.current && !editingName) {
+			lastSyncedNameRef.current = user.name;
+			setName(user.name);
+		}
+	}, [user?.name, editingName]);
+
+	const refreshUser = async () => {
+		await queryClient.invalidateQueries({ queryKey: queryKeys.auth.session() });
+		await queryClient.invalidateQueries({ queryKey: queryKeys.user.profile() });
+	};
+
+	const handleSaveName = async () => {
+		const trimmed = name.trim();
+		if (!trimmed || trimmed === user?.name) {
+			setEditingName(false);
+			setName(user?.name ?? "");
 			return;
 		}
-		const next = window.prompt(t("account.editPrompt", { label }), field.value);
-		if (next == null) return;
-		const trimmed = next.trim();
-		if (!trimmed) return;
-		setFields((prev) => prev.map((f, i) => (i === index ? { ...f, value: trimmed } : f)));
+		setSavingName(true);
+		try {
+			const updated = await apiService.updateCurrentUser({ name: trimmed });
+			storeUser(updated);
+			await refreshUser();
+			pushToast({ kind: "success", title: t("account.nameUpdated") });
+			setEditingName(false);
+		} catch (error) {
+			Logger.error("Update name failed", error);
+			pushToast({ kind: "danger", title: t("account.nameUpdateFailed") });
+		} finally {
+			setSavingName(false);
+		}
 	};
 
-	const handleDeleteAccount = () => {
-		const confirmed = window.confirm(t("account.deleteConfirm"));
-		if (!confirmed) return;
-		pushToast({
-			kind: "info",
-			title: t("account.deleteToast.title"),
-			body: t("account.deleteToast.body"),
+	const handleCancelName = () => {
+		setEditingName(false);
+		setName(user?.name ?? "");
+	};
+
+	const handleAvatarClick = () => fileInputRef.current?.click();
+
+	const handleAvatarFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+		const file = event.target.files?.[0];
+		event.target.value = "";
+		if (!file) return;
+		if (!file.type.startsWith("image/")) {
+			pushToast({ kind: "warn", title: t("settings.profile.avatar.invalidType") });
+			return;
+		}
+		setAvatarUploading(true);
+		try {
+			const dataUrl = await resizeImageToDataUrl(file, 256);
+			const updated = await apiService.updateCurrentUser({ avatar: dataUrl });
+			storeUser(updated);
+			await refreshUser();
+			pushToast({ kind: "success", title: t("settings.profile.avatar.updated") });
+		} catch (error) {
+			Logger.error("Avatar upload failed", error);
+			pushToast({ kind: "danger", title: t("settings.profile.avatar.failed") });
+		} finally {
+			setAvatarUploading(false);
+		}
+	};
+
+	const handleClearAvatar = async () => {
+		setAvatarUploading(true);
+		try {
+			const updated = await apiService.updateCurrentUser({ avatar: "" });
+			storeUser(updated);
+			await refreshUser();
+			pushToast({ kind: "success", title: t("settings.profile.avatar.cleared") });
+		} catch (error) {
+			Logger.error("Avatar clear failed", error);
+			pushToast({ kind: "danger", title: t("settings.profile.avatar.failed") });
+		} finally {
+			setAvatarUploading(false);
+		}
+	};
+
+	const resetPasswordForm = () => {
+		setCurrentPassword("");
+		setNewPassword("");
+		setConfirmPassword("");
+		setPasswordError(null);
+	};
+
+	const handleCancelPassword = () => {
+		setEditingPassword(false);
+		resetPasswordForm();
+	};
+
+	const handleSavePassword = async (event: React.FormEvent<HTMLFormElement>) => {
+		event.preventDefault();
+		setPasswordError(null);
+		if (newPassword.length < 12) {
+			setPasswordError(t("account.password.tooShort"));
+			return;
+		}
+		if (newPassword !== confirmPassword) {
+			setPasswordError(t("account.password.mismatch"));
+			return;
+		}
+		setSavingPassword(true);
+		try {
+			await apiService.setPassword({
+				newPassword,
+				currentPassword: currentPassword || undefined,
+			});
+			pushToast({ kind: "success", title: t("settings.security.passwordUpdated") });
+			setEditingPassword(false);
+			resetPasswordForm();
+		} catch (error) {
+			Logger.error("Set password failed", error);
+			const message = error instanceof Error ? error.message : t("settings.security.passwordFailed");
+			setPasswordError(message);
+		} finally {
+			setSavingPassword(false);
+		}
+	};
+
+	const handleDeleteAccount = async () => {
+		setDeleting(true);
+		try {
+			await apiService.deleteAccount();
+			pushToast({ kind: "success", title: t("settings.account.deleteScheduled") });
+			emitAppEvent("routess:open-login");
+		} catch (error) {
+			Logger.error("Delete account failed", error);
+			pushToast({ kind: "danger", title: t("settings.account.deleteFailed") });
+		} finally {
+			setDeleting(false);
+			setConfirmingDelete(false);
+		}
+	};
+
+	const isPendingDeletion = user?.deletionStatus === "pending_hard_delete";
+
+	const handleCancelDeletion = async () => {
+		try {
+			await apiService.cancelDeletion();
+			await refreshUser();
+			pushToast({ kind: "success", title: t("settings.account.deletionCancelled") });
+		} catch (error) {
+			Logger.error("Cancel deletion failed", error);
+			pushToast({ kind: "danger", title: t("settings.account.deletionCancelFailed") });
+		}
+	};
+
+	const logout = useLogout();
+
+	const handleSignOut = () => {
+		logout.mutate(undefined, {
+			onSuccess: () => {
+				pushToast({ kind: "success", title: t("common.signedOut") });
+				emitAppEvent("routess:open-login");
+			},
 		});
 	};
+
+	const handleLogoutEverywhere = async () => {
+		if (!window.confirm(t("settings.security.logoutEverywhereConfirm"))) return;
+		try {
+			await apiService.logoutEverywhere();
+			pushToast({ kind: "success", title: t("common.signedOut") });
+			emitAppEvent("routess:open-login");
+		} catch (error) {
+			Logger.error("Logout everywhere failed", error);
+			pushToast({ kind: "danger", title: t("settings.security.logoutEverywhereFailed") });
+		}
+	};
+
+	const handleExportData = () => {
+		const url = apiService.exportDataUrl();
+		const a = document.createElement("a");
+		a.href = url;
+		a.download = "";
+		document.body.appendChild(a);
+		a.click();
+		document.body.removeChild(a);
+	};
+
+	const avatarSize = 72;
 
 	return (
 		<div
@@ -94,41 +299,267 @@ export function AccountScreen() {
 					{t("account.heading")}
 				</h1>
 
-				<div
-					style={{
-						marginTop: 24,
-						padding: 20,
-						background: RDS_COLORS.bgPanel,
-						border: `1px solid ${RDS_COLORS.border}`,
-						borderRadius: 12,
-					}}
-				>
-					<SecTitle style={{ marginBottom: 14 }}>{t("account.title")}</SecTitle>
-					{fields.map((f, i) => (
+				{isPendingDeletion && (
+					<div
+						style={{
+							marginTop: 20,
+							padding: 14,
+							borderRadius: 10,
+							background: `color-mix(in oklch, ${RDS_COLORS.warn} 14%, ${RDS_COLORS.bgPanel})`,
+							border: `1px solid color-mix(in oklch, ${RDS_COLORS.warn} 50%, ${RDS_COLORS.border})`,
+							display: "flex",
+							alignItems: "center",
+							gap: 12,
+						}}
+					>
+						<div style={{ flex: 1 }}>
+							<div style={{ fontSize: 13, fontWeight: 600, color: RDS_COLORS.fg }}>
+								{t("settings.account.pendingDeletion")}
+							</div>
+							<div style={{ fontSize: 12, color: RDS_COLORS.fgMuted, marginTop: 2 }}>
+								{t("settings.account.pendingDeletionSub")}
+							</div>
+						</div>
+						<Btn variant="primary" onClick={handleCancelDeletion}>
+							{t("settings.account.cancelDeletion")}
+						</Btn>
+					</div>
+				)}
+
+				<Card title={t("account.title")}>
+					<div style={{ display: "flex", alignItems: "center", gap: 16, padding: "4px 0 16px" }}>
 						<div
-							key={f.labelKey}
 							style={{
+								width: avatarSize,
+								height: avatarSize,
+								borderRadius: 999,
+								background: user?.avatar ? "transparent" : RDS_COLORS.bgInput,
+								border: `1px solid ${RDS_COLORS.border}`,
+								overflow: "hidden",
 								display: "flex",
 								alignItems: "center",
-								gap: 12,
-								padding: "10px 0",
-								borderBottom: i < fields.length - 1 ? `1px solid ${RDS_COLORS.border}` : "none",
+								justifyContent: "center",
+								color: RDS_COLORS.fgMuted,
+								fontSize: 22,
+								fontWeight: 600,
+								flexShrink: 0,
 							}}
 						>
-							<div style={{ fontSize: 13, color: RDS_COLORS.fgMuted, width: 110 }}>{t(f.labelKey)}</div>
-							<div style={{ flex: 1, fontSize: 13 }}>{f.value}</div>
+							{user?.avatar ? (
+								<img src={user.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+							) : (
+								initialsFromName(user?.name, user?.email)
+							)}
+						</div>
+						<div style={{ display: "flex", flexDirection: "column", gap: 6, flex: 1 }}>
+							<input
+								ref={fileInputRef}
+								type="file"
+								accept="image/*"
+								onChange={handleAvatarFile}
+								style={{ display: "none" }}
+							/>
+							<div style={{ display: "flex", gap: 8 }}>
+								<Btn variant="default" onClick={handleAvatarClick} disabled={avatarUploading}>
+									{avatarUploading ? t("account.uploading") : t("settings.profile.avatar.upload")}
+								</Btn>
+								{user?.avatar && (
+									<Btn variant="ghost" onClick={handleClearAvatar} disabled={avatarUploading}>
+										{t("settings.profile.avatar.clear")}
+									</Btn>
+								)}
+							</div>
+							<div style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle }}>{t("settings.profile.avatar.sub")}</div>
+						</div>
+					</div>
+
+					<Row label={t("account.field.name")}>
+						{editingName ? (
+							<>
+								<input
+									value={name}
+									onChange={(e) => setName(e.target.value)}
+									// biome-ignore lint/a11y/noAutofocus: clicking Edit toggles this row into edit mode; focusing the field is the expected affordance
+									autoFocus
+									style={{
+										flex: 1,
+										height: 32,
+										padding: "0 10px",
+										borderRadius: 6,
+										background: RDS_COLORS.bgInput,
+										border: `1px solid ${RDS_COLORS.borderStrong}`,
+										color: RDS_COLORS.fg,
+										fontSize: 13,
+										outline: "none",
+									}}
+								/>
+								<Btn variant="primary" onClick={handleSaveName} disabled={savingName}>
+									{savingName ? t("account.saving") : t("common.save")}
+								</Btn>
+								<Btn variant="ghost" onClick={handleCancelName} disabled={savingName}>
+									{t("common.cancel")}
+								</Btn>
+							</>
+						) : (
+							<>
+								<div style={{ flex: 1, fontSize: 13 }}>{user?.name || dash}</div>
+								<Btn variant="ghost" onClick={() => setEditingName(true)}>
+									{t("common.edit")}
+								</Btn>
+							</>
+						)}
+					</Row>
+
+					<Row label={t("account.field.email")}>
+						<div style={{ flex: 1, fontSize: 13 }}>{user?.email || dash}</div>
+						<span style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle }}>{t("account.emailReadonly")}</span>
+					</Row>
+
+					{editingPassword ? (
+						<div
+							style={{
+								padding: "12px 0",
+								borderTop: `1px solid ${RDS_COLORS.border}`,
+							}}
+						>
+							<div style={{ fontSize: 13, fontWeight: 500, color: RDS_COLORS.fg, marginBottom: 4 }}>
+								{user?.hasPassword ? t("account.password.changeTitle") : t("account.password.setTitle")}
+							</div>
+							<div style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle, marginBottom: 12 }}>
+								{user?.hasPassword ? t("account.password.changeHint") : t("account.password.setHint")}
+							</div>
+							<form onSubmit={handleSavePassword} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+								{user?.hasPassword && (
+									<input
+										type="password"
+										autoComplete="current-password"
+										required
+										placeholder={t("account.password.currentPlaceholder")}
+										value={currentPassword}
+										onChange={(e) => setCurrentPassword(e.target.value)}
+										style={{
+											height: 36,
+											padding: "0 12px",
+											borderRadius: 8,
+											background: RDS_COLORS.bgInput,
+											border: `1px solid ${RDS_COLORS.border}`,
+											color: RDS_COLORS.fg,
+											fontSize: 13,
+											outline: "none",
+										}}
+									/>
+								)}
+								<input
+									type="password"
+									autoComplete="new-password"
+									required
+									minLength={12}
+									placeholder={t("account.password.newPlaceholder")}
+									value={newPassword}
+									onChange={(e) => setNewPassword(e.target.value)}
+									style={{
+										height: 36,
+										padding: "0 12px",
+										borderRadius: 8,
+										background: RDS_COLORS.bgInput,
+										border: `1px solid ${RDS_COLORS.border}`,
+										color: RDS_COLORS.fg,
+										fontSize: 13,
+										outline: "none",
+									}}
+								/>
+								<input
+									type="password"
+									autoComplete="new-password"
+									required
+									minLength={12}
+									placeholder={t("account.password.confirmPlaceholder")}
+									value={confirmPassword}
+									onChange={(e) => setConfirmPassword(e.target.value)}
+									style={{
+										height: 36,
+										padding: "0 12px",
+										borderRadius: 8,
+										background: RDS_COLORS.bgInput,
+										border: `1px solid ${confirmPassword && confirmPassword !== newPassword ? RDS_COLORS.danger : RDS_COLORS.border}`,
+										color: RDS_COLORS.fg,
+										fontSize: 13,
+										outline: "none",
+									}}
+								/>
+								{passwordError && (
+									<div
+										style={{
+											padding: 10,
+											borderRadius: 8,
+											background: `color-mix(in oklch, ${RDS_COLORS.danger} 14%, ${RDS_COLORS.bgPanel})`,
+											color: RDS_COLORS.fg,
+											fontSize: 12.5,
+											lineHeight: 1.5,
+										}}
+									>
+										{passwordError}
+									</div>
+								)}
+								<div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 2 }}>
+									<Btn variant="ghost" type="button" onClick={handleCancelPassword} disabled={savingPassword}>
+										{t("common.cancel")}
+									</Btn>
+									<Btn
+										type="submit"
+										variant="primary"
+										disabled={savingPassword || newPassword.length < 12 || newPassword !== confirmPassword}
+									>
+										{savingPassword ? t("account.saving") : t("common.save")}
+									</Btn>
+								</div>
+							</form>
+						</div>
+					) : (
+						<Row label={t("account.field.password")} last>
+							<div style={{ flex: 1, fontSize: 13, color: RDS_COLORS.fgMuted }}>
+								{user?.hasPassword ? t("account.password.placeholderDisplay") : t("account.password.notSet")}
+							</div>
 							<Btn
 								variant="ghost"
-								style={{ height: 28, padding: "0 10px", fontSize: 12 }}
-								onClick={() => handleEdit(i)}
-								disabled={f.editable}
-								title={f.editable ? t("common.comingSoon") : undefined}
+								onClick={() => {
+									resetPasswordForm();
+									setEditingPassword(true);
+								}}
 							>
-								{f.editable ? t("account.soon") : t("common.edit")}
+								{user?.hasPassword ? t("settings.security.changePasswordAction") : t("account.password.setAction")}
 							</Btn>
+						</Row>
+					)}
+				</Card>
+
+				<Card title={t("account.sessions")}>
+					<Row label={t("account.sessions.thisDevice")}>
+						<div style={{ flex: 1, fontSize: 13, color: RDS_COLORS.fgMuted }}>
+							{t("account.sessions.thisDeviceHint")}
 						</div>
-					))}
-				</div>
+						<Btn variant="ghost" onClick={handleSignOut} disabled={logout.isPending}>
+							{logout.isPending ? t("common.signingOut") : t("common.signOut")}
+						</Btn>
+					</Row>
+					<Row label={t("settings.security.logoutEverywhere")} last>
+						<div style={{ flex: 1, fontSize: 13, color: RDS_COLORS.fgMuted }}>
+							{t("settings.security.logoutEverywhereSub")}
+						</div>
+						<Btn variant="ghost" onClick={handleLogoutEverywhere} style={{ color: RDS_COLORS.danger }}>
+							{t("settings.security.logoutEverywhereAction")}
+						</Btn>
+					</Row>
+				</Card>
+
+				<Card title={t("account.data")}>
+					<Row label={t("settings.account.exportAll")} last>
+						<div style={{ flex: 1, fontSize: 13, color: RDS_COLORS.fgMuted }}>{t("settings.account.exportAllSub")}</div>
+						<Btn variant="ghost" onClick={handleExportData}>
+							{t("account.data.export")}
+						</Btn>
+					</Row>
+				</Card>
 
 				<div
 					style={{
@@ -139,26 +570,59 @@ export function AccountScreen() {
 					}}
 				>
 					<SecTitle style={{ marginBottom: 12, color: RDS_COLORS.danger }}>{t("account.danger")}</SecTitle>
-					<div style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 0" }}>
-						<div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
-							<div style={{ fontSize: 13, fontWeight: 500 }}>{t("account.deleteAccount")}</div>
-							<div style={{ fontSize: 12, color: RDS_COLORS.fgMuted, marginTop: 2 }}>
-								{t("account.deleteAccountSub")}
-							</div>
-						</div>
-						<Btn
-							onClick={handleDeleteAccount}
-							disabled
-							title={t("common.comingSoon")}
+					{confirmingDelete ? (
+						<div
 							style={{
-								background: "transparent",
-								color: RDS_COLORS.danger,
-								borderColor: `color-mix(in oklch, ${RDS_COLORS.danger} 40%, ${RDS_COLORS.border})`,
+								padding: 14,
+								borderRadius: 10,
+								background: `color-mix(in oklch, ${RDS_COLORS.danger} 10%, ${RDS_COLORS.bgPanel})`,
+								border: `1px solid color-mix(in oklch, ${RDS_COLORS.danger} 60%, ${RDS_COLORS.border})`,
 							}}
 						>
-							{t("common.delete")}
-						</Btn>
-					</div>
+							<div style={{ fontSize: 13, fontWeight: 600, color: RDS_COLORS.fg, marginBottom: 6 }}>
+								{t("account.deleteAccount")}
+							</div>
+							<div style={{ fontSize: 12.5, color: RDS_COLORS.fgMuted, marginBottom: 14, lineHeight: 1.5 }}>
+								{t("settings.account.deleteConfirm")}
+							</div>
+							<div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+								<Btn variant="ghost" onClick={() => setConfirmingDelete(false)} disabled={deleting}>
+									{t("common.cancel")}
+								</Btn>
+								<Btn
+									onClick={handleDeleteAccount}
+									disabled={deleting}
+									style={{
+										background: RDS_COLORS.danger,
+										color: "white",
+										borderColor: RDS_COLORS.danger,
+									}}
+								>
+									{deleting ? t("account.deleting") : t("account.deleteConfirmAction")}
+								</Btn>
+							</div>
+						</div>
+					) : (
+						<div style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 0" }}>
+							<div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+								<div style={{ fontSize: 13, fontWeight: 500 }}>{t("account.deleteAccount")}</div>
+								<div style={{ fontSize: 12, color: RDS_COLORS.fgMuted, marginTop: 2 }}>
+									{t("account.deleteAccountSub")}
+								</div>
+							</div>
+							<Btn
+								onClick={() => setConfirmingDelete(true)}
+								disabled={isPendingDeletion}
+								style={{
+									background: "transparent",
+									color: RDS_COLORS.danger,
+									borderColor: `color-mix(in oklch, ${RDS_COLORS.danger} 40%, ${RDS_COLORS.border})`,
+								}}
+							>
+								{t("common.delete")}
+							</Btn>
+						</div>
+					)}
 				</div>
 			</div>
 		</div>

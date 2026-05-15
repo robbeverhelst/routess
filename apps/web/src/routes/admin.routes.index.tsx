@@ -240,7 +240,7 @@ function AdminRoutesPage() {
 									</Td>
 									<Td muted>{route.activity ?? "—"}</Td>
 									<Td>
-										<Badge variant={route.privacy === "public" ? "accent" : "default"}>{route.privacy}</Badge>
+										<Badge variant={route.visibility === "public" ? "accent" : "default"}>{route.visibility}</Badge>
 									</Td>
 									<Td muted align="right">
 										{formatDistance(route.distance)}

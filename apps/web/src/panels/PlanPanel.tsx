@@ -162,7 +162,7 @@ export function PlanPanel() {
 				updates: {
 					name: editingName ?? editingBaseline.name,
 					activity: draftActivity ?? editingBaseline.activity,
-					privacy: editingBaseline.privacy,
+					visibility: editingBaseline.visibility,
 					tags: editingBaseline.tags,
 					waypoints,
 					distance: distanceMeters ?? 0,
@@ -198,7 +198,7 @@ export function PlanPanel() {
 				name: `${baseName} (copy)`,
 				description: editingBaseline.description,
 				activity: draftActivity ?? editingBaseline.activity,
-				privacy: editingBaseline.privacy,
+				visibility: editingBaseline.visibility,
 				tags: editingBaseline.tags,
 				waypoints,
 				distance: distanceMeters ?? 0,

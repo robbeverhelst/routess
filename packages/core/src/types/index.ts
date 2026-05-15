@@ -17,8 +17,8 @@ export interface Waypoint {
 export const ROUTE_ACTIVITIES = ["run", "cycle", "walk"] as const;
 export type RouteActivity = (typeof ROUTE_ACTIVITIES)[number];
 
-export const ROUTE_PRIVACIES = ["private", "link", "public"] as const;
-export type RoutePrivacy = (typeof ROUTE_PRIVACIES)[number];
+export const ROUTE_VISIBILITIES = ["private", "unlisted", "public"] as const;
+export type RouteVisibility = (typeof ROUTE_VISIBILITIES)[number];
 
 // Map style types
 export type MapStyle = "standard" | "satellite";

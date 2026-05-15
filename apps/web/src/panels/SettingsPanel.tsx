@@ -1,3 +1,4 @@
+import type { RouteVisibility } from "@routess/core";
 import { type ReactNode, useEffect, useState } from "react";
 import { useLogout, useUserProfile } from "@/lib/api-queries";
 import { emitAppEvent } from "@/lib/app-events";
@@ -35,6 +36,12 @@ const SPORT_LABEL_KEYS: Record<RedesignActivity, string> = {
 	cycle: "sport.cycle",
 	walk: "sport.walk",
 };
+
+const VISIBILITY_OPTIONS: { key: RouteVisibility; labelKey: string; subKey: string }[] = [
+	{ key: "private", labelKey: "save.visibility.private", subKey: "save.visibility.privateSub" },
+	{ key: "unlisted", labelKey: "save.visibility.unlisted", subKey: "save.visibility.unlistedSub" },
+	{ key: "public", labelKey: "save.visibility.public", subKey: "save.visibility.publicSub" },
+];
 
 function Group({ title, children }: { title: string; children: ReactNode }) {
 	return (
@@ -242,10 +249,6 @@ export function SettingsPanel() {
 		setShowPois,
 		terrain3d,
 		setTerrain3d,
-		publicProfile,
-		setPublicProfile,
-		hidePrivacy,
-		setHidePrivacy,
 		setDefaultActivity,
 		selectedSports,
 		toggleSport,
@@ -253,6 +256,8 @@ export function SettingsPanel() {
 		setSportSpeed,
 		mapStyle,
 		setMapStyle,
+		defaultRouteVisibility,
+		setDefaultRouteVisibility,
 	} = useRedesignSettingsStore();
 	const autoSnap = useRoutingPreferencesStore((s) => s.snap);
 	const setAutoSnap = useRoutingPreferencesStore((s) => s.setSnap);
@@ -287,15 +292,8 @@ export function SettingsPanel() {
 		setDefaultActivity(tIn("en", SPORT_LABEL_KEYS[sport]));
 	};
 
-	const userName = profile?.name ?? t("settings.profile.yourAccount");
-	const userEmail = profile?.email ?? t("settings.profile.signInToSync");
-
 	const handleEditProfile = () => {
 		emitAppEvent("routess:open-account");
-	};
-
-	const handleExportData = () => {
-		emitAppEvent("routess:export-all-data");
 	};
 
 	const handleMapStyleChange = (nextStyle: RedesignMapStyle) => {
@@ -321,15 +319,6 @@ export function SettingsPanel() {
 	return (
 		<div style={{ padding: "20px 20px", overflow: "auto", height: "100%" }}>
 			<Group title={t("settings.profile")}>
-				<Row
-					label={userName}
-					sub={userEmail}
-					control={
-						<Btn variant="ghost" onClick={handleEditProfile}>
-							{t("settings.profile.edit")}
-						</Btn>
-					}
-				/>
 				<div
 					style={{
 						padding: "14px 14px 16px",
@@ -584,39 +573,50 @@ export function SettingsPanel() {
 							{t("settings.privacy.enable")}
 						</Btn>
 					}
+					last
 				/>
+			</Group>
+
+			<Group title={t("settings.routingDefaults")}>
 				<Row
-					label={t("settings.privacy.publicProfile")}
-					sub={t("settings.privacy.publicProfileSub")}
-					control={<Toggle on={publicProfile} onChange={setPublicProfile} disabled />}
-				/>
-				<Row
-					label={t("settings.privacy.hidePrivacy")}
-					sub={t("settings.privacy.hidePrivacySub")}
-					control={<Toggle on={hidePrivacy} onChange={setHidePrivacy} />}
+					label={t("settings.routingDefaults.visibility")}
+					sub={t("settings.routingDefaults.visibilitySub")}
+					control={
+						<select
+							value={defaultRouteVisibility}
+							onChange={(e) => setDefaultRouteVisibility(e.target.value as RouteVisibility)}
+							style={{
+								height: 30,
+								padding: "0 8px",
+								borderRadius: 6,
+								background: RDS_COLORS.bgInput,
+								border: `1px solid ${RDS_COLORS.border}`,
+								color: RDS_COLORS.fg,
+								fontSize: 12.5,
+							}}
+						>
+							{VISIBILITY_OPTIONS.map((opt) => (
+								<option key={opt.key} value={opt.key}>
+									{t(opt.labelKey)}
+								</option>
+							))}
+						</select>
+					}
 					last
 				/>
 			</Group>
 
 			<Group title={t("settings.account")}>
 				<Row
-					label={t("settings.account.exportAll")}
-					control={
-						<Btn variant="ghost" onClick={handleExportData}>
-							<I.download size={14} />
-						</Btn>
-					}
-				/>
-				<Row
-					label={profile ? t("common.signOut") : t("common.signIn")}
+					label={profile ? t("settings.account.manage") : t("settings.account.signInPrompt")}
+					sub={profile ? t("settings.account.manageSub") : t("settings.account.signInSub")}
 					control={
 						<Btn
 							variant={profile ? "ghost" : "primary"}
-							onClick={handleSignOut}
-							disabled={logout.isPending}
-							style={profile ? { color: RDS_COLORS.danger } : undefined}
+							onClick={profile ? handleEditProfile : handleSignOut}
+							disabled={!profile && logout.isPending}
 						>
-							{logout.isPending ? t("common.signingOut") : profile ? t("common.signOut") : t("common.signIn")}
+							{profile ? t("settings.account.open") : t("common.signIn")}
 						</Btn>
 					}
 					last

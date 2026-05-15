@@ -364,23 +364,6 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 		return authRoot(
 			<>
 				<LoginScreen onSuccess={() => setSkippedAuth(true)} />
-				<button
-					type="button"
-					onClick={() => setAuthView("signup")}
-					style={{
-						position: "fixed",
-						bottom: 16,
-						right: 16,
-						background: "transparent",
-						border: 0,
-						color: RDS_COLORS.fgMuted,
-						fontSize: 12,
-						cursor: "pointer",
-						zIndex: 100,
-					}}
-				>
-					{t("appshell.newHere")}
-				</button>
 				<ToastStack />
 			</>,
 		);

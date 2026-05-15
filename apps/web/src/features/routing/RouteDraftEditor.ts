@@ -322,7 +322,7 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 		const baseline: RouteBaseline = {
 			name: route.name,
 			activity: route.activity,
-			privacy: route.privacy,
+			visibility: route.visibility,
 			tags: route.tags,
 			description: route.description,
 			waypoints: route.waypoints.map((wp) => ({ ...wp })),
@@ -359,7 +359,7 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 		const baseline: RouteBaseline = {
 			name: route.name,
 			activity: route.activity,
-			privacy: route.privacy,
+			visibility: route.visibility,
 			tags: route.tags,
 			description: route.description,
 			waypoints: route.waypoints.map((wp) => ({ ...wp })),

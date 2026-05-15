@@ -1,9 +1,8 @@
 import type {
 	Logger,
 	RouteActivity,
-	RoutePrivacy,
+	RouteVisibility,
 	UserPreferenceActivity,
-	UserPreferenceLocationPermission,
 	UserPreferenceMapStyle,
 	UserPreferenceOverlayKey,
 	UserPreferenceOverlays,
@@ -14,14 +13,13 @@ import type {
 } from "@routess/core";
 
 // Re-export for convenience
-export type { Coordinate, RouteActivity, RoutePrivacy, Waypoint, WaypointType } from "@routess/core";
+export type { Coordinate, RouteActivity, RouteVisibility, Waypoint, WaypointType } from "@routess/core";
 
 // API Response Types — aliases of the canonical preference types in @routess/core.
 // Kept as Api* names so callers that already import them keep working.
 export type ApiActivity = UserPreferenceActivity;
 export type ApiUnits = UserPreferenceUnits;
 export type ApiMapStyle = UserPreferenceMapStyle;
-export type ApiLocationPermission = UserPreferenceLocationPermission;
 export type ApiOverlayKey = UserPreferenceOverlayKey;
 
 export type ApiOverlays = UserPreferenceOverlays;
@@ -30,6 +28,8 @@ export type ApiSportSpeeds = UserPreferenceSportSpeeds;
 export type ApiUserPreferences = UserPreferences;
 
 export type ApiUserRole = "user" | "admin";
+
+export type ApiUserDeletionStatus = "active" | "pending_hard_delete";
 
 export interface ApiUser {
 	id: number;
@@ -42,6 +42,12 @@ export interface ApiUser {
 	// Pseudonymous user identifier for ProductEvent tracking. Stable per user,
 	// computed server-side as sha256(salt + user.id). See ADR-0020.
 	idHash: string;
+	deletionStatus: ApiUserDeletionStatus;
+	deletionRequestedAt?: string | null;
+	// True if the user has an email/password credential set up. Drives
+	// password-change UI affordances (hide current-password field for users
+	// who only signed in via Google and never set a password).
+	hasPassword: boolean;
 	statistics?: {
 		totalRoutes: number;
 		totalDistance: number;
@@ -191,7 +197,7 @@ export interface ApiRoute {
 	name: string;
 	description?: string;
 	activity?: RouteActivity;
-	privacy: RoutePrivacy;
+	visibility: RouteVisibility;
 	tags: string[];
 	waypoints: Waypoint[];
 	geometry?: [number, number][];
@@ -209,7 +215,7 @@ export interface CreateRouteRequest {
 	name: string;
 	description?: string;
 	activity?: RouteActivity;
-	privacy?: RoutePrivacy;
+	visibility?: RouteVisibility;
 	tags?: string[];
 	waypoints: Waypoint[];
 	geometry?: [number, number][];
@@ -224,7 +230,7 @@ export interface UpdateRouteRequest {
 	name?: string;
 	description?: string;
 	activity?: RouteActivity;
-	privacy?: RoutePrivacy;
+	visibility?: RouteVisibility;
 	tags?: string[];
 	waypoints?: Waypoint[];
 	geometry?: [number, number][];

@@ -59,6 +59,7 @@
 		"@opentelemetry/sdk-metrics": "^2.0.1",
 		"@opentelemetry/sdk-node": "^0.218.0",
 		"@routess/core": "workspace:*",
+		"argon2": "^0.44.0",
 		"bcryptjs": "^3.0.2",
 		"class-transformer": "^0.5.1",
 		"class-validator": "^0.15.0",
@@ -66,6 +67,7 @@
 		"dotenv": "^17.0.0",
 		"google-auth-library": "^10.1.0",
 		"helmet": "^8.1.0",
+		"jszip": "^3.10.1",
 		"nestjs-pino": "^4.4.0",
 		"passport": "^0.7.0",
 		"passport-jwt": "^4.0.1",
@@ -73,6 +75,7 @@
 		"pino": "^10.0.0",
 		"pino-http": "^11.0.0",
 		"reflect-metadata": "^0.2.2",
+		"resend": "^6.12.3",
 		"rimraf": "^6.0.1",
 		"rxjs": "^7.2.0"
 	},
