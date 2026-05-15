@@ -116,6 +116,13 @@ spec:
                 secretKeyRef:
                   name: {{ include "routess.fullname" . }}-api
                   key: analytics-salt
+            - name: EMAIL_FROM
+              value: {{ .Values.api.env.emailFrom | quote }}
+            - name: RESEND_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "routess.fullname" . }}-api
+                  key: resend-api-key
           securityContext:
             {{- toYaml .Values.api.containerSecurityContext | nindent 12 }}
           resources:

@@ -100,6 +100,8 @@ api:
     dbName: routess
     swaggerEnabled: "true"
     swaggerPath: "/api"
+    # From address for transactional email. Must be a verified Resend sender.
+    emailFrom: "routess <noreply@routess.app>"
   # Email allowlist for admin role. Source of truth for User.role; reconciled at
   # login via AuthService. Empty list disables reconciliation entirely (existing
   # roles are preserved). See ADR-0015.
@@ -114,6 +116,8 @@ api:
     dbUser: ""
     dbPassword: ""
     analyticsSalt: ""
+    # Empty disables Resend; the API falls back to a console transport (dev-only).
+    resendApiKey: ""
   resources:
     requests:
       cpu: 250m
