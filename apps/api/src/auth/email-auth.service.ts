@@ -154,7 +154,7 @@ export class EmailAuthService {
 
 		return {
 			accessToken,
-			user: toUserResponseDto(user, this.config.analytics.salt),
+			user: toUserResponseDto(user, this.config.analytics.salt, true),
 		};
 	}
 
@@ -188,7 +188,7 @@ export class EmailAuthService {
 		this.emitLoginAttempt("success");
 		return {
 			accessToken,
-			user: toUserResponseDto(user, this.config.analytics.salt),
+			user: toUserResponseDto(user, this.config.analytics.salt, true),
 		};
 	}
 
