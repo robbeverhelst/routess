@@ -12,7 +12,6 @@ import {
 	SPORT_SPEED_MIN_KMH,
 	useRedesignSettingsStore,
 } from "@/stores/redesignSettingsStore";
-import { useRoutingPreferencesStore } from "@/stores/routingPreferencesStore";
 import { useToastStore } from "@/stores/toastStore";
 import { type RedesignAccent, type RedesignActivity, useUiStore } from "@/stores/uiStore";
 import { I } from "../components/icons";
@@ -260,8 +259,8 @@ export function SettingsPanel() {
 		defaultRouteVisibility,
 		setDefaultRouteVisibility,
 	} = useRedesignSettingsStore();
-	const autoSnap = useRoutingPreferencesStore((s) => s.snap);
-	const setAutoSnap = useRoutingPreferencesStore((s) => s.setSnap);
+	const autoSnap = useRedesignSettingsStore((s) => s.autoSnap);
+	const setAutoSnap = useRedesignSettingsStore((s) => s.setAutoSnap);
 
 	const defaultSport: RedesignActivity | null =
 		selectedSports.length === 0 ? null : selectedSports.includes(activityType) ? activityType : selectedSports[0];

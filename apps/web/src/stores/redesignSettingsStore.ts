@@ -1,4 +1,11 @@
-import type { RouteVisibility } from "@routess/core";
+import {
+	mergeRoutingDefaults,
+	normalizeRoutingDefaults,
+	normalizeRoutingPreferences,
+	type RouteVisibility,
+	type RoutingDefaults,
+	type RoutingPreferences,
+} from "@routess/core";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { RedesignActivity } from "./uiStore";
@@ -26,6 +33,7 @@ export interface RedesignSettingsSnapshot {
 	mapStyle: RedesignMapStyle;
 	overlays: MapOverlays;
 	defaultRouteVisibility: RouteVisibility;
+	routingDefaults: RoutingDefaults;
 }
 
 export const DEFAULT_SPORT_SPEEDS_KMH: Record<RedesignActivity, number> = {
@@ -75,6 +83,7 @@ interface SettingsState {
 	overlays: MapOverlays;
 	defaultRouteVisibility: RouteVisibility;
 	locationPermission: LocationPermission;
+	routingDefaults: RoutingDefaults;
 
 	setUnits: (units: RedesignUnits) => void;
 	setShowPois: (showPois: boolean) => void;
@@ -88,6 +97,7 @@ interface SettingsState {
 	setOverlay: (key: OverlayKey, value: boolean) => void;
 	setDefaultRouteVisibility: (visibility: RouteVisibility) => void;
 	setLocationPermission: (permission: LocationPermission) => void;
+	setRoutingDefaultsForActivity: (activity: RedesignActivity, prefs: Partial<RoutingPreferences>) => void;
 	replaceAllSettings: (settings: RedesignSettingsSnapshot) => void;
 }
 
@@ -110,6 +120,7 @@ export const DEFAULT_REDESIGN_SETTINGS: RedesignSettingsSnapshot = {
 	mapStyle: "outdoors",
 	overlays: DEFAULT_OVERLAYS,
 	defaultRouteVisibility: "private",
+	routingDefaults: normalizeRoutingDefaults(null),
 };
 
 const DEFAULT_LOCATION_PERMISSION: LocationPermission = "unknown";
@@ -176,6 +187,7 @@ export function normalizeRedesignSettings(input?: Partial<RedesignSettingsSnapsh
 		defaultRouteVisibility: isRouteVisibility(input?.defaultRouteVisibility)
 			? input.defaultRouteVisibility
 			: DEFAULT_REDESIGN_SETTINGS.defaultRouteVisibility,
+		routingDefaults: normalizeRoutingDefaults(input?.routingDefaults),
 	};
 }
 
@@ -192,6 +204,7 @@ export function getRedesignSettingsSnapshot(
 		| "mapStyle"
 		| "overlays"
 		| "defaultRouteVisibility"
+		| "routingDefaults"
 	>,
 ): RedesignSettingsSnapshot {
 	return {
@@ -205,6 +218,7 @@ export function getRedesignSettingsSnapshot(
 		mapStyle: state.mapStyle,
 		overlays: { ...state.overlays },
 		defaultRouteVisibility: state.defaultRouteVisibility,
+		routingDefaults: normalizeRoutingDefaults(state.routingDefaults),
 	};
 }
 
@@ -239,6 +253,12 @@ export const useRedesignSettingsStore = create<SettingsState>()(
 				})),
 			setDefaultRouteVisibility: (visibility) => set({ defaultRouteVisibility: visibility }),
 			setLocationPermission: (locationPermission) => set({ locationPermission }),
+			setRoutingDefaultsForActivity: (activity, prefs) =>
+				set((state) => ({
+					routingDefaults: mergeRoutingDefaults(state.routingDefaults, {
+						[activity]: normalizeRoutingPreferences(activity, prefs),
+					}),
+				})),
 			replaceAllSettings: (settings) =>
 				set((state) => ({ ...normalizeRedesignSettings(settings), locationPermission: state.locationPermission })),
 		}),
@@ -258,6 +278,8 @@ export const useRedesignSettingsStore = create<SettingsState>()(
 				if (state && version < 5 && state.locationPermission === undefined) {
 					state.locationPermission = "unknown";
 				}
+				// v7 adds per-Activity routingDefaults. Pre-v7 state has none;
+				// normalizeRedesignSettings backfills from DEFAULT_ROUTING_DEFAULTS.
 				const locationPermission = isLocationPermission(state?.locationPermission)
 					? state.locationPermission
 					: DEFAULT_LOCATION_PERMISSION;

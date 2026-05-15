@@ -1,7 +1,6 @@
 import type { Coordinate, RouteActivity, RouteVisibility } from "@routess/core";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useComputedElevationProfile } from "@/features/routing/services/elevation";
-import { resolveValhallaCosting } from "@/features/routing/services/routingMode";
 import { fetchSurfaceBreakdown, type SurfaceBreakdown } from "@/features/routing/services/SurfaceService";
 import type { ApiRoute } from "@/lib/api";
 import { useSaveRoute, useUpdateRoute } from "@/lib/api-queries";
@@ -10,8 +9,6 @@ import { useT } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
 import { useUnits } from "@/lib/units";
 import { useModalsStore } from "@/stores/modalsStore";
-import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
-import { useRoutingPreferencesStore } from "@/stores/routingPreferencesStore";
 import { useToastStore } from "@/stores/toastStore";
 import { useUiStore } from "@/stores/uiStore";
 import { EditableLabel } from "../components/EditableLabel";
@@ -102,8 +99,6 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 	const toggleFavourite = useUiStore((s) => s.toggleFavourite);
 	const setContext = useUiStore((s) => s.setContext);
 	const favorited = favouriteRouteIds.includes(route.id);
-	const defaultActivity = useRedesignSettingsStore((s) => s.defaultActivity);
-	const routingProfile = useRoutingPreferencesStore((s) => s.profile);
 
 	// Saved routes don't persist the elevation profile array (only the gain
 	// number), so re-sample the stored geometry on view. Falls back to
@@ -121,10 +116,9 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 	// from the stored geometry. Falls back silently if Valhalla is unavailable.
 	const [surfaceBreakdown, setSurfaceBreakdown] = useState<SurfaceBreakdown | null>(null);
 	const [surfaceLoading, setSurfaceLoading] = useState(false);
-	const costing = useMemo(
-		() => resolveValhallaCosting(defaultActivity, routingProfile),
-		[defaultActivity, routingProfile],
-	);
+	// Saved routes carry their own Activity; fall back to "cycle" for legacy
+	// rows that lack one, since that produces the most permissive surface match.
+	const surfaceActivity: RouteActivity = route.activity ?? "cycle";
 	useEffect(() => {
 		if (elevationGeometry.length < 2) {
 			setSurfaceBreakdown(null);
@@ -134,7 +128,7 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 		const controller = new AbortController();
 		const timeoutId = window.setTimeout(() => controller.abort(), 10000);
 		setSurfaceLoading(true);
-		fetchSurfaceBreakdown(elevationGeometry, costing, controller.signal)
+		fetchSurfaceBreakdown(elevationGeometry, surfaceActivity, controller.signal)
 			.then((result) => {
 				setSurfaceBreakdown(result);
 				setSurfaceLoading(false);
@@ -153,7 +147,7 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 			controller.abort();
 			window.clearTimeout(timeoutId);
 		};
-	}, [elevationGeometry, costing]);
+	}, [elevationGeometry, surfaceActivity]);
 
 	const activityMeta = route.activity ? ACTIVITY_LABEL[route.activity] : null;
 	const visibilityMeta = route.visibility ? VISIBILITY_LABEL[route.visibility] : null;
@@ -388,6 +382,26 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 						{tags.map((tag) => (
 							<TagChip key={tag} label={tag} />
 						))}
+					</div>
+				)}
+
+				{route.provenance === "mapbox-legacy" && (
+					<div
+						style={{
+							display: "flex",
+							alignItems: "center",
+							gap: 8,
+							padding: "8px 10px",
+							marginTop: 12,
+							borderRadius: 8,
+							background: RDS_COLORS.bgInput,
+							border: `1px solid ${RDS_COLORS.border}`,
+							color: RDS_COLORS.fgMuted,
+							fontSize: 11.5,
+						}}
+					>
+						<I.flag size={12} />
+						<span>{t("route.provenance.mapboxLegacy")}</span>
 					</div>
 				)}
 

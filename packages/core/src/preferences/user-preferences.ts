@@ -1,3 +1,8 @@
+import { mergeRoutingDefaults, normalizeRoutingDefaults } from "../routing/preferences";
+import type { RoutingDefaults, RoutingPreferences } from "../routing/types";
+
+export type RoutingDefaultsUpdate = Partial<Record<UserPreferenceActivity, Partial<RoutingPreferences>>>;
+
 export const ACTIVITIES = ["run", "cycle", "walk"] as const;
 export type UserPreferenceActivity = (typeof ACTIVITIES)[number];
 
@@ -28,11 +33,14 @@ export interface UserPreferences {
 	mapStyle: UserPreferenceMapStyle;
 	overlays: UserPreferenceOverlays;
 	defaultRouteVisibility: RouteVisibility;
+	routingDefaults: RoutingDefaults;
 }
 
-export interface UserPreferencesUpdate extends Omit<Partial<UserPreferences>, "overlays" | "sportSpeeds"> {
+export interface UserPreferencesUpdate
+	extends Omit<Partial<UserPreferences>, "overlays" | "sportSpeeds" | "routingDefaults"> {
 	overlays?: Partial<UserPreferenceOverlays>;
 	sportSpeeds?: Partial<UserPreferenceSportSpeeds>;
+	routingDefaults?: RoutingDefaultsUpdate;
 }
 
 const ACTIVITY_LABELS: Record<UserPreferenceActivity, string> = {
@@ -64,6 +72,7 @@ export const DEFAULT_USER_PREFERENCES: UserPreferences = {
 		wind: false,
 	},
 	defaultRouteVisibility: "private",
+	routingDefaults: normalizeRoutingDefaults(null),
 };
 
 export function isActivity(value: unknown): value is UserPreferenceActivity {
@@ -167,6 +176,7 @@ export function normalizeUserPreferences(input?: Partial<UserPreferences> | null
 		defaultRouteVisibility: isRouteVisibility(input?.defaultRouteVisibility)
 			? input.defaultRouteVisibility
 			: DEFAULT_USER_PREFERENCES.defaultRouteVisibility,
+		routingDefaults: normalizeRoutingDefaults(input?.routingDefaults),
 	};
 }
 
@@ -187,5 +197,6 @@ export function mergeUserPreferences(
 			...base.overlays,
 			...(update.overlays ?? {}),
 		},
+		routingDefaults: mergeRoutingDefaults(base.routingDefaults, update.routingDefaults),
 	});
 }

@@ -1,12 +1,9 @@
-import type { Coordinate } from "@routess/core";
+import type { Coordinate, RouteActivity } from "@routess/core";
 import { useEffect, useMemo } from "react";
 import { Logger } from "@/lib/logger";
-import { activityKeyToLabel } from "@/stores/redesignSettingsStore";
 import { useRouteSurfaceStore } from "@/stores/routeSurfaceStore";
-import { useRoutingPreferencesStore } from "@/stores/routingPreferencesStore";
 import { useDraftActivity, useHasRoute, useRoutePath } from "@/stores/routingStore";
 import { useUiStore } from "@/stores/uiStore";
-import { resolveValhallaCosting, type ValhallaCosting } from "./routingMode";
 import { fetchSurfaceBreakdown, type SurfaceBreakdown } from "./SurfaceService";
 
 interface SurfaceState {
@@ -14,9 +11,9 @@ interface SurfaceState {
 	loading: boolean;
 }
 
-export function buildSurfaceBreakdownKey(routePath: Coordinate[], hasRoute: boolean, costing: ValhallaCosting): string {
+export function buildSurfaceBreakdownKey(routePath: Coordinate[], hasRoute: boolean, activity: RouteActivity): string {
 	if (!hasRoute || routePath.length < 2) return "";
-	return `${costing}:${routePath.map(([lng, lat]) => `${lng.toFixed(6)},${lat.toFixed(6)}`).join("|")}`;
+	return `${activity}:${routePath.map(([lng, lat]) => `${lng.toFixed(6)},${lat.toFixed(6)}`).join("|")}`;
 }
 
 // Mount once near the app root. Watches the active route and keeps the
@@ -27,16 +24,14 @@ export function useRouteSurfaceSync(): void {
 	const hasRoute = useHasRoute();
 	const draftActivity = useDraftActivity();
 	const globalActivity = useUiStore((s) => s.activityType);
-	const routingProfile = useRoutingPreferencesStore((s) => s.profile);
 	const setBreakdown = useRouteSurfaceStore((s) => s.setBreakdown);
 	const setLoading = useRouteSurfaceStore((s) => s.setLoading);
 
 	const activeActivity = draftActivity ?? globalActivity;
-	const costing = useMemo(
-		() => resolveValhallaCosting(activityKeyToLabel(activeActivity), routingProfile),
-		[activeActivity, routingProfile],
+	const key = useMemo(
+		() => buildSurfaceBreakdownKey(routePath, hasRoute, activeActivity),
+		[routePath, hasRoute, activeActivity],
 	);
-	const key = useMemo(() => buildSurfaceBreakdownKey(routePath, hasRoute, costing), [routePath, hasRoute, costing]);
 
 	useEffect(() => {
 		if (!key) {
@@ -53,7 +48,7 @@ export function useRouteSurfaceSync(): void {
 		setLoading(true);
 
 		const debounceTimer = window.setTimeout(() => {
-			fetchSurfaceBreakdown(routePath, costing, controller.signal)
+			fetchSurfaceBreakdown(routePath, activeActivity, controller.signal)
 				.then((result) => {
 					if (superseded) return;
 					setBreakdown(result);
@@ -78,7 +73,7 @@ export function useRouteSurfaceSync(): void {
 			window.clearTimeout(requestTimeoutId);
 			controller.abort();
 		};
-	}, [key, routePath, costing, setBreakdown, setLoading]);
+	}, [key, routePath, activeActivity, setBreakdown, setLoading]);
 }
 
 // Read-only selector for components that just want to display the breakdown.

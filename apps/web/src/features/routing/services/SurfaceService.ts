@@ -1,7 +1,7 @@
-import type { Coordinate } from "@routess/core";
+import type { Coordinate, RouteActivity } from "@routess/core";
+import { valhallaCostingModelForActivity } from "@routess/core";
 import { Logger } from "@/lib/logger";
 import { getRuntimeConfig } from "@/lib/runtime-config";
-import type { ValhallaCosting } from "./routingMode";
 
 // Surface breakdowns are served by the API, which proxies to the self-hosted
 // Valhalla service (cluster-internal; never reachable from the browser).
@@ -51,14 +51,14 @@ interface ValhallaTraceAttributesResponse {
 
 export async function fetchSurfaceBreakdown(
 	coords: Coordinate[],
-	costing: ValhallaCosting,
+	activity: RouteActivity,
 	signal?: AbortSignal,
 ): Promise<SurfaceBreakdown | null> {
 	if (coords.length < 2) return null;
 
 	const shape = downsampleCoords(coords, MAX_SHAPE_POINTS).map(([lng, lat]) => ({ lat, lon: lng }));
 
-	const body = { shape, costing };
+	const body = { shape, costing: valhallaCostingModelForActivity(activity) };
 
 	let response: Response;
 	try {

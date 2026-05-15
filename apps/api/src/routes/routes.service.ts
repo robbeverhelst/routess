@@ -59,6 +59,8 @@ export class RoutesService {
 			elevationGain: route.elevationGain,
 			startAddress: route.startAddress,
 			endAddress: route.endAddress,
+			routingPreferences: route.routingPreferences ?? null,
+			provenance: route.provenance,
 			user: toUserResponseDto(serializedUser, this.config.analytics.salt),
 			createdAt: route.createdAt.toISOString(),
 			updatedAt: route.updatedAt.toISOString(),
@@ -72,6 +74,7 @@ export class RoutesService {
 			...createRouteDto,
 			visibility: createRouteDto.visibility ?? ownerDefault,
 			tags: createRouteDto.tags ?? [],
+			provenance: createRouteDto.provenance ?? "valhalla",
 			user: userId,
 		});
 		await this.em.persistAndFlush(route);

@@ -1,5 +1,12 @@
-import { ApiProperty } from "@nestjs/swagger";
-import { ROUTE_ACTIVITIES, ROUTE_VISIBILITIES, type RouteActivity, type RouteVisibility } from "@routess/core";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import {
+	PROVENANCES,
+	type Provenance,
+	ROUTE_ACTIVITIES,
+	ROUTE_VISIBILITIES,
+	type RouteActivity,
+	type RouteVisibility,
+} from "@routess/core";
 import { Type } from "class-transformer";
 import {
 	ArrayMaxSize,
@@ -15,6 +22,7 @@ import {
 	ValidatorConstraint,
 	type ValidatorConstraintInterface,
 } from "class-validator";
+import { RoutingPreferencesDto } from "../../common/routing-preferences.dto";
 
 const MAX_WAYPOINTS = 100;
 const MAX_GEOMETRY_POINTS = 20_000;
@@ -221,4 +229,21 @@ export class CreateRouteDto {
 	@IsOptional()
 	@IsString()
 	endAddress?: string;
+
+	@ApiPropertyOptional({
+		description: "Inputs that produced this route's geometry. Required when provenance='valhalla'.",
+		type: RoutingPreferencesDto,
+	})
+	@IsOptional()
+	@ValidateNested()
+	@Type(() => RoutingPreferencesDto)
+	routingPreferences?: RoutingPreferencesDto;
+
+	@ApiPropertyOptional({
+		description: "How this route was produced. Defaults to 'valhalla' for new routes.",
+		enum: PROVENANCES,
+	})
+	@IsOptional()
+	@IsIn(PROVENANCES)
+	provenance?: Provenance;
 }

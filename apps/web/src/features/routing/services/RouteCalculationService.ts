@@ -1,14 +1,13 @@
-import type { Coordinate, Waypoint } from "@routess/core";
+import type { Coordinate, RouteActivity, RoutingPreferences, Waypoint } from "@routess/core";
+import { defaultPreferencesForActivity } from "@routess/core";
 import type { Map as MapboxMap } from "mapbox-gl";
 import { Logger } from "@/lib/logger";
 import serviceWorkerManager from "@/lib/serviceWorker";
-import { activityKeyToLabel, getSpeedForActivity, useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
-import { getRoutingPreferences } from "@/stores/routingPreferencesStore";
+import { getSpeedForActivity, useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 import { useRoutingStore } from "@/stores/routingStore";
 import { useUiStore } from "@/stores/uiStore";
 import { getDefaultElevationService } from "./elevation";
-import { type ComputeRouteOptions, computeRoute, type DirectionsOptions } from "./RoutingEngine";
-import { resolveMapboxProfile } from "./routingMode";
+import { type ComputeRouteOptions, computeRoute } from "./valhallaClient";
 
 const sameCoord = (a: Coordinate, b: Coordinate) => a[0] === b[0] && a[1] === b[1];
 
@@ -37,7 +36,7 @@ const computeElevationInBackground = (routePath: Coordinate[], accessToken: stri
 
 	// Elevation is computed for a specific RoutePath. The staleness check
 	// compares against routePath in the store, not waypoints — waypoints
-	// can mutate via snap-writeback after getRoute returns without
+	// can mutate via snap-writeback after computeRoute returns without
 	// invalidating the elevation result we computed for this exact path.
 	getDefaultElevationService(accessToken)
 		.sampleAndCompute(routePath, { signal: controller.signal })
@@ -60,27 +59,34 @@ const computeElevationInBackground = (routePath: Coordinate[], accessToken: stri
 		});
 };
 
-function buildComputeOptions(): ComputeRouteOptions {
-	const prefs = getRoutingPreferences();
+// Reads the prefs that should drive this route's computation: prefer the
+// draft's own routingPreferences (per ADR-0023); fall back to the user's
+// per-Activity defaults; final fallback is the activity's built-in default.
+function resolvePreferencesForDraft(activity: RouteActivity): RoutingPreferences {
+	const draftPrefs = useRoutingStore.getState().routingPreferences;
+	if (draftPrefs) return draftPrefs;
+	const userDefaults = useRedesignSettingsStore.getState().routingDefaults;
+	return userDefaults?.[activity] ?? defaultPreferencesForActivity(activity);
+}
+
+function buildComputeOptions(activity: RouteActivity): {
+	prefs: RoutingPreferences;
+	options: ComputeRouteOptions;
+} {
 	const settings = useRedesignSettingsStore.getState();
-	// The active draft's activity drives routing + duration so switching the
-	// activity tab actually re-routes and re-estimates. Falls back to the
-	// global preference when the draft has no activity (fresh start).
-	const sportKey = useRoutingStore.getState().activity ?? useUiStore.getState().activityType;
-	const profile = resolveMapboxProfile(activityKeyToLabel(sportKey), prefs.profile);
-	const directions: DirectionsOptions = {
-		profile,
-		radius: 150,
-		continueStraight: true,
+	const speedKmh = getSpeedForActivity(activity, settings.sportSpeeds);
+	const prefs = resolvePreferencesForDraft(activity);
+	// Walking speed for Valhalla pedestrian costing is in m/s; the user
+	// configures km/h, so convert.
+	const walkingSpeedMps = activity !== "cycle" ? speedKmh / 3.6 : undefined;
+	return {
+		prefs,
+		options: {
+			snap: settings.autoSnap,
+			speedKmh,
+			walkingSpeedMps,
+		},
 	};
-	// Mapbox only accepts `exclude=motorway` on the driving profile. Cycling
-	// and walking return 422 InvalidInput if it's set, so the param is gated
-	// on profile here even if the "avoid highways" preference is enabled.
-	if (prefs.highways && profile === "mapbox/driving") {
-		directions.exclude = ["motorway"];
-	}
-	const speedKmh = getSpeedForActivity(sportKey, settings.sportSpeeds);
-	return { directions, snap: prefs.snap, speedKmh };
 }
 
 const sameWaypoint = (a: Waypoint, b: Waypoint) => sameCoord(a.coord, b.coord) && a.type === b.type;
@@ -103,6 +109,7 @@ export interface RouteResult {
 	waypointsSnapped: boolean;
 	snappedWaypoints?: Waypoint[];
 	error?: string;
+	failedSegment?: { from: number; to: number };
 }
 
 export const getRoute = async (map: MapboxMap, accessToken: string): Promise<RouteResult> => {
@@ -123,7 +130,9 @@ export const getRoute = async (map: MapboxMap, accessToken: string): Promise<Rou
 		return { success: true, waypointsSnapped: false };
 	}
 
-	const outcome = await computeRoute(waypoints, accessToken, buildComputeOptions());
+	const activity = store.activity ?? useUiStore.getState().activityType;
+	const { prefs, options } = buildComputeOptions(activity);
+	const outcome = await computeRoute(waypoints, activity, prefs, options);
 
 	if (!routeInputsMatch(waypoints)) {
 		Logger.info("[RCS/getRoute] Route inputs changed during calculation. Discarding stale result.");
@@ -137,7 +146,12 @@ export const getRoute = async (map: MapboxMap, accessToken: string): Promise<Rou
 		elevationAbort?.abort();
 		after.clearElevation();
 		after.setIsComputingElevation(false);
-		return { success: false, waypointsSnapped: false, error: outcome.error };
+		return {
+			success: false,
+			waypointsSnapped: false,
+			error: outcome.error,
+			failedSegment: outcome.failedSegment,
+		};
 	}
 
 	const after = useRoutingStore.getState();
@@ -149,6 +163,13 @@ export const getRoute = async (map: MapboxMap, accessToken: string): Promise<Rou
 		isOffline: !!outcome.offline,
 	});
 	after.setHasRoute(true);
+
+	// First successful computation on this draft commits the prefs that
+	// produced it (per ADR-0023). Subsequent recalcs respect whatever's
+	// currently in the draft (e.g. user changed prefs via the modal).
+	if (!after.routingPreferences) {
+		after.setRoutingPreferences(prefs);
+	}
 
 	// Elevation runs async — distance/duration display immediately while we
 	// sample terrain. Offline routes skip sampling since we can't reach the
@@ -167,7 +188,7 @@ export const getRoute = async (map: MapboxMap, accessToken: string): Promise<Rou
 				geometry: outcome.routePath,
 				distance: outcome.distanceKm * 1000,
 				duration: outcome.durationMinutes * 60,
-				url: `directions_api_request_${Date.now()}`,
+				url: `valhalla_request_${Date.now()}`,
 			});
 		} catch (error) {
 			Logger.warn("[RCS/getRoute] Failed to precache route:", error);

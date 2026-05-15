@@ -13,7 +13,8 @@
 		"dev": "tsc --watch",
 		"clean": "rm -rf dist tsconfig.tsbuildinfo",
 		"lint": "biome check .",
-		"check-types": "tsc --noEmit"
+		"check-types": "tsc --noEmit",
+		"test": "bun test"
 	},
 	"dependencies": {
 		"zustand": "^5.0.2"

@@ -12,6 +12,7 @@ import {
 	IsString,
 	ValidateNested,
 } from "class-validator";
+import { RoutingDefaultsDto, UpdateRoutingDefaultsDto } from "../../common/routing-preferences.dto";
 
 export class UserPreferenceSportSpeedsDto {
 	@ApiPropertyOptional({ example: 10 })
@@ -127,6 +128,11 @@ export class UserPreferencesDto {
 	@ApiProperty({ enum: ROUTE_VISIBILITIES, example: "private" })
 	@IsIn(ROUTE_VISIBILITIES)
 	defaultRouteVisibility!: (typeof ROUTE_VISIBILITIES)[number];
+
+	@ApiProperty({ type: RoutingDefaultsDto })
+	@ValidateNested()
+	@Type(() => RoutingDefaultsDto)
+	routingDefaults!: RoutingDefaultsDto;
 }
 
 export class UpdateUserPreferencesDto {
@@ -187,4 +193,10 @@ export class UpdateUserPreferencesDto {
 	@IsOptional()
 	@IsIn(ROUTE_VISIBILITIES)
 	defaultRouteVisibility?: (typeof ROUTE_VISIBILITIES)[number];
+
+	@ApiPropertyOptional({ type: UpdateRoutingDefaultsDto })
+	@IsOptional()
+	@ValidateNested()
+	@Type(() => UpdateRoutingDefaultsDto)
+	routingDefaults?: UpdateRoutingDefaultsDto;
 }
