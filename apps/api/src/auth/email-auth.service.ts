@@ -229,6 +229,14 @@ export class EmailAuthService {
 		}
 	}
 
+	// Whether the given User has an active email/password credential. Used by
+	// the user-response mapper so the UI can drive password-change affordances
+	// (required current-password field vs hidden for users who never set one).
+	async userHasPassword(userId: number): Promise<boolean> {
+		const method = await this.authMethodRepository.findOne({ user: userId, provider: "email" });
+		return Boolean(method?.passwordHash);
+	}
+
 	// Always returns 200 to the caller (no email enumeration). Sends a reset
 	// email only if a user with this email + 'email' auth method exists. Users
 	// with only Google auth can't reset a password they never had.

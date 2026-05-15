@@ -44,6 +44,10 @@ export interface ApiUser {
 	idHash: string;
 	deletionStatus: ApiUserDeletionStatus;
 	deletionRequestedAt?: string | null;
+	// True if the user has an email/password credential set up. Drives
+	// password-change UI affordances (hide current-password field for users
+	// who only signed in via Google and never set a password).
+	hasPassword: boolean;
 	statistics?: {
 		totalRoutes: number;
 		totalDistance: number;

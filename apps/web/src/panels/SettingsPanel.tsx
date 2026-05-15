@@ -368,21 +368,11 @@ export function SettingsPanel() {
 		}
 	};
 
-	const handleChangePassword = async () => {
-		const currentPassword = profile ? (window.prompt(t("settings.security.currentPasswordPrompt")) ?? "") : "";
-		const newPassword = window.prompt(t("settings.security.newPasswordPrompt"));
-		if (!newPassword) return;
-		try {
-			await apiService.setPassword({
-				newPassword,
-				currentPassword: currentPassword || undefined,
-			});
-			pushToast({ kind: "success", title: t("settings.security.passwordUpdated") });
-		} catch (error) {
-			Logger.error("Set password failed:", error);
-			const message = error instanceof Error ? error.message : t("settings.security.passwordFailed");
-			pushToast({ kind: "danger", title: t("settings.security.passwordFailed"), body: message });
-		}
+	const handleChangePassword = () => {
+		// Password change lives in the dedicated AccountScreen now — it has a
+		// proper inline form (current / new / confirm + live validation)
+		// instead of two stacked window.prompts. Route there.
+		emitAppEvent("routess:open-account");
 	};
 
 	const handleLogoutEverywhere = async () => {

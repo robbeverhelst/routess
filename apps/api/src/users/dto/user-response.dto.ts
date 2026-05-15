@@ -72,6 +72,12 @@ export class UserResponseDto {
 		description: "When self-deletion was requested. Hard-delete fires 30 days after this timestamp.",
 	})
 	deletionRequestedAt?: string | null;
+
+	@ApiProperty({
+		example: true,
+		description: "Whether the user has an active email/password credential. Drives password-change UI affordances.",
+	})
+	hasPassword!: boolean;
 }
 
 export class UserProfileDto extends UserResponseDto {

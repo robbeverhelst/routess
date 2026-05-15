@@ -39,7 +39,8 @@ export class UsersController {
 	async getProfile(@CurrentUser() currentUser: AuthenticatedUser) {
 		const user = await this.usersService.findOne(currentUser.id);
 		const statistics = await this.routeLibrary.statisticsFor(currentUser.id);
-		return toUserProfileDto(user, statistics, this.config.analytics.salt);
+		const hasPassword = await this.emailAuth.userHasPassword(currentUser.id);
+		return toUserProfileDto(user, statistics, this.config.analytics.salt, hasPassword);
 	}
 
 	@ApiOperation({
@@ -51,7 +52,8 @@ export class UsersController {
 	async update(@CurrentUser() currentUser: AuthenticatedUser, @Body() updateUserDto: UpdateCurrentUserDto) {
 		const user = await this.usersService.update(currentUser.id, updateUserDto);
 		const statistics = await this.routeLibrary.statisticsFor(currentUser.id);
-		return toUserProfileDto(user, statistics, this.config.analytics.salt);
+		const hasPassword = await this.emailAuth.userHasPassword(currentUser.id);
+		return toUserProfileDto(user, statistics, this.config.analytics.salt, hasPassword);
 	}
 
 	@ApiOperation({
@@ -117,6 +119,7 @@ export class UsersController {
 	async cancelDeletion(@CurrentUser() currentUser: AuthenticatedUser) {
 		const user = await this.usersService.cancelDeletion(currentUser.id);
 		const statistics = await this.routeLibrary.statisticsFor(currentUser.id);
-		return toUserProfileDto(user, statistics, this.config.analytics.salt);
+		const hasPassword = await this.emailAuth.userHasPassword(currentUser.id);
+		return toUserProfileDto(user, statistics, this.config.analytics.salt, hasPassword);
 	}
 }

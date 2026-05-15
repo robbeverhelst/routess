@@ -390,29 +390,32 @@ export function AccountScreen() {
 							}}
 						>
 							<div style={{ fontSize: 13, fontWeight: 500, color: RDS_COLORS.fg, marginBottom: 4 }}>
-								{t("account.password.changeTitle")}
+								{user?.hasPassword ? t("account.password.changeTitle") : t("account.password.setTitle")}
 							</div>
 							<div style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle, marginBottom: 12 }}>
-								{t("account.password.changeHint")}
+								{user?.hasPassword ? t("account.password.changeHint") : t("account.password.setHint")}
 							</div>
 							<form onSubmit={handleSavePassword} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-								<input
-									type="password"
-									autoComplete="current-password"
-									placeholder={t("account.password.currentPlaceholder")}
-									value={currentPassword}
-									onChange={(e) => setCurrentPassword(e.target.value)}
-									style={{
-										height: 36,
-										padding: "0 12px",
-										borderRadius: 8,
-										background: RDS_COLORS.bgInput,
-										border: `1px solid ${RDS_COLORS.border}`,
-										color: RDS_COLORS.fg,
-										fontSize: 13,
-										outline: "none",
-									}}
-								/>
+								{user?.hasPassword && (
+									<input
+										type="password"
+										autoComplete="current-password"
+										required
+										placeholder={t("account.password.currentPlaceholder")}
+										value={currentPassword}
+										onChange={(e) => setCurrentPassword(e.target.value)}
+										style={{
+											height: 36,
+											padding: "0 12px",
+											borderRadius: 8,
+											background: RDS_COLORS.bgInput,
+											border: `1px solid ${RDS_COLORS.border}`,
+											color: RDS_COLORS.fg,
+											fontSize: 13,
+											outline: "none",
+										}}
+									/>
+								)}
 								<input
 									type="password"
 									autoComplete="new-password"
@@ -482,7 +485,7 @@ export function AccountScreen() {
 					) : (
 						<Row label={t("account.field.password")} last>
 							<div style={{ flex: 1, fontSize: 13, color: RDS_COLORS.fgMuted }}>
-								{t("account.password.placeholderDisplay")}
+								{user?.hasPassword ? t("account.password.placeholderDisplay") : t("account.password.notSet")}
 							</div>
 							<Btn
 								variant="ghost"
@@ -491,7 +494,7 @@ export function AccountScreen() {
 									setEditingPassword(true);
 								}}
 							>
-								{t("settings.security.changePasswordAction")}
+								{user?.hasPassword ? t("settings.security.changePasswordAction") : t("account.password.setAction")}
 							</Btn>
 						</Row>
 					)}

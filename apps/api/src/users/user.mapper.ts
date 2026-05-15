@@ -20,7 +20,11 @@ function hashUserId(salt: string, userId: number): string {
 	return createHash("sha256").update(`${salt}:${userId}`).digest("hex");
 }
 
-export function toUserResponseDto(user: SerializableUser, analyticsSalt: string): UserResponseDto {
+// `hasPassword` is computed by the caller (typically by querying
+// UserAuthMethod for a row with provider='email' and a non-null password
+// hash); flows that don't care can leave it as the default false and the
+// frontend just won't render password-aware UI.
+export function toUserResponseDto(user: SerializableUser, analyticsSalt: string, hasPassword = false): UserResponseDto {
 	return {
 		id: user.id,
 		email: user.email,
@@ -32,6 +36,7 @@ export function toUserResponseDto(user: SerializableUser, analyticsSalt: string)
 		idHash: hashUserId(analyticsSalt, user.id),
 		deletionStatus: user.deletionStatus,
 		deletionRequestedAt: user.deletionRequestedAt ? user.deletionRequestedAt.toISOString() : null,
+		hasPassword,
 	};
 }
 
@@ -42,9 +47,10 @@ export function toUserProfileDto(
 		totalDistance: number;
 	},
 	analyticsSalt: string,
+	hasPassword = false,
 ): UserProfileDto {
 	return {
-		...toUserResponseDto(user, analyticsSalt),
+		...toUserResponseDto(user, analyticsSalt, hasPassword),
 		statistics,
 	};
 }
