@@ -226,6 +226,10 @@ describe("Personal Access Tokens Integration Tests", () => {
 		it("rejects POST /routes from a PAT even with write scope (#170 follow-up)", async () => {
 			const { token } = await mintPat(app, cookieJwt, { label: "write", scope: "write" });
 
+			// POST /routes is cookie-only (JwtAuthGuard, not UnifiedAuthGuard),
+			// so a PAT bearer fails the JWT strategy and we get 401 rather than
+			// a scope-related 403. Either status communicates "PAT cannot create
+			// routes," which is the contract that matters for #170's deferral.
 			await supertest(app.getHttpServer())
 				.post("/api/v1/routes")
 				.set("Authorization", `Bearer ${token}`)
@@ -236,7 +240,7 @@ describe("Personal Access Tokens Integration Tests", () => {
 						{ coord: [4.36, 50.86], type: "routed" },
 					],
 				})
-				.expect(403);
+				.expect(401);
 		});
 	});
 
@@ -299,14 +303,14 @@ describe("Personal Access Tokens Integration Tests", () => {
 			await supertest(app.getHttpServer())
 				.patch(`/api/v1/routes/${route.id}`)
 				.set("Authorization", `Bearer ${token}`)
-				.send({ privacy: "public" })
+				.send({ visibility: "public" })
 				.expect(428);
 
 			await supertest(app.getHttpServer())
 				.patch(`/api/v1/routes/${route.id}`)
 				.set("Authorization", `Bearer ${token}`)
 				.set("X-Routess-Confirm", "true")
-				.send({ privacy: "public" })
+				.send({ visibility: "public" })
 				.expect(200);
 		});
 
