@@ -16,19 +16,15 @@ function buildFields(_language: SupportedLanguage, name: string | null, email: s
 	const dash = t("account.dash");
 	const username = email?.split("@")[0] ?? t("account.guest");
 	return [
-		{ labelKey: "account.field.name", value: name ?? dash, managedKey: "account.managedByGoogle" },
-		{ labelKey: "account.field.email", value: email ?? dash, managedKey: "account.managedByGoogle" },
+		{ labelKey: "account.field.name", value: name ?? dash },
+		{ labelKey: "account.field.email", value: email ?? dash },
 		{ labelKey: "account.field.username", value: username, editable: true },
 		{
 			labelKey: "account.field.password",
-			value: t("account.passwordManaged"),
-			managedKey: "account.managedByGoogle",
+			value: t("account.passwordManagedInSettings"),
+			managedKey: "account.passwordManageHint",
 		},
-		{
-			labelKey: "account.field.twofactor",
-			value: t("account.passwordManaged"),
-			managedKey: "account.managedByGoogle",
-		},
+		{ labelKey: "account.field.twofactor", value: t("account.comingSoon") },
 		{ labelKey: "account.field.connected", value: t("account.connectedNone"), editable: true },
 	];
 }
