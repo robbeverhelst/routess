@@ -12,6 +12,12 @@ import {
 import { JwtAuthGuard } from "./guards/jwt-auth.guard";
 import { PersonalAccessTokensService } from "./personal-access-tokens.service";
 
+// The entire /v1/auth/tokens surface is cookie-only: a PAT can never mint
+// another PAT (otherwise agent privilege escalation), and listing/revoking
+// tokens belongs in the human-driven Settings UI rather than in agent
+// workflows. ADR-0022 makes this explicit; ADR-0023's self-revocation gate
+// is defensive infrastructure for any future relaxation but is currently
+// unreachable.
 @ApiTags("auth")
 @ApiBearerAuth("JWT-auth")
 @Controller("auth/tokens")

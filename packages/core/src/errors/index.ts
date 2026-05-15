@@ -9,6 +9,7 @@ export type DomainErrorCode =
 	| "UNAUTHORIZED"
 	| "FORBIDDEN"
 	| "CONFLICT"
+	| "PRECONDITION_REQUIRED"
 	| "RATE_LIMITED"
 	| "INTERNAL";
 
@@ -27,6 +28,7 @@ const DOMAIN_CODES: ReadonlySet<DomainErrorCode> = new Set([
 	"UNAUTHORIZED",
 	"FORBIDDEN",
 	"CONFLICT",
+	"PRECONDITION_REQUIRED",
 	"RATE_LIMITED",
 	"INTERNAL",
 ]);
@@ -50,6 +52,7 @@ export const inferCodeFromStatus = (status: number): DomainErrorCode => {
 	if (status === 403) return "FORBIDDEN";
 	if (status === 404) return "NOT_FOUND";
 	if (status === 409) return "CONFLICT";
+	if (status === 412 || status === 428) return "PRECONDITION_REQUIRED";
 	if (status === 422 || status === 400) return "VALIDATION_FAILED";
 	if (status === 429) return "RATE_LIMITED";
 	return "INTERNAL";
@@ -61,6 +64,7 @@ export const severityForCode = (code: DomainErrorCode): DomainErrorSeverity => {
 			return "low";
 		case "NOT_FOUND":
 		case "CONFLICT":
+		case "PRECONDITION_REQUIRED":
 		case "RATE_LIMITED":
 			return "medium";
 		case "UNAUTHORIZED":

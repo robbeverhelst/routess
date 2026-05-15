@@ -1,9 +1,14 @@
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, UseGuards } from "@nestjs/common";
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiResponse, ApiTags } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiBody, ApiHeader, ApiOperation, ApiParam, ApiResponse, ApiTags } from "@nestjs/swagger";
 import type { AuthenticatedUser } from "../auth/authenticated-user";
 import { CurrentUser, OptionalCurrentUser } from "../auth/decorators/current-user.decorator";
+import { RequireConfirmation } from "../auth/decorators/require-confirmation.decorator";
+import { RequireScope } from "../auth/decorators/require-scope.decorator";
+import { ConfirmationGuard } from "../auth/guards/confirmation.guard";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { OptionalJwtAuthGuard } from "../auth/guards/optional-jwt-auth.guard";
+import { ScopeGuard } from "../auth/guards/scope.guard";
+import { UnifiedAuthGuard } from "../auth/guards/unified-auth.guard";
 import { ThrottleModerate, ThrottleStrict } from "../common/decorators/throttle.decorator";
 import { CreateRouteDto } from "./dto/create-route.dto";
 import { RouteResponseDto } from "./dto/route-response.dto";
@@ -19,7 +24,7 @@ export class RoutesController {
 	@UseGuards(JwtAuthGuard)
 	@ApiOperation({
 		summary: "Create a new route",
-		description: "Creates a new route for the authenticated user",
+		description: "Creates a new route for the authenticated user. PATs are blocked; route creation lands with #170.",
 	})
 	@ApiBody({ type: CreateRouteDto })
 	@ApiResponse({ status: 201, description: "Route created successfully", type: RouteResponseDto })
@@ -32,7 +37,8 @@ export class RoutesController {
 	}
 
 	@ApiBearerAuth("JWT-auth")
-	@UseGuards(JwtAuthGuard)
+	@ApiBearerAuth("PAT-auth")
+	@UseGuards(UnifiedAuthGuard, ScopeGuard)
 	@ApiOperation({
 		summary: "Get all user routes",
 		description: "Retrieves all routes belonging to the authenticated user (any visibility)",
@@ -40,6 +46,7 @@ export class RoutesController {
 	@ApiResponse({ status: 200, description: "Routes retrieved successfully", type: RouteResponseDto, isArray: true })
 	@ApiResponse({ status: 401, description: "Unauthorized" })
 	@ThrottleModerate()
+	@RequireScope("read")
 	@Get()
 	findAll(@CurrentUser() user: AuthenticatedUser): Promise<RouteResponseDto[]> {
 		return this.routesService.findAll(user.id);
@@ -65,7 +72,7 @@ export class RoutesController {
 	@ApiOperation({
 		summary: "Get route by ID",
 		description:
-			"Returns the route. Owners see it regardless of visibility; non-owners (including anonymous viewers) only see public and unlisted routes. Private routes return 404 to non-owners.",
+			"Returns the route. Owners see it regardless of visibility; non-owners (including anonymous viewers) only see public and unlisted routes. Private routes return 404 to non-owners. PATs hit this through the cookie-or-bearer JWT path; PAT-as-Bearer is not yet supported here (use GET /routes to list and filter).",
 	})
 	@ApiParam({ name: "id", description: "Route ID", type: "number" })
 	@ApiResponse({ status: 200, description: "Route retrieved successfully", type: RouteResponseDto })
@@ -80,10 +87,11 @@ export class RoutesController {
 	}
 
 	@ApiBearerAuth("JWT-auth")
-	@UseGuards(JwtAuthGuard)
+	@ApiBearerAuth("PAT-auth")
+	@UseGuards(UnifiedAuthGuard, ScopeGuard, ConfirmationGuard)
 	@ApiOperation({
 		summary: "Update route",
-		description: "Updates a specific route for the authenticated user",
+		description: "Updates a specific route for the authenticated user.",
 	})
 	@ApiParam({ name: "id", description: "Route ID", type: "number" })
 	@ApiBody({ type: UpdateRouteDto })
@@ -91,7 +99,23 @@ export class RoutesController {
 	@ApiResponse({ status: 400, description: "Invalid route data" })
 	@ApiResponse({ status: 401, description: "Unauthorized" })
 	@ApiResponse({ status: 404, description: "Route not found" })
+	@ApiResponse({
+		status: 428,
+		description:
+			"PAT-authenticated call attempted to set visibility to public without `X-Routess-Confirm: true`. Surface the `impact` field of the response to the user and retry with the header set.",
+	})
+	@ApiHeader({
+		name: "X-Routess-Confirm",
+		required: false,
+		description: "Set to `true` when a PAT call sets `visibility: public`. Cookie sessions ignore this header.",
+	})
 	@ThrottleModerate()
+	@RequireScope("write")
+	@RequireConfirmation((req) =>
+		(req.body as { visibility?: string } | undefined)?.visibility === "public"
+			? `Make route ${req.params.id} publicly visible. Once public the URL may be archived externally; reverting to private does not unshare.`
+			: null,
+	)
 	@Patch(":id")
 	update(
 		@Param("id", ParseIntPipe) id: number,
@@ -102,10 +126,11 @@ export class RoutesController {
 	}
 
 	@ApiBearerAuth("JWT-auth")
-	@UseGuards(JwtAuthGuard)
+	@ApiBearerAuth("PAT-auth")
+	@UseGuards(UnifiedAuthGuard, ScopeGuard, ConfirmationGuard)
 	@ApiOperation({
 		summary: "Delete route",
-		description: "Deletes a specific route for the authenticated user",
+		description: "Deletes a specific route for the authenticated user. PAT callers must set X-Routess-Confirm: true.",
 	})
 	@ApiParam({ name: "id", description: "Route ID", type: "number" })
 	@ApiResponse({
@@ -115,7 +140,22 @@ export class RoutesController {
 	})
 	@ApiResponse({ status: 401, description: "Unauthorized" })
 	@ApiResponse({ status: 404, description: "Route not found" })
+	@ApiResponse({
+		status: 428,
+		description:
+			"PAT-authenticated DELETE without `X-Routess-Confirm: true`. Surface the `impact` field of the response to the user and retry with the header set.",
+	})
+	@ApiHeader({
+		name: "X-Routess-Confirm",
+		required: false,
+		description: "Required as `true` for PAT callers. Cookie sessions ignore this header.",
+	})
 	@ThrottleStrict()
+	@RequireScope("write")
+	@RequireConfirmation(
+		(req) =>
+			`Delete route ${req.params.id}. The route is soft-deleted and can be restored by an admin within the retention window.`,
+	)
 	@Delete(":id")
 	async remove(@Param("id", ParseIntPipe) id: number, @CurrentUser() user: AuthenticatedUser) {
 		await this.routesService.remove(id, user.id);
