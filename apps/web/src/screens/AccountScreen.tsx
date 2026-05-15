@@ -1,7 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { apiService } from "@/lib/api";
-import { useAuthStatus } from "@/lib/api-queries";
+import { useAuthStatus, useLogout } from "@/lib/api-queries";
 import { emitAppEvent } from "@/lib/app-events";
 import { storeUser } from "@/lib/auth-state";
 import { t } from "@/lib/i18n";
@@ -247,6 +247,39 @@ export function AccountScreen() {
 			Logger.error("Cancel deletion failed", error);
 			pushToast({ kind: "danger", title: t("settings.account.deletionCancelFailed") });
 		}
+	};
+
+	const logout = useLogout();
+
+	const handleSignOut = () => {
+		logout.mutate(undefined, {
+			onSuccess: () => {
+				pushToast({ kind: "success", title: t("common.signedOut") });
+				emitAppEvent("routess:open-login");
+			},
+		});
+	};
+
+	const handleLogoutEverywhere = async () => {
+		if (!window.confirm(t("settings.security.logoutEverywhereConfirm"))) return;
+		try {
+			await apiService.logoutEverywhere();
+			pushToast({ kind: "success", title: t("common.signedOut") });
+			emitAppEvent("routess:open-login");
+		} catch (error) {
+			Logger.error("Logout everywhere failed", error);
+			pushToast({ kind: "danger", title: t("settings.security.logoutEverywhereFailed") });
+		}
+	};
+
+	const handleExportData = () => {
+		const url = apiService.exportDataUrl();
+		const a = document.createElement("a");
+		a.href = url;
+		a.download = "";
+		document.body.appendChild(a);
+		a.click();
+		document.body.removeChild(a);
 	};
 
 	const avatarSize = 72;
@@ -498,6 +531,34 @@ export function AccountScreen() {
 							</Btn>
 						</Row>
 					)}
+				</Card>
+
+				<Card title={t("account.sessions")}>
+					<Row label={t("account.sessions.thisDevice")}>
+						<div style={{ flex: 1, fontSize: 13, color: RDS_COLORS.fgMuted }}>
+							{t("account.sessions.thisDeviceHint")}
+						</div>
+						<Btn variant="ghost" onClick={handleSignOut} disabled={logout.isPending}>
+							{logout.isPending ? t("common.signingOut") : t("common.signOut")}
+						</Btn>
+					</Row>
+					<Row label={t("settings.security.logoutEverywhere")} last>
+						<div style={{ flex: 1, fontSize: 13, color: RDS_COLORS.fgMuted }}>
+							{t("settings.security.logoutEverywhereSub")}
+						</div>
+						<Btn variant="ghost" onClick={handleLogoutEverywhere} style={{ color: RDS_COLORS.danger }}>
+							{t("settings.security.logoutEverywhereAction")}
+						</Btn>
+					</Row>
+				</Card>
+
+				<Card title={t("account.data")}>
+					<Row label={t("settings.account.exportAll")} last>
+						<div style={{ flex: 1, fontSize: 13, color: RDS_COLORS.fgMuted }}>{t("settings.account.exportAllSub")}</div>
+						<Btn variant="ghost" onClick={handleExportData}>
+							{t("account.data.export")}
+						</Btn>
+					</Row>
 				</Card>
 
 				<div

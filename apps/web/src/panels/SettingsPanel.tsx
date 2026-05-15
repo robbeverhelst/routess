@@ -1,10 +1,8 @@
 import type { RouteVisibility } from "@routess/core";
-import { type ReactNode, useEffect, useRef, useState } from "react";
-import { apiService } from "@/lib/api";
+import { type ReactNode, useEffect, useState } from "react";
 import { useLogout, useUserProfile } from "@/lib/api-queries";
 import { emitAppEvent } from "@/lib/app-events";
 import { type SupportedLanguage, t, tIn } from "@/lib/i18n";
-import { Logger } from "@/lib/logger";
 import { getVersionDisplay } from "@/lib/version";
 import {
 	DEFAULT_SPORT_SPEEDS_KMH,
@@ -38,31 +36,6 @@ const SPORT_LABEL_KEYS: Record<RedesignActivity, string> = {
 	cycle: "sport.cycle",
 	walk: "sport.walk",
 };
-
-async function resizeImageToDataUrl(file: File, maxDimension: number): Promise<string> {
-	const dataUrl = await new Promise<string>((resolve, reject) => {
-		const reader = new FileReader();
-		reader.onload = () => resolve(reader.result as string);
-		reader.onerror = () => reject(reader.error ?? new Error("read failed"));
-		reader.readAsDataURL(file);
-	});
-	const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-		const image = new Image();
-		image.onload = () => resolve(image);
-		image.onerror = () => reject(new Error("image decode failed"));
-		image.src = dataUrl;
-	});
-	const ratio = Math.min(maxDimension / img.width, maxDimension / img.height, 1);
-	const w = Math.round(img.width * ratio);
-	const h = Math.round(img.height * ratio);
-	const canvas = document.createElement("canvas");
-	canvas.width = w;
-	canvas.height = h;
-	const ctx = canvas.getContext("2d");
-	if (!ctx) throw new Error("canvas 2d not available");
-	ctx.drawImage(img, 0, 0, w, h);
-	return canvas.toDataURL("image/jpeg", 0.85);
-}
 
 const VISIBILITY_OPTIONS: { key: RouteVisibility; labelKey: string; subKey: string }[] = [
 	{ key: "private", labelKey: "save.visibility.private", subKey: "save.visibility.privateSub" },
@@ -319,97 +292,9 @@ export function SettingsPanel() {
 		setDefaultActivity(tIn("en", SPORT_LABEL_KEYS[sport]));
 	};
 
-	const userName = profile?.name ?? t("settings.profile.yourAccount");
-	const userEmail = profile?.email ?? t("settings.profile.signInToSync");
-
 	const handleEditProfile = () => {
 		emitAppEvent("routess:open-account");
 	};
-
-	const handleExportData = () => {
-		const url = apiService.exportDataUrl();
-		const a = document.createElement("a");
-		a.href = url;
-		a.download = "";
-		document.body.appendChild(a);
-		a.click();
-		document.body.removeChild(a);
-	};
-
-	const fileInputRef = useRef<HTMLInputElement | null>(null);
-
-	const handleAvatarUploadClick = () => fileInputRef.current?.click();
-
-	const handleAvatarFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-		const file = event.target.files?.[0];
-		event.target.value = "";
-		if (!file) return;
-		if (!file.type.startsWith("image/")) {
-			pushToast({ kind: "warn", title: t("settings.profile.avatar.invalidType") });
-			return;
-		}
-		try {
-			const dataUrl = await resizeImageToDataUrl(file, 256);
-			await apiService.updateCurrentUser({ avatar: dataUrl });
-			pushToast({ kind: "success", title: t("settings.profile.avatar.updated") });
-		} catch (error) {
-			Logger.error("Avatar upload failed:", error);
-			pushToast({ kind: "danger", title: t("settings.profile.avatar.failed") });
-		}
-	};
-
-	const handleClearAvatar = async () => {
-		try {
-			await apiService.updateCurrentUser({ avatar: "" });
-			pushToast({ kind: "success", title: t("settings.profile.avatar.cleared") });
-		} catch (error) {
-			Logger.error("Avatar clear failed:", error);
-			pushToast({ kind: "danger", title: t("settings.profile.avatar.failed") });
-		}
-	};
-
-	const handleChangePassword = () => {
-		// Password change lives in the dedicated AccountScreen now — it has a
-		// proper inline form (current / new / confirm + live validation)
-		// instead of two stacked window.prompts. Route there.
-		emitAppEvent("routess:open-account");
-	};
-
-	const handleLogoutEverywhere = async () => {
-		if (!window.confirm(t("settings.security.logoutEverywhereConfirm"))) return;
-		try {
-			await apiService.logoutEverywhere();
-			pushToast({ kind: "success", title: t("common.signedOut") });
-			emitAppEvent("routess:open-login");
-		} catch (error) {
-			Logger.error("Logout everywhere failed:", error);
-			pushToast({ kind: "danger", title: t("settings.security.logoutEverywhereFailed") });
-		}
-	};
-
-	const handleDeleteAccount = async () => {
-		if (!window.confirm(t("settings.account.deleteConfirm"))) return;
-		try {
-			await apiService.deleteAccount();
-			pushToast({ kind: "success", title: t("settings.account.deleteScheduled") });
-			emitAppEvent("routess:open-login");
-		} catch (error) {
-			Logger.error("Delete account failed:", error);
-			pushToast({ kind: "danger", title: t("settings.account.deleteFailed") });
-		}
-	};
-
-	const handleCancelDeletion = async () => {
-		try {
-			await apiService.cancelDeletion();
-			pushToast({ kind: "success", title: t("settings.account.deletionCancelled") });
-		} catch (error) {
-			Logger.error("Cancel deletion failed:", error);
-			pushToast({ kind: "danger", title: t("settings.account.deletionCancelFailed") });
-		}
-	};
-
-	const isPendingDeletion = profile?.deletionStatus === "pending_hard_delete";
 
 	const handleMapStyleChange = (nextStyle: RedesignMapStyle) => {
 		setMapStyle(nextStyle);
@@ -434,15 +319,6 @@ export function SettingsPanel() {
 	return (
 		<div style={{ padding: "20px 20px", overflow: "auto", height: "100%" }}>
 			<Group title={t("settings.profile")}>
-				<Row
-					label={userName}
-					sub={userEmail}
-					control={
-						<Btn variant="ghost" onClick={handleEditProfile}>
-							{t("settings.profile.edit")}
-						</Btn>
-					}
-				/>
 				<div
 					style={{
 						padding: "14px 14px 16px",
@@ -730,95 +606,17 @@ export function SettingsPanel() {
 				/>
 			</Group>
 
-			{profile && (
-				<Group title={t("settings.security")}>
-					<Row
-						label={t("settings.profile.avatar")}
-						sub={t("settings.profile.avatar.sub")}
-						control={
-							<>
-								<input
-									ref={fileInputRef}
-									type="file"
-									accept="image/*"
-									onChange={handleAvatarFileChange}
-									style={{ display: "none" }}
-								/>
-								<Btn variant="ghost" onClick={handleAvatarUploadClick}>
-									{t("settings.profile.avatar.upload")}
-								</Btn>
-								{profile.avatar && (
-									<Btn variant="ghost" onClick={handleClearAvatar} style={{ marginLeft: 6 }}>
-										{t("settings.profile.avatar.clear")}
-									</Btn>
-								)}
-							</>
-						}
-					/>
-					<Row
-						label={t("settings.security.changePassword")}
-						sub={t("settings.security.changePasswordSub")}
-						control={
-							<Btn variant="ghost" onClick={handleChangePassword}>
-								{t("settings.security.changePasswordAction")}
-							</Btn>
-						}
-					/>
-					<Row
-						label={t("settings.security.logoutEverywhere")}
-						sub={t("settings.security.logoutEverywhereSub")}
-						control={
-							<Btn variant="ghost" onClick={handleLogoutEverywhere} style={{ color: RDS_COLORS.danger }}>
-								{t("settings.security.logoutEverywhereAction")}
-							</Btn>
-						}
-						last
-					/>
-				</Group>
-			)}
-
 			<Group title={t("settings.account")}>
-				{isPendingDeletion && (
-					<Row
-						label={t("settings.account.pendingDeletion")}
-						sub={t("settings.account.pendingDeletionSub")}
-						control={
-							<Btn variant="primary" onClick={handleCancelDeletion}>
-								{t("settings.account.cancelDeletion")}
-							</Btn>
-						}
-					/>
-				)}
 				<Row
-					label={t("settings.account.exportAll")}
-					sub={t("settings.account.exportAllSub")}
-					control={
-						<Btn variant="ghost" onClick={handleExportData}>
-							<I.download size={14} />
-						</Btn>
-					}
-				/>
-				{profile && !isPendingDeletion && (
-					<Row
-						label={t("settings.account.deleteAccount")}
-						sub={t("settings.account.deleteAccountSub")}
-						control={
-							<Btn variant="ghost" onClick={handleDeleteAccount} style={{ color: RDS_COLORS.danger }}>
-								{t("settings.account.deleteAccountAction")}
-							</Btn>
-						}
-					/>
-				)}
-				<Row
-					label={profile ? t("common.signOut") : t("common.signIn")}
+					label={profile ? t("settings.account.manage") : t("settings.account.signInPrompt")}
+					sub={profile ? t("settings.account.manageSub") : t("settings.account.signInSub")}
 					control={
 						<Btn
 							variant={profile ? "ghost" : "primary"}
-							onClick={handleSignOut}
-							disabled={logout.isPending}
-							style={profile ? { color: RDS_COLORS.danger } : undefined}
+							onClick={profile ? handleEditProfile : handleSignOut}
+							disabled={!profile && logout.isPending}
 						>
-							{logout.isPending ? t("common.signingOut") : profile ? t("common.signOut") : t("common.signIn")}
+							{profile ? t("settings.account.open") : t("common.signIn")}
 						</Btn>
 					}
 					last
