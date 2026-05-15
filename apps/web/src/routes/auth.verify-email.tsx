@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AUTH_CARD_STYLE, AuthBackdrop, AuthCardAccentBar, AuthLayout } from "@/components/auth-shared";
 import { Btn, RDS_COLORS } from "@/components/primitives";
 import { apiService } from "@/lib/api";
@@ -23,6 +23,11 @@ function VerifyEmailPage() {
 	const pushToast = useToastStore((s) => s.push);
 	const [state, setState] = useState<VerifyState>("verifying");
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
+	// React 18 StrictMode mounts → unmounts → mounts in dev, so a naive
+	// useEffect would POST verify-email twice in quick succession and race
+	// past the "no existing user" check. Track the token we've already kicked
+	// off a request for so we fire exactly once per token.
+	const startedForToken = useRef<string | null>(null);
 
 	useEffect(() => {
 		if (!token) {
@@ -30,6 +35,8 @@ function VerifyEmailPage() {
 			setErrorMessage(t("auth.verifyEmail.missingToken"));
 			return;
 		}
+		if (startedForToken.current === token) return;
+		startedForToken.current = token;
 		void (async () => {
 			try {
 				const result = await apiService.verifyEmail(token);

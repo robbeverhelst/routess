@@ -101,24 +101,34 @@ export class EmailAuthService {
 	// the User and the UserAuthMethod with the password hash, and starts a
 	// session.
 	async verifyEmail(token: string, sessionContext?: SessionContext): Promise<AuthResponseDto> {
-		const tokenRow = await this.tokenRepository.findOne({ token, purpose: "pending_signup" });
-		if (!tokenRow || tokenRow.usedAt || tokenRow.expiresAt.getTime() < Date.now() || !tokenRow.passwordHash) {
+		// Atomically claim the token — UPDATE...WHERE used_at IS NULL ensures
+		// only one of two concurrent requests (e.g. React 18 StrictMode's
+		// double-fire in dev) can proceed past this point. The losing request
+		// gets zero rows back and falls through to the "invalid or expired"
+		// branch below.
+		const claimedRows = (await this.em.getConnection().execute(
+			`update "verification_token"
+			 set "used_at" = now(), "updated_at" = now()
+			 where "token" = ? and "purpose" = 'pending_signup' and "used_at" is null and "expires_at" > now()
+			 returning "id", "email", "password_hash"`,
+			[token],
+		)) as Array<{ id: number; email: string; password_hash: string | null }>;
+		const claimed = claimedRows[0];
+		if (!claimed?.password_hash) {
 			throw new BadRequestException("This verification link is invalid or has expired.");
 		}
 
 		// Race: another signup attempt with the same email might have completed
-		// between the token issue and now. Reject in that case.
-		const existing = await this.userRepository.findOne({ email: tokenRow.email }, { filters: { softDelete: false } });
+		// between the token issue and now (e.g. via Google). Reject in that case.
+		const existing = await this.userRepository.findOne({ email: claimed.email }, { filters: { softDelete: false } });
 		if (existing) {
-			tokenRow.usedAt = new Date();
-			await this.em.persistAndFlush(tokenRow);
 			throw new ConflictException("An account with this email already exists.");
 		}
 
-		const desiredRole = this.resolveDesiredRole(tokenRow.email);
-		const localPart = tokenRow.email.split("@")[0] ?? tokenRow.email;
+		const desiredRole = this.resolveDesiredRole(claimed.email);
+		const localPart = claimed.email.split("@")[0] ?? claimed.email;
 		const user = this.userRepository.create({
-			email: tokenRow.email,
+			email: claimed.email,
 			name: localPart,
 			isEmailVerified: true,
 			role: desiredRole ?? "user",
@@ -129,14 +139,11 @@ export class EmailAuthService {
 		const method = this.authMethodRepository.create({
 			user: user.id,
 			provider: "email",
-			providerId: tokenRow.email,
-			passwordHash: tokenRow.passwordHash,
+			providerId: claimed.email,
+			passwordHash: claimed.password_hash,
 			lastUsedAt: new Date(),
 		});
 		await this.em.persistAndFlush(method);
-
-		tokenRow.usedAt = new Date();
-		await this.em.persistAndFlush(tokenRow);
 
 		this.events.emit(USER_REGISTERED, { source: "email" } satisfies UserRegisteredEvent);
 
