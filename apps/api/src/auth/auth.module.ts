@@ -22,6 +22,7 @@ import { PersonalAccessTokensService } from "./personal-access-tokens.service";
 import { SessionService } from "./session.service";
 import { SessionsController } from "./sessions.controller";
 import { JwtStrategy } from "./strategies/jwt.strategy";
+import { PatBearerStrategy } from "./strategies/pat-bearer.strategy";
 
 @Module({
 	imports: [
@@ -50,9 +51,18 @@ import { JwtStrategy } from "./strategies/jwt.strategy";
 		SessionService,
 		PasswordService,
 		JwtStrategy,
+		PatBearerStrategy,
 		PersonalAccessTokensService,
 		{ provide: GOOGLE_IDENTITY_VERIFIER, useClass: GoogleOAuth2Verifier },
 	],
-	exports: [AuthService, EmailAuthService, SessionService, PasswordService, JwtStrategy, PersonalAccessTokensService],
+	exports: [
+		AuthService,
+		EmailAuthService,
+		SessionService,
+		PasswordService,
+		JwtStrategy,
+		PatBearerStrategy,
+		PersonalAccessTokensService,
+	],
 })
 export class AuthModule {}
