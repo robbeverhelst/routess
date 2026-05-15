@@ -20,6 +20,7 @@ import { UsersService } from "./users.service";
 
 @ApiTags("users")
 @ApiBearerAuth("JWT-auth")
+@ApiBearerAuth("PAT-auth")
 @UseGuards(UnifiedAuthGuard, ScopeGuard)
 @Controller("users")
 export class UsersController {
