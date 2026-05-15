@@ -668,6 +668,8 @@ export const en: Record<string, string> = {
 	"login.googleNotConfigured": "Google sign-in not configured",
 	"login.googleNotConfiguredHint": "Set VITE_GOOGLE_CLIENT_ID in .env, then restart bun dev.",
 	"login.continueGuest": "Continue without an account",
+	"login.noAccount": "Don't have an account?",
+	"login.createAccount": "Create one",
 	"login.terms": "Terms",
 	"login.privacy": "Privacy",
 	"login.toast.welcomeBack": "Welcome back",

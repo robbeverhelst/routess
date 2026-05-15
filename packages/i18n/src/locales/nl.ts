@@ -674,6 +674,8 @@ export const nl: Record<string, string> = {
 	"login.googleNotConfigured": "Google-aanmelding niet geconfigureerd",
 	"login.googleNotConfiguredHint": "Stel VITE_GOOGLE_CLIENT_ID in .env in en herstart daarna bun dev.",
 	"login.continueGuest": "Doorgaan zonder account",
+	"login.noAccount": "Nog geen account?",
+	"login.createAccount": "Maak er een aan",
 	"login.terms": "Voorwaarden",
 	"login.privacy": "Privacy",
 	"login.toast.welcomeBack": "Welkom terug",

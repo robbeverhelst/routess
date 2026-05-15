@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { trackEvent } from "@/lib/analytics/track";
 import { apiService } from "@/lib/api";
+import { emitAppEvent } from "@/lib/app-events";
 import { type GoogleCodeResponse, googleAuth, hasValidGoogleClientId } from "@/lib/google-auth";
 import { useT } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
@@ -15,7 +16,7 @@ import {
 import { I } from "../components/icons";
 import { Btn, RDS_COLORS } from "../components/primitives";
 
-type EmailMode = "signin" | "signup" | "forgot";
+type EmailMode = "signin" | "forgot";
 
 export function LoginScreen({ onSuccess }: { onSuccess?: () => void }) {
 	const [isLoading, setIsLoading] = useState(false);
@@ -64,10 +65,7 @@ export function LoginScreen({ onSuccess }: { onSuccess?: () => void }) {
 				const result = await apiService.loginEmail(email.trim(), password);
 				pushToast({ kind: "success", title: t("login.toast.welcomeBack"), body: result.user.email });
 				onSuccess?.();
-			} else if (emailMode === "signup") {
-				await apiService.signupEmail({ email: email.trim(), password });
-				setPostSubmitMessage(t("login.email.signupSent"));
-			} else if (emailMode === "forgot") {
+			} else {
 				await apiService.requestPasswordReset(email.trim());
 				setPostSubmitMessage(t("login.email.resetSent"));
 			}
@@ -151,28 +149,16 @@ export function LoginScreen({ onSuccess }: { onSuccess?: () => void }) {
 					</div>
 
 					{!emailMode && (
-						<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-							<Btn
-								variant="default"
-								onClick={() => {
-									resetEmailForm();
-									setEmailMode("signin");
-								}}
-								style={{ width: "100%", height: 40 }}
-							>
-								<I.user size={14} /> {t("login.email.signInWithEmail")}
-							</Btn>
-							<Btn
-								variant="ghost"
-								onClick={() => {
-									resetEmailForm();
-									setEmailMode("signup");
-								}}
-								style={{ width: "100%", height: 40 }}
-							>
-								{t("login.email.createAccount")}
-							</Btn>
-						</div>
+						<Btn
+							variant="default"
+							onClick={() => {
+								resetEmailForm();
+								setEmailMode("signin");
+							}}
+							style={{ width: "100%", height: 40 }}
+						>
+							<I.user size={14} /> {t("login.email.signInWithEmail")}
+						</Btn>
 					)}
 
 					{emailMode && (
@@ -195,18 +181,12 @@ export function LoginScreen({ onSuccess }: { onSuccess?: () => void }) {
 									outline: "none",
 								}}
 							/>
-							{emailMode !== "forgot" && (
+							{emailMode === "signin" && (
 								<input
 									type="password"
-									autoComplete={emailMode === "signin" ? "current-password" : "new-password"}
+									autoComplete="current-password"
 									required
-									minLength={emailMode === "signup" ? 12 : undefined}
-									maxLength={128}
-									placeholder={
-										emailMode === "signup"
-											? t("login.email.newPasswordPlaceholder")
-											: t("login.email.passwordPlaceholder")
-									}
+									placeholder={t("login.email.passwordPlaceholder")}
 									value={password}
 									onChange={(e) => setPassword(e.target.value)}
 									style={{
@@ -240,9 +220,7 @@ export function LoginScreen({ onSuccess }: { onSuccess?: () => void }) {
 										? t("login.email.submitting")
 										: emailMode === "signin"
 											? t("login.email.signIn")
-											: emailMode === "signup"
-												? t("login.email.createAccount")
-												: t("login.email.sendReset")}
+											: t("login.email.sendReset")}
 								</Btn>
 							)}
 							<div style={{ display: "flex", justifyContent: "space-between", fontSize: 11.5 }}>
@@ -304,6 +282,32 @@ export function LoginScreen({ onSuccess }: { onSuccess?: () => void }) {
 					>
 						{t("login.continueGuest")}
 					</Btn>
+
+					<div
+						style={{
+							textAlign: "center",
+							marginTop: 16,
+							fontSize: 12.5,
+							color: RDS_COLORS.fgMuted,
+						}}
+					>
+						{t("login.noAccount")}{" "}
+						<button
+							type="button"
+							onClick={() => emitAppEvent("routess:open-signup")}
+							style={{
+								background: "transparent",
+								border: 0,
+								color: RDS_COLORS.accent,
+								fontWeight: 600,
+								cursor: "pointer",
+								padding: 0,
+								font: "inherit",
+							}}
+						>
+							{t("login.createAccount")}
+						</button>
+					</div>
 
 					{isLoading && (
 						<div
