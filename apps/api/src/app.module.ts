@@ -2,12 +2,13 @@ import { MikroOrmModule } from "@mikro-orm/nestjs";
 import { type MiddlewareConsumer, Module, type NestModule } from "@nestjs/common";
 import { APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
 import { EventEmitterModule } from "@nestjs/event-emitter";
-import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
+import { ThrottlerModule } from "@nestjs/throttler";
 import { LoggerModule } from "nestjs-pino";
 import { AdminModule } from "./admin/admin.module";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { AuthModule } from "./auth/auth.module";
+import { AuthAwareThrottlerGuard } from "./auth/guards/auth-aware-throttler.guard";
 import type { AppConfig } from "./config/app-config";
 import { APP_CONFIG, ConfigModule } from "./config/config.module";
 import { HealthModule } from "./health/health.module";
@@ -70,7 +71,7 @@ import { UsersModule } from "./users/users.module";
 		AppService,
 		{
 			provide: APP_GUARD,
-			useClass: ThrottlerGuard,
+			useClass: AuthAwareThrottlerGuard,
 		},
 		{
 			provide: APP_INTERCEPTOR,
