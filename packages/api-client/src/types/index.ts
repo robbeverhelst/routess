@@ -188,6 +188,34 @@ export interface AuthResponse {
 	user: ApiUser;
 }
 
+// ========== Personal access tokens (PATs) ==========
+// Long-lived bearer credentials a user mints for non-browser clients
+// (CLI, AI agents, scripts). See ADR-0022.
+
+export type ApiPatScope = "read" | "write";
+
+export interface ApiPersonalAccessToken {
+	id: number;
+	label: string;
+	scope: ApiPatScope;
+	lastUsedAt: string | null;
+	expiresAt: string | null;
+	createdAt: string;
+}
+
+export interface ApiPersonalAccessTokenWithSecret extends ApiPersonalAccessToken {
+	// Plaintext returned exactly once at creation. Never returned again by
+	// the list endpoint; if the user loses it they revoke and mint a new
+	// one.
+	token: string;
+}
+
+export interface CreatePersonalAccessTokenRequest {
+	label: string;
+	scope: ApiPatScope;
+	expiresAt?: string;
+}
+
 export interface GoogleAuthRequest {
 	code: string;
 }

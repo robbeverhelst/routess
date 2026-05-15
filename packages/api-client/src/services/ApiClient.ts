@@ -9,9 +9,12 @@ import type {
 	AdminUserList,
 	AdminUserStats,
 	ApiClientConfig,
+	ApiPersonalAccessToken,
+	ApiPersonalAccessTokenWithSecret,
 	ApiRoute,
 	ApiUser,
 	AuthResponse,
+	CreatePersonalAccessTokenRequest,
 	CreateRouteRequest,
 	UpdateCurrentUserRequest,
 	UpdateRouteRequest,
@@ -193,6 +196,26 @@ export class ApiClient {
 
 	exportDataUrl(): string {
 		return `${this.config.baseUrl}/api/v1/users/me/export`;
+	}
+
+	// Personal access tokens. Mint/list/revoke. The mint endpoint returns
+	// the plaintext exactly once; the caller is responsible for surfacing
+	// it to the user immediately and not persisting it client-side.
+	async createPersonalAccessToken(body: CreatePersonalAccessTokenRequest): Promise<ApiPersonalAccessTokenWithSecret> {
+		return this.request<ApiPersonalAccessTokenWithSecret>("/auth/tokens", {
+			method: "POST",
+			body,
+		});
+	}
+
+	async listPersonalAccessTokens(): Promise<ApiPersonalAccessToken[]> {
+		return this.request<ApiPersonalAccessToken[]>("/auth/tokens");
+	}
+
+	async revokePersonalAccessToken(id: number): Promise<void> {
+		await this.request<{ success: boolean }>(`/auth/tokens/${id}`, {
+			method: "DELETE",
+		});
 	}
 
 	// Route management methods

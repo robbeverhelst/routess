@@ -17,6 +17,7 @@ import { useToastStore } from "@/stores/toastStore";
 import { type RedesignAccent, type RedesignActivity, useUiStore } from "@/stores/uiStore";
 import { I } from "../components/icons";
 import { Btn, RDS_COLORS, SecTitle, Toggle } from "../components/primitives";
+import { ApiTokensSection } from "./ApiTokensSection";
 
 const LANGUAGE_OPTIONS: { value: SupportedLanguage; label: string }[] = [
 	{ value: "en", label: "English" },
@@ -605,6 +606,8 @@ export function SettingsPanel() {
 					last
 				/>
 			</Group>
+
+			{profile && <ApiTokensSection />}
 
 			<Group title={t("settings.account")}>
 				<Row

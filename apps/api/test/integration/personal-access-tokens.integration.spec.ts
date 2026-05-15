@@ -144,20 +144,14 @@ describe("Personal Access Tokens Integration Tests", () => {
 		it("revokes the token and stops accepting it", async () => {
 			const { id, token } = await mintPat(app, cookieJwt, { label: "transient", scope: "read" });
 
-			await supertest(app.getHttpServer())
-				.get("/api/v1/routes")
-				.set("Authorization", `Bearer ${token}`)
-				.expect(200);
+			await supertest(app.getHttpServer()).get("/api/v1/routes").set("Authorization", `Bearer ${token}`).expect(200);
 
 			await supertest(app.getHttpServer())
 				.delete(`/api/v1/auth/tokens/${id}`)
 				.set("Authorization", `Bearer ${cookieJwt}`)
 				.expect(200);
 
-			await supertest(app.getHttpServer())
-				.get("/api/v1/routes")
-				.set("Authorization", `Bearer ${token}`)
-				.expect(401);
+			await supertest(app.getHttpServer()).get("/api/v1/routes").set("Authorization", `Bearer ${token}`).expect(401);
 		});
 
 		it("is idempotent on a token already revoked", async () => {
