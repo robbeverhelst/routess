@@ -1,6 +1,7 @@
 import type { Options } from "@mikro-orm/core";
 import { PostgreSqlDriver } from "@mikro-orm/postgresql";
 import { getAppConfig } from "./config/app-config";
+import { PersonalAccessToken } from "./entities/personal-access-token.entity";
 import { Route } from "./entities/route.entity";
 import { Session } from "./entities/session.entity";
 import { User } from "./entities/user.entity";
@@ -17,7 +18,7 @@ const config: Options = {
 	user: appConfig.database.user,
 	password: appConfig.database.password,
 	dbName: appConfig.database.name,
-	entities: [User, Route, Session, UserAuthMethod, VerificationToken],
+	entities: [User, Route, Session, UserAuthMethod, VerificationToken, PersonalAccessToken],
 	migrations: {
 		// Production runs compiled JS migrations from dist, while local tooling still uses TS sources.
 		// pathTs is only included outside production: the production image ships dist only, and mikro-orm
