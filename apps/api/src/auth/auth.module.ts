@@ -7,6 +7,7 @@ import { ScheduleModule } from "@nestjs/schedule";
 import type { AppConfig } from "../config/app-config";
 import { APP_CONFIG, ConfigModule } from "../config/config.module";
 import { EmailModule } from "../email/email.module";
+import { PersonalAccessToken } from "../entities/personal-access-token.entity";
 import { Session } from "../entities/session.entity";
 import { User } from "../entities/user.entity";
 import { UserAuthMethod } from "../entities/user-auth-method.entity";
@@ -16,6 +17,8 @@ import { AuthService } from "./auth.service";
 import { EmailAuthService } from "./email-auth.service";
 import { GOOGLE_IDENTITY_VERIFIER, GoogleOAuth2Verifier } from "./google-identity-verifier";
 import { PasswordService } from "./password.service";
+import { PersonalAccessTokensController } from "./personal-access-tokens.controller";
+import { PersonalAccessTokensService } from "./personal-access-tokens.service";
 import { SessionService } from "./session.service";
 import { SessionsController } from "./sessions.controller";
 import { JwtStrategy } from "./strategies/jwt.strategy";
@@ -24,7 +27,7 @@ import { JwtStrategy } from "./strategies/jwt.strategy";
 	imports: [
 		ConfigModule,
 		EmailModule,
-		MikroOrmModule.forFeature([User, Session, UserAuthMethod, VerificationToken]),
+		MikroOrmModule.forFeature([User, Session, UserAuthMethod, VerificationToken, PersonalAccessToken]),
 		PassportModule.register({ defaultStrategy: "jwt" }),
 		ScheduleModule.forRoot(),
 		JwtModule.registerAsync({
@@ -40,15 +43,16 @@ import { JwtStrategy } from "./strategies/jwt.strategy";
 			},
 		}),
 	],
-	controllers: [AuthController, SessionsController],
+	controllers: [AuthController, SessionsController, PersonalAccessTokensController],
 	providers: [
 		AuthService,
 		EmailAuthService,
 		SessionService,
 		PasswordService,
 		JwtStrategy,
+		PersonalAccessTokensService,
 		{ provide: GOOGLE_IDENTITY_VERIFIER, useClass: GoogleOAuth2Verifier },
 	],
-	exports: [AuthService, EmailAuthService, SessionService, PasswordService, JwtStrategy],
+	exports: [AuthService, EmailAuthService, SessionService, PasswordService, JwtStrategy, PersonalAccessTokensService],
 })
 export class AuthModule {}
