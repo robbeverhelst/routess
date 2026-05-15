@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { AUTH_CARD_STYLE, AuthBackdrop, AuthCardAccentBar, AuthLayout } from "@/components/auth-shared";
 import { Btn, RDS_COLORS } from "@/components/primitives";
 import { apiService } from "@/lib/api";
+import { notifyAuthStateChange, storeUser } from "@/lib/auth-state";
 import { useT } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
 import { useToastStore } from "@/stores/toastStore";
@@ -40,6 +41,8 @@ function VerifyEmailPage() {
 		void (async () => {
 			try {
 				const result = await apiService.verifyEmail(token);
+				storeUser(result.user);
+				notifyAuthStateChange();
 				setState("success");
 				pushToast({ kind: "success", title: t("auth.verifyEmail.success"), body: result.user.email });
 				setTimeout(() => navigate({ to: "/" }), 1200);

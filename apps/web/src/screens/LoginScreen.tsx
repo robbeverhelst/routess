@@ -2,6 +2,7 @@ import { useState } from "react";
 import { trackEvent } from "@/lib/analytics/track";
 import { apiService } from "@/lib/api";
 import { emitAppEvent } from "@/lib/app-events";
+import { notifyAuthStateChange, storeUser } from "@/lib/auth-state";
 import { type GoogleCodeResponse, googleAuth, hasValidGoogleClientId } from "@/lib/google-auth";
 import { useT } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
@@ -63,6 +64,8 @@ export function LoginScreen({ onSuccess }: { onSuccess?: () => void }) {
 		try {
 			if (emailMode === "signin") {
 				const result = await apiService.loginEmail(email.trim(), password);
+				storeUser(result.user);
+				notifyAuthStateChange();
 				pushToast({ kind: "success", title: t("login.toast.welcomeBack"), body: result.user.email });
 				onSuccess?.();
 			} else {
