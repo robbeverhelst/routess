@@ -1,6 +1,7 @@
 import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { CliError, EXIT_CODES } from "./output";
 
 // Token storage matches the convention used by gh / aws / kubectl: a plain
 // JSON file at $XDG_CONFIG_HOME/routess/auth.json (or ~/.config/routess
@@ -100,13 +101,16 @@ export function configFileLocation(): string {
 	return authFilePath();
 }
 
-// Throws a usage-style error when there is no token. Commands that need
-// authentication should call this once at entry; the CLI's command runner
-// translates the thrown error to exit code 5 (UNAUTHORIZED).
+// Throws a CliError mapped to exit code 5 (UNAUTHORIZED) when there is no
+// token, matching the exit-code taxonomy documented in
+// docs/skills/routess.skill.md so agents branch on "auth needed" the same
+// way regardless of whether the token is missing locally or rejected by the
+// API.
 export function requireToken(config: CliConfig): string {
 	if (!config.token) {
-		throw new Error(
+		throw new CliError(
 			"Not signed in. Run `routess auth login --token <pat>` after minting a token in the web app Settings → API Tokens.",
+			EXIT_CODES.UNAUTHORIZED,
 		);
 	}
 	return config.token;
