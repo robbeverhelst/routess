@@ -22,7 +22,7 @@ test.describe("route library", () => {
 			data: {
 				name: "my saved loop",
 				activity: "cycle",
-				privacy: "private",
+				visibility: "private",
 				waypoints: [
 					{ coord: [4.4025, 51.2194], type: "routed" },
 					{ coord: [4.4115, 51.2225], type: "routed" },
@@ -54,7 +54,7 @@ test.describe("route library", () => {
 			data: {
 				name: "owner's route",
 				activity: "run",
-				privacy: "private",
+				visibility: "private",
 				waypoints: [
 					{ coord: [4.4, 51.2], type: "routed" },
 					{ coord: [4.41, 51.21], type: "routed" },

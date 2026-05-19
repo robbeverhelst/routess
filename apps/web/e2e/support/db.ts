@@ -29,7 +29,9 @@ export async function truncateDb(): Promise<void> {
 	const client = new Client({ connectionString });
 	await client.connect();
 	try {
-		await client.query(`TRUNCATE TABLE "session", "route", "user" RESTART IDENTITY CASCADE`);
+		await client.query(
+			`TRUNCATE TABLE "verification_token", "user_auth_method", "session", "route", "user" RESTART IDENTITY CASCADE`,
+		);
 	} finally {
 		await client.end();
 	}

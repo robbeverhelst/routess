@@ -16,4 +16,4 @@ The contracts that matter most for E2E coverage, the `directFlags` ↔ `type` ad
 
 - HAR files are committed to the repo and grow with the suite. They are test data, not source: diffing them in PRs is mostly noise. Rely on the scheduled refresh PR to surface real upstream changes.
 - "Mapbox is down" or "Valhalla returned a 500" is not caught by E2E. That is a job for synthetic monitoring against prod, intentionally out of scope here.
-- "Real backend" includes Postgres, so DB reset between tests is required (see ADR-0018).
+- "Real backend" includes Postgres, so DB reset between tests is required (see ADR-0023).

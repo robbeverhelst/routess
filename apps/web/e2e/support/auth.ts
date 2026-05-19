@@ -22,6 +22,27 @@ export async function testLogin(request: APIRequestContext, email: string): Prom
 	return response.json();
 }
 
+// Seeds a User with an email+password auth method, bypassing the signup-email
+// → verify-email round-trip. Used to set up a known account that a spec can
+// then log in to via the real `/auth/login-email` endpoint (and the real UI).
+export async function seedUserWithPassword(
+	request: APIRequestContext,
+	email: string,
+	password: string,
+	name?: string,
+): Promise<void> {
+	if (!TEST_LOGIN_SECRET) {
+		throw new Error("E2E_TEST_LOGIN_SECRET is not set; the API will reject /test/seed-user");
+	}
+	const response = await request.post(`http://localhost:${API_PORT}/api/v1/test/seed-user`, {
+		headers: { "x-test-secret": TEST_LOGIN_SECRET },
+		data: { email, password, name },
+	});
+	if (!response.ok()) {
+		throw new Error(`/test/seed-user failed: ${response.status()} ${await response.text()}`);
+	}
+}
+
 // Logs the user in and lands on `/` with the auth state propagated. Two-pass
 // approach: navigate to set the origin, write localStorage from the test
 // context, reload so the React app boots with auth state already present.

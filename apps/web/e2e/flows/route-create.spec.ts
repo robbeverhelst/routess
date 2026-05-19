@@ -69,7 +69,7 @@ test.describe("hand-drawn route", () => {
 			data: {
 				name: "spec route",
 				activity: "cycle",
-				privacy: "private",
+				visibility: "private",
 				waypoints: draft.waypoints.map((w) => ({ coord: w.coord, type: w.type })),
 				distance: draft.distanceMeters ?? undefined,
 				duration: draft.durationSeconds ?? undefined,

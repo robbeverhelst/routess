@@ -3,6 +3,7 @@ import { type DynamicModule, Logger, Module, type OnModuleInit } from "@nestjs/c
 import { AuthModule } from "../auth/auth.module";
 import { ConfigModule } from "../config/config.module";
 import { User } from "../entities/user.entity";
+import { UserAuthMethod } from "../entities/user-auth-method.entity";
 import { TestLoginController } from "./test-login.controller";
 
 const TEST_DB_NAME_PATTERN = /(_e2e|_test)$/;
@@ -22,7 +23,7 @@ export class TestSupportModule implements OnModuleInit {
 		}
 		return {
 			module: TestSupportModule,
-			imports: [ConfigModule, AuthModule, MikroOrmModule.forFeature([User])],
+			imports: [ConfigModule, AuthModule, MikroOrmModule.forFeature([User, UserAuthMethod])],
 			controllers: [TestLoginController],
 		};
 	}

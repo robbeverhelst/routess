@@ -16,4 +16,4 @@ The alternative (letting `release` proceed when E2E fails, or `retries: 2`+) def
 ## Consequences
 
 - A genuinely broken E2E test blocks `main` until fixed or skipped. This is the desired pressure but means the on-call rotation must include "fix or skip the failing E2E" as a known task type.
-- The Mondays HAR refresh PR (per ADR-0017) can fail E2E if a Mapbox response shape changed. That is the right signal: refusing the refresh PR until the suite is updated is the same convention as any other breaking-change response.
+- The Mondays HAR refresh PR (per ADR-0022) can fail E2E if a Mapbox response shape changed. That is the right signal: refusing the refresh PR until the suite is updated is the same convention as any other breaking-change response.
