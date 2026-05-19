@@ -31,7 +31,7 @@ The complete glossary lives in `CONTEXT.md`. If a user introduces a term that co
 The user mints a Personal Access Token in the Routess web app: **Settings → API Tokens → Create**. The plaintext is shown exactly once. Two scopes:
 
 - **`read`** — list and inspect routes, GPX export (when available), read profile.
-- **`write`** — `read` plus metadata-only mutations on owned routes (`PATCH` name/activity/privacy, `DELETE`) and on user preferences.
+- **`write`** — `read` plus metadata-only mutations on owned routes (`PATCH` name/activity/visibility, `DELETE`) and on user preferences.
 
 A PAT is **never** valid against `/api/v1/admin/*` or `DELETE /api/v1/users/me`, regardless of the owning user's role. PATs cannot mint other PATs; minting is cookie-only.
 
@@ -82,10 +82,10 @@ routess routes delete 17 --confirm
 
 ### Make a route shareable (public)
 
-`privacy: public` is a destructive operation in the eyes of the API: once public, the URL may be archived externally and reverting does not unshare. Confirm with the user before doing this.
+`visibility: public` is a destructive operation in the eyes of the API: once public, the URL may be archived externally and reverting does not unshare. Confirm with the user before doing this.
 
 ```
-routess routes update 42 --privacy public --confirm
+routess routes update 42 --visibility public --confirm
 ```
 
 ## Guardrails
@@ -93,7 +93,7 @@ routess routes update 42 --privacy public --confirm
 These are the operations that **require explicit user confirmation in your conversation** before you call them:
 
 1. `DELETE` on any route. The API soft-deletes (admin can recover within retention), but the user does not see the recovered route until restored.
-2. `PATCH` that sets `privacy: public`. The URL becomes potentially indexable and archivable externally.
+2. `PATCH` that sets `visibility: public`. The URL becomes potentially indexable and archivable externally.
 3. Bulk operations (more than 5 mutations in one chain). Even when each individual op is benign, the volume can surprise the user.
 4. Anything you cannot describe in one sentence to the user.
 

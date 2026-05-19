@@ -8,7 +8,7 @@ interface RouteResponse {
 	name: string;
 	description?: string | null;
 	activity?: string | null;
-	privacy: "private" | "link" | "public";
+	visibility: "private" | "unlisted" | "public";
 	tags: string[];
 	distance?: number | null;
 	duration?: number | null;
@@ -20,14 +20,13 @@ interface RouteResponse {
 interface UpdateRouteBody {
 	name?: string;
 	activity?: string;
-	privacy?: "private" | "link" | "public";
+	visibility?: "private" | "unlisted" | "public";
 }
 
 function formatRouteRow(route: RouteResponse): string {
 	const distanceKm = route.distance ? `${(route.distance / 1000).toFixed(1)}km` : "—";
 	const activity = route.activity ?? "—";
-	const privacy = route.privacy;
-	return `${route.id}\t${route.name}\t${activity}\t${privacy}\t${distanceKm}`;
+	return `${route.id}\t${route.name}\t${activity}\t${route.visibility}\t${distanceKm}`;
 }
 
 export function registerRoutesCommands(program: Command): void {
@@ -65,12 +64,12 @@ export function registerRoutesCommands(program: Command): void {
 					const distanceKm = data.distance ? `${(data.distance / 1000).toFixed(2)} km` : "n/a";
 					const lines = [
 						`Route ${data.id}: ${data.name}`,
-						`  activity: ${data.activity ?? "n/a"}`,
-						`  privacy : ${data.privacy}`,
-						`  distance: ${distanceKm}`,
-						`  tags    : ${data.tags.join(", ") || "(none)"}`,
-						`  created : ${data.createdAt}`,
-						`  updated : ${data.updatedAt}`,
+						`  activity  : ${data.activity ?? "n/a"}`,
+						`  visibility: ${data.visibility}`,
+						`  distance  : ${distanceKm}`,
+						`  tags      : ${data.tags.join(", ") || "(none)"}`,
+						`  created   : ${data.createdAt}`,
+						`  updated   : ${data.updatedAt}`,
 					];
 					return lines.join("\n");
 				});
@@ -80,12 +79,12 @@ export function registerRoutesCommands(program: Command): void {
 	routes
 		.command("update <id>")
 		.description(
-			"Update metadata on a route (name / activity / privacy). Body fields are optional but at least one is required.",
+			"Update metadata on a route (name / activity / visibility). Body fields are optional but at least one is required.",
 		)
 		.option("--name <name>", "rename the route")
 		.option("--activity <activity>", "set the activity (e.g. run, cycle, walk)")
-		.option("--privacy <privacy>", "set the visibility: private | link | public")
-		.option("--confirm", "set X-Routess-Confirm: true (required when --privacy is public)")
+		.option("--visibility <visibility>", "set the visibility: private | unlisted | public")
+		.option("--confirm", "set X-Routess-Confirm: true (required when --visibility is public)")
 		.action(async (id: string, options: UpdateRouteBody & { confirm?: boolean }) => {
 			await runWithProgram(program, async (runOptions) => {
 				const config = loadConfig();
@@ -93,9 +92,9 @@ export function registerRoutesCommands(program: Command): void {
 				const body: UpdateRouteBody = {};
 				if (options.name !== undefined) body.name = options.name;
 				if (options.activity !== undefined) body.activity = options.activity;
-				if (options.privacy !== undefined) body.privacy = options.privacy;
+				if (options.visibility !== undefined) body.visibility = options.visibility;
 				if (Object.keys(body).length === 0) {
-					throw new CliError("At least one of --name, --activity, --privacy is required.", EXIT_CODES.USAGE);
+					throw new CliError("At least one of --name, --activity, --visibility is required.", EXIT_CODES.USAGE);
 				}
 				const numericId = parseId(id);
 				const route = await request<RouteResponse>(config, `/api/v1/routes/${numericId}`, {
@@ -103,7 +102,7 @@ export function registerRoutesCommands(program: Command): void {
 					body,
 					confirm: options.confirm,
 				});
-				renderResult(runOptions, route, (data) => `Updated route ${data.id}: ${data.name} (${data.privacy}).`);
+				renderResult(runOptions, route, (data) => `Updated route ${data.id}: ${data.name} (${data.visibility}).`);
 			});
 		});
 
