@@ -13,7 +13,11 @@
 		"docker:build": "docker build -f Dockerfile -t routess-web ../..",
 		"test": "vitest run",
 		"test:watch": "vitest",
-		"test:coverage": "vitest run --coverage"
+		"test:coverage": "vitest run --coverage",
+		"e2e": "playwright test --config e2e/playwright.config.ts",
+		"e2e:ui": "playwright test --config e2e/playwright.config.ts --ui",
+		"e2e:record": "E2E_RECORD=1 playwright test --config e2e/playwright.config.ts",
+		"e2e:install": "playwright install --with-deps chromium"
 	},
 	"dependencies": {
 		"@radix-ui/react-dialog": "^1.1.13",

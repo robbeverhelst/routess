@@ -1,0 +1,79 @@
+name: E2E HAR refresh
+
+# Records fresh HAR fixtures against real Mapbox / Valhalla and opens a PR if
+# any fixture changed. See ADR-0017.
+
+on:
+  schedule:
+    - cron: "0 7 * * 1" # Mondays 07:00 UTC
+  workflow_dispatch: {}
+
+jobs:
+  refresh:
+    runs-on: arc-routess
+    timeout-minutes: 30
+    env:
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: routess_db_e2e
+      JWT_SECRET: e2e-jwt-secret-not-for-prod
+      GOOGLE_CLIENT_ID: e2e-google-client-id.apps.googleusercontent.com
+      VITE_E2E: "true"
+      VITE_API_URL: "http://localhost:3000"
+      VITE_MAPBOX_ACCESS_TOKEN: ${{ secrets.MAPBOX_TEST_TOKEN }}
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.13"
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+
+      - run: bun install --frozen-lockfile
+
+      - name: Generate per-run E2E secret
+        run: echo "E2E_TEST_LOGIN_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+
+      - name: Create test database
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d postgres -c 'CREATE DATABASE routess_db_e2e;'
+
+      - run: bun run --filter './packages/*' build
+      - run: bun run --filter './apps/api' build:e2e
+      - run: bun run --filter './apps/web' e2e:install
+      - run: bun run --filter './apps/web' e2e:record
+
+      - name: Open PR if fixtures changed
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: "test(web): refresh e2e HAR fixtures"
+          branch: bot/refresh-e2e-hars
+          delete-branch: true
+          title: "test(web): refresh e2e HAR fixtures"
+          body: |
+            Automated refresh of Playwright HAR fixtures.
+
+            If this PR turns the `e2e` job red, the upstream Mapbox or Valhalla
+            response shape has changed. Update the affected specs and merge.
+          add-paths: |
+            apps/web/e2e/fixtures/har/**

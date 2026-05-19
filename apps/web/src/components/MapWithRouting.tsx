@@ -16,6 +16,9 @@ import { Logger } from "@/lib/logger";
 import { getRuntimeConfig } from "@/lib/runtime-config";
 import { useRoutingStore } from "@/stores/routingStore";
 import { useToastStore } from "@/stores/toastStore";
+import { E2ETestApiBridge } from "@/test-support/E2ETestApiBridge";
+
+const E2E_ENABLED = import.meta.env.VITE_E2E === "true";
 
 const MAPBOX_TOKEN = getRuntimeConfig("VITE_MAPBOX_ACCESS_TOKEN") ?? "";
 const HAS_INVALID_MAPBOX_TOKEN =
@@ -230,6 +233,7 @@ const MapWithRoutingContent: React.FC<MapboxMapProps> = ({
 
 	return (
 		<RouteDraftEditorProvider editor={editor}>
+			{E2E_ENABLED && <E2ETestApiBridge />}
 			<UserLocationProvider mapRef={mapRef} hasRoute={hasRoute} isMapReady={mapRef.current !== null}>
 				<MapConfigurationContent
 					mapRef={mapRef}

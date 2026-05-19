@@ -1,0 +1,14 @@
+{
+	"extends": "../tsconfig.app.json",
+	"compilerOptions": {
+		"types": ["node"],
+		"baseUrl": "..",
+		"paths": {
+			"@/*": ["./src/*"]
+		},
+		"noUnusedLocals": false,
+		"noUnusedParameters": false,
+		"ignoreDeprecations": "6.0"
+	},
+	"include": ["**/*.ts"]
+}
