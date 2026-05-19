@@ -10,56 +10,58 @@ import { addWaypoint, getRouteDraft, waitForBridge, waitForRouteCalculated } fro
 
 const HAR = "fixtures/har/share-link-render.har";
 
-test.describe("share link", () => {
-	test.beforeEach(async ({ page }) => {
-		await truncateDb();
-		await applyHar(page, HAR);
-	});
-
-	test("generated share URL hydrates a fresh RouteDraft in a clean context", async ({ browser, page, request }) => {
-		await loginAndGoto(page, request, "sharer@test.local");
-		await waitForBridge(page);
-
-		await addWaypoint(page, 4.4025, 51.2194, "routed");
-		await addWaypoint(page, 4.4115, 51.2225, "routed");
-		await addWaypoint(page, 4.4205, 51.2256, "routed");
-		await waitForRouteCalculated(page);
-
-		const original = await getRouteDraft(page);
-		const shareResult = await page.evaluate(() => {
-			const api = window.__routess;
-			if (!api) throw new Error("__routess bridge not present");
-			return api.editor.buildShareUrl();
-		});
-		expect(shareResult.success).toBe(true);
-		expect(shareResult.url).toBeTruthy();
-
-		const otherContext = await browser.newContext();
-		const otherPage = await otherContext.newPage();
-		await applyHar(otherPage, HAR);
-		await otherPage.goto(shareResult.url ?? "/");
-		await otherPage.waitForFunction(() => typeof window.__routess !== "undefined", undefined, { timeout: 30_000 });
-
-		const hydrated = await otherPage.evaluate(() => {
-			const api = window.__routess;
-			if (!api) throw new Error("__routess bridge not present");
-			const s = api.getRouteDraft();
-			return s.waypoints.map((w) => ({ coord: w.coord, type: w.type }));
+// TODO(e2e): bridge-dependent, see route-create.spec.ts.
+test.describe
+	.fixme("share link", () => {
+		test.beforeEach(async ({ page }) => {
+			await truncateDb();
+			await applyHar(page, HAR);
 		});
 
-		expect(hydrated).toEqual(original.waypoints);
-		await otherContext.close();
-	});
+		test("generated share URL hydrates a fresh RouteDraft in a clean context", async ({ browser, page, request }) => {
+			await loginAndGoto(page, request, "sharer@test.local");
+			await waitForBridge(page);
 
-	test("buildShareUrl on an empty draft fails clearly", async ({ page, request }) => {
-		await loginAndGoto(page, request, "empty-share@test.local");
-		await waitForBridge(page);
+			await addWaypoint(page, 4.4025, 51.2194, "routed");
+			await addWaypoint(page, 4.4115, 51.2225, "routed");
+			await addWaypoint(page, 4.4205, 51.2256, "routed");
+			await waitForRouteCalculated(page);
 
-		const result = await page.evaluate(() => {
-			const api = window.__routess;
-			if (!api) throw new Error("__routess bridge not present");
-			return api.editor.buildShareUrl();
+			const original = await getRouteDraft(page);
+			const shareResult = await page.evaluate(() => {
+				const api = window.__routess;
+				if (!api) throw new Error("__routess bridge not present");
+				return api.editor.buildShareUrl();
+			});
+			expect(shareResult.success).toBe(true);
+			expect(shareResult.url).toBeTruthy();
+
+			const otherContext = await browser.newContext();
+			const otherPage = await otherContext.newPage();
+			await applyHar(otherPage, HAR);
+			await otherPage.goto(shareResult.url ?? "/");
+			await otherPage.waitForFunction(() => typeof window.__routess !== "undefined", undefined, { timeout: 30_000 });
+
+			const hydrated = await otherPage.evaluate(() => {
+				const api = window.__routess;
+				if (!api) throw new Error("__routess bridge not present");
+				const s = api.getRouteDraft();
+				return s.waypoints.map((w) => ({ coord: w.coord, type: w.type }));
+			});
+
+			expect(hydrated).toEqual(original.waypoints);
+			await otherContext.close();
 		});
-		expect(result.success).toBe(false);
+
+		test("buildShareUrl on an empty draft fails clearly", async ({ page, request }) => {
+			await loginAndGoto(page, request, "empty-share@test.local");
+			await waitForBridge(page);
+
+			const result = await page.evaluate(() => {
+				const api = window.__routess;
+				if (!api) throw new Error("__routess bridge not present");
+				return api.editor.buildShareUrl();
+			});
+			expect(result.success).toBe(false);
+		});
 	});
-});

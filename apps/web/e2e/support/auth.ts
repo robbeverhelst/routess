@@ -43,11 +43,9 @@ export async function seedUserWithPassword(
 	}
 }
 
-// Logs the user in and lands on `/` with the auth state propagated. Two-pass
-// approach: navigate to set the origin, write localStorage from the test
-// context, reload so the React app boots with auth state already present.
-// Matches the storage shape produced by api-client/LocalStorageAuthState +
-// auth-state.storeUser.
+// DEPRECATED. The /test/login backdoor mints a JWT directly but localStorage
+// propagation through reload has been unreliable. Prefer loginViaEmailUI which
+// exercises the real /auth/login-email path and matches what a user does.
 export async function loginAndGoto(
 	page: Page,
 	request: APIRequestContext,
@@ -65,4 +63,46 @@ export async function loginAndGoto(
 	);
 	await page.reload();
 	return auth;
+}
+
+const DEFAULT_PASSWORD = "correct-horse-battery-staple";
+
+// Real sign-in flow: seeds a User with an email+password auth method (via the
+// test backdoor that skips email verification), then drives the actual Sign-in
+// UI through `/auth/login-email`. Returns once the API has responded 200.
+//
+// Pre-seeds two pieces of localStorage:
+//   - `routingAppLanguage = "en"` so role/text selectors match
+//   - `routess-redesign-ui = { state: { welcomeCompleted: true } }` so the
+//     post-login onboarding (`You're in. Let's set you up.`) is skipped
+export async function loginViaEmailUI(
+	page: Page,
+	request: APIRequestContext,
+	email: string,
+	password: string = DEFAULT_PASSWORD,
+	name?: string,
+): Promise<void> {
+	await seedUserWithPassword(request, email, password, name);
+
+	await page.addInitScript(() => {
+		window.localStorage.setItem("routingAppLanguage", "en");
+		window.localStorage.setItem(
+			"routess-redesign-ui",
+			JSON.stringify({ state: { welcomeCompleted: true }, version: 0 }),
+		);
+	});
+	await page.goto("/");
+
+	await page.getByRole("button", { name: /sign in with email/i }).click();
+	await page.locator('input[type="email"]').fill(email);
+	await page.locator('input[type="password"]').fill(password);
+	const loginResponse = page.waitForResponse(
+		(r) => r.url().includes("/auth/login-email") && r.request().method() === "POST",
+		{ timeout: 15_000 },
+	);
+	await page.locator('button[type="submit"]').click();
+	const resp = await loginResponse;
+	if (resp.status() !== 200) {
+		throw new Error(`Sign-in failed: ${resp.status()} ${await resp.text()}`);
+	}
 }

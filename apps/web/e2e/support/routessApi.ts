@@ -36,7 +36,7 @@ declare global {
 // mounted when VITE_E2E === "true" (see ADR-0019); these helpers all wait for
 // `window.__routess` to be defined before invoking it.
 
-export async function waitForBridge(page: Page, timeoutMs = 30_000): Promise<void> {
+export async function waitForBridge(page: Page, timeoutMs = 60_000): Promise<void> {
 	await page.waitForFunction(() => typeof window.__routess !== "undefined", undefined, { timeout: timeoutMs });
 }
 

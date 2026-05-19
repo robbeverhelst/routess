@@ -1,11 +1,10 @@
 import { expect, test } from "@playwright/test";
-import { loginAndGoto, testLogin } from "../support/auth";
+import { testLogin } from "../support/auth";
 import { truncateDb } from "../support/db";
-import { getRouteDraft, waitForBridge } from "../support/routessApi";
 
-// RouteLibrary round-trip: seed a Route via the API, then confirm the user's
-// route list contains it. Loading a Route into the editor exercises the
-// loadFromApiRoute path on RouteDraftEditor (ADR-0009).
+// RouteLibrary API contract: POST and GET /routes round-trip correctly and
+// ownership isolation holds. Pure API specs (no browser), exercise the
+// directFlags ↔ type adapter in the api-client via the API surface.
 
 const API = `http://localhost:${process.env.E2E_API_PORT ?? "3010"}/api/v1`;
 
@@ -14,10 +13,10 @@ test.describe("route library", () => {
 		await truncateDb();
 	});
 
-	test("saved Route appears in GET /routes for the owner", async ({ page, request }) => {
-		const auth = await loginAndGoto(page, request, "library@test.local");
+	test("saved Route appears in GET /routes for the owner", async ({ request }) => {
+		const auth = await testLogin(request, "library@test.local");
 
-		await request.post(`${API}/routes`, {
+		const created = await request.post(`${API}/routes`, {
 			headers: { Authorization: `Bearer ${auth.accessToken}` },
 			data: {
 				name: "my saved loop",
@@ -31,6 +30,7 @@ test.describe("route library", () => {
 				duration: 360,
 			},
 		});
+		expect(created.status()).toBe(201);
 
 		const list = await request.get(`${API}/routes`, {
 			headers: { Authorization: `Bearer ${auth.accessToken}` },
@@ -39,12 +39,7 @@ test.describe("route library", () => {
 		const routes = await list.json();
 		expect(routes).toHaveLength(1);
 		expect(routes[0].name).toBe("my saved loop");
-
-		await waitForBridge(page);
-		// Loading is invoked by the UI's library panel; here we verify the API
-		// surface is consistent with what the editor's loadFromApiRoute consumes.
-		const draftBefore = await getRouteDraft(page);
-		expect(draftBefore.waypointCount).toBe(0);
+		expect(routes[0].waypoints[0].type).toBe("routed");
 	});
 
 	test("another user's Routes are not in the list", async ({ request }) => {

@@ -29,7 +29,16 @@ export default defineConfig({
 	projects: [
 		{
 			name: "chromium-desktop",
-			use: devices["Desktop Chrome"],
+			use: {
+				...devices["Desktop Chrome"],
+				launchOptions: {
+					// Mapbox needs a usable WebGL context. The default headless
+					// chromium GL stack sometimes refuses to initialize Mapbox;
+					// these flags pin to the swiftshader software renderer via
+					// ANGLE, which is the most reliable in headless.
+					args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"],
+				},
+			},
 		},
 		// v1.1: enable mobile project for flow specs only
 		// { name: "chromium-mobile", use: devices["iPhone 14"], testMatch: /flows\// },
