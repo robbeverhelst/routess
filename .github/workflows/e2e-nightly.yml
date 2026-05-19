@@ -1,0 +1,81 @@
+name: Nightly E2E
+
+on:
+  schedule:
+    # 04:00 UTC is 05:00 in Brussels during CET and 06:00 during CEST.
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: nightly-e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    runs-on: arc-routess
+    timeout-minutes: 25
+    env:
+      # scripts/e2e.ts reads E2E_DB_PORT and propagates the rest. The
+      # dedicated E2E ports (3010/5183) come from the same script's defaults.
+      E2E_DB_PORT: "5432"
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: routess_db_e2e
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d routess_db_e2e"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.13"
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+
+      - uses: actions/cache@v5
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
+          restore-keys: ${{ runner.os }}-bun-
+
+      - run: bun install --frozen-lockfile
+
+      - name: Generate per-run E2E secret
+        run: echo "E2E_TEST_LOGIN_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+
+      - name: Build packages
+        run: bun run --filter './packages/*' build
+
+      - name: Build API for E2E
+        run: bun run --filter './apps/api' build:e2e
+
+      - name: Install Playwright browsers
+        run: bun run --filter './apps/web' e2e:install
+
+      - name: Run Playwright suite
+        run: bun run --filter './apps/web' e2e
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: apps/web/e2e/playwright-report/
+          retention-days: 14
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-results
+          path: apps/web/e2e/test-results/
+          retention-days: 14
