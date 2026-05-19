@@ -8,6 +8,6 @@
 		"**/*spec.ts",
 		"src/test-support",
 		"src/app.test.module.ts",
-		"src/main.test.ts"
+		"src/main.e2e.ts"
 	]
 }

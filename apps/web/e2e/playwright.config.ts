@@ -83,6 +83,7 @@ export default defineConfig({
 						VITE_E2E: "true",
 						VITE_API_URL: `http://localhost:${API_PORT}`,
 						VITE_APP_URL: `http://localhost:${WEB_PORT}`,
+						VITE_GOOGLE_CLIENT_ID: "e2e-google-client-id.apps.googleusercontent.com",
 					} as Record<string, string>,
 					cwd: "../../..",
 				},

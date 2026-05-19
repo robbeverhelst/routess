@@ -70,6 +70,7 @@ const env: Record<string, string> = {
 	E2E_DB_PORT: dbPort,
 	JWT_SECRET: process.env.JWT_SECRET ?? "e2e-jwt-secret-not-for-prod",
 	GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID ?? "e2e-google-client-id.apps.googleusercontent.com",
+	VITE_GOOGLE_CLIENT_ID: process.env.VITE_GOOGLE_CLIENT_ID ?? "e2e-google-client-id.apps.googleusercontent.com",
 	VITE_E2E: "true",
 	E2E_API_PORT: process.env.E2E_API_PORT ?? "3010",
 	E2E_WEB_PORT: process.env.E2E_WEB_PORT ?? "5183",

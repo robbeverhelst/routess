@@ -16,7 +16,7 @@
 		"dev": "nest start --watch",
 		"start:debug": "nest start --debug --watch",
 		"start:prod": "bun dist/start-prod.js",
-		"start:e2e": "bun dist-e2e/main.test.js",
+		"start:e2e": "bun dist-e2e/main.e2e.js",
 		"lint": "biome check --fix src/ test/",
 		"lint:check": "biome check src/ test/",
 		"test": "bun test --timeout 30000 --max-concurrency 1",
