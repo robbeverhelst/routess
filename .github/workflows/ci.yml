@@ -76,26 +76,20 @@ jobs:
     runs-on: arc-routess
     timeout-minutes: 25
     env:
-      DB_HOST: localhost
-      DB_PORT: "5432"
-      DB_USER: postgres
-      DB_PASSWORD: postgres
-      DB_NAME: routess_db_e2e
-      JWT_SECRET: e2e-jwt-secret-not-for-prod
-      GOOGLE_CLIENT_ID: e2e-google-client-id.apps.googleusercontent.com
-      VITE_E2E: "true"
-      VITE_API_URL: "http://localhost:3000"
+      # scripts/e2e.ts reads E2E_DB_PORT and propagates the rest. The
+      # dedicated E2E ports (3010/5183) come from the same script's defaults.
+      E2E_DB_PORT: "5432"
     services:
       postgres:
         image: postgres:18
         env:
-          POSTGRES_DB: postgres
+          POSTGRES_DB: routess_db_e2e
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-cmd "pg_isready -U postgres -d routess_db_e2e"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -120,11 +114,6 @@ jobs:
 
       - name: Generate per-run E2E secret
         run: echo "E2E_TEST_LOGIN_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
-
-      - name: Create test database
-        env:
-          PGPASSWORD: postgres
-        run: psql -h localhost -U postgres -d postgres -c 'CREATE DATABASE routess_db_e2e;'
 
       - name: Build packages
         run: bun run --filter './packages/*' build

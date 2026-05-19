@@ -1,33 +1,61 @@
 #!/usr/bin/env bun
 import { randomBytes } from "node:crypto";
+import { Socket } from "node:net";
 import { $ } from "bun";
 
 const E2E_DB = "routess_db_e2e";
 
-console.log("[e2e] starting Postgres");
-await $`docker compose up -d postgres`.quiet();
+// In CI (GitHub Actions service container) postgres is already running on a
+// known port and the DB has been created via POSTGRES_DB. Locally we use
+// docker compose. Caller can force-skip docker setup via E2E_DB_PORT.
+const portReachable = (port: number) =>
+	new Promise<boolean>((resolve) => {
+		const sock = new Socket();
+		sock.setTimeout(500);
+		sock.once("connect", () => {
+			sock.destroy();
+			resolve(true);
+		});
+		sock.once("timeout", () => {
+			sock.destroy();
+			resolve(false);
+		});
+		sock.once("error", () => resolve(false));
+		sock.connect(port, "127.0.0.1");
+	});
 
-const portInspect = await $`docker port routess-postgres-1 5432/tcp`.quiet().text();
-const dbPortMatch = portInspect.match(/0\.0\.0\.0:(\d+)/);
-const dbPort = dbPortMatch ? dbPortMatch[1] : "5432";
-console.log(`[e2e] postgres bound to host port ${dbPort}`);
+let dbPort = process.env.E2E_DB_PORT ?? "";
+if (!dbPort) {
+	console.log("[e2e] starting Postgres (docker compose)");
+	await $`docker compose up -d postgres`.quiet();
+	const portInspect = await $`docker port routess-postgres-1 5432/tcp`.quiet().text();
+	const dbPortMatch = portInspect.match(/0\.0\.0\.0:(\d+)/);
+	dbPort = dbPortMatch ? dbPortMatch[1] : "5432";
+	console.log(`[e2e] postgres bound to host port ${dbPort}`);
 
-let ready = false;
-for (let i = 0; i < 30 && !ready; i++) {
-	try {
-		await $`docker compose exec -T postgres pg_isready -U postgres -d postgres`.quiet();
-		ready = true;
-	} catch {
-		await Bun.sleep(1000);
+	let ready = false;
+	for (let i = 0; i < 30 && !ready; i++) {
+		try {
+			await $`docker compose exec -T postgres pg_isready -U postgres -d postgres`.quiet();
+			ready = true;
+		} catch {
+			await Bun.sleep(1000);
+		}
+	}
+	if (!ready) {
+		console.error("[e2e] Postgres did not become ready in 30s");
+		process.exit(1);
+	}
+
+	console.log(`[e2e] ensuring database '${E2E_DB}' exists`);
+	await $`docker compose exec -T postgres psql -U postgres -d postgres -tc "SELECT 1 FROM pg_database WHERE datname = '${E2E_DB}'" | grep -q 1 || docker compose exec -T postgres psql -U postgres -d postgres -c "CREATE DATABASE ${E2E_DB};"`.quiet();
+} else {
+	console.log(`[e2e] using preconfigured Postgres on port ${dbPort} (E2E_DB_PORT set)`);
+	if (!(await portReachable(Number(dbPort)))) {
+		console.error(`[e2e] nothing listening on localhost:${dbPort}`);
+		process.exit(1);
 	}
 }
-if (!ready) {
-	console.error("[e2e] Postgres did not become ready in 30s");
-	process.exit(1);
-}
-
-console.log(`[e2e] ensuring database '${E2E_DB}' exists`);
-await $`docker compose exec -T postgres psql -U postgres -d postgres -tc "SELECT 1 FROM pg_database WHERE datname = '${E2E_DB}'" | grep -q 1 || docker compose exec -T postgres psql -U postgres -d postgres -c "CREATE DATABASE ${E2E_DB};"`.quiet();
 
 const env: Record<string, string> = {
 	...(Object.fromEntries(Object.entries(process.env).filter(([, v]) => typeof v === "string")) as Record<
