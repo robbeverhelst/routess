@@ -93,14 +93,12 @@
       "name": "routess",
       "version": "0.1.0",
       "bin": {
-        "routess": "./src/index.ts",
-      },
-      "dependencies": {
-        "@routess/core": "workspace:*",
-        "commander": "^13.1.0",
+        "routess": "./dist/index.js",
       },
       "devDependencies": {
+        "@routess/core": "workspace:*",
         "@types/node": "^22.0.0",
+        "commander": "^13.1.0",
         "typescript": "~6.0.0",
       },
     },

@@ -1,15 +1,20 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { Command } from "commander";
 import { registerAuthCommands } from "./commands/auth";
 import { registerRoutesCommands } from "./commands/routes";
 import { type RunOptions, renderError } from "./output";
 
 const program = new Command();
+const packageJsonPath = join(dirname(fileURLToPath(import.meta.url)), "../package.json");
+const packageVersion = JSON.parse(readFileSync(packageJsonPath, "utf8")).version as string;
 
 program
 	.name("routess")
 	.description("Routess command-line interface. See `routess auth login --help` to get started.")
-	.version("0.1.0")
+	.version(packageVersion)
 	.option("--json", "emit machine-readable JSON to stdout, errors as DomainErrorPayload to stderr", false)
 	.option("--api-url <url>", "override the API base URL (defaults to ROUTESS_API_URL env var or production)");
 

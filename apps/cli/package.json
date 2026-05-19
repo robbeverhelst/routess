@@ -5,21 +5,25 @@
 	"private": false,
 	"type": "module",
 	"bin": {
-		"routess": "./src/index.ts"
+		"routess": "./dist/index.js"
 	},
+	"files": [
+		"dist",
+		"README.md"
+	],
 	"scripts": {
 		"dev": "bun src/index.ts",
 		"build": "bun build src/index.ts --outdir dist --target node --format esm",
+		"prepack": "bun run build",
 		"lint": "biome check .",
 		"check-types": "tsc --noEmit",
 		"test": "bun run check-types"
 	},
-	"dependencies": {
-		"@routess/core": "workspace:*",
-		"commander": "^13.1.0"
-	},
+	"dependencies": {},
 	"devDependencies": {
+		"@routess/core": "workspace:*",
 		"@types/node": "^22.0.0",
+		"commander": "^13.1.0",
 		"typescript": "~6.0.0"
 	},
 	"publishConfig": {

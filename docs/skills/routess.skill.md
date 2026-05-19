@@ -35,6 +35,12 @@ The user mints a Personal Access Token in the Routess web app: **Settings → AP
 
 A PAT is **never** valid against `/api/v1/admin/*` or `DELETE /api/v1/users/me`, regardless of the owning user's role. PATs cannot mint other PATs; minting is cookie-only.
 
+Install the CLI:
+
+```
+npm install -g routess
+```
+
 Pass the token to the CLI:
 
 ```

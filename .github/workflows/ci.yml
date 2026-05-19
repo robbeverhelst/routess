@@ -240,6 +240,46 @@ jobs:
         working-directory: docker
         run: docker buildx bake --allow=fs.read=.. --push default
 
+  publish-cli:
+    needs: release
+    runs-on: arc-routess
+    if: needs.release.outputs.released == 'true'
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.14"
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+
+      - uses: actions/cache@v5
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
+          restore-keys: ${{ runner.os }}-bun-
+
+      - run: bun install --frozen-lockfile
+
+      - name: Set CLI package version
+        working-directory: apps/cli
+        run: npm version "${{ needs.release.outputs.version }}" --no-git-tag-version --allow-same-version
+
+      - name: Build CLI
+        run: bun run --filter=routess build
+
+      - name: Publish CLI to npm
+        working-directory: apps/cli
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public --provenance
+
   publish-helm:
     needs:
       - release
