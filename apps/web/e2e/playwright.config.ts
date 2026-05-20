@@ -55,7 +55,8 @@ export default defineConfig({
 					stderr: "pipe",
 					env: {
 						...process.env,
-						NODE_ENV: "development",
+						NODE_ENV: "test",
+						LOG_LEVEL: process.env.LOG_LEVEL ?? "silent",
 						PORT: API_PORT,
 						DB_HOST: "localhost",
 						DB_PORT: process.env.E2E_DB_PORT ?? "5432",
@@ -84,6 +85,7 @@ export default defineConfig({
 						VITE_API_URL: `http://localhost:${API_PORT}`,
 						VITE_APP_URL: `http://localhost:${WEB_PORT}`,
 						VITE_GOOGLE_CLIENT_ID: "e2e-google-client-id.apps.googleusercontent.com",
+						VITE_LOG_LEVEL: process.env.VITE_LOG_LEVEL ?? "none",
 					} as Record<string, string>,
 					cwd: "../../..",
 				},

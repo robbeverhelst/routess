@@ -68,10 +68,12 @@ const env: Record<string, string> = {
 	DB_PASSWORD: "postgres",
 	DB_NAME: E2E_DB,
 	E2E_DB_PORT: dbPort,
+	LOG_LEVEL: process.env.LOG_LEVEL ?? "silent",
 	JWT_SECRET: process.env.JWT_SECRET ?? "e2e-jwt-secret-not-for-prod",
 	GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID ?? "e2e-google-client-id.apps.googleusercontent.com",
 	VITE_GOOGLE_CLIENT_ID: process.env.VITE_GOOGLE_CLIENT_ID ?? "e2e-google-client-id.apps.googleusercontent.com",
 	VITE_E2E: "true",
+	VITE_LOG_LEVEL: process.env.VITE_LOG_LEVEL ?? "none",
 	E2E_API_PORT: process.env.E2E_API_PORT ?? "3010",
 	E2E_WEB_PORT: process.env.E2E_WEB_PORT ?? "5183",
 	E2E_UI: process.argv[2] === "ui" ? "true" : (process.env.E2E_UI ?? ""),
@@ -88,6 +90,7 @@ await $`bun run --filter './apps/api' build:e2e`.env(env);
 
 const passthrough = process.argv.slice(2);
 const target = passthrough[0] === "ui" ? "e2e:ui" : passthrough[0] === "record" ? "e2e:record" : "e2e";
+const playwrightArgs = passthrough[0] === "ui" || passthrough[0] === "record" ? passthrough.slice(1) : passthrough;
 
 console.log(`[e2e] running Playwright (${target})`);
-await $`bun run --filter './apps/web' ${target}`.env(env);
+await $`bun run --filter './apps/web' ${target} -- ${playwrightArgs}`.env(env);
