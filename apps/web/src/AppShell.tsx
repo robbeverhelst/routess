@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { lazy, type ReactNode, Suspense, useEffect, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import MapWithRouting from "@/components/MapWithRouting";
 import { useRouteSurfaceSync } from "@/features/routing/services/useSurfaceBreakdown";
 import { useRouteDraftRehydration } from "@/features/routing/useRouteDraftRehydration";
 import { apiService } from "@/lib/api";
@@ -63,9 +64,6 @@ import { RecordingScreen } from "./screens/RecordingScreen";
 import { SignUpScreen } from "./screens/SignUpScreen";
 import { WelcomeScreen } from "./screens/WelcomeScreen";
 
-const loadMapWithRouting = () => import("@/components/MapWithRouting");
-const MapWithRouting = lazy(loadMapWithRouting);
-
 const SCREEN_TITLE_KEYS: Record<RedesignContext, string> = {
 	plan: "nav.plan",
 	library: "nav.library",
@@ -125,6 +123,26 @@ function shouldForceWelcome(): boolean {
 	return value === "1" || value === "true" || value === "force";
 }
 
+const SKIPPED_AUTH_KEY = "routess.skippedAuth";
+
+function readSkippedAuth(): boolean {
+	if (typeof window === "undefined") return false;
+	try {
+		return localStorage.getItem(SKIPPED_AUTH_KEY) === "1";
+	} catch {
+		return false;
+	}
+}
+
+function writeSkippedAuth(value: boolean): void {
+	try {
+		if (value) localStorage.setItem(SKIPPED_AUTH_KEY, "1");
+		else localStorage.removeItem(SKIPPED_AUTH_KEY);
+	} catch {
+		// ignore storage failures (private mode, quota)
+	}
+}
+
 export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps) {
 	const {
 		context,
@@ -139,7 +157,7 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 	} = useUiStore();
 	const selectedSports = useRedesignSettingsStore((s) => s.selectedSports);
 	const { modal, overlay, openModal, openOverlay, closeOverlay } = useModalsStore();
-	const { data: auth, isLoading: authLoading } = useAuthStatus();
+	const { data: auth } = useAuthStatus();
 	const online = useOnlineStatus();
 	const hasRoute = useHasRoute();
 	const distance = useRouteDistance();
@@ -155,7 +173,11 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 	const queryClient = useQueryClient();
 	const { isMobile } = useViewport();
 	const [authView, setAuthView] = useState<AuthView>("login");
-	const [skippedAuth, setSkippedAuth] = useState(false);
+	const [skippedAuth, setSkippedAuthState] = useState<boolean>(readSkippedAuth);
+	const setSkippedAuth = useCallback((value: boolean) => {
+		writeSkippedAuth(value);
+		setSkippedAuthState(value);
+	}, []);
 	const [offlineDismissed, setOfflineDismissed] = useState(false);
 	const [devScreen, setDevScreen] = useState<DevScreen | null>(getDevScreen);
 	const [forceWelcome] = useState<boolean>(shouldForceWelcome);
@@ -211,7 +233,7 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 		};
 		window.addEventListener("auth-change", onAuthChange);
 		return () => window.removeEventListener("auth-change", onAuthChange);
-	}, [queryClient]);
+	}, [queryClient, setSkippedAuth]);
 
 	useEffect(() => {
 		const pushToast = useToastStore.getState().push;
@@ -293,15 +315,19 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 				unsubscribe();
 			}
 		};
-	}, [setContext]);
+	}, [setContext, setSkippedAuth]);
 
 	const isAuthenticated = !!auth?.isAuthenticated;
-	const authResolving = authLoading;
 	const hasAccountSports = (auth?.user?.preferences?.selectedSports?.length ?? 0) > 0;
 	const hasBootstrappedWelcomeSelections = hasAccountSports || hadStoredSportsAtStartupRef.current;
-	const showLogin = !isAuthenticated && !authResolving && !skippedAuth && authView === "login";
-	const showSignup = !isAuthenticated && !authResolving && !skippedAuth && authView === "signup";
+	const showLogin = !isAuthenticated && !skippedAuth && authView === "login";
+	const showSignup = !isAuthenticated && !skippedAuth && authView === "signup";
 	const showWelcome = isAuthenticated && (forceWelcome || (!welcomeCompleted && !hasBootstrappedWelcomeSelections));
+	// The map shell + chrome mount whenever the user is past the login gate.
+	// Auth screens render as overlays above this shell, so transitioning
+	// from login → app no longer tears down the layout (or the Mapbox
+	// instance behind it).
+	const showApp = isAuthenticated || skippedAuth;
 
 	useEffect(() => {
 		if (forceWelcome) {
@@ -311,81 +337,6 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 			completeWelcome();
 		}
 	}, [completeWelcome, forceWelcome, hasBootstrappedWelcomeSelections, isAuthenticated, welcomeCompleted]);
-
-	useEffect(() => {
-		if (isAuthenticated) {
-			void loadMapWithRouting();
-		}
-	}, [isAuthenticated]);
-
-	const authRoot = (children: ReactNode) => (
-		<div
-			data-redesign
-			data-accent={accent}
-			className={theme === "dark" ? "dark" : undefined}
-			style={{
-				position: "fixed",
-				inset: 0,
-				background: RDS_COLORS.bgCanvas,
-				color: RDS_COLORS.fg,
-			}}
-		>
-			{children}
-		</div>
-	);
-
-	if (authResolving && !skippedAuth) {
-		return authRoot(
-			<div
-				style={{
-					position: "absolute",
-					inset: 0,
-					display: "flex",
-					alignItems: "center",
-					justifyContent: "center",
-					background: RDS_COLORS.bgCanvas,
-				}}
-			>
-				<div
-					style={{
-						width: 18,
-						height: 18,
-						borderRadius: 999,
-						border: `2px solid ${RDS_COLORS.border}`,
-						borderTopColor: RDS_COLORS.accent,
-						animation: "rds-pulse 1s linear infinite",
-					}}
-				/>
-			</div>,
-		);
-	}
-
-	if (showLogin) {
-		return authRoot(
-			<>
-				<LoginScreen onSuccess={() => setSkippedAuth(true)} />
-				<ToastStack />
-			</>,
-		);
-	}
-
-	if (showSignup) {
-		return authRoot(
-			<>
-				<SignUpScreen onSwitchToLogin={() => setAuthView("login")} />
-				<ToastStack />
-			</>,
-		);
-	}
-
-	if (showWelcome) {
-		return authRoot(
-			<>
-				<WelcomeScreen onComplete={completeWelcome} />
-				<ToastStack />
-			</>,
-		);
-	}
 
 	if (devScreen) {
 		const close = () => {
@@ -512,26 +463,14 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 	);
 
 	const MapNode = (
-		<Suspense
-			fallback={
-				<div
-					style={{
-						position: "absolute",
-						inset: 0,
-						background: RDS_COLORS.bgPanelElev,
-					}}
-				/>
-			}
-		>
-			<MapWithRouting
-				height="100%"
-				width="100%"
-				initialCenter={initialCenter}
-				initialZoom={initialZoom}
-				routeId={routeId}
-				mapTheme={theme}
-			/>
-		</Suspense>
+		<MapWithRouting
+			height="100%"
+			width="100%"
+			initialCenter={initialCenter}
+			initialZoom={initialZoom}
+			routeId={routeId}
+			mapTheme={theme}
+		/>
 	);
 
 	const Toolbar = (
@@ -565,6 +504,21 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 			/>
 		) : null;
 
+	const AuthOverlay =
+		showLogin || showSignup || showWelcome ? (
+			<div
+				style={{
+					position: "absolute",
+					inset: 0,
+					zIndex: 200,
+				}}
+			>
+				{showLogin && <LoginScreen onSuccess={() => setSkippedAuth(true)} />}
+				{showSignup && <SignUpScreen onSwitchToLogin={() => setAuthView("login")} />}
+				{showWelcome && <WelcomeScreen onComplete={completeWelcome} />}
+			</div>
+		) : null;
+
 	const sharedRoot = (children: ReactNode) => (
 		<div
 			data-redesign
@@ -593,14 +547,14 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 						background: RDS_COLORS.bgCanvas,
 					}}
 				>
-					{MapNode}
-					{Toolbar}
-					{Chip}
-					{renderOverlay()}
+					{showApp && MapNode}
+					{showApp && Toolbar}
+					{showApp && Chip}
+					{showApp && renderOverlay()}
 					{Offline}
 				</main>
-				<MobileTopBar />
-				{!panelCollapsed && (
+				{showApp && <MobileTopBar />}
+				{showApp && !panelCollapsed && (
 					<MobilePanelDrawer
 						title={screenTitle(context, language)}
 						onClose={() => useUiStore.getState().setPanelCollapsed(true)}
@@ -608,68 +562,72 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 						{renderPanelContent()}
 					</MobilePanelDrawer>
 				)}
-				<BottomTabBar />
+				{showApp && <BottomTabBar />}
 				{/* Modals must render above the side panel/drawer; keeping them
 				   inside main would trap their z-index in main's stacking
 				   context and let the drawer cover them. */}
 				<div style={{ position: "absolute", inset: 0, zIndex: 100, pointerEvents: "none" }}>
 					<div style={{ pointerEvents: "auto" }}>{renderModal()}</div>
 				</div>
+				{AuthOverlay}
 			</div>,
 		);
 	}
 
 	return sharedRoot(
 		<div style={{ position: "absolute", inset: 0 }}>
-			<RailNav />
+			{showApp && <RailNav />}
 			<main
 				style={{
 					position: "absolute",
 					top: 0,
 					right: 0,
 					bottom: 0,
-					left: "var(--rds-rail-w)",
+					left: showApp ? "var(--rds-rail-w)" : 0,
 					overflow: "hidden",
 					background: RDS_COLORS.bgCanvas,
 					zIndex: 1,
 				}}
 			>
-				{MapNode}
-				{Toolbar}
-				{Chip}
-				{renderOverlay()}
+				{showApp && MapNode}
+				{showApp && Toolbar}
+				{showApp && Chip}
+				{showApp && renderOverlay()}
 				{Offline}
 			</main>
-			<aside
-				aria-hidden={panelCollapsed}
-				style={{
-					position: "absolute",
-					top: 0,
-					bottom: 0,
-					left: "var(--rds-rail-w)",
-					width: "var(--rds-panel-w)",
-					background: RDS_COLORS.bgPanel,
-					borderRight: `1px solid ${RDS_COLORS.border}`,
-					display: "flex",
-					flexDirection: "column",
-					overflow: "hidden",
-					zIndex: 3,
-					transform: panelCollapsed ? "translateX(-100%)" : "translateX(0)",
-					boxShadow: panelCollapsed ? "none" : "var(--rds-shadow-md)",
-					transition: "transform var(--rds-panel-anim), box-shadow var(--rds-panel-anim)",
-					willChange: "transform",
-					pointerEvents: panelCollapsed ? "none" : "auto",
-				}}
-			>
-				{PanelHeader}
-				<div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>{renderPanelContent()}</div>
-			</aside>
+			{showApp && (
+				<aside
+					aria-hidden={panelCollapsed}
+					style={{
+						position: "absolute",
+						top: 0,
+						bottom: 0,
+						left: "var(--rds-rail-w)",
+						width: "var(--rds-panel-w)",
+						background: RDS_COLORS.bgPanel,
+						borderRight: `1px solid ${RDS_COLORS.border}`,
+						display: "flex",
+						flexDirection: "column",
+						overflow: "hidden",
+						zIndex: 3,
+						transform: panelCollapsed ? "translateX(-100%)" : "translateX(0)",
+						boxShadow: panelCollapsed ? "none" : "var(--rds-shadow-md)",
+						transition: "transform var(--rds-panel-anim), box-shadow var(--rds-panel-anim)",
+						willChange: "transform",
+						pointerEvents: panelCollapsed ? "none" : "auto",
+					}}
+				>
+					{PanelHeader}
+					<div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>{renderPanelContent()}</div>
+				</aside>
+			)}
 			{/* Modals render above main and aside; nesting them inside main would
 			   trap their z-index in main's stacking context and let the open
 			   sidebar cover them on narrow viewports. */}
 			<div style={{ position: "absolute", inset: 0, zIndex: 100, pointerEvents: "none" }}>
 				<div style={{ pointerEvents: "auto" }}>{renderModal()}</div>
 			</div>
+			{AuthOverlay}
 		</div>,
 	);
 }
