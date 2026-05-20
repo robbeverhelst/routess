@@ -22,7 +22,7 @@ export default defineConfig({
 	outputDir: "./test-results",
 	use: {
 		baseURL,
-		trace: "on-first-retry",
+		trace: process.env.E2E_UI ? "on" : "on-first-retry",
 		screenshot: "only-on-failure",
 		video: "retain-on-failure",
 	},

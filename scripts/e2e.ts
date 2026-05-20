@@ -74,6 +74,7 @@ const env: Record<string, string> = {
 	VITE_E2E: "true",
 	E2E_API_PORT: process.env.E2E_API_PORT ?? "3010",
 	E2E_WEB_PORT: process.env.E2E_WEB_PORT ?? "5183",
+	E2E_UI: process.argv[2] === "ui" ? "true" : (process.env.E2E_UI ?? ""),
 	VITE_API_URL: process.env.VITE_API_URL ?? `http://localhost:${process.env.E2E_API_PORT ?? "3010"}`,
 	FRONTEND_URL: process.env.FRONTEND_URL ?? `http://localhost:${process.env.E2E_WEB_PORT ?? "5183"}`,
 	E2E_TEST_LOGIN_SECRET: process.env.E2E_TEST_LOGIN_SECRET ?? randomBytes(32).toString("hex"),
