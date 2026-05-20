@@ -1,4 +1,4 @@
-import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
+import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
 import { loginViaEmailUI, testLogin } from "../support/auth";
 import { truncateDb } from "../support/db";
 
