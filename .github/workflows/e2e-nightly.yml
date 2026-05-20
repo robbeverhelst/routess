@@ -18,6 +18,7 @@ jobs:
       # scripts/e2e.ts reads E2E_DB_PORT and propagates the rest. The
       # dedicated E2E ports (3010/5183) come from the same script's defaults.
       E2E_DB_PORT: "5432"
+      VITE_MAPBOX_ACCESS_TOKEN: ${{ secrets.MAPBOX_TEST_TOKEN }}
     services:
       postgres:
         image: postgres:18

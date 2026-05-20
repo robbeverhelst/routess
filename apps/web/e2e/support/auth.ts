@@ -67,6 +67,20 @@ export async function loginAndGoto(
 
 const DEFAULT_PASSWORD = "correct-horse-battery-staple";
 
+export async function installE2EUiState(page: Page): Promise<void> {
+	await page.addInitScript(() => {
+		window.localStorage.setItem("routingAppLanguage", "en");
+		window.localStorage.setItem(
+			"routess-redesign-ui",
+			JSON.stringify({ state: { welcomeCompleted: true }, version: 0 }),
+		);
+		window.localStorage.setItem(
+			"mapLastView",
+			JSON.stringify({ longitude: 4.4025, latitude: 51.2194, zoom: 14, bearing: 0, pitch: 30 }),
+		);
+	});
+}
+
 // Real sign-in flow: seeds a User with an email+password auth method (via the
 // test backdoor that skips email verification), then drives the actual Sign-in
 // UI through `/auth/login-email`. Returns once the API has responded 200.
@@ -83,14 +97,7 @@ export async function loginViaEmailUI(
 	name?: string,
 ): Promise<void> {
 	await seedUserWithPassword(request, email, password, name);
-
-	await page.addInitScript(() => {
-		window.localStorage.setItem("routingAppLanguage", "en");
-		window.localStorage.setItem(
-			"routess-redesign-ui",
-			JSON.stringify({ state: { welcomeCompleted: true }, version: 0 }),
-		);
-	});
+	await installE2EUiState(page);
 	await page.goto("/");
 
 	await page.getByRole("button", { name: /sign in with email/i }).click();

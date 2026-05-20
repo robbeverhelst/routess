@@ -2,6 +2,7 @@ import type { Coordinate } from "@routess/core";
 import { haversineDistance } from "@routess/core";
 import { LngLat, LngLatBounds, type Map as MapboxMap } from "mapbox-gl";
 import { Logger } from "@/lib/logger";
+import { getMatching } from "@/lib/utils/mapbox-api";
 
 /**
  * Checks if a coordinate is near a road by querying the Mapbox Matching API.
@@ -19,16 +20,17 @@ export const checkNearRoad = async (
 	try {
 		const MAX_MATCHING_API_RADIUS = 49; // Max radius for Mapbox Matching API based on error
 		const effectiveRadius = Math.max(1, Math.min(searchRadiusMeters, MAX_MATCHING_API_RADIUS));
-		const coordinatesParam = `${coords[0]},${coords[1]};${coords[0]},${coords[1]}`;
-		const radiusesParam = `${effectiveRadius};${effectiveRadius}`; // This will now be <= 49
-		const url = `https://api.mapbox.com/matching/v5/mapbox/walking/${coordinatesParam}?steps=true&geometries=geojson&access_token=${accessToken}&radiuses=${radiusesParam}`;
-
-		const response = await fetch(url);
-		if (!response.ok) {
-			Logger.error("[checkNearRoad] Matching API request failed:", response.status, await response.text());
+		const result = await getMatching([coords, coords], accessToken, {
+			profile: "mapbox/walking",
+			radius: effectiveRadius,
+			steps: true,
+			geometries: "geojson",
+		});
+		if (!result.success || !result.data) {
+			Logger.error("[checkNearRoad] Matching API request failed:", result.error);
 			return { isValid: false };
 		}
-		const json = await response.json();
+		const json = result.data;
 
 		if (json && json.code === "Ok" && json.tracepoints && json.tracepoints.length > 0) {
 			const snappedTracepoint = json.tracepoints[0];
