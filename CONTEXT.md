@@ -65,7 +65,7 @@ Compass direction (0 to 360°) of a Waypoint or segment. Used by GPX import for 
 ## Editing & state
 
 **RouteDraft**:
-The in-progress Route currently being edited in the UI, the working state of `routingStore` (waypoints, directFlags, routePath, distance, duration). A RouteDraft has a **mode**: `unsaved` (composing fresh; on save becomes a new Route) or `editing(routeId, baseline)` (bound to a saved Route; carries a snapshot of the saved fields and on save PATCHes that Route). The current **activity** is a property of the RouteDraft; the global activity setting is just a default applied when starting a new draft, never overwritten by loading a Route.
+A Route-in-progress: a document holding waypoints, per-waypoint Type, RoutePath, Distance, Duration, ElevationGain, and an activity. In the web app, the RouteDraft is the working state of `routingStore`; for CLI and agent clients it is the same shape passed over the wire to `/v1/draft/recalc` and `/v1/draft/save`. A RouteDraft has a **mode**: `unsaved` (composing fresh; on save becomes a new Route) or `editing(routeId, baseline)` (bound to a saved Route; carries a snapshot of the saved fields and on save PATCHes that Route). The current **activity** is a property of the RouteDraft; the global activity setting is just a default applied when starting a new draft, never overwritten by loading a Route. A RouteDraft is never persisted on the server side; it lives only in the client that holds it (browser store, CLI invocation, agent context).
 
 **HistoryManager**:
 The undo/redo stack over RouteDraft mutations. _(Implementation term, included here because the store explicitly models it as a first-class concept.)_
@@ -98,6 +98,10 @@ _Avoid_: credential, login, identity provider link.
 **Session**:
 An authenticated User's active login on a specific device, identified by a JWT `jti` and tracked server-side with `userAgent`, `ipAddress`, `lastActivity`, and `expiresAt`. A User can hold multiple Sessions across devices and list/revoke them from settings. Password reset and self-initiated account deletion revoke all Sessions; "logout everywhere" revokes all including the current one.
 _Avoid_: token, login, device.
+
+**PersonalAccessToken** (PAT):
+A long-lived bearer credential a User mints for non-browser clients (the `routess` CLI, AI agents, scripts). Carries one of two scopes: `read` (list/get Routes, export GPX, get profile) or `write` (`read` plus metadata-only mutations on own Routes and own preferences). Presented as `Authorization: Bearer routess_pat_<random>`. Never valid against `/api/v1/admin/*` and cannot delete the User account regardless of the owner's role. Subject to a separate per-token rate-limit bucket so a runaway agent does not block the User's interactive session. Stored hashed with argon2id; the plaintext is shown to the User exactly once at creation.
+_Avoid_: API key, access token, bearer token (the term is **PAT** when discussing the domain shape; "Bearer token" is the HTTP transport detail).
 
 ## Relationships
 

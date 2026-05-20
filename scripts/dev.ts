@@ -160,7 +160,11 @@ async function main(): Promise<void> {
 	// longer rebuild core themselves, so the parallel pass below doesn't race.
 	await runCommand(["bun", "run", "--filter", "@routess/core", "build"], env, "Building @routess/core");
 	await runCommand(["bun", "run", "--filter", "./packages/*", "build"], env, "Building workspace packages");
-	await runCommand(["bun", "run", "--filter", "./apps/*", "dev"], env, "Starting app dev servers");
+	await runCommand(
+		["bun", "run", "--filter", "api", "--filter", "web", "--filter", "docs", "dev"],
+		env,
+		"Starting app dev servers",
+	);
 }
 
 await main();

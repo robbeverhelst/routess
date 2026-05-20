@@ -1,3 +1,8 @@
+import type {
+	ApiPersonalAccessToken,
+	ApiPersonalAccessTokenWithSecret,
+	CreatePersonalAccessTokenRequest,
+} from "@routess/api-client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRoutingStore } from "@/stores/routingStore";
 import { trackEvent } from "./analytics/track";
@@ -252,6 +257,60 @@ export function useLogout() {
 // ============================================================================
 // UTILITY HOOKS
 // ============================================================================
+
+// ============================================================================
+// PERSONAL ACCESS TOKENS
+// ============================================================================
+
+/**
+ * List the current user's active personal access tokens. Plaintext is never
+ * present in the list response; only metadata.
+ */
+export function usePersonalAccessTokens() {
+	const hasUser = hasStoredUser();
+
+	return useQuery<ApiPersonalAccessToken[]>({
+		queryKey: queryKeys.auth.tokens(),
+		queryFn: () => apiService.listPersonalAccessTokens(),
+		enabled: hasUser,
+		staleTime: 30 * 1000,
+	});
+}
+
+/**
+ * Mint a new PAT. The mutation result includes the plaintext exactly once.
+ * Surface it to the user immediately; subsequent reads return only metadata.
+ */
+export function useCreatePersonalAccessToken() {
+	const queryClient = useQueryClient();
+
+	return useMutation<ApiPersonalAccessTokenWithSecret, Error, CreatePersonalAccessTokenRequest>({
+		mutationFn: (body) => apiService.createPersonalAccessToken(body),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: queryKeys.auth.tokens() });
+		},
+		onError: (error) => {
+			Logger.error("Failed to create personal access token:", error);
+		},
+	});
+}
+
+/**
+ * Revoke a PAT by id. Soft-revoke is idempotent server-side.
+ */
+export function useRevokePersonalAccessToken() {
+	const queryClient = useQueryClient();
+
+	return useMutation<void, Error, number>({
+		mutationFn: (id) => apiService.revokePersonalAccessToken(id),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: queryKeys.auth.tokens() });
+		},
+		onError: (error) => {
+			Logger.error("Failed to revoke personal access token:", error);
+		},
+	});
+}
 
 /**
  * Hook to prefetch routes for better UX

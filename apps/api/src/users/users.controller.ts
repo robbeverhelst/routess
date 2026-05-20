@@ -3,9 +3,11 @@ import { ApiBearerAuth, ApiBody, ApiOperation, ApiProduces, ApiResponse, ApiTags
 import type { Response } from "express";
 import type { AuthenticatedUser } from "../auth/authenticated-user";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
+import { RequireScope } from "../auth/decorators/require-scope.decorator";
 import { SetPasswordDto } from "../auth/dto/email-auth.dto";
 import { EmailAuthService } from "../auth/email-auth.service";
-import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { ScopeGuard } from "../auth/guards/scope.guard";
+import { UnifiedAuthGuard } from "../auth/guards/unified-auth.guard";
 import { ThrottleModerate, ThrottleStrict } from "../common/decorators/throttle.decorator";
 import type { AppConfig } from "../config/app-config";
 import { APP_CONFIG } from "../config/config.module";
@@ -18,7 +20,8 @@ import { UsersService } from "./users.service";
 
 @ApiTags("users")
 @ApiBearerAuth("JWT-auth")
-@UseGuards(JwtAuthGuard)
+@ApiBearerAuth("PAT-auth")
+@UseGuards(UnifiedAuthGuard, ScopeGuard)
 @Controller("users")
 export class UsersController {
 	constructor(
@@ -35,6 +38,7 @@ export class UsersController {
 	})
 	@ApiResponse({ status: 200, type: UserProfileDto })
 	@ThrottleModerate()
+	@RequireScope("read")
 	@Get(["me", "profile"])
 	async getProfile(@CurrentUser() currentUser: AuthenticatedUser) {
 		const user = await this.usersService.findOne(currentUser.id);
@@ -48,6 +52,7 @@ export class UsersController {
 	})
 	@ApiResponse({ status: 200, type: UserProfileDto })
 	@ThrottleModerate()
+	@RequireScope("write")
 	@Patch("me")
 	async update(@CurrentUser() currentUser: AuthenticatedUser, @Body() updateUserDto: UpdateCurrentUserDto) {
 		const user = await this.usersService.update(currentUser.id, updateUserDto);

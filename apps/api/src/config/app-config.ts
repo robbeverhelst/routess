@@ -23,6 +23,11 @@ export interface AppConfig {
 		sessionTtlMs: number;
 		cookieName: string;
 		adminEmails: string[];
+		// Server-side pepper for HMAC-SHA-256 hashing of personal access tokens.
+		// Never exposed to clients; the API hashes the plaintext bearer token
+		// with this pepper and looks the resulting digest up in the
+		// personal_access_token table. See ADR-0022.
+		patPepper: string;
 	};
 	database: {
 		host: string;
@@ -161,6 +166,9 @@ export function getAppConfig(): AppConfig {
 	const analyticsSalt = isProduction
 		? requireProductionValue("ANALYTICS_SALT", process.env.ANALYTICS_SALT)
 		: process.env.ANALYTICS_SALT || "development-only-analytics-salt-change-me";
+	const patPepper = isProduction
+		? requireProductionValue("PAT_PEPPER", process.env.PAT_PEPPER)
+		: process.env.PAT_PEPPER || "development-only-pat-pepper-change-me";
 	const explicitFrontendUrls = parseStringList(process.env.FRONTEND_URLS);
 	const fallbackFrontendUrls = parseStringList(process.env.FRONTEND_URL);
 	const allowedFrontendUrls =
@@ -191,6 +199,7 @@ export function getAppConfig(): AppConfig {
 			sessionTtlMs,
 			cookieName: process.env.SESSION_COOKIE_NAME || DEFAULTS.sessionCookieName,
 			adminEmails: parseStringList(process.env.ADMIN_EMAILS).map((email) => email.toLowerCase()),
+			patPepper,
 		},
 		database: {
 			host: process.env.DB_HOST || "localhost",

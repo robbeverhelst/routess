@@ -1,0 +1,32 @@
+{
+	"name": "routess",
+	"version": "0.1.0",
+	"description": "Command-line interface for Routess, the route-planning product for cyclists, runners, and hikers.",
+	"private": false,
+	"type": "module",
+	"bin": {
+		"routess": "./dist/index.js"
+	},
+	"files": [
+		"dist",
+		"README.md"
+	],
+	"scripts": {
+		"dev": "bun src/index.ts",
+		"build": "bun build src/index.ts --outdir dist --target node --format esm",
+		"prepack": "bun run build",
+		"lint": "biome check .",
+		"check-types": "tsc --noEmit",
+		"test": "bun run check-types"
+	},
+	"dependencies": {},
+	"devDependencies": {
+		"@routess/core": "workspace:*",
+		"@types/node": "^22.0.0",
+		"commander": "^13.1.0",
+		"typescript": "~6.0.0"
+	},
+	"publishConfig": {
+		"access": "public"
+	}
+}
