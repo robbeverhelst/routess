@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRoutingStore } from "@/stores/routingStore";
 import { trackEvent } from "./analytics/track";
 import { type ApiRoute, apiService, type CreateRouteRequest } from "./api";
-import { hasStoredUser, storeUser } from "./auth-state";
+import { getStoredUser, hasStoredUser } from "./auth-state";
 import { googleAuth } from "./google-auth";
 import { Logger } from "./logger";
 import { queryKeys } from "./query-client";
@@ -196,32 +196,28 @@ export function useUserProfile() {
 // ============================================================================
 
 /**
- * Hook to check authentication status with proper token validation
+ * Hook to check authentication status.
+ *
+ * Reads the stored user from localStorage and treats them as authenticated.
+ * We deliberately do NOT probe the server here: the ApiClient already clears
+ * auth state on any 401 from a real user action, so a separate probe at boot
+ * just bounces returning users to the login screen on any transient failure
+ * (cold dev API, cookie expiry) before they've done anything. If the session
+ * is actually invalid, the first protected request will surface that and
+ * route the user to login through the auth-change event.
  */
 export function useAuthStatus() {
-	const hasUser = hasStoredUser();
+	const storedUser = getStoredUser();
 
 	return useQuery({
 		queryKey: queryKeys.auth.session(),
-		queryFn: async () => {
-			try {
-				const isValid = await googleAuth.validateSession();
-
-				if (isValid) {
-					const profile = await apiService.getProfile();
-					storeUser(profile);
-					return { isAuthenticated: true, user: profile };
-				} else {
-					return { isAuthenticated: false, user: null };
-				}
-			} catch (error) {
-				Logger.error("Auth status check failed:", error);
-				return { isAuthenticated: false, user: null };
-			}
+		queryFn: () => {
+			const current = getStoredUser();
+			return current ? { isAuthenticated: true, user: current } : { isAuthenticated: false, user: null };
 		},
-		enabled: hasUser,
-		staleTime: 10 * 60 * 1000,
-		retry: false, // Don't retry auth checks
+		initialData: storedUser ? { isAuthenticated: true, user: storedUser } : { isAuthenticated: false, user: null },
+		staleTime: Number.POSITIVE_INFINITY,
+		retry: false,
 		refetchOnWindowFocus: false,
 		refetchOnMount: false,
 	});
