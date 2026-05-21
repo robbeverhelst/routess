@@ -304,7 +304,9 @@ jobs:
 
       - name: Publish CLI to npm
         working-directory: apps/cli
-        run: npm publish --access public --provenance
+        # --provenance requires a public source repository; this repo is
+        # private. Re-enable provenance if the repo is ever made public.
+        run: npm publish --access public
 
   publish-helm:
     needs:
