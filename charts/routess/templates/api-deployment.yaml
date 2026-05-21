@@ -116,6 +116,11 @@ spec:
                 secretKeyRef:
                   name: {{ include "routess.fullname" . }}-api
                   key: analytics-salt
+            - name: PAT_PEPPER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "routess.fullname" . }}-api
+                  key: pat-pepper
             - name: EMAIL_FROM
               value: {{ .Values.api.env.emailFrom | quote }}
             - name: RESEND_API_KEY

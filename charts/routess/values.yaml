@@ -116,6 +116,9 @@ api:
     dbUser: ""
     dbPassword: ""
     analyticsSalt: ""
+    # Server-side pepper used to HMAC personal access tokens. Required when
+    # NODE_ENV=production; the API refuses to start without it.
+    patPepper: ""
     # Empty disables Resend; the API falls back to a console transport (dev-only).
     resendApiKey: ""
   resources:
