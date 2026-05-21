@@ -1,22 +1,49 @@
-Routess has been deployed!
+routess has been deployed to namespace {{ .Values.global.namespace }}.
 
 {{- if .Values.ingress.enabled }}
 
-Access the application at:
+Web app:
 {{- range .Values.ingress.web.hosts }}
-  - https://{{ . }}
+  https://{{ . }}
+{{- else }}
+  (no hosts configured; set ingress.web.hosts)
 {{- end }}
 
-API available at:
+API:
 {{- range .Values.ingress.api.hosts }}
-  - https://{{ . }}
-{{- end }}
+  https://{{ . }}
+{{- else }}
+  (no hosts configured; set ingress.api.hosts)
 {{- end }}
 
-To check the deployment status:
+Docs:
+{{- range .Values.ingress.docs.hosts }}
+  https://{{ . }}
+{{- else }}
+  (no hosts configured; set ingress.docs.hosts)
+{{- end }}
+{{- else }}
+
+Ingress is disabled. To reach the apps, port-forward:
+
+  kubectl port-forward -n {{ .Values.global.namespace }} svc/{{ include "routess.fullname" . }}-web {{ .Values.web.service.port }}:{{ .Values.web.service.port }}
+  kubectl port-forward -n {{ .Values.global.namespace }} svc/{{ include "routess.fullname" . }}-api {{ .Values.api.service.port }}:{{ .Values.api.service.port }}
+
+Or expose them via your own ingress / proxy / Gateway.
+{{- end }}
+
+Check pod status:
+
   kubectl get pods -n {{ .Values.global.namespace }}
-  kubectl get svc -n {{ .Values.global.namespace }}
 
-To view logs:
-  kubectl logs -n {{ .Values.global.namespace }} -l app.kubernetes.io/component=web
-  kubectl logs -n {{ .Values.global.namespace }} -l app.kubernetes.io/component=api
+Tail logs:
+
+  kubectl logs -n {{ .Values.global.namespace }} -l app.kubernetes.io/component=api -f
+  kubectl logs -n {{ .Values.global.namespace }} -l app.kubernetes.io/component=web -f
+
+{{- if not .Values.api.secrets.patPepper }}
+
+WARNING: api.secrets.patPepper is empty. The API will refuse to start in
+production. Generate a long random string and pass it via --set or your
+secret manager.
+{{- end }}

@@ -3,22 +3,68 @@ title: Kubernetes
 description: Deploying routess with the bundled Helm chart.
 ---
 
-The chart at `charts/routess` deploys all three apps (web, api, docs) plus their services, ingresses, and security policies.
+The chart at `charts/routess` deploys all three apps (web, api, docs) plus their services, ingresses, and security policies. Postgres is **not** managed by the chart — bring your own database.
 
-## Quick install
+For chart-level details, see [`charts/routess/README.md`](https://github.com/robbeverhelst/routess/blob/main/charts/routess/README.md).
+
+## Install from GHCR
 
 ```sh
 helm install routess oci://ghcr.io/robbeverhelst/charts/routess \
-	--version <VERSION> \
-	--namespace routess \
-	--create-namespace \
-	--set api.secrets.jwtSecret=<random> \
-	--set api.secrets.googleClientId=<from-google> \
-	--set api.secrets.dbHost=<db-host> \
-	--set api.secrets.dbUser=<db-user> \
-	--set api.secrets.dbPassword=<db-password> \
-	--set networkPolicies.postgresEgress.host=<db-host>
+  --version <VERSION> \
+  --namespace routess \
+  --create-namespace \
+  -f my-values.yaml
 ```
+
+Find the latest chart version on the [releases page](https://github.com/robbeverhelst/routess/releases) — chart version tracks app version.
+
+## Pick an ingress strategy
+
+The chart ships with two example overlays:
+
+### Cloudflare Tunnel
+
+```sh
+helm install routess oci://ghcr.io/robbeverhelst/charts/routess \
+  -f charts/routess/values.example.cloudflare.yaml \
+  --set ingress.web.hosts[0]=routess.example.com \
+  --set ingress.api.hosts[0]=api.routess.example.com \
+  --set ingress.docs.hosts[0]=docs.routess.example.com \
+  --set networkPolicies.cloudflareNamespace=cloudflare \
+  ...
+```
+
+### ingress-nginx + cert-manager
+
+```sh
+helm install routess oci://ghcr.io/robbeverhelst/charts/routess \
+  -f charts/routess/values.example.nginx.yaml \
+  --set ingress.web.hosts[0]=routess.example.com \
+  --set ingress.api.hosts[0]=api.routess.example.com \
+  --set ingress.docs.hosts[0]=docs.routess.example.com \
+  ...
+```
+
+Requires `ingress-nginx`, `cert-manager`, and a `ClusterIssuer` named `letsencrypt-prod` already present in the cluster.
+
+## Required secrets
+
+Pass these from your secret manager (1Password Connect, External Secrets Operator, sealed-secrets, etc.):
+
+```sh
+--set api.secrets.jwtSecret=<random> \
+--set api.secrets.analyticsSalt=<random> \
+--set api.secrets.patPepper=<random> \
+--set api.secrets.googleClientId=<from-google> \
+--set api.secrets.googleClientSecret=<from-google> \
+--set api.secrets.dbHost=<postgres-host> \
+--set api.secrets.dbUser=<postgres-user> \
+--set api.secrets.dbPassword=<postgres-password> \
+--set networkPolicies.postgresEgress.host=<postgres-host>
+```
+
+The API refuses to start without `JWT_SECRET`, `ANALYTICS_SALT`, and `PAT_PEPPER`. See [ADR-0022](https://github.com/robbeverhelst/routess/blob/main/docs/adr/0022-personal-access-tokens-for-non-browser-clients.md).
 
 ## Values structure
 
@@ -26,29 +72,34 @@ Top-level keys:
 
 - `global` — namespace, etc.
 - `web`, `api`, `docs` — per-app deployment config (replicas, resources, probes, security)
-- `ingress` — Cloudflare tunnel hostnames per service
-- `networkPolicies` — default-deny + app-specific allows
+- `ingress` — host configuration per service
+- `networkPolicies` — default-deny + app-specific allows ([ADR-0006](https://github.com/robbeverhelst/routess/blob/main/docs/adr/0006-kubernetes-deny-all-network-policy-baseline.md))
+- `monitoring.serviceMonitor` — Prometheus Operator integration
 - `serviceAccount` — minimal RBAC per service
 
-See `charts/routess/values.yaml` for the full reference.
-
-## Hostnames
-
-Default ingress hosts:
-
-- `routess.com` → web
-- `api.routess.com` → api
-- `docs.routess.com` → docs
-
-Override via `ingress.<service>.hosts`.
+See [`values.yaml`](https://github.com/robbeverhelst/routess/blob/main/charts/routess/values.yaml) for the full reference.
 
 ## Render locally
 
 ```sh
 helm template test ./charts/routess \
-	--set api.secrets.jwtSecret=test \
-	--set api.secrets.googleClientId=test \
-	--set api.secrets.dbHost=10.0.0.1 \
-	--set api.secrets.dbUser=test \
-	--set api.secrets.dbPassword=test
+  --set api.secrets.jwtSecret=test \
+  --set api.secrets.analyticsSalt=test \
+  --set api.secrets.patPepper=test \
+  --set api.secrets.googleClientId=test \
+  --set api.secrets.googleClientSecret=test \
+  --set api.secrets.dbHost=10.0.0.1 \
+  --set api.secrets.dbUser=test \
+  --set api.secrets.dbPassword=test
 ```
+
+## Upgrade
+
+```sh
+helm upgrade routess oci://ghcr.io/robbeverhelst/charts/routess \
+  --version <NEW_VERSION> \
+  -n routess \
+  -f my-values.yaml
+```
+
+The API runs MikroORM migrations on startup. Standard rolling-update mechanics apply.

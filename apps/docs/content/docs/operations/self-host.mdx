@@ -1,0 +1,103 @@
+---
+title: Self-host
+description: Run your own routess instance with Docker Compose.
+---
+
+This walkthrough gets a routess instance running on your own machine or server in about five minutes. For Kubernetes, see [Kubernetes](./kubernetes).
+
+## What you need
+
+- **Docker** and **Docker Compose v2** (modern Docker Desktop or Docker Engine ships with both).
+- A **Google OAuth client** — the only login provider supported today.
+- A **Mapbox access token** — free tier is fine.
+- Long random strings for `JWT_SECRET`, `ANALYTICS_SALT`, `PAT_PEPPER`, and `DB_PASSWORD`. Generate with `openssl rand -base64 32`.
+
+Optional, gracefully disabled when unset:
+
+- **Resend** for transactional email (without it, verification URLs are logged to stdout).
+- **Stadia Maps** for surface-type analysis (falls back to public FOSSGIS Valhalla).
+- **Sentry / GlitchTip** for browser error reporting.
+- **Umami** for product analytics.
+
+## Set up Google OAuth
+
+1. Open the [Google Cloud Console credentials page](https://console.cloud.google.com/apis/credentials).
+2. Create an **OAuth 2.0 Client ID** of type **Web application**.
+3. Under **Authorized JavaScript origins**, add the URL your users will open (e.g. `http://localhost:8080` or `https://routess.example.com`).
+4. Under **Authorized redirect URIs**, add `<your-web-url>/auth/callback`.
+5. Copy the **Client ID** and **Client secret**.
+
+## Get a Mapbox token
+
+1. Sign up at [account.mapbox.com](https://account.mapbox.com).
+2. Create a public access token (`pk.…`) under **Access tokens**.
+3. Restrict it to your domain when you go to production.
+
+## Run it
+
+```sh
+git clone https://github.com/robbeverhelst/routess.git
+cd routess
+cp .env.selfhost.example .env
+# edit .env and fill in the required values
+docker compose -f docker-compose.selfhost.yml up -d
+```
+
+Then open <http://localhost:8080>.
+
+The stack starts four containers:
+
+| Service  | Image                                      | Default port |
+| -------- | ------------------------------------------ | ------------ |
+| Postgres | `postgres:18`                              | (internal)   |
+| API      | `ghcr.io/robbeverhelst/routess-api`        | `3000`       |
+| Web      | `ghcr.io/robbeverhelst/routess-web`        | `8080`       |
+| Docs     | `ghcr.io/robbeverhelst/routess-docs`       | `3002`       |
+
+Change the host ports via `WEB_PORT`, `API_PORT`, `DOCS_PORT` in `.env`.
+
+## Pin a version
+
+Default tag is `latest`. For production, pin to a specific release:
+
+```sh
+ROUTESS_TAG=1.122.7 docker compose -f docker-compose.selfhost.yml up -d
+```
+
+Or set `ROUTESS_TAG` in `.env`. See the [releases page](https://github.com/robbeverhelst/routess/releases) for available tags.
+
+## Put it behind a reverse proxy
+
+The default compose exposes ports directly. For TLS and a real domain, front the `web` and `api` services with a reverse proxy (Caddy, Traefik, ingress-nginx, Cloudflare Tunnel) and override the public URLs in `.env`:
+
+```sh
+PUBLIC_WEB_URL=https://routess.example.com
+PUBLIC_API_URL=https://api.routess.example.com
+```
+
+`PUBLIC_WEB_URL` is also used as the OAuth redirect base, so it must match what you configured in Google Cloud.
+
+## Upgrade
+
+```sh
+docker compose -f docker-compose.selfhost.yml pull
+docker compose -f docker-compose.selfhost.yml up -d
+```
+
+The API runs migrations automatically on startup. There is no manual migration step.
+
+## Back up
+
+The Postgres data lives in the `postgres_data` named volume. Standard `pg_dump` works:
+
+```sh
+docker compose -f docker-compose.selfhost.yml exec postgres \
+  pg_dump -U routess routess > routess-$(date +%F).sql
+```
+
+## Troubleshooting
+
+- **"address already in use"** on `:8080` or `:3000` — change `WEB_PORT` / `API_PORT` in `.env`.
+- **Google sign-in returns `redirect_uri_mismatch`** — the OAuth client's authorised redirect URI must exactly match `<PUBLIC_WEB_URL>/auth/callback`.
+- **Map tiles don't load** — verify `VITE_MAPBOX_ACCESS_TOKEN` is set; check browser devtools for 401s from `api.mapbox.com`.
+- **Verification emails not arriving** — set `RESEND_API_KEY` and `EMAIL_FROM`. Without them the API logs the verification URL to stdout; run `docker compose logs api | grep '\[email:console\]'`.

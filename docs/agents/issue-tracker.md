@@ -1,6 +1,6 @@
 # Issue tracker: GitHub
 
-Issues and PRDs for this repo live as GitHub issues at `robbeverhelst/maps`. Use the `gh` CLI for all operations.
+Issues and PRDs for this repo live as GitHub issues at `robbeverhelst/routess`. Use the `gh` CLI for all operations.
 
 ## Conventions
 

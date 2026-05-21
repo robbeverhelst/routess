@@ -1,0 +1,60 @@
+name: Bug report
+description: Something in routess is broken or behaving incorrectly.
+title: "bug: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. The more concrete the repro, the faster we can fix it.
+        For security vulnerabilities, please use the [private advisory flow](https://github.com/robbeverhelst/routess/security/advisories/new) instead.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, what did you see instead?
+      placeholder: |
+        1. I opened the route editor and placed three waypoints
+        2. Expected: the third segment to snap to the road
+        3. Actual: it drew a straight line and the type toggle was greyed out
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps someone else could follow.
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Where did it happen?
+      options:
+        - Web app (routess.com or self-hosted web)
+        - API
+        - CLI
+        - Docs site
+        - Helm chart / Kubernetes deployment
+        - Docker Compose self-host
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: routess version
+      description: From the footer, `routess --version`, or your image tag.
+      placeholder: "1.122.7"
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, browser, deployment target.
+      placeholder: "macOS 15, Chrome 140, hosted at routess.com"
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / console output / screenshots
+      description: Optional but very helpful.
+      render: shell
