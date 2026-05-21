@@ -45,6 +45,8 @@ The `routess` CLI (`npm install -g routess`) is the easiest way to drive the API
 curl -H "Authorization: Bearer routess_pat_…" https://api.routess.com/api/v1/users/me
 ```
 
+The CLI persists its token at `~/.config/routess/auth.json` (mode 0600), or `$XDG_CONFIG_HOME/routess/auth.json` if that is set. `ROUTESS_TOKEN` and `ROUTESS_API_URL` env vars take precedence over the on-disk values, which is convenient in CI and containers.
+
 ## Endpoints (overview)
 
 | Method | Path | Purpose |
