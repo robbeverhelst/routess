@@ -31,6 +31,9 @@
 				},
 				"security": [
 					{
+						"PAT-auth": []
+					},
+					{
 						"JWT-auth": []
 					}
 				],
@@ -64,6 +67,9 @@
 				},
 				"security": [
 					{
+						"PAT-auth": []
+					},
+					{
 						"JWT-auth": []
 					}
 				],
@@ -71,6 +77,7 @@
 				"tags": ["users"]
 			},
 			"delete": {
+				"description": "Initiates self-deletion (ADR 0017). Soft-deletes the user and their routes, revokes all sessions, and schedules permanent erasure 30 days later. The user can cancel by signing back in and calling POST /users/me/cancel-deletion within the grace window.",
 				"operationId": "UsersController_remove",
 				"parameters": [],
 				"responses": {
@@ -88,6 +95,9 @@
 					}
 				},
 				"security": [
+					{
+						"PAT-auth": []
+					},
 					{
 						"JWT-auth": []
 					}
@@ -114,6 +124,9 @@
 				},
 				"security": [
 					{
+						"PAT-auth": []
+					},
+					{
 						"JWT-auth": []
 					}
 				],
@@ -121,9 +134,110 @@
 				"tags": ["users"]
 			}
 		},
+		"/users/me/password": {
+			"post": {
+				"description": "Sets a password for the authenticated user, or changes it if one already exists. HIBP/length validation always applies. Changing an existing password requires the current password. Adding a password to a Google-only account does not require email verification (OAuth already proved email control).",
+				"operationId": "UsersController_setPassword",
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/SetPasswordDto"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "",
+						"content": {
+							"application/json": {
+								"schema": {
+									"example": {
+										"success": true
+									}
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Password failed validation, or current password missing on change"
+					},
+					"401": {
+						"description": "Current password is incorrect"
+					}
+				},
+				"security": [
+					{
+						"PAT-auth": []
+					},
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Set or change password",
+				"tags": ["users"]
+			}
+		},
+		"/users/me/export": {
+			"get": {
+				"description": "Returns a ZIP containing routess-export.json (full account dump) and one GPX file per Route. Soft-capped at 1000 routes; accounts above the cap get a 400 and should contact support. GDPR Art. 15 right of access.",
+				"operationId": "UsersController_export",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"description": "ZIP archive"
+					},
+					"400": {
+						"description": "Account exceeds the export size cap"
+					}
+				},
+				"security": [
+					{
+						"PAT-auth": []
+					},
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Export account data as ZIP",
+				"tags": ["users"]
+			}
+		},
+		"/users/me/cancel-deletion": {
+			"post": {
+				"description": "Cancels a self-initiated deletion that's still inside the 30-day grace window. Restores the user's routes and clears the pending status. No-op if the user is not in a pending state.",
+				"operationId": "UsersController_cancelDeletion",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"description": "",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/UserProfileDto"
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"PAT-auth": []
+					},
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Cancel a pending account deletion",
+				"tags": ["users"]
+			}
+		},
 		"/auth/google": {
 			"post": {
-				"description": "Authenticates user using Google OAuth2 credential token",
+				"description": "Authenticates user using a Google OAuth2 authorization code from the popup auth-code flow",
 				"operationId": "AuthController_googleAuth",
 				"parameters": [],
 				"requestBody": {
@@ -148,7 +262,7 @@
 						}
 					},
 					"400": {
-						"description": "Invalid Google credential"
+						"description": "Invalid Google authorization code"
 					},
 					"401": {
 						"description": "Authentication failed"
@@ -158,32 +272,155 @@
 				"tags": ["auth"]
 			}
 		},
-		"/auth/me": {
-			"get": {
-				"description": "Retrieves the profile of the currently authenticated user",
-				"operationId": "AuthController_getProfile",
+		"/auth/signup-email": {
+			"post": {
+				"description": "Step 1 of email+password signup. Validates the password (length 12-128, HIBP breach check) and emails a verification link. The User row is NOT created until the verification link is clicked. Rejected with 409 if an account with this email already exists.",
+				"operationId": "AuthController_signupEmail",
 				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/EmailSignupDto"
+							}
+						}
+					}
+				},
 				"responses": {
 					"200": {
-						"description": "Profile retrieved successfully",
+						"description": "Verification email sent"
+					},
+					"400": {
+						"description": "Invalid password (too short, too long, or breached)"
+					},
+					"409": {
+						"description": "Email already in use"
+					}
+				},
+				"summary": "Email + password signup (request)",
+				"tags": ["auth"]
+			}
+		},
+		"/auth/verify-email": {
+			"post": {
+				"description": "Step 2: consume the verification token, create the User and password method, and start a session.",
+				"operationId": "AuthController_verifyEmail",
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/VerifyEmailDto"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "",
 						"content": {
 							"application/json": {
 								"schema": {
-									"$ref": "#/components/schemas/UserProfileDto"
+									"$ref": "#/components/schemas/AuthResponseDto"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Token invalid or expired"
+					},
+					"409": {
+						"description": "Email was claimed by another signup in the meantime"
+					}
+				},
+				"summary": "Email + password signup (verify)",
+				"tags": ["auth"]
+			}
+		},
+		"/auth/login-email": {
+			"post": {
+				"description": "Authenticates with email + password. Returns a session JWT. Generic error message on failure.",
+				"operationId": "AuthController_loginEmail",
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/EmailLoginDto"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/AuthResponseDto"
 								}
 							}
 						}
 					},
 					"401": {
-						"description": "Unauthorized"
+						"description": "Email or password is incorrect"
 					}
 				},
-				"security": [
-					{
-						"JWT-auth": []
+				"summary": "Email + password login",
+				"tags": ["auth"]
+			}
+		},
+		"/auth/request-password-reset": {
+			"post": {
+				"description": "Always returns 200 to avoid email enumeration. If a user with this email and a password method exists, a reset email is sent.",
+				"operationId": "AuthController_requestPasswordReset",
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/RequestPasswordResetDto"
+							}
+						}
 					}
-				],
-				"summary": "Get current user profile",
+				},
+				"responses": {
+					"200": {
+						"description": "Request accepted (always 200)"
+					}
+				},
+				"summary": "Request a password reset email",
+				"tags": ["auth"]
+			}
+		},
+		"/auth/reset-password": {
+			"post": {
+				"description": "Consumes a reset token, sets a new password, and revokes ALL sessions for the user.",
+				"operationId": "AuthController_resetPassword",
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/ResetPasswordDto"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Password reset"
+					},
+					"400": {
+						"description": "Token invalid or expired, or password failed validation"
+					}
+				},
+				"summary": "Reset password using a token",
 				"tags": ["auth"]
 			}
 		},
@@ -213,9 +450,221 @@
 				"tags": ["auth"]
 			}
 		},
+		"/me/sessions": {
+			"get": {
+				"description": "Returns all active sessions for the authenticated user. The session that issued the current JWT is marked with isCurrent=true.",
+				"operationId": "SessionsController_list",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"description": "",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"$ref": "#/components/schemas/SessionResponseDto"
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "List active sessions",
+				"tags": ["sessions"]
+			}
+		},
+		"/me/sessions/{id}": {
+			"delete": {
+				"description": "Revokes the given session for the authenticated user. The current session cannot be revoked here; use POST /auth/logout for that.",
+				"operationId": "SessionsController_revoke",
+				"parameters": [
+					{
+						"name": "id",
+						"required": true,
+						"in": "path",
+						"description": "Session ID",
+						"schema": {
+							"type": "number"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "",
+						"content": {
+							"application/json": {
+								"schema": {
+									"example": {
+										"success": true
+									}
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Cannot revoke the current session"
+					},
+					"404": {
+						"description": "Session not found"
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Revoke a specific session",
+				"tags": ["sessions"]
+			}
+		},
+		"/me/sessions/logout-everywhere": {
+			"post": {
+				"description": "Revokes every active session for the authenticated user, including the current one.",
+				"operationId": "SessionsController_logoutEverywhere",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"description": "",
+						"content": {
+							"application/json": {
+								"schema": {
+									"example": {
+										"success": true
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Sign out from all devices",
+				"tags": ["sessions"]
+			}
+		},
+		"/auth/tokens": {
+			"post": {
+				"description": "Creates a new PAT for the authenticated user. Returns the plaintext exactly once; it is hashed at rest and cannot be retrieved again. Tokens authenticate non-browser clients (CLI, AI agents, scripts) via `Authorization: Bearer routess_pat_…`. PATs are blocked from `/v1/admin/*` and from `DELETE /v1/users/me` regardless of the owner's role.",
+				"operationId": "PersonalAccessTokensController_create",
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/CreatePersonalAccessTokenDto"
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Token created",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/CreatePersonalAccessTokenResponseDto"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Unauthorized"
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Mint a personal access token",
+				"tags": ["auth"]
+			},
+			"get": {
+				"description": "Lists the authenticated user's active (non-revoked) PATs. Plaintext is never returned; only metadata.",
+				"operationId": "PersonalAccessTokensController_list",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"description": "Tokens retrieved",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"$ref": "#/components/schemas/PersonalAccessTokenResponseDto"
+									}
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Unauthorized"
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "List personal access tokens",
+				"tags": ["auth"]
+			}
+		},
+		"/auth/tokens/{id}": {
+			"delete": {
+				"description": "Revokes the token with the given ID. Idempotent: revoking an already-revoked token succeeds.",
+				"operationId": "PersonalAccessTokensController_revoke",
+				"parameters": [
+					{
+						"name": "id",
+						"required": true,
+						"in": "path",
+						"description": "Token ID",
+						"schema": {
+							"type": "number"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Token revoked",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/RevokePersonalAccessTokenResponseDto"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Unauthorized"
+					},
+					"404": {
+						"description": "Token not found"
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Revoke a personal access token",
+				"tags": ["auth"]
+			}
+		},
 		"/routes": {
 			"post": {
-				"description": "Creates a new route for the authenticated user",
+				"description": "Creates a new route for the authenticated user. PATs are blocked; route creation lands with #170.",
 				"operationId": "RoutesController_create",
 				"parameters": [],
 				"requestBody": {
@@ -255,7 +704,7 @@
 				"tags": ["routes"]
 			},
 			"get": {
-				"description": "Retrieves all routes belonging to the authenticated user",
+				"description": "Retrieves all routes belonging to the authenticated user (any visibility)",
 				"operationId": "RoutesController_findAll",
 				"parameters": [],
 				"responses": {
@@ -278,6 +727,9 @@
 				},
 				"security": [
 					{
+						"PAT-auth": []
+					},
+					{
 						"JWT-auth": []
 					}
 				],
@@ -285,9 +737,43 @@
 				"tags": ["routes"]
 			}
 		},
+		"/routes/by-user/{userId}": {
+			"get": {
+				"description": "Returns the public Routes owned by the given user. Excludes private and unlisted routes.",
+				"operationId": "RoutesController_findPublicByUser",
+				"parameters": [
+					{
+						"name": "userId",
+						"required": true,
+						"in": "path",
+						"description": "Owner user ID",
+						"schema": {
+							"type": "number"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"$ref": "#/components/schemas/RouteResponseDto"
+									}
+								}
+							}
+						}
+					}
+				},
+				"summary": "Get a user's public routes",
+				"tags": ["routes"]
+			}
+		},
 		"/routes/{id}": {
 			"get": {
-				"description": "Retrieves a specific route by ID for the authenticated user",
+				"description": "Returns the route. Owners see it regardless of visibility; non-owners (including anonymous viewers) only see public and unlisted routes. Private routes return 404 to non-owners. PATs hit this through the cookie-or-bearer JWT path; PAT-as-Bearer is not yet supported here (use GET /routes to list and filter).",
 				"operationId": "RoutesController_findOne",
 				"parameters": [
 					{
@@ -311,23 +797,15 @@
 							}
 						}
 					},
-					"401": {
-						"description": "Unauthorized"
-					},
 					"404": {
 						"description": "Route not found"
 					}
 				},
-				"security": [
-					{
-						"JWT-auth": []
-					}
-				],
 				"summary": "Get route by ID",
 				"tags": ["routes"]
 			},
 			"patch": {
-				"description": "Updates a specific route for the authenticated user",
+				"description": "Updates a specific route for the authenticated user.",
 				"operationId": "RoutesController_update",
 				"parameters": [
 					{
@@ -337,6 +815,15 @@
 						"description": "Route ID",
 						"schema": {
 							"type": "number"
+						}
+					},
+					{
+						"name": "X-Routess-Confirm",
+						"in": "header",
+						"description": "Set to `true` when a PAT call sets `visibility: public`. Cookie sessions ignore this header.",
+						"required": false,
+						"schema": {
+							"type": "string"
 						}
 					}
 				],
@@ -369,9 +856,15 @@
 					},
 					"404": {
 						"description": "Route not found"
+					},
+					"428": {
+						"description": "PAT-authenticated call attempted to set visibility to public without `X-Routess-Confirm: true`. Surface the `impact` field of the response to the user and retry with the header set."
 					}
 				},
 				"security": [
+					{
+						"PAT-auth": []
+					},
 					{
 						"JWT-auth": []
 					}
@@ -380,7 +873,7 @@
 				"tags": ["routes"]
 			},
 			"delete": {
-				"description": "Deletes a specific route for the authenticated user",
+				"description": "Deletes a specific route for the authenticated user. PAT callers must set X-Routess-Confirm: true.",
 				"operationId": "RoutesController_remove",
 				"parameters": [
 					{
@@ -390,6 +883,15 @@
 						"description": "Route ID",
 						"schema": {
 							"type": "number"
+						}
+					},
+					{
+						"name": "X-Routess-Confirm",
+						"in": "header",
+						"description": "Required as `true` for PAT callers. Cookie sessions ignore this header.",
+						"required": false,
+						"schema": {
+							"type": "string"
 						}
 					}
 				],
@@ -412,9 +914,15 @@
 					},
 					"404": {
 						"description": "Route not found"
+					},
+					"428": {
+						"description": "PAT-authenticated DELETE without `X-Routess-Confirm: true`. Surface the `impact` field of the response to the user and retry with the header set."
 					}
 				},
 				"security": [
+					{
+						"PAT-auth": []
+					},
 					{
 						"JWT-auth": []
 					}
@@ -754,10 +1262,301 @@
 				},
 				"tags": ["metrics"]
 			}
+		},
+		"/admin/stats/overview": {
+			"get": {
+				"operationId": "AdminController_getOverview",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"description": ""
+					}
+				},
+				"security": [
+					{
+						"bearer": []
+					}
+				],
+				"summary": "Aggregate top-level metrics for the admin dashboard",
+				"tags": ["admin"]
+			}
+		},
+		"/admin/stats/users": {
+			"get": {
+				"operationId": "AdminController_getUserStats",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"description": ""
+					}
+				},
+				"security": [
+					{
+						"bearer": []
+					}
+				],
+				"summary": "User-level KPIs (signups, churn, active count)",
+				"tags": ["admin"]
+			}
+		},
+		"/admin/stats/routes": {
+			"get": {
+				"operationId": "AdminController_getRouteStats",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"description": ""
+					}
+				},
+				"security": [
+					{
+						"bearer": []
+					}
+				],
+				"summary": "Route counts by activity, top creators, recent trend",
+				"tags": ["admin"]
+			}
+		},
+		"/admin/routes": {
+			"get": {
+				"operationId": "AdminController_listRoutes",
+				"parameters": [
+					{
+						"name": "search",
+						"required": true,
+						"in": "query",
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"name": "userId",
+						"required": true,
+						"in": "query",
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": ""
+					}
+				},
+				"security": [
+					{
+						"bearer": []
+					}
+				],
+				"summary": "Paginated, searchable route list",
+				"tags": ["admin"]
+			}
+		},
+		"/admin/routes/{id}": {
+			"get": {
+				"operationId": "AdminController_getRouteDetail",
+				"parameters": [
+					{
+						"name": "id",
+						"required": true,
+						"in": "path",
+						"schema": {
+							"type": "number"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": ""
+					}
+				},
+				"security": [
+					{
+						"bearer": []
+					}
+				],
+				"summary": "Route detail: metadata, waypoints summary, owner",
+				"tags": ["admin"]
+			},
+			"delete": {
+				"operationId": "AdminController_softDeleteRoute",
+				"parameters": [
+					{
+						"name": "id",
+						"required": true,
+						"in": "path",
+						"schema": {
+							"type": "number"
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": ""
+					}
+				},
+				"security": [
+					{
+						"bearer": []
+					}
+				],
+				"summary": "Soft-delete a route",
+				"tags": ["admin"]
+			}
+		},
+		"/admin/users": {
+			"get": {
+				"operationId": "AdminController_listUsers",
+				"parameters": [
+					{
+						"name": "search",
+						"required": true,
+						"in": "query",
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": ""
+					}
+				},
+				"security": [
+					{
+						"bearer": []
+					}
+				],
+				"summary": "Paginated, searchable user list",
+				"tags": ["admin"]
+			}
+		},
+		"/admin/users/{id}": {
+			"get": {
+				"operationId": "AdminController_getUserDetail",
+				"parameters": [
+					{
+						"name": "id",
+						"required": true,
+						"in": "path",
+						"schema": {
+							"type": "number"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": ""
+					}
+				},
+				"security": [
+					{
+						"bearer": []
+					}
+				],
+				"summary": "User detail: profile, sessions, recent routes",
+				"tags": ["admin"]
+			},
+			"delete": {
+				"operationId": "AdminController_softDeleteUser",
+				"parameters": [
+					{
+						"name": "id",
+						"required": true,
+						"in": "path",
+						"schema": {
+							"type": "number"
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": ""
+					}
+				},
+				"security": [
+					{
+						"bearer": []
+					}
+				],
+				"summary": "Soft-delete a user; cascades to routes and sessions",
+				"tags": ["admin"]
+			}
+		},
+		"/admin/users/{id}/sessions/{sessionId}": {
+			"delete": {
+				"operationId": "AdminController_revokeSession",
+				"parameters": [
+					{
+						"name": "id",
+						"required": true,
+						"in": "path",
+						"schema": {
+							"type": "number"
+						}
+					},
+					{
+						"name": "sessionId",
+						"required": true,
+						"in": "path",
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": ""
+					}
+				},
+				"security": [
+					{
+						"bearer": []
+					}
+				],
+				"summary": "Revoke a single session for a user",
+				"tags": ["admin"]
+			}
+		},
+		"/admin/system/health": {
+			"get": {
+				"operationId": "AdminController_getSystemHealth",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"description": ""
+					}
+				},
+				"security": [
+					{
+						"bearer": []
+					}
+				],
+				"summary": "API health, version, uptime, DB reachability",
+				"tags": ["admin"]
+			}
+		},
+		"/admin/system/config-summary": {
+			"get": {
+				"operationId": "AdminController_getConfigSummary",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"description": ""
+					}
+				},
+				"security": [
+					{
+						"bearer": []
+					}
+				],
+				"summary": "Sanitised view of runtime config (no secrets)",
+				"tags": ["admin"]
+			}
 		}
 	},
 	"info": {
-		"title": "routess API",
+		"title": "Routess API",
 		"description": "API for route management and mapping functionality",
 		"version": "dev",
 		"contact": {}
@@ -790,16 +1589,12 @@
 	],
 	"servers": [
 		{
-			"url": "http://localhost:3000",
-			"description": "Local development"
-		},
-		{
-			"url": "https://routess-api.robbeverhelst.com",
+			"url": "https://api.routess.com",
 			"description": "Production"
 		},
 		{
-			"url": "https://api.routess.com",
-			"description": "Future canonical domain"
+			"url": "http://localhost:3000",
+			"description": "Local development"
 		}
 	],
 	"components": {
@@ -809,9 +1604,130 @@
 				"bearerFormat": "JWT",
 				"type": "http",
 				"in": "header"
+			},
+			"PAT-auth": {
+				"scheme": "bearer",
+				"bearerFormat": "routess_pat_<random>",
+				"type": "http",
+				"description": "Personal access token for non-browser clients. Mint at Settings → API Tokens. Carries one of two scopes: `read` (list/get Routes, export GPX, profile) or `write` (`read` plus metadata-only mutations on owned routes and on preferences). Blocked from /admin/* and from DELETE /users/me. Destructive operations require `X-Routess-Confirm: true` and return 428 PRECONDITION_REQUIRED otherwise. See ADR-0022 and ADR-0023.",
+				"in": "header"
 			}
 		},
 		"schemas": {
+			"UserPreferenceSportSpeedsDto": {
+				"type": "object",
+				"properties": {
+					"run": {
+						"type": "number",
+						"example": 10
+					},
+					"cycle": {
+						"type": "number",
+						"example": 25
+					},
+					"walk": {
+						"type": "number",
+						"example": 5
+					}
+				}
+			},
+			"UserPreferenceOverlaysDto": {
+				"type": "object",
+				"properties": {
+					"heatmap": {
+						"type": "boolean",
+						"example": true
+					},
+					"contour": {
+						"type": "boolean",
+						"example": false
+					},
+					"bike": {
+						"type": "boolean",
+						"example": true
+					},
+					"surface": {
+						"type": "boolean",
+						"example": false
+					},
+					"wind": {
+						"type": "boolean",
+						"example": false
+					}
+				},
+				"required": ["heatmap", "contour", "bike", "surface", "wind"]
+			},
+			"UserPreferencesDto": {
+				"type": "object",
+				"properties": {
+					"units": {
+						"type": "string",
+						"enum": ["km", "mi"],
+						"example": "km"
+					},
+					"showPois": {
+						"type": "boolean",
+						"example": true
+					},
+					"terrain3d": {
+						"type": "boolean",
+						"example": false
+					},
+					"autoSnap": {
+						"type": "boolean",
+						"example": true
+					},
+					"defaultActivity": {
+						"type": "string",
+						"example": "Cycling"
+					},
+					"selectedSports": {
+						"type": "array",
+						"example": ["cycle", "run"],
+						"items": {
+							"type": "string",
+							"enum": ["run", "cycle", "walk"]
+						}
+					},
+					"sportSpeeds": {
+						"example": {
+							"run": 10,
+							"cycle": 25,
+							"walk": 5
+						},
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/UserPreferenceSportSpeedsDto"
+							}
+						]
+					},
+					"mapStyle": {
+						"type": "string",
+						"enum": ["streets", "outdoors", "satellite"],
+						"example": "outdoors"
+					},
+					"overlays": {
+						"$ref": "#/components/schemas/UserPreferenceOverlaysDto"
+					},
+					"defaultRouteVisibility": {
+						"type": "string",
+						"enum": ["private", "unlisted", "public"],
+						"example": "private"
+					}
+				},
+				"required": [
+					"units",
+					"showPois",
+					"terrain3d",
+					"autoSnap",
+					"defaultActivity",
+					"selectedSports",
+					"sportSpeeds",
+					"mapStyle",
+					"overlays",
+					"defaultRouteVisibility"
+				]
+			},
 			"UserStatisticsDto": {
 				"type": "object",
 				"properties": {
@@ -850,11 +1766,141 @@
 						"type": "boolean",
 						"example": true
 					},
+					"role": {
+						"type": "string",
+						"example": "user",
+						"enum": ["user", "admin"]
+					},
+					"preferences": {
+						"nullable": true,
+						"type": "object",
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/UserPreferencesDto"
+							}
+						]
+					},
+					"idHash": {
+						"type": "string",
+						"example": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+						"description": "Pseudonymous user identifier for client-side ProductEvent tracking. See ADR-0020."
+					},
+					"deletionStatus": {
+						"type": "string",
+						"example": "active",
+						"enum": ["active", "pending_hard_delete"],
+						"description": "Deletion lifecycle. 'pending_hard_delete' means the user has requested self-deletion and is in the 30-day grace window before permanent erasure. The web app should redirect such users to a cancel screen."
+					},
+					"deletionRequestedAt": {
+						"type": "string",
+						"example": "2026-05-09T08:00:00.000Z",
+						"nullable": true,
+						"description": "When self-deletion was requested. Hard-delete fires 30 days after this timestamp."
+					},
+					"hasPassword": {
+						"type": "boolean",
+						"example": true,
+						"description": "Whether the user has an active email/password credential. Drives password-change UI affordances."
+					},
 					"statistics": {
 						"$ref": "#/components/schemas/UserStatisticsDto"
 					}
 				},
-				"required": ["id", "email", "name", "isEmailVerified", "statistics"]
+				"required": [
+					"id",
+					"email",
+					"name",
+					"isEmailVerified",
+					"role",
+					"idHash",
+					"deletionStatus",
+					"hasPassword",
+					"statistics"
+				]
+			},
+			"UpdateUserPreferenceOverlaysDto": {
+				"type": "object",
+				"properties": {
+					"heatmap": {
+						"type": "boolean",
+						"example": true
+					},
+					"contour": {
+						"type": "boolean",
+						"example": false
+					},
+					"bike": {
+						"type": "boolean",
+						"example": true
+					},
+					"surface": {
+						"type": "boolean",
+						"example": false
+					},
+					"wind": {
+						"type": "boolean",
+						"example": false
+					}
+				}
+			},
+			"UpdateUserPreferencesDto": {
+				"type": "object",
+				"properties": {
+					"units": {
+						"type": "string",
+						"enum": ["km", "mi"],
+						"example": "km"
+					},
+					"showPois": {
+						"type": "boolean",
+						"example": true
+					},
+					"terrain3d": {
+						"type": "boolean",
+						"example": false
+					},
+					"autoSnap": {
+						"type": "boolean",
+						"example": true
+					},
+					"defaultActivity": {
+						"type": "string",
+						"example": "Cycling"
+					},
+					"selectedSports": {
+						"type": "array",
+						"example": ["cycle", "run"],
+						"items": {
+							"type": "string",
+							"enum": ["run", "cycle", "walk"]
+						}
+					},
+					"sportSpeeds": {
+						"example": {
+							"run": 10,
+							"cycle": 25,
+							"walk": 5
+						},
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/UserPreferenceSportSpeedsDto"
+							}
+						]
+					},
+					"mapStyle": {
+						"type": "string",
+						"enum": ["streets", "outdoors", "satellite"],
+						"example": "outdoors"
+					},
+					"overlays": {
+						"$ref": "#/components/schemas/UpdateUserPreferenceOverlaysDto"
+					},
+					"defaultRouteVisibility": {
+						"type": "string",
+						"enum": ["private", "unlisted", "public"],
+						"example": "private"
+					}
+				}
 			},
 			"UpdateCurrentUserDto": {
 				"type": "object",
@@ -866,19 +1912,39 @@
 					"avatar": {
 						"type": "string",
 						"example": "https://example.com/avatar.jpg"
+					},
+					"preferences": {
+						"$ref": "#/components/schemas/UpdateUserPreferencesDto"
 					}
 				}
+			},
+			"SetPasswordDto": {
+				"type": "object",
+				"properties": {
+					"currentPassword": {
+						"type": "string",
+						"example": "current pass",
+						"description": "Required if changing an existing password."
+					},
+					"newPassword": {
+						"type": "string",
+						"example": "new correct horse battery staple",
+						"minLength": 12,
+						"maxLength": 128
+					}
+				},
+				"required": ["newPassword"]
 			},
 			"GoogleAuthDto": {
 				"type": "object",
 				"properties": {
-					"credential": {
+					"code": {
 						"type": "string",
-						"description": "Google OAuth2 credential token",
-						"example": "eyJhbGciOiJSUzI1NiIsImtpZCI6IjdkYzAyYjg5..."
+						"description": "Google OAuth2 authorization code from the popup auth-code flow",
+						"example": "4/0AX4XfWj..."
 					}
 				},
-				"required": ["credential"]
+				"required": ["code"]
 			},
 			"UserResponseDto": {
 				"type": "object",
@@ -902,9 +1968,45 @@
 					"isEmailVerified": {
 						"type": "boolean",
 						"example": true
+					},
+					"role": {
+						"type": "string",
+						"example": "user",
+						"enum": ["user", "admin"]
+					},
+					"preferences": {
+						"nullable": true,
+						"type": "object",
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/UserPreferencesDto"
+							}
+						]
+					},
+					"idHash": {
+						"type": "string",
+						"example": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+						"description": "Pseudonymous user identifier for client-side ProductEvent tracking. See ADR-0020."
+					},
+					"deletionStatus": {
+						"type": "string",
+						"example": "active",
+						"enum": ["active", "pending_hard_delete"],
+						"description": "Deletion lifecycle. 'pending_hard_delete' means the user has requested self-deletion and is in the 30-day grace window before permanent erasure. The web app should redirect such users to a cancel screen."
+					},
+					"deletionRequestedAt": {
+						"type": "string",
+						"example": "2026-05-09T08:00:00.000Z",
+						"nullable": true,
+						"description": "When self-deletion was requested. Hard-delete fires 30 days after this timestamp."
+					},
+					"hasPassword": {
+						"type": "boolean",
+						"example": true,
+						"description": "Whether the user has an active email/password credential. Drives password-change UI affordances."
 					}
 				},
-				"required": ["id", "email", "name", "isEmailVerified"]
+				"required": ["id", "email", "name", "isEmailVerified", "role", "idHash", "deletionStatus", "hasPassword"]
 			},
 			"AuthResponseDto": {
 				"type": "object",
@@ -925,7 +2027,229 @@
 				},
 				"required": ["accessToken", "user"]
 			},
+			"EmailSignupDto": {
+				"type": "object",
+				"properties": {
+					"email": {
+						"type": "string",
+						"example": "alice@example.com"
+					},
+					"name": {
+						"type": "string",
+						"example": "Alice"
+					},
+					"password": {
+						"type": "string",
+						"example": "correct horse battery staple",
+						"minLength": 12,
+						"maxLength": 128
+					}
+				},
+				"required": ["email", "password"]
+			},
+			"VerifyEmailDto": {
+				"type": "object",
+				"properties": {
+					"token": {
+						"type": "string",
+						"example": "0a1b2c3d…"
+					}
+				},
+				"required": ["token"]
+			},
+			"EmailLoginDto": {
+				"type": "object",
+				"properties": {
+					"email": {
+						"type": "string",
+						"example": "alice@example.com"
+					},
+					"password": {
+						"type": "string",
+						"example": "correct horse battery staple"
+					}
+				},
+				"required": ["email", "password"]
+			},
+			"RequestPasswordResetDto": {
+				"type": "object",
+				"properties": {
+					"email": {
+						"type": "string",
+						"example": "alice@example.com"
+					}
+				},
+				"required": ["email"]
+			},
+			"ResetPasswordDto": {
+				"type": "object",
+				"properties": {
+					"token": {
+						"type": "string",
+						"example": "0a1b2c3d…"
+					},
+					"password": {
+						"type": "string",
+						"example": "new correct horse battery staple",
+						"minLength": 12,
+						"maxLength": 128
+					}
+				},
+				"required": ["token", "password"]
+			},
 			"LogoutResponseDto": {
+				"type": "object",
+				"properties": {
+					"success": {
+						"type": "boolean",
+						"example": true
+					}
+				},
+				"required": ["success"]
+			},
+			"SessionResponseDto": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "number",
+						"example": 42
+					},
+					"isCurrent": {
+						"type": "boolean",
+						"example": true,
+						"description": "True for the session that issued the JWT on this request. Cannot be revoked from the list."
+					},
+					"userAgent": {
+						"type": "string",
+						"example": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)..."
+					},
+					"ipAddress": {
+						"type": "string",
+						"example": "203.0.113.42"
+					},
+					"lastActivity": {
+						"type": "string",
+						"example": "2026-05-09T12:01:00.000Z"
+					},
+					"expiresAt": {
+						"type": "string",
+						"example": "2026-05-16T12:01:00.000Z"
+					},
+					"createdAt": {
+						"type": "string",
+						"example": "2026-05-09T08:00:00.000Z"
+					}
+				},
+				"required": ["id", "isCurrent", "expiresAt", "createdAt"]
+			},
+			"CreatePersonalAccessTokenDto": {
+				"type": "object",
+				"properties": {
+					"label": {
+						"type": "string",
+						"description": "Human-readable label so the user can identify the token later in the Settings list. Not displayed to anyone but the owning user.",
+						"example": "Backup script (laptop)",
+						"minLength": 1,
+						"maxLength": 80
+					},
+					"scope": {
+						"type": "string",
+						"description": "Scope of the token. `read` covers list/get/export and reading the profile. `write` adds metadata-only mutations on owned routes and on user preferences.",
+						"enum": ["read", "write"],
+						"example": "read"
+					},
+					"expiresAt": {
+						"type": "string",
+						"description": "Optional ISO-8601 expiry. When omitted the token does not expire and lives until the user revokes it.",
+						"example": "2027-01-01T00:00:00Z"
+					}
+				},
+				"required": ["label", "scope"]
+			},
+			"CreatePersonalAccessTokenResponseDto": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "number",
+						"description": "Stable identifier used to revoke the token.",
+						"example": 42
+					},
+					"label": {
+						"type": "string",
+						"description": "User-supplied label.",
+						"example": "Backup script (laptop)"
+					},
+					"scope": {
+						"type": "string",
+						"description": "Scope of the token.",
+						"enum": ["read", "write"],
+						"example": "read"
+					},
+					"lastUsedAt": {
+						"type": "string",
+						"description": "Most recent time the token was used to authenticate a request, or null if never used since creation.",
+						"nullable": true,
+						"example": "2026-05-14T10:23:00Z"
+					},
+					"expiresAt": {
+						"type": "string",
+						"description": "Expiry timestamp, or null if the token has no expiry.",
+						"nullable": true,
+						"example": "2027-01-01T00:00:00Z"
+					},
+					"createdAt": {
+						"type": "string",
+						"description": "Creation timestamp.",
+						"example": "2026-05-10T08:00:00Z"
+					},
+					"token": {
+						"type": "string",
+						"description": "The plaintext bearer token. Returned exactly once at creation time; the API does not store it and there is no way to retrieve it later. If you lose it, revoke the token and mint a new one.",
+						"example": "routess_pat_uK0wXY8Q1nN3pZqV-7gE2tHaB4cMdL5JfRvO6sI"
+					}
+				},
+				"required": ["id", "label", "scope", "lastUsedAt", "expiresAt", "createdAt", "token"]
+			},
+			"PersonalAccessTokenResponseDto": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "number",
+						"description": "Stable identifier used to revoke the token.",
+						"example": 42
+					},
+					"label": {
+						"type": "string",
+						"description": "User-supplied label.",
+						"example": "Backup script (laptop)"
+					},
+					"scope": {
+						"type": "string",
+						"description": "Scope of the token.",
+						"enum": ["read", "write"],
+						"example": "read"
+					},
+					"lastUsedAt": {
+						"type": "string",
+						"description": "Most recent time the token was used to authenticate a request, or null if never used since creation.",
+						"nullable": true,
+						"example": "2026-05-14T10:23:00Z"
+					},
+					"expiresAt": {
+						"type": "string",
+						"description": "Expiry timestamp, or null if the token has no expiry.",
+						"nullable": true,
+						"example": "2027-01-01T00:00:00Z"
+					},
+					"createdAt": {
+						"type": "string",
+						"description": "Creation timestamp.",
+						"example": "2026-05-10T08:00:00Z"
+					}
+				},
+				"required": ["id", "label", "scope", "lastUsedAt", "expiresAt", "createdAt"]
+			},
+			"RevokePersonalAccessTokenResponseDto": {
 				"type": "object",
 				"properties": {
 					"success": {
@@ -938,29 +2262,34 @@
 			"WaypointDto": {
 				"type": "object",
 				"properties": {
-					"lat": {
-						"type": "number",
-						"description": "Latitude coordinate of the waypoint",
-						"example": 40.7128
-					},
-					"lng": {
-						"type": "number",
-						"description": "Longitude coordinate of the waypoint",
-						"example": -74.006
-					},
-					"timestamp": {
-						"type": "string",
-						"description": "Timestamp when the waypoint was recorded",
-						"example": "2024-01-15T10:30:00Z"
+					"coord": {
+						"type": "array",
+						"description": "Waypoint coordinate as a [lng, lat] pair",
+						"example": [-74.006, 40.7128],
+						"items": {
+							"type": "number"
+						},
+						"minItems": 2,
+						"maxItems": 2
 					},
 					"type": {
 						"type": "string",
 						"description": "Type of waypoint routing",
 						"enum": ["routed", "direct"],
 						"example": "routed"
+					},
+					"name": {
+						"type": "string",
+						"description": "Optional user-assigned name for the waypoint",
+						"example": "Coffee stop"
+					},
+					"timestamp": {
+						"type": "string",
+						"description": "Timestamp when the waypoint was recorded",
+						"example": "2024-01-15T10:30:00Z"
 					}
 				},
-				"required": ["lat", "lng", "type"]
+				"required": ["coord", "type"]
 			},
 			"CreateRouteDto": {
 				"type": "object",
@@ -976,26 +2305,51 @@
 						"description": "Optional description of the route",
 						"example": "A scenic route through Central Park"
 					},
+					"activity": {
+						"type": "string",
+						"description": "Activity associated with the route",
+						"enum": ["run", "cycle", "walk"]
+					},
+					"visibility": {
+						"type": "string",
+						"description": "Visibility of the route",
+						"enum": ["private", "unlisted", "public"],
+						"default": "private"
+					},
+					"tags": {
+						"description": "Free-form tags for the route",
+						"example": ["hilly", "scenic"],
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					},
 					"waypoints": {
 						"description": "Array of waypoints that define the route",
 						"minItems": 1,
 						"example": [
 							{
-								"lat": 40.7128,
-								"lng": -74.006,
-								"timestamp": "2024-01-15T10:00:00Z",
-								"type": "routed"
+								"coord": [-74.006, 40.7128],
+								"type": "routed",
+								"timestamp": "2024-01-15T10:00:00Z"
 							},
 							{
-								"lat": 40.7589,
-								"lng": -73.9851,
-								"timestamp": "2024-01-15T10:30:00Z",
-								"type": "direct"
+								"coord": [-73.9851, 40.7589],
+								"type": "direct",
+								"timestamp": "2024-01-15T10:30:00Z"
 							}
 						],
 						"type": "array",
 						"items": {
 							"$ref": "#/components/schemas/WaypointDto"
+						}
+					},
+					"geometry": {
+						"description": "Routed polyline as an array of [lng, lat] coordinate pairs",
+						"example": [[-74.006, 40.7128], [-74.0055, 40.7135]],
+						"type": "array",
+						"items": {
+							"type": "string"
 						}
 					},
 					"distance": {
@@ -1029,21 +2383,30 @@
 			"WaypointResponseDto": {
 				"type": "object",
 				"properties": {
-					"lat": {
-						"type": "number"
-					},
-					"lng": {
-						"type": "number"
+					"coord": {
+						"type": "array",
+						"description": "Waypoint coordinate as a [lng, lat] pair",
+						"example": [-74.006, 40.7128],
+						"items": {
+							"type": "number"
+						},
+						"minItems": 2,
+						"maxItems": 2
 					},
 					"type": {
 						"type": "string",
 						"enum": ["routed", "direct"]
 					},
+					"name": {
+						"type": "string",
+						"description": "Optional user-assigned name for the waypoint"
+					},
 					"timestamp": {
-						"type": "string"
+						"type": "string",
+						"description": "Timestamp when the waypoint was recorded"
 					}
 				},
-				"required": ["lat", "lng"]
+				"required": ["coord", "type"]
 			},
 			"RouteResponseDto": {
 				"type": "object",
@@ -1057,10 +2420,31 @@
 					"description": {
 						"type": "string"
 					},
+					"activity": {
+						"type": "string",
+						"enum": ["run", "cycle", "walk"]
+					},
+					"visibility": {
+						"type": "string",
+						"enum": ["private", "unlisted", "public"]
+					},
+					"tags": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					},
 					"waypoints": {
 						"type": "array",
 						"items": {
 							"$ref": "#/components/schemas/WaypointResponseDto"
+						}
+					},
+					"geometry": {
+						"description": "Routed polyline as an array of [lng, lat] coordinate pairs",
+						"type": "array",
+						"items": {
+							"type": "string"
 						}
 					},
 					"distance": {
@@ -1091,7 +2475,7 @@
 						"type": "string"
 					}
 				},
-				"required": ["id", "name", "waypoints", "user", "createdAt", "updatedAt"]
+				"required": ["id", "name", "visibility", "tags", "waypoints", "user", "createdAt", "updatedAt"]
 			},
 			"UpdateRouteDto": {
 				"type": "object",
@@ -1107,26 +2491,51 @@
 						"description": "Optional description of the route",
 						"example": "A scenic route through Central Park"
 					},
+					"activity": {
+						"type": "string",
+						"description": "Activity associated with the route",
+						"enum": ["run", "cycle", "walk"]
+					},
+					"visibility": {
+						"type": "string",
+						"description": "Visibility of the route",
+						"enum": ["private", "unlisted", "public"],
+						"default": "private"
+					},
+					"tags": {
+						"description": "Free-form tags for the route",
+						"example": ["hilly", "scenic"],
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					},
 					"waypoints": {
 						"description": "Array of waypoints that define the route",
 						"minItems": 1,
 						"example": [
 							{
-								"lat": 40.7128,
-								"lng": -74.006,
-								"timestamp": "2024-01-15T10:00:00Z",
-								"type": "routed"
+								"coord": [-74.006, 40.7128],
+								"type": "routed",
+								"timestamp": "2024-01-15T10:00:00Z"
 							},
 							{
-								"lat": 40.7589,
-								"lng": -73.9851,
-								"timestamp": "2024-01-15T10:30:00Z",
-								"type": "direct"
+								"coord": [-73.9851, 40.7589],
+								"type": "direct",
+								"timestamp": "2024-01-15T10:30:00Z"
 							}
 						],
 						"type": "array",
 						"items": {
 							"$ref": "#/components/schemas/WaypointDto"
+						}
+					},
+					"geometry": {
+						"description": "Routed polyline as an array of [lng, lat] coordinate pairs",
+						"example": [[-74.006, 40.7128], [-74.0055, 40.7135]],
+						"type": "array",
+						"items": {
+							"type": "string"
 						}
 					},
 					"distance": {

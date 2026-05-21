@@ -110,9 +110,8 @@ export function createOpenApiDocument(app: INestApplication, config: AppConfig =
 				},
 				"PAT-auth",
 			)
+			.addServer("https://api.routess.com", "Production")
 			.addServer(`http://localhost:${config.app.port}`, "Local development")
-			.addServer("https://routess-api.robbeverhelst.com", "Production")
-			.addServer("https://api.routess.com", "Future canonical domain")
 			.addTag("auth", "Authentication endpoints")
 			.addTag("routes", "Route management")
 			.addTag("users", "User profile management")

@@ -11,27 +11,55 @@ import { Callout } from "fumadocs-ui/components/callout";
 
 ## Base URL
 
-- Production: `https://routess-api.robbeverhelst.com`
-- Future canonical API domain: `https://api.routess.com`
+- Production: `https://api.routess.com`
 - Local: `http://localhost:3000`
 
-All paths below are prefixed with `/api/v1` unless noted.
+Versioned routes live under `/api/v1`. Health and metrics endpoints (`/health`, `/health/live`, `/health/ready`, `/metrics`) are not versioned and live at the root.
 
 ## Authentication
 
-Most endpoints require a session cookie issued by `POST /api/v1/auth/google`. See [Developer Docs → Architecture → Auth](/docs/architecture/auth) for the full flow.
+The API accepts two authentication modes.
+
+### Session cookie (browser)
+
+`POST /api/v1/auth/google` exchanges a Google ID token for a session cookie. Subsequent calls send the cookie automatically. This is what the routess web app uses. See [Developer Docs → Architecture → Auth](/docs/architecture/auth) for the full flow.
+
+### Personal access token (CLI / scripts)
+
+Non-browser clients authenticate by sending a personal access token as a Bearer header:
+
+```http
+Authorization: Bearer routess_pat_<random>
+```
+
+Mint tokens in the web app under **Settings → API Tokens**. Each token carries one of two scopes:
+
+- `read` — list and get routes, export GPX, read profile.
+- `write` — everything in `read` plus metadata-only mutations on owned routes and on preferences.
+
+PATs are blocked from `/admin/*` and from `DELETE /users/me`. Destructive operations (changing a route's visibility to public, deleting a route) require an `X-Routess-Confirm: true` header and otherwise return `428 PRECONDITION_REQUIRED` with an `impact` field describing the change. See ADR-0022 and ADR-0023.
+
+The `routess` CLI (`npm install -g routess`) is the easiest way to drive the API with a PAT; for ad-hoc usage, `curl` works the same way:
+
+```bash
+curl -H "Authorization: Bearer routess_pat_…" https://api.routess.com/api/v1/users/me
+```
 
 ## Endpoints (overview)
 
 | Method | Path | Purpose |
 | --- | --- | --- |
-| POST | `/auth/google` | Exchange Google ID token for a session |
-| GET | `/auth/me` | Get the current user |
-| POST | `/auth/logout` | Clear the session |
-| GET / PATCH / DELETE | `/users/me` | Manage the current user |
-| GET | `/routes` | List the current user's routes |
-| POST | `/routes` | Create a route |
-| GET / PATCH / DELETE | `/routes/:id` | Read / update / delete a route |
-| GET | `/health/live` | Liveness probe |
-| GET | `/health/ready` | Readiness probe |
-| GET | `/metrics` | Prometheus metrics (internal) |
+| POST | `/api/v1/auth/google` | Exchange Google ID token for a session |
+| POST | `/api/v1/auth/logout` | Clear the session |
+| GET / POST / DELETE | `/api/v1/auth/tokens(/:id)` | Mint / list / revoke personal access tokens |
+| GET / PATCH / DELETE | `/api/v1/users/me` | Manage the current user |
+| GET | `/api/v1/users/profile` | Public-facing alias of `/users/me` |
+| GET | `/api/v1/routes` | List the current user's routes |
+| POST | `/api/v1/routes` | Create a route |
+| GET | `/api/v1/routes/:id` | Read a route (session-cookie only; PATs cannot read by id — use `/routes` and filter) |
+| PATCH / DELETE | `/api/v1/routes/:id` | Update or delete a route |
+| GET | `/api/v1/routes/by-user/:userId` | List a user's public routes (no auth) |
+| GET | `/health`, `/health/live`, `/health/ready` | Liveness/readiness probes (root path) |
+| GET | `/metrics` | Prometheus metrics, internal-only (root path) |
+
+The endpoint pages linked in the sidebar are the source of truth for request/response shapes and per-endpoint auth requirements.
