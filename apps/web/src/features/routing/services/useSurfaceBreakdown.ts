@@ -47,8 +47,8 @@ export function useRouteSurfaceSync(): void {
 
 		let superseded = false;
 		const controller = new AbortController();
-		// Public Valhalla instance is occasionally slow or unreachable; cap any
-		// single attempt so the loading flag can resolve instead of sticking.
+		// Cap any single trace-attributes attempt so the loading flag can
+		// resolve instead of sticking if the upstream Valhalla is slow.
 		const requestTimeoutId = window.setTimeout(() => controller.abort(), 10000);
 		setLoading(true);
 

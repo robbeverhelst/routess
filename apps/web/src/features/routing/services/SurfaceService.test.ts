@@ -1,7 +1,7 @@
 import { fetchSurfaceBreakdown } from "@/features/routing/services/SurfaceService";
 
 describe("SurfaceService", () => {
-	it("sends the requested costing mode to Valhalla", async () => {
+	it("sends the requested costing mode to the trace-attributes proxy", async () => {
 		vi.mocked(fetch).mockResolvedValue({
 			ok: true,
 			json: async () => ({
@@ -21,10 +21,12 @@ describe("SurfaceService", () => {
 		);
 
 		expect(fetch).toHaveBeenCalledTimes(1);
-		const [, init] = vi.mocked(fetch).mock.calls[0] ?? [];
+		const [url, init] = vi.mocked(fetch).mock.calls[0] ?? [];
 		const body = JSON.parse(String(init?.body));
 
+		expect(String(url)).toContain("/api/v1/routing/trace-attributes");
 		expect(body.costing).toBe("auto");
+		expect(body.shape).toHaveLength(2);
 		expect(result).toEqual({
 			meters: {
 				paved: 1200,

@@ -47,7 +47,6 @@ replace_placeholders() {
     replace_token "$file" "__VITE_APP_URL__" "${VITE_APP_URL:-}"
     replace_token "$file" "__VITE_API_URL__" "${VITE_API_URL:-}"
     replace_token "$file" "__VITE_APP_VERSION__" "${VITE_APP_VERSION:-}"
-    replace_token "$file" "__VITE_STADIA_API_KEY__" "${VITE_STADIA_API_KEY:-}"
     replace_token "$file" "__VITE_UMAMI_URL__" "${VITE_UMAMI_URL:-}"
     replace_token "$file" "__VITE_UMAMI_WEBSITE_ID__" "${VITE_UMAMI_WEBSITE_ID:-}"
     replace_token "$file" "__VITE_SENTRY_DSN__" "${VITE_SENTRY_DSN:-}"
