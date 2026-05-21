@@ -267,6 +267,9 @@ jobs:
 
       - run: bun install --frozen-lockfile
 
+      - name: Build workspace packages
+        run: bun run --filter './packages/*' build
+
       - name: Build CLI
         run: bun run --filter=routess build
 
