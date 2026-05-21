@@ -242,7 +242,10 @@ jobs:
 
   publish-cli:
     needs: release
-    runs-on: arc-routess
+    # npm registry rejects provenance attestations from self-hosted runners
+    # ("Only github-hosted runners are supported when publishing with
+    # provenance"). The job is light enough that hosted runners are fine.
+    runs-on: ubuntu-latest
     if: needs.release.outputs.released == 'true'
     permissions:
       contents: read
