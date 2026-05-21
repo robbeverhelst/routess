@@ -267,12 +267,26 @@ jobs:
 
       - run: bun install --frozen-lockfile
 
-      - name: Set CLI package version
-        working-directory: apps/cli
-        run: npm version "${{ needs.release.outputs.version }}" --no-git-tag-version --allow-same-version
-
       - name: Build CLI
         run: bun run --filter=routess build
+
+      - name: Prepare CLI package.json for npm
+        working-directory: apps/cli
+        env:
+          VERSION: ${{ needs.release.outputs.version }}
+        run: |
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            pkg.version = process.env.VERSION;
+            // Bun build inlines every dependency into dist/index.js, so the
+            // published tarball has no runtime deps. Strip dev/workspace deps
+            // before npm sees them to avoid EUNSUPPORTEDPROTOCOL on workspace:.
+            delete pkg.devDependencies;
+            delete pkg.dependencies;
+            delete pkg.scripts;
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
 
       - name: Load npm token from 1Password
         uses: 1password/load-secrets-action@v2
