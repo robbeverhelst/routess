@@ -15,8 +15,7 @@ program
 	.name("routess")
 	.description("Routess command-line interface. See `routess auth login --help` to get started.")
 	.version(packageVersion)
-	.option("--json", "emit machine-readable JSON to stdout, errors as DomainErrorPayload to stderr", false)
-	.option("--api-url <url>", "override the API base URL (defaults to ROUTESS_API_URL env var or production)");
+	.option("--json", "emit machine-readable JSON to stdout, errors as DomainErrorPayload to stderr", false);
 
 // Run a command, translating thrown errors into the exit code mapping
 // documented in docs/skills/routess.skill.md. Subcommands import this
