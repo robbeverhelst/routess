@@ -49,7 +49,7 @@ export function loadConfig(): CliConfig {
 	const envApiUrl = process.env.ROUTESS_API_URL?.trim();
 	const persisted = readPersisted();
 
-	const apiUrl = envApiUrl || persisted.apiUrl || "https://routess-api.robbeverhelst.com";
+	const apiUrl = envApiUrl || persisted.apiUrl || "https://api.routess.com";
 
 	if (envToken && envToken.length > 0) {
 		return { apiUrl, token: envToken, tokenSource: "env" };
