@@ -87,7 +87,3 @@ Security issues: please follow [`SECURITY.md`](.github/SECURITY.md) — do not o
 ## License
 
 [MIT](LICENSE) © Robbe Verhelst.
-
-## Trademark
-
-"Routess" and the routess logo are trademarks of Robbe Verhelst. The MIT license covers the code; it does not grant permission to use the name or logo for forks, derivative products, or services that could be confused with the original. You are welcome to say your project is "based on routess" or "compatible with routess."
