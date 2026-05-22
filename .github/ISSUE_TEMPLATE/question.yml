@@ -1,0 +1,21 @@
+name: Question / support
+description: You're stuck and the docs didn't cover it.
+title: "question: "
+labels: ["question", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before opening, check the [docs](https://docs.routess.com) and existing [issues](https://github.com/robbeverhelst/routess/issues?q=). If you still need help, we're glad to answer.
+  - type: textarea
+    id: question
+    attributes:
+      label: What are you trying to do?
+      description: Describe the goal and what you've already tried.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Relevant context
+      description: Self-host vs. hosted, version, deployment target, configs you've tried.

@@ -1,0 +1,52 @@
+# Example overlay: ingress-nginx + cert-manager.
+#
+# Use when your cluster has ingress-nginx and cert-manager installed, and you
+# want Let's Encrypt certificates per host.
+#
+# Prerequisites:
+#   - `ingress-nginx` controller installed (e.g. `ingress-nginx/ingress-nginx`)
+#   - `cert-manager` installed
+#   - A ClusterIssuer named `letsencrypt-prod` (override below if you use a
+#     different name)
+#
+# Usage:
+#   helm install routess oci://ghcr.io/robbeverhelst/charts/routess \
+#     -f values.example.nginx.yaml \
+#     --set ingress.web.hosts[0]=routess.example.com \
+#     --set ingress.api.hosts[0]=api.routess.example.com \
+#     --set ingress.docs.hosts[0]=docs.routess.example.com
+
+ingress:
+  enabled: true
+  className: nginx
+  web:
+    hosts: []
+    tls:
+      - secretName: routess-web-tls
+        hosts: []   # populate to match hosts above
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+  api:
+    hosts: []
+    tls:
+      - secretName: routess-api-tls
+        hosts: []
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      nginx.ingress.kubernetes.io/proxy-body-size: "5m"
+  docs:
+    hosts: []
+    tls:
+      - secretName: routess-docs-tls
+        hosts: []
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+
+networkPolicies:
+  enabled: true
+  # ingress-nginx commonly runs in `ingress-nginx`. Adjust if yours differs.
+  cloudflareNamespace: ingress-nginx
+  postgresEgress:
+    enabled: true
+    # host must be set per environment via --set
+    port: 5432

@@ -1,4 +1,4 @@
 {
 	"title": "Operations",
-	"pages": ["docker", "kubernetes", "security", "ci-cd", "observability"]
+	"pages": ["self-host", "docker", "kubernetes", "security", "ci-cd", "observability"]
 }

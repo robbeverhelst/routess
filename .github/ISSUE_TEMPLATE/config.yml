@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/robbeverhelst/routess/security/advisories/new
+    about: Please report security issues privately via GitHub Security Advisories, not in public issues.
+  - name: Documentation
+    url: https://docs.routess.com
+    about: Most usage questions are answered in the docs.

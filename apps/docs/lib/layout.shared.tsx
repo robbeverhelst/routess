@@ -34,7 +34,7 @@ export function baseOptions(locale: string = "en"): BaseLayoutProps {
 				url: "/api-reference",
 			},
 		],
-		githubUrl: "https://github.com/robbeverhelst/maps",
+		githubUrl: "https://github.com/robbeverhelst/routess",
 	};
 }
 

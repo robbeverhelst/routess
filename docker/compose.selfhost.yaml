@@ -1,0 +1,93 @@
+# Self-host Docker Compose for routess.
+#
+# Run from the repository root so the root `.env` is picked up:
+#   cp docker/.env.selfhost.example .env
+#   # fill in JWT_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, VITE_MAPBOX_ACCESS_TOKEN
+#   docker compose -f docker/compose.selfhost.yaml --project-directory . up -d
+#
+# Then open http://localhost:8080.
+#
+# For a TLS-terminated production setup, put a reverse proxy (Caddy, Traefik,
+# Cloudflare Tunnel, ingress-nginx) in front of the `web` and `api` services
+# and override VITE_API_URL/FRONTEND_URL accordingly.
+
+name: routess
+
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: ${DB_NAME:-routess}
+      POSTGRES_USER: ${DB_USER:-routess}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-routess} -d ${DB_NAME:-routess}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    restart: unless-stopped
+
+  api:
+    image: ghcr.io/robbeverhelst/routess-api:${ROUTESS_TAG:-latest}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USER: ${DB_USER:-routess}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      DB_NAME: ${DB_NAME:-routess}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      ANALYTICS_SALT: ${ANALYTICS_SALT:?ANALYTICS_SALT is required}
+      PAT_PEPPER: ${PAT_PEPPER:?PAT_PEPPER is required}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?GOOGLE_CLIENT_ID is required}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:?GOOGLE_CLIENT_SECRET is required}
+      FRONTEND_URL: ${PUBLIC_WEB_URL:-http://localhost:8080}
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:-routess <noreply@routess.app>}
+    ports:
+      - "${API_PORT:-3000}:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/health/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    restart: unless-stopped
+
+  web:
+    image: ghcr.io/robbeverhelst/routess-web:${ROUTESS_TAG:-latest}
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      VITE_API_URL: ${PUBLIC_API_URL:-http://localhost:3000}
+      VITE_APP_URL: ${PUBLIC_WEB_URL:-http://localhost:8080}
+      VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?GOOGLE_CLIENT_ID is required}
+      VITE_MAPBOX_ACCESS_TOKEN: ${VITE_MAPBOX_ACCESS_TOKEN:?VITE_MAPBOX_ACCESS_TOKEN is required}
+      VITE_APP_VERSION: ${ROUTESS_TAG:-latest}
+      VITE_STADIA_API_KEY: ${VITE_STADIA_API_KEY:-}
+      VITE_UMAMI_URL: ${VITE_UMAMI_URL:-}
+      VITE_UMAMI_WEBSITE_ID: ${VITE_UMAMI_WEBSITE_ID:-}
+      VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
+      VITE_SENTRY_ENVIRONMENT: ${VITE_SENTRY_ENVIRONMENT:-production}
+    ports:
+      - "${WEB_PORT:-8080}:8080"
+    restart: unless-stopped
+
+  docs:
+    image: ghcr.io/robbeverhelst/routess-docs:${ROUTESS_TAG:-latest}
+    ports:
+      - "${DOCS_PORT:-3002}:8080"
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

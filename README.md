@@ -1,61 +1,76 @@
-# Routess
+# routess
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![CI](https://github.com/robbeverhelst/maps/actions/workflows/ci.yml/badge.svg)](https://github.com/robbeverhelst/maps/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/robbeverhelst/maps)](https://github.com/robbeverhelst/maps/releases)
+[![CI](https://github.com/robbeverhelst/routess/actions/workflows/ci.yml/badge.svg)](https://github.com/robbeverhelst/routess/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/robbeverhelst/routess)](https://github.com/robbeverhelst/routess/releases)
+[![Docs](https://img.shields.io/badge/docs-docs.routess.com-blue)](https://docs.routess.com)
 
-Route-planning app for cyclists, runners, and hikers, with interactive mapping, GPX import/export, and a saved-route library. Built as a Bun monorepo.
+Route-planning app for cyclists, runners, and hikers. Interactive map editor, GPX import/export, and a personal route library. Open source, self-hostable, and also available as a hosted service.
 
-## Architecture
+![routess route editor](docs/assets/hero.png)
 
-```
-routess/
-├── apps/
-│   ├── web/             # React + Vite + Tailwind + Mapbox
-│   ├── api/             # NestJS + PostgreSQL + MikroORM
-│   └── docs/            # Next.js (Fumadocs)
-├── charts/
-│   └── routess/         # Helm chart
-├── docker/              # Build pipeline (bake + deps image)
-└── packages/
-    ├── @routess/core            # Shared business logic & state
-    ├── @routess/api-client      # Type-safe API client
-    ├── @routess/i18n            # Internationalization
-    └── @routess/design-tokens   # Shared design system
-```
+📚 **Full documentation: [docs.routess.com](https://docs.routess.com)**
 
-## Quick start
-
-Prerequisites: **Bun** (version pinned in `package.json` `packageManager`), **Docker**.
+## Try it locally (self-host, 5 minutes)
 
 ```bash
-git clone https://github.com/robbeverhelst/maps.git routess
+git clone https://github.com/robbeverhelst/routess.git
 cd routess
+cp docker/.env.selfhost.example .env
+# fill in JWT_SECRET, GOOGLE_CLIENT_ID/SECRET, VITE_MAPBOX_ACCESS_TOKEN
+docker compose -f docker/compose.selfhost.yaml --project-directory . up -d
+```
+
+Then open <http://localhost:8080>.
+
+See [`docs/operations/self-host`](https://docs.routess.com/docs/operations/self-host) for the full walkthrough (OAuth setup, optional services, Helm/Kubernetes path, TLS).
+
+## What you need
+
+Minimum to run routess:
+
+- A **Google OAuth client** (the only login provider today)
+- A **Mapbox access token** (free tier is fine)
+- A **JWT secret** (any long random string)
+
+Optional services degrade gracefully when unset: Resend (email), Stadia Maps (surface analysis), Sentry/GlitchTip (error reporting), Umami (product analytics), Prometheus (metrics).
+
+## Develop on routess
+
+```bash
 bun install
-cp .env.example .env  # then fill in JWT_SECRET, GOOGLE_CLIENT_ID, VITE_MAPBOX_ACCESS_TOKEN
+cp .env.example .env
 bun dev
 ```
 
-Defaults: API `:3000`, docs `:3001`, web `:5173`, Postgres `:5432`, pgAdmin `:5050`. If a port is taken, `bun dev` picks the next free one and prints it. Override any port via `.env`.
-
-## Scripts
+Defaults: web `:5173`, API `:3000`, docs `:3001`, Postgres `:5432`, pgAdmin `:5050`. Ports auto-shift if taken. Full dev guide: [`docs/getting-started/local-setup`](https://docs.routess.com/docs/getting-started/local-setup).
 
 ```bash
-bun dev              # all apps
-bun run build        # build everything
-bun run lint         # biome check (production-strict)
-bun run check-types  # tsc across workspaces
+bun run lint         # biome check
+bun run check-types  # tsc across all workspaces
 bun run test         # all tests
 bun run ci           # full pipeline (postgres + format:check + lint + check-types + build + test)
 ```
 
 Run `bun run` with no arguments to list every script.
 
-## Deployment
+## Project layout
 
-Routess deploys to Kubernetes via the Helm chart in [`charts/routess`](charts/routess). CI builds and pushes images to GHCR via [`docker/docker-bake.hcl`](docker/docker-bake.hcl), then `helm upgrade --install` to the cluster.
-
-For configuration, see [`charts/routess/values.yaml`](charts/routess/values.yaml).
+```
+routess/
+├── apps/
+│   ├── web/            # React + Vite + Tailwind + Mapbox
+│   ├── api/            # NestJS + PostgreSQL + MikroORM
+│   ├── cli/            # `routess` CLI (npm)
+│   └── docs/           # Next.js (Fumadocs)
+├── packages/
+│   ├── core/           # @routess/core           — shared business logic & state
+│   ├── api-client/     # @routess/api-client     — type-safe API client
+│   ├── i18n/           # @routess/i18n           — internationalization
+│   └── design-tokens/  # @routess/design-tokens  — design system
+├── charts/routess/     # Helm chart
+└── docker/             # buildx bake + dev/self-host compose files
+```
 
 ## Tech stack
 
@@ -69,10 +84,10 @@ For configuration, see [`charts/routess/values.yaml`](charts/routess/values.yaml
 
 ## Contributing
 
-PRs welcome. Run `bun run ci` before submitting; CI enforces production-strict TypeScript and Biome rules.
+PRs welcome. See [`CONTRIBUTING.md`](.github/CONTRIBUTING.md) for the short version and [`docs/contributing`](https://docs.routess.com/docs/contributing) for depth. Run `bun run ci` before submitting; CI enforces production-strict TypeScript and Biome rules.
 
-See [`CONTEXT.md`](CONTEXT.md) for the domain glossary and [`docs/agents/`](docs/agents/) for agent/contributor conventions.
+Security issues: please follow [`SECURITY.md`](.github/SECURITY.md) — do not open public issues for vulnerabilities.
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE) © Robbe Verhelst.

@@ -1,0 +1,39 @@
+# Example overlay: Cloudflare Tunnel ingress.
+#
+# Use when your cluster sits behind Cloudflare Tunnel pods (e.g. installed via
+# the `cloudflared` Helm chart) running in their own namespace, with the
+# external hostname terminating TLS at Cloudflare.
+#
+# Usage:
+#   helm install routess oci://ghcr.io/robbeverhelst/charts/routess \
+#     -f values.example.cloudflare.yaml \
+#     --set ingress.web.hosts[0]=routess.example.com \
+#     --set ingress.api.hosts[0]=api.routess.example.com \
+#     --set ingress.docs.hosts[0]=docs.routess.example.com \
+#     --set networkPolicies.cloudflareNamespace=cloudflare
+#
+# The chart's `allow-cloudflare` NetworkPolicy expects the Cloudflare Tunnel
+# pods to run in a namespace whose label `kubernetes.io/metadata.name` equals
+# `networkPolicies.cloudflareNamespace`.
+
+ingress:
+  enabled: true
+  className: cloudflare-tunnel
+  # Hosts intentionally left empty here; override per environment via --set.
+  web:
+    hosts: []
+    tls: []
+  api:
+    hosts: []
+    tls: []
+  docs:
+    hosts: []
+    tls: []
+
+networkPolicies:
+  enabled: true
+  cloudflareNamespace: cloudflare
+  postgresEgress:
+    enabled: true
+    # host must be set per environment via --set
+    port: 5432
