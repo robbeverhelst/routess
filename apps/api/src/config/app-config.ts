@@ -65,6 +65,12 @@ export interface AppConfig {
 		resendApiKey: string;
 		from: string;
 	};
+	routing: {
+		// Base URL of the self-hosted Valhalla service. The API proxies
+		// /trace_attributes through this so the browser never hits Valhalla
+		// directly (it lives on a cluster-internal Service).
+		valhallaUrl: string;
+	};
 }
 
 const DEFAULTS = {
@@ -231,6 +237,9 @@ export function getAppConfig(): AppConfig {
 			provider: process.env.RESEND_API_KEY ? "resend" : "console",
 			resendApiKey: process.env.RESEND_API_KEY ?? "",
 			from: process.env.EMAIL_FROM || "Routess <noreply@routess.app>",
+		},
+		routing: {
+			valhallaUrl: (process.env.VALHALLA_URL ?? "").replace(/\/+$/, ""),
 		},
 	};
 }

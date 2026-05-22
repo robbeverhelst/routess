@@ -114,6 +114,7 @@ export function createOpenApiDocument(app: INestApplication, config: AppConfig =
 			.addServer(`http://localhost:${config.app.port}`, "Local development")
 			.addTag("auth", "Authentication endpoints")
 			.addTag("routes", "Route management")
+			.addTag("routing", "Routing engine (Valhalla) proxy endpoints")
 			.addTag("users", "User profile management")
 			.addTag("app", "API root metadata")
 			.addTag("health", "Health and monitoring")

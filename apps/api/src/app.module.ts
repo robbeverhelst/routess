@@ -14,6 +14,7 @@ import { APP_CONFIG, ConfigModule } from "./config/config.module";
 import { HealthModule } from "./health/health.module";
 import config from "./mikro-orm.config";
 import { RoutesModule } from "./routes/routes.module";
+import { RoutingModule } from "./routing/routing.module";
 import { MetricsInterceptor } from "./telemetry/metrics.interceptor";
 import { RequestIdMiddleware } from "./telemetry/request-id.middleware";
 import { TelemetryModule } from "./telemetry/telemetry.module";
@@ -62,6 +63,7 @@ import { UsersModule } from "./users/users.module";
 		UsersModule,
 		AuthModule,
 		RoutesModule,
+		RoutingModule,
 		HealthModule,
 		TelemetryModule,
 		AdminModule,

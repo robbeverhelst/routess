@@ -3,13 +3,10 @@ import { Logger } from "@/lib/logger";
 import { getRuntimeConfig } from "@/lib/runtime-config";
 import type { ValhallaCosting } from "./routingMode";
 
-// Prefer Stadia Maps when VITE_STADIA_API_KEY is set (reliable, free tier).
-// Fall back to the public FOSSGIS Valhalla instance otherwise; fine for local
-// hacking but frequently slow or unreachable.
-const STADIA_API_KEY = getRuntimeConfig("VITE_STADIA_API_KEY")?.trim();
-const VALHALLA_TRACE_ATTRIBUTES_URL = STADIA_API_KEY
-	? `https://api.stadiamaps.com/trace_attributes/v1?api_key=${encodeURIComponent(STADIA_API_KEY)}`
-	: "https://valhalla1.openstreetmap.de/trace_attributes";
+// Surface breakdowns are served by the API, which proxies to the self-hosted
+// Valhalla service (cluster-internal; never reachable from the browser).
+const API_BASE_URL = getRuntimeConfig("VITE_API_URL") ?? "";
+const TRACE_ATTRIBUTES_URL = `${API_BASE_URL.replace(/\/+$/, "")}/api/v1/routing/trace-attributes`;
 
 const MAX_SHAPE_POINTS = 1500;
 
@@ -61,32 +58,25 @@ export async function fetchSurfaceBreakdown(
 
 	const shape = downsampleCoords(coords, MAX_SHAPE_POINTS).map(([lng, lat]) => ({ lat, lon: lng }));
 
-	const body = {
-		shape,
-		shape_match: "map_snap",
-		costing,
-		filters: {
-			attributes: ["edge.surface", "edge.length", "edge.begin_shape_index", "edge.end_shape_index", "shape"],
-			action: "include",
-		},
-	};
+	const body = { shape, costing };
 
 	let response: Response;
 	try {
-		response = await fetch(VALHALLA_TRACE_ATTRIBUTES_URL, {
+		response = await fetch(TRACE_ATTRIBUTES_URL, {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify(body),
 			signal,
+			credentials: "include",
 		});
 	} catch (err) {
 		if ((err as Error).name === "AbortError") throw err;
-		Logger.warn("[SurfaceService] Valhalla request failed:", err);
+		Logger.warn("[SurfaceService] trace-attributes request failed:", err);
 		return null;
 	}
 
 	if (!response.ok) {
-		Logger.warn(`[SurfaceService] Valhalla returned ${response.status}`);
+		Logger.warn(`[SurfaceService] trace-attributes returned ${response.status}`);
 		return null;
 	}
 
@@ -210,10 +200,11 @@ function decodePolyline6(encoded: string): Coordinate[] {
 
 function downsampleCoords(coords: Coordinate[], max: number): Coordinate[] {
 	if (coords.length <= max) return coords;
-	const step = coords.length / max;
+	// Reserve the last slot for the final coord so the result is always
+	// exactly `max` points and never overshoots the API cap.
+	const step = coords.length / (max - 1);
 	const out: Coordinate[] = [];
-	for (let i = 0; i < max; i++) out.push(coords[Math.floor(i * step)]);
-	const last = coords[coords.length - 1];
-	if (out[out.length - 1] !== last) out.push(last);
+	for (let i = 0; i < max - 1; i++) out.push(coords[Math.floor(i * step)]);
+	out.push(coords[coords.length - 1]);
 	return out;
 }

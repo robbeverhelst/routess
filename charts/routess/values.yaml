@@ -102,6 +102,13 @@ api:
     swaggerPath: "/api"
     # From address for transactional email. Must be a verified Resend sender.
     emailFrom: "routess <noreply@routess.app>"
+    # Base URL of a Valhalla routing service for surface breakdowns. Leave
+    # empty to disable the trace-attributes proxy (the web app falls back
+    # gracefully and just skips surface strips). Set to any reachable URL,
+    # e.g. an in-cluster Service like
+    # `http://valhalla.valhalla.svc.cluster.local:8002`, an ingress, or a
+    # Tailscale hostname.
+    valhallaUrl: ""
   # Email allowlist for admin role. Source of truth for User.role; reconciled at
   # login via AuthService. Empty list disables reconciliation entirely (existing
   # roles are preserved). See ADR-0015.
