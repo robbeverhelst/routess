@@ -1,21 +1,14 @@
 import type { Coordinate, RouteActivity, RoutingPreferences, Waypoint } from "@routess/core";
-import { estimateDuration, haversineDistance, valhallaCostingFromPreferences } from "@routess/core";
+import { estimateDuration, haversineDistance } from "@routess/core";
 import { Logger } from "@/lib/logger";
 import { getRuntimeConfig } from "@/lib/runtime-config";
 
-// Stadia Maps hosts Valhalla. The `/route/v1` endpoint accepts a body identical
-// to upstream Valhalla; the `api_key` is appended to the URL. Falls back to the
-// public FOSSGIS instance for local dev when VITE_STADIA_API_KEY is not set —
-// fine for hacking, frequently rate-limited or slow.
-function buildValhallaRouteUrl(): string {
-	const apiKey = getRuntimeConfig("VITE_STADIA_API_KEY")?.trim();
-	const base = getRuntimeConfig("VITE_VALHALLA_BASE_URL")?.trim();
-	if (base) {
-		return apiKey ? `${base}/route?api_key=${encodeURIComponent(apiKey)}` : `${base}/route`;
-	}
-	if (apiKey) return `https://api.stadiamaps.com/route/v1?api_key=${encodeURIComponent(apiKey)}`;
-	return "https://valhalla1.openstreetmap.de/route";
-}
+// Routing requests go through the API, which owns the translation from
+// RoutingPreferences to Valhalla costing JSON and forwards to the
+// cluster-internal Valhalla service. The browser never reaches Valhalla
+// directly (see ADR-0021, mirrored from the trace-attributes proxy).
+const API_BASE_URL = getRuntimeConfig("VITE_API_URL") ?? "";
+const ROUTE_URL = `${API_BASE_URL.replace(/\/+$/, "")}/api/v1/routing/route`;
 
 export interface ComputeRouteOptions {
 	snap?: boolean;
@@ -41,27 +34,20 @@ export type RouteOutcome =
 			failedSegment?: { from: number; to: number };
 	  };
 
-interface ValhallaLeg {
+interface ApiRouteLeg {
 	shape: string;
 	summary: { length: number; time: number };
 }
 
-interface ValhallaLocation {
+interface ApiRouteLocation {
 	lat: number;
 	lon: number;
 	original_index?: number;
 }
 
-interface ValhallaRouteResponse {
-	trip?: {
-		legs?: ValhallaLeg[];
-		locations?: ValhallaLocation[];
-		summary?: { length: number; time: number };
-		status?: number;
-		status_message?: string;
-	};
-	error?: string;
-	error_code?: number;
+interface ApiRouteResponse {
+	legs: ApiRouteLeg[];
+	locations: ApiRouteLocation[];
 }
 
 const sameCoord = (a: Coordinate, b: Coordinate) => a[0] === b[0] && a[1] === b[1];
@@ -98,28 +84,27 @@ function decodePolyline6(encoded: string): Coordinate[] {
 	return coords;
 }
 
-async function callValhallaRoute(
+async function callApiRoute(
 	coords: Coordinate[],
 	activity: RouteActivity,
 	prefs: RoutingPreferences,
 	options: ComputeRouteOptions,
-): Promise<{ ok: true; data: ValhallaRouteResponse } | { ok: false; error: string }> {
-	const costing = valhallaCostingFromPreferences(activity, prefs, { walkingSpeedMps: options.walkingSpeedMps });
+): Promise<{ ok: true; data: ApiRouteResponse } | { ok: false; error: string }> {
 	const body = {
+		activity,
+		preferences: prefs,
 		locations: coords.map(([lng, lat]) => ({ lat, lon: lng })),
-		costing: costing.costing,
-		costing_options: costing.costing_options,
-		directions_options: { units: "kilometers" },
-		format: "json",
+		walkingSpeedMps: options.walkingSpeedMps,
 	};
 
 	let response: Response;
 	try {
-		response = await fetch(buildValhallaRouteUrl(), {
+		response = await fetch(ROUTE_URL, {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify(body),
 			signal: options.signal,
+			credentials: "include",
 		});
 	} catch (err) {
 		if ((err as Error).name === "AbortError") throw err;
@@ -128,17 +113,17 @@ async function callValhallaRoute(
 
 	if (!response.ok) {
 		const text = await response.text().catch(() => "");
-		return { ok: false, error: `Valhalla ${response.status}${text ? `: ${text}` : ""}` };
+		return { ok: false, error: `routing API ${response.status}${text ? `: ${text}` : ""}` };
 	}
 
-	const data = (await response.json()) as ValhallaRouteResponse;
-	if (data.error || !data.trip?.legs?.length) {
-		return { ok: false, error: data.error ?? "Valhalla returned no trip" };
+	const data = (await response.json()) as ApiRouteResponse;
+	if (!data.legs?.length) {
+		return { ok: false, error: "API returned no legs" };
 	}
 	return { ok: true, data };
 }
 
-function combineLegs(legs: ValhallaLeg[]): { path: Coordinate[]; distanceKm: number; durationMinutes: number } {
+function combineLegs(legs: ApiRouteLeg[]): { path: Coordinate[]; distanceKm: number; durationMinutes: number } {
 	const path: Coordinate[] = [];
 	let distanceKm = 0;
 	let durationSeconds = 0;
@@ -155,7 +140,7 @@ function combineLegs(legs: ValhallaLeg[]): { path: Coordinate[]; distanceKm: num
 
 function snappedFromLocations(
 	waypoints: Waypoint[],
-	locations: ValhallaLocation[] | undefined,
+	locations: ApiRouteLocation[] | undefined,
 ): Waypoint[] | undefined {
 	if (!locations || locations.length !== waypoints.length) return undefined;
 	let changed = false;
@@ -195,7 +180,7 @@ function buildAllDirect(waypoints: Waypoint[]): { routePath: Coordinate[]; dista
 	return { routePath, distanceKm };
 }
 
-// Mixed routed+direct: call Valhalla for each `routed` segment individually
+// Mixed routed+direct: call the API for each `routed` segment individually
 // (between waypoint i and waypoint i+1) and stitch directs as straight lines.
 // Per ADR-0014, a routed segment that fails to route bubbles up as an error;
 // the engine never silently downgrades to direct.
@@ -226,20 +211,19 @@ async function computeMixedRoute(
 			continue;
 		}
 
-		const result = await callValhallaRoute([from, to], activity, prefs, options);
+		const result = await callApiRoute([from, to], activity, prefs, options);
 		if (!result.ok) {
 			return { ok: false, error: result.error, failedSegment: { from: i, to: i + 1 } };
 		}
 
-		const legs = result.data.trip?.legs ?? [];
-		const { path, distanceKm, durationMinutes } = combineLegs(legs);
+		const { path, distanceKm, durationMinutes } = combineLegs(result.data.legs);
 		totalDistKm += distanceKm;
 		totalDurationSeconds += durationMinutes * 60;
 
 		if (coordsAccum.length === 0) coordsAccum.push(...path);
 		else if (path.length > 0) coordsAccum.push(...path.slice(1));
 
-		const locs = result.data.trip?.locations;
+		const locs = result.data.locations;
 		if (options.snap !== false && locs && locs.length === 2) {
 			const snappedFrom: Coordinate = [locs[0].lon, locs[0].lat];
 			const snappedTo: Coordinate = [locs[1].lon, locs[1].lat];
@@ -290,9 +274,9 @@ export async function computeRoute(
 		return computeMixedRoute(waypoints, activity, prefs, options);
 	}
 
-	// all-routed: single Valhalla call.
+	// all-routed: single API call.
 	try {
-		const result = await callValhallaRoute(
+		const result = await callApiRoute(
 			waypoints.map((wp) => wp.coord),
 			activity,
 			prefs,
@@ -300,7 +284,7 @@ export async function computeRoute(
 		);
 		if (!result.ok) {
 			// Offline fallback: build a direct-line route so the user has something
-			// to look at if Valhalla is unreachable. Marked offline so the UI can
+			// to look at if the API is unreachable. Marked offline so the UI can
 			// indicate the route is unsnapped.
 			Logger.warn("[ValhallaClient] Route failed:", result.error);
 			const { routePath, distanceKm } = buildAllDirect(waypoints);
@@ -313,9 +297,8 @@ export async function computeRoute(
 			};
 		}
 
-		const legs = result.data.trip?.legs ?? [];
-		const { path, distanceKm, durationMinutes } = combineLegs(legs);
-		const snapped = options.snap !== false ? snappedFromLocations(waypoints, result.data.trip?.locations) : undefined;
+		const { path, distanceKm, durationMinutes } = combineLegs(result.data.legs);
+		const snapped = options.snap !== false ? snappedFromLocations(waypoints, result.data.locations) : undefined;
 
 		return {
 			ok: true,
