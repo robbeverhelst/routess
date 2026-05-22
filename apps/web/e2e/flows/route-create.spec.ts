@@ -46,6 +46,27 @@ test.describe("hand-drawn route with real Mapbox", () => {
 		expect(draft.waypoints.map((w) => w.type)).toEqual(["direct", "direct", "direct"]);
 	});
 
+	test("left-click 3 spots draws a road-following routed path", async ({ page, request }) => {
+		await loginAndWaitForRealMap(page, request, "routed@test.local");
+
+		await clickAtMapPixel(page, 250, 250);
+		await clickAtMapPixel(page, 320, 250);
+		await clickAtMapPixel(page, 390, 250);
+
+		await waitForRouteCalculated(page);
+
+		const draft = await getRouteDraft(page);
+		expect(draft.waypoints).toHaveLength(3);
+		expect(draft.waypoints.map((w) => w.type)).toEqual(["routed", "routed", "routed"]);
+		expect(draft.hasRoute).toBe(true);
+		// A straight line between 3 waypoints has 3 coords. A road-following
+		// route has many more (one coord per turn/curve). 10 is a conservative
+		// floor that still proves Mapbox Directions returned a real path.
+		expect(draft.routePathLength).toBeGreaterThan(10);
+		expect(draft.distanceMeters ?? 0).toBeGreaterThan(0);
+		expect(draft.durationSeconds ?? 0).toBeGreaterThan(0);
+	});
+
 	test("routed start + direct segments populate RoutePath with both Types", async ({ page, request }) => {
 		await loginAndWaitForRealMap(page, request, "mixed@test.local");
 

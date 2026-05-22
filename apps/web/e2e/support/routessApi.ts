@@ -17,6 +17,7 @@ interface E2ETestApi {
 	};
 	getRouteDraft: () => {
 		waypoints: Array<{ coord: [number, number]; type: "routed" | "direct" }>;
+		routePath: Array<[number, number]>;
 		hasRoute: boolean;
 		distanceMeters: number | null;
 		durationSeconds: number | null;
@@ -61,6 +62,7 @@ export async function getRouteDraft(page: Page) {
 		return {
 			waypointCount: s.waypoints.length,
 			waypoints: s.waypoints.map((w) => ({ coord: w.coord, type: w.type })),
+			routePathLength: s.routePath?.length ?? 0,
 			hasRoute: s.hasRoute,
 			distanceMeters: s.distanceMeters,
 			durationSeconds: s.durationSeconds,
