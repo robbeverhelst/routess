@@ -38,9 +38,9 @@ Optional, gracefully disabled when unset:
 ```sh
 git clone https://github.com/robbeverhelst/routess.git
 cd routess
-cp .env.selfhost.example .env
+cp docker/.env.selfhost.example .env
 # edit .env and fill in the required values
-docker compose -f docker-compose.selfhost.yml up -d
+docker compose -f docker/compose.selfhost.yaml --project-directory . up -d
 ```
 
 Then open [http://localhost:8080](http://localhost:8080).
@@ -61,7 +61,7 @@ Change the host ports via `WEB_PORT`, `API_PORT`, `DOCS_PORT` in `.env`.
 Default tag is `latest`. For production, pin to a specific release:
 
 ```sh
-ROUTESS_TAG=1.122.7 docker compose -f docker-compose.selfhost.yml up -d
+ROUTESS_TAG=1.122.7 docker compose -f docker/compose.selfhost.yaml --project-directory . up -d
 ```
 
 Or set `ROUTESS_TAG` in `.env`. See the [releases page](https://github.com/robbeverhelst/routess/releases) for available tags.
@@ -80,8 +80,8 @@ PUBLIC_API_URL=https://api.routess.example.com
 ## Upgrade
 
 ```sh
-docker compose -f docker-compose.selfhost.yml pull
-docker compose -f docker-compose.selfhost.yml up -d
+docker compose -f docker/compose.selfhost.yaml --project-directory . pull
+docker compose -f docker/compose.selfhost.yaml --project-directory . up -d
 ```
 
 The API runs migrations automatically on startup. There is no manual migration step.
@@ -91,7 +91,7 @@ The API runs migrations automatically on startup. There is no manual migration s
 The Postgres data lives in the `postgres_data` named volume. Standard `pg_dump` works:
 
 ```sh
-docker compose -f docker-compose.selfhost.yml exec postgres \
+docker compose -f docker/compose.selfhost.yaml --project-directory . exec postgres \
   pg_dump -U routess routess > routess-$(date +%F).sql
 ```
 

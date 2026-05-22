@@ -13,9 +13,9 @@ Route-planning app for cyclists, runners, and hikers. Interactive map editor, AI
 ```bash
 git clone https://github.com/robbeverhelst/routess.git
 cd routess
-cp .env.selfhost.example .env
+cp docker/.env.selfhost.example .env
 # fill in JWT_SECRET, GOOGLE_CLIENT_ID/SECRET, VITE_MAPBOX_ACCESS_TOKEN
-docker compose -f docker-compose.selfhost.yml up -d
+docker compose -f docker/compose.selfhost.yaml --project-directory . up -d
 ```
 
 Then open <http://localhost:8080>.

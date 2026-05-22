@@ -19,7 +19,7 @@ Only the latest release of routess receives security updates. We don't backport 
 - Dependencies are managed by [Renovate](renovate.json) and reviewed in PRs.
 - Container images are built from minimal bases (`nginx:alpine`, `node:20-alpine`), run as non-root with `readOnlyRootFilesystem` where possible, and drop all Linux capabilities. See [ADR-0006](../docs/adr/0006-kubernetes-deny-all-network-policy-baseline.md) for the Kubernetes baseline.
 - Personal access tokens are hashed with HMAC-SHA-256 using a server-side pepper, and the plaintext is shown to the user exactly once. See [ADR-0022](../docs/adr/0022-personal-access-tokens-for-non-browser-clients.md).
-- Secrets must never be committed to the repository. The `.env.example` and `.env.selfhost.example` files document required variables with placeholders only.
+- Secrets must never be committed to the repository. The `.env.example` and `docker/.env.selfhost.example` files document required variables with placeholders only.
 
 ## Scope
 

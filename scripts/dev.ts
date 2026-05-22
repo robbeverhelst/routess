@@ -80,12 +80,14 @@ async function commandExists(command: string): Promise<boolean> {
 }
 
 async function resolveComposeCommand(): Promise<Command> {
+	const composeFileArgs = ["-f", "docker/compose.yaml", "--project-directory", "."];
+
 	if (await commandExists("docker-compose")) {
-		return ["docker-compose"];
+		return ["docker-compose", ...composeFileArgs];
 	}
 
 	if (await commandExists("docker")) {
-		return ["docker", "compose"];
+		return ["docker", "compose", ...composeFileArgs];
 	}
 
 	throw new Error("Docker Compose is not installed");

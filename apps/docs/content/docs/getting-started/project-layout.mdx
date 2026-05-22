@@ -4,7 +4,7 @@ description: Where things live in the monorepo.
 ---
 
 ```
-maps/
+routess/
 ├── apps/
 │   ├── web/          # React 19 + Vite + Mapbox SPA
 │   ├── api/          # NestJS REST API
@@ -16,9 +16,14 @@ maps/
 │   └── design-tokens/# Colors, typography, spacing
 ├── charts/
 │   └── routess/      # Helm chart for k8s deployment
+├── docker/
+│   ├── docker-bake.hcl       # Build pipeline for app images
+│   ├── Dockerfile.deps       # Shared deps stage
+│   ├── compose.yaml          # Local Postgres + pgAdmin (dev)
+│   ├── compose.selfhost.yaml # Full self-host stack
+│   └── .env.selfhost.example # Self-host env template
 ├── .github/
 │   └── workflows/    # CI/CD (single ci.yml)
-├── docker-compose.yml  # Local Postgres + pgAdmin
 ├── biome.json          # Lint/format rules
 └── package.json        # Bun workspace root
 ```

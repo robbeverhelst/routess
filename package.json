@@ -16,7 +16,7 @@
 		"test": "bun run --filter '*' test",
 		"format": "biome format --write .",
 		"format:check": "biome format .",
-		"ci": "docker compose up -d postgres && bun run format:check && bun run lint && bun run check-types && bun run build && bun run test",
+		"ci": "docker compose -f docker/compose.yaml --project-directory . up -d postgres && bun run format:check && bun run lint && bun run check-types && bun run build && bun run test",
 		"clean": "bun ./scripts/clean.ts",
 		"build:images": "cd docker && docker buildx bake --allow=fs.read=..",
 		"docs:generate-api": "bun run --filter './apps/api' openapi:generate && bun run --filter './apps/docs' openapi:generate",
