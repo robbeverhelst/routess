@@ -80,7 +80,7 @@ routess/
 
 ## Contributing
 
-PRs welcome. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the short version and [`docs/contributing`](https://docs.routess.com/docs/contributing) for depth. Run `bun run ci` before submitting; CI enforces production-strict TypeScript and Biome rules.
+PRs welcome. See [`CONTRIBUTING.md`](.github/CONTRIBUTING.md) for the short version and [`docs/contributing`](https://docs.routess.com/docs/contributing) for depth. Run `bun run ci` before submitting; CI enforces production-strict TypeScript and Biome rules.
 
 Security issues: please follow [`SECURITY.md`](.github/SECURITY.md) — do not open public issues for vulnerabilities.
 

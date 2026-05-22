@@ -44,11 +44,11 @@ See [`docs/contributing/commit-conventions`](https://docs.routess.com/docs/contr
 
 ## Reporting bugs and proposing features
 
-Open a [GitHub issue](https://github.com/robbeverhelst/routess/issues/new/choose) with the appropriate template. For security issues, see [SECURITY.md](.github/SECURITY.md) — do not open a public issue.
+Open a [GitHub issue](https://github.com/robbeverhelst/routess/issues/new/choose) with the appropriate template. For security issues, see [SECURITY.md](SECURITY.md) — do not open a public issue.
 
 ## License & contribution terms
 
-routess is [MIT licensed](LICENSE). By submitting a contribution, you agree that your contribution is licensed under MIT on the same terms.
+routess is [MIT licensed](../LICENSE). By submitting a contribution, you agree that your contribution is licensed under MIT on the same terms.
 
 ## Code of conduct
 
@@ -56,6 +56,6 @@ This project follows the [Contributor Covenant](CODE_OF_CONDUCT.md). Be kind.
 
 ## Where things live
 
-- Domain glossary: [`CONTEXT.md`](CONTEXT.md)
-- Architecture decisions: [`docs/adr/`](docs/adr/) (start with [`docs/adr/README.md`](docs/adr/README.md))
-- Agent / contributor conventions: [`docs/agents/`](docs/agents/)
+- Domain glossary: [`CONTEXT.md`](../CONTEXT.md)
+- Architecture decisions: [`docs/adr/`](../docs/adr/) (start with [`docs/adr/README.md`](../docs/adr/README.md))
+- Agent / contributor conventions: [`docs/agents/`](../docs/agents/)
