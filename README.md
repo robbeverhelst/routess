@@ -4,7 +4,7 @@
 [![CI](https://github.com/robbeverhelst/routess/actions/workflows/ci.yml/badge.svg)](https://github.com/robbeverhelst/routess/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/robbeverhelst/routess)](https://github.com/robbeverhelst/routess/releases)
 
-Route-planning app for cyclists, runners, and hikers. Interactive map editor, AI route generation, GPX import/export, and a personal route library. Open source, self-hostable, and also available as a hosted service.
+Route-planning app for cyclists, runners, and hikers. Interactive map editor, GPX import/export, and a personal route library. Open source, self-hostable, and also available as a hosted service.
 
 ![routess route editor](docs/assets/hero.png)
 
