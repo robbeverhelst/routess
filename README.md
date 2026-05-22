@@ -4,7 +4,7 @@
 [![CI](https://github.com/robbeverhelst/maps/actions/workflows/ci.yml/badge.svg)](https://github.com/robbeverhelst/maps/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/robbeverhelst/maps)](https://github.com/robbeverhelst/maps/releases)
 
-Route-planning app for cyclists, runners, and hikers, with interactive mapping, AI route generation, GPX import/export, and a saved-route library. Built as a Bun monorepo.
+Route-planning app for cyclists, runners, and hikers, with interactive mapping, GPX import/export, and a saved-route library. Built as a Bun monorepo.
 
 ## Architecture
 
