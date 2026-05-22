@@ -6,7 +6,7 @@
 
 Route-planning app for cyclists, runners, and hikers. Interactive map editor, AI route generation, GPX import/export, and a personal route library. Open source, self-hostable, and also available as a hosted service.
 
-> Screenshot placeholder: replace with `docs/assets/hero.png` once captured.
+![routess route editor](docs/assets/hero.png)
 
 ## Try it locally (self-host, 5 minutes)
 
