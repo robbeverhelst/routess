@@ -56,16 +56,17 @@ Run `bun run` with no arguments to list every script.
 ```
 routess/
 ├── apps/
-│   ├── web/       # React + Vite + Tailwind + Mapbox
-│   ├── api/       # NestJS + PostgreSQL + MikroORM
-│   └── docs/      # Next.js (Fumadocs)
+│   ├── web/            # React + Vite + Tailwind + Mapbox
+│   ├── api/            # NestJS + PostgreSQL + MikroORM
+│   ├── cli/            # `routess` CLI (npm)
+│   └── docs/           # Next.js (Fumadocs)
 ├── packages/
-│   ├── @routess/core           # Shared business logic & state
-│   ├── @routess/api-client     # Type-safe API client
-│   ├── @routess/i18n           # Internationalization
-│   └── @routess/design-tokens  # Design system
-├── charts/routess/  # Helm chart
-└── docker/          # Build pipeline (buildx bake)
+│   ├── core/           # @routess/core           — shared business logic & state
+│   ├── api-client/     # @routess/api-client     — type-safe API client
+│   ├── i18n/           # @routess/i18n           — internationalization
+│   └── design-tokens/  # @routess/design-tokens  — design system
+├── charts/routess/     # Helm chart
+└── docker/             # buildx bake + dev/self-host compose files
 ```
 
 ## Tech stack
