@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { type PersistOptions, persist } from "zustand/middleware";
+import { createJSONStorage, type PersistOptions, persist } from "zustand/middleware";
 import {
 	emptyHistory,
 	type HistoryStacks,
@@ -160,12 +160,61 @@ const dropLegacyMetricStrings = (persisted: Record<string, unknown> & Partial<Ro
 	return rest as Partial<RouteState>;
 };
 
+// localStorage wrapper that survives QuotaExceededError on long routes.
+// routePath/elevationProfile can each be tens of thousands of coordinates;
+// hitting the ~5MB quota would otherwise throw out of setItem and abort the
+// entire store update (see RouteCalculationService.setRoutePath). On overflow
+// we drop those two derived fields and persist the rest; they repopulate the
+// next time the user nudges a waypoint and recompute fires.
+function createQuotaSafeStorage(logger: Logger) {
+	return {
+		getItem: (name: string): string | null => {
+			try {
+				return localStorage.getItem(name);
+			} catch {
+				return null;
+			}
+		},
+		setItem: (name: string, value: string): void => {
+			try {
+				localStorage.setItem(name, value);
+				return;
+			} catch (err) {
+				if (!(err instanceof DOMException) || err.name !== "QuotaExceededError") {
+					throw err;
+				}
+			}
+			try {
+				const parsed = JSON.parse(value) as { state?: Record<string, unknown> };
+				if (parsed.state) {
+					parsed.state.routePath = [];
+					parsed.state.elevationProfile = undefined;
+				}
+				localStorage.setItem(name, JSON.stringify(parsed));
+				logger.warn(
+					"[RoutingStore] localStorage quota exceeded; dropped routePath/elevationProfile from persisted snapshot",
+				);
+			} catch (retryErr) {
+				logger.error("[RoutingStore] Failed to persist trimmed snapshot:", retryErr);
+			}
+		},
+		removeItem: (name: string): void => {
+			try {
+				localStorage.removeItem(name);
+			} catch {
+				// best-effort
+			}
+		},
+	};
+}
+
 // ===== STORE FACTORY =====
 
 export function createRoutingStore(logger: Logger) {
 	const persistConfig: PersistOptions<RoutingStore, Partial<RouteState>> = {
 		name: "routing-store",
 		version: 3,
+		storage: createJSONStorage(() => createQuotaSafeStorage(logger)),
 		migrate: (persisted, version) => {
 			let next = (persisted ?? {}) as Record<string, unknown>;
 			if (version < 1) {

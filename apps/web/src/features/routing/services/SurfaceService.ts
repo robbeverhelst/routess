@@ -200,10 +200,11 @@ function decodePolyline6(encoded: string): Coordinate[] {
 
 function downsampleCoords(coords: Coordinate[], max: number): Coordinate[] {
 	if (coords.length <= max) return coords;
-	const step = coords.length / max;
+	// Reserve the last slot for the final coord so the result is always
+	// exactly `max` points and never overshoots the API cap.
+	const step = coords.length / (max - 1);
 	const out: Coordinate[] = [];
-	for (let i = 0; i < max; i++) out.push(coords[Math.floor(i * step)]);
-	const last = coords[coords.length - 1];
-	if (out[out.length - 1] !== last) out.push(last);
+	for (let i = 0; i < max - 1; i++) out.push(coords[Math.floor(i * step)]);
+	out.push(coords[coords.length - 1]);
 	return out;
 }
