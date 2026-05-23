@@ -1,17 +1,29 @@
 ---
 title: Informations d'itineraire
-description: Distance, duree et statistiques de trajet.
+description: Distance, duree, denivele et revetement.
 translationStatus: machine-draft
 ---
 
 Le panneau lateral affiche les informations en direct pendant la creation.
 
-> Emplacement de capture d'ecran : panneau avec distance et duree.
+> Emplacement de capture d'ecran : panneau avec distance, duree, denivele et graphique de revetement.
 
 ## Totaux
 
-- **Distance** indique la longueur totale.
-- **Duree** indique le temps estime.
-- **Points de passage** montrent les arrets et changements de direction.
+- **Distance** — somme de toutes les sections, en km ou mi (defini dans votre compte)
+- **Duree** — temps de trajet estime pour le sport selectionne
+- **Denivele positif** — total des montees sur l'itineraire complet
 
-Les valeurs changent quand vous ajoutez, deplacez, supprimez ou reorganisez des points.
+## Statistiques par section
+
+Cliquez sur un point dans le panneau lateral pour le developper. Vous voyez la distance et la duree de la section menant a ce point.
+
+## Graphique denivele et revetement
+
+Sous les totaux, un graphique unique montre le profil altimetrique avec le revetement superpose sous forme de bandes colorees. Survolez le graphique pour voir le denivele, la distance et le revetement a ce point. Le point correspondant sur la carte est mis en evidence.
+
+La ligne d'itineraire sur la carte utilise aussi des motifs de tirets pour indiquer le revetement : continu pour goudronne, tirets pour non goudronne, points pour les sentiers. Le graphique et la carte partagent la meme echelle de couleurs.
+
+## Calcul des estimations
+
+La duree utilise votre allure par sport definie dans **Parametres → Sports**. Chaque sport (marche, course, velo, voiture) a son allure par defaut ; ajustez-la si elle ne correspond pas a votre rythme reel. Le denivele provient de Mapbox Terrain-RGB ; le revetement vient du moteur de routage.

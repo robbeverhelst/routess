@@ -7,7 +7,11 @@ The API ships with **OpenTelemetry** wired up.
 
 ## Metrics
 
-`GET /metrics` exposes Prometheus-format metrics. The endpoint is reachable only from inside the namespace by default — scrape it from your Prometheus deployment using a `ServiceMonitor` or equivalent.
+`GET /metrics` exposes Prometheus-format metrics. The endpoint is reachable only from inside the namespace by default. Scrape it from your Prometheus deployment using a `ServiceMonitor`; the chart ships one under `charts/routess/templates/api-servicemonitor.yaml` that you can enable with `metrics.serviceMonitor.enabled=true`.
+
+## Admin panel
+
+Operators with their email listed in `ADMIN_EMAILS` see an in-app admin panel at `/admin` covering an overview dashboard, users, routes, and a system health page. The panel is backed by the `/admin/*` API endpoints, all guarded by the `admin` role. See [`docs/architecture/admin`](../architecture/admin) for the data model and endpoints.
 
 ## Traces
 

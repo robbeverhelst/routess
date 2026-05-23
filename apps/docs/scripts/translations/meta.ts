@@ -21,9 +21,18 @@ export const meta = {
 		de: { title: "Erste Schritte", pages: ["sign-in", "your-first-route", "interface-tour"] },
 	},
 	routes: {
-		nl: { title: "Routes", pages: ["creating-routes", "editing-routes", "saving-routes", "route-info"] },
-		fr: { title: "Itineraires", pages: ["creating-routes", "editing-routes", "saving-routes", "route-info"] },
-		de: { title: "Routen", pages: ["creating-routes", "editing-routes", "saving-routes", "route-info"] },
+		nl: {
+			title: "Routes",
+			pages: ["creating-routes", "editing-routes", "saving-routes", "route-info", "sharing-routes"],
+		},
+		fr: {
+			title: "Itineraires",
+			pages: ["creating-routes", "editing-routes", "saving-routes", "route-info", "sharing-routes"],
+		},
+		de: {
+			title: "Routen",
+			pages: ["creating-routes", "editing-routes", "saving-routes", "route-info", "sharing-routes"],
+		},
 	},
 	map: {
 		nl: { title: "Kaart", pages: ["navigation", "styles", "your-location"] },

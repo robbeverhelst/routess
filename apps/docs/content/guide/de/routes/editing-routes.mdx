@@ -1,10 +1,10 @@
 ---
 title: Routen bearbeiten
-description: Verschiebe, sortiere, loesche, rueckgaengig und wiederhole Aenderungen.
+description: Verschiebe, sortiere, loesche, mache rueckgaengig und bearbeite gespeicherte Routen.
 translationStatus: machine-draft
 ---
 
-> Screenshot-Platzhalter: ein Wegpunkt wird gezogen.
+> Screenshot-Platzhalter: Wegpunkt wird gezogen mit Anzeige fuer ungespeicherte Aenderungen.
 
 ## Verschieben
 
@@ -12,12 +12,23 @@ Ziehe einen Wegpunkt auf der Karte. routess aktualisiert die Route, wenn du ihn 
 
 ## Loeschen
 
-Waehle einen Wegpunkt in der Seitenleiste aus und nutze die Loeschaktion.
+Rechtsklick (oder langer Druck) auf einen Wegpunkt entfernt ihn. Die Route wird um die Luecke neu berechnet.
+
+## Hover-Synchronisation zwischen Seitenleiste und Karte
+
+Fahre in der Seitenleiste ueber einen Wegpunkt, um ihn auf der Karte hervorzuheben, und umgekehrt. Praktisch bei langen Routen mit vielen Wegpunkten.
 
 ## Rueckgaengig und wiederholen
 
-Nutze Rueckgaengig, um eine Aenderung zurueckzunehmen. Nutze Wiederholen, um sie erneut anzuwenden.
+- **Rueckgaengig:** Undo-Button oder `Strg/Cmd + Z`
+- **Wiederholen:** Redo-Button oder `Strg/Cmd + Umschalt + Z`
 
-## Reihenfolge aendern
+routess speichert die vollstaendige Bearbeitungshistorie der aktuellen Sitzung.
 
-Aendere die Reihenfolge der Stopps in der Seitenleiste, wenn die Route anders verlaufen soll.
+## Gespeicherte Route direkt bearbeiten
+
+Oeffne eine Route aus deiner Bibliothek und bearbeite Name, Beschreibung, Sichtbarkeit oder Wegpunkte direkt. Eine Anzeige "Ungespeicherte Aenderungen" erscheint neben dem Titel, solange Aenderungen ausstehen. Klicke auf **Speichern**, um sie zu uebernehmen, oder auf **Verwerfen**, um zur letzten gespeicherten Version zurueckzukehren. Beim Verlassen mit ungespeicherten Aenderungen fragt routess zuerst nach.
+
+## Zuruecksetzen
+
+Klicke auf **Zuruecksetzen**, um die aktuelle Route komplett zu loeschen. Das ist sofort rueckgaengig zu machen.
