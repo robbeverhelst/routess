@@ -1,10 +1,10 @@
 ---
 title: Modifier des itineraires
-description: Deplacez, reorganisez, supprimez, annulez et retablissez les changements.
+description: Deplacez, reorganisez, supprimez, annulez et modifiez les itineraires enregistres.
 translationStatus: machine-draft
 ---
 
-> Emplacement de capture d'ecran : deplacement d'un point.
+> Emplacement de capture d'ecran : deplacement d'un point avec l'indicateur de modifications non enregistrees.
 
 ## Deplacer
 
@@ -12,12 +12,23 @@ Faites glisser un point sur la carte. Le trajet est recalcule lorsque vous le de
 
 ## Supprimer
 
-Selectionnez un point dans le panneau lateral et utilisez l'action de suppression.
+Clic droit (ou appui long) sur un point pour le retirer. Le trajet est recalcule autour de la lacune.
+
+## Synchronisation au survol entre le panneau et la carte
+
+Survolez un point dans le panneau lateral pour le mettre en evidence sur la carte, et inversement. Utile sur des itineraires longs avec beaucoup d'arrets.
 
 ## Annuler et retablir
 
-Utilisez annuler pour revenir en arriere et retablir pour reappliquer une modification.
+- **Annuler :** bouton annuler ou `Ctrl/Cmd + Z`
+- **Retablir :** bouton retablir ou `Ctrl/Cmd + Shift + Z`
 
-## Reorganiser
+routess conserve l'historique complet des modifications pour la session en cours.
 
-Changez l'ordre des arrets dans le panneau lateral lorsque le trajet doit suivre une autre sequence.
+## Modifier un itineraire enregistre directement
+
+Ouvrez un itineraire depuis votre bibliotheque et modifiez son nom, sa description, sa visibilite ou ses points directement. Un indicateur "Modifications non enregistrees" apparait a cote du titre tant qu'il reste des changements en attente. Cliquez sur **Enregistrer** pour valider, ou **Annuler** pour revenir a la derniere version enregistree. Si vous quittez avec des modifications non enregistrees, routess vous le demande d'abord.
+
+## Reinitialiser
+
+Cliquez sur **Reinitialiser** pour effacer entierement l'itineraire en cours. L'operation est annulable immediatement.

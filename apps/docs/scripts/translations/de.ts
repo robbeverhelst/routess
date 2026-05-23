@@ -130,11 +130,11 @@ Zoome zuerst in den Bereich, den du planen willst. Setze grobe Punkte und verfei
 		path: "routes/editing-routes.mdx",
 		content: `---
 title: Routen bearbeiten
-description: Verschiebe, sortiere, loesche, rueckgaengig und wiederhole Aenderungen.
+description: Verschiebe, sortiere, loesche, mache rueckgaengig und bearbeite gespeicherte Routen.
 translationStatus: machine-draft
 ---
 
-> Screenshot-Platzhalter: ein Wegpunkt wird gezogen.
+> Screenshot-Platzhalter: Wegpunkt wird gezogen mit Anzeige fuer ungespeicherte Aenderungen.
 
 ## Verschieben
 
@@ -142,15 +142,26 @@ Ziehe einen Wegpunkt auf der Karte. routess aktualisiert die Route, wenn du ihn 
 
 ## Loeschen
 
-Waehle einen Wegpunkt in der Seitenleiste aus und nutze die Loeschaktion.
+Rechtsklick (oder langer Druck) auf einen Wegpunkt entfernt ihn. Die Route wird um die Luecke neu berechnet.
+
+## Hover-Synchronisation zwischen Seitenleiste und Karte
+
+Fahre in der Seitenleiste ueber einen Wegpunkt, um ihn auf der Karte hervorzuheben, und umgekehrt. Praktisch bei langen Routen mit vielen Wegpunkten.
 
 ## Rueckgaengig und wiederholen
 
-Nutze Rueckgaengig, um eine Aenderung zurueckzunehmen. Nutze Wiederholen, um sie erneut anzuwenden.
+- **Rueckgaengig:** Undo-Button oder \`Strg/Cmd + Z\`
+- **Wiederholen:** Redo-Button oder \`Strg/Cmd + Umschalt + Z\`
 
-## Reihenfolge aendern
+routess speichert die vollstaendige Bearbeitungshistorie der aktuellen Sitzung.
 
-Aendere die Reihenfolge der Stopps in der Seitenleiste, wenn die Route anders verlaufen soll.
+## Gespeicherte Route direkt bearbeiten
+
+Oeffne eine Route aus deiner Bibliothek und bearbeite Name, Beschreibung, Sichtbarkeit oder Wegpunkte direkt. Eine Anzeige "Ungespeicherte Aenderungen" erscheint neben dem Titel, solange Aenderungen ausstehen. Klicke auf **Speichern**, um sie zu uebernehmen, oder auf **Verwerfen**, um zur letzten gespeicherten Version zurueckzukehren. Beim Verlassen mit ungespeicherten Aenderungen fragt routess zuerst nach.
+
+## Zuruecksetzen
+
+Klicke auf **Zuruecksetzen**, um die aktuelle Route komplett zu loeschen. Das ist sofort rueckgaengig zu machen.
 `,
 	},
 	{
@@ -180,21 +191,60 @@ Ohne Anmeldung kannst du planen, aber die Route bleibt nur lokal in deinem Brows
 		path: "routes/route-info.mdx",
 		content: `---
 title: Routeninformationen
-description: Distanz, Dauer und Routendaten.
+description: Distanz, Dauer, Hoehe und Untergrund.
 translationStatus: machine-draft
 ---
 
 Die Seitenleiste zeigt Live-Informationen, waehrend du die Route erstellst.
 
-> Screenshot-Platzhalter: Seitenleiste mit Distanz und Dauer.
+> Screenshot-Platzhalter: Seitenleiste mit Distanz, Dauer, Hoehe und Untergrund-Diagramm.
 
 ## Gesamtwerte
 
-- **Distanz** zeigt die gesamte Laenge.
-- **Dauer** zeigt die geschaetzte Zeit.
-- **Wegpunkte** zeigen Stopps und Richtungswechsel.
+- **Distanz** — Summe aller Abschnitte, in km oder mi (im Konto einstellbar)
+- **Dauer** — geschaetzte Reisezeit fuer die gewaehlte Sportart
+- **Hoehenmeter** — Gesamtanstieg ueber die ganze Route
 
-Die Werte aendern sich, wenn du Punkte hinzufuegst, verschiebst, loeschst oder neu sortierst.
+## Werte pro Abschnitt
+
+Klicke auf einen Wegpunkt in der Seitenleiste, um ihn auszuklappen. Du siehst Distanz und Dauer des Abschnitts, der zu diesem Punkt fuehrt.
+
+## Hoehen- und Untergrund-Diagramm
+
+Unter den Werten zeigt ein einziges Diagramm das Hoehenprofil mit dem Untergrund als farbige Baender darunter. Bewege den Zeiger ueber das Diagramm, um an dieser Stelle Hoehe, Distanz und Untergrund zu sehen. Der entsprechende Punkt auf der Karte wird mit hervorgehoben.
+
+Die Routenlinie auf der Karte nutzt zudem Strichmuster fuer den Untergrund: durchgezogen fuer asphaltiert, gestrichelt fuer unbefestigt, gepunktet fuer Pfade. Diagramm und Karte teilen sich dieselbe Farbskala.
+
+## Wie Schaetzungen berechnet werden
+
+Die Dauer nutzt deine Geschwindigkeit pro Sportart aus **Einstellungen → Sportarten**. Jede Sportart (Gehen, Laufen, Radfahren, Fahren) hat eine eigene Standardgeschwindigkeit; passe sie an, falls sie nicht zu deinem tatsaechlichen Tempo passt. Hoehe kommt von Mapbox Terrain-RGB; Untergrund vom Routing-Motor.
+`,
+	},
+	{
+		path: "routes/sharing-routes.mdx",
+		content: `---
+title: Routen teilen
+description: Teile eine Route per Link oder ueber System-Teilen.
+translationStatus: machine-draft
+---
+
+Oeffne eine gespeicherte Route und klicke auf **Teilen**, um den Teilen-Dialog zu oeffnen.
+
+> Screenshot-Platzhalter: Teilen-Dialog mit Link, Kopieren und systemweitem Teilen.
+
+## Was im Dialog steht
+
+- **Link kopieren** — kopiert die oeffentliche URL der Route in die Zwischenablage.
+- **System-Teilen** — auf dem Smartphone oeffnet sich das Teilen-Menue (WhatsApp, Nachrichten, Mail, ...).
+- **Vorschau** — Miniaturbild und Routenwerte, damit der Empfaenger weiss, was er bekommt.
+
+## Oeffentlich oder privat
+
+Eine Route zu teilen erfordert, dass sie **oeffentlich** ist. Bei einer privaten Route bittet der Dialog zuerst um Umschaltung der Sichtbarkeit und warnt, dass der Link dann fuer alle einsehbar ist. Spaeter kannst du ueber **Bearbeiten → Sichtbarkeit** wieder auf privat zurueck.
+
+## Was der Empfaenger sieht
+
+Jeder mit dem Link sieht die Route auf der Karte, die Werte, das Hoehen- und Untergrund-Diagramm und einen Button zum Herunterladen als GPX. Ein Konto ist zum Ansehen nicht noetig. Um eine Kopie in die eigene Bibliothek zu speichern, ist eine Anmeldung erforderlich.
 `,
 	},
 	{
@@ -266,21 +316,26 @@ Die Berechtigung wird vom Browser verwaltet. Du kannst sie spaeter in den Browse
 		path: "account/profile.mdx",
 		content: `---
 title: Dein Profil
-description: Profil ansehen und aktualisieren.
+description: Profil und Einstellungen pro Sportart ansehen und aktualisieren.
 translationStatus: machine-draft
 ---
 
-Oeffne das Menue oben rechts und klicke auf Avatar oder Namen.
+Oeffne das Menue oben rechts und klicke auf deinen Avatar.
 
-> Screenshot-Platzhalter: Profilansicht.
+> Screenshot-Platzhalter: Profilansicht mit Sport-Einstellungen.
 
 ## Was du aendern kannst
 
 - Anzeigename
-- Avatar, wenn dein Konto ihn bereitstellt
-- Einstellungen wie Sprache
+- Distanzeinheit (Kilometer oder Meilen)
+- Standard-Kartenstil
+- **Sportarten** — welche Sportarten du planst (Gehen, Laufen, Radfahren, Fahren) und ein Standardtempo je Sportart
 
-Deine E-Mail-Adresse kommt aus deinem Google-Konto und verbindet deine Routen mit deinem Konto.
+Deine E-Mail-Adresse kommt aus deinem Google-Konto und kann in routess nicht geaendert werden.
+
+## Sportarten und Tempo
+
+Waehle bei der Onboarding eine oder mehrere Sportarten oder passe sie spaeter in **Einstellungen → Sportarten** an. Die aktuell gewaehlte Sportart steuert die Zeitschaetzungen deiner Routen. Jede Sportart hat ein eigenes Standardtempo; passe es an, falls es nicht zu deinem tatsaechlichen Tempo passt. Die Aenderung wirkt bei der naechsten Routenneuberechnung.
 `,
 	},
 	{

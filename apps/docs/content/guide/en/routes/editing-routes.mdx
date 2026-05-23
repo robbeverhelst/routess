@@ -1,9 +1,9 @@
 ---
 title: Editing routes
-description: Drag, reorder, delete, undo, and redo edits to your route.
+description: Drag, reorder, delete, undo, redo, and edit metadata on saved routes.
 ---
 
-> _Screenshot placeholder: drag-reorder in action._
+> _Screenshot placeholder: drag-reorder in action with the unsaved-changes indicator._
 
 ## Reorder
 
@@ -13,6 +13,10 @@ Drag a waypoint marker on the map. The route updates as you drop.
 
 Right-click (or long-press) a waypoint to remove it. The route reroutes around the gap.
 
+## Hover sync between sidebar and map
+
+Hover a waypoint in the sidebar to highlight it on the map, and hover a marker on the map to highlight its row in the sidebar. This works in both directions, which is handy when a long route has many waypoints.
+
 ## Undo / Redo
 
 - **Undo:** click the undo button or press `Ctrl/Cmd + Z`
@@ -20,6 +24,10 @@ Right-click (or long-press) a waypoint to remove it. The route reroutes around t
 
 routess keeps your full edit history for the current session.
 
+## Edit a saved route in place
+
+Open a route from your library and edit its name, description, visibility, or waypoints directly. An "Unsaved changes" indicator appears next to the title while you have pending edits. Click **Save** to commit, or **Discard** to revert to the last saved version. If you navigate away with unsaved changes, routess prompts you first.
+
 ## Reset
 
-Click **Reset** to clear the route entirely. This is undo-able right away — useful if you cleared by accident.
+Click **Reset** to clear the current route entirely. This is undo-able right away — useful if you cleared by accident.

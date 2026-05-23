@@ -1,19 +1,29 @@
 ---
 title: Route-informatie
-description: Afstand, duur en statistieken per route.
+description: Afstand, duur, hoogte en ondergrond.
 translationStatus: machine-draft
 ---
 
-De routezijbalk toont live informatie terwijl je de route maakt.
+De zijbalk toont live informatie terwijl je de route maakt.
 
-> Screenshotplaceholder: zijbalk met afstand en duur.
+> Screenshotplaceholder: zijbalk met afstand, duur, hoogte en ondergrondgrafiek.
 
 ## Totale waarden
 
-- **Afstand** toont de totale lengte van de route.
-- **Duur** toont de geschatte reistijd.
-- **Waypoints** tonen waar de route stopt of draait.
+- **Afstand** — som van alle deelroutes, in km of mi (in te stellen in je account)
+- **Duur** — geschatte reistijd voor de geselecteerde sport
+- **Hoogtemeters** — totale klim over de hele route
 
-## Wanneer waarden veranderen
+## Waarden per deelroute
 
-De waarden veranderen wanneer je punten toevoegt, verwijdert, verplaatst of opnieuw ordent.
+Klik op een waypoint in de zijbalk om het uit te klappen. Je ziet de afstand en duur van de deelroute die naar dat punt leidt.
+
+## Hoogte- en ondergrondgrafiek
+
+Onder de waarden toont één grafiek het hoogteprofiel met de ondergrond als gekleurde banden eronder. Beweeg over de grafiek om op dat punt de hoogte, afstand en ondergrond te zien. Het bijbehorende punt op de kaart wordt mee gemarkeerd.
+
+De routelijn op de kaart gebruikt ook streepjespatronen om de ondergrond aan te duiden: doorgetrokken voor verhard, streepjes voor onverhard, stippen voor paden. Grafiek en kaart delen dezelfde kleurschaal.
+
+## Hoe schattingen worden berekend
+
+De duur gebruikt je pertinent tempo per sport uit **Instellingen → Sporten**. Elke sport (wandelen, lopen, fietsen, autorijden) heeft een eigen standaardtempo; pas dat aan als het niet overeenkomt met hoe snel je echt beweegt. Hoogtegegevens komen van Mapbox Terrain-RGB; ondergrond komt van de routeringsmotor.

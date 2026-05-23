@@ -1,17 +1,29 @@
 ---
 title: Routeninformationen
-description: Distanz, Dauer und Routendaten.
+description: Distanz, Dauer, Hoehe und Untergrund.
 translationStatus: machine-draft
 ---
 
 Die Seitenleiste zeigt Live-Informationen, waehrend du die Route erstellst.
 
-> Screenshot-Platzhalter: Seitenleiste mit Distanz und Dauer.
+> Screenshot-Platzhalter: Seitenleiste mit Distanz, Dauer, Hoehe und Untergrund-Diagramm.
 
 ## Gesamtwerte
 
-- **Distanz** zeigt die gesamte Laenge.
-- **Dauer** zeigt die geschaetzte Zeit.
-- **Wegpunkte** zeigen Stopps und Richtungswechsel.
+- **Distanz** — Summe aller Abschnitte, in km oder mi (im Konto einstellbar)
+- **Dauer** — geschaetzte Reisezeit fuer die gewaehlte Sportart
+- **Hoehenmeter** — Gesamtanstieg ueber die ganze Route
 
-Die Werte aendern sich, wenn du Punkte hinzufuegst, verschiebst, loeschst oder neu sortierst.
+## Werte pro Abschnitt
+
+Klicke auf einen Wegpunkt in der Seitenleiste, um ihn auszuklappen. Du siehst Distanz und Dauer des Abschnitts, der zu diesem Punkt fuehrt.
+
+## Hoehen- und Untergrund-Diagramm
+
+Unter den Werten zeigt ein einziges Diagramm das Hoehenprofil mit dem Untergrund als farbige Baender darunter. Bewege den Zeiger ueber das Diagramm, um an dieser Stelle Hoehe, Distanz und Untergrund zu sehen. Der entsprechende Punkt auf der Karte wird mit hervorgehoben.
+
+Die Routenlinie auf der Karte nutzt zudem Strichmuster fuer den Untergrund: durchgezogen fuer asphaltiert, gestrichelt fuer unbefestigt, gepunktet fuer Pfade. Diagramm und Karte teilen sich dieselbe Farbskala.
+
+## Wie Schaetzungen berechnet werden
+
+Die Dauer nutzt deine Geschwindigkeit pro Sportart aus **Einstellungen → Sportarten**. Jede Sportart (Gehen, Laufen, Radfahren, Fahren) hat eine eigene Standardgeschwindigkeit; passe sie an, falls sie nicht zu deinem tatsaechlichen Tempo passt. Hoehe kommt von Mapbox Terrain-RGB; Untergrund vom Routing-Motor.

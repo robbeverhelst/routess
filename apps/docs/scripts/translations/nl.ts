@@ -130,11 +130,11 @@ Zoom eerst in op het gebied waar je wilt plannen. Voeg daarna je grove route toe
 		path: "routes/editing-routes.mdx",
 		content: `---
 title: Routes bewerken
-description: Verplaats, orden, verwijder, herstel en herhaal routewijzigingen.
+description: Verplaats, orden, verwijder, herstel en bewerk opgeslagen routes.
 translationStatus: machine-draft
 ---
 
-> Screenshotplaceholder: waypoint wordt versleept.
+> Screenshotplaceholder: waypoint wordt versleept met de indicator voor onopgeslagen wijzigingen.
 
 ## Verplaatsen
 
@@ -142,15 +142,26 @@ Sleep een waypoint op de kaart. routess werkt de route bij zodra je het punt los
 
 ## Verwijderen
 
-Selecteer een waypoint in de zijbalk en gebruik de verwijderactie.
+Klik met de rechtermuisknop (of houd lang ingedrukt) op een waypoint om het te verwijderen. De route wordt opnieuw berekend rond de leemte.
+
+## Hover-synchronisatie tussen zijbalk en kaart
+
+Beweeg in de zijbalk over een waypoint om dat punt op de kaart te markeren, en omgekeerd. Dit werkt in beide richtingen en is handig bij lange routes met veel waypoints.
 
 ## Ongedaan maken en opnieuw
 
-Gebruik ongedaan maken als je een wijziging wilt terugdraaien. Gebruik opnieuw om die wijziging terug te zetten.
+- **Ongedaan maken:** klik op de undo-knop of druk \`Ctrl/Cmd + Z\`
+- **Opnieuw:** klik op redo of druk \`Ctrl/Cmd + Shift + Z\`
 
-## Volgorde aanpassen
+routess bewaart je volledige bewerkingsgeschiedenis voor de huidige sessie.
 
-Wijzig de volgorde van stops in de routezijbalk wanneer de route in een andere volgorde moet lopen.
+## Een opgeslagen route ter plekke bewerken
+
+Open een route uit je bibliotheek en pas naam, beschrijving, zichtbaarheid of waypoints rechtstreeks aan. Een indicator "Onopgeslagen wijzigingen" verschijnt naast de titel zolang je openstaande bewerkingen hebt. Klik op **Opslaan** om door te voeren of op **Verwerpen** om terug te keren naar de laatst opgeslagen versie. Als je weggaat met onopgeslagen wijzigingen, vraagt routess je eerst om bevestiging.
+
+## Reset
+
+Klik op **Reset** om de huidige route volledig te wissen. Dit is meteen ongedaan te maken — handig als je per ongeluk hebt gewist.
 `,
 	},
 	{
@@ -180,23 +191,60 @@ Zonder aanmelden kan je nog steeds plannen, maar je route blijft alleen lokaal i
 		path: "routes/route-info.mdx",
 		content: `---
 title: Route-informatie
-description: Afstand, duur en statistieken per route.
+description: Afstand, duur, hoogte en ondergrond.
 translationStatus: machine-draft
 ---
 
-De routezijbalk toont live informatie terwijl je de route maakt.
+De zijbalk toont live informatie terwijl je de route maakt.
 
-> Screenshotplaceholder: zijbalk met afstand en duur.
+> Screenshotplaceholder: zijbalk met afstand, duur, hoogte en ondergrondgrafiek.
 
 ## Totale waarden
 
-- **Afstand** toont de totale lengte van de route.
-- **Duur** toont de geschatte reistijd.
-- **Waypoints** tonen waar de route stopt of draait.
+- **Afstand** — som van alle deelroutes, in km of mi (in te stellen in je account)
+- **Duur** — geschatte reistijd voor de geselecteerde sport
+- **Hoogtemeters** — totale klim over de hele route
 
-## Wanneer waarden veranderen
+## Waarden per deelroute
 
-De waarden veranderen wanneer je punten toevoegt, verwijdert, verplaatst of opnieuw ordent.
+Klik op een waypoint in de zijbalk om het uit te klappen. Je ziet de afstand en duur van de deelroute die naar dat punt leidt.
+
+## Hoogte- en ondergrondgrafiek
+
+Onder de waarden toont één grafiek het hoogteprofiel met de ondergrond als gekleurde banden eronder. Beweeg over de grafiek om op dat punt de hoogte, afstand en ondergrond te zien. Het bijbehorende punt op de kaart wordt mee gemarkeerd.
+
+De routelijn op de kaart gebruikt ook streepjespatronen om de ondergrond aan te duiden: doorgetrokken voor verhard, streepjes voor onverhard, stippen voor paden. Grafiek en kaart delen dezelfde kleurschaal.
+
+## Hoe schattingen worden berekend
+
+De duur gebruikt je pertinent tempo per sport uit **Instellingen → Sporten**. Elke sport (wandelen, lopen, fietsen, autorijden) heeft een eigen standaardtempo; pas dat aan als het niet overeenkomt met hoe snel je echt beweegt. Hoogtegegevens komen van Mapbox Terrain-RGB; ondergrond komt van de routeringsmotor.
+`,
+	},
+	{
+		path: "routes/sharing-routes.mdx",
+		content: `---
+title: Routes delen
+description: Deel een route met een link of via systeem-deelopties.
+translationStatus: machine-draft
+---
+
+Open een opgeslagen route en klik op **Delen** om het deelvenster te openen.
+
+> Screenshotplaceholder: deelvenster met link, kopieeroptie en systeemdeling.
+
+## Wat staat er in het venster
+
+- **Link kopiëren** — kopieert de openbare URL van de route naar je klembord.
+- **Systeemdeling** — op mobiel opent dit het deelmenu van je telefoon (WhatsApp, Berichten, Mail, ...).
+- **Voorbeeld** — een miniatuur en de routestatistieken, zodat de ontvanger weet wat ze krijgen.
+
+## Openbaar versus privé
+
+Een route delen vereist dat hij **openbaar** is. Is de route privé, dan vraagt het venster eerst om de zichtbaarheid om te zetten, en waarschuwt het dat de link voor iedereen toegankelijk wordt. Je kunt later terug naar privé via **Bewerken → Zichtbaarheid**.
+
+## Wat ziet de ontvanger
+
+Iedereen met de link ziet de route op de kaart, de statistieken, de hoogte- en ondergrondgrafiek en een knop om de route als GPX te downloaden. Een account is niet vereist om te bekijken. Om een kopie in de eigen bibliotheek te bewaren is wel aanmelden nodig.
 `,
 	},
 	{
@@ -268,21 +316,26 @@ Je browser beheert de toestemming. Je kunt die toestemming later intrekken via d
 		path: "account/profile.mdx",
 		content: `---
 title: Je profiel
-description: Bekijk en werk je profiel bij.
+description: Bekijk en werk je profiel en sportinstellingen bij.
 translationStatus: machine-draft
 ---
 
-Open het menu rechtsboven en klik op je avatar of naam om je profiel te bekijken.
+Open het menu rechtsboven en klik op je avatar om je profiel te bekijken.
 
-> Screenshotplaceholder: profielscherm.
+> Screenshotplaceholder: profielscherm met sportinstellingen.
 
 ## Wat je kunt aanpassen
 
 - Weergavenaam
-- Avatar, als die door je account wordt ondersteund
-- Voorkeuren zoals taal
+- Afstandseenheid (kilometers of mijlen)
+- Standaard kaartstijl
+- **Sporten** — voor welke sporten je plant (wandelen, lopen, fietsen, autorijden) en een standaardtempo per sport
 
-Je e-mailadres komt uit je Google-account en wordt gebruikt om je routes aan je account te koppelen.
+Je e-mailadres komt uit je Google-account en kan niet worden gewijzigd in routess.
+
+## Sporten en tempo
+
+Kies tijdens onboarding een of meer sporten, of pas ze later aan in **Instellingen → Sporten**. De huidige sport bepaalt de geschatte duur van je routes. Elke sport heeft een eigen standaardtempo; pas het aan als het niet overeenkomt met hoe snel je echt beweegt. De wijziging wordt toegepast bij de volgende herberekening van de route.
 `,
 	},
 	{

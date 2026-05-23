@@ -931,6 +931,43 @@
 				"tags": ["routes"]
 			}
 		},
+		"/routing/trace-attributes": {
+			"post": {
+				"description": "Forwards the shape to the self-hosted Valhalla `trace_attributes` endpoint and returns per-edge surface data. Used by the web app to render surface composition for a Route.",
+				"operationId": "RoutingController_traceAttributes",
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/TraceAttributesRequestDto"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Edge attributes",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/TraceAttributesResponseDto"
+								}
+							}
+						}
+					},
+					"502": {
+						"description": "Valhalla returned an error"
+					},
+					"503": {
+						"description": "Valhalla is not configured or unreachable"
+					}
+				},
+				"summary": "Match a recorded shape against the road network",
+				"tags": ["routing"]
+			}
+		},
 		"/health": {
 			"get": {
 				"operationId": "HealthController_check",
@@ -1569,6 +1606,10 @@
 		{
 			"name": "routes",
 			"description": "Route management"
+		},
+		{
+			"name": "routing",
+			"description": "Routing engine (Valhalla) proxy endpoints"
 		},
 		{
 			"name": "users",
@@ -2564,6 +2605,80 @@
 						"example": "Times Square, New York, NY"
 					}
 				}
+			},
+			"TraceShapePointDto": {
+				"type": "object",
+				"properties": {
+					"lat": {
+						"type": "number",
+						"description": "Latitude in WGS84 degrees",
+						"example": 50.8467
+					},
+					"lon": {
+						"type": "number",
+						"description": "Longitude in WGS84 degrees",
+						"example": 4.3525
+					}
+				},
+				"required": ["lat", "lon"]
+			},
+			"TraceAttributesRequestDto": {
+				"type": "object",
+				"properties": {
+					"costing": {
+						"type": "string",
+						"description": "Costing model used by Valhalla to match the shape to edges.",
+						"enum": ["pedestrian", "bicycle", "auto"],
+						"example": "pedestrian"
+					},
+					"shape": {
+						"description": "Recorded shape points to match against the road network. Capped at 1500 points.",
+						"minItems": 2,
+						"maxItems": 1500,
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/TraceShapePointDto"
+						}
+					}
+				},
+				"required": ["costing", "shape"]
+			},
+			"TraceAttributesEdgeDto": {
+				"type": "object",
+				"properties": {
+					"surface": {
+						"type": "string",
+						"description": "OSM surface classification for the edge."
+					},
+					"length": {
+						"type": "number",
+						"description": "Edge length in kilometers."
+					},
+					"begin_shape_index": {
+						"type": "number",
+						"description": "Index of the first shape point covered by this edge."
+					},
+					"end_shape_index": {
+						"type": "number",
+						"description": "Index of the last shape point covered by this edge."
+					}
+				}
+			},
+			"TraceAttributesResponseDto": {
+				"type": "object",
+				"properties": {
+					"edges": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/TraceAttributesEdgeDto"
+						}
+					},
+					"shape": {
+						"type": "string",
+						"description": "Polyline6-encoded matched shape returned by Valhalla."
+					}
+				},
+				"required": ["edges"]
 			}
 		}
 	}

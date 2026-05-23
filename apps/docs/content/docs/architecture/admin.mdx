@@ -1,0 +1,31 @@
+---
+title: Admin panel
+description: How the in-app admin UI is wired together.
+---
+
+routess ships with an in-app admin panel for operators. It lives under `/admin` in the web app and is backed by `/admin/*` endpoints on the API.
+
+## Access control
+
+The admin role is granted at sign-in. Any email listed in the `ADMIN_EMAILS` env var on the API (comma-separated) gets `role: "admin"` written onto its session JWT on next login. Other users see no `/admin` route in the navigation, and API requests are rejected by the `RolesGuard`.
+
+Leaving `ADMIN_EMAILS` empty disables the panel entirely. There is no super-user bootstrap; you provision admins by editing the env var and restarting the API.
+
+## Surfaces
+
+| Panel              | Route                | Purpose                                                        |
+| ------------------ | -------------------- | -------------------------------------------------------------- |
+| Overview dashboard | `/admin`             | KPIs: users, routes, signups, churn, recent activity           |
+| Users              | `/admin/users`       | Paginated + searchable list, per-user detail, session revoke   |
+| Routes             | `/admin/routes`      | Paginated + searchable list, per-route detail, soft-delete     |
+| System             | `/admin/system`      | API health, version, uptime, DB reachability, runtime config   |
+
+All endpoints live on the API at the matching path under `/admin/*` (e.g. `/admin/stats/overview`, `/admin/users/:id`, `/admin/system/health`).
+
+## Audit trail
+
+Every mutating call (soft-delete, revoke session) passes through an `AuditInterceptor` that writes a structured log line including the admin's user ID, the action, and the target. Aggregate these with the rest of the API logs.
+
+## Metrics
+
+Admin actions and the panel's data fetches are part of the same `/metrics` surface as the rest of the API. See [Observability](../operations/observability).

@@ -37,6 +37,17 @@ Mint tokens in the web app under **Settings → API Tokens**. Each token carries
 - `read` — list and get routes, export GPX, read profile.
 - `write` — everything in `read` plus metadata-only mutations on owned routes and on preferences.
 
+#### Scope per endpoint
+
+| Scope required | Endpoints |
+| --- | --- |
+| none (public) | `GET /api/v1/routes/by-user/:userId`, `GET /health/*`, `GET /metrics` |
+| `read` | `GET /api/v1/users/me`, `GET /api/v1/users/profile`, `GET /api/v1/routes` |
+| `write` | `PATCH /api/v1/users/me`, `PATCH /api/v1/routes/:id`, `DELETE /api/v1/routes/:id`, `POST /api/v1/routing/trace-attributes` |
+| PAT-blocked (session cookie only) | `POST /api/v1/routes`, `GET /api/v1/routes/:id`, `DELETE /api/v1/users/me`, `POST /api/v1/users/me/password`, `GET /api/v1/users/me/export`, `/api/v1/auth/*`, `/api/v1/admin/*` |
+
+If you call an endpoint with a token that lacks the required scope, the API responds with `403 FORBIDDEN`. The CLI surfaces this as exit code 6 (see [CLI exit codes](../docs/apps/cli)).
+
 PATs are blocked from `/admin/*` and from `DELETE /users/me`. Destructive operations (changing a route's visibility to public, deleting a route) require an `X-Routess-Confirm: true` header and otherwise return `428 PRECONDITION_REQUIRED` with an `impact` field describing the change. See ADR-0022 and ADR-0023.
 
 The `routess` CLI (`npm install -g routess`) is the easiest way to drive the API with a PAT; for ad-hoc usage, `curl` works the same way:
@@ -61,6 +72,7 @@ The CLI persists its token at `~/.config/routess/auth.json` (mode 0600), or `$XD
 | GET | `/api/v1/routes/:id` | Read a route (session-cookie only; PATs cannot read by id — use `/routes` and filter) |
 | PATCH / DELETE | `/api/v1/routes/:id` | Update or delete a route |
 | GET | `/api/v1/routes/by-user/:userId` | List a user's public routes (no auth) |
+| POST | `/api/v1/routing/trace-attributes` | Snap a recorded shape to the road network and return per-edge surface data (Valhalla proxy) |
 | GET | `/health`, `/health/live`, `/health/ready` | Liveness/readiness probes (root path) |
 | GET | `/metrics` | Prometheus metrics, internal-only (root path) |
 

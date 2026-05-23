@@ -1,4 +1,4 @@
 {
 	"title": "Architecture",
-	"pages": ["overview", "data-flow", "state-management", "auth"]
+	"pages": ["overview", "data-flow", "state-management", "auth", "admin"]
 }

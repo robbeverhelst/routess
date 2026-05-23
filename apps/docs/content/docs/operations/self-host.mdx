@@ -15,9 +15,10 @@ This walkthrough gets a routess instance running on your own machine or server i
 Optional, gracefully disabled when unset:
 
 - **Resend** for transactional email (without it, verification URLs are logged to stdout).
-- **Stadia Maps** for surface-type analysis (falls back to public FOSSGIS Valhalla).
+- **Valhalla** for surface-type analysis on planned routes.
 - **Sentry / GlitchTip** for browser error reporting.
 - **Umami** for product analytics.
+- **Admin role** for accessing the in-app admin panel.
 
 ## Set up Google OAuth
 
@@ -65,6 +66,27 @@ ROUTESS_TAG=1.122.7 docker compose -f docker/compose.selfhost.yaml --project-dir
 ```
 
 Or set `ROUTESS_TAG` in `.env`. See the [releases page](https://github.com/robbeverhelst/routess/releases) for available tags.
+
+## Environment variables
+
+The `.env` file in `docker/.env.selfhost.example` is the source of truth. The variables you'll touch most often:
+
+| Variable                       | Required | Default                          | Purpose                                                                                  |
+| ------------------------------ | -------- | -------------------------------- | ---------------------------------------------------------------------------------------- |
+| `JWT_SECRET`                   | yes      | —                                | Signs session and API tokens. Rotating logs everyone out.                                |
+| `ANALYTICS_SALT`               | yes      | —                                | Hashes user IDs in analytics events. Rotating resets the analytics pseudonyms.            |
+| `PAT_PEPPER`                   | yes      | —                                | Hashes personal access tokens at rest. Rotating invalidates every existing PAT.          |
+| `DB_PASSWORD`                  | yes      | —                                | Postgres password.                                                                       |
+| `GOOGLE_CLIENT_ID/SECRET`      | yes      | —                                | Google OAuth credentials.                                                                |
+| `VITE_MAPBOX_ACCESS_TOKEN`     | yes      | —                                | Mapbox access token used by the web app.                                                 |
+| `PUBLIC_WEB_URL`               | no       | `http://localhost:8080`          | Where users open the app. Used as OAuth redirect base.                                   |
+| `PUBLIC_API_URL`               | no       | `http://localhost:3000`          | Where the web app reaches the API.                                                       |
+| `ADMIN_EMAILS`                 | no       | empty                            | Comma-separated emails granted the admin role on login. Empty disables the admin panel. |
+| `RESEND_API_KEY`               | no       | empty                            | Resend API key. Empty falls back to logging verification URLs to stdout.                 |
+| `EMAIL_FROM`                   | no       | `routess <noreply@routess.app>`  | Sender address used by Resend.                                                           |
+| `VALHALLA_URL`                 | no       | empty                            | Base URL of a self-hosted Valhalla instance for surface analysis. Empty disables it.     |
+| `VITE_UMAMI_URL` / `_WEBSITE_ID` | no     | empty                            | Umami endpoint and site ID. Empty disables product analytics.                            |
+| `VITE_SENTRY_DSN`              | no       | empty                            | Sentry / GlitchTip DSN for browser error reporting.                                      |
 
 ## Put it behind a reverse proxy
 
