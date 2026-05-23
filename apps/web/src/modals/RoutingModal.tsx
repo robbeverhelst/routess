@@ -227,38 +227,40 @@ export function RoutingModal() {
 				</FieldRow>
 			)}
 
-			<div
-				style={{
-					display: "flex",
-					alignItems: "center",
-					gap: 12,
-					padding: "12px 0",
-					borderTop: `1px solid ${RDS_COLORS.border}`,
-					marginTop: 8,
-				}}
-			>
+			{activity === "cycle" && (
 				<div
 					style={{
-						width: 28,
-						height: 28,
-						borderRadius: 6,
-						background: RDS_COLORS.bgInput,
 						display: "flex",
 						alignItems: "center",
-						justifyContent: "center",
-						color: RDS_COLORS.fgMuted,
+						gap: 12,
+						padding: "12px 0",
+						borderTop: `1px solid ${RDS_COLORS.border}`,
+						marginTop: 8,
 					}}
 				>
-					<I.trend size={14} />
-				</div>
-				<div style={{ flex: 1 }}>
-					<div style={{ fontSize: 13, fontWeight: 500 }}>{t("routing.pref.highways")}</div>
-					<div style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle, marginTop: 2 }}>
-						{t("routing.pref.highwaysSub")}
+					<div
+						style={{
+							width: 28,
+							height: 28,
+							borderRadius: 6,
+							background: RDS_COLORS.bgInput,
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+							color: RDS_COLORS.fgMuted,
+						}}
+					>
+						<I.trend size={14} />
 					</div>
+					<div style={{ flex: 1 }}>
+						<div style={{ fontSize: 13, fontWeight: 500 }}>{t("routing.pref.highways")}</div>
+						<div style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle, marginTop: 2 }}>
+							{t("routing.pref.highwaysSub")}
+						</div>
+					</div>
+					<Toggle on={pending.avoidHighways} onChange={(v) => update({ avoidHighways: v })} />
 				</div>
-				<Toggle on={pending.avoidHighways} onChange={(v) => update({ avoidHighways: v })} />
-			</div>
+			)}
 
 			<div
 				style={{
