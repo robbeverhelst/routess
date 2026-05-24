@@ -27,10 +27,16 @@ export function valhallaCostingModelForActivity(activity: RouteActivity): Valhal
 	return activity === "cycle" ? "bicycle" : "pedestrian";
 }
 
+// use_hills accepts the full 0..1 range in Valhalla. The previous timid
+// spread (0.1 / 0.5 / 0.9) often produced no visible route change in
+// marginally-hilly terrain because flat still tolerated some climbing and
+// hilly was not aggressive enough to seek out grades. Pushing both ends
+// to the limits makes the toggle actually shift routes when there's any
+// elevation choice in the road network.
 const HILL_USE: Record<HillPreference, number> = {
-	flat: 0.1,
+	flat: 0.0,
 	mixed: 0.5,
-	hilly: 0.9,
+	hilly: 1.0,
 };
 
 const SURFACE_USE_TRACKS_BIKE: Record<SurfaceType, number> = {
