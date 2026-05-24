@@ -1,6 +1,5 @@
 import {
 	defaultPreferencesForActivity,
-	type HillPreference,
 	type RouteActivity,
 	type RoutingPreferences,
 	type SurfaceType,
@@ -21,12 +20,6 @@ const SURFACE_OPTIONS: { key: SurfaceType; labelKey: string }[] = [
 	{ key: "paved", labelKey: "routing.surface.paved" },
 	{ key: "mixed", labelKey: "routing.surface.mixed" },
 	{ key: "unpaved", labelKey: "routing.surface.unpaved" },
-];
-
-const HILL_OPTIONS: { key: HillPreference; labelKey: string }[] = [
-	{ key: "flat", labelKey: "routing.hill.flat" },
-	{ key: "mixed", labelKey: "routing.hill.mixed" },
-	{ key: "hilly", labelKey: "routing.hill.hilly" },
 ];
 
 function Segmented<T extends string>({
@@ -195,15 +188,6 @@ export function RoutingModal() {
 					options={SURFACE_OPTIONS}
 					value={pending.surfacePreference}
 					onChange={(v) => update({ surfacePreference: v })}
-					t={t}
-				/>
-			</FieldRow>
-
-			<FieldRow icon={I.mountain} label={t("routing.hill.label")} hint={t("routing.hill.hint")}>
-				<Segmented<HillPreference>
-					options={HILL_OPTIONS}
-					value={pending.hillPreference}
-					onChange={(v) => update({ hillPreference: v })}
 					t={t}
 				/>
 			</FieldRow>

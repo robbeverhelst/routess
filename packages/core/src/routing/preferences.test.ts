@@ -35,10 +35,8 @@ describe("normalizeRoutingPreferences", () => {
 	it("rejects invalid enum values and falls back to defaults", () => {
 		const result = normalizeRoutingPreferences("cycle", {
 			surfacePreference: "asphalt" as unknown as RoutingPreferences["surfacePreference"],
-			hillPreference: "rolling" as unknown as RoutingPreferences["hillPreference"],
 		});
 		expect(result.surfacePreference).toBe("mixed");
-		expect(result.hillPreference).toBe("mixed");
 	});
 
 	it("rejects non-boolean avoidFerries/avoidHighways", () => {
@@ -68,14 +66,14 @@ describe("mergeRoutingDefaults", () => {
 		const result = mergeRoutingDefaults(current, { cycle: { surfacePreference: "unpaved" } });
 		expect(result.cycle.surfacePreference).toBe("unpaved");
 		// Other cycle fields preserved
-		expect(result.cycle.hillPreference).toBe(DEFAULT_CYCLE_PREFERENCES.hillPreference);
+		expect(result.cycle.avoidFerries).toBe(DEFAULT_CYCLE_PREFERENCES.avoidFerries);
 		// Other activities untouched
 		expect(result.run).toEqual(DEFAULT_ROUTING_DEFAULTS.run);
 	});
 
 	it("treats null current as full defaults base", () => {
-		const result = mergeRoutingDefaults(null, { run: { hillPreference: "hilly" } });
-		expect(result.run.hillPreference).toBe("hilly");
+		const result = mergeRoutingDefaults(null, { run: { avoidFerries: false } });
+		expect(result.run.avoidFerries).toBe(false);
 		expect(result.cycle).toEqual(DEFAULT_ROUTING_DEFAULTS.cycle);
 	});
 });

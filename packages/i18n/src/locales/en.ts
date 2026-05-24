@@ -1078,11 +1078,6 @@ export const en: Record<string, string> = {
 	"routing.surface.mismatchTitle": "This route doesn't match your '{pref}' preference",
 	"routing.surface.mismatchBody":
 		"{pct}% of the route is on surfaces that don't match. Adjust preferences or move waypoints.",
-	"routing.hill.label": "Hill preference",
-	"routing.hill.hint": "How much elevation gain to accept",
-	"routing.hill.flat": "Flat",
-	"routing.hill.mixed": "Mixed",
-	"routing.hill.hilly": "Hilly",
 	"routing.ferries.label": "Avoid ferries",
 	"routing.ferries.hint": "Skip routes that cross water by ferry",
 	"route.provenance.mapboxLegacy": "Originally planned with a previous routing engine",

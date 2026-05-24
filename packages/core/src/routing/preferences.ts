@@ -1,23 +1,20 @@
 import type { RouteActivity } from "../types";
-import { isHillPreference, isSurfaceType, type RoutingDefaults, type RoutingPreferences } from "./types";
+import { isSurfaceType, type RoutingDefaults, type RoutingPreferences } from "./types";
 
 export const DEFAULT_CYCLE_PREFERENCES: RoutingPreferences = {
 	surfacePreference: "mixed",
-	hillPreference: "mixed",
 	avoidFerries: true,
 	avoidHighways: true,
 };
 
 export const DEFAULT_RUN_PREFERENCES: RoutingPreferences = {
 	surfacePreference: "mixed",
-	hillPreference: "mixed",
 	avoidFerries: true,
 	avoidHighways: true,
 };
 
 export const DEFAULT_WALK_PREFERENCES: RoutingPreferences = {
 	surfacePreference: "mixed",
-	hillPreference: "mixed",
 	avoidFerries: true,
 	avoidHighways: true,
 };
@@ -41,7 +38,6 @@ export function normalizeRoutingPreferences(
 
 	return {
 		surfacePreference: isSurfaceType(input.surfacePreference) ? input.surfacePreference : base.surfacePreference,
-		hillPreference: isHillPreference(input.hillPreference) ? input.hillPreference : base.hillPreference,
 		avoidFerries: typeof input.avoidFerries === "boolean" ? input.avoidFerries : base.avoidFerries,
 		avoidHighways: typeof input.avoidHighways === "boolean" ? input.avoidHighways : base.avoidHighways,
 	};

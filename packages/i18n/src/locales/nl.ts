@@ -1089,11 +1089,6 @@ export const nl: Record<string, string> = {
 	"routing.surface.mismatchTitle": "Deze route past niet bij je '{pref}'-voorkeur",
 	"routing.surface.mismatchBody":
 		"{pct}% van de route ligt op een ondergrond die niet past. Pas je voorkeuren aan of verplaats waypoints.",
-	"routing.hill.label": "Hellingvoorkeur",
-	"routing.hill.hint": "Hoeveel hoogtemeters je wilt accepteren",
-	"routing.hill.flat": "Vlak",
-	"routing.hill.mixed": "Gemengd",
-	"routing.hill.hilly": "Heuvelachtig",
 	"routing.ferries.label": "Veerboten vermijden",
 	"routing.ferries.hint": "Sla routes over die via een veerboot het water oversteken",
 	"route.provenance.mapboxLegacy": "Oorspronkelijk gepland met een vorige routeringsengine",

@@ -1,10 +1,9 @@
 import type { RouteActivity } from "../types";
-import type { HillPreference, RoutingPreferences, SurfaceType } from "./types";
+import type { RoutingPreferences, SurfaceType } from "./types";
 
 export type ValhallaCostingModel = "bicycle" | "pedestrian";
 
 export interface ValhallaBicycleOptions {
-	use_hills: number;
 	use_ferry: number;
 	use_roads: number;
 	use_tracks: number;
@@ -12,7 +11,6 @@ export interface ValhallaBicycleOptions {
 }
 
 export interface ValhallaPedestrianOptions {
-	use_hills: number;
 	use_ferry: number;
 	use_tracks: number;
 	walking_speed?: number;
@@ -27,17 +25,16 @@ export function valhallaCostingModelForActivity(activity: RouteActivity): Valhal
 	return activity === "cycle" ? "bicycle" : "pedestrian";
 }
 
-// use_hills accepts the full 0..1 range in Valhalla. The previous timid
-// spread (0.1 / 0.5 / 0.9) often produced no visible route change in
-// marginally-hilly terrain because flat still tolerated some climbing and
-// hilly was not aggressive enough to seek out grades. Pushing both ends
-// to the limits makes the toggle actually shift routes when there's any
-// elevation choice in the road network.
-const HILL_USE: Record<HillPreference, number> = {
-	flat: 0.0,
-	mixed: 0.5,
-	hilly: 1.0,
-};
+// HillPreference + use_hills were removed from the vocabulary because the
+// effect in practice was imperceptible across most road networks we tested.
+// Valhalla's hill penalty is small relative to distance, so even with the
+// full 0..1 spread the engine still preferred the shorter route over any
+// detour to skip a moderate climb. Revisit if we ever add explicit elevation
+// routing (e.g. via a custom Valhalla profile or a different engine):
+//   - Add HillPreference back to RoutingPreferences (flat | mixed | hilly).
+//   - Map to use_hills: { flat: 0.0, mixed: 0.5, hilly: 1.0 }.
+//   - Send it on both `bicycle` and `pedestrian` costing.
+//   - Restore the UI segmented control in RoutingModal.tsx.
 
 const SURFACE_USE_TRACKS_BIKE: Record<SurfaceType, number> = {
 	paved: 0.0,
@@ -66,7 +63,6 @@ export function valhallaCostingFromPreferences(
 		// Valhalla defaults bicycle_type to Hybrid when omitted; that's fine for
 		// our small vocabulary which doesn't model bike type.
 		const bicycle: ValhallaBicycleOptions = {
-			use_hills: HILL_USE[prefs.hillPreference],
 			use_ferry: prefs.avoidFerries ? 0.0 : 0.5,
 			use_roads: prefs.avoidHighways ? 0.2 : 0.5,
 			use_tracks: SURFACE_USE_TRACKS_BIKE[prefs.surfacePreference],
@@ -79,7 +75,6 @@ export function valhallaCostingFromPreferences(
 	}
 
 	const pedestrian: ValhallaPedestrianOptions = {
-		use_hills: HILL_USE[prefs.hillPreference],
 		use_ferry: prefs.avoidFerries ? 0.0 : 0.5,
 		use_tracks: SURFACE_USE_TRACKS_PED[prefs.surfacePreference],
 	};

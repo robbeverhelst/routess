@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { DEFAULT_CYCLE_PREFERENCES, DEFAULT_RUN_PREFERENCES, DEFAULT_WALK_PREFERENCES } from "./preferences";
-import type { HillPreference, SurfaceType } from "./types";
+import type { SurfaceType } from "./types";
 import { valhallaCostingFromPreferences, valhallaCostingModelForActivity } from "./valhalla-costing";
 
 describe("valhallaCostingModelForActivity", () => {
@@ -28,14 +28,10 @@ describe("valhallaCostingFromPreferences — cycle", () => {
 		expect("bicycle_type" in b).toBe(false);
 	});
 
-	it("orders use_hills monotonically: flat < mixed < hilly", () => {
-		const useHills = (h: HillPreference) => {
-			const prefs = { ...DEFAULT_CYCLE_PREFERENCES, hillPreference: h };
-			const req = valhallaCostingFromPreferences("cycle", prefs);
-			return (req.costing_options as { bicycle: { use_hills: number } }).bicycle.use_hills;
-		};
-		expect(useHills("flat")).toBeLessThan(useHills("mixed"));
-		expect(useHills("mixed")).toBeLessThan(useHills("hilly"));
+	it("does not send use_hills (no HillPreference in vocabulary)", () => {
+		const req = valhallaCostingFromPreferences("cycle", DEFAULT_CYCLE_PREFERENCES);
+		const b = (req.costing_options as { bicycle: Record<string, unknown> }).bicycle;
+		expect("use_hills" in b).toBe(false);
 	});
 
 	it("orders use_tracks monotonically: paved < mixed < unpaved", () => {
@@ -91,6 +87,12 @@ describe("valhallaCostingFromPreferences — pedestrian", () => {
 	it("does not include bicycle options for pedestrian costing", () => {
 		const req = valhallaCostingFromPreferences("walk", DEFAULT_WALK_PREFERENCES);
 		expect("bicycle" in req.costing_options).toBe(false);
+	});
+
+	it("does not send use_hills (no HillPreference in vocabulary)", () => {
+		const req = valhallaCostingFromPreferences("walk", DEFAULT_WALK_PREFERENCES);
+		const p = (req.costing_options as { pedestrian: Record<string, unknown> }).pedestrian;
+		expect("use_hills" in p).toBe(false);
 	});
 
 	it("forwards walking_speed when provided", () => {
