@@ -1070,4 +1070,15 @@ export const en: Record<string, string> = {
 	"routing.appliedTitle": "Routing preferences applied",
 	"routing.appliedBody": "New routes and recalculations use these settings.",
 	"routing.restoreDefaults": "Restore defaults: {profile}",
+	"routing.surface.label": "Surface preference",
+	"routing.surface.hint": "Bias toward roads with this surface type",
+	"routing.surface.paved": "Paved",
+	"routing.surface.mixed": "Mixed",
+	"routing.surface.unpaved": "Unpaved",
+	"routing.surface.mismatchTitle": "This route doesn't match your '{pref}' preference",
+	"routing.surface.mismatchBody":
+		"{pct}% of the route is on surfaces that don't match. Adjust preferences or move waypoints.",
+	"routing.ferries.label": "Avoid ferries",
+	"routing.ferries.hint": "Skip routes that cross water by ferry",
+	"route.provenance.mapboxLegacy": "Originally planned with a previous routing engine",
 };

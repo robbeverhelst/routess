@@ -1,9 +1,9 @@
 import { Entity, Index, ManyToOne, PrimaryKey, Property, type Ref } from "@mikro-orm/core";
-import type { RouteActivity, RouteVisibility, Waypoint } from "@routess/core";
+import type { Provenance, RouteActivity, RouteVisibility, RoutingPreferences, Waypoint } from "@routess/core";
 import { BaseEntity } from "./base.entity";
 import { User } from "./user.entity";
 
-export type { RouteActivity, RouteVisibility, Waypoint } from "@routess/core";
+export type { Provenance, RouteActivity, RouteVisibility, RoutingPreferences, Waypoint } from "@routess/core";
 
 @Entity()
 @Index({ properties: ["user"] })
@@ -48,6 +48,15 @@ export class Route extends BaseEntity {
 
 	@Property({ nullable: true })
 	endAddress?: string;
+
+	// Inputs that produced this Route's geometry. Null for legacy / GPX-imported
+	// routes that have no recorded inputs. See CONTEXT.md "RoutingPreferences".
+	@Property({ type: "json", nullable: true })
+	routingPreferences?: RoutingPreferences | null;
+
+	// How this Route came to exist. Immutable after creation. See CONTEXT.md.
+	@Property({ type: "string", default: "valhalla" })
+	provenance: Provenance = "valhalla";
 
 	@ManyToOne(() => User)
 	user!: Ref<User>;

@@ -1,7 +1,9 @@
 import type {
 	Logger,
+	Provenance,
 	RouteActivity,
 	RouteVisibility,
+	RoutingPreferences,
 	UserPreferenceActivity,
 	UserPreferenceMapStyle,
 	UserPreferenceOverlayKey,
@@ -234,6 +236,8 @@ export interface ApiRoute {
 	elevationGain?: number;
 	startAddress?: string;
 	endAddress?: string;
+	routingPreferences?: RoutingPreferences | null;
+	provenance: Provenance;
 	user: ApiUser;
 	createdAt: string;
 	updatedAt: string;
@@ -252,6 +256,8 @@ export interface CreateRouteRequest {
 	elevationGain?: number;
 	startAddress?: string;
 	endAddress?: string;
+	routingPreferences?: RoutingPreferences;
+	provenance?: Provenance;
 }
 
 export interface UpdateRouteRequest {
@@ -267,6 +273,7 @@ export interface UpdateRouteRequest {
 	elevationGain?: number;
 	startAddress?: string;
 	endAddress?: string;
+	routingPreferences?: RoutingPreferences;
 }
 
 export interface UpdateCurrentUserRequest {

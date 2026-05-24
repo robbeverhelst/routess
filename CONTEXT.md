@@ -29,7 +29,7 @@ _Avoid_: AI route, auto route, suggested route.
 Either `a-to-b` (start ≠ end) or `loop` (start = end). A property of a generated or saved Route.
 
 **SurfaceType**:
-Routing *preference* (an input): `paved`, `mixed`, or `unpaved`. Used by RouteGeneration and routing requests to bias the chosen RoutePath. Distinct from **SurfaceBucket**.
+Routing *preference* (an input): `paved`, `mixed`, or `unpaved`. Used by RouteGeneration and routing requests to bias the chosen RoutePath. Distinct from **SurfaceBucket**. `mixed` is *permissive*: a route that is 100% paved still satisfies a `mixed` preference. The match between a SurfaceBucket and a SurfaceType is defined by the pure predicate `bucketMatchesPreference(bucket, pref)` in `@routess/core`.
 _Avoid_: terrain, surface preference.
 
 **SurfaceBucket**:
@@ -65,7 +65,15 @@ Compass direction (0 to 360°) of a Waypoint or segment. Used by GPX import for 
 ## Editing & state
 
 **RouteDraft**:
-A Route-in-progress: a document holding waypoints, per-waypoint Type, RoutePath, Distance, Duration, ElevationGain, and an activity. In the web app, the RouteDraft is the working state of `routingStore`; for CLI and agent clients it is the same shape passed over the wire to `/v1/draft/recalc` and `/v1/draft/save`. A RouteDraft has a **mode**: `unsaved` (composing fresh; on save becomes a new Route) or `editing(routeId, baseline)` (bound to a saved Route; carries a snapshot of the saved fields and on save PATCHes that Route). The current **activity** is a property of the RouteDraft; the global activity setting is just a default applied when starting a new draft, never overwritten by loading a Route. A RouteDraft is never persisted on the server side; it lives only in the client that holds it (browser store, CLI invocation, agent context).
+A Route-in-progress: a document holding waypoints, per-waypoint Type, RoutePath, Distance, Duration, ElevationGain, an activity, and **routingPreferences**. In the web app, the RouteDraft is the working state of `routingStore`; for CLI and agent clients it is the same shape passed over the wire to `/v1/draft/recalc` and `/v1/draft/save`. A RouteDraft has a **mode**: `unsaved` (composing fresh; on save becomes a new Route) or `editing(routeId, baseline)` (bound to a saved Route; carries a snapshot of the saved fields and on save PATCHes that Route). The current **activity** is a property of the RouteDraft; the global activity setting is just a default applied when starting a new draft, never overwritten by loading a Route. The same rule applies to **routingPreferences**: per-Activity user defaults are copied onto the draft at creation; from then on they travel with the draft and are persisted on save. A RouteDraft is never persisted on the server side; it lives only in the client that holds it (browser store, CLI invocation, agent context).
+
+**RoutingPreferences**:
+The bundle of inputs that shape how a Route is computed: **SurfaceType**, `avoidFerries`, `avoidHighways` (`avoidHighways` only affects routing for cycle activities). Lives on the **RouteDraft** and on the saved **Route**, never on the User (the User holds *defaults* keyed by **Activity**). Translated to provider-specific costing at the edge by the pure function `valhallaCostingFromPreferences(activity, prefs)` in `@routess/core`. The set is deliberately small and opinionated; provider-specific knobs (`use_tracks`, `walkway_factor`, `use_hills`, etc.) do not appear in this vocabulary.
+_Avoid_: routing profile, routing mode, routing options, route settings.
+
+**Provenance**:
+How a Route came to exist: `valhalla` (computed by the current routing engine), `mapbox-legacy` (computed by the pre-Valhalla engine; has no **RoutingPreferences**), `gpx-import` (no inputs, geometry came from a file), `generation` (produced by a **RouteGeneration**). Immutable after creation. Determines whether "recalculate" is available and whether the Route's **RoutingPreferences** are meaningful.
+_Avoid_: source, origin, type (Type is already taken by Waypoint).
 
 **HistoryManager**:
 The undo/redo stack over RouteDraft mutations. _(Implementation term, included here because the store explicitly models it as a first-class concept.)_
@@ -112,6 +120,8 @@ _Avoid_: API key, access token, bearer token (the term is **PAT** when discussin
 - A **RouteGeneration** produces a **Route** from **RouteType** + **SurfaceType** + **LoopDirection** + target distance, without manual Waypoint placement.
 - A **Route** has exactly one **RouteVisibility** (`private` | `unlisted` | `public`), defaulting from the owning User's preference.
 - A **User** owns zero or more **Routes**, accessed through their **RouteLibrary**.
+- A **User** holds **RoutingPreferences defaults** keyed by **Activity** (`cycle`, `run`, `walk`); these are *copied* onto a new **RouteDraft** at creation, never read again for that draft.
+- A **Route** has its own **RoutingPreferences** (which produced its RoutePath) and a **Provenance** (how it was made). Both are immutable inputs to the Route; `Provenance` never changes after creation.
 - A **RouteDraft** is an in-progress **Route** held in `routingStore`. Its mode is either `unsaved` (will become a new Route on save) or `editing(routeId)` (bound to a saved Route, will PATCH it on save).
 - An **Admin** is a **User** with elevated access; admin status is derived from the `ADMIN_EMAILS` env var at login time, not granted in-app.
 
@@ -134,6 +144,8 @@ _Avoid_: API key, access token, bearer token (the term is **PAT** when discussin
 - **"Loop"** is a **RouteType** value, not a synonym for "cycle" or "ride". A Route's RouteType is either `a-to-b` or `loop`.
 - **"Account" / "Profile"** are not Routess concepts. The domain only has **User**.
 - **"Surface"** is overloaded: **SurfaceType** is a routing *preference* (3 values, an input), **SurfaceBucket** is a per-segment *classification* (4 values, an observation on the resulting RoutePath). Don't conflate them; in conversation, name the specific term.
+- **"Profile" / "routing profile" / "routing mode"**: the legacy `routingPreferencesStore.profile` field (`fast | scenic | safe | flat`) is being retired with the Valhalla migration (#137). These are not domain terms and should not appear in new code or user-facing copy. The replacement is **RoutingPreferences** (a structured object), not a single enum. "Mode" remains on the avoid list (it collides with Waypoint **Type**).
+- **"Profile" in provider terms** (e.g. Mapbox's `cycling` / `walking` / `driving` profile, or Valhalla's `bicycle` / `pedestrian` costing) is an *implementation detail* derived from **Activity**, not a domain concept the user picks directly.
 - **"Metric" / "analytics"** are overloaded across four distinct uses. The **Metrics** section above defines _route metrics_, properties of a Route (Distance, Duration, ElevationGain). Separately the API exposes _operational metrics_ (HTTP request rate, route-generation latency, event loop lag) via Prometheus at `/metrics`. _ProductEvents_ are behavioural events (a user did X at moment T) sent to self-hosted Umami; they are the raw stream from which funnels and retention are derived. The admin API surfaces _business analytics_ (signup counts, top creators, retention) computed from Postgres aggregate queries, **not** from Umami — Postgres is authoritative for per-entity KPIs. In ambiguous conversations, qualify: **route metric**, **operational metric**, **ProductEvent**, or **business analytic**.
 
 ## Product analytics

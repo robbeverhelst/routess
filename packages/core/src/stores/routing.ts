@@ -9,6 +9,7 @@ import {
 	redoStep,
 	undoStep,
 } from "../history";
+import type { RoutingPreferences } from "../routing/types";
 import type { Coordinate, Logger, RouteActivity, RouteVisibility, Waypoint, WaypointType } from "../types";
 
 // ===== STATE & ACTIONS =====
@@ -66,6 +67,11 @@ export interface RouteState {
 	// activity preference (`uiStore`) is only the default for fresh drafts.
 	activity: RouteActivity | undefined;
 
+	// Inputs that produced this draft's RoutePath. Copied from the user's
+	// per-Activity defaults when the draft starts; on save persists with the
+	// Route. Null only for legacy / GPX-imported routes (see ADR-0023).
+	routingPreferences: RoutingPreferences | null;
+
 	history: HistoryStacks<Waypoint[]>;
 	canUndo: boolean;
 	canRedo: boolean;
@@ -97,6 +103,7 @@ export interface RouteActions {
 	setEditingName: (name: string) => void;
 	setBaseline: (baseline: RouteBaseline) => void;
 	setActivity: (activity: RouteActivity | undefined) => void;
+	setRoutingPreferences: (prefs: RoutingPreferences | null) => void;
 
 	saveSnapshot: () => void;
 	undo: () => void;
@@ -122,6 +129,7 @@ const initialState: RouteState = {
 	isMapLocked: false,
 	mode: { kind: "unsaved" },
 	activity: undefined,
+	routingPreferences: null,
 	history: emptyHistory<Waypoint[]>(),
 	canUndo: false,
 	canRedo: false,
@@ -138,6 +146,9 @@ const initialState: RouteState = {
 // v3 adds the RouteDraftMode lifecycle (unsaved | editing) and per-draft
 // activity. Pre-v3 state had no mode/activity, so they default to
 // `unsaved`/`undefined` on migration.
+// v4 adds per-draft routingPreferences (see ADR-0023). Pre-v4 state had no
+// stored prefs, so the draft starts with null and the editor populates from
+// user defaults on next interaction.
 type LegacyPersistedRoute = {
 	waypoints?: Coordinate[];
 	directFlags?: boolean[];
@@ -213,7 +224,7 @@ function createQuotaSafeStorage(logger: Logger) {
 export function createRoutingStore(logger: Logger) {
 	const persistConfig: PersistOptions<RoutingStore, Partial<RouteState>> = {
 		name: "routing-store",
-		version: 3,
+		version: 4,
 		storage: createJSONStorage(() => createQuotaSafeStorage(logger)),
 		migrate: (persisted, version) => {
 			let next = (persisted ?? {}) as Record<string, unknown>;
@@ -247,6 +258,7 @@ export function createRoutingStore(logger: Logger) {
 			isMapLocked: state.isMapLocked,
 			mode: state.mode,
 			activity: state.activity,
+			routingPreferences: state.routingPreferences,
 			history: state.history,
 			canUndo: state.canUndo,
 			canRedo: state.canRedo,
@@ -384,6 +396,10 @@ export function createRoutingStore(logger: Logger) {
 
 				setActivity: (activity) => {
 					set({ activity });
+				},
+
+				setRoutingPreferences: (prefs) => {
+					set({ routingPreferences: prefs });
 				},
 
 				// === HISTORY ===

@@ -1,5 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { ROUTE_ACTIVITIES, ROUTE_VISIBILITIES, type RouteActivity, type RouteVisibility } from "@routess/core";
+import {
+	PROVENANCES,
+	type Provenance,
+	ROUTE_ACTIVITIES,
+	ROUTE_VISIBILITIES,
+	type RouteActivity,
+	type RouteVisibility,
+} from "@routess/core";
+import { RoutingPreferencesDto } from "../../common/routing-preferences.dto";
 import { UserResponseDto } from "../../users/dto/user-response.dto";
 
 class WaypointResponseDto {
@@ -74,6 +82,18 @@ export class RouteResponseDto {
 
 	@ApiPropertyOptional()
 	endAddress?: string;
+
+	@ApiPropertyOptional({
+		description: "Inputs that produced this route's geometry. Null for legacy / GPX-imported routes.",
+		type: RoutingPreferencesDto,
+	})
+	routingPreferences?: RoutingPreferencesDto | null;
+
+	@ApiProperty({
+		description: "How this route was produced.",
+		enum: PROVENANCES,
+	})
+	provenance!: Provenance;
 
 	@ApiProperty({
 		type: UserResponseDto,

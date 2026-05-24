@@ -3,9 +3,9 @@ import { emptyHistory, type Waypoint } from "@routess/core";
 import type { Map as MapboxMap } from "mapbox-gl";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { sampleAndComputeMock, getDirectionsMock } = vi.hoisted(() => ({
+const { sampleAndComputeMock, computeRouteMock } = vi.hoisted(() => ({
 	sampleAndComputeMock: vi.fn(),
-	getDirectionsMock: vi.fn(),
+	computeRouteMock: vi.fn(),
 }));
 
 vi.mock("./elevation", () => ({
@@ -14,8 +14,8 @@ vi.mock("./elevation", () => ({
 	}),
 }));
 
-vi.mock("@/lib/utils/mapbox-api", () => ({
-	getDirections: getDirectionsMock,
+vi.mock("./valhallaClient", () => ({
+	computeRoute: computeRouteMock,
 }));
 
 import { useRoutingStore } from "@/stores/routingStore";
@@ -41,27 +41,25 @@ describe("RouteCalculationService.getRoute — elevation lifecycle", () => {
 			elevationProfile: undefined,
 			isComputingElevation: false,
 			isMapLocked: false,
+			routingPreferences: null,
 			history: emptyHistory<Waypoint[]>(),
 			canUndo: false,
 			canRedo: false,
 		});
 		sampleAndComputeMock.mockReset();
-		getDirectionsMock.mockReset();
+		computeRouteMock.mockReset();
 	});
 
 	afterEach(() => {
 		vi.clearAllMocks();
 	});
 
-	it("delivers ElevationGain to the store even when Mapbox snapped the Waypoints", async () => {
-		// User clicked two points slightly off the road network. Mapbox returns
+	it("delivers ElevationGain to the store even when Valhalla snapped the Waypoints", async () => {
+		// User clicked two points slightly off the road network. Valhalla returns
 		// a route, with snapped waypoint locations that differ from the input.
 		const userClicks: Waypoint[] = [wp([0, 0]), wp([0.01, 0])];
-		const snappedFromMapbox: Coordinate[] = [
-			[0.0001, 0],
-			[0.0099, 0],
-		];
-		const routeGeometry: Coordinate[] = [
+		const snappedFromValhalla: Waypoint[] = [wp([0.0001, 0]), wp([0.0099, 0])];
+		const routePath: Coordinate[] = [
 			[0.0001, 0],
 			[0.005, 0],
 			[0.0099, 0],
@@ -69,13 +67,12 @@ describe("RouteCalculationService.getRoute — elevation lifecycle", () => {
 
 		useRoutingStore.getState().setWaypoints(userClicks);
 
-		getDirectionsMock.mockResolvedValue({
-			success: true,
-			data: {
-				routes: [{ geometry: { coordinates: routeGeometry }, distance: 1100, duration: 600 }],
-				waypoints: snappedFromMapbox.map((c) => ({ location: c })),
-				code: "Ok",
-			},
+		computeRouteMock.mockResolvedValue({
+			ok: true,
+			routePath,
+			distanceKm: 1.1,
+			durationMinutes: 10,
+			snappedWaypoints: snappedFromValhalla,
 		});
 
 		// Hold the elevation result so we can resolve it AFTER the editor
@@ -93,7 +90,7 @@ describe("RouteCalculationService.getRoute — elevation lifecycle", () => {
 		expect(result.snappedWaypoints).toBeDefined();
 
 		// Editor commits the snapped Waypoints to the store, mirroring
-		// RouteDraftEditor.recompute lines 96-98.
+		// RouteDraftEditor.recompute.
 		if (!result.snappedWaypoints) throw new Error("expected snappedWaypoints from getRoute");
 		useRoutingStore.getState().setWaypoints(result.snappedWaypoints);
 
@@ -110,30 +107,18 @@ describe("RouteCalculationService.getRoute — elevation lifecycle", () => {
 	});
 
 	it("still discards elevation if the routePath itself changed mid-sample", async () => {
-		// Inverse case: the staleness guard must still work when a real new
-		// route calculation has overwritten routePath underneath us.
 		const initialClicks: Waypoint[] = [wp([0, 0]), wp([0.01, 0])];
 		useRoutingStore.getState().setWaypoints(initialClicks);
 
-		getDirectionsMock.mockResolvedValue({
-			success: true,
-			data: {
-				routes: [
-					{
-						geometry: {
-							coordinates: [
-								[0, 0],
-								[0.005, 0],
-								[0.01, 0],
-							],
-						},
-						distance: 1100,
-						duration: 600,
-					},
-				],
-				waypoints: [{ location: [0, 0] }, { location: [0.01, 0] }],
-				code: "Ok",
-			},
+		computeRouteMock.mockResolvedValue({
+			ok: true,
+			routePath: [
+				[0, 0],
+				[0.005, 0],
+				[0.01, 0],
+			],
+			distanceKm: 1.1,
+			durationMinutes: 10,
 		});
 
 		let resolveSample!: (value: { gainMeters: number; lossMeters: number; profile: never[] }) => void;
@@ -155,5 +140,28 @@ describe("RouteCalculationService.getRoute — elevation lifecycle", () => {
 		await flushMicrotasks();
 
 		expect(useRoutingStore.getState().elevationGain).toBeUndefined();
+	});
+
+	it("commits the prefs that produced a successful route onto the draft", async () => {
+		useRoutingStore.getState().setWaypoints([wp([0, 0]), wp([0.01, 0])]);
+		useRoutingStore.getState().setActivity("cycle");
+		useRoutingStore.getState().setRoutingPreferences(null);
+
+		computeRouteMock.mockResolvedValue({
+			ok: true,
+			routePath: [
+				[0, 0],
+				[0.01, 0],
+			],
+			distanceKm: 1.1,
+			durationMinutes: 10,
+		});
+		sampleAndComputeMock.mockReturnValue(new Promise(() => {}));
+
+		await getRoute(mapStub, "test-token");
+
+		const after = useRoutingStore.getState();
+		expect(after.routingPreferences).not.toBeNull();
+		expect(after.routingPreferences?.surfacePreference).toBeDefined();
 	});
 });

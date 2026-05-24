@@ -21,6 +21,8 @@ export const useCanUndo = () => useRoutingStore((s) => s.canUndo);
 export const useCanRedo = () => useRoutingStore((s) => s.canRedo);
 export const useDraftMode = () => useRoutingStore((s) => s.mode);
 export const useDraftActivity = () => useRoutingStore((s) => s.activity);
+export const useDraftRoutingPreferences = () => useRoutingStore((s) => s.routingPreferences);
+export const useSetRoutingPreferences = () => useRoutingStore((s) => s.setRoutingPreferences);
 
 // Display-formatted selectors derived from canonical numeric state. Consumers
 // that need raw numbers use useDistanceMeters/useDurationSeconds instead.

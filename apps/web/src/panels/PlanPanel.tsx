@@ -14,6 +14,7 @@ import {
 	useDistanceMeters,
 	useDraftActivity,
 	useDraftMode,
+	useDraftRoutingPreferences,
 	useDurationSeconds,
 	useElevationGain,
 	useElevationProfile,
@@ -38,6 +39,7 @@ import { EditableLabel } from "../components/EditableLabel";
 import { I } from "../components/icons";
 import { Btn, IconBtn, Kbd, RDS_COLORS, SecTitle } from "../components/primitives";
 import { RouteProfileChart } from "../components/RouteProfileChart";
+import { SurfaceMismatchBadge } from "../components/SurfaceMismatchBadge";
 
 // Parses durations produced by @routess/core formatDuration: "X min", "X h", or "X.X h"
 // (with optional " (estimated)" / " (offline)" suffix). Returns minutes or null.
@@ -62,14 +64,17 @@ function PlanRouteProfileChart() {
 	const isComputing = useIsComputingElevation();
 	const hasRoute = useHasRoute();
 	const { breakdown, loading: surfaceLoading } = useSurfaceBreakdown();
+	const draftPrefs = useDraftRoutingPreferences();
 	return (
-		<RouteProfileChart
-			profile={profile}
-			breakdown={breakdown}
-			elevationLoading={hasRoute && isComputing}
-			surfaceLoading={surfaceLoading}
-			style={{ marginTop: 14 }}
-		/>
+		<div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+			<SurfaceMismatchBadge breakdown={breakdown} preference={draftPrefs?.surfacePreference ?? null} />
+			<RouteProfileChart
+				profile={profile}
+				breakdown={breakdown}
+				elevationLoading={hasRoute && isComputing}
+				surfaceLoading={surfaceLoading}
+			/>
+		</div>
 	);
 }
 
@@ -116,6 +121,7 @@ export function PlanPanel() {
 	const distanceMeters = useDistanceMeters();
 	const durationSeconds = useDurationSeconds();
 	const elevationGain = useElevationGain();
+	const draftRoutingPreferences = useDraftRoutingPreferences();
 	const isComputingElevation = useIsComputingElevation();
 	const { formatElevationParts, units } = useUnits();
 	const saveRoute = useSaveRoute();
@@ -168,6 +174,7 @@ export function PlanPanel() {
 					distance: distanceMeters ?? 0,
 					duration: durationSeconds ?? undefined,
 					elevationGain: elevationGain != null ? Math.round(elevationGain) : 0,
+					...(draftRoutingPreferences ? { routingPreferences: draftRoutingPreferences } : {}),
 				},
 			},
 			{
@@ -204,6 +211,7 @@ export function PlanPanel() {
 				distance: distanceMeters ?? 0,
 				duration: durationSeconds ?? undefined,
 				elevationGain: elevationGain != null ? Math.round(elevationGain) : 0,
+				...(draftRoutingPreferences ? { routingPreferences: draftRoutingPreferences } : {}),
 			},
 			{
 				onSuccess: (newRoute) => {

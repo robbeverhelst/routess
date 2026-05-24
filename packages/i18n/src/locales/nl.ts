@@ -1081,4 +1081,15 @@ export const nl: Record<string, string> = {
 	"routing.appliedTitle": "Routevoorkeuren toegepast",
 	"routing.appliedBody": "Nieuwe routes en herberekeningen gebruiken deze instellingen.",
 	"routing.restoreDefaults": "Standaarden herstellen: {profile}",
+	"routing.surface.label": "Ondergrondvoorkeur",
+	"routing.surface.hint": "Stuur de route richting dit type ondergrond",
+	"routing.surface.paved": "Verhard",
+	"routing.surface.mixed": "Gemengd",
+	"routing.surface.unpaved": "Onverhard",
+	"routing.surface.mismatchTitle": "Deze route past niet bij je '{pref}'-voorkeur",
+	"routing.surface.mismatchBody":
+		"{pct}% van de route ligt op een ondergrond die niet past. Pas je voorkeuren aan of verplaats waypoints.",
+	"routing.ferries.label": "Veerboten vermijden",
+	"routing.ferries.hint": "Sla routes over die via een veerboot het water oversteken",
+	"route.provenance.mapboxLegacy": "Oorspronkelijk gepland met een vorige routeringsengine",
 };
