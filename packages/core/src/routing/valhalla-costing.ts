@@ -1,10 +1,9 @@
 import type { RouteActivity } from "../types";
-import type { BikeType, HillPreference, RoutingPreferences, SurfaceType } from "./types";
+import type { HillPreference, RoutingPreferences, SurfaceType } from "./types";
 
 export type ValhallaCostingModel = "bicycle" | "pedestrian";
 
 export interface ValhallaBicycleOptions {
-	bicycle_type: "Road" | "Hybrid" | "Cross" | "Mountain";
 	use_hills: number;
 	use_ferry: number;
 	use_roads: number;
@@ -52,22 +51,15 @@ const SURFACE_USE_TRACKS_PED: Record<SurfaceType, number> = {
 	unpaved: 1.0,
 };
 
-const BIKE_TYPE_TO_VALHALLA: Record<BikeType, ValhallaBicycleOptions["bicycle_type"]> = {
-	road: "Road",
-	hybrid: "Hybrid",
-	gravel: "Cross",
-	mountain: "Mountain",
-};
-
 export function valhallaCostingFromPreferences(
 	activity: RouteActivity,
 	prefs: RoutingPreferences,
 	options?: { walkingSpeedMps?: number },
 ): ValhallaCostingRequest {
 	if (activity === "cycle") {
-		const bikeType = prefs.bikeType ?? "hybrid";
+		// Valhalla defaults bicycle_type to Hybrid when omitted; that's fine for
+		// our small vocabulary which doesn't model bike type.
 		const bicycle: ValhallaBicycleOptions = {
-			bicycle_type: BIKE_TYPE_TO_VALHALLA[bikeType],
 			use_hills: HILL_USE[prefs.hillPreference],
 			use_ferry: prefs.avoidFerries ? 0.0 : 0.5,
 			use_roads: prefs.avoidHighways ? 0.2 : 0.5,

@@ -36,10 +36,6 @@ _Avoid_: terrain, surface preference.
 Per-segment *classification* (an observation): `paved`, `compacted`, `unpaved`, or `path`. The result of analysing the actual RoutePath's edges (via Valhalla `trace_attributes`). Used to render surface composition along the route. Distinct from **SurfaceType** (which is what the user asked for, not what the route turned out to be).
 _Avoid_: surface, surface kind.
 
-**BikeType**:
-The kind of bicycle a user is on: `road`, `hybrid`, `gravel`, or `mountain`. A property of a **RoutingPreferences** when the Activity is `cycle`. Materially affects routing (a `road` bike refuses tracks a `mountain` bike welcomes) and is translated into Valhalla's `bicycle_type` + `avoid_bad_surfaces` costing options. Never present when Activity is `run` or `walk`.
-_Avoid_: bike, cycle type, vehicle.
-
 **HillPreference**:
 User's tolerance for elevation gain: `flat`, `mixed`, or `hilly`. A property of **RoutingPreferences** for all activities. Translated to Valhalla's `use_hills` costing value at the edge. `mixed` is permissive (a flat route still satisfies `mixed`).
 _Avoid_: elevation preference, climbing preference, hilliness.
@@ -76,7 +72,7 @@ Compass direction (0 to 360°) of a Waypoint or segment. Used by GPX import for 
 A Route-in-progress: a document holding waypoints, per-waypoint Type, RoutePath, Distance, Duration, ElevationGain, an activity, and **routingPreferences**. In the web app, the RouteDraft is the working state of `routingStore`; for CLI and agent clients it is the same shape passed over the wire to `/v1/draft/recalc` and `/v1/draft/save`. A RouteDraft has a **mode**: `unsaved` (composing fresh; on save becomes a new Route) or `editing(routeId, baseline)` (bound to a saved Route; carries a snapshot of the saved fields and on save PATCHes that Route). The current **activity** is a property of the RouteDraft; the global activity setting is just a default applied when starting a new draft, never overwritten by loading a Route. The same rule applies to **routingPreferences**: per-Activity user defaults are copied onto the draft at creation; from then on they travel with the draft and are persisted on save. A RouteDraft is never persisted on the server side; it lives only in the client that holds it (browser store, CLI invocation, agent context).
 
 **RoutingPreferences**:
-The bundle of inputs that shape how a Route is computed: **SurfaceType**, **HillPreference**, **BikeType** (cycle only), `avoidFerries`, `avoidHighways`. Lives on the **RouteDraft** and on the saved **Route**, never on the User (the User holds *defaults* keyed by **Activity**). Translated to provider-specific costing at the edge by the pure function `valhallaCostingFromPreferences(activity, prefs)` in `@routess/core`. The set is deliberately small and opinionated; provider-specific knobs (`use_tracks`, `walkway_factor`, etc.) do not appear in this vocabulary.
+The bundle of inputs that shape how a Route is computed: **SurfaceType**, **HillPreference**, `avoidFerries`, `avoidHighways` (`avoidHighways` only affects routing for cycle activities). Lives on the **RouteDraft** and on the saved **Route**, never on the User (the User holds *defaults* keyed by **Activity**). Translated to provider-specific costing at the edge by the pure function `valhallaCostingFromPreferences(activity, prefs)` in `@routess/core`. The set is deliberately small and opinionated; provider-specific knobs (`use_tracks`, `walkway_factor`, etc.) do not appear in this vocabulary.
 _Avoid_: routing profile, routing mode, routing options, route settings.
 
 **Provenance**:

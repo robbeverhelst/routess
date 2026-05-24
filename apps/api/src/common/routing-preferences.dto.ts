@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { BIKE_TYPES, HILL_PREFERENCES, SURFACE_TYPES } from "@routess/core";
+import { HILL_PREFERENCES, SURFACE_TYPES } from "@routess/core";
 import { IsBoolean, IsIn, IsOptional } from "class-validator";
 
 export class RoutingPreferencesDto {
@@ -18,11 +18,6 @@ export class RoutingPreferencesDto {
 	@ApiProperty({ example: true })
 	@IsBoolean()
 	avoidHighways!: boolean;
-
-	@ApiPropertyOptional({ enum: BIKE_TYPES, example: "hybrid" })
-	@IsOptional()
-	@IsIn(BIKE_TYPES)
-	bikeType?: (typeof BIKE_TYPES)[number];
 }
 
 export class UpdateRoutingPreferencesDto {
@@ -45,11 +40,6 @@ export class UpdateRoutingPreferencesDto {
 	@IsOptional()
 	@IsBoolean()
 	avoidHighways?: boolean;
-
-	@ApiPropertyOptional({ enum: BIKE_TYPES })
-	@IsOptional()
-	@IsIn(BIKE_TYPES)
-	bikeType?: (typeof BIKE_TYPES)[number];
 }
 
 export class RoutingDefaultsDto {

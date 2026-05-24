@@ -18,16 +18,10 @@ describe("defaultPreferencesForActivity", () => {
 		expect(b.surfacePreference).toBe("mixed");
 	});
 
-	it("includes bikeType for cycle", () => {
-		expect(defaultPreferencesForActivity("cycle").bikeType).toBe("hybrid");
-	});
-
-	it("omits bikeType for run", () => {
-		expect(defaultPreferencesForActivity("run").bikeType).toBeUndefined();
-	});
-
-	it("omits bikeType for walk", () => {
-		expect(defaultPreferencesForActivity("walk").bikeType).toBeUndefined();
+	it("has the same shape across activities", () => {
+		expect(Object.keys(defaultPreferencesForActivity("cycle")).sort()).toEqual(
+			Object.keys(defaultPreferencesForActivity("run")).sort(),
+		);
 	});
 });
 
@@ -45,23 +39,6 @@ describe("normalizeRoutingPreferences", () => {
 		});
 		expect(result.surfacePreference).toBe("mixed");
 		expect(result.hillPreference).toBe("mixed");
-	});
-
-	it("strips bikeType on non-cycle activities", () => {
-		const result = normalizeRoutingPreferences("run", { bikeType: "road" });
-		expect(result.bikeType).toBeUndefined();
-	});
-
-	it("preserves bikeType on cycle", () => {
-		const result = normalizeRoutingPreferences("cycle", { bikeType: "mountain" });
-		expect(result.bikeType).toBe("mountain");
-	});
-
-	it("rejects invalid bikeType and falls back to default", () => {
-		const result = normalizeRoutingPreferences("cycle", {
-			bikeType: "tandem" as unknown as RoutingPreferences["bikeType"],
-		});
-		expect(result.bikeType).toBe("hybrid");
 	});
 
 	it("rejects non-boolean avoidFerries/avoidHighways", () => {
@@ -91,7 +68,7 @@ describe("mergeRoutingDefaults", () => {
 		const result = mergeRoutingDefaults(current, { cycle: { surfacePreference: "unpaved" } });
 		expect(result.cycle.surfacePreference).toBe("unpaved");
 		// Other cycle fields preserved
-		expect(result.cycle.bikeType).toBe("hybrid");
+		expect(result.cycle.hillPreference).toBe(DEFAULT_CYCLE_PREFERENCES.hillPreference);
 		// Other activities untouched
 		expect(result.run).toEqual(DEFAULT_ROUTING_DEFAULTS.run);
 	});

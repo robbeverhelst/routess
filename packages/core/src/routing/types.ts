@@ -9,9 +9,6 @@ export type SurfaceBucket = (typeof SURFACE_BUCKETS)[number];
 export const HILL_PREFERENCES = ["flat", "mixed", "hilly"] as const;
 export type HillPreference = (typeof HILL_PREFERENCES)[number];
 
-export const BIKE_TYPES = ["road", "hybrid", "gravel", "mountain"] as const;
-export type BikeType = (typeof BIKE_TYPES)[number];
-
 export const PROVENANCES = ["valhalla", "mapbox-legacy", "gpx-import", "generation"] as const;
 export type Provenance = (typeof PROVENANCES)[number];
 
@@ -20,7 +17,6 @@ export interface RoutingPreferences {
 	hillPreference: HillPreference;
 	avoidFerries: boolean;
 	avoidHighways: boolean;
-	bikeType?: BikeType;
 }
 
 export type RoutingDefaults = Record<RouteActivity, RoutingPreferences>;
@@ -35,10 +31,6 @@ export function isSurfaceBucket(value: unknown): value is SurfaceBucket {
 
 export function isHillPreference(value: unknown): value is HillPreference {
 	return HILL_PREFERENCES.includes(value as HillPreference);
-}
-
-export function isBikeType(value: unknown): value is BikeType {
-	return BIKE_TYPES.includes(value as BikeType);
 }
 
 export function isProvenance(value: unknown): value is Provenance {

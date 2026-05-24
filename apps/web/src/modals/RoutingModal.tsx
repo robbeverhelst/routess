@@ -1,5 +1,4 @@
 import {
-	type BikeType,
 	defaultPreferencesForActivity,
 	type HillPreference,
 	type RouteActivity,
@@ -28,13 +27,6 @@ const HILL_OPTIONS: { key: HillPreference; labelKey: string }[] = [
 	{ key: "flat", labelKey: "routing.hill.flat" },
 	{ key: "mixed", labelKey: "routing.hill.mixed" },
 	{ key: "hilly", labelKey: "routing.hill.hilly" },
-];
-
-const BIKE_OPTIONS: { key: BikeType; labelKey: string }[] = [
-	{ key: "road", labelKey: "routing.bike.road" },
-	{ key: "hybrid", labelKey: "routing.bike.hybrid" },
-	{ key: "gravel", labelKey: "routing.bike.gravel" },
-	{ key: "mountain", labelKey: "routing.bike.mountain" },
 ];
 
 function Segmented<T extends string>({
@@ -215,17 +207,6 @@ export function RoutingModal() {
 					t={t}
 				/>
 			</FieldRow>
-
-			{activity === "cycle" && (
-				<FieldRow icon={I.bike} label={t("routing.bike.label")} hint={t("routing.bike.hint")}>
-					<Segmented<BikeType>
-						options={BIKE_OPTIONS}
-						value={pending.bikeType ?? "hybrid"}
-						onChange={(v) => update({ bikeType: v })}
-						t={t}
-					/>
-				</FieldRow>
-			)}
 
 			{activity === "cycle" && (
 				<div

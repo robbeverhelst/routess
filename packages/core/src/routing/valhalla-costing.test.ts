@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { DEFAULT_CYCLE_PREFERENCES, DEFAULT_RUN_PREFERENCES, DEFAULT_WALK_PREFERENCES } from "./preferences";
-import type { BikeType, HillPreference, RoutingPreferences, SurfaceType } from "./types";
+import type { HillPreference, SurfaceType } from "./types";
 import { valhallaCostingFromPreferences, valhallaCostingModelForActivity } from "./valhalla-costing";
 
 describe("valhallaCostingModelForActivity", () => {
@@ -16,39 +16,16 @@ describe("valhallaCostingModelForActivity", () => {
 });
 
 describe("valhallaCostingFromPreferences — cycle", () => {
-	it("translates default cycle prefs to bicycle costing with Hybrid bike", () => {
+	it("translates default cycle prefs to bicycle costing", () => {
 		const req = valhallaCostingFromPreferences("cycle", DEFAULT_CYCLE_PREFERENCES);
 		expect(req.costing).toBe("bicycle");
 		expect("bicycle" in req.costing_options).toBe(true);
-		const b = (req.costing_options as { bicycle: { bicycle_type: string } }).bicycle;
-		expect(b.bicycle_type).toBe("Hybrid");
 	});
 
-	it("maps every BikeType to a distinct Valhalla bicycle_type", () => {
-		const map: Record<BikeType, string> = {
-			road: "Road",
-			hybrid: "Hybrid",
-			gravel: "Cross",
-			mountain: "Mountain",
-		};
-		for (const [bike, expected] of Object.entries(map) as [BikeType, string][]) {
-			const prefs: RoutingPreferences = { ...DEFAULT_CYCLE_PREFERENCES, bikeType: bike };
-			const req = valhallaCostingFromPreferences("cycle", prefs);
-			const b = (req.costing_options as { bicycle: { bicycle_type: string } }).bicycle;
-			expect(b.bicycle_type).toBe(expected);
-		}
-	});
-
-	it("defaults bikeType to Hybrid when prefs lack it", () => {
-		const prefs: RoutingPreferences = {
-			surfacePreference: "mixed",
-			hillPreference: "mixed",
-			avoidFerries: true,
-			avoidHighways: true,
-		};
-		const req = valhallaCostingFromPreferences("cycle", prefs);
-		const b = (req.costing_options as { bicycle: { bicycle_type: string } }).bicycle;
-		expect(b.bicycle_type).toBe("Hybrid");
+	it("does not send a bicycle_type (Valhalla defaults it to Hybrid)", () => {
+		const req = valhallaCostingFromPreferences("cycle", DEFAULT_CYCLE_PREFERENCES);
+		const b = (req.costing_options as { bicycle: Record<string, unknown> }).bicycle;
+		expect("bicycle_type" in b).toBe(false);
 	});
 
 	it("orders use_hills monotonically: flat < mixed < hilly", () => {
@@ -111,7 +88,7 @@ describe("valhallaCostingFromPreferences — pedestrian", () => {
 		expect(req.costing).toBe("pedestrian");
 	});
 
-	it("does not include bicycle_type for pedestrian costing", () => {
+	it("does not include bicycle options for pedestrian costing", () => {
 		const req = valhallaCostingFromPreferences("walk", DEFAULT_WALK_PREFERENCES);
 		expect("bicycle" in req.costing_options).toBe(false);
 	});
