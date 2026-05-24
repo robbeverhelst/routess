@@ -9,6 +9,7 @@ import { useModalsStore } from "@/stores/modalsStore";
 import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 import {
 	useDistanceMeters,
+	useDraftRoutingPreferences,
 	useDurationSeconds,
 	useElevationGain,
 	useRouteDistance,
@@ -42,6 +43,7 @@ export function SaveModal() {
 	const distanceMeters = useDistanceMeters();
 	const durationSeconds = useDurationSeconds();
 	const elevationGain = useElevationGain();
+	const draftRoutingPreferences = useDraftRoutingPreferences();
 	const { activityType, setActivityType } = useUiStore();
 	const selectedSports = useRedesignSettingsStore((s) => s.selectedSports);
 	const saveRoute = useSaveRoute();
@@ -84,6 +86,7 @@ export function SaveModal() {
 				distance: distanceMeters ?? 0,
 				duration: durationSeconds ?? undefined,
 				elevationGain: elevationGain != null ? Math.round(elevationGain) : 0,
+				...(draftRoutingPreferences ? { routingPreferences: draftRoutingPreferences } : {}),
 			},
 			{
 				onSuccess: (created) => {

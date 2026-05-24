@@ -121,6 +121,7 @@ export function PlanPanel() {
 	const distanceMeters = useDistanceMeters();
 	const durationSeconds = useDurationSeconds();
 	const elevationGain = useElevationGain();
+	const draftRoutingPreferences = useDraftRoutingPreferences();
 	const isComputingElevation = useIsComputingElevation();
 	const { formatElevationParts, units } = useUnits();
 	const saveRoute = useSaveRoute();
@@ -173,6 +174,7 @@ export function PlanPanel() {
 					distance: distanceMeters ?? 0,
 					duration: durationSeconds ?? undefined,
 					elevationGain: elevationGain != null ? Math.round(elevationGain) : 0,
+					...(draftRoutingPreferences ? { routingPreferences: draftRoutingPreferences } : {}),
 				},
 			},
 			{
@@ -209,6 +211,7 @@ export function PlanPanel() {
 				distance: distanceMeters ?? 0,
 				duration: durationSeconds ?? undefined,
 				elevationGain: elevationGain != null ? Math.round(elevationGain) : 0,
+				...(draftRoutingPreferences ? { routingPreferences: draftRoutingPreferences } : {}),
 			},
 			{
 				onSuccess: (newRoute) => {

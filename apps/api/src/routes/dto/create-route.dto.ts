@@ -231,7 +231,8 @@ export class CreateRouteDto {
 	endAddress?: string;
 
 	@ApiPropertyOptional({
-		description: "Inputs that produced this route's geometry. Required when provenance='valhalla'.",
+		description:
+			"Inputs that produced this route's geometry. Optional: routes saved from clients without this metadata (e.g. legacy clients, GPX imports, agents that didn't capture the prefs) are persisted with `routingPreferences = null` and remain usable but cannot be recalculated against their original inputs.",
 		type: RoutingPreferencesDto,
 	})
 	@IsOptional()

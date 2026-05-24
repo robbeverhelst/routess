@@ -196,6 +196,8 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 				distance: route.distance,
 				duration: route.duration,
 				elevationGain: route.elevationGain,
+				provenance: route.provenance,
+				...(route.routingPreferences ? { routingPreferences: route.routingPreferences } : {}),
 			},
 			{
 				onSuccess: (newRoute) => {

@@ -29,7 +29,7 @@ export class RoutingController {
 	@ApiOperation({
 		summary: "Compute a route through ordered locations with structured preferences",
 		description:
-			"Forwards locations + RoutingPreferences to the self-hosted Valhalla `/route` endpoint. The API owns the translation from Routess preferences (SurfaceType, HillPreference, BikeType, avoidFerries, avoidHighways) to Valhalla costing options, so the browser never sees provider-specific knobs.",
+			"Forwards locations + RoutingPreferences to the self-hosted Valhalla `/route` endpoint. The API owns the translation from Routess preferences (SurfaceType, avoidFerries, avoidHighways) to Valhalla costing options, so the browser never sees provider-specific knobs.",
 	})
 	@ApiBody({ type: RouteRequestDto })
 	@ApiResponse({ status: 200, description: "Route legs and snapped locations", type: RouteResponseDto })

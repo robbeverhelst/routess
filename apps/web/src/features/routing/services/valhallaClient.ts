@@ -84,12 +84,21 @@ function decodePolyline6(encoded: string): Coordinate[] {
 	return coords;
 }
 
+// `kind` lets the caller distinguish a routing failure (API replied that no
+// path exists, or a true upstream error) from a transport failure (browser
+// couldn't reach the API at all). Per ADR-0014 routing failures bubble up; only
+// transport failures qualify for the direct-line offline fallback.
+type CallApiRouteResult =
+	| { ok: true; data: ApiRouteResponse }
+	| { ok: false; kind: "routing"; error: string }
+	| { ok: false; kind: "transport"; error: string };
+
 async function callApiRoute(
 	coords: Coordinate[],
 	activity: RouteActivity,
 	prefs: RoutingPreferences,
 	options: ComputeRouteOptions,
-): Promise<{ ok: true; data: ApiRouteResponse } | { ok: false; error: string }> {
+): Promise<CallApiRouteResult> {
 	const body = {
 		activity,
 		preferences: prefs,
@@ -108,17 +117,21 @@ async function callApiRoute(
 		});
 	} catch (err) {
 		if ((err as Error).name === "AbortError") throw err;
-		return { ok: false, error: (err as Error).message };
+		return { ok: false, kind: "transport", error: (err as Error).message };
 	}
 
 	if (!response.ok) {
 		const text = await response.text().catch(() => "");
-		return { ok: false, error: `routing API ${response.status}${text ? `: ${text}` : ""}` };
+		return {
+			ok: false,
+			kind: "routing",
+			error: `routing API ${response.status}${text ? `: ${text}` : ""}`,
+		};
 	}
 
 	const data = (await response.json()) as ApiRouteResponse;
 	if (!data.legs?.length) {
-		return { ok: false, error: "API returned no legs" };
+		return { ok: false, kind: "routing", error: "API returned no legs" };
 	}
 	return { ok: true, data };
 }
@@ -274,7 +287,11 @@ export async function computeRoute(
 		return computeMixedRoute(waypoints, activity, prefs, options);
 	}
 
-	// all-routed: single API call.
+	// all-routed: single API call. Routing failures (API replied 4xx/5xx, or
+	// returned no path) bubble up as errors per ADR-0014, matching the mixed
+	// behaviour. Only transport failures (browser couldn't reach the API at
+	// all) fall back to a direct line so the UI still has something to render
+	// while offline.
 	try {
 		const result = await callApiRoute(
 			waypoints.map((wp) => wp.coord),
@@ -283,10 +300,14 @@ export async function computeRoute(
 			options,
 		);
 		if (!result.ok) {
-			// Offline fallback: build a direct-line route so the user has something
-			// to look at if the API is unreachable. Marked offline so the UI can
-			// indicate the route is unsnapped.
-			Logger.warn("[ValhallaClient] Route failed:", result.error);
+			if (result.kind === "routing") {
+				return {
+					ok: false,
+					error: result.error,
+					failedSegment: { from: 0, to: waypoints.length - 1 },
+				};
+			}
+			Logger.warn("[ValhallaClient] Transport failure, falling back to direct routes:", result.error);
 			const { routePath, distanceKm } = buildAllDirect(waypoints);
 			return {
 				ok: true,
@@ -309,7 +330,7 @@ export async function computeRoute(
 		};
 	} catch (err) {
 		if ((err as Error).name === "AbortError") throw err;
-		Logger.warn("[ValhallaClient] Network error, falling back to direct routes:", err);
+		Logger.warn("[ValhallaClient] Unexpected error, falling back to direct routes:", err);
 		const { routePath, distanceKm } = buildAllDirect(waypoints);
 		return {
 			ok: true,
