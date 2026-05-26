@@ -17,6 +17,10 @@ interface MapToolbarProps {
 	onZoomIn?: () => void;
 	onZoomOut?: () => void;
 	hasRoute?: boolean;
+	// True when there is anything to clear — at least one waypoint, even if
+	// the route polyline hasn't been computed yet (a single Start counts).
+	// Defaults to hasRoute for backwards-compat at call sites that don't pass it.
+	canRemoveRoute?: boolean;
 	isLocked?: boolean;
 	isMobile?: boolean;
 }
@@ -42,6 +46,7 @@ function Group({ children, vertical }: { children: ReactNode; vertical?: boolean
 
 export function MapToolbar(props: MapToolbarProps) {
 	const t = useT();
+	const canRemoveRoute = props.canRemoveRoute ?? props.hasRoute;
 	if (props.isMobile) {
 		const btnStyle: CSSProperties = { width: 40, height: 40 };
 		return (
@@ -88,7 +93,7 @@ export function MapToolbar(props: MapToolbarProps) {
 						<I.minus size={18} />
 					</IconBtn>
 				</Group>
-				{(props.canUndo || props.canRedo || props.hasRoute) && (
+				{(props.canUndo || props.canRedo || canRemoveRoute) && (
 					<Group vertical>
 						<IconBtn title={t("toolbar.undo")} onClick={props.onUndo} disabled={!props.canUndo} style={btnStyle}>
 							<I.undo size={18} />
@@ -99,7 +104,7 @@ export function MapToolbar(props: MapToolbarProps) {
 						<IconBtn
 							title={t("toolbar.removeRoute")}
 							onClick={props.onRemoveRoute}
-							disabled={!props.hasRoute}
+							disabled={!canRemoveRoute}
 							style={btnStyle}
 						>
 							<I.trash size={18} />
@@ -140,7 +145,7 @@ export function MapToolbar(props: MapToolbarProps) {
 				<IconBtn title={t("toolbar.redo")} onClick={props.onRedo} disabled={!props.canRedo}>
 					<I.redo size={16} />
 				</IconBtn>
-				<IconBtn title={t("toolbar.removeRoute")} onClick={props.onRemoveRoute} disabled={!props.hasRoute}>
+				<IconBtn title={t("toolbar.removeRoute")} onClick={props.onRemoveRoute} disabled={!canRemoveRoute}>
 					<I.trash size={16} />
 				</IconBtn>
 			</Group>

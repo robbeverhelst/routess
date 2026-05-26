@@ -112,40 +112,42 @@ export const UserLocationProvider: React.FC<UserLocationProviderProps> = ({
 
 	// Combined handler for the locate button that handles both locating and tracking
 	const handleLocateButtonClick = useCallback(async () => {
+		// Optimistic pre-fly: if we already have a usable location (current
+		// or last-known) move the camera immediately so the button feels
+		// responsive. A fresh GPS fix can take several seconds on desktop
+		// and indoors, and the previous `maximumAge: 0` forced that wait on
+		// every click. We still request a fresh fix below to correct the
+		// position once it arrives.
+		const optimistic = userLocation ?? (hasLastKnownLocation ? getLastKnownLocation() : null);
+		let didPreFly = false;
+		if (optimistic && mapRef.current) {
+			mapRef.current.flyTo({ center: optimistic, zoom: 15 });
+			didPreFly = true;
+		}
+
 		try {
-			// Always try to get a fresh location first - this will trigger permission request if needed
 			Logger.info("[UserLocationProvider] Requesting fresh location...");
 			const freshLocation = await getCurrentLocation({
 				enableHighAccuracy: true,
-				timeout: 10000,
-				maximumAge: 0, // Force fresh reading
+				timeout: 8000,
+				// Accept a cached fix up to 30s old — plenty fresh for
+				// "where am I right now" and lets the browser skip a
+				// full GPS reacquire when it already has one.
+				maximumAge: 30000,
 			});
 
-			// Center on the fresh location if we got one
 			if (freshLocation.location && mapRef.current) {
 				mapRef.current.flyTo({ center: freshLocation.location, zoom: 17 });
 				Logger.info("[UserLocationProvider] Centered on fresh location:", freshLocation.location);
 			}
 
-			// If we have a route and we're not tracking yet, start tracking
 			if (hasRoute && !isLocationTracking) {
 				Logger.info("[UserLocationProvider] Starting location tracking after successful locate");
 				startLocationTracking();
 			}
 		} catch (error) {
 			Logger.warn("[UserLocationProvider] Failed to get fresh location:", error);
-
-			// Fall back to trying existing location or last known
-			if (hasCurrentLocation && userLocation && mapRef.current) {
-				mapRef.current.flyTo({ center: userLocation, zoom: 17 });
-				Logger.info("[UserLocationProvider] Centered on current location");
-			} else if (hasLastKnownLocation) {
-				const lastKnown = getLastKnownLocation();
-				if (lastKnown && mapRef.current) {
-					mapRef.current.flyTo({ center: lastKnown, zoom: 15 });
-					Logger.info("[UserLocationProvider] Centered on last known location");
-				}
-			} else {
+			if (!didPreFly) {
 				Logger.info("[UserLocationProvider] No location available to center on");
 			}
 		}
@@ -155,7 +157,6 @@ export const UserLocationProvider: React.FC<UserLocationProviderProps> = ({
 		hasRoute,
 		isLocationTracking,
 		startLocationTracking,
-		hasCurrentLocation,
 		userLocation,
 		hasLastKnownLocation,
 		getLastKnownLocation,
