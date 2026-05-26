@@ -136,31 +136,41 @@ async function callApiRoute(
 	return { ok: true, data };
 }
 
-function combineLegs(legs: ApiRouteLeg[]): { path: Coordinate[]; distanceKm: number; durationMinutes: number } {
+function combineLegs(legs: ApiRouteLeg[]): {
+	path: Coordinate[];
+	legShapes: Coordinate[][];
+	distanceKm: number;
+	durationMinutes: number;
+} {
 	const path: Coordinate[] = [];
+	const legShapes: Coordinate[][] = [];
 	let distanceKm = 0;
 	let durationSeconds = 0;
 	for (const leg of legs) {
 		const shape = decodePolyline6(leg.shape);
+		legShapes.push(shape);
 		distanceKm += leg.summary.length;
 		durationSeconds += leg.summary.time;
 		if (shape.length === 0) continue;
 		if (path.length === 0) path.push(...shape);
 		else path.push(...shape.slice(1));
 	}
-	return { path, distanceKm, durationMinutes: Math.round(durationSeconds / 60) };
+	return { path, legShapes, distanceKm, durationMinutes: Math.round(durationSeconds / 60) };
 }
 
-function snappedFromLocations(
-	waypoints: Waypoint[],
-	locations: ApiRouteLocation[] | undefined,
-): Waypoint[] | undefined {
-	if (!locations || locations.length !== waypoints.length) return undefined;
+// Valhalla's `trip.locations` echoes the request input verbatim (only side_of_street
+// and original_index are added), so it is NOT a source of snapped coordinates. The
+// snapped position of waypoint i is the boundary of its adjacent leg shape: the
+// start of leg i for the first waypoint, and the end of leg i-1 for every later
+// waypoint. `direct` waypoints stay where the user dropped them.
+function snappedFromLegShapes(waypoints: Waypoint[], legShapes: Coordinate[][]): Waypoint[] | undefined {
+	if (legShapes.length !== waypoints.length - 1) return undefined;
 	let changed = false;
 	const next = waypoints.map((wp, i) => {
 		if (wp.type === "direct") return { ...wp };
-		const loc = locations[i];
-		const snapped: Coordinate = [loc.lon, loc.lat];
+		const shape = i === 0 ? legShapes[0] : legShapes[i - 1];
+		if (!shape || shape.length === 0) return { ...wp };
+		const snapped: Coordinate = i === 0 ? shape[0] : shape[shape.length - 1];
 		if (!sameCoord(wp.coord, snapped)) {
 			changed = true;
 			return { ...wp, coord: snapped };
@@ -229,17 +239,20 @@ async function computeMixedRoute(
 			return { ok: false, error: result.error, failedSegment: { from: i, to: i + 1 } };
 		}
 
-		const { path, distanceKm, durationMinutes } = combineLegs(result.data.legs);
+		const { path, legShapes, distanceKm, durationMinutes } = combineLegs(result.data.legs);
 		totalDistKm += distanceKm;
 		totalDurationSeconds += durationMinutes * 60;
 
 		if (coordsAccum.length === 0) coordsAccum.push(...path);
 		else if (path.length > 0) coordsAccum.push(...path.slice(1));
 
-		const locs = result.data.locations;
-		if (options.snap !== false && locs && locs.length === 2) {
-			const snappedFrom: Coordinate = [locs[0].lon, locs[0].lat];
-			const snappedTo: Coordinate = [locs[1].lon, locs[1].lat];
+		// Snap from the segment's polyline boundaries (Valhalla's trip.locations
+		// echoes the request input, so it can't be the snap source).
+		const firstShape = legShapes[0];
+		const lastShape = legShapes[legShapes.length - 1];
+		if (options.snap !== false && firstShape?.length && lastShape?.length) {
+			const snappedFrom = firstShape[0];
+			const snappedTo = lastShape[lastShape.length - 1];
 			if (working[i].type !== "direct" && !sameCoord(working[i].coord, snappedFrom)) {
 				working[i] = { ...working[i], coord: snappedFrom };
 				modified = true;
@@ -318,8 +331,8 @@ export async function computeRoute(
 			};
 		}
 
-		const { path, distanceKm, durationMinutes } = combineLegs(result.data.legs);
-		const snapped = options.snap !== false ? snappedFromLocations(waypoints, result.data.locations) : undefined;
+		const { path, legShapes, distanceKm, durationMinutes } = combineLegs(result.data.legs);
+		const snapped = options.snap !== false ? snappedFromLegShapes(waypoints, legShapes) : undefined;
 
 		return {
 			ok: true,

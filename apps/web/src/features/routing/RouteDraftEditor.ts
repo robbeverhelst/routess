@@ -249,7 +249,14 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 	};
 
 	const recalculate = async (): Promise<EditResult> => {
-		if (getWaypoints().length < 2) return ok();
+		// With fewer than 2 waypoints there's nothing to route. Drop any stale
+		// routePath/metrics so the map doesn't keep showing a polyline that no
+		// longer corresponds to the current waypoint set (the per-waypoint
+		// trash in PlanPanel goes through this path after going from 2→1).
+		if (getWaypoints().length < 2) {
+			clearComputedRouteUi();
+			return ok();
+		}
 		return recompute();
 	};
 

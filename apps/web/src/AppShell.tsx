@@ -20,6 +20,7 @@ import {
 	useRouteDistance,
 	useRouteDuration,
 	useSetIsMapLocked,
+	useWaypoints,
 } from "@/stores/routingStore";
 import { useToastStore } from "@/stores/toastStore";
 import { type RedesignContext, useUiStore } from "@/stores/uiStore";
@@ -160,6 +161,7 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 	const { data: auth } = useAuthStatus();
 	const online = useOnlineStatus();
 	const hasRoute = useHasRoute();
+	const hasAnyWaypoint = useWaypoints().length > 0;
 	const distance = useRouteDistance();
 	const duration = useRouteDuration();
 	const canUndo = useCanUndo();
@@ -480,6 +482,7 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 			onUndo={() => emitAppEvent("routess:undo")}
 			onRedo={() => emitAppEvent("routess:redo")}
 			onRemoveRoute={() => emitAppEvent("routess:reset-route")}
+			canRemoveRoute={hasAnyWaypoint}
 			hasRoute={hasRoute}
 			isLocked={isLocked}
 			onLock={() => setIsLocked(!isLocked)}
