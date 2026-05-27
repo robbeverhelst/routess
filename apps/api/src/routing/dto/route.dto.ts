@@ -65,15 +65,15 @@ export class RouteRequestDto {
 	locations!: RouteLocationDto[];
 
 	@ApiPropertyOptional({
-		description: "Walking speed in meters per second. Only applied to pedestrian routing.",
-		minimum: 0.1,
-		maximum: 6,
+		description: "Walking speed in kilometers per hour. Only applied to pedestrian routing.",
+		minimum: 0.5,
+		maximum: 25,
 	})
 	@IsOptional()
 	@IsNumber()
-	@Min(0.1)
-	@Max(6)
-	walkingSpeedMps?: number;
+	@Min(0.5)
+	@Max(25)
+	walkingSpeedKmh?: number;
 }
 
 export class RouteLegSummaryDto {

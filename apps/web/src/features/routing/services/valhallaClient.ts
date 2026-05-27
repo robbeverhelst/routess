@@ -13,7 +13,7 @@ const ROUTE_URL = `${API_BASE_URL.replace(/\/+$/, "")}/api/v1/routing/route`;
 export interface ComputeRouteOptions {
 	snap?: boolean;
 	speedKmh?: number;
-	walkingSpeedMps?: number;
+	walkingSpeedKmh?: number;
 	signal?: AbortSignal;
 }
 
@@ -103,7 +103,7 @@ async function callApiRoute(
 		activity,
 		preferences: prefs,
 		locations: coords.map(([lng, lat]) => ({ lat, lon: lng })),
-		walkingSpeedMps: options.walkingSpeedMps,
+		walkingSpeedKmh: options.walkingSpeedKmh,
 	};
 
 	let response: Response;

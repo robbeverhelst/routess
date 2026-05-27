@@ -64,7 +64,7 @@ export class RoutingService {
 
 	async route(request: RouteRequestDto): Promise<RouteResponseDto> {
 		const costing = valhallaCostingFromPreferences(request.activity, request.preferences, {
-			walkingSpeedMps: request.walkingSpeedMps,
+			walkingSpeedKmh: request.walkingSpeedKmh,
 		});
 		const data = await this.callValhalla<ValhallaRouteResponse>("/route", {
 			locations: request.locations.map((l) => ({ lat: l.lat, lon: l.lon })),

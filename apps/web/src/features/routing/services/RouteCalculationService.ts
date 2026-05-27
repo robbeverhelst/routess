@@ -76,15 +76,15 @@ function buildComputeOptions(activity: RouteActivity): {
 	const settings = useRedesignSettingsStore.getState();
 	const speedKmh = getSpeedForActivity(activity, settings.sportSpeeds);
 	const prefs = resolvePreferencesForDraft(activity);
-	// Walking speed for Valhalla pedestrian costing is in m/s; the user
-	// configures km/h, so convert.
-	const walkingSpeedMps = activity !== "cycle" ? speedKmh / 3.6 : undefined;
+	// Valhalla's pedestrian costing accepts walking_speed in km/h (default
+	// 5.1 km/h), matching how users configure it in settings.
+	const walkingSpeedKmh = activity !== "cycle" ? speedKmh : undefined;
 	return {
 		prefs,
 		options: {
 			snap: settings.autoSnap,
 			speedKmh,
-			walkingSpeedMps,
+			walkingSpeedKmh,
 		},
 	};
 }

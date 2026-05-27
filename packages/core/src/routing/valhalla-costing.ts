@@ -57,7 +57,7 @@ const SURFACE_USE_TRACKS_PED: Record<SurfaceType, number> = {
 export function valhallaCostingFromPreferences(
 	activity: RouteActivity,
 	prefs: RoutingPreferences,
-	options?: { walkingSpeedMps?: number },
+	options?: { walkingSpeedKmh?: number },
 ): ValhallaCostingRequest {
 	if (activity === "cycle") {
 		// Valhalla defaults bicycle_type to Hybrid when omitted; that's fine for
@@ -78,8 +78,8 @@ export function valhallaCostingFromPreferences(
 		use_ferry: prefs.avoidFerries ? 0.0 : 0.5,
 		use_tracks: SURFACE_USE_TRACKS_PED[prefs.surfacePreference],
 	};
-	if (typeof options?.walkingSpeedMps === "number" && options.walkingSpeedMps > 0) {
-		pedestrian.walking_speed = options.walkingSpeedMps;
+	if (typeof options?.walkingSpeedKmh === "number" && options.walkingSpeedKmh > 0) {
+		pedestrian.walking_speed = options.walkingSpeedKmh;
 	}
 	return {
 		costing: "pedestrian",

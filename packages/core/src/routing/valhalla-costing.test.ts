@@ -95,10 +95,10 @@ describe("valhallaCostingFromPreferences — pedestrian", () => {
 		expect("use_hills" in p).toBe(false);
 	});
 
-	it("forwards walking_speed when provided", () => {
-		const req = valhallaCostingFromPreferences("walk", DEFAULT_WALK_PREFERENCES, { walkingSpeedMps: 1.6 });
+	it("forwards walking_speed in km/h when provided", () => {
+		const req = valhallaCostingFromPreferences("walk", DEFAULT_WALK_PREFERENCES, { walkingSpeedKmh: 5 });
 		const p = (req.costing_options as { pedestrian: { walking_speed?: number } }).pedestrian;
-		expect(p.walking_speed).toBe(1.6);
+		expect(p.walking_speed).toBe(5);
 	});
 
 	it("omits walking_speed when not provided or invalid", () => {
@@ -106,7 +106,7 @@ describe("valhallaCostingFromPreferences — pedestrian", () => {
 		const p = (req.costing_options as { pedestrian: { walking_speed?: number } }).pedestrian;
 		expect(p.walking_speed).toBeUndefined();
 
-		const req2 = valhallaCostingFromPreferences("walk", DEFAULT_WALK_PREFERENCES, { walkingSpeedMps: -1 });
+		const req2 = valhallaCostingFromPreferences("walk", DEFAULT_WALK_PREFERENCES, { walkingSpeedKmh: -1 });
 		const p2 = (req2.costing_options as { pedestrian: { walking_speed?: number } }).pedestrian;
 		expect(p2.walking_speed).toBeUndefined();
 	});
