@@ -301,7 +301,14 @@ export function PlanPanel() {
 	const endWp = waypoints[waypoints.length - 1];
 
 	return (
-		<div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+		<div
+			style={{
+				display: "flex",
+				flexDirection: "column",
+				height: "100%",
+				paddingBottom: "var(--rds-bottom-tab-h)",
+			}}
+		>
 			{mode.kind === "editing" && (
 				<div
 					style={{

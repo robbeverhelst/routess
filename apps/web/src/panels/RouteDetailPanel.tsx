@@ -269,7 +269,14 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 	];
 
 	return (
-		<div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+		<div
+			style={{
+				display: "flex",
+				flexDirection: "column",
+				height: "100%",
+				paddingBottom: "var(--rds-bottom-tab-h)",
+			}}
+		>
 			<div
 				style={{
 					display: "flex",
