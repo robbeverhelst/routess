@@ -412,6 +412,14 @@ export function PlanPanel() {
 				</button>
 			</div>
 
+			{/* Elevation + surface */}
+			<div
+				data-vaul-no-drag
+				style={{ padding: "0 20px 14px", borderBottom: `1px solid ${RDS_COLORS.border}` }}
+			>
+				<PlanRouteProfileChart />
+			</div>
+
 			{/* Stats */}
 			<div style={{ padding: "14px 20px", borderBottom: `1px solid ${RDS_COLORS.border}` }}>
 				<div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(72px, 1fr))", gap: 8 }}>
@@ -437,7 +445,6 @@ export function PlanPanel() {
 						</div>
 					))}
 				</div>
-				<PlanRouteProfileChart />
 			</div>
 
 			{/* Waypoints list */}
