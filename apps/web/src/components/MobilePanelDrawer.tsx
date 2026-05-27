@@ -122,7 +122,11 @@ export function MobilePanelDrawer({ title, open, onClose, children, headerSlot }
 							minHeight: 0,
 							overflow: "auto",
 							width: "100%",
-							paddingBottom: "var(--rds-bottom-tab-h)",
+							// Reserve room for the bottom tab bar and for vaul's full-snap
+							// transform (~8dvh, the (1 - max-snap) translation of the
+							// drawer Content) so sticky footers inside the panels land
+							// just above the tab bar at full snap.
+							paddingBottom: "calc(var(--rds-bottom-tab-h) + 8dvh)",
 						}}
 					>
 						{children}

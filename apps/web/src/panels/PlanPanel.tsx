@@ -451,7 +451,7 @@ export function PlanPanel() {
 			</div>
 
 			{/* Waypoints list */}
-			<div style={{ padding: "14px 20px", overflow: "auto", flex: 1 }}>
+			<div style={{ padding: "14px 20px", overflow: "auto", flex: 1, minHeight: 0 }}>
 				<SecTitle style={{ marginBottom: 10 }}>
 					{t("plan.waypointsCount", { count: String(waypoints.length) })}
 				</SecTitle>
