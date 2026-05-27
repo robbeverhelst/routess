@@ -379,7 +379,7 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 				</div>
 			</div>
 
-			<div style={{ flex: 1, overflow: "auto", padding: 20 }}>
+			<div style={{ flex: 1, minHeight: 0, overflow: "auto", padding: 20 }}>
 				<h2 style={{ margin: "0 0 4px", fontSize: 22, fontWeight: 600, letterSpacing: -0.4 }}>{route.name}</h2>
 				<p className="rds-mono" style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle, margin: 0 }}>
 					{t("route.created", {
