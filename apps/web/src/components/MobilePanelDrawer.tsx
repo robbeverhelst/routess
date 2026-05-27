@@ -91,6 +91,9 @@ export function MobilePanelDrawer({ title, open, onClose, children, headerSlot }
 					<VisuallyHidden asChild>
 						<Drawer.Title>{title}</Drawer.Title>
 					</VisuallyHidden>
+					<VisuallyHidden asChild>
+						<Drawer.Description>{title} panel</Drawer.Description>
+					</VisuallyHidden>
 					<Drawer.Handle
 						style={{
 							margin: "8px auto 4px",
