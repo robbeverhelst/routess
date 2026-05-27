@@ -10,11 +10,14 @@ interface MobilePanelDrawerProps {
 	open: boolean;
 	onClose: () => void;
 	children: ReactNode;
+	// Replaces the plain title text in the visible header. The string `title`
+	// is still used as the accessible label for the dialog.
+	headerSlot?: ReactNode;
 }
 
 const SNAP_POINTS = [...MOBILE_DRAWER_SNAPS] as (number | string)[];
 
-export function MobilePanelDrawer({ title, open, onClose, children }: MobilePanelDrawerProps) {
+export function MobilePanelDrawer({ title, open, onClose, children, headerSlot }: MobilePanelDrawerProps) {
 	const snap = useMobileDrawerStore((s) => s.snap);
 	const setSnap = useMobileDrawerStore((s) => s.setSnap);
 
@@ -104,7 +107,9 @@ export function MobilePanelDrawer({ title, open, onClose, children }: MobilePane
 							borderBottom: `1px solid ${RDS_COLORS.border}`,
 						}}
 					>
-						<span style={{ fontSize: 16, fontWeight: 600, letterSpacing: -0.2 }}>{title}</span>
+						{headerSlot ?? (
+							<span style={{ fontSize: 16, fontWeight: 600, letterSpacing: -0.2 }}>{title}</span>
+						)}
 						<div style={{ flex: 1 }} />
 						<IconBtn title="Close" onClick={onClose}>
 							<I.close size={16} />

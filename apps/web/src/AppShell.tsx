@@ -58,6 +58,7 @@ import { CompareScreen } from "./screens/CompareScreen";
 import { type ErrorKind, ErrorScreen } from "./screens/ErrorScreen";
 import { LiveNavScreen } from "./screens/LiveNavScreen";
 import { LoginScreen } from "./screens/LoginScreen";
+import { MobilePlanTitle } from "./components/MobilePlanTitle";
 import { MobileDrawer } from "./screens/MobileDrawer";
 import { PostActivityScreen } from "./screens/PostActivityScreen";
 import { ProfileScreen } from "./screens/ProfileScreen";
@@ -560,6 +561,7 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 				{showApp && (
 					<MobilePanelDrawer
 						title={screenTitle(context, language)}
+						headerSlot={context === "plan" ? <MobilePlanTitle /> : undefined}
 						open={!panelCollapsed}
 						onClose={() => useUiStore.getState().setPanelCollapsed(true)}
 					>
