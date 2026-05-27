@@ -110,9 +110,7 @@ export function MobilePanelDrawer({ title, open, onClose, children, headerSlot }
 							borderBottom: `1px solid ${RDS_COLORS.border}`,
 						}}
 					>
-						{headerSlot ?? (
-							<span style={{ fontSize: 16, fontWeight: 600, letterSpacing: -0.2 }}>{title}</span>
-						)}
+						{headerSlot ?? <span style={{ fontSize: 16, fontWeight: 600, letterSpacing: -0.2 }}>{title}</span>}
 						<div style={{ flex: 1 }} />
 						<IconBtn title="Close" onClick={onClose}>
 							<I.close size={16} />

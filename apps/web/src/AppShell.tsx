@@ -10,9 +10,9 @@ import { hasStoredUser } from "@/lib/auth-state";
 import { type SupportedLanguage, t } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
 import { queryKeys } from "@/lib/query-client";
+import { useUnits } from "@/lib/units";
 import { useModalsStore } from "@/stores/modalsStore";
 import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
-import { useUnits } from "@/lib/units";
 import {
 	useCanRedo,
 	useCanUndo,
@@ -30,6 +30,7 @@ import { BottomTabBar } from "./components/BottomTabBar";
 import { I } from "./components/icons";
 import { MapToolbar } from "./components/MapToolbar";
 import { MobilePanelDrawer } from "./components/MobilePanelDrawer";
+import { MobilePlanTitle } from "./components/MobilePlanTitle";
 import { MobileTopBar } from "./components/MobileTopBar";
 import { Badge, IconBtn, RDS_COLORS } from "./components/primitives";
 import { RailNav } from "./components/RailNav";
@@ -60,7 +61,6 @@ import { CompareScreen } from "./screens/CompareScreen";
 import { type ErrorKind, ErrorScreen } from "./screens/ErrorScreen";
 import { LiveNavScreen } from "./screens/LiveNavScreen";
 import { LoginScreen } from "./screens/LoginScreen";
-import { MobilePlanTitle } from "./components/MobilePlanTitle";
 import { MobileDrawer } from "./screens/MobileDrawer";
 import { PostActivityScreen } from "./screens/PostActivityScreen";
 import { ProfileScreen } from "./screens/ProfileScreen";
@@ -506,9 +506,7 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 		/>
 	);
 
-	const Chip = hasRoute ? (
-		<RouteChip distance={distance || "—"} time={duration || "—"} elevation={elevation} />
-	) : null;
+	const Chip = hasRoute ? <RouteChip distance={distance || "—"} time={duration || "—"} elevation={elevation} /> : null;
 
 	const Offline =
 		!online && !offlineDismissed ? (

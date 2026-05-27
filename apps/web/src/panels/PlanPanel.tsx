@@ -3,9 +3,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { applySavedRoute } from "@/features/routing/applySavedRoute";
 import { isDraftDirty } from "@/features/routing/draftDirty";
 import { useSurfaceBreakdown } from "@/features/routing/services/useSurfaceBreakdown";
+import { useViewport } from "@/hooks/useViewport";
 import { useSaveRoute, useUpdateRoute } from "@/lib/api-queries";
 import { emitAppEvent, onAppEvent } from "@/lib/app-events";
-import { useViewport } from "@/hooks/useViewport";
 import { useT } from "@/lib/i18n";
 import { formatSpeedParts, useUnits } from "@/lib/units";
 import { useModalsStore } from "@/stores/modalsStore";
@@ -419,10 +419,7 @@ export function PlanPanel() {
 			</div>
 
 			{/* Elevation + surface */}
-			<div
-				data-vaul-no-drag
-				style={{ padding: "0 20px 14px", borderBottom: `1px solid ${RDS_COLORS.border}` }}
-			>
+			<div data-vaul-no-drag style={{ padding: "0 20px 14px", borderBottom: `1px solid ${RDS_COLORS.border}` }}>
 				<PlanRouteProfileChart />
 			</div>
 
