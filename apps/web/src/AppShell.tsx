@@ -12,9 +12,11 @@ import { Logger } from "@/lib/logger";
 import { queryKeys } from "@/lib/query-client";
 import { useModalsStore } from "@/stores/modalsStore";
 import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
+import { useUnits } from "@/lib/units";
 import {
 	useCanRedo,
 	useCanUndo,
+	useElevationGain,
 	useHasRoute,
 	useIsMapLocked,
 	useRouteDistance,
@@ -165,6 +167,13 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 	const hasAnyWaypoint = useWaypoints().length > 0;
 	const distance = useRouteDistance();
 	const duration = useRouteDuration();
+	const elevationGain = useElevationGain();
+	const { formatElevationParts } = useUnits();
+	const elevation = (() => {
+		if (elevationGain == null) return undefined;
+		const parts = formatElevationParts(elevationGain);
+		return `${parts.value} ${parts.unit}`;
+	})();
 	const canUndo = useCanUndo();
 	const canRedo = useCanRedo();
 	const isLocked = useIsMapLocked();
@@ -497,7 +506,9 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 		/>
 	);
 
-	const Chip = hasRoute ? <RouteChip distance={distance || "—"} time={duration || "—"} /> : null;
+	const Chip = hasRoute ? (
+		<RouteChip distance={distance || "—"} time={duration || "—"} elevation={elevation} />
+	) : null;
 
 	const Offline =
 		!online && !offlineDismissed ? (
