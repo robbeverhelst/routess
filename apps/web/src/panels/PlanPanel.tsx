@@ -5,6 +5,7 @@ import { isDraftDirty } from "@/features/routing/draftDirty";
 import { useSurfaceBreakdown } from "@/features/routing/services/useSurfaceBreakdown";
 import { useSaveRoute, useUpdateRoute } from "@/lib/api-queries";
 import { emitAppEvent, onAppEvent } from "@/lib/app-events";
+import { useViewport } from "@/hooks/useViewport";
 import { useT } from "@/lib/i18n";
 import { formatSpeedParts, useUnits } from "@/lib/units";
 import { useModalsStore } from "@/stores/modalsStore";
@@ -80,6 +81,7 @@ function PlanRouteProfileChart() {
 
 export function PlanPanel() {
 	const t = useT();
+	const { isMobile } = useViewport();
 	const waypoints = useWaypoints();
 	const routePath = useRoutePath();
 	const distance = useRouteDistance();
@@ -375,41 +377,45 @@ export function PlanPanel() {
 					</IconBtn>
 				</div>
 
-				<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 6 }}>
-					<EndpointInput
-						dotColor={RDS_COLORS.success}
-						label={startWp ? formatCoord(startWp.coord) : t("plan.addStart")}
-					/>
-					<EndpointInput
-						dotColor={RDS_COLORS.danger}
-						label={endWp && waypoints.length > 1 ? formatCoord(endWp.coord) : t("plan.addEnd")}
-					/>
-				</div>
+				{!isMobile && (
+					<>
+						<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 6 }}>
+							<EndpointInput
+								dotColor={RDS_COLORS.success}
+								label={startWp ? formatCoord(startWp.coord) : t("plan.addStart")}
+							/>
+							<EndpointInput
+								dotColor={RDS_COLORS.danger}
+								label={endWp && waypoints.length > 1 ? formatCoord(endWp.coord) : t("plan.addEnd")}
+							/>
+						</div>
 
-				<button
-					type="button"
-					onClick={() => openModal("search")}
-					style={{
-						display: "inline-flex",
-						alignItems: "center",
-						gap: 8,
-						marginTop: 8,
-						height: 32,
-						padding: "0 10px",
-						borderRadius: 8,
-						border: `1px dashed ${RDS_COLORS.borderStrong}`,
-						background: "transparent",
-						color: RDS_COLORS.fgMuted,
-						fontSize: 12.5,
-						width: "100%",
-						cursor: "pointer",
-					}}
-				>
-					<I.plus size={14} /> {t("plan.addWaypoint")}
-					<span style={{ flex: 1 }} />
-					<Kbd>⌘</Kbd>
-					<Kbd>K</Kbd>
-				</button>
+						<button
+							type="button"
+							onClick={() => openModal("search")}
+							style={{
+								display: "inline-flex",
+								alignItems: "center",
+								gap: 8,
+								marginTop: 8,
+								height: 32,
+								padding: "0 10px",
+								borderRadius: 8,
+								border: `1px dashed ${RDS_COLORS.borderStrong}`,
+								background: "transparent",
+								color: RDS_COLORS.fgMuted,
+								fontSize: 12.5,
+								width: "100%",
+								cursor: "pointer",
+							}}
+						>
+							<I.plus size={14} /> {t("plan.addWaypoint")}
+							<span style={{ flex: 1 }} />
+							<Kbd>⌘</Kbd>
+							<Kbd>K</Kbd>
+						</button>
+					</>
+				)}
 			</div>
 
 			{/* Elevation + surface */}
