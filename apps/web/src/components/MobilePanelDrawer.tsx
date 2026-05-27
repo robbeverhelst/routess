@@ -122,7 +122,7 @@ export function MobilePanelDrawer({ title, open, onClose, children, headerSlot }
 							minHeight: 0,
 							overflow: "auto",
 							width: "100%",
-							marginBottom: "var(--rds-bottom-tab-h)",
+							paddingBottom: "var(--rds-bottom-tab-h)",
 						}}
 					>
 						{children}
