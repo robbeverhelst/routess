@@ -28,6 +28,23 @@ export function MobilePanelDrawer({ title, open, onClose, children }: MobilePane
 		setContainer(document.querySelector<HTMLElement>("[data-redesign]"));
 	}, []);
 
+	// Vaul does not forward its `modal: false` prop to the underlying Radix
+	// Dialog. Radix therefore always treats this as a modal and its
+	// DismissableLayer sets `body { pointer-events: none }`, which kills map
+	// gestures and any UI outside the sheet (bottom tab bar, etc.). Restore
+	// pointer events on body while the drawer is open — the drawer Content
+	// has its own explicit pointer-events: auto so the sheet keeps working.
+	useEffect(() => {
+		if (!open) return;
+		const style = document.createElement("style");
+		style.setAttribute("data-mobile-drawer-restore-pointer-events", "");
+		style.textContent = "body { pointer-events: auto !important; }";
+		document.head.appendChild(style);
+		return () => {
+			style.remove();
+		};
+	}, [open]);
+
 	return (
 		<Drawer.Root
 			open={open}
