@@ -1,95 +1,109 @@
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import type { ReactNode } from "react";
+import { Drawer } from "vaul";
+import { MOBILE_DRAWER_SNAPS, useMobileDrawerStore } from "../stores/mobileDrawerStore";
 import { I } from "./icons";
 import { IconBtn, RDS_COLORS } from "./primitives";
 
 interface MobilePanelDrawerProps {
 	title: string;
+	open: boolean;
 	onClose: () => void;
 	children: ReactNode;
 }
 
-export function MobilePanelDrawer({ title, onClose, children }: MobilePanelDrawerProps) {
+const SNAP_POINTS = [...MOBILE_DRAWER_SNAPS] as (number | string)[];
+
+export function MobilePanelDrawer({ title, open, onClose, children }: MobilePanelDrawerProps) {
+	const snap = useMobileDrawerStore((s) => s.snap);
+	const setSnap = useMobileDrawerStore((s) => s.setSnap);
+
 	return (
-		<>
-			<button
-				type="button"
-				aria-label="Close panel"
-				onClick={onClose}
-				style={{
-					position: "absolute",
-					inset: 0,
-					background: "color-mix(in oklch, oklch(0 0 0) 32%, transparent)",
-					border: 0,
-					padding: 0,
-					zIndex: 9,
-					animation: "rds-fade-in 180ms ease-out",
-					cursor: "default",
-				}}
-			/>
-			<aside
-				role="dialog"
-				aria-label={title}
-				style={{
-					position: "absolute",
-					left: 0,
-					right: 0,
-					bottom: 0,
-					top: "var(--rds-top-bar-h)",
-					background: RDS_COLORS.bgPanel,
-					borderTop: `1px solid ${RDS_COLORS.border}`,
-					borderTopLeftRadius: 18,
-					borderTopRightRadius: 18,
-					boxShadow: "var(--rds-shadow-lg)",
-					display: "flex",
-					flexDirection: "column",
-					overflow: "hidden",
-					zIndex: 10,
-					animation: "rds-sheet-in 220ms cubic-bezier(0.32, 0.72, 0, 1)",
-				}}
-			>
-				<button
-					type="button"
-					onClick={onClose}
-					aria-label="Close drawer"
+		<Drawer.Root
+			open={open}
+			onOpenChange={(next) => {
+				if (!next) onClose();
+			}}
+			snapPoints={SNAP_POINTS}
+			activeSnapPoint={snap}
+			setActiveSnapPoint={(value) => {
+				if (typeof value === "number") {
+					const allowed = MOBILE_DRAWER_SNAPS.find((s) => s === value);
+					if (allowed !== undefined) setSnap(allowed);
+				}
+			}}
+			fadeFromIndex={2}
+			modal={false}
+			dismissible
+			disablePreventScroll
+		>
+			<Drawer.Portal>
+				<Drawer.Overlay
 					style={{
-						alignSelf: "center",
-						margin: "8px 0 4px",
-						width: 40,
-						height: 4,
-						borderRadius: 999,
-						background: RDS_COLORS.borderStrong,
-						border: 0,
-						padding: 0,
-						cursor: "pointer",
+						position: "fixed",
+						inset: 0,
+						background: "color-mix(in oklch, oklch(0 0 0) 32%, transparent)",
+						zIndex: 9,
+						pointerEvents: "none",
 					}}
 				/>
-				<header
+				<Drawer.Content
 					style={{
+						position: "fixed",
+						left: 0,
+						right: 0,
+						bottom: 0,
+						height: "calc(100dvh - var(--rds-top-bar-h))",
+						background: RDS_COLORS.bgPanel,
+						borderTop: `1px solid ${RDS_COLORS.border}`,
+						borderTopLeftRadius: 18,
+						borderTopRightRadius: 18,
+						boxShadow: "var(--rds-shadow-lg)",
 						display: "flex",
-						alignItems: "center",
-						gap: 12,
-						padding: "8px 16px 12px",
-						borderBottom: `1px solid ${RDS_COLORS.border}`,
+						flexDirection: "column",
+						overflow: "hidden",
+						zIndex: 10,
+						outline: "none",
 					}}
 				>
-					<span style={{ fontSize: 16, fontWeight: 600, letterSpacing: -0.2 }}>{title}</span>
-					<div style={{ flex: 1 }} />
-					<IconBtn title="Close" onClick={onClose}>
-						<I.close size={16} />
-					</IconBtn>
-				</header>
-				<div
-					style={{
-						flex: 1,
-						minHeight: 0,
-						overflow: "auto",
-						width: "100%",
-						paddingBottom: "var(--rds-bottom-tab-h)",
-					}}
-				>
-					{children}
-				</div>
-			</aside>
-		</>
+					<VisuallyHidden asChild>
+						<Drawer.Title>{title}</Drawer.Title>
+					</VisuallyHidden>
+					<Drawer.Handle
+						style={{
+							margin: "8px auto 4px",
+							background: RDS_COLORS.borderStrong,
+							opacity: 0.9,
+						}}
+					/>
+					<header
+						style={{
+							display: "flex",
+							alignItems: "center",
+							gap: 12,
+							padding: "8px 16px 12px",
+							borderBottom: `1px solid ${RDS_COLORS.border}`,
+						}}
+					>
+						<span style={{ fontSize: 16, fontWeight: 600, letterSpacing: -0.2 }}>{title}</span>
+						<div style={{ flex: 1 }} />
+						<IconBtn title="Close" onClick={onClose}>
+							<I.close size={16} />
+						</IconBtn>
+					</header>
+					<div
+						style={{
+							flex: 1,
+							minHeight: 0,
+							overflow: "auto",
+							width: "100%",
+							paddingBottom: "var(--rds-bottom-tab-h)",
+						}}
+					>
+						{children}
+					</div>
+				</Drawer.Content>
+			</Drawer.Portal>
+		</Drawer.Root>
 	);
 }

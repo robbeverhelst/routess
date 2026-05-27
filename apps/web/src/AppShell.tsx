@@ -557,9 +557,10 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 					{Offline}
 				</main>
 				{showApp && <MobileTopBar />}
-				{showApp && !panelCollapsed && (
+				{showApp && (
 					<MobilePanelDrawer
 						title={screenTitle(context, language)}
+						open={!panelCollapsed}
 						onClose={() => useUiStore.getState().setPanelCollapsed(true)}
 					>
 						{renderPanelContent()}
