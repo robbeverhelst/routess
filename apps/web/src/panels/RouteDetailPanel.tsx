@@ -8,6 +8,7 @@ import { emitAppEvent, routeToLoadDetail } from "@/lib/app-events";
 import { useT } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
 import { useUnits } from "@/lib/units";
+import { MOBILE_DRAWER_SNAPS, useMobileDrawerStore } from "@/stores/mobileDrawerStore";
 import { useModalsStore } from "@/stores/modalsStore";
 import { useToastStore } from "@/stores/toastStore";
 import { useUiStore } from "@/stores/uiStore";
@@ -153,6 +154,16 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 	const visibilityMeta = route.visibility ? VISIBILITY_LABEL[route.visibility] : null;
 	const tags = route.tags ?? [];
 	const hasMetaChips = Boolean(activityMeta) || Boolean(visibilityMeta) || tags.length > 0;
+
+	// On mobile, open the drawer at the half-snap so the map stays visible
+	// above the elevation chart and the user can scrub to inspect surface and
+	// elevation at any point along the route. Restore to full on unmount so
+	// other panels (library list, etc.) revert to their preferred snap.
+	const setDrawerSnap = useMobileDrawerStore((s) => s.setSnap);
+	useEffect(() => {
+		setDrawerSnap(MOBILE_DRAWER_SNAPS[0]);
+		return () => setDrawerSnap(MOBILE_DRAWER_SNAPS[1]);
+	}, [setDrawerSnap]);
 
 	useEffect(() => {
 		if (!moreOpen) return;
@@ -413,6 +424,20 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 					</p>
 				)}
 
+				{elevationGeometry.length >= 2 && (
+					<div data-vaul-no-drag style={{ marginTop: 18 }}>
+						<SecTitle style={{ marginBottom: 8 }}>{t("route.elevation")}</SecTitle>
+						<RouteProfileChart
+							profile={computedProfile}
+							breakdown={surfaceBreakdown}
+							elevationLoading={elevationLoading}
+							surfaceLoading={surfaceLoading}
+							gradientId={`rds-elev-${route.id}`}
+							style={{ marginTop: 0 }}
+						/>
+					</div>
+				)}
+
 				{/* Stat strip */}
 				<div
 					style={{
@@ -452,20 +477,6 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 						</div>
 					))}
 				</div>
-
-				{elevationGeometry.length >= 2 && (
-					<div style={{ marginTop: 18 }}>
-						<SecTitle style={{ marginBottom: 8 }}>{t("route.elevation")}</SecTitle>
-						<RouteProfileChart
-							profile={computedProfile}
-							breakdown={surfaceBreakdown}
-							elevationLoading={elevationLoading}
-							surfaceLoading={surfaceLoading}
-							gradientId={`rds-elev-${route.id}`}
-							style={{ marginTop: 0 }}
-						/>
-					</div>
-				)}
 
 				{route.waypoints && route.waypoints.length > 0 && (
 					<div style={{ marginTop: 18 }}>

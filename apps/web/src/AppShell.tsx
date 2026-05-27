@@ -10,11 +10,13 @@ import { hasStoredUser } from "@/lib/auth-state";
 import { type SupportedLanguage, t } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
 import { queryKeys } from "@/lib/query-client";
+import { useUnits } from "@/lib/units";
 import { useModalsStore } from "@/stores/modalsStore";
 import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 import {
 	useCanRedo,
 	useCanUndo,
+	useElevationGain,
 	useHasRoute,
 	useIsMapLocked,
 	useRouteDistance,
@@ -28,6 +30,7 @@ import { BottomTabBar } from "./components/BottomTabBar";
 import { I } from "./components/icons";
 import { MapToolbar } from "./components/MapToolbar";
 import { MobilePanelDrawer } from "./components/MobilePanelDrawer";
+import { MobilePlanTitle } from "./components/MobilePlanTitle";
 import { MobileTopBar } from "./components/MobileTopBar";
 import { Badge, IconBtn, RDS_COLORS } from "./components/primitives";
 import { RailNav } from "./components/RailNav";
@@ -164,6 +167,13 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 	const hasAnyWaypoint = useWaypoints().length > 0;
 	const distance = useRouteDistance();
 	const duration = useRouteDuration();
+	const elevationGain = useElevationGain();
+	const { formatElevationParts } = useUnits();
+	const elevation = (() => {
+		if (elevationGain == null) return undefined;
+		const parts = formatElevationParts(elevationGain);
+		return `${parts.value} ${parts.unit}`;
+	})();
 	const canUndo = useCanUndo();
 	const canRedo = useCanRedo();
 	const isLocked = useIsMapLocked();
@@ -496,7 +506,7 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 		/>
 	);
 
-	const Chip = hasRoute ? <RouteChip distance={distance || "—"} time={duration || "—"} /> : null;
+	const Chip = hasRoute ? <RouteChip distance={distance || "—"} time={duration || "—"} elevation={elevation} /> : null;
 
 	const Offline =
 		!online && !offlineDismissed ? (
@@ -557,9 +567,11 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 					{Offline}
 				</main>
 				{showApp && <MobileTopBar />}
-				{showApp && !panelCollapsed && (
+				{showApp && (
 					<MobilePanelDrawer
 						title={screenTitle(context, language)}
+						headerSlot={context === "plan" ? <MobilePlanTitle /> : undefined}
+						open={!panelCollapsed}
 						onClose={() => useUiStore.getState().setPanelCollapsed(true)}
 					>
 						{renderPanelContent()}

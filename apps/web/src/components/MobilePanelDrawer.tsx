@@ -1,95 +1,134 @@
-import type { ReactNode } from "react";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { type ReactNode, useEffect, useState } from "react";
+import { Drawer } from "vaul";
+import { MOBILE_DRAWER_SNAPS, useMobileDrawerStore } from "../stores/mobileDrawerStore";
 import { I } from "./icons";
 import { IconBtn, RDS_COLORS } from "./primitives";
 
 interface MobilePanelDrawerProps {
 	title: string;
+	open: boolean;
 	onClose: () => void;
 	children: ReactNode;
+	// Replaces the plain title text in the visible header. The string `title`
+	// is still used as the accessible label for the dialog.
+	headerSlot?: ReactNode;
 }
 
-export function MobilePanelDrawer({ title, onClose, children }: MobilePanelDrawerProps) {
+const SNAP_POINTS = [...MOBILE_DRAWER_SNAPS] as (number | string)[];
+
+export function MobilePanelDrawer({ title, open, onClose, children, headerSlot }: MobilePanelDrawerProps) {
+	const snap = useMobileDrawerStore((s) => s.snap);
+	const setSnap = useMobileDrawerStore((s) => s.setSnap);
+
+	// Vaul's portal defaults to document.body, but our theme tokens
+	// (--rds-bg-panel, etc.) are scoped to `[data-redesign]`. Mounting the
+	// drawer outside that scope leaves the panel with no background and
+	// reads as transparent over the map. Anchor the portal inside the themed
+	// root instead.
+	const [container, setContainer] = useState<HTMLElement | null>(null);
+	useEffect(() => {
+		setContainer(document.querySelector<HTMLElement>("[data-redesign]"));
+	}, []);
+
+	// Vaul does not forward its `modal: false` prop to the underlying Radix
+	// Dialog. Radix therefore always treats this as a modal and its
+	// DismissableLayer sets `body { pointer-events: none }`, which kills map
+	// gestures and any UI outside the sheet (bottom tab bar, etc.). Restore
+	// pointer events on body while the drawer is open — the drawer Content
+	// has its own explicit pointer-events: auto so the sheet keeps working.
+	useEffect(() => {
+		if (!open) return;
+		const style = document.createElement("style");
+		style.setAttribute("data-mobile-drawer-restore-pointer-events", "");
+		style.textContent = "body { pointer-events: auto !important; }";
+		document.head.appendChild(style);
+		return () => {
+			style.remove();
+		};
+	}, [open]);
+
 	return (
-		<>
-			<button
-				type="button"
-				aria-label="Close panel"
-				onClick={onClose}
-				style={{
-					position: "absolute",
-					inset: 0,
-					background: "color-mix(in oklch, oklch(0 0 0) 32%, transparent)",
-					border: 0,
-					padding: 0,
-					zIndex: 9,
-					animation: "rds-fade-in 180ms ease-out",
-					cursor: "default",
-				}}
-			/>
-			<aside
-				role="dialog"
-				aria-label={title}
-				style={{
-					position: "absolute",
-					left: 0,
-					right: 0,
-					bottom: 0,
-					top: "var(--rds-top-bar-h)",
-					background: RDS_COLORS.bgPanel,
-					borderTop: `1px solid ${RDS_COLORS.border}`,
-					borderTopLeftRadius: 18,
-					borderTopRightRadius: 18,
-					boxShadow: "var(--rds-shadow-lg)",
-					display: "flex",
-					flexDirection: "column",
-					overflow: "hidden",
-					zIndex: 10,
-					animation: "rds-sheet-in 220ms cubic-bezier(0.32, 0.72, 0, 1)",
-				}}
-			>
-				<button
-					type="button"
-					onClick={onClose}
-					aria-label="Close drawer"
+		<Drawer.Root
+			open={open}
+			onOpenChange={(next) => {
+				if (!next) onClose();
+			}}
+			snapPoints={SNAP_POINTS}
+			activeSnapPoint={snap}
+			setActiveSnapPoint={(value) => {
+				if (typeof value === "number") {
+					const allowed = MOBILE_DRAWER_SNAPS.find((s) => s === value);
+					if (allowed !== undefined) setSnap(allowed);
+				}
+			}}
+			fadeFromIndex={1}
+			modal={false}
+			dismissible
+			disablePreventScroll
+			handleOnly
+		>
+			<Drawer.Portal container={container}>
+				<Drawer.Content
 					style={{
-						alignSelf: "center",
-						margin: "8px 0 4px",
-						width: 40,
-						height: 4,
-						borderRadius: 999,
-						background: RDS_COLORS.borderStrong,
-						border: 0,
-						padding: 0,
-						cursor: "pointer",
-					}}
-				/>
-				<header
-					style={{
+						position: "fixed",
+						left: 0,
+						right: 0,
+						bottom: 0,
+						height: "calc(100dvh - var(--rds-top-bar-h))",
+						background: RDS_COLORS.bgPanel,
+						borderTop: `1px solid ${RDS_COLORS.border}`,
+						borderTopLeftRadius: 18,
+						borderTopRightRadius: 18,
+						boxShadow: "var(--rds-shadow-lg)",
 						display: "flex",
-						alignItems: "center",
-						gap: 12,
-						padding: "8px 16px 12px",
-						borderBottom: `1px solid ${RDS_COLORS.border}`,
+						flexDirection: "column",
+						overflow: "hidden",
+						zIndex: 10,
+						outline: "none",
 					}}
 				>
-					<span style={{ fontSize: 16, fontWeight: 600, letterSpacing: -0.2 }}>{title}</span>
-					<div style={{ flex: 1 }} />
-					<IconBtn title="Close" onClick={onClose}>
-						<I.close size={16} />
-					</IconBtn>
-				</header>
-				<div
-					style={{
-						flex: 1,
-						minHeight: 0,
-						overflow: "auto",
-						width: "100%",
-						paddingBottom: "var(--rds-bottom-tab-h)",
-					}}
-				>
-					{children}
-				</div>
-			</aside>
-		</>
+					<VisuallyHidden asChild>
+						<Drawer.Title>{title}</Drawer.Title>
+					</VisuallyHidden>
+					<VisuallyHidden asChild>
+						<Drawer.Description>{title} panel</Drawer.Description>
+					</VisuallyHidden>
+					<Drawer.Handle
+						style={{
+							margin: "8px auto 4px",
+							background: RDS_COLORS.borderStrong,
+							opacity: 0.9,
+						}}
+					/>
+					<header
+						style={{
+							display: "flex",
+							alignItems: "center",
+							gap: 12,
+							padding: "8px 16px 12px",
+							borderBottom: `1px solid ${RDS_COLORS.border}`,
+						}}
+					>
+						{headerSlot ?? <span style={{ fontSize: 16, fontWeight: 600, letterSpacing: -0.2 }}>{title}</span>}
+						<div style={{ flex: 1 }} />
+						<IconBtn title="Close" onClick={onClose}>
+							<I.close size={16} />
+						</IconBtn>
+					</header>
+					<div
+						style={{
+							flex: 1,
+							minHeight: 0,
+							overflow: "auto",
+							width: "100%",
+							paddingBottom: "var(--rds-bottom-tab-h)",
+						}}
+					>
+						{children}
+					</div>
+				</Drawer.Content>
+			</Drawer.Portal>
+		</Drawer.Root>
 	);
 }
