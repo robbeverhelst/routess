@@ -161,8 +161,8 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 	// other panels (library list, etc.) revert to their preferred snap.
 	const setDrawerSnap = useMobileDrawerStore((s) => s.setSnap);
 	useEffect(() => {
-		setDrawerSnap(MOBILE_DRAWER_SNAPS[1]);
-		return () => setDrawerSnap(MOBILE_DRAWER_SNAPS[2]);
+		setDrawerSnap(MOBILE_DRAWER_SNAPS[0]);
+		return () => setDrawerSnap(MOBILE_DRAWER_SNAPS[1]);
 	}, [setDrawerSnap]);
 
 	useEffect(() => {

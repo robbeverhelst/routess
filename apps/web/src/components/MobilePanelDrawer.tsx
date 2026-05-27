@@ -42,7 +42,7 @@ export function MobilePanelDrawer({ title, open, onClose, children }: MobilePane
 					if (allowed !== undefined) setSnap(allowed);
 				}
 			}}
-			fadeFromIndex={2}
+			fadeFromIndex={1}
 			modal={false}
 			dismissible
 			disablePreventScroll
