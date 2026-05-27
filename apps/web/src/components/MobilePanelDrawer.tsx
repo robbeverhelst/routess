@@ -1,5 +1,5 @@
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { Drawer } from "vaul";
 import { MOBILE_DRAWER_SNAPS, useMobileDrawerStore } from "../stores/mobileDrawerStore";
 import { I } from "./icons";
@@ -17,6 +17,16 @@ const SNAP_POINTS = [...MOBILE_DRAWER_SNAPS] as (number | string)[];
 export function MobilePanelDrawer({ title, open, onClose, children }: MobilePanelDrawerProps) {
 	const snap = useMobileDrawerStore((s) => s.snap);
 	const setSnap = useMobileDrawerStore((s) => s.setSnap);
+
+	// Vaul's portal defaults to document.body, but our theme tokens
+	// (--rds-bg-panel, etc.) are scoped to `[data-redesign]`. Mounting the
+	// drawer outside that scope leaves the panel with no background and
+	// reads as transparent over the map. Anchor the portal inside the themed
+	// root instead.
+	const [container, setContainer] = useState<HTMLElement | null>(null);
+	useEffect(() => {
+		setContainer(document.querySelector<HTMLElement>("[data-redesign]"));
+	}, []);
 
 	return (
 		<Drawer.Root
@@ -37,7 +47,7 @@ export function MobilePanelDrawer({ title, open, onClose, children }: MobilePane
 			dismissible
 			disablePreventScroll
 		>
-			<Drawer.Portal>
+			<Drawer.Portal container={container}>
 				<Drawer.Overlay
 					style={{
 						position: "fixed",
