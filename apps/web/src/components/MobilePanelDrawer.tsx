@@ -46,17 +46,9 @@ export function MobilePanelDrawer({ title, open, onClose, children }: MobilePane
 			modal={false}
 			dismissible
 			disablePreventScroll
+			handleOnly
 		>
 			<Drawer.Portal container={container}>
-				<Drawer.Overlay
-					style={{
-						position: "fixed",
-						inset: 0,
-						background: "color-mix(in oklch, oklch(0 0 0) 32%, transparent)",
-						zIndex: 9,
-						pointerEvents: "none",
-					}}
-				/>
 				<Drawer.Content
 					style={{
 						position: "fixed",
