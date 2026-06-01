@@ -571,7 +571,9 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 					<MobilePanelDrawer
 						title={screenTitle(context, language)}
 						headerSlot={context === "plan" ? <MobilePlanTitle /> : undefined}
-						open={!panelCollapsed}
+						// Close while a modal is open so the drawer's focus trap
+						// doesn't steal focus from modal text inputs on mobile.
+						open={!panelCollapsed && modal === null}
 						onClose={() => useUiStore.getState().setPanelCollapsed(true)}
 					>
 						{renderPanelContent()}
