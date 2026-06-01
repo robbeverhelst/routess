@@ -35,7 +35,8 @@ const FALLBACK: MapPalette = {
 	waypointStroke: "rgb(255, 255, 255)",
 	kmText: "rgb(70, 70, 80)",
 	kmHalo: "rgba(255, 255, 255, 0.95)",
-	userLocation: "rgb(102, 56, 207)",
+	// Location blue, kept off the accent so the puck stands apart from route/waypoints.
+	userLocation: "rgb(28, 117, 230)",
 	userLocationStroke: "rgb(255, 255, 255)",
 	dragLine: "rgb(102, 56, 207)",
 };
@@ -100,6 +101,8 @@ export function readMapPalette(): MapPalette {
 		const start = dark ? resolve("oklch(0.74 0.14 155)") : resolve("oklch(0.6 0.13 155)");
 		const end = dark ? resolve("oklch(0.7 0.18 25)") : resolve("oklch(0.6 0.18 25)");
 		const direct = dark ? resolve("oklch(0.78 0.13 80)") : resolve("oklch(0.68 0.13 80)");
+		// Location blue, kept off the accent so the puck stands apart from route/waypoints.
+		const userLoc = dark ? resolve("oklch(0.72 0.15 255)") : resolve("oklch(0.58 0.16 255)");
 
 		const casing = dark ? resolve("oklch(1 0 0 / 0.22)") : resolve("oklch(0 0 0 / 0.18)");
 		const shadow = dark ? resolve("oklch(0 0 0 / 0.55)") : resolve("oklch(0 0 0 / 0.18)");
@@ -120,7 +123,7 @@ export function readMapPalette(): MapPalette {
 			waypointStroke: panelBg,
 			kmText: fg,
 			kmHalo,
-			userLocation: accent,
+			userLocation: userLoc,
 			userLocationStroke: panelBg,
 			dragLine: accent,
 		};
