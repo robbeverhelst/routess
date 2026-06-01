@@ -1,9 +1,28 @@
+import type { Coordinate } from "@routess/core";
+import { closestPointOnSegment, haversineDistance } from "@routess/core";
 import type { Map as MapboxMap } from "mapbox-gl";
 import type React from "react";
 import { createContext, useCallback, useContext, useEffect } from "react";
-import { updateUserLocationLayer } from "@/features/routing/managers/MapLayerManager";
+import { updateLineToRouteLayer, updateUserLocationLayer } from "@/features/routing/managers/MapLayerManager";
 import { useEnhancedLocation } from "@/hooks/useEnhancedLocation";
 import { Logger } from "@/lib/logger";
+import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
+import { useIsMapLocked, useRoutePath } from "@/stores/routingStore";
+
+// Show the off-track guide line only once the user is meaningfully off the
+// route, so it stays hidden while they're essentially on it.
+const OFF_TRACK_THRESHOLD_KM = 0.05; // 50 m
+
+function nearestPointOnPath(point: Coordinate, path: Coordinate[]): { coord: Coordinate; distanceKm: number } | null {
+	if (path.length < 2) return null;
+	let best: { coord: Coordinate; distanceKm: number } | null = null;
+	for (let i = 0; i < path.length - 1; i++) {
+		const coord = closestPointOnSegment(point, path[i], path[i + 1]);
+		const distanceKm = haversineDistance(point, coord);
+		if (!best || distanceKm < best.distanceKm) best = { coord, distanceKm };
+	}
+	return best;
+}
 
 interface UserLocationContextType {
 	// Location state
@@ -79,6 +98,10 @@ export const UserLocationProvider: React.FC<UserLocationProviderProps> = ({
 		},
 	});
 
+	const routePath = useRoutePath();
+	const isMapLocked = useIsMapLocked();
+	const showOffTrackGuideLine = useRedesignSettingsStore((s) => s.showOffTrackGuideLine);
+
 	// Auto-start tracking when user has a route
 	useEffect(() => {
 		if (isMapReady && hasRoute && !isLocationTracking) {
@@ -109,6 +132,28 @@ export const UserLocationProvider: React.FC<UserLocationProviderProps> = ({
 			updateUserLocationLayer(mapRef.current, userLocation);
 		}
 	}, [userLocation, isMapReady, mapRef]);
+
+	// Off-track guide line: a dashed connector from the user to the nearest
+	// point on the route. Only in follow/lock mode, when enabled, and once
+	// they're >50m off the route.
+	useEffect(() => {
+		const map = mapRef.current;
+		if (!map || !isMapReady) return;
+		if (!showOffTrackGuideLine || !isMapLocked || !userLocation || routePath.length < 2) {
+			updateLineToRouteLayer(map, null);
+			return;
+		}
+		const nearest = nearestPointOnPath(userLocation, routePath);
+		if (!nearest || nearest.distanceKm <= OFF_TRACK_THRESHOLD_KM) {
+			updateLineToRouteLayer(map, null);
+			return;
+		}
+		updateLineToRouteLayer(map, {
+			type: "Feature",
+			properties: {},
+			geometry: { type: "LineString", coordinates: [userLocation, nearest.coord] },
+		});
+	}, [userLocation, routePath, isMapLocked, showOffTrackGuideLine, isMapReady, mapRef]);
 
 	// Combined handler for the locate button that handles both locating and tracking
 	const handleLocateButtonClick = useCallback(async () => {

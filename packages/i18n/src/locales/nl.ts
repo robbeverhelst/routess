@@ -372,6 +372,9 @@ export const nl: Record<string, string> = {
 	"settings.map.pois": "Bezienswaardigheden tonen",
 	"settings.map.terrain3d": "3D-terrein",
 	"settings.map.autoSnap": "Automatisch op wegen vastklikken",
+	"settings.map.offTrackGuide": "Hulplijn bij afwijken",
+	"settings.map.offTrackGuideSub":
+		"Toon een stippellijn naar het dichtstbijzijnde punt op je route als je ervan afwijkt",
 	"settings.privacy.locationAccess": "Locatietoegang",
 	"settings.privacy.enable": "Inschakelen",
 	"settings.account.exportAll": "Alle gegevens exporteren",
