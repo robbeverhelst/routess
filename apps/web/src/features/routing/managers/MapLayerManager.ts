@@ -29,6 +29,8 @@ export const ROUTE_SURFACE_PATH_LAYER_ID = "route-surface-path";
 export const ROUTE_SCRUB_SOURCE_ID = "route-scrub";
 export const ROUTE_SCRUB_HALO_LAYER_ID = "route-scrub-halo";
 export const ROUTE_SCRUB_LAYER_ID = "route-scrub";
+export const LINE_TO_ROUTE_SOURCE_ID = "line-to-route";
+export const LINE_TO_ROUTE_LAYER_ID = "line-to-route";
 
 // Dasharrays are not data-driven in mapbox-gl, so each bucket gets its own
 // filtered layer. Patterns chosen to read intuitively: solid-ish long dash
@@ -373,6 +375,24 @@ export const initializeSourcesAndLayers = (map: MapboxMap, palette?: MapPalette)
 			},
 		});
 	}
+
+	if (!map.getSource(LINE_TO_ROUTE_SOURCE_ID)) {
+		map.addSource(LINE_TO_ROUTE_SOURCE_ID, {
+			type: "geojson",
+			data: { type: "FeatureCollection", features: [] },
+		});
+		map.addLayer({
+			id: LINE_TO_ROUTE_LAYER_ID,
+			type: "line",
+			source: LINE_TO_ROUTE_SOURCE_ID,
+			layout: { "line-join": "round", "line-cap": "round" },
+			paint: {
+				"line-color": "rgba(128, 128, 128, 0.75)",
+				"line-width": 2,
+				"line-dasharray": [1, 2],
+			},
+		});
+	}
 	Logger.info("[MapLayerManager] All sources and layers initialized (if not already present).");
 };
 
@@ -546,6 +566,17 @@ export const updateDragLinesLayer = (map: MapboxMap, dragLineFeatures: GeoJSON.F
 	if (!map?.getSource(TEMP_DRAG_LINES_SOURCE_ID)) return;
 	const source = map.getSource(TEMP_DRAG_LINES_SOURCE_ID) as GeoJSONSource;
 	source.setData({ type: "FeatureCollection" as const, features: dragLineFeatures });
+};
+
+// Dashed connector from the user's location to the nearest point on the route.
+// Pass null to hide it.
+export const updateLineToRouteLayer = (
+	map: MapboxMap,
+	lineFeature: GeoJSON.Feature<GeoJSON.LineString> | null,
+): void => {
+	if (!map?.getSource(LINE_TO_ROUTE_SOURCE_ID)) return;
+	const source = map.getSource(LINE_TO_ROUTE_SOURCE_ID) as GeoJSONSource;
+	source.setData({ type: "FeatureCollection" as const, features: lineFeature ? [lineFeature] : [] });
 };
 
 export const clearRouteLayer = (map: MapboxMap): void => {

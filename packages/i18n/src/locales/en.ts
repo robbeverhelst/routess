@@ -369,6 +369,8 @@ export const en: Record<string, string> = {
 	"settings.map.pois": "Show points of interest",
 	"settings.map.terrain3d": "3D terrain",
 	"settings.map.autoSnap": "Auto-snap to roads",
+	"settings.map.offTrackGuide": "Off-track guide line",
+	"settings.map.offTrackGuideSub": "Show a dashed line to the nearest point on your route when you stray off it",
 	"settings.privacy.locationAccess": "Location access",
 	"settings.privacy.enable": "Enable",
 	"settings.account.exportAll": "Export all data",

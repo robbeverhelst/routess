@@ -84,6 +84,8 @@ interface SettingsState {
 	defaultRouteVisibility: RouteVisibility;
 	locationPermission: LocationPermission;
 	routingDefaults: RoutingDefaults;
+	// Local-only (per-device), not part of the server-synced snapshot.
+	showOffTrackGuideLine: boolean;
 
 	setUnits: (units: RedesignUnits) => void;
 	setShowPois: (showPois: boolean) => void;
@@ -97,6 +99,7 @@ interface SettingsState {
 	setOverlay: (key: OverlayKey, value: boolean) => void;
 	setDefaultRouteVisibility: (visibility: RouteVisibility) => void;
 	setLocationPermission: (permission: LocationPermission) => void;
+	setShowOffTrackGuideLine: (show: boolean) => void;
 	setRoutingDefaultsForActivity: (activity: RedesignActivity, prefs: Partial<RoutingPreferences>) => void;
 	replaceAllSettings: (settings: RedesignSettingsSnapshot) => void;
 }
@@ -124,6 +127,7 @@ export const DEFAULT_REDESIGN_SETTINGS: RedesignSettingsSnapshot = {
 };
 
 const DEFAULT_LOCATION_PERMISSION: LocationPermission = "unknown";
+const DEFAULT_SHOW_OFFTRACK_GUIDE_LINE = true;
 
 function isActivity(value: unknown): value is RedesignActivity {
 	return value === "run" || value === "cycle" || value === "walk";
@@ -227,6 +231,7 @@ export const useRedesignSettingsStore = create<SettingsState>()(
 		(set) => ({
 			...DEFAULT_REDESIGN_SETTINGS,
 			locationPermission: DEFAULT_LOCATION_PERMISSION,
+			showOffTrackGuideLine: DEFAULT_SHOW_OFFTRACK_GUIDE_LINE,
 
 			setUnits: (units) => set({ units }),
 			setShowPois: (showPois) => set({ showPois }),
@@ -253,6 +258,7 @@ export const useRedesignSettingsStore = create<SettingsState>()(
 				})),
 			setDefaultRouteVisibility: (visibility) => set({ defaultRouteVisibility: visibility }),
 			setLocationPermission: (locationPermission) => set({ locationPermission }),
+			setShowOffTrackGuideLine: (showOffTrackGuideLine) => set({ showOffTrackGuideLine }),
 			setRoutingDefaultsForActivity: (activity, prefs) =>
 				set((state) => ({
 					routingDefaults: mergeRoutingDefaults(state.routingDefaults, {
@@ -267,7 +273,10 @@ export const useRedesignSettingsStore = create<SettingsState>()(
 			version: 7,
 			migrate: (persisted, version) => {
 				const state = persisted as
-					| (Partial<RedesignSettingsSnapshot> & { locationPermission?: LocationPermission })
+					| (Partial<RedesignSettingsSnapshot> & {
+							locationPermission?: LocationPermission;
+							showOffTrackGuideLine?: boolean;
+					  })
 					| null;
 				if (state && version < 4) {
 					const stale = state.mapStyle as string | undefined;
@@ -283,7 +292,11 @@ export const useRedesignSettingsStore = create<SettingsState>()(
 				const locationPermission = isLocationPermission(state?.locationPermission)
 					? state.locationPermission
 					: DEFAULT_LOCATION_PERMISSION;
-				return { ...normalizeRedesignSettings(state), locationPermission };
+				const showOffTrackGuideLine =
+					typeof state?.showOffTrackGuideLine === "boolean"
+						? state.showOffTrackGuideLine
+						: DEFAULT_SHOW_OFFTRACK_GUIDE_LINE;
+				return { ...normalizeRedesignSettings(state), locationPermission, showOffTrackGuideLine };
 			},
 		},
 	),

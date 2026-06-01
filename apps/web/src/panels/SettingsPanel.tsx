@@ -261,6 +261,8 @@ export function SettingsPanel() {
 	} = useRedesignSettingsStore();
 	const autoSnap = useRedesignSettingsStore((s) => s.autoSnap);
 	const setAutoSnap = useRedesignSettingsStore((s) => s.setAutoSnap);
+	const showOffTrackGuideLine = useRedesignSettingsStore((s) => s.showOffTrackGuideLine);
+	const setShowOffTrackGuideLine = useRedesignSettingsStore((s) => s.setShowOffTrackGuideLine);
 
 	const defaultSport: RedesignActivity | null =
 		selectedSports.length === 0 ? null : selectedSports.includes(activityType) ? activityType : selectedSports[0];
@@ -561,7 +563,13 @@ export function SettingsPanel() {
 					sub={t("common.comingSoon")}
 					control={<Toggle on={terrain3d} onChange={setTerrain3d} disabled />}
 				/>
-				<Row label={t("settings.map.autoSnap")} control={<Toggle on={autoSnap} onChange={setAutoSnap} />} last />
+				<Row label={t("settings.map.autoSnap")} control={<Toggle on={autoSnap} onChange={setAutoSnap} />} />
+				<Row
+					label={t("settings.map.offTrackGuide")}
+					sub={t("settings.map.offTrackGuideSub")}
+					control={<Toggle on={showOffTrackGuideLine} onChange={setShowOffTrackGuideLine} />}
+					last
+				/>
 			</Group>
 
 			<Group title={t("settings.privacy")}>
