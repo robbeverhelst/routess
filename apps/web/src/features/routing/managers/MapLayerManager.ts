@@ -15,7 +15,9 @@ export const WAYPOINTS_LAYER_ID = "points";
 export const WAYPOINTS_CORE_LAYER_ID = "points-core";
 export const USER_LOCATION_SOURCE_ID = "user-location-point";
 export const USER_LOCATION_HALO_LAYER_ID = "user-location-halo";
+export const USER_LOCATION_HEADING_LAYER_ID = "user-location-heading";
 export const USER_LOCATION_POINT_LAYER_ID = "user-location-point";
+const USER_LOCATION_HEADING_IMAGE_ID = "user-location-heading-cone";
 export const KM_MARKERS_SOURCE_ID = "km-markers";
 export const KM_MARKERS_LAYER_ID = "km-markers";
 export const TEMP_DRAG_LINES_SOURCE_ID = "temp-drag-lines";
@@ -75,6 +77,34 @@ const interpolateZoomStops = (column: 1 | 2 | 3 | 4, hoverMultiplier = 1): unkno
 			: ["case", ["boolean", ["feature-state", "hover"], false], stop[column] * hoverMultiplier, stop[column]],
 	]),
 ];
+
+// Draw the heading cone once and register it as a map image. It points "up"
+// (north) in image space, with its apex at the bottom (the puck); the symbol
+// layer rotates it to the device heading.
+function ensureHeadingConeImage(map: MapboxMap): void {
+	if (map.hasImage(USER_LOCATION_HEADING_IMAGE_ID)) return;
+	const ratio = 2;
+	const w = 56 * ratio;
+	const h = 64 * ratio;
+	const canvas = document.createElement("canvas");
+	canvas.width = w;
+	canvas.height = h;
+	const ctx = canvas.getContext("2d");
+	if (!ctx) return;
+	const apexX = w / 2;
+	const halfSpread = 24 * ratio;
+	const gradient = ctx.createLinearGradient(0, h, 0, 0);
+	gradient.addColorStop(0, "rgba(28, 117, 230, 0.55)");
+	gradient.addColorStop(1, "rgba(28, 117, 230, 0)");
+	ctx.fillStyle = gradient;
+	ctx.beginPath();
+	ctx.moveTo(apexX, h);
+	ctx.lineTo(apexX - halfSpread, 0);
+	ctx.lineTo(apexX + halfSpread, 0);
+	ctx.closePath();
+	ctx.fill();
+	map.addImage(USER_LOCATION_HEADING_IMAGE_ID, ctx.getImageData(0, 0, w, h), { pixelRatio: ratio });
+}
 
 export const initializeSourcesAndLayers = (map: MapboxMap, palette?: MapPalette): void => {
 	const p = palette ?? readMapPalette();
@@ -258,6 +288,24 @@ export const initializeSourcesAndLayers = (map: MapboxMap, palette?: MapPalette)
 				"circle-opacity": 0.18,
 				"circle-blur": 0.4,
 				"circle-stroke-width": 0,
+			},
+		});
+		// Heading cone: only rendered for features that carry a `heading`,
+		// rotated to it and laid flat on the map. Sits below the dot.
+		ensureHeadingConeImage(map);
+		map.addLayer({
+			id: USER_LOCATION_HEADING_LAYER_ID,
+			type: "symbol",
+			source: USER_LOCATION_SOURCE_ID,
+			filter: ["has", "heading"],
+			layout: {
+				"icon-image": USER_LOCATION_HEADING_IMAGE_ID,
+				"icon-rotate": ["get", "heading"],
+				"icon-rotation-alignment": "map",
+				"icon-pitch-alignment": "map",
+				"icon-anchor": "bottom",
+				"icon-allow-overlap": true,
+				"icon-ignore-placement": true,
 			},
 		});
 		map.addLayer({
@@ -508,13 +556,20 @@ export const updateWaypointsLayer = (map: MapboxMap, waypoints: Waypoint[], isMa
 	source.setData({ type: "FeatureCollection" as const, features });
 };
 
-export const updateUserLocationLayer = (map: MapboxMap, coordinates: Coordinate | null): void => {
+export const updateUserLocationLayer = (
+	map: MapboxMap,
+	coordinates: Coordinate | null,
+	heading?: number | null,
+): void => {
 	if (!map?.getSource(USER_LOCATION_SOURCE_ID)) return;
 	const features = [];
 	if (coordinates) {
+		// Only attach `heading` when known; the cone layer is filtered on its
+		// presence, so omitting it hides the cone (e.g. no compass / not moving).
+		const properties = heading != null && !Number.isNaN(heading) ? { heading } : {};
 		features.push({
 			type: "Feature" as const,
-			properties: {},
+			properties,
 			geometry: { type: "Point" as const, coordinates: coordinates },
 		});
 	}
