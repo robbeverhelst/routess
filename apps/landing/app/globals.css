@@ -18,6 +18,7 @@
 	body {
 		margin: 0;
 		padding: 0;
+		overflow-x: clip;
 	}
 	body {
 		font-family: var(--font-body);
@@ -25,7 +26,6 @@
 		color: var(--ink);
 		-webkit-font-smoothing: antialiased;
 		font-feature-settings: "ss01", "cv11";
-		overflow-x: hidden;
 	}
 	a {
 		color: inherit;
@@ -257,6 +257,76 @@ section.tight {
 }
 .nav.scrolled {
 	border-bottom-color: var(--line);
+}
+
+/* Nav: desktop is one inline row (the menu wrapper dissolves via display:contents),
+   so logo / links / actions stay in their space-between positions. */
+.nav-menu {
+	display: contents;
+}
+.nav-links {
+	display: flex;
+	gap: 28px;
+	font-size: 14px;
+	font-weight: 500;
+}
+.nav-actions {
+	display: flex;
+	gap: 10px;
+	align-items: center;
+}
+.nav-toggle {
+	display: none;
+	width: 40px;
+	height: 40px;
+	align-items: center;
+	justify-content: center;
+	border: 1px solid var(--line);
+	border-radius: 10px;
+	background: var(--paper);
+	color: var(--ink);
+	cursor: pointer;
+}
+
+/* Nav: below 860px the desktop row no longer fits, collapse into a hamburger
+   dropdown. The menu wrapper becomes a real positioned panel. */
+@media (max-width: 860px) {
+	.nav-toggle {
+		display: inline-flex;
+	}
+	.nav-menu {
+		position: absolute;
+		top: 72px;
+		left: 0;
+		right: 0;
+		display: none;
+		flex-direction: column;
+		gap: 18px;
+		padding: 18px 22px 24px;
+		background: var(--paper);
+		border-bottom: 1px solid var(--line);
+		box-shadow: 0 14px 28px oklch(0 0 0 / 0.1);
+	}
+	.nav-menu.open {
+		display: flex;
+	}
+	.nav-links {
+		flex-direction: column;
+		gap: 16px;
+		font-size: 16px;
+	}
+	.nav-actions {
+		flex-direction: column;
+		align-items: stretch;
+		gap: 12px;
+	}
+	.nav-actions .btn {
+		width: 100%;
+		justify-content: center;
+	}
+	.nav-actions .nav-lang {
+		align-self: flex-start;
+	}
 }
 
 /* Marquee */
