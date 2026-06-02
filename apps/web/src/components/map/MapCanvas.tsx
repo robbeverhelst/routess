@@ -407,6 +407,12 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
 	]);
 
 	// Map positioning hook
+	// A shared route is being opened when there's a route id or a ?route= param.
+	const pendingSharedRoute = useMemo(
+		() => Boolean(routeId) || new URLSearchParams(window.location.search).has("route"),
+		[routeId],
+	);
+
 	useMapPositioning({
 		mapRef,
 		isMapReady: mapRef.current !== null,
@@ -417,6 +423,7 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
 		locationError: locationError as GeolocationPositionError | null,
 		lastKnownLocationFromStorage,
 		detectedRouteInLocalStorageOnInit,
+		pendingSharedRoute,
 		mapPitch: MAP_PITCH,
 	});
 

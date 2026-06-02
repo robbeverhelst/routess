@@ -348,6 +348,7 @@ describe("MapCanvas", () => {
 				locationError: null,
 				lastKnownLocationFromStorage: [-0.1276, 51.5074],
 				detectedRouteInLocalStorageOnInit: true,
+				pendingSharedRoute: false,
 				mapPitch: 30,
 			});
 		});

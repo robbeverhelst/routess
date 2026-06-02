@@ -7,6 +7,8 @@ import { applyMapPalette, initializeSourcesAndLayers } from "@/features/routing/
 import { attachMapViewAdapter } from "@/features/routing/managers/MapViewAdapter";
 import { readMapPalette, subscribeMapPalette } from "@/features/routing/managers/mapPalette";
 import { createRouteDraftEditor, type RouteDraftEditor } from "@/features/routing/RouteDraftEditor";
+import { getCurrentRoutePath } from "@/features/routing/services/RouteCalculationService";
+import { zoomToRoute } from "@/features/routing/utils/RoutingUtils";
 import { Logger } from "@/lib/logger";
 import { useToastStore } from "@/stores/toastStore";
 
@@ -76,8 +78,18 @@ export const useMapInitialization = ({
 				const result = await editor.loadFromShareLink(encodedRoute);
 				if (!result.success) {
 					pushToast({ kind: "danger", title: result.message || "Failed to load shared route." });
-				} else if (urlParams.get("route")) {
-					window.history.replaceState({}, document.title, window.location.pathname);
+				} else {
+					if (urlParams.get("route")) {
+						window.history.replaceState({}, document.title, window.location.pathname);
+					}
+					// Opening a shared link should land on the route. The geometry is
+					// ready now (loadFromShareLink awaits the routing), so fit the map
+					// to it instead of leaving the user to press the recenter button.
+					const routeCoords = getCurrentRoutePath();
+					if (routeCoords && routeCoords.length > 0) {
+						map.stop();
+						zoomToRoute(map, routeCoords);
+					}
 				}
 			}
 		},
