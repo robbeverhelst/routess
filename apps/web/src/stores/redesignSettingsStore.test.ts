@@ -20,4 +20,17 @@ describe("redesignSettingsStore", () => {
 		expect(settings.overlays.hikingNodes).toBe(true);
 		expect(settings.overlays.cyclingNodes).toBe(true);
 	});
+
+	it("prefers explicit node overlay flags over the legacy combined nodes flag", () => {
+		const settings = normalizeRedesignSettings({
+			overlays: {
+				nodes: true,
+				hikingNodes: false,
+				cyclingNodes: false,
+			} as unknown as Parameters<typeof normalizeRedesignSettings>[0]["overlays"],
+		});
+
+		expect(settings.overlays.hikingNodes).toBe(false);
+		expect(settings.overlays.cyclingNodes).toBe(false);
+	});
 });

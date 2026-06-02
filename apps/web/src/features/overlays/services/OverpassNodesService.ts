@@ -68,6 +68,18 @@ const inFlightFetches = new Map<string, Promise<NodeFeatureCollection>>();
 export function clearNodeNetworkCacheForTests(): void {
 	memoryCache.clear();
 	inFlightFetches.clear();
+	if (typeof window === "undefined") return;
+
+	try {
+		for (let index = window.localStorage.length - 1; index >= 0; index -= 1) {
+			const key = window.localStorage.key(index);
+			if (key?.startsWith(CACHE_PREFIX)) {
+				window.localStorage.removeItem(key);
+			}
+		}
+	} catch (err) {
+		Logger.debug("[OverpassNodesService] node-network cache clear skipped", err);
+	}
 }
 
 function classify(network: string | undefined): NodeNetworkKind | null {
@@ -200,7 +212,11 @@ export async function fetchNodeNetwork(bbox: NodeNetworkBbox, signal?: AbortSign
 	const cached = getCachedEntry(cacheKey);
 	if (cached) {
 		if (!isCacheFresh(cached)) {
-			void refreshNodeNetworkCache(cacheKey, bbox, signal);
+			void refreshNodeNetworkCache(cacheKey, bbox, signal).catch((err) => {
+				if ((err as { name?: string }).name !== "AbortError") {
+					Logger.warn("[OverpassNodesService] background refresh failed", err);
+				}
+			});
 		}
 		return cached.data;
 	}

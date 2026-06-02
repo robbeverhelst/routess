@@ -176,6 +176,7 @@ export function LayerPicker() {
 								<button
 									key={row.key}
 									type="button"
+									aria-pressed={on}
 									onClick={() => setOverlay(row.key, !on)}
 									style={{
 										display: "flex",
