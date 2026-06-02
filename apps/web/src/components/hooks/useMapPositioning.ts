@@ -14,6 +14,7 @@ interface UseMapPositioningProps {
 	locationError: GeolocationPositionError | null;
 	lastKnownLocationFromStorage: [number, number] | null;
 	detectedRouteInLocalStorageOnInit: boolean;
+	pendingSharedRoute: boolean;
 	mapPitch: number;
 }
 
@@ -27,6 +28,7 @@ export const useMapPositioning = ({
 	locationError,
 	lastKnownLocationFromStorage,
 	detectedRouteInLocalStorageOnInit,
+	pendingSharedRoute,
 	mapPitch,
 }: UseMapPositioningProps) => {
 	const hasInitiallyZoomedToUser = useRef(false);
@@ -72,6 +74,15 @@ export const useMapPositioning = ({
 			return;
 		}
 
+		// A shared route is loading (from ?route= or a route id). Don't fly to the
+		// user's location, it would win the race and the route would never get
+		// focused; the share-link load handler fits to the route once its
+		// geometry is ready.
+		if (pendingSharedRoute) {
+			Logger.info("[useMapPositioning] Shared route pending, deferring to the route fit");
+			return;
+		}
+
 		// Priority 2: Zoom to current user location if available
 		if (userLocation && !isUserLocationLoading && !locationError) {
 			Logger.info("[useMapPositioning] Priority 2: Zooming to current user location");
@@ -113,6 +124,7 @@ export const useMapPositioning = ({
 		locationError,
 		lastKnownLocationFromStorage,
 		detectedRouteInLocalStorageOnInit,
+		pendingSharedRoute,
 		mapPitch,
 		mapRef,
 	]);
