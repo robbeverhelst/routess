@@ -2,8 +2,9 @@ import type { Coordinate } from "@routess/core";
 import { closestPointOnSegment, haversineDistance } from "@routess/core";
 import type { Map as MapboxMap } from "mapbox-gl";
 import type React from "react";
-import { createContext, useCallback, useContext, useEffect } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef } from "react";
 import { updateLineToRouteLayer, updateUserLocationLayer } from "@/features/routing/managers/MapLayerManager";
+import { useDeviceHeading } from "@/hooks/useDeviceHeading";
 import { useEnhancedLocation } from "@/hooks/useEnhancedLocation";
 import { Logger } from "@/lib/logger";
 import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
@@ -87,13 +88,14 @@ export const UserLocationProvider: React.FC<UserLocationProviderProps> = ({
 		stopTracking: stopLocationTracking,
 		getCurrentLocation,
 		getLastKnownLocation,
+		heading: movementHeading,
 	} = useEnhancedLocation({
 		autoStart: false, // Start manually when needed
 		trackingMode: "walking", // Optimized for walking
 		onLocationUpdate: (state) => {
-			// Update map with new location
+			// Update map with new location (with the latest known heading).
 			if (mapRef.current && state.location) {
-				updateUserLocationLayer(mapRef.current, state.location);
+				updateUserLocationLayer(mapRef.current, state.location, headingRef.current);
 			}
 		},
 	});
@@ -101,6 +103,17 @@ export const UserLocationProvider: React.FC<UserLocationProviderProps> = ({
 	const routePath = useRoutePath();
 	const isMapLocked = useIsMapLocked();
 	const showOffTrackGuideLine = useRedesignSettingsStore((s) => s.showOffTrackGuideLine);
+
+	// Facing direction for the location cone: prefer the device compass (works
+	// while stationary), fall back to GPS course-over-ground while moving.
+	const compassHeading = useDeviceHeading();
+	const showHeadingCone = useRedesignSettingsStore((s) => s.showHeadingCone);
+	const rawHeading = compassHeading ?? movementHeading ?? null;
+	const effectiveHeading = showHeadingCone ? rawHeading : null;
+	const headingRef = useRef<number | null>(effectiveHeading);
+	useEffect(() => {
+		headingRef.current = effectiveHeading;
+	}, [effectiveHeading]);
 
 	// Auto-start tracking when user has a route
 	useEffect(() => {
@@ -124,14 +137,15 @@ export const UserLocationProvider: React.FC<UserLocationProviderProps> = ({
 		}
 	}, [isLocationTracking, locationError, stopLocationTracking]);
 
-	// Update map with user location from hook
+	// Update map with user location + heading from hook. Re-runs on heading
+	// change too, so the cone rotates even while the user stands still.
 	useEffect(() => {
 		if (!mapRef.current) return;
 
 		if (isMapReady && userLocation) {
-			updateUserLocationLayer(mapRef.current, userLocation);
+			updateUserLocationLayer(mapRef.current, userLocation, effectiveHeading);
 		}
-	}, [userLocation, isMapReady, mapRef]);
+	}, [userLocation, isMapReady, mapRef, effectiveHeading]);
 
 	// Off-track guide line: a dashed connector from the user to the nearest
 	// point on the route. Only in follow/lock mode, when enabled, and once

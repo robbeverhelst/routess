@@ -263,6 +263,8 @@ export function SettingsPanel() {
 	const setAutoSnap = useRedesignSettingsStore((s) => s.setAutoSnap);
 	const showOffTrackGuideLine = useRedesignSettingsStore((s) => s.showOffTrackGuideLine);
 	const setShowOffTrackGuideLine = useRedesignSettingsStore((s) => s.setShowOffTrackGuideLine);
+	const showHeadingCone = useRedesignSettingsStore((s) => s.showHeadingCone);
+	const setShowHeadingCone = useRedesignSettingsStore((s) => s.setShowHeadingCone);
 
 	const defaultSport: RedesignActivity | null =
 		selectedSports.length === 0 ? null : selectedSports.includes(activityType) ? activityType : selectedSports[0];
@@ -568,6 +570,11 @@ export function SettingsPanel() {
 					label={t("settings.map.offTrackGuide")}
 					sub={t("settings.map.offTrackGuideSub")}
 					control={<Toggle on={showOffTrackGuideLine} onChange={setShowOffTrackGuideLine} />}
+				/>
+				<Row
+					label={t("settings.map.headingCone")}
+					sub={t("settings.map.headingConeSub")}
+					control={<Toggle on={showHeadingCone} onChange={setShowHeadingCone} />}
 					last
 				/>
 			</Group>

@@ -375,6 +375,8 @@ export const nl: Record<string, string> = {
 	"settings.map.offTrackGuide": "Hulplijn bij afwijken",
 	"settings.map.offTrackGuideSub":
 		"Toon een stippellijn naar het dichtstbijzijnde punt op je route als je ervan afwijkt",
+	"settings.map.headingCone": "Kijkrichtingkegel",
+	"settings.map.headingConeSub": "Toon een kegel op je locatie die wijst in de richting waarin je kijkt",
 	"settings.privacy.locationAccess": "Locatietoegang",
 	"settings.privacy.enable": "Inschakelen",
 	"settings.account.exportAll": "Alle gegevens exporteren",

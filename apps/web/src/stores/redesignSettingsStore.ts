@@ -86,6 +86,7 @@ interface SettingsState {
 	routingDefaults: RoutingDefaults;
 	// Local-only (per-device), not part of the server-synced snapshot.
 	showOffTrackGuideLine: boolean;
+	showHeadingCone: boolean;
 
 	setUnits: (units: RedesignUnits) => void;
 	setShowPois: (showPois: boolean) => void;
@@ -100,6 +101,7 @@ interface SettingsState {
 	setDefaultRouteVisibility: (visibility: RouteVisibility) => void;
 	setLocationPermission: (permission: LocationPermission) => void;
 	setShowOffTrackGuideLine: (show: boolean) => void;
+	setShowHeadingCone: (show: boolean) => void;
 	setRoutingDefaultsForActivity: (activity: RedesignActivity, prefs: Partial<RoutingPreferences>) => void;
 	replaceAllSettings: (settings: RedesignSettingsSnapshot) => void;
 }
@@ -128,6 +130,7 @@ export const DEFAULT_REDESIGN_SETTINGS: RedesignSettingsSnapshot = {
 
 const DEFAULT_LOCATION_PERMISSION: LocationPermission = "unknown";
 const DEFAULT_SHOW_OFFTRACK_GUIDE_LINE = true;
+const DEFAULT_SHOW_HEADING_CONE = true;
 
 function isActivity(value: unknown): value is RedesignActivity {
 	return value === "run" || value === "cycle" || value === "walk";
@@ -232,6 +235,7 @@ export const useRedesignSettingsStore = create<SettingsState>()(
 			...DEFAULT_REDESIGN_SETTINGS,
 			locationPermission: DEFAULT_LOCATION_PERMISSION,
 			showOffTrackGuideLine: DEFAULT_SHOW_OFFTRACK_GUIDE_LINE,
+			showHeadingCone: DEFAULT_SHOW_HEADING_CONE,
 
 			setUnits: (units) => set({ units }),
 			setShowPois: (showPois) => set({ showPois }),
@@ -259,6 +263,7 @@ export const useRedesignSettingsStore = create<SettingsState>()(
 			setDefaultRouteVisibility: (visibility) => set({ defaultRouteVisibility: visibility }),
 			setLocationPermission: (locationPermission) => set({ locationPermission }),
 			setShowOffTrackGuideLine: (showOffTrackGuideLine) => set({ showOffTrackGuideLine }),
+			setShowHeadingCone: (showHeadingCone) => set({ showHeadingCone }),
 			setRoutingDefaultsForActivity: (activity, prefs) =>
 				set((state) => ({
 					routingDefaults: mergeRoutingDefaults(state.routingDefaults, {
@@ -276,6 +281,7 @@ export const useRedesignSettingsStore = create<SettingsState>()(
 					| (Partial<RedesignSettingsSnapshot> & {
 							locationPermission?: LocationPermission;
 							showOffTrackGuideLine?: boolean;
+							showHeadingCone?: boolean;
 					  })
 					| null;
 				if (state && version < 4) {
@@ -296,7 +302,9 @@ export const useRedesignSettingsStore = create<SettingsState>()(
 					typeof state?.showOffTrackGuideLine === "boolean"
 						? state.showOffTrackGuideLine
 						: DEFAULT_SHOW_OFFTRACK_GUIDE_LINE;
-				return { ...normalizeRedesignSettings(state), locationPermission, showOffTrackGuideLine };
+				const showHeadingCone =
+					typeof state?.showHeadingCone === "boolean" ? state.showHeadingCone : DEFAULT_SHOW_HEADING_CONE;
+				return { ...normalizeRedesignSettings(state), locationPermission, showOffTrackGuideLine, showHeadingCone };
 			},
 		},
 	),
