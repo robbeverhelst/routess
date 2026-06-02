@@ -1,10 +1,8 @@
-import type { Waypoint } from "@routess/core";
 import mapboxgl, { LngLatBounds } from "mapbox-gl";
 import {
 	initializeSourcesAndLayers,
 	updateRouteLayer,
 	updateRouteSurfaceLayer,
-	updateWaypointsLayer,
 } from "@/features/routing/managers/MapLayerManager";
 import { readMapPalette } from "@/features/routing/managers/mapPalette";
 import type { SurfaceSegment } from "@/features/routing/services/SurfaceService";
@@ -28,7 +26,6 @@ const BRAND_PURPLE = "#6638cf";
 
 export interface RouteShareCardInput {
 	points: Coordinate[];
-	waypoints: Waypoint[];
 	surfaceSegments: SurfaceSegment[];
 	mapStyle: RedesignMapStyle;
 	lightPreset: string;
@@ -104,7 +101,6 @@ async function renderRouteMap(input: RouteShareCardInput): Promise<HTMLCanvasEle
 		initializeSourcesAndLayers(map, readMapPalette());
 		updateRouteLayer(map, input.points);
 		updateRouteSurfaceLayer(map, input.surfaceSegments);
-		updateWaypointsLayer(map, input.waypoints, false);
 
 		const bounds = input.points.reduce(
 			(acc, point) => acc.extend(point),
@@ -180,8 +176,11 @@ export async function buildRouteShareCard(input: RouteShareCardInput): Promise<B
 	ctx.textBaseline = "middle";
 	ctx.textAlign = "left";
 	ctx.fillStyle = BRAND_PURPLE;
-	ctx.font = "700 60px Inter, system-ui, -apple-system, sans-serif";
-	ctx.fillText("routess", wordmarkX, footerCenterY);
+	ctx.font = "700 56px Inter, system-ui, -apple-system, sans-serif";
+	ctx.fillText("routess", wordmarkX, footerCenterY - 20);
+	ctx.fillStyle = "#9aa0ab";
+	ctx.font = "500 30px Inter, system-ui, -apple-system, sans-serif";
+	ctx.fillText("routess.com", wordmarkX, footerCenterY + 28);
 
 	const rightX = CARD_WIDTH - pad;
 	ctx.textAlign = "right";

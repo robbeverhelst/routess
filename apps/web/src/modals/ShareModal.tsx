@@ -223,7 +223,6 @@ export function ShareModal() {
 	const makeCard = () =>
 		buildRouteShareCard({
 			points: previewPoints,
-			waypoints,
 			surfaceSegments: surfaceBreakdown?.segments ?? [],
 			mapStyle,
 			lightPreset,
