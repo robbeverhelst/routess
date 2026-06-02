@@ -10,6 +10,7 @@ import { useMapViewBindings } from "@/components/hooks/useMapViewBindings";
 import { MapPopup, type PopupInfo as MapPopupInfo } from "@/components/map/MapPopup";
 import { SunPositionIndicator } from "@/components/map/SunPositionIndicator";
 import { useUserLocation } from "@/components/providers/UserLocationProvider";
+import { NodesOverlay } from "@/features/overlays/NodesOverlay";
 import { useServiceWorker } from "@/hooks/useServiceWorker";
 import { useErrorHandler } from "@/lib/errors";
 import type { SupportedLanguage } from "@/lib/i18n";
@@ -569,6 +570,7 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
 							currentLanguage={currentLanguage}
 						/>
 					)}
+					<NodesOverlay />
 				</MapGL>
 
 				{!isMapLoaded && <MapLoadingShell isSatellite={isSatelliteStyle} theme={mapTheme} />}

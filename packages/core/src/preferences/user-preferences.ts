@@ -16,7 +16,7 @@ import { ROUTE_VISIBILITIES, type RouteVisibility } from "../types";
 
 export { ROUTE_VISIBILITIES, type RouteVisibility };
 
-export const OVERLAY_KEYS = ["heatmap", "contour", "bike", "surface", "wind"] as const;
+export const OVERLAY_KEYS = ["heatmap", "contour", "bike", "surface", "wind", "hikingNodes", "cyclingNodes"] as const;
 export type UserPreferenceOverlayKey = (typeof OVERLAY_KEYS)[number];
 
 export type UserPreferenceOverlays = Record<UserPreferenceOverlayKey, boolean>;
@@ -70,6 +70,8 @@ export const DEFAULT_USER_PREFERENCES: UserPreferences = {
 		bike: true,
 		surface: false,
 		wind: false,
+		hikingNodes: false,
+		cyclingNodes: false,
 	},
 	defaultRouteVisibility: "private",
 	routingDefaults: normalizeRoutingDefaults(null),

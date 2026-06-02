@@ -397,6 +397,9 @@ export const nl: Record<string, string> = {
 	"settings.routingDefaults": "Standaardinstellingen voor routes",
 	"settings.routingDefaults.visibility": "Standaardzichtbaarheid",
 	"settings.routingDefaults.visibilitySub": "Zichtbaarheid voor nieuwe routes die je opslaat",
+	"settings.experimental": "Experimenteel",
+	"settings.experimental.nodeNetworkOverlays": "Knooppunten-overlays",
+	"settings.experimental.nodeNetworkOverlaysSub": "Toon wandel- en fietsknooppunten in de kaartlaagkiezer.",
 	"settings.security": "Beveiliging",
 	"settings.security.changePassword": "Wachtwoord",
 	"settings.security.changePasswordSub": "Stel een wachtwoord in of wijzig het",
@@ -1043,8 +1046,13 @@ export const nl: Record<string, string> = {
 		"Vermeldingen, sociale activiteit en systeemberichten verschijnen hier zodra de notificatiebackend live is.",
 	"layers.overlays": "Lagen",
 	"layers.overlaysComingSoon": "Lagen binnenkort",
-	"layers.overlaysSub":
-		"Heatmaps, hoogtelijnen, fietsinfrastructuur en oppervlaktekleuring komen met de lagenpijplijn.",
+	"layers.overlaysSub": "Meer lagen volgen: heatmaps, hoogtelijnen, oppervlaktekleuring, wind.",
+	"layers.nodes": "Wandel- en fietsknooppunten",
+	"layers.nodesSub": "Belgische en Nederlandse genummerde knooppuntennetwerken. Zoom in voor de nummers.",
+	"layers.hikingNodes": "Wandelknooppunten",
+	"layers.hikingNodesSub": "Rode genummerde wandel- en hikingroutes.",
+	"layers.cyclingNodes": "Fietsknooppunten",
+	"layers.cyclingNodesSub": "Blauwe genummerde fietsknooppuntenroutes.",
 
 	// CommandPalette
 	"cmd.placeholder": "Typ een opdracht, zoek of spring…",
