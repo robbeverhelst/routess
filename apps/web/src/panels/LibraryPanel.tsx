@@ -1,3 +1,4 @@
+import type { RouteVisibility } from "@routess/core";
 import { useMemo, useState } from "react";
 import { useIsAuthenticated } from "@/hooks/useAuthState";
 import type { ApiRoute } from "@/lib/api";
@@ -18,12 +19,29 @@ const THUMB_WIDTH = 96;
 const THUMB_HEIGHT = 96;
 
 type Filter = "all" | RedesignActivity | "favourites";
+type SortKey = "recent" | "created" | "name" | "distance" | "elevation";
+type VisibilityFilter = "all" | RouteVisibility;
 
 const FILTERS: { key: Filter; labelKey: string }[] = [
 	{ key: "all", labelKey: "library.filter.all" },
 	{ key: "cycle", labelKey: "library.filter.cycling" },
 	{ key: "run", labelKey: "library.filter.running" },
 	{ key: "favourites", labelKey: "library.filter.favourites" },
+];
+
+const SORTS: { key: SortKey; labelKey: string }[] = [
+	{ key: "recent", labelKey: "library.sort.recent" },
+	{ key: "created", labelKey: "library.sort.created" },
+	{ key: "name", labelKey: "library.sort.name" },
+	{ key: "distance", labelKey: "library.sort.distance" },
+	{ key: "elevation", labelKey: "library.sort.elevation" },
+];
+
+const VISIBILITIES: { key: VisibilityFilter; labelKey: string }[] = [
+	{ key: "all", labelKey: "library.visibilityFilter.all" },
+	{ key: "private", labelKey: "library.visibility.private" },
+	{ key: "unlisted", labelKey: "library.visibility.unlisted" },
+	{ key: "public", labelKey: "library.visibility.public" },
 ];
 
 const TAG_COLOR: Record<RedesignActivity, string> = {
@@ -53,11 +71,8 @@ const VISIBILITY_ICON: Record<
 	public: { icon: "globe", titleKey: "library.visibility.public" },
 };
 
-// Default-data: until backend tracks activity type per route, derive a stable
-// pseudo-type from the route id so each row gets a coloured tag without churn.
-function getActivityType(route: ApiRoute): RedesignActivity {
-	const types: RedesignActivity[] = ["cycle", "run", "walk"];
-	return types[route.id % 3];
+function getActivityType(route: ApiRoute, fallback: RedesignActivity): RedesignActivity {
+	return (route.activity as RedesignActivity | undefined) ?? fallback;
 }
 
 function MiniRouteSvg({ route, color }: { route: ApiRoute; color: string }) {
@@ -186,6 +201,7 @@ function RouteThumb({ route, color }: { route: ApiRoute; color: string }) {
 function RouteCard({
 	route,
 	fav,
+	defaultActivity,
 	formatDistance,
 	onOpen,
 	onToggleFavourite,
@@ -193,13 +209,14 @@ function RouteCard({
 }: {
 	route: ApiRoute;
 	fav: boolean;
+	defaultActivity: RedesignActivity;
 	formatDistance: (km: number) => string;
 	onOpen: () => void;
 	onToggleFavourite: () => void;
 	onDelete: () => void;
 }) {
 	const [hover, setHover] = useState(false);
-	const tag = getActivityType(route);
+	const tag = getActivityType(route, defaultActivity);
 	const dist = route.distance ? formatDistance(route.distance / 1000) : "—";
 	const date = new Date(route.createdAt).toLocaleDateString(undefined, {
 		month: "short",
@@ -449,30 +466,68 @@ function LibraryPanelInner() {
 	const openModal = useModalsStore((s) => s.openModal);
 	const openDelete = useModalsStore((s) => s.openDelete);
 	const { formatDistance } = useUnits();
+	const defaultActivity = useUiStore((s) => s.activityType);
 	const [filter, setFilter] = useState<Filter>("all");
+	const [visibility, setVisibility] = useState<VisibilityFilter>("all");
+	const [sort, setSort] = useState<SortKey>("recent");
+	const [activeTag, setActiveTag] = useState<string | null>(null);
 	const [query, setQuery] = useState("");
 	const [openedRouteId, setOpenedRouteId] = useState<number | null>(null);
-	const hasActiveFilters = filter !== "all" || query.trim().length > 0;
+	const hasActiveFilters = filter !== "all" || visibility !== "all" || activeTag !== null || query.trim().length > 0;
 
 	const counts = useMemo(() => {
 		const c = { all: routes.length, run: 0, cycle: 0, walk: 0, favourites: favouriteRouteIds.length };
-		for (const r of routes) c[getActivityType(r)] += 1;
+		for (const r of routes) c[getActivityType(r, defaultActivity)] += 1;
 		return c;
-	}, [routes, favouriteRouteIds.length]);
+	}, [routes, favouriteRouteIds.length, defaultActivity]);
+
+	const topTags = useMemo(() => {
+		const counts = new Map<string, number>();
+		for (const r of routes) {
+			for (const tag of r.tags ?? []) counts.set(tag, (counts.get(tag) ?? 0) + 1);
+		}
+		return Array.from(counts.entries())
+			.sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+			.slice(0, 8)
+			.map(([tag, count]) => ({ tag, count }));
+	}, [routes]);
 
 	const filtered = useMemo(() => {
 		let out = routes;
 		if (filter === "favourites") {
 			out = out.filter((r) => favouriteRouteIds.includes(r.id));
 		} else if (filter !== "all") {
-			out = out.filter((r) => getActivityType(r) === filter);
+			out = out.filter((r) => getActivityType(r, defaultActivity) === filter);
+		}
+		if (visibility !== "all") {
+			out = out.filter((r) => (r.visibility ?? "private") === visibility);
+		}
+		if (activeTag) {
+			out = out.filter((r) => (r.tags ?? []).includes(activeTag));
 		}
 		if (query.trim()) {
 			const q = query.toLowerCase();
 			out = out.filter((r) => r.name.toLowerCase().includes(q) || (r.description ?? "").toLowerCase().includes(q));
 		}
-		return out;
-	}, [routes, filter, query, favouriteRouteIds]);
+		const sorted = [...out];
+		switch (sort) {
+			case "created":
+				sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+				break;
+			case "name":
+				sorted.sort((a, b) => a.name.localeCompare(b.name));
+				break;
+			case "distance":
+				sorted.sort((a, b) => (b.distance ?? 0) - (a.distance ?? 0));
+				break;
+			case "elevation":
+				sorted.sort((a, b) => (b.elevationGain ?? 0) - (a.elevationGain ?? 0));
+				break;
+			default:
+				sorted.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+		}
+		return sorted;
+	}, [routes, filter, visibility, activeTag, query, sort, favouriteRouteIds, defaultActivity]);
 
 	const openedRoute = openedRouteId != null ? routes.find((r) => r.id === openedRouteId) : null;
 	if (openedRoute) {
@@ -562,10 +617,84 @@ function LibraryPanelInner() {
 							);
 						})}
 					</div>
-					<div className="rds-mono" style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle }}>
-						{filtered.length} {filtered.length === 1 ? t("library.routeSingular") : t("library.routePlural")}
+					<div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+						<select
+							value={sort}
+							onChange={(e) => setSort(e.target.value as SortKey)}
+							aria-label={t("library.sort.label")}
+							style={{
+								height: 28,
+								borderRadius: 8,
+								border: `1px solid ${RDS_COLORS.border}`,
+								background: RDS_COLORS.bgInput,
+								color: RDS_COLORS.fgMuted,
+								fontSize: 12,
+								padding: "0 8px",
+								cursor: "pointer",
+							}}
+						>
+							{SORTS.map((s) => (
+								<option key={s.key} value={s.key}>
+									{t(s.labelKey)}
+								</option>
+							))}
+						</select>
+						<div className="rds-mono" style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle }}>
+							{filtered.length} {filtered.length === 1 ? t("library.routeSingular") : t("library.routePlural")}
+						</div>
 					</div>
 				</div>
+				<div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
+					{VISIBILITIES.map((v) => {
+						const on = visibility === v.key;
+						return (
+							<button
+								key={v.key}
+								type="button"
+								onClick={() => setVisibility(v.key)}
+								style={{
+									height: 24,
+									padding: "0 8px",
+									borderRadius: 999,
+									border: `1px solid ${on ? RDS_COLORS.borderStrong : RDS_COLORS.border}`,
+									background: on ? RDS_COLORS.bgActive : "transparent",
+									color: on ? RDS_COLORS.fg : RDS_COLORS.fgSubtle,
+									fontSize: 11,
+									cursor: "pointer",
+								}}
+							>
+								{t(v.labelKey)}
+							</button>
+						);
+					})}
+				</div>
+				{topTags.length > 0 && (
+					<div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
+						{topTags.map(({ tag, count }) => {
+							const on = activeTag === tag;
+							return (
+								<button
+									key={tag}
+									type="button"
+									onClick={() => setActiveTag(on ? null : tag)}
+									style={{
+										height: 22,
+										padding: "0 8px",
+										borderRadius: 999,
+										border: `1px solid ${on ? RDS_COLORS.accent : RDS_COLORS.border}`,
+										background: on ? RDS_COLORS.accentSoft : "transparent",
+										color: on ? RDS_COLORS.accent : RDS_COLORS.fgSubtle,
+										fontSize: 11,
+										cursor: "pointer",
+									}}
+								>
+									#{tag}
+									<span style={{ marginLeft: 4, opacity: 0.6 }}>{count}</span>
+								</button>
+							);
+						})}
+					</div>
+				)}
 			</div>
 
 			<div style={{ padding: "8px 12px", overflow: "auto", flex: 1 }}>
@@ -596,6 +725,8 @@ function LibraryPanelInner() {
 								variant="ghost"
 								onClick={() => {
 									setFilter("all");
+									setVisibility("all");
+									setActiveTag(null);
 									setQuery("");
 								}}
 								style={{ color: RDS_COLORS.fgMuted, margin: "0 auto" }}
@@ -610,6 +741,7 @@ function LibraryPanelInner() {
 						key={r.id}
 						route={r}
 						fav={favouriteRouteIds.includes(r.id)}
+						defaultActivity={defaultActivity}
 						formatDistance={formatDistance}
 						onOpen={() => setOpenedRouteId(r.id)}
 						onToggleFavourite={() => toggleFavourite(r.id)}

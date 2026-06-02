@@ -1,5 +1,16 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, UseGuards } from "@nestjs/common";
-import { ApiBearerAuth, ApiBody, ApiHeader, ApiOperation, ApiParam, ApiResponse, ApiTags } from "@nestjs/swagger";
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, Res, UseGuards } from "@nestjs/common";
+import {
+	ApiBearerAuth,
+	ApiBody,
+	ApiHeader,
+	ApiOperation,
+	ApiParam,
+	ApiQuery,
+	ApiResponse,
+	ApiTags,
+} from "@nestjs/swagger";
+import { ROUTE_ACTIVITIES, ROUTE_VISIBILITIES, type RouteActivity, type RouteVisibility } from "@routess/core";
+import type { Response } from "express";
 import type { AuthenticatedUser } from "../auth/authenticated-user";
 import { CurrentUser, OptionalCurrentUser } from "../auth/decorators/current-user.decorator";
 import { RequireConfirmation } from "../auth/decorators/require-confirmation.decorator";
@@ -13,7 +24,17 @@ import { ThrottleModerate, ThrottleStrict } from "../common/decorators/throttle.
 import { CreateRouteDto } from "./dto/create-route.dto";
 import { RouteResponseDto } from "./dto/route-response.dto";
 import { UpdateRouteDto } from "./dto/update-route.dto";
-import { RoutesService } from "./routes.service";
+import { buildRouteGpx } from "./gpx";
+import { type RouteListSort, RoutesService } from "./routes.service";
+
+const ROUTE_LIST_SORTS: RouteListSort[] = ["recent", "created", "name", "distance", "elevation"];
+
+function parseTagsParam(raw: string | string[] | undefined): string[] | undefined {
+	if (raw === undefined) return undefined;
+	const list = Array.isArray(raw) ? raw : raw.split(",");
+	const cleaned = list.map((t) => t.trim().toLowerCase()).filter(Boolean);
+	return cleaned.length > 0 ? cleaned : undefined;
+}
 
 @ApiTags("routes")
 @Controller("routes")
@@ -41,15 +62,75 @@ export class RoutesController {
 	@UseGuards(UnifiedAuthGuard, ScopeGuard)
 	@ApiOperation({
 		summary: "Get all user routes",
-		description: "Retrieves all routes belonging to the authenticated user (any visibility)",
+		description:
+			"Retrieves the authenticated user's routes (any visibility), optionally filtered by activity, visibility, tags, and a free-text search across name and description. Sort options: recent (updatedAt desc, default), created, name, distance, elevation.",
 	})
+	@ApiQuery({
+		name: "q",
+		required: false,
+		description: "Substring match against name and description (case-insensitive)",
+	})
+	@ApiQuery({ name: "activity", required: false, enum: ROUTE_ACTIVITIES })
+	@ApiQuery({ name: "visibility", required: false, enum: ROUTE_VISIBILITIES })
+	@ApiQuery({
+		name: "tags",
+		required: false,
+		description: "Comma-separated tag list; routes must contain all listed tags",
+	})
+	@ApiQuery({ name: "sort", required: false, enum: ROUTE_LIST_SORTS })
 	@ApiResponse({ status: 200, description: "Routes retrieved successfully", type: RouteResponseDto, isArray: true })
 	@ApiResponse({ status: 401, description: "Unauthorized" })
 	@ThrottleModerate()
 	@RequireScope("read")
 	@Get()
-	findAll(@CurrentUser() user: AuthenticatedUser): Promise<RouteResponseDto[]> {
-		return this.routesService.findAll(user.id);
+	findAll(
+		@CurrentUser() user: AuthenticatedUser,
+		@Query("q") q?: string,
+		@Query("activity") activity?: string,
+		@Query("visibility") visibility?: string,
+		@Query("tags") tags?: string | string[],
+		@Query("sort") sort?: string,
+	): Promise<RouteResponseDto[]> {
+		const activityParam =
+			activity && (ROUTE_ACTIVITIES as readonly string[]).includes(activity) ? (activity as RouteActivity) : undefined;
+		const visibilityParam =
+			visibility && (ROUTE_VISIBILITIES as readonly string[]).includes(visibility)
+				? (visibility as RouteVisibility)
+				: undefined;
+		const sortParam =
+			sort && (ROUTE_LIST_SORTS as readonly string[]).includes(sort) ? (sort as RouteListSort) : undefined;
+		return this.routesService.findAll(user.id, {
+			q,
+			activity: activityParam,
+			visibility: visibilityParam,
+			tags: parseTagsParam(tags),
+			sort: sortParam,
+		});
+	}
+
+	@ApiBearerAuth("JWT-auth")
+	@ApiBearerAuth("PAT-auth")
+	@UseGuards(UnifiedAuthGuard, ScopeGuard)
+	@ApiOperation({
+		summary: "List tags used by the current user's routes",
+		description: "Returns the distinct tag values across the caller's routes with usage counts, sorted by count desc.",
+	})
+	@ApiResponse({
+		status: 200,
+		schema: {
+			type: "array",
+			items: {
+				type: "object",
+				properties: { tag: { type: "string" }, count: { type: "integer" } },
+				required: ["tag", "count"],
+			},
+		},
+	})
+	@ThrottleModerate()
+	@RequireScope("read")
+	@Get("tags")
+	listTags(@CurrentUser() user: AuthenticatedUser): Promise<Array<{ tag: string; count: number }>> {
+		return this.routesService.listTags(user.id);
 	}
 
 	// Static segment must be declared before the dynamic ":id" route below;
@@ -66,6 +147,38 @@ export class RoutesController {
 	@Get("by-user/:userId")
 	findPublicByUser(@Param("userId", ParseIntPipe) userId: number): Promise<RouteResponseDto[]> {
 		return this.routesService.findPublicByOwner(userId);
+	}
+
+	@UseGuards(OptionalJwtAuthGuard)
+	@ApiOperation({
+		summary: "Download route as GPX",
+		description:
+			"Returns the route as a GPX 1.1 document with a routess-namespaced extension carrying per-waypoint Type. Owner can fetch any visibility; non-owners can fetch public and unlisted; private routes return 404 to non-owners. Unlisted responses carry X-Robots-Tag: noindex.",
+	})
+	@ApiParam({ name: "id", description: "Route ID", type: "number" })
+	@ApiResponse({ status: 200, description: "GPX document" })
+	@ApiResponse({ status: 404, description: "Route not found or not viewable" })
+	@ThrottleModerate()
+	@Get(":id/gpx")
+	async downloadGpx(
+		@Param("id", ParseIntPipe) id: number,
+		@OptionalCurrentUser() user: AuthenticatedUser | null,
+		@Res() res: Response,
+	): Promise<void> {
+		const route = await this.routesService.findForGpx(id, user?.id ?? null);
+		const gpx = buildRouteGpx({
+			name: route.name,
+			description: route.description,
+			waypoints: route.waypoints ?? [],
+			geometry: route.geometry,
+		});
+		const filename = `${route.name.replace(/[^a-z0-9-]+/gi, "-")}-${route.id}.gpx`;
+		res.setHeader("Content-Type", "application/gpx+xml; charset=utf-8");
+		res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+		if (route.visibility !== "public") {
+			res.setHeader("X-Robots-Tag", "noindex");
+		}
+		res.send(gpx);
 	}
 
 	@UseGuards(OptionalJwtAuthGuard)

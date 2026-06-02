@@ -17,12 +17,17 @@ import {
 	IsNumber,
 	IsOptional,
 	IsString,
+	Matches,
+	MaxLength,
 	Validate,
 	ValidateNested,
 	ValidatorConstraint,
 	type ValidatorConstraintInterface,
 } from "class-validator";
 import { RoutingPreferencesDto } from "../../common/routing-preferences.dto";
+
+const TAG_PATTERN = /^[a-z0-9][a-z0-9-]{0,23}$/;
+const MAX_TAGS = 10;
 
 const MAX_WAYPOINTS = 100;
 const MAX_GEOMETRY_POINTS = 20_000;
@@ -145,15 +150,22 @@ export class CreateRouteDto {
 	visibility?: RouteVisibility;
 
 	@ApiProperty({
-		description: "Free-form tags for the route",
+		description:
+			"Free-form tags for the route. Each tag is lowercase alphanumeric plus '-', 1 to 24 characters, must start with a letter or digit. Max 10 tags per route. Values are normalised server-side (lowercased, whitespace collapsed to hyphens).",
 		type: [String],
 		required: false,
-		example: ["hilly", "scenic"],
+		example: ["hilly", "scenic", "weekend-loop"],
 	})
 	@IsOptional()
 	@IsArray()
 	@IsString({ each: true })
-	@ArrayMaxSize(20)
+	@ArrayMaxSize(MAX_TAGS)
+	@Type(() => String)
+	@MaxLength(24, { each: true })
+	@Matches(TAG_PATTERN, {
+		each: true,
+		message: "each tag must be lowercase alphanumeric plus '-', 1 to 24 chars, starting with [a-z0-9]",
+	})
 	tags?: string[];
 
 	@ApiProperty({

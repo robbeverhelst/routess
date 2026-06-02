@@ -496,6 +496,16 @@ export const en: Record<string, string> = {
 	"route.routeLabel": "Route",
 	"route.loadOnMap": "Load on map",
 	"route.downloadGpx": "Download GPX",
+	"route.updateFailed": "Update failed",
+	"route.field.activity": "Activity",
+	"route.field.visibility": "Visibility",
+	"route.field.tags": "Tags",
+	"route.tag.addPlaceholder": "add tag…",
+	"route.tag.remove": "Remove tag #{tag}",
+	"route.makePublic.title": "Make this route public?",
+	"route.makePublic.body":
+		"Public routes are viewable by anyone with the link and may be archived externally. Reverting to private later does not unshare anyone who already has the URL.",
+	"route.makePublic.confirm": "Make public",
 
 	// LibraryPanel
 	"library.filter.all": "All",
@@ -505,6 +515,13 @@ export const en: Record<string, string> = {
 	"library.visibility.private": "Private",
 	"library.visibility.unlisted": "Unlisted",
 	"library.visibility.public": "Public",
+	"library.visibilityFilter.all": "Any visibility",
+	"library.sort.label": "Sort routes",
+	"library.sort.recent": "Recently updated",
+	"library.sort.created": "Recently created",
+	"library.sort.name": "Name (A to Z)",
+	"library.sort.distance": "Longest distance",
+	"library.sort.elevation": "Most elevation",
 	"library.empty.title": "No routes yet",
 	"library.empty.subtitle": "Plan one on the map, generate a loop from your front door, or import a GPX from Strava.",
 	"library.empty.plan": "Plan a route",
@@ -522,6 +539,25 @@ export const en: Record<string, string> = {
 	"library.wp": "wp",
 	"library.markFavourite": "Mark favourite",
 	"library.deleteRoute": "Delete route",
+
+	// Public route page
+	"public.byOwner": "by {name}",
+	"public.anonymous": "a Routess user",
+	"public.mapAlt": "Map preview of {name}",
+	"public.noPreview": "No preview available",
+	"public.openInRoutess": "Open in routess",
+	"public.downloadGpx": "Download GPX",
+	"public.signIn": "Sign in",
+	"public.loading": "Loading route…",
+	"public.notFound.title": "Route not found",
+	"public.notFound.body": "This route is private or no longer exists.",
+	"public.footer.cta": "Plan your own ride, run, or hike.",
+	"public.footer.try": "Try routess",
+
+	// Share hints
+	"share.privateHint":
+		"This saved route is private, so only you can open the canonical link. The URL above carries the route waypoints in the link itself. Switch the route to unlisted or public to share a stable address.",
+	"share.canonicalHint": "Anyone with this link can view the route. Privacy changes take effect immediately.",
 
 	// Stub panels (Discover, Social, Activity)
 	"stub.discover.title": "Discover routes near you",

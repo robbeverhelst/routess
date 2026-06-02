@@ -47,6 +47,10 @@ Who can view a Route. One of `private`, `unlisted`, or `public`.
 The URL is the capability: changing visibility takes immediate effect for everyone, there is no separable share-token to rotate.
 _Avoid_: privacy, sharing, share level, access level.
 
+**Tag**:
+A short free-form lowercase keyword attached to a Route, used to organise and filter the RouteLibrary. Each Tag matches `[a-z0-9][a-z0-9-]{0,23}` (1 to 24 characters, lowercase alphanumeric plus hyphen, must start with a letter or digit). A Route has zero to 10 Tags. Tags are owned per Route and never shared as standalone entities. Surfaced in the library filter row and in the route detail meta editor.
+_Avoid_: label, category, group, folder, collection (no folder/collection hierarchy exists in the domain).
+
 ## Metrics
 
 **Distance**:
@@ -119,6 +123,7 @@ _Avoid_: API key, access token, bearer token (the term is **PAT** when discussin
 - A **Route** has computed **Distance**, **Duration**, and **ElevationGain** metrics derived from its **RoutePath**.
 - A **RouteGeneration** produces a **Route** from **RouteType** + **SurfaceType** + **LoopDirection** + target distance, without manual Waypoint placement.
 - A **Route** has exactly one **RouteVisibility** (`private` | `unlisted` | `public`), defaulting from the owning User's preference.
+- A **Route** has zero or more **Tags**; Tags are flat (no hierarchy, no folder grouping).
 - A **User** owns zero or more **Routes**, accessed through their **RouteLibrary**.
 - A **User** holds **RoutingPreferences defaults** keyed by **Activity** (`cycle`, `run`, `walk`); these are *copied* onto a new **RouteDraft** at creation, never read again for that draft.
 - A **Route** has its own **RoutingPreferences** (which produced its RoutePath) and a **Provenance** (how it was made). Both are immutable inputs to the Route; `Provenance` never changes after creation.

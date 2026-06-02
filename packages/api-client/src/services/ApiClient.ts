@@ -16,9 +16,20 @@ import type {
 	AuthResponse,
 	CreatePersonalAccessTokenRequest,
 	CreateRouteRequest,
+	RouteListQuery,
 	UpdateCurrentUserRequest,
 	UpdateRouteRequest,
 } from "../types";
+
+function buildRouteListQuery(params: RouteListQuery): string {
+	const qs = new URLSearchParams();
+	if (params.q?.trim()) qs.set("q", params.q.trim());
+	if (params.activity) qs.set("activity", params.activity);
+	if (params.visibility) qs.set("visibility", params.visibility);
+	if (params.tags && params.tags.length > 0) qs.set("tags", params.tags.join(","));
+	if (params.sort) qs.set("sort", params.sort);
+	return qs.toString();
+}
 
 export class ApiClient {
 	private config: ApiClientConfig;
@@ -226,8 +237,13 @@ export class ApiClient {
 		});
 	}
 
-	async getRoutes(): Promise<ApiRoute[]> {
-		return this.request<ApiRoute[]>("/routes");
+	async getRoutes(params: RouteListQuery = {}): Promise<ApiRoute[]> {
+		const qs = buildRouteListQuery(params);
+		return this.request<ApiRoute[]>(`/routes${qs ? `?${qs}` : ""}`);
+	}
+
+	async getRouteTags(): Promise<Array<{ tag: string; count: number }>> {
+		return this.request<Array<{ tag: string; count: number }>>("/routes/tags");
 	}
 
 	async getRoute(id: number): Promise<ApiRoute> {

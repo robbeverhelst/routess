@@ -260,6 +260,16 @@ export interface CreateRouteRequest {
 	provenance?: Provenance;
 }
 
+export type RouteListSort = "recent" | "created" | "name" | "distance" | "elevation";
+
+export interface RouteListQuery {
+	q?: string;
+	activity?: RouteActivity;
+	visibility?: RouteVisibility;
+	tags?: string[];
+	sort?: RouteListSort;
+}
+
 export interface UpdateRouteRequest {
 	name?: string;
 	description?: string;
