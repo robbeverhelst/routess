@@ -32,7 +32,7 @@ export interface RouteShareCardInput {
 	surfaceSegments: SurfaceSegment[];
 	mapStyle: RedesignMapStyle;
 	lightPreset: string;
-	activityLabel: string | null;
+	activityIconUrl: string | null;
 	distance: string | null;
 	duration: string | null;
 	elevationMeters: number | null;
@@ -65,38 +65,6 @@ function roundedClip(ctx: CanvasRenderingContext2D, x: number, y: number, size: 
 	ctx.arcTo(x, y + size, x, y, radius);
 	ctx.arcTo(x, y, x + size, y, radius);
 	ctx.closePath();
-}
-
-function roundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, radius: number): void {
-	ctx.beginPath();
-	ctx.moveTo(x + radius, y);
-	ctx.arcTo(x + w, y, x + w, y + h, radius);
-	ctx.arcTo(x + w, y + h, x, y + h, radius);
-	ctx.arcTo(x, y + h, x, y, radius);
-	ctx.arcTo(x, y, x + w, y, radius);
-	ctx.closePath();
-}
-
-// Pill in the map's top-left corner showing the activity (e.g. Cycling).
-function drawActivityBadge(ctx: CanvasRenderingContext2D, label: string): void {
-	ctx.font = "600 34px Inter, system-ui, -apple-system, sans-serif";
-	ctx.textAlign = "left";
-	ctx.textBaseline = "middle";
-	const padX = 28;
-	const h = 62;
-	const x = 28;
-	const y = 28;
-	const w = ctx.measureText(label).width + padX * 2;
-	ctx.save();
-	ctx.shadowColor = "rgba(0,0,0,0.18)";
-	ctx.shadowBlur = 18;
-	ctx.shadowOffsetY = 4;
-	roundedRect(ctx, x, y, w, h, h / 2);
-	ctx.fillStyle = "rgba(255,255,255,0.95)";
-	ctx.fill();
-	ctx.restore();
-	ctx.fillStyle = "#16161d";
-	ctx.fillText(label, x + padX, y + h / 2 + 1);
 }
 
 // Render the route on a throwaway offscreen Mapbox map, top-down and fit to the
@@ -139,9 +107,7 @@ async function renderRouteMap(input: RouteShareCardInput): Promise<HTMLCanvasEle
 		updateRouteSurfaceLayer(map, input.surfaceSegments);
 		// Only the start and end pins, not every intermediate waypoint.
 		const endpoints =
-			input.waypoints.length >= 2
-				? [input.waypoints[0], input.waypoints[input.waypoints.length - 1]]
-				: input.waypoints;
+			input.waypoints.length >= 2 ? [input.waypoints[0], input.waypoints[input.waypoints.length - 1]] : input.waypoints;
 		updateWaypointsLayer(map, endpoints, false);
 
 		const bounds = input.points.reduce(
@@ -177,7 +143,11 @@ async function renderRouteMap(input: RouteShareCardInput): Promise<HTMLCanvasEle
 export async function buildRouteShareCard(input: RouteShareCardInput): Promise<Blob | null> {
 	if (input.points.length === 0) return null;
 
-	const [mapCanvas, logoImg] = await Promise.all([renderRouteMap(input), loadImage("/logo.png")]);
+	const [mapCanvas, logoImg, activityIcon] = await Promise.all([
+		renderRouteMap(input),
+		loadImage("/logo.png"),
+		input.activityIconUrl ? loadImage(input.activityIconUrl) : Promise.resolve(null),
+	]);
 	if (!mapCanvas) return null;
 
 	try {
@@ -194,10 +164,6 @@ export async function buildRouteShareCard(input: RouteShareCardInput): Promise<B
 
 	// Route map (downscale the high-DPI capture into the card's map area).
 	ctx.drawImage(mapCanvas, 0, 0, mapCanvas.width, mapCanvas.height, 0, 0, CARD_WIDTH, MAP_HEIGHT);
-
-	if (input.activityLabel) {
-		drawActivityBadge(ctx, input.activityLabel);
-	}
 
 	// Footer
 	ctx.fillStyle = "#ffffff";
@@ -229,20 +195,36 @@ export async function buildRouteShareCard(input: RouteShareCardInput): Promise<B
 	ctx.fillText("routess.com", wordmarkX, footerCenterY + 28);
 
 	const rightX = CARD_WIDTH - pad;
-	ctx.textAlign = "right";
-	ctx.fillStyle = "#16161d";
-	ctx.font = "700 64px Inter, system-ui, -apple-system, sans-serif";
-	ctx.fillText(input.distance || "—", rightX, footerCenterY - 30);
-
+	const distText = input.distance || "—";
 	const sub: string[] = [];
 	if (input.duration) sub.push(input.duration);
 	if (input.elevationMeters != null && Number.isFinite(input.elevationMeters)) {
 		sub.push(`↑ ${Math.round(input.elevationMeters)} m`);
 	}
-	if (sub.length > 0) {
+	const subText = sub.join("    ·    ");
+
+	ctx.textAlign = "right";
+	ctx.textBaseline = "middle";
+	ctx.font = "700 64px Inter, system-ui, -apple-system, sans-serif";
+	const distWidth = ctx.measureText(distText).width;
+	ctx.font = "500 38px Inter, system-ui, -apple-system, sans-serif";
+	const subWidth = subText ? ctx.measureText(subText).width : 0;
+	const statsWidth = Math.max(distWidth, subWidth);
+
+	// Activity icon to the left of the stats.
+	if (activityIcon) {
+		const iconSize = 66;
+		const gap = 30;
+		ctx.drawImage(activityIcon, rightX - statsWidth - gap - iconSize, footerCenterY - iconSize / 2, iconSize, iconSize);
+	}
+
+	ctx.fillStyle = "#16161d";
+	ctx.font = "700 64px Inter, system-ui, -apple-system, sans-serif";
+	ctx.fillText(distText, rightX, footerCenterY - 30);
+	if (subText) {
 		ctx.fillStyle = "#6b7280";
 		ctx.font = "500 38px Inter, system-ui, -apple-system, sans-serif";
-		ctx.fillText(sub.join("    ·    "), rightX, footerCenterY + 42);
+		ctx.fillText(subText, rightX, footerCenterY + 42);
 	}
 
 	return await new Promise<Blob | null>((resolve) => canvas.toBlob((blob) => resolve(blob), "image/png"));

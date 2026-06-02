@@ -1,4 +1,5 @@
 import { type CSSProperties, type ReactNode, useEffect, useMemo, useState } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { trackEvent } from "@/lib/analytics/track";
 import { emitAppEvent } from "@/lib/app-events";
 import { t } from "@/lib/i18n";
@@ -85,6 +86,11 @@ export function ShareModal() {
 	const closeModal = useModalsStore((s) => s.closeModal);
 	const _language = useUiStore((s) => s.language);
 	const activityType = useUiStore((s) => s.activityType);
+	const activityIconUrl = useMemo(() => {
+		const ActivityIcon = activityType === "cycle" ? I.bike : activityType === "walk" ? I.walk : I.run;
+		const svg = renderToStaticMarkup(<ActivityIcon size={64} />).replace("<svg", '<svg color="#16161d"');
+		return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+	}, [activityType]);
 	const waypoints = useWaypoints();
 	const routePath = useRoutePath();
 	const isMapLocked = useIsMapLocked();
@@ -228,7 +234,7 @@ export function ShareModal() {
 			surfaceSegments: surfaceBreakdown?.segments ?? [],
 			mapStyle,
 			lightPreset,
-			activityLabel: t(`sport.${activityType}`),
+			activityIconUrl,
 			distance,
 			duration,
 			elevationMeters: elevationGain ?? null,
