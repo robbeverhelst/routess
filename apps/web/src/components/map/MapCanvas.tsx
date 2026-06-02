@@ -49,27 +49,18 @@ const FALLBACK_STYLE_VARIANT: MapStyleVariant = {
 	supportsLightPreset: true,
 };
 
-function MapLoadingShell({ isSatellite }: { isSatellite: boolean }) {
+function MapLoadingShell({ isSatellite, theme }: { isSatellite: boolean; theme: "light" | "dark" }) {
+	// Match the map's resting tone so a cold-start (e.g. a discarded PWA
+	// reloading) just fades the map in over the same colour, instead of
+	// flashing a dark-blue loading screen.
+	const background = isSatellite ? "#1b261f" : theme === "dark" ? "#0c1320" : "#e7ecec";
 	return (
 		<div
 			data-testid="map-loading-shell"
 			aria-hidden="true"
-			className={`absolute inset-0 overflow-hidden transition-opacity duration-300 ${
-				isSatellite ? "bg-[#203024]" : "bg-slate-950"
-			}`}
-		>
-			<div
-				className={`absolute inset-0 ${
-					isSatellite
-						? "bg-[radial-gradient(circle_at_top,#6b8a5a,transparent_45%),radial-gradient(circle_at_bottom,#314b2f,transparent_35%),linear-gradient(135deg,#243b2e,#101c14)]"
-						: "bg-[radial-gradient(circle_at_top,#1e3a8a,transparent_45%),radial-gradient(circle_at_bottom,#1e293b,transparent_40%),linear-gradient(180deg,#020617,#0f172a)]"
-				}`}
-			/>
-			<div className="absolute left-4 top-4 h-10 w-10 rounded-xl bg-white/15 backdrop-blur-sm" />
-			<div className="absolute right-4 top-4 h-10 w-10 rounded-xl bg-white/15 backdrop-blur-sm" />
-			<div className="absolute left-1/2 top-8 h-12 w-64 -translate-x-1/2 rounded-2xl bg-white/12 backdrop-blur-sm" />
-			<div className="absolute bottom-8 right-8 h-16 w-28 rounded-2xl bg-white/12 backdrop-blur-sm" />
-		</div>
+			className="absolute inset-0 transition-opacity duration-300"
+			style={{ background }}
+		/>
 	);
 }
 
@@ -491,7 +482,7 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
 	if (hasInvalidMapboxToken) {
 		return (
 			<div ref={containerRef} className="relative" style={{ width, height }}>
-				<MapLoadingShell isSatellite={isSatelliteStyle} />
+				<MapLoadingShell isSatellite={isSatelliteStyle} theme={mapTheme} />
 				<MapUnavailablePanel
 					title="Mapbox token required"
 					message="The map cannot load because VITE_MAPBOX_ACCESS_TOKEN is missing or still set to the example value. Put a real public Mapbox token in the repo root .env file and restart bun dev."
@@ -573,7 +564,7 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
 					)}
 				</MapGL>
 
-				{!isMapLoaded && <MapLoadingShell isSatellite={isSatelliteStyle} />}
+				{!isMapLoaded && <MapLoadingShell isSatellite={isSatelliteStyle} theme={mapTheme} />}
 				{loadTimedOut && (
 					<MapUnavailablePanel
 						title="Map is still loading"
