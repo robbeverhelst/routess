@@ -5,8 +5,10 @@ import { t } from "@/lib/i18n";
 import { serializeAndCompress } from "@/lib/shareUtils";
 import { buildMapboxStaticPreviewUrl } from "@/lib/utils/mapboxStaticPreview";
 import { buildRouteShareCard } from "@/lib/utils/routeShareCard";
+import { useMapViewStore } from "@/stores/mapViewStore";
 import { useModalsStore } from "@/stores/modalsStore";
 import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
+import { useRouteSurfaceStore } from "@/stores/routeSurfaceStore";
 import {
 	useElevationGain,
 	useIsMapLocked,
@@ -91,6 +93,8 @@ export function ShareModal() {
 	const pushToast = useToastStore((s) => s.push);
 
 	const mapStyle = useRedesignSettingsStore((s) => s.mapStyle);
+	const lightPreset = useMapViewStore((s) => s.lightPreset);
+	const surfaceBreakdown = useRouteSurfaceStore((s) => s.breakdown);
 	const [copied, setCopied] = useState(false);
 	const [canNativeShare, setCanNativeShare] = useState(false);
 	const [imageBusy, setImageBusy] = useState(false);
@@ -219,7 +223,10 @@ export function ShareModal() {
 	const makeCard = () =>
 		buildRouteShareCard({
 			points: previewPoints,
+			waypoints,
+			surfaceSegments: surfaceBreakdown?.segments ?? [],
 			mapStyle,
+			lightPreset,
 			distance,
 			duration,
 			elevationMeters: elevationGain ?? null,

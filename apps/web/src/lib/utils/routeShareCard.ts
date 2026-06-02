@@ -1,29 +1,58 @@
+import type { Waypoint } from "@routess/core";
+import mapboxgl, { LngLatBounds } from "mapbox-gl";
+import {
+	initializeSourcesAndLayers,
+	updateRouteLayer,
+	updateRouteSurfaceLayer,
+	updateWaypointsLayer,
+} from "@/features/routing/managers/MapLayerManager";
+import { readMapPalette } from "@/features/routing/managers/mapPalette";
+import type { SurfaceSegment } from "@/features/routing/services/SurfaceService";
 import { Logger } from "@/lib/logger";
-import { buildMapboxStaticPreviewUrl } from "@/lib/utils/mapboxStaticPreview";
+import { getRuntimeConfig } from "@/lib/runtime-config";
 import type { RedesignMapStyle } from "@/stores/redesignSettingsStore";
 
 type Coordinate = [number, number];
 
-export interface RouteShareCardInput {
-	points: Coordinate[];
-	mapStyle: RedesignMapStyle;
-	distance: string | null;
-	duration: string | null;
-	elevationMeters: number | null;
-}
+// Keep in sync with the style variants in MapCanvas.
+const STYLE_URLS: Record<RedesignMapStyle, string> = {
+	streets: "mapbox://styles/mapbox/standard",
+	outdoors: "mapbox://styles/robbeverhelst/cmosm4baj001j01s65hjz79cw",
+	satellite: "mapbox://styles/robbeverhelst/cmosm5k7x000c01segxetckb9",
+};
 
 const CARD_WIDTH = 1080;
 const MAP_HEIGHT = 720;
 const FOOTER_HEIGHT = 240;
 const BRAND_PURPLE = "#6638cf";
 
-function loadImage(src: string, crossOrigin: boolean): Promise<HTMLImageElement | null> {
+export interface RouteShareCardInput {
+	points: Coordinate[];
+	waypoints: Waypoint[];
+	surfaceSegments: SurfaceSegment[];
+	mapStyle: RedesignMapStyle;
+	lightPreset: string;
+	distance: string | null;
+	duration: string | null;
+	elevationMeters: number | null;
+}
+
+function loadImage(src: string): Promise<HTMLImageElement | null> {
 	return new Promise((resolve) => {
 		const img = new Image();
-		if (crossOrigin) img.crossOrigin = "anonymous";
 		img.onload = () => resolve(img);
 		img.onerror = () => resolve(null);
 		img.src = src;
+	});
+}
+
+function once(map: mapboxgl.Map, event: string, timeoutMs: number): Promise<void> {
+	return new Promise((resolve) => {
+		const timer = window.setTimeout(resolve, timeoutMs);
+		map.once(event, () => {
+			window.clearTimeout(timer);
+			resolve();
+		});
 	});
 }
 
@@ -37,33 +66,82 @@ function roundedClip(ctx: CanvasRenderingContext2D, x: number, y: number, size: 
 	ctx.closePath();
 }
 
+// Render the route on a throwaway offscreen Mapbox map, top-down and fit to the
+// route, with the app's real route/arrow/surface layers, then grab its canvas.
+// This matches the live map exactly (line style, direction arrows, paved vs
+// unpaved) and carries no Mapbox attribution overlay.
+async function renderRouteMap(input: RouteShareCardInput): Promise<HTMLCanvasElement | null> {
+	const token = getRuntimeConfig("VITE_MAPBOX_ACCESS_TOKEN");
+	if (!token || input.points.length === 0) return null;
+
+	const container = document.createElement("div");
+	container.style.cssText = `position:fixed;left:-10000px;top:0;width:${CARD_WIDTH}px;height:${MAP_HEIGHT}px;pointer-events:none;`;
+	document.body.appendChild(container);
+
+	const map = new mapboxgl.Map({
+		container,
+		accessToken: token,
+		style: STYLE_URLS[input.mapStyle] ?? STYLE_URLS.outdoors,
+		interactive: false,
+		attributionControl: false,
+		preserveDrawingBuffer: true,
+		fadeDuration: 0,
+		pitch: 0,
+		bearing: 0,
+		center: input.points[0],
+		zoom: 9,
+	});
+
+	try {
+		await once(map, "style.load", 12000);
+
+		try {
+			map.setConfigProperty("basemap", "lightPreset", input.lightPreset);
+		} catch {
+			// style may not support light presets
+		}
+
+		initializeSourcesAndLayers(map, readMapPalette());
+		updateRouteLayer(map, input.points);
+		updateRouteSurfaceLayer(map, input.surfaceSegments);
+		updateWaypointsLayer(map, input.waypoints, false);
+
+		const bounds = input.points.reduce(
+			(acc, point) => acc.extend(point),
+			new LngLatBounds(input.points[0], input.points[0]),
+		);
+		map.fitBounds(bounds, { padding: 72, animate: false, pitch: 0, bearing: 0 });
+
+		await once(map, "idle", 9000);
+
+		const gl = map.getCanvas();
+		const out = document.createElement("canvas");
+		out.width = gl.width;
+		out.height = gl.height;
+		const ctx = out.getContext("2d");
+		if (!ctx) return null;
+		ctx.drawImage(gl, 0, 0);
+		return out;
+	} catch (err) {
+		Logger.warn("[routeShareCard] offscreen route render failed", err);
+		return null;
+	} finally {
+		map.remove();
+		container.remove();
+	}
+}
+
 /**
- * Render a shareable route card: the route on a map with a footer carrying the
- * distance/time/elevation stats and routess branding. Returns a PNG blob, or
- * null if there's nothing to render or the map image can't be fetched.
+ * Build a shareable route card PNG: the route rendered exactly as on the live
+ * map (line style, arrows, paved/unpaved) with a footer carrying the routess
+ * logo + wordmark and the distance / time / elevation stats.
  */
 export async function buildRouteShareCard(input: RouteShareCardInput): Promise<Blob | null> {
-	const { points, mapStyle, distance, duration, elevationMeters } = input;
-	if (points.length === 0) return null;
+	if (input.points.length === 0) return null;
 
-	const mapUrl = buildMapboxStaticPreviewUrl(points, {
-		width: CARD_WIDTH / 2,
-		height: MAP_HEIGHT / 2,
-		mapStyle,
-		retina: true,
-		strokeWidth: 5,
-		padding: 48,
-		showPins: true,
-	});
-	if (!mapUrl) return null;
+	const [mapCanvas, logoImg] = await Promise.all([renderRouteMap(input), loadImage("/logo.png")]);
+	if (!mapCanvas) return null;
 
-	const [mapImg, logoImg] = await Promise.all([loadImage(mapUrl, true), loadImage("/logo.png", false)]);
-	if (!mapImg) {
-		Logger.warn("[routeShareCard] Static map image failed to load (CORS or network)");
-		return null;
-	}
-
-	// Make sure the brand font is ready so text doesn't fall back to a default.
 	try {
 		await document.fonts?.ready;
 	} catch {
@@ -76,7 +154,8 @@ export async function buildRouteShareCard(input: RouteShareCardInput): Promise<B
 	const ctx = canvas.getContext("2d");
 	if (!ctx) return null;
 
-	ctx.drawImage(mapImg, 0, 0, CARD_WIDTH, MAP_HEIGHT);
+	// Route map (downscale the high-DPI capture into the card's map area).
+	ctx.drawImage(mapCanvas, 0, 0, mapCanvas.width, mapCanvas.height, 0, 0, CARD_WIDTH, MAP_HEIGHT);
 
 	// Footer
 	ctx.fillStyle = "#ffffff";
@@ -87,7 +166,6 @@ export async function buildRouteShareCard(input: RouteShareCardInput): Promise<B
 	const footerCenterY = MAP_HEIGHT + FOOTER_HEIGHT / 2;
 	const pad = 56;
 
-	// Branding: logo glyph + wordmark
 	let wordmarkX = pad;
 	if (logoImg) {
 		const logoSize = 96;
@@ -105,16 +183,17 @@ export async function buildRouteShareCard(input: RouteShareCardInput): Promise<B
 	ctx.font = "700 60px Inter, system-ui, -apple-system, sans-serif";
 	ctx.fillText("routess", wordmarkX, footerCenterY);
 
-	// Stats (right-aligned)
 	const rightX = CARD_WIDTH - pad;
 	ctx.textAlign = "right";
 	ctx.fillStyle = "#16161d";
 	ctx.font = "700 64px Inter, system-ui, -apple-system, sans-serif";
-	ctx.fillText(distance || "—", rightX, footerCenterY - 30);
+	ctx.fillText(input.distance || "—", rightX, footerCenterY - 30);
 
 	const sub: string[] = [];
-	if (duration) sub.push(duration);
-	if (elevationMeters != null && Number.isFinite(elevationMeters)) sub.push(`↑ ${Math.round(elevationMeters)} m`);
+	if (input.duration) sub.push(input.duration);
+	if (input.elevationMeters != null && Number.isFinite(input.elevationMeters)) {
+		sub.push(`↑ ${Math.round(input.elevationMeters)} m`);
+	}
 	if (sub.length > 0) {
 		ctx.fillStyle = "#6b7280";
 		ctx.font = "500 38px Inter, system-ui, -apple-system, sans-serif";
