@@ -14,6 +14,7 @@ web:
     VITE_APP_URL: ""
     VITE_API_URL: ""
     VITE_APP_VERSION: ""
+    VITE_ENABLE_NODE_NETWORK_OVERLAYS: "false"
     # Sentry/GlitchTip error reporting. Leave VITE_SENTRY_DSN empty to disable.
     VITE_SENTRY_DSN: ""
     VITE_SENTRY_ENVIRONMENT: "production"

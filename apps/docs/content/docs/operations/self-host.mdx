@@ -79,6 +79,7 @@ The `.env` file in `docker/.env.selfhost.example` is the source of truth. The va
 | `DB_PASSWORD`                  | yes      | —                                | Postgres password.                                                                       |
 | `GOOGLE_CLIENT_ID/SECRET`      | yes      | —                                | Google OAuth credentials.                                                                |
 | `VITE_MAPBOX_ACCESS_TOKEN`     | yes      | —                                | Mapbox access token used by the web app.                                                 |
+| `VITE_ENABLE_NODE_NETWORK_OVERLAYS` | no   | `false`                          | Enables the experimental walking/cycling node-network map overlays.                      |
 | `PUBLIC_WEB_URL`               | no       | `http://localhost:8080`          | Where users open the app. Used as OAuth redirect base.                                   |
 | `PUBLIC_API_URL`               | no       | `http://localhost:3000`          | Where the web app reaches the API.                                                       |
 | `ADMIN_EMAILS`                 | no       | empty                            | Comma-separated emails granted the admin role on login. Empty disables the admin panel. |

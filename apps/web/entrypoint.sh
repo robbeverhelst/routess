@@ -54,6 +54,7 @@ replace_placeholders() {
     replace_token "$file" "__VITE_SENTRY_TRACES_SAMPLE_RATE__" "${VITE_SENTRY_TRACES_SAMPLE_RATE:-}"
     replace_token "$file" "__VITE_SENTRY_LOGS_ENABLED__" "${VITE_SENTRY_LOGS_ENABLED:-}"
     replace_token "$file" "__VITE_SENTRY_DEBUG__" "${VITE_SENTRY_DEBUG:-}"
+    replace_token "$file" "__VITE_ENABLE_NODE_NETWORK_OVERLAYS__" "${VITE_ENABLE_NODE_NETWORK_OVERLAYS:-false}"
 
     echo "Processed: $file"
 }

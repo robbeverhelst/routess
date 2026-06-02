@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { Layer, Source, useMap } from "react-map-gl/mapbox";
 import { Logger } from "@/lib/logger";
 import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
+import { nodeNetworkOverlaysEnabled } from "./nodeNetworkFeatureFlag";
 import {
 	bboxArea,
 	bboxKey,
@@ -110,6 +111,7 @@ export function NodesOverlay() {
 	const showHiking = useRedesignSettingsStore((s) => s.overlays?.hikingNodes ?? false);
 	const showCycling = useRedesignSettingsStore((s) => s.overlays?.cyclingNodes ?? false);
 
+	if (!nodeNetworkOverlaysEnabled()) return null;
 	if (!showHiking && !showCycling) return null;
 
 	return <ActiveNodesOverlay showHiking={showHiking} showCycling={showCycling} />;
