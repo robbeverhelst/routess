@@ -1,8 +1,10 @@
+import type { Waypoint } from "@routess/core";
 import mapboxgl, { LngLatBounds } from "mapbox-gl";
 import {
 	initializeSourcesAndLayers,
 	updateRouteLayer,
 	updateRouteSurfaceLayer,
+	updateWaypointsLayer,
 } from "@/features/routing/managers/MapLayerManager";
 import { readMapPalette } from "@/features/routing/managers/mapPalette";
 import type { SurfaceSegment } from "@/features/routing/services/SurfaceService";
@@ -26,9 +28,11 @@ const BRAND_PURPLE = "#6638cf";
 
 export interface RouteShareCardInput {
 	points: Coordinate[];
+	waypoints: Waypoint[];
 	surfaceSegments: SurfaceSegment[];
 	mapStyle: RedesignMapStyle;
 	lightPreset: string;
+	activityIconUrl: string | null;
 	distance: string | null;
 	duration: string | null;
 	elevationMeters: number | null;
@@ -101,6 +105,10 @@ async function renderRouteMap(input: RouteShareCardInput): Promise<HTMLCanvasEle
 		initializeSourcesAndLayers(map, readMapPalette());
 		updateRouteLayer(map, input.points);
 		updateRouteSurfaceLayer(map, input.surfaceSegments);
+		// Only the start and end pins, not every intermediate waypoint.
+		const endpoints =
+			input.waypoints.length >= 2 ? [input.waypoints[0], input.waypoints[input.waypoints.length - 1]] : input.waypoints;
+		updateWaypointsLayer(map, endpoints, false);
 
 		const bounds = input.points.reduce(
 			(acc, point) => acc.extend(point),
@@ -135,7 +143,11 @@ async function renderRouteMap(input: RouteShareCardInput): Promise<HTMLCanvasEle
 export async function buildRouteShareCard(input: RouteShareCardInput): Promise<Blob | null> {
 	if (input.points.length === 0) return null;
 
-	const [mapCanvas, logoImg] = await Promise.all([renderRouteMap(input), loadImage("/logo.png")]);
+	const [mapCanvas, logoImg, activityIcon] = await Promise.all([
+		renderRouteMap(input),
+		loadImage("/logo.png"),
+		input.activityIconUrl ? loadImage(input.activityIconUrl) : Promise.resolve(null),
+	]);
 	if (!mapCanvas) return null;
 
 	try {
@@ -183,20 +195,36 @@ export async function buildRouteShareCard(input: RouteShareCardInput): Promise<B
 	ctx.fillText("routess.com", wordmarkX, footerCenterY + 28);
 
 	const rightX = CARD_WIDTH - pad;
-	ctx.textAlign = "right";
-	ctx.fillStyle = "#16161d";
-	ctx.font = "700 64px Inter, system-ui, -apple-system, sans-serif";
-	ctx.fillText(input.distance || "—", rightX, footerCenterY - 30);
-
+	const distText = input.distance || "—";
 	const sub: string[] = [];
 	if (input.duration) sub.push(input.duration);
 	if (input.elevationMeters != null && Number.isFinite(input.elevationMeters)) {
 		sub.push(`↑ ${Math.round(input.elevationMeters)} m`);
 	}
-	if (sub.length > 0) {
+	const subText = sub.join("    ·    ");
+
+	ctx.textAlign = "right";
+	ctx.textBaseline = "middle";
+	ctx.font = "700 64px Inter, system-ui, -apple-system, sans-serif";
+	const distWidth = ctx.measureText(distText).width;
+	ctx.font = "500 38px Inter, system-ui, -apple-system, sans-serif";
+	const subWidth = subText ? ctx.measureText(subText).width : 0;
+	const statsWidth = Math.max(distWidth, subWidth);
+
+	// Activity icon to the left of the stats.
+	if (activityIcon) {
+		const iconSize = 66;
+		const gap = 30;
+		ctx.drawImage(activityIcon, rightX - statsWidth - gap - iconSize, footerCenterY - iconSize / 2, iconSize, iconSize);
+	}
+
+	ctx.fillStyle = "#16161d";
+	ctx.font = "700 64px Inter, system-ui, -apple-system, sans-serif";
+	ctx.fillText(distText, rightX, footerCenterY - 30);
+	if (subText) {
 		ctx.fillStyle = "#6b7280";
 		ctx.font = "500 38px Inter, system-ui, -apple-system, sans-serif";
-		ctx.fillText(sub.join("    ·    "), rightX, footerCenterY + 42);
+		ctx.fillText(subText, rightX, footerCenterY + 42);
 	}
 
 	return await new Promise<Blob | null>((resolve) => canvas.toBlob((blob) => resolve(blob), "image/png"));
