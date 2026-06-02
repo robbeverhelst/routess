@@ -122,11 +122,39 @@ Docs service account name
 {{- end }}
 
 {{/*
-Frontend URLs from web ingress hosts
+Frontend URLs from web ingress hosts (these are the origins allowed by the API CORS policy)
 */}}
 {{- define "routess.frontendUrls" -}}
 {{- range $index, $host := .Values.ingress.web.hosts -}}
 {{- if $index }},{{ end -}}
 {{- printf "https://%s" $host -}}
 {{- end -}}
+{{- end }}
+
+{{/*
+Landing labels
+*/}}
+{{- define "routess.landing.labels" -}}
+{{ include "routess.labels" . }}
+{{ include "routess.landing.selectorLabels" . }}
+{{- end }}
+
+{{/*
+Landing selector labels
+*/}}
+{{- define "routess.landing.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "routess.name" . }}-landing
+app.kubernetes.io/instance: {{ .Release.Name }}
+app.kubernetes.io/component: landing
+{{- end }}
+
+{{/*
+Landing service account name
+*/}}
+{{- define "routess.landing.serviceAccountName" -}}
+{{- if .Values.serviceAccount.landing.create }}
+{{- default (printf "%s-landing" (include "routess.fullname" .)) .Values.serviceAccount.landing.name }}
+{{- else }}
+{{- default "default" .Values.serviceAccount.landing.name }}
+{{- end }}
 {{- end }}
