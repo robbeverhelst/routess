@@ -88,6 +88,7 @@ interface SettingsState {
 	// Local-only (per-device), not part of the server-synced snapshot.
 	showOffTrackGuideLine: boolean;
 	showHeadingCone: boolean;
+	showNodeNetworkOverlays: boolean;
 
 	setUnits: (units: RedesignUnits) => void;
 	setShowPois: (showPois: boolean) => void;
@@ -103,6 +104,7 @@ interface SettingsState {
 	setLocationPermission: (permission: LocationPermission) => void;
 	setShowOffTrackGuideLine: (show: boolean) => void;
 	setShowHeadingCone: (show: boolean) => void;
+	setShowNodeNetworkOverlays: (show: boolean) => void;
 	setRoutingDefaultsForActivity: (activity: RedesignActivity, prefs: Partial<RoutingPreferences>) => void;
 	replaceAllSettings: (settings: RedesignSettingsSnapshot) => void;
 }
@@ -134,6 +136,7 @@ export const DEFAULT_REDESIGN_SETTINGS: RedesignSettingsSnapshot = {
 const DEFAULT_LOCATION_PERMISSION: LocationPermission = "unknown";
 const DEFAULT_SHOW_OFFTRACK_GUIDE_LINE = true;
 const DEFAULT_SHOW_HEADING_CONE = true;
+const DEFAULT_SHOW_NODE_NETWORK_OVERLAYS = false;
 
 function isActivity(value: unknown): value is RedesignActivity {
 	return value === "run" || value === "cycle" || value === "walk";
@@ -248,6 +251,7 @@ export const useRedesignSettingsStore = create<SettingsState>()(
 			locationPermission: DEFAULT_LOCATION_PERMISSION,
 			showOffTrackGuideLine: DEFAULT_SHOW_OFFTRACK_GUIDE_LINE,
 			showHeadingCone: DEFAULT_SHOW_HEADING_CONE,
+			showNodeNetworkOverlays: DEFAULT_SHOW_NODE_NETWORK_OVERLAYS,
 
 			setUnits: (units) => set({ units }),
 			setShowPois: (showPois) => set({ showPois }),
@@ -276,6 +280,7 @@ export const useRedesignSettingsStore = create<SettingsState>()(
 			setLocationPermission: (locationPermission) => set({ locationPermission }),
 			setShowOffTrackGuideLine: (showOffTrackGuideLine) => set({ showOffTrackGuideLine }),
 			setShowHeadingCone: (showHeadingCone) => set({ showHeadingCone }),
+			setShowNodeNetworkOverlays: (showNodeNetworkOverlays) => set({ showNodeNetworkOverlays }),
 			setRoutingDefaultsForActivity: (activity, prefs) =>
 				set((state) => ({
 					routingDefaults: mergeRoutingDefaults(state.routingDefaults, {
@@ -294,6 +299,7 @@ export const useRedesignSettingsStore = create<SettingsState>()(
 							locationPermission?: LocationPermission;
 							showOffTrackGuideLine?: boolean;
 							showHeadingCone?: boolean;
+							showNodeNetworkOverlays?: boolean;
 					  })
 					| null;
 				if (state && version < 4) {
@@ -316,7 +322,17 @@ export const useRedesignSettingsStore = create<SettingsState>()(
 						: DEFAULT_SHOW_OFFTRACK_GUIDE_LINE;
 				const showHeadingCone =
 					typeof state?.showHeadingCone === "boolean" ? state.showHeadingCone : DEFAULT_SHOW_HEADING_CONE;
-				return { ...normalizeRedesignSettings(state), locationPermission, showOffTrackGuideLine, showHeadingCone };
+				const showNodeNetworkOverlays =
+					typeof state?.showNodeNetworkOverlays === "boolean"
+						? state.showNodeNetworkOverlays
+						: DEFAULT_SHOW_NODE_NETWORK_OVERLAYS;
+				return {
+					...normalizeRedesignSettings(state),
+					locationPermission,
+					showOffTrackGuideLine,
+					showHeadingCone,
+					showNodeNetworkOverlays,
+				};
 			},
 		},
 	),

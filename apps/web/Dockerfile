@@ -17,7 +17,6 @@ ENV VITE_MAPBOX_ACCESS_TOKEN=__VITE_MAPBOX_ACCESS_TOKEN__
 ENV VITE_GOOGLE_CLIENT_ID=__VITE_GOOGLE_CLIENT_ID__
 ENV VITE_APP_URL=__VITE_APP_URL__
 ENV VITE_API_URL=__VITE_API_URL__
-ENV VITE_ENABLE_NODE_NETWORK_OVERLAYS=__VITE_ENABLE_NODE_NETWORK_OVERLAYS__
 # VITE_APP_VERSION is the Sentry/GlitchTip release identifier for source-map
 # upload, so it must be the actual version at build time. CI passes the
 # released version via the build arg; local builds fall back to the

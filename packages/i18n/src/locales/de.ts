@@ -240,6 +240,10 @@ export const de: Record<string, string> = {
 	"settings.madeBy": "Erstellt von",
 	"settings.visitWebsite": "Website Besuchen",
 	"settings.viewGithub": "Auf GitHub Anzeigen",
+	"settings.experimental": "Experimentell",
+	"settings.experimental.nodeNetworkOverlays": "Knotenpunkt-Netzwerk-Overlays",
+	"settings.experimental.nodeNetworkOverlaysSub":
+		"Zeigt Steuerelemente für Wander- und Rad-Knotenpunktnetze in der Kartenebenenauswahl an.",
 
 	// Footer translations
 	"footer.madeBy": "Erstellt von",

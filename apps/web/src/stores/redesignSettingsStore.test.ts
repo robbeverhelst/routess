@@ -1,6 +1,10 @@
-import { normalizeRedesignSettings } from "@/stores/redesignSettingsStore";
+import { normalizeRedesignSettings, useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 
 describe("redesignSettingsStore", () => {
+	it("keeps experimental node-network overlay controls hidden by default", () => {
+		expect(useRedesignSettingsStore.getState().showNodeNetworkOverlays).toBe(false);
+	});
+
 	it("migrates the legacy combined nodes overlay into separate hiking and cycling toggles", () => {
 		const settings = normalizeRedesignSettings({
 			overlays: {

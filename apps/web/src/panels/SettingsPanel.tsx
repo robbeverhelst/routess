@@ -265,6 +265,8 @@ export function SettingsPanel() {
 	const setShowOffTrackGuideLine = useRedesignSettingsStore((s) => s.setShowOffTrackGuideLine);
 	const showHeadingCone = useRedesignSettingsStore((s) => s.showHeadingCone);
 	const setShowHeadingCone = useRedesignSettingsStore((s) => s.setShowHeadingCone);
+	const showNodeNetworkOverlays = useRedesignSettingsStore((s) => s.showNodeNetworkOverlays);
+	const setShowNodeNetworkOverlays = useRedesignSettingsStore((s) => s.setShowNodeNetworkOverlays);
 
 	const defaultSport: RedesignActivity | null =
 		selectedSports.length === 0 ? null : selectedSports.includes(activityType) ? activityType : selectedSports[0];
@@ -617,6 +619,15 @@ export function SettingsPanel() {
 							))}
 						</select>
 					}
+					last
+				/>
+			</Group>
+
+			<Group title={t("settings.experimental")}>
+				<Row
+					label={t("settings.experimental.nodeNetworkOverlays")}
+					sub={t("settings.experimental.nodeNetworkOverlaysSub")}
+					control={<Toggle on={showNodeNetworkOverlays} onChange={setShowNodeNetworkOverlays} />}
 					last
 				/>
 			</Group>

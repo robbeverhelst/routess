@@ -392,6 +392,10 @@ export const en: Record<string, string> = {
 	"settings.routingDefaults": "Routing defaults",
 	"settings.routingDefaults.visibility": "Default visibility",
 	"settings.routingDefaults.visibilitySub": "Visibility applied to new routes you save",
+	"settings.experimental": "Experimental",
+	"settings.experimental.nodeNetworkOverlays": "Node network overlays",
+	"settings.experimental.nodeNetworkOverlaysSub":
+		"Show walking and cycling node-network controls in the map layer picker.",
 	"settings.security": "Security",
 	"settings.security.changePassword": "Password",
 	"settings.security.changePasswordSub": "Set or change your account password",

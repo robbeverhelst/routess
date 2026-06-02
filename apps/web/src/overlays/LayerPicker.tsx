@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import { nodeNetworkOverlaysEnabled } from "@/features/overlays/nodeNetworkFeatureFlag";
 import { loadLastMapViewFromLocalStorage } from "@/features/routing/services/LocalStorageService";
 import { useT } from "@/lib/i18n";
 import { getRuntimeConfig } from "@/lib/runtime-config";
@@ -57,9 +56,10 @@ export function LayerPicker() {
 	const setMapStyle = useRedesignSettingsStore((s) => s.setMapStyle);
 	const overlays = useRedesignSettingsStore((s) => s.overlays);
 	const setOverlay = useRedesignSettingsStore((s) => s.setOverlay);
+	const showNodeNetworkOverlays = useRedesignSettingsStore((s) => s.showNodeNetworkOverlays);
 	const t = useT();
 	const { isMobile } = useViewport();
-	const overlayRows = nodeNetworkOverlaysEnabled() ? OVERLAY_ROWS : [];
+	const overlayRows = showNodeNetworkOverlays ? OVERLAY_ROWS : [];
 
 	const previews = useMemo(() => {
 		const token = getRuntimeConfig("VITE_MAPBOX_ACCESS_TOKEN");

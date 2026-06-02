@@ -245,6 +245,10 @@ export const fr: Record<string, string> = {
 	"settings.madeBy": "Créé par",
 	"settings.visitWebsite": "Visiter le Site Web",
 	"settings.viewGithub": "Voir sur GitHub",
+	"settings.experimental": "Expérimental",
+	"settings.experimental.nodeNetworkOverlays": "Superpositions de réseaux de nœuds",
+	"settings.experimental.nodeNetworkOverlaysSub":
+		"Afficher les contrôles des réseaux de nœuds pédestres et cyclables dans le sélecteur de couches.",
 
 	// Footer translations
 	"footer.madeBy": "Fait par",
