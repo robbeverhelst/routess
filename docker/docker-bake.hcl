@@ -7,7 +7,7 @@ variable "OWNER"      { default = "" }
 variable "REGISTRY"   { default = "ghcr.io" }
 
 group "default" {
-  targets = ["web", "api", "docs"]
+  targets = ["web", "api", "docs", "landing"]
 }
 
 target "common" {
@@ -77,4 +77,17 @@ target "docs" {
   ]
   cache-from = ["type=registry,ref=${REGISTRY}/${OWNER}/routess-docs:buildcache"]
   cache-to   = ["type=registry,ref=${REGISTRY}/${OWNER}/routess-docs:buildcache,mode=max"]
+}
+
+target "landing" {
+  inherits   = ["common"]
+  dockerfile = "apps/landing/Dockerfile"
+  tags = [
+    "${REGISTRY}/${OWNER}/routess-landing:${VERSION}",
+    "${REGISTRY}/${OWNER}/routess-landing:${MINOR}",
+    "${REGISTRY}/${OWNER}/routess-landing:${MAJOR}",
+    "${REGISTRY}/${OWNER}/routess-landing:sha-${SHA}",
+  ]
+  cache-from = ["type=registry,ref=${REGISTRY}/${OWNER}/routess-landing:buildcache"]
+  cache-to   = ["type=registry,ref=${REGISTRY}/${OWNER}/routess-landing:buildcache,mode=max"]
 }

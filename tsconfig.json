@@ -26,6 +26,7 @@
 	"references": [
 		{ "path": "./apps/api" },
 		{ "path": "./apps/docs" },
+		{ "path": "./apps/landing" },
 		{ "path": "./apps/web" },
 		{ "path": "./packages/api-client" },
 		{ "path": "./packages/core" },

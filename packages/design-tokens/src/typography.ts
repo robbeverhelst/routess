@@ -1,36 +1,32 @@
 /**
- * Simple typography tokens
+ * Typography tokens
+ *
+ * Three font families:
+ *  - display: Bricolage Grotesque (display headings + italic accent)
+ *  - body:    Inter (body copy)
+ *  - mono:    JetBrains Mono (eyebrows, stats, code)
+ *
+ * Apps are expected to load the actual font files (Next.js: `next/font/google`,
+ * other apps: `@fontsource/*`). The package only declares the font-family stacks
+ * and weight/size scales.
  */
 
 export interface FontSizeScale {
-	/** 12px */
 	xs: string;
-	/** 14px */
 	sm: string;
-	/** 16px */
 	base: string;
-	/** 18px */
 	lg: string;
-	/** 20px */
 	xl: string;
-	/** 24px */
 	"2xl": string;
 }
 
 export interface FontWeightScale {
-	/** 400 */
 	normal: string;
-	/** 500 */
 	medium: string;
-	/** 600 */
 	semibold: string;
-	/** 700 */
 	bold: string;
 }
 
-/**
- * Font size tokens
- */
 export const fontSize: FontSizeScale = {
 	xs: "12px",
 	sm: "14px",
@@ -40,9 +36,6 @@ export const fontSize: FontSizeScale = {
 	"2xl": "24px",
 };
 
-/**
- * Font weight tokens
- */
 export const fontWeight: FontWeightScale = {
 	normal: "400",
 	medium: "500",
@@ -50,9 +43,9 @@ export const fontWeight: FontWeightScale = {
 	bold: "700",
 };
 
-/**
- * Font family tokens
- */
 export const fontFamily = {
-	sans: ["system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"],
+	display: ['"Bricolage Grotesque"', '"Inter"', "system-ui", "sans-serif"],
+	body: ['"Inter"', "system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"],
+	mono: ['"JetBrains Mono"', "ui-monospace", "Menlo", "monospace"],
+	sans: ['"Inter"', "system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"],
 } as const;
