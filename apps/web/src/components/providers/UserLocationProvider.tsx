@@ -107,7 +107,9 @@ export const UserLocationProvider: React.FC<UserLocationProviderProps> = ({
 	// Facing direction for the location cone: prefer the device compass (works
 	// while stationary), fall back to GPS course-over-ground while moving.
 	const compassHeading = useDeviceHeading();
-	const effectiveHeading = compassHeading ?? movementHeading ?? null;
+	const showHeadingCone = useRedesignSettingsStore((s) => s.showHeadingCone);
+	const rawHeading = compassHeading ?? movementHeading ?? null;
+	const effectiveHeading = showHeadingCone ? rawHeading : null;
 	const headingRef = useRef<number | null>(effectiveHeading);
 	useEffect(() => {
 		headingRef.current = effectiveHeading;

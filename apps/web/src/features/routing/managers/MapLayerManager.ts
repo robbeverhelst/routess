@@ -79,28 +79,32 @@ const interpolateZoomStops = (column: 1 | 2 | 3 | 4, hoverMultiplier = 1): unkno
 ];
 
 // Draw the heading cone once and register it as a map image. It points "up"
-// (north) in image space, with its apex at the bottom (the puck); the symbol
-// layer rotates it to the device heading.
+// (north) in image space, with its wide base at the bottom (the puck); the
+// symbol layer rotates it to the device heading.
 function ensureHeadingConeImage(map: MapboxMap): void {
 	if (map.hasImage(USER_LOCATION_HEADING_IMAGE_ID)) return;
 	const ratio = 2;
-	const w = 56 * ratio;
-	const h = 64 * ratio;
+	const w = 58 * ratio;
+	const h = 52 * ratio;
 	const canvas = document.createElement("canvas");
 	canvas.width = w;
 	canvas.height = h;
 	const ctx = canvas.getContext("2d");
 	if (!ctx) return;
-	const apexX = w / 2;
-	const halfSpread = 24 * ratio;
+	const cx = w / 2;
+	const baseHalf = 7 * ratio; // narrow at the dot
+	const endHalf = 26 * ratio; // fans out wide at the far end (~55° cone)
+	// Bold near the dot, fading out to transparent at the end (Google-like).
 	const gradient = ctx.createLinearGradient(0, h, 0, 0);
-	gradient.addColorStop(0, "rgba(28, 117, 230, 0.55)");
+	gradient.addColorStop(0, "rgba(28, 117, 230, 0.9)");
+	gradient.addColorStop(0.6, "rgba(28, 117, 230, 0.45)");
 	gradient.addColorStop(1, "rgba(28, 117, 230, 0)");
 	ctx.fillStyle = gradient;
 	ctx.beginPath();
-	ctx.moveTo(apexX, h);
-	ctx.lineTo(apexX - halfSpread, 0);
-	ctx.lineTo(apexX + halfSpread, 0);
+	ctx.moveTo(cx - baseHalf, h);
+	ctx.lineTo(cx + baseHalf, h);
+	ctx.lineTo(cx + endHalf, 0);
+	ctx.lineTo(cx - endHalf, 0);
 	ctx.closePath();
 	ctx.fill();
 	map.addImage(USER_LOCATION_HEADING_IMAGE_ID, ctx.getImageData(0, 0, w, h), { pixelRatio: ratio });

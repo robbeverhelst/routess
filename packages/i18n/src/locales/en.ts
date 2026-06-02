@@ -371,6 +371,8 @@ export const en: Record<string, string> = {
 	"settings.map.autoSnap": "Auto-snap to roads",
 	"settings.map.offTrackGuide": "Off-track guide line",
 	"settings.map.offTrackGuideSub": "Show a dashed line to the nearest point on your route when you stray off it",
+	"settings.map.headingCone": "Heading cone",
+	"settings.map.headingConeSub": "Show a cone on your location pointing the way you're facing",
 	"settings.privacy.locationAccess": "Location access",
 	"settings.privacy.enable": "Enable",
 	"settings.account.exportAll": "Export all data",
