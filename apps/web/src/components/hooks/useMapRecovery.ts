@@ -31,15 +31,16 @@ export const useMapRecovery = (mapRef: React.RefObject<MapboxMap | null>, isMapL
 			if (!document.hidden) refresh();
 		};
 
-		const canvas = map.getCanvas();
+		// getCanvas() can be a stub in tests (and null during teardown), so guard.
+		const canvas = map.getCanvas?.();
 		document.addEventListener("visibilitychange", onVisible);
 		window.addEventListener("pageshow", onVisible);
-		canvas.addEventListener("webglcontextrestored", refresh);
+		canvas?.addEventListener?.("webglcontextrestored", refresh);
 
 		return () => {
 			document.removeEventListener("visibilitychange", onVisible);
 			window.removeEventListener("pageshow", onVisible);
-			canvas.removeEventListener("webglcontextrestored", refresh);
+			canvas?.removeEventListener?.("webglcontextrestored", refresh);
 		};
 	}, [mapRef, isMapLoaded]);
 };
