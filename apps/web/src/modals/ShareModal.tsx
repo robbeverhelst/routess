@@ -4,9 +4,13 @@ import { emitAppEvent } from "@/lib/app-events";
 import { t } from "@/lib/i18n";
 import { serializeAndCompress } from "@/lib/shareUtils";
 import { buildMapboxStaticPreviewUrl } from "@/lib/utils/mapboxStaticPreview";
+import { buildRouteShareCard } from "@/lib/utils/routeShareCard";
+import { useMapViewStore } from "@/stores/mapViewStore";
 import { useModalsStore } from "@/stores/modalsStore";
 import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
+import { useRouteSurfaceStore } from "@/stores/routeSurfaceStore";
 import {
+	useElevationGain,
 	useIsMapLocked,
 	useRouteDistance,
 	useRouteDuration,
@@ -85,11 +89,15 @@ export function ShareModal() {
 	const isMapLocked = useIsMapLocked();
 	const distance = useRouteDistance();
 	const duration = useRouteDuration();
+	const elevationGain = useElevationGain();
 	const pushToast = useToastStore((s) => s.push);
 
 	const mapStyle = useRedesignSettingsStore((s) => s.mapStyle);
+	const lightPreset = useMapViewStore((s) => s.lightPreset);
+	const surfaceBreakdown = useRouteSurfaceStore((s) => s.breakdown);
 	const [copied, setCopied] = useState(false);
 	const [canNativeShare, setCanNativeShare] = useState(false);
+	const [imageBusy, setImageBusy] = useState(false);
 
 	useEffect(() => {
 		setCanNativeShare(typeof navigator !== "undefined" && typeof navigator.share === "function");
@@ -210,6 +218,64 @@ export function ShareModal() {
 		}
 		emitAppEvent("routess:export-gpx");
 		closeModal();
+	};
+
+	const makeCard = () =>
+		buildRouteShareCard({
+			points: previewPoints,
+			surfaceSegments: surfaceBreakdown?.segments ?? [],
+			mapStyle,
+			lightPreset,
+			distance,
+			duration,
+			elevationMeters: elevationGain ?? null,
+		});
+
+	const copyImage = async () => {
+		if (!hasRoute) {
+			pushToast({ kind: "warn", title: t("share.empty") });
+			return;
+		}
+		if (typeof ClipboardItem === "undefined" || !navigator.clipboard?.write) {
+			pushToast({ kind: "warn", title: t("share.imageCopyUnsupported") });
+			return;
+		}
+		setImageBusy(true);
+		try {
+			const blob = await makeCard();
+			if (!blob) throw new Error("card unavailable");
+			await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+			pushToast({ kind: "success", title: t("share.imageCopied") });
+		} catch {
+			pushToast({ kind: "danger", title: t("share.imageFailed") });
+		} finally {
+			setImageBusy(false);
+		}
+	};
+
+	const downloadImage = async () => {
+		if (!hasRoute) {
+			pushToast({ kind: "warn", title: t("share.empty") });
+			return;
+		}
+		setImageBusy(true);
+		try {
+			const blob = await makeCard();
+			if (!blob) throw new Error("card unavailable");
+			const objectUrl = URL.createObjectURL(blob);
+			const link = document.createElement("a");
+			link.href = objectUrl;
+			link.download = "routess-route.png";
+			document.body.appendChild(link);
+			link.click();
+			link.remove();
+			URL.revokeObjectURL(objectUrl);
+			pushToast({ kind: "success", title: t("share.imageSaved") });
+		} catch {
+			pushToast({ kind: "danger", title: t("share.imageFailed") });
+		} finally {
+			setImageBusy(false);
+		}
 	};
 
 	return (
@@ -374,6 +440,19 @@ export function ShareModal() {
 				<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
 					<SecTitle>{t("share.via")}</SecTitle>
 					<div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+						<TargetTile
+							label={t("share.copyImage")}
+							icon={<I.copy size={18} />}
+							onClick={copyImage}
+							tint={RDS_COLORS.accent}
+							disabled={!hasRoute || imageBusy}
+						/>
+						<TargetTile
+							label={t("share.saveImage")}
+							icon={<I.download size={18} />}
+							onClick={downloadImage}
+							disabled={!hasRoute || imageBusy}
+						/>
 						{canNativeShare && (
 							<TargetTile
 								label={t("share.more")}
