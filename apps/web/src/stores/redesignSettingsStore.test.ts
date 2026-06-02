@@ -1,6 +1,21 @@
-import { normalizeRedesignSettings, useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
+import {
+	DEFAULT_REDESIGN_SETTINGS,
+	normalizeRedesignSettings,
+	useRedesignSettingsStore,
+} from "@/stores/redesignSettingsStore";
 
 describe("redesignSettingsStore", () => {
+	beforeEach(() => {
+		localStorage.removeItem("routess.redesign.settings");
+		useRedesignSettingsStore.setState({
+			...DEFAULT_REDESIGN_SETTINGS,
+			locationPermission: "unknown",
+			showOffTrackGuideLine: true,
+			showHeadingCone: true,
+			showNodeNetworkOverlays: false,
+		});
+	});
+
 	it("keeps experimental node-network overlay controls hidden by default", () => {
 		expect(useRedesignSettingsStore.getState().showNodeNetworkOverlays).toBe(false);
 	});
