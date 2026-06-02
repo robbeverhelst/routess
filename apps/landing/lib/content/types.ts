@@ -19,11 +19,6 @@ export interface Dict {
 		ctaPrimary: string;
 		ctaSecondary: string;
 		bullets: ReadonlyArray<string>;
-		mode: { run: string; cycle: string; walk: string };
-		statThisRoute: string;
-		statDist: string;
-		statElev: string;
-		statTime: string;
 	};
 	marquee: ReadonlyArray<string>;
 	planner: {
@@ -113,7 +108,6 @@ export interface Dict {
 		colMore: { title: string; items: ReadonlyArray<{ label: string; href: string }> };
 		copyright: string;
 		madeWith: string;
-		mastodon: string;
 	};
 	dev: {
 		hero: {

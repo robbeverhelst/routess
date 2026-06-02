@@ -18,15 +18,17 @@ export default async function LandingPage() {
 	return (
 		<>
 			<Nav dict={dict} locale={locale} />
-			<Hero dict={dict} />
-			<PlanMarquee dict={dict} />
-			<MiniPlanner dict={dict} />
-			<Modes dict={dict} />
-			<SurfaceSection dict={dict} />
-			<RouteGen dict={dict} />
-			<Sharing dict={dict} />
-			<Pricing dict={dict} />
-			<OpenSourceTeaser dict={dict} />
+			<main>
+				<Hero dict={dict} />
+				<PlanMarquee dict={dict} />
+				<MiniPlanner dict={dict} />
+				<Modes dict={dict} />
+				<SurfaceSection dict={dict} />
+				<RouteGen dict={dict} />
+				<Sharing dict={dict} />
+				<Pricing dict={dict} />
+				<OpenSourceTeaser dict={dict} />
+			</main>
 			<Footer dict={dict} />
 		</>
 	);

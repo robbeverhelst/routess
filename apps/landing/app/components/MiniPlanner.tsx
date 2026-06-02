@@ -76,8 +76,7 @@ export function MiniPlanner({ dict }: { dict: Dict }) {
 		const r = svg.getBoundingClientRect();
 		const x = ((e.clientX - r.left) / r.width) * W;
 		const y = ((e.clientY - r.top) / r.height) * H;
-		if (pts.length >= 8) return;
-		setPts([...pts, { x, y }]);
+		setPts((prev) => (prev.length >= 8 ? prev : [...prev, { x, y }]));
 	};
 
 	const reset = () =>
@@ -110,15 +109,10 @@ export function MiniPlanner({ dict }: { dict: Dict }) {
 
 				<div className="grid-planner" style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 24 }}>
 					<div className="card" style={{ overflow: "hidden", padding: 0, position: "relative" }}>
+						{/* Decorative mouse-only enhancement; the Reset button and Open-in-app link are the real controls. */}
 						<svg
 							viewBox={`0 0 ${W} ${H}`}
 							onClick={onSvgClick}
-							onKeyDown={(e) => {
-								if (e.key === "Enter" || e.key === " ") {
-									e.preventDefault();
-									reset();
-								}
-							}}
 							style={{
 								width: "100%",
 								height: 420,
@@ -126,8 +120,7 @@ export function MiniPlanner({ dict }: { dict: Dict }) {
 								cursor: "crosshair",
 								background: "oklch(0.96 0.03 80)",
 							}}
-							role="application"
-							aria-label={dict.planner.clickHint}
+							aria-hidden="true"
 						>
 							<g>
 								<rect x="0" y="0" width={W} height={H} fill="oklch(0.96 0.03 80)" />

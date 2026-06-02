@@ -21,11 +21,6 @@ export const en: Dict = {
 		ctaPrimary: "Plan your first route",
 		ctaSecondary: "See features",
 		bullets: ["Free forever", "No account to plan", "GPX in & out"],
-		mode: { run: "Run", cycle: "Cycle", walk: "Walk" },
-		statThisRoute: "This route",
-		statDist: "dist",
-		statElev: "elev",
-		statTime: "time",
 	},
 	marquee: [
 		"🏃 Sint-Amands loop · 28.5 km",
@@ -66,13 +61,13 @@ export const en: Dict = {
 			},
 			{
 				mode: "Cycle",
-				copy: "Hills, gravel preferences, distance targets up to 300 km.",
+				copy: "Hills, gravel preferences, café stops optional.",
 				stat: "28.5 km",
 				statLabel: "today's plan",
 			},
 			{
 				mode: "Walk",
-				copy: "Footpaths first. Wheelchair-friendly toggle for any route.",
+				copy: "Footpaths first, with a surface breakdown so you know what's underfoot.",
 				stat: "5.7 h",
 				statLabel: "estimated",
 			},
@@ -92,14 +87,14 @@ export const en: Dict = {
 		elevationStats: "↑ 46 m · ↓ 44 m",
 	},
 	routegen: {
-		eyebrow: "Route generation",
+		eyebrow: "Coming soon · Route generation",
 		title: [{ text: "Don't know where to go? " }, { text: "Ask.", accent: true }],
-		body: "Type what you feel like doing. Routess turns it into a real route, with surfaces you'd actually want to ride or run on.",
+		body: "Soon you'll type what you feel like doing, and Routess will turn it into a real route, with surfaces you'd actually want to ride or run on. In the works, not live yet.",
 		bullets: [
 			"Loop or A→B, your call",
 			"Target distance, give or take",
 			"Surface preference: paved · mixed · unpaved",
-			"Paths-only or wheel-friendly toggles",
+			"Avoids busy roads where it can",
 		],
 		promptLabel: "Prompt",
 		prompts: [
@@ -133,7 +128,7 @@ export const en: Dict = {
 	pricing: {
 		eyebrow: "Pricing",
 		title: [{ text: "Start free. " }, { text: "Go further when you want to.", accent: true }],
-		body: "The whole planner is free, forever. Pro adds the heavier features, AI generation, advanced layers, priority support, for the people who plan a lot.",
+		body: "The whole planner is free, forever. A Pro plan with the heavier extras is planned for the people who plan a lot.",
 		freeName: "Free",
 		freeTagline: "For anyone who just wants to plan a route.",
 		freePrice: "€0",
@@ -148,20 +143,20 @@ export const en: Dict = {
 		],
 		freeCta: "Plan a route",
 		proName: "Pro",
-		proTagline: "For the people who plan every weekend.",
-		proPrice: "€4",
-		proPeriod: "/ month",
-		proAlt: "or €40/yr",
+		proTagline: "Planned, for the people who plan every weekend.",
+		proPrice: "Soon",
+		proPeriod: "",
+		proAlt: "pricing TBD",
 		proPerks: [
 			"Everything in Free",
-			"AI route generation",
+			"Route generation",
 			"Heatmaps & advanced layers",
-			"Higher generation rate limits",
+			"Higher rate limits",
 			"Priority support",
 			"Early access to new features",
 		],
-		proCta: "Get Pro",
-		proBadge: "Most popular",
+		proCta: "Follow the roadmap",
+		proBadge: "Coming soon",
 		selfHostNote: "Or self-host it on your own infra, free, MIT, no strings attached.",
 		selfHostLink: "self-host it",
 	},
@@ -199,7 +194,6 @@ export const en: Dict = {
 		},
 		copyright: "© 2026 routess · MIT license",
 		madeWith: "made with map tiles & coffee · Belgium",
-		mastodon: "Mastodon",
 	},
 	dev: {
 		hero: {
@@ -213,7 +207,7 @@ export const en: Dict = {
 			{
 				eyebrow: "Public API",
 				title: "Every action is an HTTP call.",
-				body: "Routes, waypoints, generation, library, exports. The web app uses the same API you do, with a typed OpenAPI client generated from the same spec.",
+				body: "Routes, waypoints, library, exports. The web app uses the same API you do, with a typed OpenAPI client generated from the same spec.",
 				bullets: [
 					"REST + JSON, OpenAPI 3 spec",
 					"Personal access tokens for non-browser clients",
@@ -224,12 +218,12 @@ export const en: Dict = {
 			{
 				eyebrow: "CLI",
 				title: "Routess in your terminal.",
-				body: "A small CLI for the operations you actually do: list routes, export GPX, generate a loop, inspect a draft. JSON output mode and stable exit codes for scripting.",
+				body: "A small CLI for the operations you actually do: list routes, inspect one, rename it, manage your tokens. JSON output mode and stable exit codes for scripting.",
 				bullets: [
 					"`routess routes list`",
-					"`routess routes export <id> --format gpx`",
-					"`routess generate --loop --distance 30km`",
-					"`routess draft inspect`",
+					"`routess routes get <id>`",
+					'`routess routes update <id> --name "..."`',
+					"`routess auth whoami`",
 				],
 			},
 			{

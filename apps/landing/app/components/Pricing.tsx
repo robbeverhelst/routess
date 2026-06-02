@@ -1,5 +1,5 @@
 import type { Dict } from "@/lib/content";
-import { APP_HOST } from "@/lib/i18n";
+import { APP_HOST, REPO_URL } from "@/lib/i18n";
 import { AccentInline } from "./AccentText";
 import { ArrowIcon } from "./Icons";
 
@@ -195,7 +195,7 @@ export function Pricing({ dict }: { dict: Dict }) {
 						</div>
 						<a
 							className="btn"
-							href={`https://${APP_HOST}/upgrade`}
+							href={`${REPO_URL}/issues`}
 							style={{
 								background: "var(--sun)",
 								color: "oklch(0.18 0.02 270)",

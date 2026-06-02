@@ -1,4 +1,11 @@
+import type { Metadata } from "next";
 import { HeroAppScreenshotMock } from "../components/HeroAppScreenshotMock";
+
+// Internal tooling route, not for visitors. robots.txt disallows it; this also
+// keeps it out of the index if the URL leaks.
+export const metadata: Metadata = {
+	robots: { index: false, follow: false },
+};
 
 // Standalone page that renders only the hero app-screenshot mock at fixed
 // 920x560 dimensions. Used by `scripts/screenshot-hero.ts` to capture

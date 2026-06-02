@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { Bricolage_Grotesque, Inter, JetBrains_Mono } from "next/font/google";
-import { headers } from "next/headers";
 import Script from "next/script";
 import type { ReactNode } from "react";
 import { getDict } from "@/lib/content";
-import { DEFAULT_LOCALE, HTML_LANG, LOCALE_HEADER, LOCALES, type Locale, SELF_HOST, SISTER_HOST } from "@/lib/i18n";
+import { HTML_LANG, type Locale, REPO_URL, SELF_HOST, SISTER_HOST } from "@/lib/i18n";
+import { getLocale } from "@/lib/locale";
 import "./globals.css";
 
 const bodyFont = Inter({
@@ -25,17 +25,8 @@ const monoFont = JetBrains_Mono({
 	display: "swap",
 });
 
-async function readLocale(): Promise<Locale> {
-	const h = await headers();
-	const fromHeader = h.get(LOCALE_HEADER);
-	if (fromHeader && (LOCALES as readonly string[]).includes(fromHeader)) {
-		return fromHeader as Locale;
-	}
-	return DEFAULT_LOCALE;
-}
-
 export async function generateMetadata(): Promise<Metadata> {
-	const locale = await readLocale();
+	const locale = await getLocale();
 	const dict = getDict(locale);
 	const selfHost = SELF_HOST[locale];
 	const sisterHost = SISTER_HOST[locale];
@@ -73,14 +64,48 @@ export async function generateMetadata(): Promise<Metadata> {
 	};
 }
 
+function jsonLd(locale: Locale) {
+	const dict = getDict(locale);
+	const selfHost = SELF_HOST[locale];
+	const base = `https://${selfHost}`;
+	return {
+		"@context": "https://schema.org",
+		"@graph": [
+			{
+				"@type": "Organization",
+				"@id": `${base}/#org`,
+				name: "routess",
+				url: base,
+				sameAs: [REPO_URL],
+			},
+			{
+				"@type": "SoftwareApplication",
+				name: "routess",
+				applicationCategory: "LifestyleApplication",
+				operatingSystem: "Web",
+				url: base,
+				description: dict.meta.landing.description,
+				offers: { "@type": "Offer", price: "0", priceCurrency: "EUR" },
+				publisher: { "@id": `${base}/#org` },
+			},
+		],
+	};
+}
+
 export default async function RootLayout({ children }: { children: ReactNode }) {
-	const locale = await readLocale();
+	const locale = await getLocale();
 	const umamiUrl = process.env.NEXT_PUBLIC_UMAMI_URL;
 	const umamiId = process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID;
 	return (
 		<html lang={HTML_LANG[locale]} suppressHydrationWarning>
 			<body className={`${bodyFont.variable} ${displayFont.variable} ${monoFont.variable}`}>
 				{children}
+				<Script
+					id="ld-json"
+					type="application/ld+json"
+					// biome-ignore lint/security/noDangerouslySetInnerHtml: serialized JSON-LD
+					dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd(locale)) }}
+				/>
 				{umamiUrl && umamiId ? (
 					<Script defer src={umamiUrl} data-website-id={umamiId} strategy="afterInteractive" />
 				) : null}
