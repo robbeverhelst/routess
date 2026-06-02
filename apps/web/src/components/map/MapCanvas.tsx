@@ -5,6 +5,7 @@ import type { Map as MapboxMap } from "mapbox-gl";
 import type { Dispatch, SetStateAction } from "react";
 import { useMapInitialization } from "@/components/hooks/useMapInitialization";
 import { useMapPositioning } from "@/components/hooks/useMapPositioning";
+import { useMapRecovery } from "@/components/hooks/useMapRecovery";
 import { useMapViewBindings } from "@/components/hooks/useMapViewBindings";
 import { MapPopup, type PopupInfo as MapPopupInfo } from "@/components/map/MapPopup";
 import { SunPositionIndicator } from "@/components/map/SunPositionIndicator";
@@ -250,15 +251,41 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
 	useEffect(() => {
 		if (hasInvalidMapboxToken || isMapLoaded) return;
 
-		const timeout = window.setTimeout(() => {
-			setLoadTimedOut(true);
-			handleMapError(
-				new Error("Mapbox did not finish loading. Check the access token and network connection."),
-				"map-load",
-			);
-		}, 12000);
+		// Only count the load timeout while the tab is visible. A backgrounded
+		// cold-start (common for an installed PWA the user switched away from)
+		// otherwise trips this and shows the reload panel even though loading is
+		// simply paused; restart the clock fresh each time they return.
+		let timeout: number | null = null;
+		const disarm = () => {
+			if (timeout !== null) {
+				window.clearTimeout(timeout);
+				timeout = null;
+			}
+		};
+		const arm = () => {
+			if (document.hidden || timeout !== null) return;
+			timeout = window.setTimeout(() => {
+				setLoadTimedOut(true);
+				handleMapError(
+					new Error("Mapbox did not finish loading. Check the access token and network connection."),
+					"map-load",
+				);
+			}, 12000);
+		};
+		const onVisibility = () => {
+			if (document.hidden) disarm();
+			else {
+				disarm();
+				arm();
+			}
+		};
 
-		return () => window.clearTimeout(timeout);
+		arm();
+		document.addEventListener("visibilitychange", onVisibility);
+		return () => {
+			disarm();
+			document.removeEventListener("visibilitychange", onVisibility);
+		};
 	}, [hasInvalidMapboxToken, isMapLoaded, handleMapError]);
 
 	useEffect(() => {
@@ -330,6 +357,9 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
 		currentLightPreset,
 		routeId,
 	});
+
+	// Refresh the canvas when the tab returns to the foreground.
+	useMapRecovery(mapRef, isMapLoaded);
 
 	// Memoize the complex initial view state calculation to avoid repeated computations
 	const effectiveInitialViewState = useMemo(() => {
