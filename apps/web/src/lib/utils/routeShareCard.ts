@@ -1,8 +1,10 @@
+import type { Waypoint } from "@routess/core";
 import mapboxgl, { LngLatBounds } from "mapbox-gl";
 import {
 	initializeSourcesAndLayers,
 	updateRouteLayer,
 	updateRouteSurfaceLayer,
+	updateWaypointsLayer,
 } from "@/features/routing/managers/MapLayerManager";
 import { readMapPalette } from "@/features/routing/managers/mapPalette";
 import type { SurfaceSegment } from "@/features/routing/services/SurfaceService";
@@ -26,9 +28,11 @@ const BRAND_PURPLE = "#6638cf";
 
 export interface RouteShareCardInput {
 	points: Coordinate[];
+	waypoints: Waypoint[];
 	surfaceSegments: SurfaceSegment[];
 	mapStyle: RedesignMapStyle;
 	lightPreset: string;
+	activityLabel: string | null;
 	distance: string | null;
 	duration: string | null;
 	elevationMeters: number | null;
@@ -61,6 +65,38 @@ function roundedClip(ctx: CanvasRenderingContext2D, x: number, y: number, size: 
 	ctx.arcTo(x, y + size, x, y, radius);
 	ctx.arcTo(x, y, x + size, y, radius);
 	ctx.closePath();
+}
+
+function roundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, radius: number): void {
+	ctx.beginPath();
+	ctx.moveTo(x + radius, y);
+	ctx.arcTo(x + w, y, x + w, y + h, radius);
+	ctx.arcTo(x + w, y + h, x, y + h, radius);
+	ctx.arcTo(x, y + h, x, y, radius);
+	ctx.arcTo(x, y, x + w, y, radius);
+	ctx.closePath();
+}
+
+// Pill in the map's top-left corner showing the activity (e.g. Cycling).
+function drawActivityBadge(ctx: CanvasRenderingContext2D, label: string): void {
+	ctx.font = "600 34px Inter, system-ui, -apple-system, sans-serif";
+	ctx.textAlign = "left";
+	ctx.textBaseline = "middle";
+	const padX = 28;
+	const h = 62;
+	const x = 28;
+	const y = 28;
+	const w = ctx.measureText(label).width + padX * 2;
+	ctx.save();
+	ctx.shadowColor = "rgba(0,0,0,0.18)";
+	ctx.shadowBlur = 18;
+	ctx.shadowOffsetY = 4;
+	roundedRect(ctx, x, y, w, h, h / 2);
+	ctx.fillStyle = "rgba(255,255,255,0.95)";
+	ctx.fill();
+	ctx.restore();
+	ctx.fillStyle = "#16161d";
+	ctx.fillText(label, x + padX, y + h / 2 + 1);
 }
 
 // Render the route on a throwaway offscreen Mapbox map, top-down and fit to the
@@ -101,6 +137,12 @@ async function renderRouteMap(input: RouteShareCardInput): Promise<HTMLCanvasEle
 		initializeSourcesAndLayers(map, readMapPalette());
 		updateRouteLayer(map, input.points);
 		updateRouteSurfaceLayer(map, input.surfaceSegments);
+		// Only the start and end pins, not every intermediate waypoint.
+		const endpoints =
+			input.waypoints.length >= 2
+				? [input.waypoints[0], input.waypoints[input.waypoints.length - 1]]
+				: input.waypoints;
+		updateWaypointsLayer(map, endpoints, false);
 
 		const bounds = input.points.reduce(
 			(acc, point) => acc.extend(point),
@@ -152,6 +194,10 @@ export async function buildRouteShareCard(input: RouteShareCardInput): Promise<B
 
 	// Route map (downscale the high-DPI capture into the card's map area).
 	ctx.drawImage(mapCanvas, 0, 0, mapCanvas.width, mapCanvas.height, 0, 0, CARD_WIDTH, MAP_HEIGHT);
+
+	if (input.activityLabel) {
+		drawActivityBadge(ctx, input.activityLabel);
+	}
 
 	// Footer
 	ctx.fillStyle = "#ffffff";

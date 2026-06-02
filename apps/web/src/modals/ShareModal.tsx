@@ -84,6 +84,7 @@ function TargetTile({ label, icon, onClick, disabled, tint }: TargetTileProps) {
 export function ShareModal() {
 	const closeModal = useModalsStore((s) => s.closeModal);
 	const _language = useUiStore((s) => s.language);
+	const activityType = useUiStore((s) => s.activityType);
 	const waypoints = useWaypoints();
 	const routePath = useRoutePath();
 	const isMapLocked = useIsMapLocked();
@@ -223,9 +224,11 @@ export function ShareModal() {
 	const makeCard = () =>
 		buildRouteShareCard({
 			points: previewPoints,
+			waypoints,
 			surfaceSegments: surfaceBreakdown?.segments ?? [],
 			mapStyle,
 			lightPreset,
+			activityLabel: t(`sport.${activityType}`),
 			distance,
 			duration,
 			elevationMeters: elevationGain ?? null,
