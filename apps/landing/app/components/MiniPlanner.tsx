@@ -23,8 +23,8 @@ const SURFACES = [
 type SurfaceId = (typeof SURFACES)[number]["id"];
 
 const SVG_TO_LATLNG = (p: Pt) => {
-	// Pure illustration: map SVG to a plausible Belgian latlng range so the
-	// /plan handoff has data shaped like real waypoints. Numbers are illustrative.
+	// Pure illustration: map the SVG point to a plausible Belgian latlng so the
+	// "open in app" link can center the real planner there. Numbers are illustrative.
 	const lat = 51.04 + (p.y / H) * 0.04;
 	const lng = 4.27 + (p.x / W) * 0.08;
 	return { lat: lat.toFixed(5), lng: lng.toFixed(5) };
@@ -87,14 +87,12 @@ export function MiniPlanner({ dict }: { dict: Dict }) {
 		]);
 
 	const openInAppHref = useMemo(() => {
-		const wp = pts
-			.map((p) => {
-				const { lat, lng } = SVG_TO_LATLNG(p);
-				return `${lat},${lng}`;
-			})
-			.join(";");
-		return `https://${APP_HOST}/plan?wp=${encodeURIComponent(wp)}&mode=${mode}&surface=${surface}`;
-	}, [pts, mode, surface]);
+		const base = `https://${APP_HOST}/`;
+		const first = pts[0];
+		if (!first) return base;
+		const { lat, lng } = SVG_TO_LATLNG(first);
+		return `${base}?center=${lat},${lng}&zoom=13`;
+	}, [pts]);
 
 	return (
 		<section id="planner" style={{ background: "var(--paper-2)" }}>

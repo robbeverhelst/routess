@@ -47,7 +47,7 @@ export function Hero({ dict }: { dict: Dict }) {
 						</p>
 
 						<div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 28 }}>
-							<a className="btn btn-primary" href={`https://${APP_HOST}/plan`}>
+							<a className="btn btn-primary" href={`https://${APP_HOST}/`}>
 								{dict.hero.ctaPrimary} <ArrowIcon />
 							</a>
 							<a className="btn btn-ghost" href="#features">

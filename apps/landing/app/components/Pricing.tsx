@@ -107,7 +107,7 @@ export function Pricing({ dict }: { dict: Dict }) {
 						<PricingList items={dict.pricing.freePerks} dim />
 						<a
 							className="btn"
-							href={`https://${APP_HOST}/plan`}
+							href={`https://${APP_HOST}/`}
 							style={{ background: "var(--paper)", color: "var(--ink)", marginTop: "auto", justifyContent: "center" }}
 						>
 							{dict.pricing.freeCta} <ArrowIcon />
