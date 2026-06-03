@@ -1,6 +1,12 @@
 global:
   namespace: routess
   createNamespace: true
+  # Shared Umami analytics for web, landing, and docs (one website ID across all
+  # hostnames). Leave empty to disable. The Umami website must accept every
+  # hostname (routess.com, routess.be, app.routess.com, docs.routess.com).
+  umami:
+    url: ""
+    websiteId: ""
 
 web:
   replicaCount: 2

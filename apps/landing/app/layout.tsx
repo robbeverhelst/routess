@@ -94,8 +94,8 @@ function jsonLd(locale: Locale) {
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
 	const locale = await getLocale();
-	const umamiUrl = process.env.NEXT_PUBLIC_UMAMI_URL;
-	const umamiId = process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID;
+	const umamiUrl = process.env.UMAMI_URL;
+	const umamiId = process.env.UMAMI_WEBSITE_ID;
 	return (
 		<html lang={HTML_LANG[locale]} suppressHydrationWarning>
 			<body className={`${bodyFont.variable} ${displayFont.variable} ${monoFont.variable}`}>

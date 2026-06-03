@@ -85,6 +85,9 @@ services:
 
   docs:
     image: ghcr.io/robbeverhelst/routess-docs:${ROUTESS_TAG:-latest}
+    environment:
+      UMAMI_URL: ${UMAMI_URL:-}
+      UMAMI_WEBSITE_ID: ${UMAMI_WEBSITE_ID:-}
     ports:
       - "${DOCS_PORT:-3002}:8080"
     restart: unless-stopped
