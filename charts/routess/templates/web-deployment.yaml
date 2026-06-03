@@ -52,6 +52,7 @@ spec:
               value: {{ $value | quote }}
             {{- end }}
             {{- end }}
+            {{- include "routess.umamiEnvVite" . | nindent 12 }}
           securityContext:
             {{- toYaml .Values.web.containerSecurityContext | nindent 12 }}
           resources:

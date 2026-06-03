@@ -158,3 +158,33 @@ Landing service account name
 {{- default "default" .Values.serviceAccount.landing.name }}
 {{- end }}
 {{- end }}
+
+{{/*
+Shared Umami analytics env. Plain UMAMI_* names (landing + docs read them at
+runtime, server-side). Emits nothing when unset.
+*/}}
+{{- define "routess.umamiEnv" -}}
+{{- if .Values.global.umami.url }}
+- name: UMAMI_URL
+  value: {{ .Values.global.umami.url | quote }}
+{{- end }}
+{{- if .Values.global.umami.websiteId }}
+- name: UMAMI_WEBSITE_ID
+  value: {{ .Values.global.umami.websiteId | quote }}
+{{- end }}
+{{- end }}
+
+{{/*
+Shared Umami analytics env, VITE_ names for the web app (substituted into
+env-config.js by its entrypoint at container start).
+*/}}
+{{- define "routess.umamiEnvVite" -}}
+{{- if .Values.global.umami.url }}
+- name: VITE_UMAMI_URL
+  value: {{ .Values.global.umami.url | quote }}
+{{- end }}
+{{- if .Values.global.umami.websiteId }}
+- name: VITE_UMAMI_WEBSITE_ID
+  value: {{ .Values.global.umami.websiteId | quote }}
+{{- end }}
+{{- end }}

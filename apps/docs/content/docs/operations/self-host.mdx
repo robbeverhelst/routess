@@ -85,7 +85,8 @@ The `.env` file in `docker/.env.selfhost.example` is the source of truth. The va
 | `RESEND_API_KEY`               | no       | empty                            | Resend API key. Empty falls back to logging verification URLs to stdout.                 |
 | `EMAIL_FROM`                   | no       | `routess <noreply@routess.app>`  | Sender address used by Resend.                                                           |
 | `VALHALLA_URL`                 | no       | empty                            | Base URL of a self-hosted Valhalla instance for surface analysis. Empty disables it.     |
-| `VITE_UMAMI_URL` / `_WEBSITE_ID` | no     | empty                            | Umami endpoint and site ID. Empty disables product analytics.                            |
+| `VITE_UMAMI_URL` / `_WEBSITE_ID` | no     | empty                            | Umami endpoint and site ID for the web app. Empty disables product analytics.            |
+| `UMAMI_URL` / `_WEBSITE_ID`    | no       | empty                            | Same Umami endpoint and site ID for the docs site (Next reads them server-side).         |
 | `VITE_SENTRY_DSN`              | no       | empty                            | Sentry / GlitchTip DSN for browser error reporting.                                      |
 
 ## Put it behind a reverse proxy
