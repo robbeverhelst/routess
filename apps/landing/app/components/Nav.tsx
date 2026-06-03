@@ -133,7 +133,7 @@ export function Nav({ dict, locale, dev = false }: NavProps) {
 								</a>
 								<a
 									className="btn btn-primary"
-									href={`https://${APP_HOST}/plan`}
+									href={`https://${APP_HOST}/`}
 									style={{ height: 40, padding: "0 18px", fontSize: 14 }}
 								>
 									{dict.nav.planRoute} <ArrowIcon />
