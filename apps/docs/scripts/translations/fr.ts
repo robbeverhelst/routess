@@ -11,7 +11,7 @@ translationStatus: machine-draft
 
 routess est une application de planification d'itinéraires qui vous permet de tracer un itinéraire sur une carte, point de passage par point de passage, et de l'enregistrer pour plus tard. Ce guide s'adresse aux **personnes qui utilisent l'application routess** : aucune connaissance en programmation n'est requise.
 
-> _Emplacement de capture d'écran : vue d'accueil avec un itinéraire enregistré._
+![Le planificateur routess avec un itinéraire à travers Gand](/guide/route-overview.jpg)
 
 ## Ce que vous pouvez faire
 
@@ -50,7 +50,7 @@ Vous pouvez vous connecter à routess avec votre compte Google ou avec une adres
 3. Acceptez les autorisations demandées.
 4. Vous revenez sur routess, connecté.
 
-> _Emplacement de capture d'écran : fenêtre pop-up de connexion._
+![L'écran de connexion de routess avec les options Google, e-mail et anonyme](/guide/welcome.jpg)
 
 ### Ce que routess peut voir
 
@@ -88,7 +88,7 @@ translationStatus: machine-draft
 
 Planifions ensemble un itinéraire rapide à partir de zéro.
 
-> _Emplacement de capture d'écran : carte vide après connexion._
+![Le planificateur vide, prêt pour un premier point de passage](/guide/planner-empty.jpg)
 
 ## 1. Cliquez sur votre point de départ
 
@@ -98,7 +98,7 @@ Cliquez n'importe où sur la carte. Un point de passage apparaît : c'est votre 
 
 Cliquez à nouveau pour ajouter le point de passage suivant. routess relie vos points de passage par une ligne et affiche la distance et la durée totales dans le panneau latéral.
 
-> _Emplacement de capture d'écran : 3 points de passage reliés par une ligne d'itinéraire._
+![Trois points de passage reliés par une ligne d'itinéraire à travers Gand](/guide/route-overview.jpg)
 
 ## 3. Réorganisez par glisser-déposer
 
@@ -126,28 +126,38 @@ description: Un tour rapide de l'interface de routess.
 translationStatus: machine-draft
 ---
 
-> _Emplacement de capture d'écran : capture de l'application complète avec des repères numérotés._
+![Le planificateur routess avec un itinéraire actif](/guide/route-overview.jpg)
 
 ## La carte
 
-Elle occupe la majeure partie de l'écran. Déplacez-vous en faisant glisser, zoomez avec la molette ou les boutons \`+\` / \`-\` en bas à droite.
+Elle occupe la majeure partie de l'écran. Déplacez-vous en faisant glisser, zoomez avec la molette ou les boutons \`+\` / \`-\` de la barre d'outils de la carte.
 
-## Le panneau latéral d'itinéraire
+## La barre latérale de gauche
 
-Il affiche votre itinéraire actuel : chaque point de passage, la distance entre les points de passage et les statistiques totales de l'itinéraire. Cliquez sur un point de passage pour centrer la carte dessus.
+La colonne d'icônes tout à gauche permet de basculer entre les panneaux :
 
-## La barre supérieure
+- **Planifier** : l'itinéraire que vous construisez
+- **Bibliothèque** : vos itinéraires enregistrés
+- **Découvrir** et **Social** : itinéraires partagés et de la communauté
+- **Paramètres** : sports, unités, langue, carte et options de confidentialité
 
-- **Logo routess** : retour à la vue d'accueil
+En bas de la barre latérale : les notifications, le bouton de mode sombre et votre compte.
+
+## Le panneau de planification
+
+Il affiche votre itinéraire actuel : les onglets d'activité (Course, Vélo, Marche), chaque point de passage, le graphique de dénivelé et de revêtement, et les statistiques totales de l'itinéraire. Cliquez sur un point de passage pour centrer la carte dessus. Les boutons **Enregistrer**, de partage et d'export se trouvent en bas.
+
+## La barre d'outils de la carte
+
+En haut de la carte :
+
 - **Recherche** : trouvez un lieu et déplacez la carte vers lui
-- **Sélecteur de langue** : basculez en en/nl/fr/de
-- **Menu du profil** : votre compte, se déconnecter
-
-## Les contrôles
-
+- **Ma position** : centrez la carte sur votre position (demande l'autorisation la première fois)
 - **Annuler / Rétablir** : parcourez vos modifications
-- **Réinitialiser** : effacez l'itinéraire actuel
-- **Ma position** : centrez la carte sur vous (demande l'autorisation la première fois)
+- **Supprimer l'itinéraire** : effacez l'itinéraire actuel
+- **Style de carte**, **Verrouiller la carte**, **Centrer sur l'itinéraire**, et le zoom \`+\` / \`-\`
+
+![La recherche de lieu avec ses résultats](/guide/search.jpg)
 
 Poursuivez avec [créer des itinéraires](/fr/guide/routes/creating-routes).
 `,
@@ -181,7 +191,7 @@ description: Comment ajouter des points de passage et construire un itinéraire 
 translationStatus: machine-draft
 ---
 
-> _Emplacement de capture d'écran : clic sur la carte pour déposer un point de passage._
+![Le premier point de passage déposé sur la carte](/guide/first-waypoint.jpg)
 
 Un itinéraire n'est qu'une liste de points de passage. Pour en créer un, cliquez n'importe où sur la carte.
 
@@ -206,7 +216,7 @@ description: Faites glisser, réorganisez, supprimez, annulez, rétablissez et m
 translationStatus: machine-draft
 ---
 
-> _Emplacement de capture d'écran : réorganisation par glisser-déposer en action avec l'indicateur de modifications non enregistrées._
+![La liste des points de passage dans le panneau latéral avec les poignées de glissement](/guide/editing-routes.png)
 
 ## Réorganiser
 
@@ -244,23 +254,21 @@ description: Comment routess conserve vos itinéraires entre les sessions.
 translationStatus: machine-draft
 ---
 
-Une fois que vous êtes connecté, votre itinéraire actuel est enregistré automatiquement et survit à :
+L'itinéraire sur lequel vous travaillez est conservé automatiquement dans votre navigateur : rechargez la page et il est toujours là, même lorsque vous n'êtes pas connecté.
 
-- Aux rechargements de page
-- À la fermeture puis à la réouverture du navigateur
-- À une connexion sur un autre appareil
+![L'itinéraire toujours présent après un rechargement de page](/guide/route-after-refresh.jpg)
 
-Il n'y a pas de bouton **Enregistrer** ; routess écrit les changements au fur et à mesure que vous les faites.
+## Enregistrer dans votre bibliothèque
 
-> _Emplacement de capture d'écran : itinéraire présent après un rechargement de page._
+Cliquez sur **Enregistrer** dans le panneau latéral pour stocker l'itinéraire dans votre bibliothèque avec un nom et une visibilité (privé, non répertorié ou public). Les itinéraires enregistrés sont stockés dans votre compte et synchronisés entre vos appareils. L'enregistrement nécessite un compte ; si vous êtes déconnecté, routess vous demande d'abord de vous connecter.
 
 ## Et si je ne suis pas connecté ?
 
-Les itinéraires anonymes vivent uniquement dans votre navigateur. Connectez-vous (avec Google) pour les conserver.
+Votre itinéraire en cours vit uniquement dans votre navigateur. Il survit aux rechargements, mais il ne vous suivra pas sur un autre appareil et peut être perdu si vous effacez les données du navigateur. Connectez-vous et enregistrez-le pour le conserver.
 
-## Supprimer un itinéraire enregistré
+## Supprimer un itinéraire
 
-Cliquez sur **Réinitialiser** pour effacer l'itinéraire de la carte. Le prochain enregistrement remplace le précédent.
+Cliquez sur **Réinitialiser** (l'icône de corbeille) pour effacer l'itinéraire actuel de la carte. Pour supprimer un itinéraire enregistré, ouvrez-le depuis votre bibliothèque et utilisez son action de suppression.
 `,
 	},
 	{
@@ -273,7 +281,7 @@ translationStatus: machine-draft
 
 Le panneau latéral affiche des statistiques en direct pour votre itinéraire au fur et à mesure que vous le construisez.
 
-> _Emplacement de capture d'écran : panneau latéral avec distance, durée, dénivelé et graphique de revêtement._
+![Le panneau latéral avec le graphique de dénivelé, la répartition du revêtement, les statistiques et la liste des points de passage](/guide/route-info.png)
 
 ## Statistiques totales
 
@@ -293,7 +301,7 @@ La ligne d'itinéraire sur la carte utilise aussi des motifs de tirets pour sugg
 
 ## Comment les estimations sont calculées
 
-La durée utilise votre allure par sport définie dans **Paramètres → Sports**. Chaque sport (marche, course, vélo, voiture) a sa propre allure par défaut ; remplacez la valeur par défaut si elle ne correspond pas à votre vitesse réelle. Le dénivelé positif provient de Mapbox Terrain-RGB ; le revêtement provient du moteur de routage.
+La durée utilise votre allure par sport définie dans **Paramètres → Sports et allure**. Chaque sport (marche, course, vélo) a sa propre allure par défaut ; remplacez la valeur par défaut si elle ne correspond pas à votre vitesse réelle. Le dénivelé positif provient de Mapbox Terrain-RGB ; le revêtement provient du moteur de routage.
 `,
 	},
 	{
@@ -306,7 +314,7 @@ translationStatus: machine-draft
 
 Cliquez sur **Partager** dans le panneau latéral de l'itinéraire, ou ouvrez un itinéraire enregistré et cliquez sur son bouton de partage, pour afficher la fenêtre de partage.
 
-> _Emplacement de capture d'écran : fenêtre de partage avec lien, copie et options de partage natives._
+![La fenêtre de partage avec aperçu de carte, lien de partage, cibles de partage et export GPX](/guide/share-modal.jpg)
 
 ## Ce que contient la fenêtre
 
@@ -339,7 +347,7 @@ description: Déplacez, zoomez et faites pivoter la carte.
 translationStatus: machine-draft
 ---
 
-> _Emplacement de capture d'écran : contrôles de carte en bas à droite._
+![La barre d'outils de la carte avec recherche, annuler/rétablir, style, verrouillage et contrôles de zoom](/guide/map-controls.png)
 
 ## Déplacer
 
@@ -350,7 +358,7 @@ Cliquez et faites glisser pour vous déplacer. Sur les appareils tactiles, faite
 - Faites défiler vers le haut pour zoomer, vers le bas pour dézoomer
 - Double-cliquez pour zoomer
 - Pincez avec deux doigts sur les appareils tactiles
-- Utilisez les boutons \`+\` / \`-\` en bas à droite
+- Utilisez les boutons \`+\` / \`-\` dans la barre d'outils de la carte
 
 ## Pivoter et incliner
 
@@ -358,7 +366,7 @@ Maintenez \`Ctrl\` (ou clic droit) et faites glisser pour pivoter. Maintenez \`C
 
 ## Recentrer
 
-Cliquez sur le bouton **Ma position** pour recentrer sur votre position actuelle (le navigateur demandera l'autorisation la première fois).
+Cliquez sur le bouton **Ma position** dans la barre d'outils de la carte pour recentrer sur votre position actuelle (le navigateur demandera l'autorisation la première fois).
 `,
 	},
 	{
@@ -369,18 +377,19 @@ description: Basculez entre les apparences de carte.
 translationStatus: machine-draft
 ---
 
-routess propose quelques styles de carte intégrés entre lesquels vous pouvez basculer.
+routess propose trois styles de carte intégrés. Ouvrez le bouton **Style de carte** dans la barre d'outils de la carte pour basculer entre eux.
 
-> _Emplacement de capture d'écran : menu du sélecteur de style._
+![Le sélecteur de style de carte avec Rues, Plein air et Satellite](/guide/map-styles.jpg)
 
 ## Styles disponibles
 
 - **Rues** : vue de rue détaillée par défaut
 - **Plein air** : courbes de niveau et détail des sentiers, utile pour la randonnée
 - **Satellite** : imagerie aérienne
-- **Sombre** : adapté à une faible luminosité
 
 Le style sélectionné est mémorisé d'une session à l'autre.
+
+Vous cherchez une carte sombre ? Le mode sombre est un thème, pas un style de carte : activez-le depuis la barre latérale de gauche ou avec \`Ctrl/Cmd + D\`.
 `,
 	},
 	{
@@ -393,11 +402,11 @@ translationStatus: machine-draft
 
 routess peut afficher votre position sur la carte et vous suivre au fur et à mesure de vos déplacements.
 
-> _Emplacement de capture d'écran : point de localisation sur la carte._
+![Le point de localisation bleu sur la carte](/guide/your-location.jpg)
 
 ## Activer la localisation
 
-Cliquez sur le bouton **Ma position** dans les contrôles. Votre navigateur demandera l'autorisation la première fois ; choisissez **Autoriser**.
+Cliquez sur le bouton **Ma position** dans la barre d'outils de la carte. Votre navigateur demandera l'autorisation la première fois ; choisissez **Autoriser**.
 
 Un point bleu apparaît sur la carte à votre position actuelle.
 
@@ -420,22 +429,22 @@ description: Consultez et mettez à jour votre profil et vos réglages par sport
 translationStatus: machine-draft
 ---
 
-Ouvrez le menu en haut à droite et cliquez sur votre avatar pour voir votre profil.
+Ouvrez **Paramètres** depuis la barre latérale de gauche pour gérer votre profil et vos préférences.
 
-> _Emplacement de capture d'écran : écran de profil avec les réglages par sport._
+![Le panneau des paramètres avec les réglages rapides et les sections](/guide/settings.jpg)
 
 ## Ce que vous pouvez modifier
 
-- Nom affiché
-- Unité de distance (kilomètres ou miles)
-- Style de carte par défaut
-- **Sports** : les sports pour lesquels vous planifiez (marche, course, vélo, voiture) et une allure par défaut pour chacun
+- **Thème et unités** : clair ou sombre, métrique ou impérial (réglages rapides en haut)
+- **Sports et allure** : les sports pour lesquels vous planifiez (marche, course, vélo) et une allure par défaut pour chacun
+- **Carte et affichage** : style de carte, langue, couleur d'accentuation et comportement de la carte
+- **Confidentialité et partage** : visibilité par défaut des nouveaux itinéraires
 
-L'adresse e-mail est lue depuis votre compte Google et ne peut pas être modifiée dans routess.
+Votre nom affiché se trouve sous votre compte ; l'adresse e-mail est lue depuis votre méthode de connexion et ne peut pas être modifiée dans routess.
 
 ## Sports et allure
 
-Choisissez un ou plusieurs sports lors de l'intégration, ou modifiez-les ensuite dans **Paramètres → Sports**. Le sport actuellement sélectionné pilote les estimations de durée de vos itinéraires. Chaque sport a sa propre allure par défaut ; remplacez-la si elle ne correspond pas à votre vitesse réelle. Le changement s'applique au prochain recalcul de l'itinéraire.
+Choisissez un ou plusieurs sports sous **Sports et allure** et désignez-en un comme sport par défaut pour les nouveaux itinéraires. Le sport actuellement sélectionné pilote les estimations de durée de vos itinéraires. Chaque sport a sa propre allure par défaut ; remplacez-la si elle ne correspond pas à votre vitesse réelle. Le changement s'applique au prochain recalcul de l'itinéraire.
 `,
 	},
 	{
@@ -453,9 +462,9 @@ routess est disponible en :
 - Français
 - Deutsch
 
-> _Emplacement de capture d'écran : sélecteur de langue dans la barre supérieure._
+![Le sélecteur de langue dans Paramètres, Carte et affichage](/guide/language.jpg)
 
-Cliquez sur le sélecteur de langue dans la barre supérieure pour changer. Le choix est mémorisé lors de votre prochaine visite.
+Ouvrez **Paramètres** depuis la barre latérale de gauche, puis **Carte et affichage**. Le sélecteur de **Langue** se trouve sous Apparence. Le choix est mémorisé lors de votre prochaine visite.
 
 ## Vous voulez une langue que nous n'avons pas ?
 
