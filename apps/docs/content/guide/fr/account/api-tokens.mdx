@@ -1,0 +1,34 @@
+---
+title: Jetons d'API
+description: Créez des jetons pour les scripts, les agents et la CLI de routess.
+translationStatus: machine-draft
+---
+
+Les jetons d'API permettent aux scripts et aux outils d'accéder à votre bibliothèque d'itinéraires sans votre mot de passe. Gérez-les sous **Paramètres → Jetons d'API** (visible lorsque vous êtes connecté).
+
+## Créer un jeton
+
+1. Cliquez sur **Créer un jeton**.
+2. Donnez-lui un **libellé** que vous reconnaîtrez plus tard, par exemple `script de sauvegarde (portable)`.
+3. Choisissez une **portée** :
+   - **Lecture** : lister et inspecter les itinéraires
+   - **Écriture** : lecture, plus renommer, changer la visibilité et supprimer
+4. Définissez éventuellement une **date d'expiration**. Vide signifie qu'il n'expire jamais.
+
+Le jeton n'est affiché qu'**une seule fois**. Copiez-le et conservez-le en lieu sûr ; si vous le perdez, révoquez-le et créez-en un nouveau.
+
+## L'utiliser
+
+Envoyez le jeton comme jeton bearer :
+
+```sh
+curl -H "Authorization: Bearer <votre-jeton>" https://api.routess.com/api/v1/routes
+```
+
+Consultez la [référence de l'API](https://docs.routess.com/api) pour chaque point de terminaison.
+
+## Révoquer un jeton
+
+Chaque jeton indique quand il a été créé et utilisé pour la dernière fois. **Révoquer** le désactive immédiatement ; tout ce qui l'utilise encore cesse de fonctionner.
+
+Faites tourner les jetons que vous ne reconnaissez plus, et préférez un jeton par outil afin qu'en révoquer un ne casse pas les autres.

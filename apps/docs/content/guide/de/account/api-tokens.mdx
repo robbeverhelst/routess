@@ -1,0 +1,34 @@
+---
+title: API-Tokens
+description: Tokens für Skripte, Agents und die routess-CLI erstellen.
+translationStatus: machine-draft
+---
+
+Mit API-Tokens können Skripte und Tools mit deiner Routenbibliothek arbeiten, ohne dein Passwort zu benötigen. Verwalte sie unter **Einstellungen → API-Tokens** (sichtbar, wenn du angemeldet bist).
+
+## Ein Token erstellen
+
+1. Klicke auf **Token erstellen**.
+2. Gib ihm ein **Label**, das du später wiedererkennst, z. B. `Backup-Skript (Laptop)`.
+3. Wähle einen **Geltungsbereich**:
+   - **Lesen**: Routen auflisten und ansehen
+   - **Schreiben**: Lesen plus Umbenennen, Sichtbarkeit ändern und Löschen
+4. Lege optional ein **Ablaufdatum** fest. Leer bedeutet, dass es nie abläuft.
+
+Das Token wird **einmal** angezeigt. Kopiere es und bewahre es an einem sicheren Ort auf; wenn du es verlierst, widerrufe es und erstelle ein neues.
+
+## Verwenden
+
+Sende das Token als Bearer-Token:
+
+```sh
+curl -H "Authorization: Bearer <dein-token>" https://api.routess.com/api/v1/routes
+```
+
+Im [API-Referenz](https://docs.routess.com/api) findest du jeden Endpunkt.
+
+## Ein Token widerrufen
+
+Bei jedem Token siehst du, wann es erstellt und zuletzt verwendet wurde. **Widerrufen** schaltet es sofort ab; alles, was es noch verwendet, hört auf zu funktionieren.
+
+Rotiere Tokens, die du nicht mehr wiedererkennst, und bevorzuge ein Token pro Tool, damit das Widerrufen eines Tokens die anderen nicht beeinträchtigt.
