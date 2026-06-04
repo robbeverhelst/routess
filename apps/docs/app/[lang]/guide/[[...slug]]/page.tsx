@@ -1,3 +1,4 @@
+import defaultMdxComponents from "fumadocs-ui/mdx";
 import { DocsBody, DocsDescription, DocsPage, DocsTitle } from "fumadocs-ui/page";
 import { notFound } from "next/navigation";
 import { i18n } from "@/lib/i18n";
@@ -24,7 +25,7 @@ export default async function Page(props: { params: Promise<{ lang: string; slug
 			<DocsTitle>{page.data.title}</DocsTitle>
 			<DocsDescription>{page.data.description}</DocsDescription>
 			<DocsBody>
-				<MDX />
+				<MDX components={defaultMdxComponents} />
 			</DocsBody>
 		</DocsPage>
 	);
