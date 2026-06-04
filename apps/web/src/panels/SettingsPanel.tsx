@@ -3,6 +3,7 @@ import { type ComponentType, useEffect, useState } from "react";
 import { useUserProfile } from "@/lib/api-queries";
 import { emitAppEvent } from "@/lib/app-events";
 import { type SupportedLanguage, t, tIn } from "@/lib/i18n";
+import { DOCS_URL } from "@/lib/links";
 import { getVersionDisplay } from "@/lib/version";
 import { usePreferencesSyncStore } from "@/stores/preferencesSyncStore";
 import {
@@ -418,6 +419,9 @@ export function SettingsPanel() {
 							onClick={() => setSection(s.key)}
 						/>
 					))}
+				</SettingsSection>
+				<SettingsSection>
+					<SettingsNavRow icon={I.help} label={t("settings.help.title")} sub={t("settings.help.sub")} href={DOCS_URL} />
 				</SettingsSection>
 				<div
 					style={{

@@ -344,6 +344,8 @@ export const en: Record<string, string> = {
 	"settings.section.privacy": "Privacy & sharing",
 	"settings.section.advanced": "Advanced",
 	"settings.section.advancedSub": "API tokens and experimental features",
+	"settings.help.title": "Help & docs",
+	"settings.help.sub": "Guides, tips, and API reference",
 	"settings.sync.saving": "Saving…",
 	"settings.sync.saved": "Saved",
 	"settings.sync.failed": "Couldn't save your settings",
@@ -430,6 +432,7 @@ export const en: Record<string, string> = {
 
 	"settings.tokens.title": "API tokens",
 	"settings.tokens.empty": "No tokens yet. Create one to use the routess CLI or scripts against your library.",
+	"settings.tokens.docs": "API reference",
 	"settings.tokens.create": "Create token",
 	"settings.tokens.cancel": "Cancel",
 	"settings.tokens.revoke": "Revoke",
@@ -949,6 +952,7 @@ export const en: Record<string, string> = {
 	"coach.stop4.title": "Save & share",
 	"coach.stop4.body": "Save your route or share it with a single link. ⌘K from anywhere to jump.",
 	"coach.stepFraction": "{n} of {total}",
+	"coach.docsLink": "Learn more in the docs",
 
 	// LiveNavScreen
 	"nav.remaining": "Remaining",
