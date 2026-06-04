@@ -340,6 +340,7 @@ export const nl: Record<string, string> = {
 	"nav.alerts": "Meldingen",
 
 	// SettingsPanel
+	"settings.quick.title": "Snelle instellingen",
 	"settings.section.sports": "Sporten & tempo",
 	"settings.section.mapDisplay": "Kaart & weergave",
 	"settings.section.privacy": "Privacy & delen",

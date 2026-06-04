@@ -337,6 +337,7 @@ export const en: Record<string, string> = {
 	"nav.alerts": "Alerts",
 
 	// SettingsPanel
+	"settings.quick.title": "Quick settings",
 	"settings.section.sports": "Sports & pacing",
 	"settings.section.mapDisplay": "Map & display",
 	"settings.section.privacy": "Privacy & sharing",

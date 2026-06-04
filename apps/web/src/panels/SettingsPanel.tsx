@@ -380,6 +380,34 @@ export function SettingsPanel() {
 						onClick={() => emitAppEvent(profile ? "routess:open-account" : "routess:open-login")}
 					/>
 				</SettingsSection>
+				<SettingsSection title={t("settings.quick.title")}>
+					<SettingsRow
+						label={t("settings.theme")}
+						control={
+							<Segmented
+								value={theme}
+								onChange={(v) => setTheme(v as "light" | "dark")}
+								options={[
+									{ value: "light", label: t("settings.theme.light") },
+									{ value: "dark", label: t("settings.theme.dark") },
+								]}
+							/>
+						}
+					/>
+					<SettingsRow
+						label={t("settings.units.label")}
+						control={
+							<Segmented
+								value={units}
+								onChange={(v) => setUnits(v as "km" | "mi")}
+								options={[
+									{ value: "km", label: t("settings.units.metric") },
+									{ value: "mi", label: t("settings.units.imperial") },
+								]}
+							/>
+						}
+					/>
+				</SettingsSection>
 				<SettingsSection>
 					{SECTIONS.map((s) => (
 						<SettingsNavRow
