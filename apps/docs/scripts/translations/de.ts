@@ -11,7 +11,7 @@ translationStatus: machine-draft
 
 routess ist eine Routenplanungs-App, mit der du Wegpunkt für Wegpunkt eine Route auf einer Karte skizzierst und für später speicherst. Dieses Handbuch richtet sich an **Menschen, die die routess-App nutzen**: Programmierkenntnisse sind nicht nötig.
 
-> Screenshot-Platzhalter: Startansicht mit einer gespeicherten Route.
+![Der routess-Planer mit einer Route durch Gent](/guide/route-overview.jpg)
 
 ## Was du tun kannst
 
@@ -194,7 +194,7 @@ Du kannst dich bei routess mit deinem Google-Konto oder mit einer E-Mail-Adresse
 3. Bestätige die angeforderten Berechtigungen.
 4. Du bist zurück in routess und angemeldet.
 
-> Screenshot-Platzhalter: Anmelde-Pop-up.
+![Der routess-Anmeldebildschirm mit Optionen für Google, E-Mail und anonyme Nutzung](/guide/welcome.jpg)
 
 ### Was routess sehen kann
 
@@ -232,7 +232,7 @@ translationStatus: machine-draft
 
 Lass uns schnell eine Route von Grund auf planen.
 
-> Screenshot-Platzhalter: leere Karte nach der Anmeldung.
+![Der leere Planer, bereit für einen ersten Wegpunkt](/guide/planner-empty.jpg)
 
 ## 1. Klicke deinen Startpunkt an
 
@@ -242,7 +242,7 @@ Klicke irgendwo auf die Karte. Ein Wegpunkt erscheint: Das ist dein Startpunkt. 
 
 Klicke erneut, um den nächsten Wegpunkt hinzuzufügen. routess verbindet deine Wegpunkte mit einer Linie und zeigt die Gesamtdistanz und -dauer in der Seitenleiste an.
 
-> Screenshot-Platzhalter: 3 Wegpunkte, die durch eine Routenlinie verbunden sind.
+![Drei Wegpunkte, verbunden durch eine berechnete Routenlinie durch Gent](/guide/route-overview.jpg)
 
 ## 3. Per Ziehen umsortieren
 
@@ -270,28 +270,38 @@ description: Ein kurzer Rundgang durch die routess-Oberfläche.
 translationStatus: machine-draft
 ---
 
-> Screenshot-Platzhalter: Screenshot der gesamten App mit nummerierten Hinweisen.
+![Der routess-Planer mit einer aktiven Route](/guide/route-overview.jpg)
 
 ## Die Karte
 
-Nimmt den größten Teil des Bildschirms ein. Verschiebe sie durch Ziehen, zoome mit dem Scrollrad oder den Schaltflächen \`+\` / \`-\` unten rechts.
+Nimmt den größten Teil des Bildschirms ein. Verschiebe sie durch Ziehen, zoome mit dem Scrollrad oder den Schaltflächen \`+\` / \`-\` in der Kartenwerkzeugleiste.
 
-## Die Routen-Seitenleiste
+## Die linke Leiste
 
-Zeigt deine aktuelle Route: jeden Wegpunkt, die Distanz zwischen Wegpunkten und die Gesamtstatistik der Route. Klicke einen Wegpunkt an, um die Karte darauf zu fokussieren.
+Die Symbolspalte ganz links wechselt zwischen den Bereichen:
 
-## Die obere Leiste
+- **Planen**: die Route, die du gerade aufbaust
+- **Bibliothek**: deine gespeicherten Routen
+- **Entdecken** und **Social**: geteilte und Community-Routen
+- **Einstellungen**: Sportarten, Einheiten, Sprache, Karten- und Datenschutzoptionen
 
-- **routess-Logo**: zurück zur Startansicht
+Am unteren Ende der Leiste: Benachrichtigungen, der Umschalter für den Dunkelmodus und dein Konto.
+
+## Die Planen-Seitenleiste
+
+Zeigt deine aktuelle Route: die Aktivitätsreiter (Laufen, Radfahren, Gehen), jeden Wegpunkt, das Höhen- und Untergrunddiagramm sowie die Gesamtstatistik der Route. Klicke einen Wegpunkt an, um die Karte darauf zu fokussieren. Die Schaltflächen **Speichern**, Teilen und Exportieren befinden sich am unteren Ende.
+
+## Die Kartenwerkzeugleiste
+
+Über die Oberseite der Karte:
+
 - **Suche**: einen Ort finden und die Karte dorthin springen lassen
-- **Sprachumschalter**: zu en/nl/fr/de wechseln
-- **Profilmenü**: dein Konto, abmelden
-
-## Bedienelemente
-
+- **Auf mich zentrieren**: die Karte auf deinen Standort zentrieren (fragt beim ersten Mal nach Erlaubnis)
 - **Rückgängig / Wiederholen**: durch deine Bearbeitungen gehen
-- **Zurücksetzen**: die aktuelle Route leeren
-- **Mein Standort**: die Karte auf dich zentrieren (fragt beim ersten Mal nach Erlaubnis)
+- **Route entfernen**: die aktuelle Route leeren
+- **Kartenstil**, **Karte sperren**, **Auf Route fokussieren** sowie Zoom \`+\` / \`-\`
+
+![Die Ortssuche mit Ergebnissen](/guide/search.jpg)
 
 Weiter geht es mit [Routen erstellen](/de/guide/routes/creating-routes).
 `,
@@ -325,7 +335,7 @@ description: Wie du Wegpunkte hinzufügst und eine Route auf der Karte aufbaust.
 translationStatus: machine-draft
 ---
 
-> Screenshot-Platzhalter: Klick auf die Karte, um einen Wegpunkt zu setzen.
+![Der erste Wegpunkt, auf der Karte gesetzt](/guide/first-waypoint.jpg)
 
 Eine Route ist einfach eine Liste von Wegpunkten. Um eine zu erstellen, klicke irgendwo auf die Karte.
 
@@ -350,7 +360,7 @@ description: Ziehen, umsortieren, löschen, rückgängig machen, wiederholen und
 translationStatus: machine-draft
 ---
 
-> Screenshot-Platzhalter: Umsortieren per Ziehen in Aktion mit der Anzeige für ungespeicherte Änderungen.
+![Die Wegpunktliste in der Seitenleiste mit Ziehgriffen](/guide/editing-routes.png)
 
 ## Umsortieren
 
@@ -388,23 +398,21 @@ description: Wie routess deine Routen über Sitzungen hinweg sichert.
 translationStatus: machine-draft
 ---
 
-Sobald du angemeldet bist, wird deine aktuelle Route automatisch gespeichert und übersteht:
+Die Route, an der du arbeitest, wird automatisch in deinem Browser behalten: Lade die Seite neu, und sie ist immer noch da, selbst wenn du nicht angemeldet bist.
 
-- Seitenaktualisierungen
-- Schließen und erneutes Öffnen des Browsers
-- Anmelden auf einem anderen Gerät
+![Die Route ist nach einer Seitenaktualisierung weiterhin vorhanden](/guide/route-after-refresh.jpg)
 
-Es gibt keine **Speichern**-Schaltfläche; routess schreibt Änderungen, während du sie vornimmst.
+## In deiner Bibliothek speichern
 
-> Screenshot-Platzhalter: Route ist nach einer Seitenaktualisierung weiterhin vorhanden.
+Klicke auf **Speichern** in der Seitenleiste, um die Route mit einem Namen und einer Sichtbarkeit (privat, nicht gelistet oder öffentlich) in deiner Bibliothek abzulegen. Gespeicherte Routen werden in deinem Konto abgelegt und über Geräte hinweg synchronisiert. Zum Speichern ist ein Konto nötig; wenn du abgemeldet bist, bittet routess dich zuerst, dich anzumelden.
 
 ## Was, wenn ich nicht angemeldet bin?
 
-Anonyme Routen bleiben nur in deinem Browser. Melde dich an (mit Google), um sie zu behalten.
+Deine laufende Route bleibt nur in deinem Browser. Sie übersteht Seitenaktualisierungen, folgt dir aber nicht auf ein anderes Gerät und kann verloren gehen, wenn du die Browserdaten löschst. Melde dich an und speichere, um sie zu behalten.
 
-## Eine gespeicherte Route entfernen
+## Eine Route entfernen
 
-Klicke auf **Zurücksetzen**, um die Route von der Karte zu leeren. Der nächste Speichervorgang ersetzt den vorherigen.
+Klicke auf **Zurücksetzen** (das Papierkorb-Symbol), um die aktuelle Route von der Karte zu leeren. Um eine gespeicherte Route zu löschen, öffne sie aus deiner Bibliothek und nutze ihre Löschaktion.
 `,
 	},
 	{
@@ -417,7 +425,7 @@ translationStatus: machine-draft
 
 Die Seitenleiste zeigt Live-Statistiken für deine Route, während du sie aufbaust.
 
-> Screenshot-Platzhalter: Seitenleiste mit Distanz, Dauer, Höhe und Untergrunddiagramm.
+![Die Seitenleiste mit Höhendiagramm, Untergrundaufschlüsselung, Statistik und Wegpunktliste](/guide/route-info.png)
 
 ## Gesamtstatistik
 
@@ -437,7 +445,7 @@ Die Routenlinie auf der Karte nutzt außerdem Strichmuster, um den Untergrund an
 
 ## Wie Schätzungen berechnet werden
 
-Die Dauer nutzt dein sportartspezifisches Tempo aus **Einstellungen → Sportarten**. Jede Sportart (Gehen, Laufen, Radfahren, Fahren) hat ihr eigenes Standardtempo; passe das Standardtempo an, wenn es nicht dazu passt, wie schnell du dich tatsächlich bewegst. Die Höhenmeter stammen aus Mapbox Terrain-RGB; der Untergrund kommt aus der Routing-Engine.
+Die Dauer nutzt dein sportartspezifisches Tempo aus **Einstellungen → Sportarten & Tempo**. Jede Sportart (Gehen, Laufen, Radfahren) hat ihr eigenes Standardtempo; passe das Standardtempo an, wenn es nicht dazu passt, wie schnell du dich tatsächlich bewegst. Die Höhenmeter stammen aus Mapbox Terrain-RGB; der Untergrund kommt aus der Routing-Engine.
 `,
 	},
 	{
@@ -450,7 +458,7 @@ translationStatus: machine-draft
 
 Klicke auf **Teilen** in der Routen-Seitenleiste, oder öffne eine gespeicherte Route und klicke auf ihre Teilen-Schaltfläche, um das Teilen-Dialogfenster aufzurufen.
 
-> Screenshot-Platzhalter: Teilen-Dialogfenster mit Link, Kopieren und nativen Teilen-Optionen.
+![Das Teilen-Dialogfenster mit Kartenvorschau, Teilen-Link, Teilen-Zielen und GPX-Export](/guide/share-modal.jpg)
 
 ## Was im Dialogfenster steckt
 
@@ -483,7 +491,7 @@ description: Die Karte verschieben, zoomen und drehen.
 translationStatus: machine-draft
 ---
 
-> Screenshot-Platzhalter: Kartenbedienelemente unten rechts.
+![Die Kartenwerkzeugleiste mit Suche, Rückgängig/Wiederholen, Stil, Sperren und Zoom-Bedienelementen](/guide/map-controls.png)
 
 ## Verschieben
 
@@ -494,7 +502,7 @@ Klicke und ziehe, um dich zu bewegen. Auf Touchgeräten ziehst du mit einem Fing
 - Nach oben scrollen, um hineinzuzoomen, nach unten, um herauszuzoomen
 - Doppelklick, um hineinzuzoomen
 - Auf Touchgeräten mit zwei Fingern zoomen
-- Die Schaltflächen \`+\` / \`-\` unten rechts nutzen
+- Die Schaltflächen \`+\` / \`-\` in der Kartenwerkzeugleiste nutzen
 
 ## Drehen & Neigen
 
@@ -502,7 +510,7 @@ Halte \`Ctrl\` (oder Rechtsklick) und ziehe, um zu drehen. Halte \`Ctrl + Shift\
 
 ## Neu zentrieren
 
-Klicke auf die Schaltfläche **Mein Standort**, um wieder auf deinen aktuellen Standort zu zentrieren (der Browser fragt beim ersten Mal nach Erlaubnis).
+Klicke auf die Schaltfläche **Auf mich zentrieren** in der Kartenwerkzeugleiste, um wieder auf deinen aktuellen Standort zu zentrieren (der Browser fragt beim ersten Mal nach Erlaubnis).
 `,
 	},
 	{
@@ -513,18 +521,19 @@ description: Zwischen Kartendarstellungen wechseln.
 translationStatus: machine-draft
 ---
 
-routess bietet einige eingebaute Kartenstile, zwischen denen du wechseln kannst.
+routess bietet drei eingebaute Kartenstile. Öffne die Schaltfläche **Kartenstil** in der Kartenwerkzeugleiste, um zu wechseln.
 
-> Screenshot-Platzhalter: Menü zum Umschalten der Stile.
+![Der Kartenstil-Umschalter mit Straßen, Outdoor und Satellit](/guide/map-styles.jpg)
 
 ## Verfügbare Stile
 
 - **Straßen**: detaillierte Standard-Straßenansicht
 - **Outdoor**: Höhenlinien und Wegdetails, nützlich zum Wandern
 - **Satellit**: Luftbilder
-- **Dunkel**: angenehm bei wenig Licht
 
 Der ausgewählte Stil wird über Sitzungen hinweg gemerkt.
+
+Suchst du eine dunkle Karte? Der Dunkelmodus ist ein Design, kein Kartenstil: Schalte ihn über die linke Leiste oder mit \`Ctrl/Cmd + D\` um.
 `,
 	},
 	{
@@ -537,11 +546,11 @@ translationStatus: machine-draft
 
 routess kann deinen Standort auf der Karte anzeigen und dir folgen, während du dich bewegst.
 
-> Screenshot-Platzhalter: Standortpunkt auf der Karte.
+![Der blaue Standortpunkt auf der Karte](/guide/your-location.jpg)
 
 ## Standort aktivieren
 
-Klicke in den Bedienelementen auf die Schaltfläche **Mein Standort**. Dein Browser fragt beim ersten Mal nach Erlaubnis; wähle **Erlauben**.
+Klicke auf die Schaltfläche **Auf mich zentrieren** in der Kartenwerkzeugleiste. Dein Browser fragt beim ersten Mal nach Erlaubnis; wähle **Erlauben**.
 
 Ein blauer Punkt erscheint auf der Karte an deiner aktuellen Position.
 
@@ -564,22 +573,22 @@ description: Dein Profil und deine sportartspezifischen Einstellungen ansehen un
 translationStatus: machine-draft
 ---
 
-Öffne das Menü oben rechts und klicke auf deinen Avatar, um dein Profil anzusehen.
+Öffne **Einstellungen** über die linke Leiste, um dein Profil und deine Voreinstellungen zu verwalten.
 
-> Screenshot-Platzhalter: Profilbildschirm mit Sportarteinstellungen.
+![Das Einstellungsfeld mit Schnelleinstellungen und Bereichen](/guide/settings.jpg)
 
 ## Was du bearbeiten kannst
 
-- Anzeigename
-- Distanzeinheit (Kilometer oder Meilen)
-- Standard-Kartenstil
-- **Sportarten**: für welche Sportarten du planst (Gehen, Laufen, Radfahren, Fahren) und ein Standardtempo für jede
+- **Design und Einheiten**: hell oder dunkel, metrisch oder imperial (Schnelleinstellungen oben)
+- **Sportarten & Tempo**: für welche Sportarten du planst (Gehen, Laufen, Radfahren) und ein Standardtempo für jede
+- **Karte & Anzeige**: Kartenstil, Sprache, Akzentfarbe und Kartenverhalten
+- **Datenschutz & Teilen**: Standardsichtbarkeit für neue Routen
 
-Die E-Mail-Adresse wird aus deinem Google-Konto übernommen und kann in routess nicht geändert werden.
+Dein Anzeigename befindet sich unter deinem Konto; die E-Mail-Adresse wird aus deiner Anmeldemethode übernommen und kann in routess nicht geändert werden.
 
 ## Sportarten und Tempo
 
-Wähle während des Onboardings eine oder mehrere Sportarten aus oder ändere sie später unter **Einstellungen → Sportarten**. Die aktuell ausgewählte Sportart bestimmt die Dauerschätzungen deiner Routen. Jede Sportart hat ihr eigenes Standardtempo; passe es an, wenn es nicht dazu passt, wie schnell du dich tatsächlich bewegst. Die Änderung wird beim nächsten Neuberechnen der Route wirksam.
+Wähle unter **Sportarten & Tempo** eine oder mehrere Sportarten aus und markiere eine als Standard für neue Routen. Die aktuell ausgewählte Sportart bestimmt die Dauerschätzungen deiner Routen. Jede Sportart hat ihr eigenes Standardtempo; passe es an, wenn es nicht dazu passt, wie schnell du dich tatsächlich bewegst. Die Änderung wird beim nächsten Neuberechnen der Route wirksam.
 `,
 	},
 	{
@@ -597,9 +606,9 @@ routess ist verfügbar in:
 - Français
 - Deutsch
 
-> Screenshot-Platzhalter: Sprachumschalter in der oberen Leiste.
+![Die Sprachauswahl unter Einstellungen, Karte & Anzeige](/guide/language.jpg)
 
-Klicke auf den Sprachumschalter in der oberen Leiste, um zu wechseln. Die Wahl wird beim nächsten Besuch gemerkt.
+Öffne **Einstellungen** über die linke Leiste, dann **Karte & Anzeige**. Die Auswahl **Sprache** befindet sich unter Darstellung. Die Wahl wird beim nächsten Besuch gemerkt.
 
 ## Eine Sprache gewünscht, die wir nicht haben?
 

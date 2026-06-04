@@ -11,7 +11,7 @@ translationStatus: machine-draft
 
 routess is een routeplanner waarmee je waypoint voor waypoint een route op een kaart uitstippelt en bewaart voor later. Deze gids is bedoeld voor **mensen die de routess-app gebruiken**: programmeren is niet nodig.
 
-> Screenshotplaceholder: startscherm met een opgeslagen route.
+![De routess-planner met een route door Gent](/guide/route-overview.jpg)
 
 ## Wat je kunt doen
 
@@ -50,7 +50,7 @@ Je kunt je bij routess aanmelden met je Google-account of met een e-mailadres en
 3. Keur de gevraagde toestemmingen goed.
 4. Je keert terug in routess, aangemeld.
 
-> Screenshotplaceholder: aanmeldvenster.
+![Het aanmeldscherm van routess met de opties Google, e-mail en anoniem](/guide/welcome.jpg)
 
 ### Wat routess kan zien
 
@@ -88,7 +88,7 @@ translationStatus: machine-draft
 
 Laten we snel een route vanaf nul plannen.
 
-> Screenshotplaceholder: lege kaart na het aanmelden.
+![De lege planner, klaar voor een eerste waypoint](/guide/planner-empty.jpg)
 
 ## 1. Klik je startpunt
 
@@ -98,7 +98,7 @@ Klik ergens op de kaart. Er verschijnt een waypoint: dat is je startpunt. Het ee
 
 Klik opnieuw om het volgende waypoint toe te voegen. routess verbindt je waypoints met een lijn en toont de totale afstand en duur in de zijbalk.
 
-> Screenshotplaceholder: 3 waypoints verbonden door een routelijn.
+![Drie waypoints verbonden door een berekende routelijn door Gent](/guide/route-overview.jpg)
 
 ## 3. Wijzig de volgorde door te slepen
 
@@ -126,28 +126,38 @@ description: Een korte rondleiding door de routess-interface.
 translationStatus: machine-draft
 ---
 
-> Screenshotplaceholder: schermafbeelding van de volledige app met genummerde aanduidingen.
+![De routess-planner met een actieve route](/guide/route-overview.jpg)
 
 ## De kaart
 
-Vult het grootste deel van het scherm. Pan door te slepen, zoom met scrollen of met de \\\`+\\\` / \\\`-\\\`-knoppen rechtsonder.
+Vult het grootste deel van het scherm. Pan door te slepen, zoom met scrollen of met de \\\`+\\\` / \\\`-\\\`-knoppen in de kaartwerkbalk.
 
-## De routezijbalk
+## De zijbalk links
 
-Toont je huidige route: elk waypoint, de afstand tussen waypoints en de totale routestatistieken. Klik op een waypoint om de kaart erop te richten.
+De pictogramkolom helemaal links wisselt tussen panelen:
 
-## De bovenbalk
+- **Plan**: de route die je aan het bouwen bent
+- **Bibliotheek**: je opgeslagen routes
+- **Ontdekken** en **Sociaal**: gedeelde en community-routes
+- **Instellingen**: sporten, eenheden, taal, kaart- en privacyopties
 
-- **routess-logo**: terug naar het startscherm
+Onderaan de zijbalk: meldingen, de schakelaar voor donkere modus en je account.
+
+## De planzijbalk
+
+Toont je huidige route: de sporttabbladen (Lopen, Fietsen, Wandelen), elk waypoint, de hoogte- en ondergrondgrafiek en de totale routestatistieken. Klik op een waypoint om de kaart erop te richten. De knoppen **Opslaan**, delen en exporteren staan onderaan.
+
+## De kaartwerkbalk
+
+Bovenaan de kaart:
+
 - **Zoeken**: vind een plaats en spring met de kaart ernaartoe
-- **Taalkiezer**: wissel naar en/nl/fr/de
-- **Profielmenu**: je account, afmelden
-
-## Knoppen
-
+- **Centreer op mij**: centreer de kaart op je locatie (vraagt de eerste keer om toestemming)
 - **Ongedaan maken / Opnieuw**: stap door je bewerkingen
-- **Reset**: wis de huidige route
-- **Mijn locatie**: centreer de kaart op jou (vraagt de eerste keer om toestemming)
+- **Route verwijderen**: wis de huidige route
+- **Kaartstijl**, **Kaart vergrendelen**, **Op route richten** en zoom \\\`+\\\` / \\\`-\\\`
+
+![De locatiezoekfunctie met resultaten](/guide/search.jpg)
 
 Lees verder bij [routes maken](/nl/guide/routes/creating-routes).
 `,
@@ -181,7 +191,7 @@ description: Hoe je waypoints toevoegt en een route op de kaart bouwt.
 translationStatus: machine-draft
 ---
 
-> Screenshotplaceholder: op de kaart klikken om een waypoint neer te zetten.
+![Het eerste waypoint neergezet op de kaart](/guide/first-waypoint.jpg)
 
 Een route is gewoon een lijst van waypoints. Om er een te maken, klik je ergens op de kaart.
 
@@ -206,7 +216,7 @@ description: Slepen, herordenen, verwijderen, ongedaan maken, opnieuw en metadat
 translationStatus: machine-draft
 ---
 
-> Screenshotplaceholder: slepen en herordenen in actie met de indicator voor onopgeslagen wijzigingen.
+![De waypointlijst in de zijbalk met sleepgrepen](/guide/editing-routes.png)
 
 ## Volgorde wijzigen
 
@@ -244,23 +254,21 @@ description: Hoe routess je routes bewaart tussen sessies.
 translationStatus: machine-draft
 ---
 
-Zodra je bent aangemeld, wordt je huidige route automatisch bewaard en overleeft die:
+De route waar je aan werkt, wordt automatisch in je browser bewaard: vernieuw de pagina en hij staat er nog steeds, zelfs als je niet bent aangemeld.
 
-- Paginaverversingen
-- De browser sluiten en opnieuw openen
-- Aanmelden op een ander apparaat
+![De route nog steeds aanwezig na een paginaverversing](/guide/route-after-refresh.jpg)
 
-Er is geen **Opslaan**-knop; routess schrijft wijzigingen weg terwijl je ze maakt.
+## Opslaan in je bibliotheek
 
-> Screenshotplaceholder: route aanwezig na een paginaverversing.
+Klik op **Opslaan** in de zijbalk om de route in je bibliotheek te bewaren met een naam en een zichtbaarheid (privé, niet vermeld of openbaar). Opgeslagen routes worden in je account bewaard en synchroniseren tussen apparaten. Opslaan vereist een account; als je bent afgemeld, vraagt routess je eerst om je aan te melden.
 
 ## Wat als ik niet ben aangemeld?
 
-Anonieme routes blijven alleen in je browser staan. Meld je aan (met Google) om ze te bewaren.
+Je route in uitvoering blijft alleen in je browser staan. Hij overleeft verversingen, maar volgt je niet naar een ander apparaat en kan verloren gaan als je je browsergegevens wist. Meld je aan en sla op om hem te behouden.
 
-## Een opgeslagen route verwijderen
+## Een route verwijderen
 
-Klik op **Reset** om de route van de kaart te wissen. De volgende keer dat er bewaard wordt, vervangt dit de vorige route.
+Klik op **Reset** (het prullenbakpictogram) om de huidige route van de kaart te wissen. Om een opgeslagen route te verwijderen, open je die uit je bibliotheek en gebruik je de verwijderactie.
 `,
 	},
 	{
@@ -273,7 +281,7 @@ translationStatus: machine-draft
 
 De zijbalk toont live statistieken voor je route terwijl je hem bouwt.
 
-> Screenshotplaceholder: zijbalk met afstand, duur, hoogte en ondergrondgrafiek.
+![De zijbalk met hoogtegrafiek, ondergrondverdeling, statistieken en waypointlijst](/guide/route-info.png)
 
 ## Totale statistieken
 
@@ -293,7 +301,7 @@ De routelijn op de kaart gebruikt ook streepjespatronen om de ondergrond aan te 
 
 ## Hoe schattingen worden berekend
 
-De duur gebruikt je tempo per sport uit **Instellingen → Sporten**. Elke sport (wandelen, lopen, fietsen, autorijden) heeft een eigen standaardtempo; overschrijf de standaard als die niet overeenkomt met hoe snel je echt beweegt. Hoogtemeters komen van Mapbox Terrain-RGB; de ondergrond komt van de routeringsmotor.
+De duur gebruikt je tempo per sport uit **Instellingen → Sporten en tempo**. Elke sport (wandelen, lopen, fietsen) heeft een eigen standaardtempo; overschrijf de standaard als die niet overeenkomt met hoe snel je echt beweegt. Hoogtemeters komen van Mapbox Terrain-RGB; de ondergrond komt van de routeringsmotor.
 `,
 	},
 	{
@@ -306,7 +314,7 @@ translationStatus: machine-draft
 
 Klik op **Delen** in de routezijbalk, of open een opgeslagen route en klik op de deelknop, om het deelvenster te openen.
 
-> Screenshotplaceholder: deelvenster met link, kopieeroptie en systeem-deelopties.
+![Het deelvenster met kaartvoorbeeld, deellink, deeldoelen en GPX-export](/guide/share-modal.jpg)
 
 ## Wat staat er in het venster
 
@@ -339,7 +347,7 @@ description: Pan, zoom en draai de kaart.
 translationStatus: machine-draft
 ---
 
-> Screenshotplaceholder: kaartknoppen rechtsonder.
+![De kaartwerkbalk met zoeken, ongedaan maken/opnieuw, stijl, vergrendelen en zoom](/guide/map-controls.png)
 
 ## Pannen
 
@@ -350,7 +358,7 @@ Klik en sleep om je te verplaatsen. Op touchapparaten sleep je met één vinger.
 - Scroll omhoog om in te zoomen, scroll omlaag om uit te zoomen
 - Dubbelklik om in te zoomen
 - Knijp met twee vingers op touchapparaten
-- Gebruik de \\\`+\\\` / \\\`-\\\`-knoppen rechtsonder
+- Gebruik de \\\`+\\\` / \\\`-\\\`-knoppen in de kaartwerkbalk
 
 ## Draaien en kantelen
 
@@ -358,7 +366,7 @@ Houd \\\`Ctrl\\\` ingedrukt (of klik met de rechtermuisknop) en sleep om te draa
 
 ## Opnieuw centreren
 
-Klik op de knop **Mijn locatie** om opnieuw te centreren op je huidige locatie (de browser vraagt de eerste keer om toestemming).
+Klik op de knop **Centreer op mij** in de kaartwerkbalk om opnieuw te centreren op je huidige locatie (de browser vraagt de eerste keer om toestemming).
 `,
 	},
 	{
@@ -369,18 +377,19 @@ description: Wissel tussen kaartweergaven.
 translationStatus: machine-draft
 ---
 
-routess biedt enkele ingebouwde kaartstijlen waartussen je kunt wisselen.
+routess biedt drie ingebouwde kaartstijlen. Open de knop **Kaartstijl** in de kaartwerkbalk om te wisselen.
 
-> Screenshotplaceholder: menu met kaartstijlen.
+![De kaartstijlkiezer met Streets, Outdoors en Satellite](/guide/map-styles.jpg)
 
 ## Beschikbare stijlen
 
 - **Streets**: standaard gedetailleerde stratenweergave
 - **Outdoors**: hoogtelijnen en paddetails, handig voor wandelen
 - **Satellite**: luchtbeelden
-- **Dark**: prettig bij weinig licht
 
 De gekozen stijl blijft bewaard tussen sessies.
+
+Op zoek naar een donkere kaart? Donkere modus is een thema, geen kaartstijl: schakel die in via de zijbalk links of met \\\`Ctrl/Cmd + D\\\`.
 `,
 	},
 	{
@@ -393,11 +402,11 @@ translationStatus: machine-draft
 
 routess kan je locatie op de kaart tonen en je volgen terwijl je beweegt.
 
-> Screenshotplaceholder: locatiestip op de kaart.
+![De blauwe locatiestip op de kaart](/guide/your-location.jpg)
 
 ## Locatie inschakelen
 
-Klik op de knop **Mijn locatie** bij de knoppen. Je browser vraagt de eerste keer om toestemming; kies **Toestaan**.
+Klik op de knop **Centreer op mij** in de kaartwerkbalk. Je browser vraagt de eerste keer om toestemming; kies **Toestaan**.
 
 Er verschijnt een blauwe stip op de kaart op je huidige positie.
 
@@ -420,22 +429,22 @@ description: Bekijk en werk je profiel en sportinstellingen bij.
 translationStatus: machine-draft
 ---
 
-Open het menu rechtsboven en klik op je avatar om je profiel te bekijken.
+Open **Instellingen** in de zijbalk links om je profiel en voorkeuren te beheren.
 
-> Screenshotplaceholder: profielscherm met sportinstellingen.
+![Het instellingenpaneel met snelinstellingen en secties](/guide/settings.jpg)
 
 ## Wat je kunt aanpassen
 
-- Weergavenaam
-- Afstandseenheid (kilometers of mijlen)
-- Standaard kaartstijl
-- **Sporten**: voor welke sporten je plant (wandelen, lopen, fietsen, autorijden) en een standaardtempo per sport
+- **Thema en eenheden**: licht of donker, metrisch of imperiaal (snelinstellingen bovenaan)
+- **Sporten en tempo**: voor welke sporten je plant (wandelen, lopen, fietsen) en een standaardtempo per sport
+- **Kaart en weergave**: kaartstijl, taal, accentkleur en kaartgedrag
+- **Privacy en delen**: standaardzichtbaarheid voor nieuwe routes
 
-Je e-mailadres wordt uit je Google-account gelezen en kan niet worden gewijzigd in routess.
+Je weergavenaam staat onder je account; je e-mailadres wordt uit je aanmeldmethode gelezen en kan niet worden gewijzigd in routess.
 
 ## Sporten en tempo
 
-Kies tijdens onboarding een of meer sporten, of pas ze later aan in **Instellingen → Sporten**. De op dat moment geselecteerde sport bepaalt de geschatte duur van je routes. Elke sport heeft een eigen standaardtempo; overschrijf het als het niet overeenkomt met hoe snel je echt beweegt. De wijziging wordt toegepast bij de volgende herberekening van de route.
+Kies een of meer sporten onder **Sporten en tempo** en markeer er een als standaard voor nieuwe routes. De op dat moment geselecteerde sport bepaalt de geschatte duur van je routes. Elke sport heeft een eigen standaardtempo; overschrijf het als het niet overeenkomt met hoe snel je echt beweegt. De wijziging wordt toegepast bij de volgende herberekening van de route.
 `,
 	},
 	{
@@ -453,9 +462,9 @@ routess is beschikbaar in:
 - Français
 - Deutsch
 
-> Screenshotplaceholder: taalkiezer in de bovenbalk.
+![De taalkiezer onder Instellingen, Kaart en weergave](/guide/language.jpg)
 
-Klik op de taalkiezer in de bovenbalk om te wisselen. Je keuze wordt onthouden bij je volgende bezoek.
+Open **Instellingen** in de zijbalk links en daarna **Kaart en weergave**. De **Taal**-kiezer staat onder Weergave. Je keuze wordt onthouden bij je volgende bezoek.
 
 ## Een taal die we niet hebben?
 
