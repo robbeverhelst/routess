@@ -15,6 +15,7 @@ import { useServiceWorker } from "@/hooks/useServiceWorker";
 import { useErrorHandler } from "@/lib/errors";
 import type { SupportedLanguage } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
+import { getTimezoneFallbackLocation } from "@/lib/timezoneLocation";
 import { useMapViewStore } from "@/stores/mapViewStore";
 import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 import { useRoutingStore } from "@/stores/routingStore";
@@ -393,6 +394,19 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
 				zoom: 14,
 				bearing: currentBearing,
 				pitch: MAP_PITCH,
+			};
+		}
+
+		// First visit without any stored or granted location: approximate from
+		// the browser timezone so the map at least opens in the user's region.
+		const timezoneLocation = getTimezoneFallbackLocation();
+		if (timezoneLocation) {
+			return {
+				longitude: timezoneLocation[0],
+				latitude: timezoneLocation[1],
+				zoom: 9,
+				bearing: 0,
+				pitch: 0,
 			};
 		}
 
