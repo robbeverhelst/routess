@@ -9,12 +9,32 @@
  */
 import { mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
+import { deflateSync } from "node:zlib";
 import type { Page } from "playwright";
 
 const APP_URL = process.env.GUIDE_SCREENSHOT_URL ?? "https://app.routess.com";
 const OUT_DIR = resolve(import.meta.dirname, "..", "public", "guide");
 const VIEWPORT = { width: 1440, height: 900 };
 const GHENT = { latitude: 51.0543, longitude: 3.7174, accuracy: 25 };
+
+// A scenic demo ride through Ghent: Citadelpark, up the Coupure canal, to the
+// Gravensteen. Loaded via a ?route= share URL so the captured route is
+// deterministic instead of depending on pixel-coordinate map clicks.
+const DEMO_WAYPOINTS = [
+	{ coord: [3.7166, 51.0397], type: "routed" },
+	{ coord: [3.709, 51.048], type: "routed" },
+	{ coord: [3.7209, 51.0577], type: "routed" },
+];
+
+function demoRouteUrl() {
+	const data = JSON.stringify({ waypoints: DEMO_WAYPOINTS, locked: false });
+	const encoded = deflateSync(Buffer.from(data))
+		.toString("base64")
+		.replaceAll("+", "-")
+		.replaceAll("/", "_")
+		.replaceAll("=", "");
+	return `${APP_URL}?route=${encoded}`;
+}
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -145,14 +165,18 @@ async function main() {
 	// Map toolbar (search, undo/redo, style, lock, zoom).
 	await clipShot(page, "map-controls", { x: 490, y: 0, width: 520, height: 64 });
 
-	// Drop three waypoints to build a route.
-	await page.mouse.click(650, 450);
-	await sleep(2500);
+	// One click on the map: the first waypoint.
+	await page.mouse.click(900, 420);
+	await sleep(3000);
 	await fullShot(page, "first-waypoint");
-	await page.mouse.click(900, 350);
-	await sleep(2500);
-	await page.mouse.click(1150, 500);
-	await sleep(5000);
+
+	// Load the demo route through its share URL and frame it.
+	await page.goto(demoRouteUrl(), { waitUntil: "load", timeout: 60_000 });
+	await sleep(4000);
+	if (await waitForWelcome(page, 15_000)) await skipSignIn(page);
+	await sleep(16_000);
+	await clickButton(page, "Focus on route");
+	await sleep(8000);
 	await fullShot(page, "route-overview");
 
 	// Sidebar with stats, elevation, and surface chart.
