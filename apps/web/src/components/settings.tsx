@@ -105,33 +105,29 @@ export function Field({ label, children }: { label: string; children: ReactEleme
 	);
 }
 
-interface SettingsNavRowProps {
+type SettingsNavRowProps = {
 	icon: ComponentType<{ size?: number }>;
 	label: string;
 	sub?: string;
-	onClick: () => void;
-}
+} & ({ onClick: () => void; href?: never } | { href: string; onClick?: never });
 
 // Root-level section entry: icon + label + chevron, pushes a detail view.
-export function SettingsNavRow({ icon: Icon, label, sub, onClick }: SettingsNavRowProps) {
-	return (
-		<button
-			type="button"
-			onClick={onClick}
-			className="rds-settings-nav-row"
-			style={{
-				display: "flex",
-				alignItems: "center",
-				gap: 12,
-				width: "100%",
-				minHeight: 52,
-				padding: "12px 14px",
-				background: "transparent",
-				border: 0,
-				cursor: "pointer",
-				textAlign: "left",
-			}}
-		>
+// With href it opens an external link in a new tab instead.
+export function SettingsNavRow({ icon: Icon, label, sub, onClick, href }: SettingsNavRowProps) {
+	const rowStyle: CSSProperties = {
+		display: "flex",
+		alignItems: "center",
+		gap: 12,
+		width: "100%",
+		minHeight: 52,
+		padding: "12px 14px",
+		background: "transparent",
+		border: 0,
+		cursor: "pointer",
+		textAlign: "left",
+	};
+	const content = (
+		<>
 			<span
 				style={{
 					width: 32,
@@ -152,8 +148,26 @@ export function SettingsNavRow({ icon: Icon, label, sub, onClick }: SettingsNavR
 				{sub && <span style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle, marginTop: 2 }}>{sub}</span>}
 			</span>
 			<span style={{ display: "inline-flex", color: RDS_COLORS.fgSubtle, flexShrink: 0 }}>
-				<I.chevronR size={14} />
+				{href ? <I.externalLink size={14} /> : <I.chevronR size={14} />}
 			</span>
+		</>
+	);
+	if (href) {
+		return (
+			<a
+				href={href}
+				target="_blank"
+				rel="noreferrer"
+				className="rds-settings-nav-row"
+				style={{ ...rowStyle, textDecoration: "none" }}
+			>
+				{content}
+			</a>
+		);
+	}
+	return (
+		<button type="button" onClick={onClick} className="rds-settings-nav-row" style={rowStyle}>
+			{content}
 		</button>
 	);
 }

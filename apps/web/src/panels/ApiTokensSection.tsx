@@ -2,7 +2,9 @@ import type { ApiPatScope, ApiPersonalAccessToken } from "@routess/api-client";
 import { useState } from "react";
 import { useCreatePersonalAccessToken, usePersonalAccessTokens, useRevokePersonalAccessToken } from "@/lib/api-queries";
 import { t } from "@/lib/i18n";
+import { API_REFERENCE_URL } from "@/lib/links";
 import { useToastStore } from "@/stores/toastStore";
+import { I } from "../components/icons";
 import { Badge, Btn, RDS_COLORS } from "../components/primitives";
 import { Field, Select, SettingsBlock, SettingsRow, SettingsSection, TextInput } from "../components/settings";
 
@@ -199,7 +201,19 @@ export function ApiTokensSection() {
 	const tokens = tokensQuery.data ?? [];
 
 	return (
-		<SettingsSection title={t("settings.tokens.title")}>
+		<SettingsSection
+			title={t("settings.tokens.title")}
+			footer={
+				<a
+					href={API_REFERENCE_URL}
+					target="_blank"
+					rel="noreferrer"
+					style={{ display: "inline-flex", alignItems: "center", gap: 4, color: RDS_COLORS.fgMuted }}
+				>
+					{t("settings.tokens.docs")} <I.externalLink size={11} />
+				</a>
+			}
+		>
 			{tokens.length === 0 && mode === "list" && (
 				<div style={{ padding: "12px 14px", fontSize: 12.5, color: RDS_COLORS.fgSubtle }}>
 					{t("settings.tokens.empty")}

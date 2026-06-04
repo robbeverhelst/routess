@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useT } from "@/lib/i18n";
+import { DOCS_URL } from "@/lib/links";
 import { I } from "../components/icons";
 import { MapBackdrop } from "../components/MapBackdrop";
 import { Badge, Btn, RDS_COLORS } from "../components/primitives";
@@ -98,6 +99,23 @@ export function CoachmarksScreen({ onComplete }: { onComplete?: () => void }) {
 				>
 					{t(stop.bodyKey)}
 				</p>
+				{step === STOPS.length - 1 && (
+					<a
+						href={DOCS_URL}
+						target="_blank"
+						rel="noreferrer"
+						style={{
+							display: "inline-flex",
+							alignItems: "center",
+							gap: 4,
+							fontSize: 12.5,
+							color: RDS_COLORS.accent,
+							marginBottom: 14,
+						}}
+					>
+						{t("coach.docsLink")} <I.externalLink size={11} />
+					</a>
+				)}
 				<div style={{ display: "flex", alignItems: "center", gap: 8 }}>
 					<Btn variant="ghost" onClick={onComplete} style={{ color: RDS_COLORS.fgMuted }}>
 						{t("coach.skipTour")}

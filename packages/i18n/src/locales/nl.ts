@@ -346,6 +346,8 @@ export const nl: Record<string, string> = {
 	"settings.section.privacy": "Privacy & delen",
 	"settings.section.advanced": "Geavanceerd",
 	"settings.section.advancedSub": "API-tokens en experimentele functies",
+	"settings.help.title": "Hulp & documentatie",
+	"settings.help.sub": "Gidsen, tips en API-referentie",
 	"settings.sync.saving": "Opslaan…",
 	"settings.sync.saved": "Opgeslagen",
 	"settings.sync.failed": "Instellingen opslaan is mislukt",
@@ -434,6 +436,7 @@ export const nl: Record<string, string> = {
 	"settings.tokens.title": "API-tokens",
 	"settings.tokens.empty":
 		"Nog geen tokens. Maak er een aan om de routess CLI of scripts op je bibliotheek te gebruiken.",
+	"settings.tokens.docs": "API-referentie",
 	"settings.tokens.create": "Token aanmaken",
 	"settings.tokens.cancel": "Annuleren",
 	"settings.tokens.revoke": "Intrekken",
@@ -959,6 +962,7 @@ export const nl: Record<string, string> = {
 	"coach.stop4.title": "Opslaan & delen",
 	"coach.stop4.body": "Sla je route op of deel deze met één link. ⌘K vanaf overal om te springen.",
 	"coach.stepFraction": "{n} van {total}",
+	"coach.docsLink": "Lees meer in de documentatie",
 
 	// LiveNavScreen
 	"nav.remaining": "Resterend",
