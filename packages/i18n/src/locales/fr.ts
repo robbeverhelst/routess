@@ -318,4 +318,5 @@ export const fr: Record<string, string> = {
 	"common.retry": "Réessayer",
 	"common.edit": "Modifier",
 	"common.delete": "Supprimer",
+	"map.loading": "Chargement de la carte…",
 };

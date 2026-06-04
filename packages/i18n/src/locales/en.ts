@@ -299,6 +299,7 @@ export const en: Record<string, string> = {
 	"common.close": "Close",
 	"common.done": "Done",
 	"common.loading": "Loading…",
+	"map.loading": "Loading map…",
 	"common.tryAgain": "Try again.",
 	"common.share": "Share",
 	"common.more": "More",

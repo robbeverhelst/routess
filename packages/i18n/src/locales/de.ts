@@ -312,4 +312,5 @@ export const de: Record<string, string> = {
 	"common.retry": "Erneut versuchen",
 	"common.edit": "Bearbeiten",
 	"common.delete": "Löschen",
+	"map.loading": "Karte wird geladen…",
 };
