@@ -116,6 +116,8 @@ export function createOpenApiDocument(app: INestApplication, config: AppConfig =
 			.addTag("routes", "Route management")
 			.addTag("routing", "Routing engine (Valhalla) proxy endpoints")
 			.addTag("users", "User profile management")
+			.addTag("sessions", "Active session management")
+			.addTag("admin", "Admin dashboard endpoints (admin role, session cookie only)")
 			.addTag("app", "API root metadata")
 			.addTag("health", "Health and monitoring")
 			.addTag("metrics", "Prometheus metrics")
