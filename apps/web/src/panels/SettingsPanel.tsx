@@ -4,6 +4,7 @@ import { useLogout, useUserProfile } from "@/lib/api-queries";
 import { emitAppEvent } from "@/lib/app-events";
 import { type SupportedLanguage, t, tIn } from "@/lib/i18n";
 import { getVersionDisplay } from "@/lib/version";
+import { usePreferencesSyncStore } from "@/stores/preferencesSyncStore";
 import {
 	DEFAULT_SPORT_SPEEDS_KMH,
 	getSpeedForActivity,
@@ -163,6 +164,44 @@ function SpeedRow({
 	);
 }
 
+function SyncStatusPill() {
+	const status = usePreferencesSyncStore((s) => s.status);
+	if (status === "idle") return null;
+	const label =
+		status === "saving"
+			? t("settings.sync.saving")
+			: status === "saved"
+				? t("settings.sync.saved")
+				: t("settings.sync.failed");
+	return (
+		<div
+			role="status"
+			style={{
+				position: "sticky",
+				bottom: 8,
+				display: "flex",
+				justifyContent: "center",
+				pointerEvents: "none",
+				marginTop: 10,
+			}}
+		>
+			<span
+				style={{
+					padding: "4px 12px",
+					borderRadius: 999,
+					background: RDS_COLORS.bgPanelElev,
+					border: `1px solid ${RDS_COLORS.border}`,
+					fontSize: 11.5,
+					color: status === "error" ? RDS_COLORS.danger : RDS_COLORS.fgMuted,
+					boxShadow: "var(--rds-shadow-lg)",
+				}}
+			>
+				{label}
+			</span>
+		</div>
+	);
+}
+
 const ACCENT_OPTIONS: { key: RedesignAccent; labelKey: string; swatch: string }[] = [
 	{ key: "violet", labelKey: "settings.accent.violet", swatch: "oklch(0.5 0.17 282)" },
 	{ key: "cobalt", labelKey: "settings.accent.cobalt", swatch: "oklch(0.5 0.17 250)" },
@@ -270,6 +309,7 @@ export function SettingsPanel() {
 				>
 					routess {getVersionDisplay()}
 				</div>
+				<SyncStatusPill />
 			</div>
 		);
 	}
@@ -440,23 +480,38 @@ export function SettingsPanel() {
 						<SettingsRow
 							label={t("settings.map.styleLabel")}
 							control={
-								<Select value={mapStyle} onChange={(e) => setMapStyle(e.target.value as RedesignMapStyle)}>
+								<Select
+									value={mapStyle}
+									onChange={(e) => setMapStyle(e.target.value as RedesignMapStyle)}
+									aria-label={t("settings.map.styleLabel")}
+								>
 									<option value="streets">{t("settings.map.streets")}</option>
 									<option value="outdoors">{t("settings.map.outdoors")}</option>
 									<option value="satellite">{t("settings.map.satellite")}</option>
 								</Select>
 							}
 						/>
-						<SettingsRow label={t("settings.map.autoSnap")} control={<Toggle on={autoSnap} onChange={setAutoSnap} />} />
+						<SettingsRow
+							label={t("settings.map.autoSnap")}
+							control={<Toggle on={autoSnap} onChange={setAutoSnap} label={t("settings.map.autoSnap")} />}
+						/>
 						<SettingsRow
 							label={t("settings.map.offTrackGuide")}
 							sub={t("settings.map.offTrackGuideSub")}
-							control={<Toggle on={showOffTrackGuideLine} onChange={setShowOffTrackGuideLine} />}
+							control={
+								<Toggle
+									on={showOffTrackGuideLine}
+									onChange={setShowOffTrackGuideLine}
+									label={t("settings.map.offTrackGuide")}
+								/>
+							}
 						/>
 						<SettingsRow
 							label={t("settings.map.headingCone")}
 							sub={t("settings.map.headingConeSub")}
-							control={<Toggle on={showHeadingCone} onChange={setShowHeadingCone} />}
+							control={
+								<Toggle on={showHeadingCone} onChange={setShowHeadingCone} label={t("settings.map.headingCone")} />
+							}
 						/>
 					</SettingsSection>
 
@@ -464,7 +519,11 @@ export function SettingsPanel() {
 						<SettingsRow
 							label={t("settings.language")}
 							control={
-								<Select value={language} onChange={(e) => setLanguage(e.target.value as SupportedLanguage)}>
+								<Select
+									value={language}
+									onChange={(e) => setLanguage(e.target.value as SupportedLanguage)}
+									aria-label={t("settings.language")}
+								>
 									{LANGUAGE_OPTIONS.map((o) => (
 										<option key={o.value} value={o.value}>
 											{o.label}
@@ -527,6 +586,7 @@ export function SettingsPanel() {
 							<Select
 								value={defaultRouteVisibility}
 								onChange={(e) => setDefaultRouteVisibility(e.target.value as RouteVisibility)}
+								aria-label={t("settings.routingDefaults.visibility")}
 							>
 								{VISIBILITY_OPTIONS.map((opt) => (
 									<option key={opt.key} value={opt.key}>
@@ -546,11 +606,19 @@ export function SettingsPanel() {
 						<SettingsRow
 							label={t("settings.experimental.nodeNetworkOverlays")}
 							sub={t("settings.experimental.nodeNetworkOverlaysSub")}
-							control={<Toggle on={showNodeNetworkOverlays} onChange={setShowNodeNetworkOverlays} />}
+							control={
+								<Toggle
+									on={showNodeNetworkOverlays}
+									onChange={setShowNodeNetworkOverlays}
+									label={t("settings.experimental.nodeNetworkOverlays")}
+								/>
+							}
 						/>
 					</SettingsSection>
 				</>
 			)}
+
+			<SyncStatusPill />
 		</div>
 	);
 }
