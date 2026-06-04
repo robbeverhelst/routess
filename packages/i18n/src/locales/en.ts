@@ -337,14 +337,9 @@ export const en: Record<string, string> = {
 	"nav.alerts": "Alerts",
 
 	// SettingsPanel
-	"settings.section.account": "Account",
-	"settings.section.accountSub": "Profile, security, and data",
 	"settings.section.sports": "Sports & pacing",
-	"settings.section.sportsSub": "Sports, speeds, and units",
 	"settings.section.mapDisplay": "Map & display",
-	"settings.section.mapDisplaySub": "Map style, theme, and language",
 	"settings.section.privacy": "Privacy & sharing",
-	"settings.section.privacySub": "Default route visibility",
 	"settings.section.advanced": "Advanced",
 	"settings.section.advancedSub": "API tokens and experimental features",
 	"settings.sync.saving": "Saving…",

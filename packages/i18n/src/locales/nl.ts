@@ -340,14 +340,9 @@ export const nl: Record<string, string> = {
 	"nav.alerts": "Meldingen",
 
 	// SettingsPanel
-	"settings.section.account": "Account",
-	"settings.section.accountSub": "Profiel, beveiliging en gegevens",
 	"settings.section.sports": "Sporten & tempo",
-	"settings.section.sportsSub": "Sporten, snelheden en eenheden",
 	"settings.section.mapDisplay": "Kaart & weergave",
-	"settings.section.mapDisplaySub": "Kaartstijl, thema en taal",
 	"settings.section.privacy": "Privacy & delen",
-	"settings.section.privacySub": "Standaardzichtbaarheid van routes",
 	"settings.section.advanced": "Geavanceerd",
 	"settings.section.advancedSub": "API-tokens en experimentele functies",
 	"settings.sync.saving": "Opslaan…",

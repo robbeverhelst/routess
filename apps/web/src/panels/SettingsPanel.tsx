@@ -1,6 +1,6 @@
 import type { RouteVisibility } from "@routess/core";
 import { type ComponentType, useEffect, useState } from "react";
-import { useLogout, useUserProfile } from "@/lib/api-queries";
+import { useUserProfile } from "@/lib/api-queries";
 import { emitAppEvent } from "@/lib/app-events";
 import { type SupportedLanguage, t, tIn } from "@/lib/i18n";
 import { getVersionDisplay } from "@/lib/version";
@@ -29,24 +29,17 @@ import {
 } from "../components/settings";
 import { ApiTokensSection } from "./ApiTokensSection";
 
-type SettingsSectionKey = "account" | "sports" | "mapDisplay" | "privacy" | "advanced";
+type SettingsSectionKey = "sports" | "mapDisplay" | "privacy" | "advanced";
 
 const SECTIONS: {
 	key: SettingsSectionKey;
 	icon: ComponentType<{ size?: number }>;
 	titleKey: string;
-	subKey: string;
 }[] = [
-	{ key: "account", icon: I.user, titleKey: "settings.section.account", subKey: "settings.section.accountSub" },
-	{ key: "sports", icon: I.activity, titleKey: "settings.section.sports", subKey: "settings.section.sportsSub" },
-	{
-		key: "mapDisplay",
-		icon: I.layers,
-		titleKey: "settings.section.mapDisplay",
-		subKey: "settings.section.mapDisplaySub",
-	},
-	{ key: "privacy", icon: I.shield, titleKey: "settings.section.privacy", subKey: "settings.section.privacySub" },
-	{ key: "advanced", icon: I.sliders, titleKey: "settings.section.advanced", subKey: "settings.section.advancedSub" },
+	{ key: "sports", icon: I.activity, titleKey: "settings.section.sports" },
+	{ key: "mapDisplay", icon: I.layers, titleKey: "settings.section.mapDisplay" },
+	{ key: "privacy", icon: I.shield, titleKey: "settings.section.privacy" },
+	{ key: "advanced", icon: I.sliders, titleKey: "settings.section.advanced" },
 ];
 
 const LANGUAGE_OPTIONS: { value: SupportedLanguage; label: string }[] = [
@@ -164,6 +157,101 @@ function SpeedRow({
 	);
 }
 
+function initialsFrom(name?: string | null, email?: string | null): string {
+	const source = (name?.trim() || email?.split("@")[0] || "").trim();
+	if (!source) return "?";
+	const parts = source.split(/\s+/).slice(0, 2);
+	return parts.map((p) => p[0]?.toUpperCase() ?? "").join("") || "?";
+}
+
+function ProfileCard({
+	name,
+	email,
+	avatar,
+	signedIn,
+	onClick,
+}: {
+	name?: string | null;
+	email?: string | null;
+	avatar?: string | null;
+	signedIn: boolean;
+	onClick: () => void;
+}) {
+	return (
+		<button
+			type="button"
+			onClick={onClick}
+			className="rds-settings-nav-row"
+			style={{
+				display: "flex",
+				alignItems: "center",
+				gap: 12,
+				width: "100%",
+				padding: 14,
+				background: "transparent",
+				border: 0,
+				cursor: "pointer",
+				textAlign: "left",
+			}}
+		>
+			<span
+				style={{
+					width: 40,
+					height: 40,
+					borderRadius: 999,
+					background: avatar ? "transparent" : RDS_COLORS.accentSoft,
+					color: RDS_COLORS.accent,
+					border: `1px solid ${RDS_COLORS.border}`,
+					overflow: "hidden",
+					display: "inline-flex",
+					alignItems: "center",
+					justifyContent: "center",
+					fontSize: 14,
+					fontWeight: 600,
+					flexShrink: 0,
+				}}
+			>
+				{avatar ? (
+					<img src={avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+				) : signedIn ? (
+					initialsFrom(name, email)
+				) : (
+					<I.user size={16} />
+				)}
+			</span>
+			<span style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
+				<span
+					style={{
+						fontSize: 13.5,
+						fontWeight: 600,
+						color: RDS_COLORS.fg,
+						overflow: "hidden",
+						textOverflow: "ellipsis",
+						whiteSpace: "nowrap",
+					}}
+				>
+					{signedIn ? name || email : t("settings.account.signInPrompt")}
+				</span>
+				<span
+					style={{
+						fontSize: 11.5,
+						color: RDS_COLORS.fgSubtle,
+						marginTop: 2,
+						overflow: "hidden",
+						textOverflow: "ellipsis",
+						whiteSpace: "nowrap",
+					}}
+				>
+					{signedIn ? email : t("settings.account.signInSub")}
+				</span>
+			</span>
+			<span style={{ display: "inline-flex", color: RDS_COLORS.fgSubtle, flexShrink: 0 }}>
+				<I.chevronR size={14} />
+			</span>
+		</button>
+	);
+}
+
 function SyncStatusPill() {
 	const status = usePreferencesSyncStore((s) => s.status);
 	if (status === "idle") return null;
@@ -212,7 +300,6 @@ const ACCENT_OPTIONS: { key: RedesignAccent; labelKey: string; swatch: string }[
 export function SettingsPanel() {
 	const [section, setSection] = useState<SettingsSectionKey | null>(null);
 	const { data: profile } = useUserProfile();
-	const logout = useLogout();
 	const pushToast = useToastStore((s) => s.push);
 	const { accent, setAccent, theme, setTheme, activityType, setActivityType, language, setLanguage } = useUiStore();
 	const {
@@ -267,34 +354,39 @@ export function SettingsPanel() {
 		setDefaultActivity(tIn("en", SPORT_LABEL_KEYS[sport]));
 	};
 
-	const handleEditProfile = () => {
-		emitAppEvent("routess:open-account");
-	};
-
-	const handleSignOut = () => {
-		if (!profile) {
-			emitAppEvent("routess:open-login");
-			return;
-		}
-		logout.mutate(undefined, {
-			onSuccess: () => {
-				pushToast({ kind: "success", title: t("common.signedOut") });
-			},
-		});
-	};
-
 	const active = section ? SECTIONS.find((s) => s.key === section) : null;
+
+	const sectionSubs: Record<SettingsSectionKey, string> = {
+		sports: [
+			selectedSports.map((s) => t(SPORT_LABEL_KEYS[s])).join(" · "),
+			units === "km" ? t("settings.units.metric") : t("settings.units.imperial"),
+		]
+			.filter(Boolean)
+			.join(" · "),
+		mapDisplay: `${t(`settings.map.${mapStyle}`)} · ${theme === "dark" ? t("settings.theme.dark") : t("settings.theme.light")}`,
+		privacy: t(VISIBILITY_OPTIONS.find((v) => v.key === defaultRouteVisibility)?.labelKey ?? "save.visibility.private"),
+		advanced: t("settings.section.advancedSub"),
+	};
 
 	if (!active) {
 		return (
 			<div style={{ padding: 20, overflow: "auto", height: "100%" }}>
+				<SettingsSection>
+					<ProfileCard
+						signedIn={Boolean(profile)}
+						name={profile?.name}
+						email={profile?.email}
+						avatar={profile?.avatar}
+						onClick={() => emitAppEvent(profile ? "routess:open-account" : "routess:open-login")}
+					/>
+				</SettingsSection>
 				<SettingsSection>
 					{SECTIONS.map((s) => (
 						<SettingsNavRow
 							key={s.key}
 							icon={s.icon}
 							label={t(s.titleKey)}
-							sub={t(s.subKey)}
+							sub={sectionSubs[s.key]}
 							onClick={() => setSection(s.key)}
 						/>
 					))}
@@ -317,24 +409,6 @@ export function SettingsPanel() {
 	return (
 		<div style={{ padding: 20, overflow: "auto", height: "100%" }}>
 			<SettingsDetailHeader title={t(active.titleKey)} backLabel={t("nav.settings")} onBack={() => setSection(null)} />
-
-			{section === "account" && (
-				<SettingsSection>
-					<SettingsRow
-						label={profile ? t("settings.account.manage") : t("settings.account.signInPrompt")}
-						sub={profile ? t("settings.account.manageSub") : t("settings.account.signInSub")}
-						control={
-							<Btn
-								variant={profile ? "ghost" : "primary"}
-								onClick={profile ? handleEditProfile : handleSignOut}
-								disabled={!profile && logout.isPending}
-							>
-								{profile ? t("settings.account.open") : t("common.signIn")}
-							</Btn>
-						}
-					/>
-				</SettingsSection>
-			)}
 
 			{section === "sports" && (
 				<>
