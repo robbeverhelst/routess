@@ -306,42 +306,57 @@ export function Toggle({
 	on,
 	onChange,
 	disabled,
+	label,
 }: {
 	on: boolean;
 	onChange?: (v: boolean) => void;
 	disabled?: boolean;
+	label?: string;
 }) {
 	return (
 		<button
 			type="button"
+			role="switch"
+			aria-checked={on}
+			aria-label={label}
 			onClick={() => !disabled && onChange?.(!on)}
 			disabled={disabled}
 			style={{
-				width: 32,
-				height: 18,
-				borderRadius: 999,
-				background: on ? RDS_COLORS.accent : RDS_COLORS.borderStrong,
-				position: "relative",
-				transition: "background 120ms",
+				// transparent padding enlarges the hit area without changing the visual
+				padding: 6,
+				margin: -6,
+				background: "transparent",
 				border: 0,
 				cursor: disabled ? "not-allowed" : "pointer",
 				opacity: disabled ? 0.5 : 1,
-				padding: 0,
+				display: "inline-flex",
+				flexShrink: 0,
 			}}
-			aria-pressed={on}
 		>
 			<span
 				style={{
-					position: "absolute",
-					top: 2,
-					left: on ? 16 : 2,
-					width: 14,
-					height: 14,
+					width: 32,
+					height: 18,
 					borderRadius: 999,
-					background: "white",
-					transition: "left 120ms",
+					background: on ? RDS_COLORS.accent : RDS_COLORS.borderStrong,
+					position: "relative",
+					transition: "background 120ms",
+					display: "inline-block",
 				}}
-			/>
+			>
+				<span
+					style={{
+						position: "absolute",
+						top: 2,
+						left: on ? 16 : 2,
+						width: 14,
+						height: 14,
+						borderRadius: 999,
+						background: "white",
+						transition: "left 120ms",
+					}}
+				/>
+			</span>
 		</button>
 	);
 }

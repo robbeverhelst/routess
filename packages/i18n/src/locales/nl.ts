@@ -340,6 +340,15 @@ export const nl: Record<string, string> = {
 	"nav.alerts": "Meldingen",
 
 	// SettingsPanel
+	"settings.quick.title": "Snelle instellingen",
+	"settings.section.sports": "Sporten & tempo",
+	"settings.section.mapDisplay": "Kaart & weergave",
+	"settings.section.privacy": "Privacy & delen",
+	"settings.section.advanced": "Geavanceerd",
+	"settings.section.advancedSub": "API-tokens en experimentele functies",
+	"settings.sync.saving": "Opslaan…",
+	"settings.sync.saved": "Opgeslagen",
+	"settings.sync.failed": "Instellingen opslaan is mislukt",
 	"settings.profile": "Profiel",
 	"settings.profile.yourAccount": "Je account",
 	"settings.profile.signInToSync": "Log in om te synchroniseren",

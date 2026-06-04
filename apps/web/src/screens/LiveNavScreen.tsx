@@ -128,11 +128,11 @@ export function LiveNavScreen({ onClose }: { onClose?: () => void }) {
 						<SecTitle>{t("nav.voiceOptions")}</SecTitle>
 						<div style={{ display: "flex", alignItems: "center", gap: 12 }}>
 							<span style={{ fontSize: 13, flex: 1 }}>{t("nav.voiceGuidance")}</span>
-							<Toggle on={voiceGuidance} onChange={setVoiceGuidance} />
+							<Toggle on={voiceGuidance} onChange={setVoiceGuidance} label={t("nav.voiceGuidance")} />
 						</div>
 						<div style={{ display: "flex", alignItems: "center", gap: 12 }}>
 							<span style={{ fontSize: 13, flex: 1 }}>{t("nav.speedAlerts")}</span>
-							<Toggle on={speedAlerts} onChange={setSpeedAlerts} />
+							<Toggle on={speedAlerts} onChange={setSpeedAlerts} label={t("nav.speedAlerts")} />
 						</div>
 					</div>
 				)}

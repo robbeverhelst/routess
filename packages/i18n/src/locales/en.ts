@@ -337,6 +337,15 @@ export const en: Record<string, string> = {
 	"nav.alerts": "Alerts",
 
 	// SettingsPanel
+	"settings.quick.title": "Quick settings",
+	"settings.section.sports": "Sports & pacing",
+	"settings.section.mapDisplay": "Map & display",
+	"settings.section.privacy": "Privacy & sharing",
+	"settings.section.advanced": "Advanced",
+	"settings.section.advancedSub": "API tokens and experimental features",
+	"settings.sync.saving": "Saving…",
+	"settings.sync.saved": "Saved",
+	"settings.sync.failed": "Couldn't save your settings",
 	"settings.profile": "Profile",
 	"settings.profile.yourAccount": "Your account",
 	"settings.profile.signInToSync": "Sign in to sync",
