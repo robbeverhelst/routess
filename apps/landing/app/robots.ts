@@ -7,7 +7,7 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
 	const locale = localeFromHost(h.get("host"));
 	const base = `https://${SELF_HOST[locale]}`;
 	return {
-		rules: [{ userAgent: "*", allow: "/", disallow: ["/screenshot"] }],
+		rules: [{ userAgent: "*", allow: "/" }],
 		sitemap: `${base}/sitemap.xml`,
 		host: base,
 	};

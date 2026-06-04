@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { getDict } from "@/lib/content";
 import { HTML_LANG, type Locale, REPO_URL, SELF_HOST, SISTER_HOST } from "@/lib/i18n";
 import { getLocale } from "@/lib/locale";
+import { AnimationRoot } from "./components/AnimationRoot";
 import "./globals.css";
 
 const bodyFont = Inter({
@@ -99,6 +100,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
 	return (
 		<html lang={HTML_LANG[locale]} suppressHydrationWarning>
 			<body className={`${bodyFont.variable} ${displayFont.variable} ${monoFont.variable}`}>
+				<AnimationRoot />
 				{children}
 				<Script
 					id="ld-json"

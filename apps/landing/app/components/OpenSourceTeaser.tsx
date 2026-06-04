@@ -6,7 +6,7 @@ export function OpenSourceTeaser({ dict }: { dict: Dict }) {
 		<section className="tight">
 			<div className="container-x">
 				<div
-					className="card grid-2"
+					className="card grid-2 reveal"
 					style={{
 						padding: "44px 48px",
 						display: "grid",

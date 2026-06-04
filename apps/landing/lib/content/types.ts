@@ -26,22 +26,28 @@ export interface Dict {
 		title: ReadonlyArray<{ text: string; accent?: boolean }>;
 		body: string;
 		mode: string;
-		surface: string;
-		surfaces: { paved: string; mixed: string; unpaved: string };
 		modes: { run: string; cycle: string; walk: string };
 		total: string;
 		computedLive: string;
+		timeLabel: string;
 		openInApp: string;
 		hint: string;
 		clickHint: string;
 		reset: string;
 		waypoints: string;
 	};
-	modes: {
+	mapStyles: {
 		eyebrow: string;
-		title: string;
+		title: ReadonlyArray<{ text: string; accent?: boolean }>;
 		body: string;
-		items: ReadonlyArray<{ mode: string; copy: string; stat: string; statLabel: string }>;
+		items: ReadonlyArray<{ key: "streets" | "outdoors" | "satellite" | "dark"; name: string; desc: string }>;
+	};
+	outside: {
+		eyebrow: string;
+		title: ReadonlyArray<{ text: string; accent?: boolean }>;
+		body: string;
+		bullets: ReadonlyArray<string>;
+		phoneCaption: string;
 	};
 	surface: {
 		eyebrow: string;

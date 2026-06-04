@@ -1,14 +1,16 @@
+import Image from "next/image";
 import type { Dict } from "@/lib/content";
 
 const SURFACE_FLEX = [46, 13, 38, 3];
-const ROUTE_COLORS = ["var(--moss)", "var(--indigo)", "var(--terracotta)", "var(--sun)"];
+// The app's surface-breakdown colors (apps/web/src/components/RouteProfileChart.tsx).
+const SURFACE_COLORS = ["oklch(0.45 0.02 240)", "oklch(0.72 0.07 75)", "oklch(0.6 0.11 50)", "oklch(0.62 0.13 145)"];
 
 export function Sharing({ dict }: { dict: Dict }) {
 	const routes = dict.sharing.routes;
 	return (
 		<section id="community">
 			<div className="container-x">
-				<div className="section-header">
+				<div className="section-header reveal">
 					<span className="eyebrow">{dict.sharing.eyebrow}</span>
 					<h2 className="display">{dict.sharing.title}</h2>
 					<p className="body-lg">{dict.sharing.body}</p>
@@ -18,7 +20,7 @@ export function Sharing({ dict }: { dict: Dict }) {
 					className="grid-sharing"
 					style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 28, alignItems: "start" }}
 				>
-					<div className="card" style={{ padding: 28 }}>
+					<div className="card reveal" style={{ padding: 28 }}>
 						<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
 							<h3 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>
 								{dict.sharing.myRoutes}{" "}
@@ -36,10 +38,10 @@ export function Sharing({ dict }: { dict: Dict }) {
 						</div>
 						<div className="grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
 							{routes.map((r, i) => {
-								const color = ROUTE_COLORS[i] ?? "var(--indigo)";
 								return (
 									<div
 										key={r.name}
+										className="card-lift"
 										style={{
 											border: "1px solid var(--line)",
 											borderRadius: 16,
@@ -57,27 +59,16 @@ export function Sharing({ dict }: { dict: Dict }) {
 												background: "oklch(0.96 0.03 80)",
 											}}
 										>
-											<svg viewBox="0 0 200 84" style={{ width: "100%", height: "100%" }} aria-hidden="true">
-												<g stroke="white" strokeWidth="2" fill="none" opacity="0.9">
-													<path d="M0 20 L 200 20" />
-													<path d="M0 50 L 200 50" />
-													<path d="M0 70 L 200 70" />
-													<path d="M40 0 L 40 84" />
-													<path d="M120 0 L 120 84" />
-													<path d="M170 0 L 170 84" />
-												</g>
-												<path
-													d={
-														i % 2 === 0
-															? "M 20 60 Q 60 20, 120 30 T 180 60"
-															: "M 20 50 Q 50 20, 100 40 Q 140 60, 180 30"
-													}
-													stroke={color}
-													strokeWidth="2.5"
-													fill="none"
-												/>
-												<circle cx="20" cy={i % 2 === 0 ? 60 : 50} r="3.5" fill="var(--moss)" />
-											</svg>
+											{/* Real map tiles: Mapbox Static preview of actual Directions
+											   geometry, baked by `bun run screenshots`. */}
+											<Image
+												src={`/previews/route-${i + 1}.png`}
+												alt=""
+												width={400}
+												height={168}
+												sizes="240px"
+												style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+											/>
 										</div>
 										<div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>{r.name}</div>
 										<div
@@ -96,10 +87,9 @@ export function Sharing({ dict }: { dict: Dict }) {
 											<span>↑{r.elev}</span>
 										</div>
 										<div style={{ marginTop: 8, height: 4, borderRadius: 2, overflow: "hidden", display: "flex" }}>
-											<div style={{ flex: SURFACE_FLEX[0], background: "var(--ink)" }} />
-											<div style={{ flex: SURFACE_FLEX[1], background: "var(--sun)" }} />
-											<div style={{ flex: SURFACE_FLEX[2], background: "var(--terracotta)" }} />
-											<div style={{ flex: SURFACE_FLEX[3], background: "var(--moss)" }} />
+											{SURFACE_FLEX.map((flex, s) => (
+												<div key={SURFACE_COLORS[s]} style={{ flex, background: SURFACE_COLORS[s] }} />
+											))}
 										</div>
 									</div>
 								);
@@ -107,7 +97,12 @@ export function Sharing({ dict }: { dict: Dict }) {
 						</div>
 					</div>
 
-					<div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+					<div
+						className="reveal"
+						style={
+							{ display: "flex", flexDirection: "column", gap: 16, "--reveal-delay": "120ms" } as React.CSSProperties
+						}
+					>
 						<div className="card card-pad">
 							<div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
 								<span
@@ -151,7 +146,9 @@ export function Sharing({ dict }: { dict: Dict }) {
 									alignItems: "center",
 								}}
 							>
-								<span>routess.com/r/sint-amands-loop</span>
+								<span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+									app.routess.com/?route=eNqrVi…
+								</span>
 								<button
 									type="button"
 									style={{
@@ -172,7 +169,7 @@ export function Sharing({ dict }: { dict: Dict }) {
 								className="grid-share-actions"
 								style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginTop: 12 }}
 							>
-								{["GPX", "FIT", "QR"].map((t) => (
+								{["GPX", "QR", "Email"].map((t) => (
 									<button
 										key={t}
 										type="button"

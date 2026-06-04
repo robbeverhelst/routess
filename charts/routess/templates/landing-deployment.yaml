@@ -45,10 +45,14 @@ spec:
             - name: http
               containerPort: {{ .Values.landing.service.targetPort }}
               protocol: TCP
-          {{- if or .Values.global.umami.url .Values.global.umami.websiteId }}
           env:
+            {{- range $key, $value := .Values.landing.env }}
+            {{- if $value }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- end }}
             {{- include "routess.umamiEnv" . | nindent 12 }}
-          {{- end }}
           securityContext:
             {{- toYaml .Values.landing.containerSecurityContext | nindent 12 }}
           resources:
