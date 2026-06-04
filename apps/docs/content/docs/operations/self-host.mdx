@@ -88,6 +88,37 @@ The `.env` file in `docker/.env.selfhost.example` is the source of truth. The va
 | `VITE_UMAMI_URL` / `_WEBSITE_ID` | no     | empty                            | Umami endpoint and site ID for the web app. Empty disables product analytics.            |
 | `UMAMI_URL` / `_WEBSITE_ID`    | no       | empty                            | Same Umami endpoint and site ID for the docs site (Next reads them server-side).         |
 | `VITE_SENTRY_DSN`              | no       | empty                            | Sentry / GlitchTip DSN for browser error reporting.                                      |
+| `VITE_SENTRY_ENVIRONMENT`      | no       | `production`                     | Environment tag attached to browser error reports.                                       |
+| `PUBLIC_DOCS_URL`              | no       | `http://localhost:3002`          | Canonical origin of the docs site, used in its sitemap, robots.txt, and llms.txt links.  |
+
+## Advanced variables
+
+The API understands more knobs than the compose file passes through. To use one, add it under the `api` service `environment` in `docker/compose.selfhost.yaml` (or your own override file):
+
+| Variable                       | Default            | Purpose                                                                                      |
+| ------------------------------ | ------------------ | -------------------------------------------------------------------------------------------- |
+| `LOG_LEVEL`                    | `info`             | Pino log level for the API (`debug`, `info`, `warn`, `error`).                               |
+| `SESSION_TTL_DAYS`             | `7`                | How long a browser session stays valid.                                                      |
+| `SESSION_COOKIE_NAME`          | `routess_session`  | Name of the HTTP-only session cookie.                                                        |
+| `JWT_EXPIRES_IN`               | `7d`               | JWT token lifetime.                                                                          |
+| `FRONTEND_URLS`                | empty              | Comma- or newline-separated list of allowed web origins; overrides `FRONTEND_URL` when set.  |
+| `SWAGGER_ENABLED`              | `false` in prod    | Serve interactive API docs at `SWAGGER_PATH`.                                                |
+| `SWAGGER_PATH`                 | `/api`             | Path for the Swagger UI when enabled.                                                        |
+| `TELEMETRY_ENABLED`            | `true`             | Master switch for OpenTelemetry (metrics + traces).                                          |
+| `METRICS_ENABLED`              | `true`             | Prometheus metrics at `/metrics` on the API port. Returns 503 when disabled.                 |
+| `OTEL_EXPORTER_OTLP_ENDPOINT`  | empty              | OTLP collector base URL for traces (`/v1/traces` is appended). Empty disables trace export.  |
+| `OTEL_EXPORTER_OTLP_HEADERS`   | empty              | Extra OTLP headers as a JSON object, e.g. `{"authorization":"Bearer …"}`.                    |
+| `GRAFANA_URLS`                 | empty              | JSON object of dashboard links shown in the admin panel: `{"apiOverview":"…","apiLatency":"…","runtime":"…"}`. |
+
+For the web container:
+
+| Variable                          | Default | Purpose                                                              |
+| --------------------------------- | ------- | --------------------------------------------------------------------- |
+| `VITE_SENTRY_TRACES_SAMPLE_RATE`  | `0.1`   | Fraction of browser sessions traced when Sentry is enabled.           |
+| `VITE_SENTRY_LOGS_ENABLED`        | `false` | Forward browser logs to Sentry.                                       |
+| `VITE_SENTRY_DEBUG`               | `false` | Verbose Sentry SDK logging.                                           |
+
+Browser console logging defaults to `warn`. To debug a single browser, set `localStorage["routess:log-level"]` to `debug`, `info`, `warn`, `error`, or `none` and reload.
 
 ## Put it behind a reverse proxy
 
@@ -102,12 +133,14 @@ PUBLIC_API_URL=https://api.routess.example.com
 
 ## Upgrade
 
+Take a database backup first (see below); migrations are forward-only, so a snapshot is your rollback path. Then:
+
 ```sh
 docker compose -f docker/compose.selfhost.yaml --project-directory . pull
 docker compose -f docker/compose.selfhost.yaml --project-directory . up -d
 ```
 
-The API runs migrations automatically on startup. There is no manual migration step.
+The API runs migrations automatically on startup. There is no manual migration step. To roll back, restore the pre-upgrade dump and pin `ROUTESS_TAG` to the previous release.
 
 ## Back up
 
@@ -118,8 +151,16 @@ docker compose -f docker/compose.selfhost.yaml --project-directory . exec postgr
   pg_dump -U routess routess > routess-$(date +%F).sql
 ```
 
+Restore into a fresh volume with `psql`:
+
+```sh
+docker compose -f docker/compose.selfhost.yaml --project-directory . exec -T postgres \
+  psql -U routess routess < routess-2026-06-04.sql
+```
+
 ## Troubleshooting
 
+- **Is the API healthy?** `curl http://localhost:3000/health/ready` returns 200 when the API can reach the database; `/health/live` checks only that the process is up.
 - **"address already in use"** on `:8080` or `:3000`: change `WEB_PORT` / `API_PORT` in `.env`.
 - **Google sign-in returns `redirect_uri_mismatch`**: the OAuth client's authorised redirect URI must exactly match `<PUBLIC_WEB_URL>/auth/callback`.
 - **Map tiles don't load**: verify `VITE_MAPBOX_ACCESS_TOKEN` is set; check browser devtools for 401s from `api.mapbox.com`.

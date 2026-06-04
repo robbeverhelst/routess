@@ -7,11 +7,15 @@ The API ships with **OpenTelemetry** wired up.
 
 ## Metrics
 
-`GET /metrics` exposes Prometheus-format metrics. The endpoint is reachable only from inside the namespace by default. Scrape it from your Prometheus deployment using a `ServiceMonitor`; the chart ships one under `charts/routess/templates/api-servicemonitor.yaml` that you can enable with `metrics.serviceMonitor.enabled=true`.
+`GET /metrics` on the API port exposes Prometheus-format metrics. The endpoint is reachable only from inside the namespace by default. Scrape it from your Prometheus deployment using a `ServiceMonitor`; the chart ships one under `charts/routess/templates/api-servicemonitor.yaml`, disabled by default, that you enable with `monitoring.serviceMonitor.enabled=true`.
+
+Two env vars control collection: `TELEMETRY_ENABLED` (master switch for metrics and traces) and `METRICS_ENABLED` (metrics only). Both default to `true`; when metrics are off, `/metrics` returns 503.
 
 ## Admin panel
 
 Operators with their email listed in `ADMIN_EMAILS` see an in-app admin panel at `/admin` covering an overview dashboard, users, routes, and a system health page. The panel is backed by the `/admin/*` API endpoints, all guarded by the `admin` role. See [`docs/architecture/admin`](../architecture/admin) for the data model and endpoints.
+
+The system page can deep-link to your Grafana dashboards. Set `GRAFANA_URLS` to a JSON object: `{"apiOverview":"https://…","apiLatency":"https://…","runtime":"https://…"}` (in the chart: `monitoring.grafanaUrls`).
 
 ## Traces
 
@@ -23,9 +27,13 @@ OTEL_SERVICE_NAME=routess-api
 OTEL_RESOURCE_ATTRIBUTES=deployment.environment=prod
 ```
 
+The API appends `/v1/traces` to the endpoint; leave it unset to disable trace export. Authenticated collectors take extra headers via `OTEL_EXPORTER_OTLP_HEADERS` as a JSON object, e.g. `{"authorization":"Bearer …"}`.
+
 ## Logs
 
-The API logs structured JSON to stdout. Anything collecting Kubernetes pod logs (Loki, Datadog, CloudWatch) will pick them up. Each log line includes `traceId` and `spanId` so you can pivot from a slow log line to its trace.
+The API logs structured JSON to stdout. Anything collecting Kubernetes pod logs (Loki, Datadog, CloudWatch) will pick them up. Each log line includes `traceId` and `spanId` so you can pivot from a slow log line to its trace. Verbosity is controlled by `LOG_LEVEL` (default `info`).
+
+In the browser, the web app logs at `warn` by default. To debug a session, set `localStorage["routess:log-level"]` to `debug` and reload. With a `VITE_SENTRY_DSN` configured, the web container also serves a first-party `/__t` tunnel that proxies browser error envelopes to Sentry/GlitchTip, so reports survive ad blockers.
 
 ## Health endpoints
 

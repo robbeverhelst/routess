@@ -1,6 +1,6 @@
 # routess Helm chart
 
-Helm chart for deploying [routess](https://github.com/robbeverhelst/routess) — web, API, and docs apps plus services, ingress, network policies, and optional ServiceMonitor.
+Helm chart for deploying [routess](https://github.com/robbeverhelst/routess): web, API, docs, and landing apps plus services, ingress, network policies, and optional ServiceMonitor.
 
 ## TL;DR
 
@@ -20,12 +20,13 @@ Find the latest chart version on the [releases page](https://github.com/robbever
 | web       | `ghcr.io/robbeverhelst/routess-web:latest`         | React SPA served by nginx              |
 | api       | `ghcr.io/robbeverhelst/routess-api:latest`         | NestJS API on Bun                      |
 | docs      | `ghcr.io/robbeverhelst/routess-docs:latest`        | Next.js documentation site             |
+| landing   | `ghcr.io/robbeverhelst/routess-landing:latest`     | Next.js marketing site (multi-domain)  |
 
 Plus:
 - One `Service` per app
 - One `Ingress` per app (when `ingress.enabled=true`)
 - A baseline of NetworkPolicies implementing the [ADR-0006 deny-all baseline](../../docs/adr/0006-kubernetes-deny-all-network-policy-baseline.md)
-- A `PodDisruptionBudget` for web and api
+- A `PodDisruptionBudget` for web, api, and landing
 - An optional `ServiceMonitor` for the api (`monitoring.serviceMonitor.enabled=true`)
 - An optional `HorizontalPodAutoscaler` per app (`autoscaling.enabled=true`)
 

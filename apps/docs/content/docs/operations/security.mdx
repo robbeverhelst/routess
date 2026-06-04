@@ -31,7 +31,9 @@ Each service has a dedicated ServiceAccount with `automountServiceAccountToken: 
 
 ## Secrets
 
-API secrets (JWT, Google client ID, DB credentials) are stored in Kubernetes `Secret` objects and injected as env vars via `secretKeyRef`. CI pulls values from 1Password and injects them via `helm install --set`.
+API secrets (JWT secret, analytics salt, PAT pepper, Google OAuth credentials, DB credentials, Resend key) are stored in Kubernetes `Secret` objects and injected as env vars via `secretKeyRef`. CI pulls values from 1Password and injects them via `helm install --set`.
+
+Plan rotations: rotating the JWT secret logs every user out, rotating the PAT pepper invalidates every personal access token, and rotating the analytics salt resets analytics pseudonyms.
 
 ## Resource limits
 
