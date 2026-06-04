@@ -3,6 +3,7 @@
 	"paths": {
 		"/": {
 			"get": {
+				"description": "Returns the API name, version, and links. Useful as a smoke test that the API is up.",
 				"operationId": "AppController_getRoot",
 				"parameters": [],
 				"responses": {
@@ -10,11 +11,13 @@
 						"description": ""
 					}
 				},
+				"summary": "API root metadata",
 				"tags": ["app"]
 			}
 		},
 		"/users/me": {
 			"get": {
+				"description": "Returns the authenticated user's profile with route statistics. `/users/profile` is an alias of `/users/me`.",
 				"operationId": "UsersController_getProfile[0]",
 				"parameters": [],
 				"responses": {
@@ -31,16 +34,17 @@
 				},
 				"security": [
 					{
-						"PAT-auth": []
+						"JWT-auth": []
 					},
 					{
-						"JWT-auth": []
+						"PAT-auth": []
 					}
 				],
 				"summary": "Get current user profile",
 				"tags": ["users"]
 			},
 			"patch": {
+				"description": "Updates profile fields (display name, locale, preferences) on the authenticated user.",
 				"operationId": "UsersController_update",
 				"parameters": [],
 				"requestBody": {
@@ -67,10 +71,10 @@
 				},
 				"security": [
 					{
-						"PAT-auth": []
+						"JWT-auth": []
 					},
 					{
-						"JWT-auth": []
+						"PAT-auth": []
 					}
 				],
 				"summary": "Update current user profile",
@@ -96,9 +100,6 @@
 				},
 				"security": [
 					{
-						"PAT-auth": []
-					},
-					{
 						"JWT-auth": []
 					}
 				],
@@ -108,6 +109,7 @@
 		},
 		"/users/profile": {
 			"get": {
+				"description": "Returns the authenticated user's profile with route statistics. `/users/profile` is an alias of `/users/me`.",
 				"operationId": "UsersController_getProfile[1]",
 				"parameters": [],
 				"responses": {
@@ -124,10 +126,10 @@
 				},
 				"security": [
 					{
-						"PAT-auth": []
+						"JWT-auth": []
 					},
 					{
-						"JWT-auth": []
+						"PAT-auth": []
 					}
 				],
 				"summary": "Get current user profile",
@@ -171,9 +173,6 @@
 				},
 				"security": [
 					{
-						"PAT-auth": []
-					},
-					{
 						"JWT-auth": []
 					}
 				],
@@ -195,9 +194,6 @@
 					}
 				},
 				"security": [
-					{
-						"PAT-auth": []
-					},
 					{
 						"JWT-auth": []
 					}
@@ -224,9 +220,6 @@
 					}
 				},
 				"security": [
-					{
-						"PAT-auth": []
-					},
 					{
 						"JWT-auth": []
 					}
@@ -968,8 +961,46 @@
 				"tags": ["routing"]
 			}
 		},
+		"/routing/route": {
+			"post": {
+				"description": "Forwards locations + RoutingPreferences to the self-hosted Valhalla `/route` endpoint. The API owns the translation from Routess preferences (SurfaceType, avoidFerries, avoidHighways) to Valhalla costing options, so the browser never sees provider-specific knobs.",
+				"operationId": "RoutingController_route",
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/RouteRequestDto"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Route legs and snapped locations",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/RouteResponseDto"
+								}
+							}
+						}
+					},
+					"502": {
+						"description": "Valhalla returned an error or no path"
+					},
+					"503": {
+						"description": "Valhalla is not configured or unreachable"
+					}
+				},
+				"summary": "Compute a route through ordered locations with structured preferences",
+				"tags": ["routing"]
+			}
+		},
 		"/health": {
 			"get": {
+				"description": "Pings the database and reports aggregate health. Same checks as /health/ready.",
 				"operationId": "HealthController_check",
 				"parameters": [],
 				"responses": {
@@ -1119,11 +1150,13 @@
 						}
 					}
 				},
+				"summary": "Overall health check",
 				"tags": ["health"]
 			}
 		},
 		"/health/ready": {
 			"get": {
+				"description": "Returns 200 once the database is reachable. Backs the Kubernetes readiness probe.",
 				"operationId": "HealthController_readiness",
 				"parameters": [],
 				"responses": {
@@ -1273,11 +1306,13 @@
 						}
 					}
 				},
+				"summary": "Readiness probe",
 				"tags": ["health"]
 			}
 		},
 		"/health/live": {
 			"get": {
+				"description": "Returns 200 while the process is alive. Backs the Kubernetes liveness probe; no dependencies checked.",
 				"operationId": "HealthController_liveness",
 				"parameters": [],
 				"responses": {
@@ -1285,11 +1320,13 @@
 						"description": ""
 					}
 				},
+				"summary": "Liveness probe",
 				"tags": ["health"]
 			}
 		},
 		"/metrics": {
 			"get": {
+				"description": "Operational metrics in Prometheus text format. Intended for in-cluster scraping; returns 503 when the exporter is disabled.",
 				"operationId": "MetricsController_getMetrics",
 				"parameters": [],
 				"responses": {
@@ -1297,11 +1334,13 @@
 						"description": ""
 					}
 				},
+				"summary": "Prometheus metrics",
 				"tags": ["metrics"]
 			}
 		},
 		"/admin/stats/overview": {
 			"get": {
+				"description": "Returns headline counts (users, routes, signups) computed from Postgres aggregates. Backs the admin overview page.",
 				"operationId": "AdminController_getOverview",
 				"parameters": [],
 				"responses": {
@@ -1311,7 +1350,7 @@
 				},
 				"security": [
 					{
-						"bearer": []
+						"JWT-auth": []
 					}
 				],
 				"summary": "Aggregate top-level metrics for the admin dashboard",
@@ -1320,6 +1359,7 @@
 		},
 		"/admin/stats/users": {
 			"get": {
+				"description": "Signup trend, churn, and active-user counts computed from Postgres aggregates.",
 				"operationId": "AdminController_getUserStats",
 				"parameters": [],
 				"responses": {
@@ -1329,7 +1369,7 @@
 				},
 				"security": [
 					{
-						"bearer": []
+						"JWT-auth": []
 					}
 				],
 				"summary": "User-level KPIs (signups, churn, active count)",
@@ -1338,6 +1378,7 @@
 		},
 		"/admin/stats/routes": {
 			"get": {
+				"description": "Route KPIs grouped by activity, the most active creators, and the recent creation trend.",
 				"operationId": "AdminController_getRouteStats",
 				"parameters": [],
 				"responses": {
@@ -1347,7 +1388,7 @@
 				},
 				"security": [
 					{
-						"bearer": []
+						"JWT-auth": []
 					}
 				],
 				"summary": "Route counts by activity, top creators, recent trend",
@@ -1356,6 +1397,7 @@
 		},
 		"/admin/routes": {
 			"get": {
+				"description": "Lists routes across all users with `page`/`pageSize` pagination, free-text `search`, and an optional `userId` filter.",
 				"operationId": "AdminController_listRoutes",
 				"parameters": [
 					{
@@ -1382,7 +1424,7 @@
 				},
 				"security": [
 					{
-						"bearer": []
+						"JWT-auth": []
 					}
 				],
 				"summary": "Paginated, searchable route list",
@@ -1391,6 +1433,7 @@
 		},
 		"/admin/routes/{id}": {
 			"get": {
+				"description": "Full admin view of one route, including its owner and a summary of its waypoints.",
 				"operationId": "AdminController_getRouteDetail",
 				"parameters": [
 					{
@@ -1409,13 +1452,14 @@
 				},
 				"security": [
 					{
-						"bearer": []
+						"JWT-auth": []
 					}
 				],
 				"summary": "Route detail: metadata, waypoints summary, owner",
 				"tags": ["admin"]
 			},
 			"delete": {
+				"description": "Marks the route deleted without erasing the row. The owner no longer sees it.",
 				"operationId": "AdminController_softDeleteRoute",
 				"parameters": [
 					{
@@ -1434,7 +1478,7 @@
 				},
 				"security": [
 					{
-						"bearer": []
+						"JWT-auth": []
 					}
 				],
 				"summary": "Soft-delete a route",
@@ -1443,6 +1487,7 @@
 		},
 		"/admin/users": {
 			"get": {
+				"description": "Lists users with `page`/`pageSize` pagination and free-text `search` over name and email.",
 				"operationId": "AdminController_listUsers",
 				"parameters": [
 					{
@@ -1461,7 +1506,7 @@
 				},
 				"security": [
 					{
-						"bearer": []
+						"JWT-auth": []
 					}
 				],
 				"summary": "Paginated, searchable user list",
@@ -1470,6 +1515,7 @@
 		},
 		"/admin/users/{id}": {
 			"get": {
+				"description": "Full admin view of one user: profile fields, active sessions, and their most recent routes.",
 				"operationId": "AdminController_getUserDetail",
 				"parameters": [
 					{
@@ -1488,13 +1534,14 @@
 				},
 				"security": [
 					{
-						"bearer": []
+						"JWT-auth": []
 					}
 				],
 				"summary": "User detail: profile, sessions, recent routes",
 				"tags": ["admin"]
 			},
 			"delete": {
+				"description": "Marks the user deleted, soft-deletes their routes, and revokes all their sessions.",
 				"operationId": "AdminController_softDeleteUser",
 				"parameters": [
 					{
@@ -1513,7 +1560,7 @@
 				},
 				"security": [
 					{
-						"bearer": []
+						"JWT-auth": []
 					}
 				],
 				"summary": "Soft-delete a user; cascades to routes and sessions",
@@ -1522,6 +1569,7 @@
 		},
 		"/admin/users/{id}/sessions/{sessionId}": {
 			"delete": {
+				"description": "Force-signs the user out of one device by revoking that session.",
 				"operationId": "AdminController_revokeSession",
 				"parameters": [
 					{
@@ -1548,7 +1596,7 @@
 				},
 				"security": [
 					{
-						"bearer": []
+						"JWT-auth": []
 					}
 				],
 				"summary": "Revoke a single session for a user",
@@ -1557,6 +1605,7 @@
 		},
 		"/admin/system/health": {
 			"get": {
+				"description": "Snapshot of the running API for the admin system page: version, uptime, and database status.",
 				"operationId": "AdminController_getSystemHealth",
 				"parameters": [],
 				"responses": {
@@ -1566,7 +1615,7 @@
 				},
 				"security": [
 					{
-						"bearer": []
+						"JWT-auth": []
 					}
 				],
 				"summary": "API health, version, uptime, DB reachability",
@@ -1575,6 +1624,7 @@
 		},
 		"/admin/system/config-summary": {
 			"get": {
+				"description": "Shows which optional integrations are configured (email, Valhalla, Umami, Sentry) without exposing secret values.",
 				"operationId": "AdminController_getConfigSummary",
 				"parameters": [],
 				"responses": {
@@ -1584,7 +1634,7 @@
 				},
 				"security": [
 					{
-						"bearer": []
+						"JWT-auth": []
 					}
 				],
 				"summary": "Sanitised view of runtime config (no secrets)",
@@ -1614,6 +1664,14 @@
 		{
 			"name": "users",
 			"description": "User profile management"
+		},
+		{
+			"name": "sessions",
+			"description": "Active session management"
+		},
+		{
+			"name": "admin",
+			"description": "Admin dashboard endpoints (admin role, session cookie only)"
 		},
 		{
 			"name": "app",
@@ -1694,9 +1752,51 @@
 					"wind": {
 						"type": "boolean",
 						"example": false
+					},
+					"hikingNodes": {
+						"type": "boolean",
+						"example": false
+					},
+					"cyclingNodes": {
+						"type": "boolean",
+						"example": false
 					}
 				},
-				"required": ["heatmap", "contour", "bike", "surface", "wind"]
+				"required": ["heatmap", "contour", "bike", "surface", "wind", "hikingNodes", "cyclingNodes"]
+			},
+			"RoutingPreferencesDto": {
+				"type": "object",
+				"properties": {
+					"surfacePreference": {
+						"type": "string",
+						"enum": ["paved", "mixed", "unpaved"],
+						"example": "mixed"
+					},
+					"avoidFerries": {
+						"type": "boolean",
+						"example": true
+					},
+					"avoidHighways": {
+						"type": "boolean",
+						"example": true
+					}
+				},
+				"required": ["surfacePreference", "avoidFerries", "avoidHighways"]
+			},
+			"RoutingDefaultsDto": {
+				"type": "object",
+				"properties": {
+					"cycle": {
+						"$ref": "#/components/schemas/RoutingPreferencesDto"
+					},
+					"run": {
+						"$ref": "#/components/schemas/RoutingPreferencesDto"
+					},
+					"walk": {
+						"$ref": "#/components/schemas/RoutingPreferencesDto"
+					}
+				},
+				"required": ["cycle", "run", "walk"]
 			},
 			"UserPreferencesDto": {
 				"type": "object",
@@ -1754,6 +1854,9 @@
 						"type": "string",
 						"enum": ["private", "unlisted", "public"],
 						"example": "private"
+					},
+					"routingDefaults": {
+						"$ref": "#/components/schemas/RoutingDefaultsDto"
 					}
 				},
 				"required": [
@@ -1766,7 +1869,8 @@
 					"sportSpeeds",
 					"mapStyle",
 					"overlays",
-					"defaultRouteVisibility"
+					"defaultRouteVisibility",
+					"routingDefaults"
 				]
 			},
 			"UserStatisticsDto": {
@@ -1881,6 +1985,43 @@
 					"wind": {
 						"type": "boolean",
 						"example": false
+					},
+					"hikingNodes": {
+						"type": "boolean",
+						"example": false
+					},
+					"cyclingNodes": {
+						"type": "boolean",
+						"example": false
+					}
+				}
+			},
+			"UpdateRoutingPreferencesDto": {
+				"type": "object",
+				"properties": {
+					"surfacePreference": {
+						"type": "string",
+						"enum": ["paved", "mixed", "unpaved"]
+					},
+					"avoidFerries": {
+						"type": "boolean"
+					},
+					"avoidHighways": {
+						"type": "boolean"
+					}
+				}
+			},
+			"UpdateRoutingDefaultsDto": {
+				"type": "object",
+				"properties": {
+					"cycle": {
+						"$ref": "#/components/schemas/UpdateRoutingPreferencesDto"
+					},
+					"run": {
+						"$ref": "#/components/schemas/UpdateRoutingPreferencesDto"
+					},
+					"walk": {
+						"$ref": "#/components/schemas/UpdateRoutingPreferencesDto"
 					}
 				}
 			},
@@ -1940,6 +2081,9 @@
 						"type": "string",
 						"enum": ["private", "unlisted", "public"],
 						"example": "private"
+					},
+					"routingDefaults": {
+						"$ref": "#/components/schemas/UpdateRoutingDefaultsDto"
 					}
 				}
 			},
@@ -2417,6 +2561,19 @@
 						"type": "string",
 						"description": "Human-readable ending address",
 						"example": "Times Square, New York, NY"
+					},
+					"routingPreferences": {
+						"description": "Inputs that produced this route's geometry. Optional: routes saved from clients without this metadata (e.g. legacy clients, GPX imports, agents that didn't capture the prefs) are persisted with `routingPreferences = null` and remain usable but cannot be recalculated against their original inputs.",
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/RoutingPreferencesDto"
+							}
+						]
+					},
+					"provenance": {
+						"type": "string",
+						"description": "How this route was produced. Defaults to 'valhalla' for new routes.",
+						"enum": ["valhalla", "mapbox-legacy", "gpx-import", "generation"]
 					}
 				},
 				"required": ["name", "waypoints"]
@@ -2452,71 +2609,20 @@
 			"RouteResponseDto": {
 				"type": "object",
 				"properties": {
-					"id": {
-						"type": "number"
-					},
-					"name": {
-						"type": "string"
-					},
-					"description": {
-						"type": "string"
-					},
-					"activity": {
-						"type": "string",
-						"enum": ["run", "cycle", "walk"]
-					},
-					"visibility": {
-						"type": "string",
-						"enum": ["private", "unlisted", "public"]
-					},
-					"tags": {
+					"legs": {
 						"type": "array",
 						"items": {
-							"type": "string"
+							"$ref": "#/components/schemas/RouteLegDto"
 						}
 					},
-					"waypoints": {
+					"locations": {
 						"type": "array",
 						"items": {
-							"$ref": "#/components/schemas/WaypointResponseDto"
+							"$ref": "#/components/schemas/RouteSnappedLocationDto"
 						}
-					},
-					"geometry": {
-						"description": "Routed polyline as an array of [lng, lat] coordinate pairs",
-						"type": "array",
-						"items": {
-							"type": "string"
-						}
-					},
-					"distance": {
-						"type": "number",
-						"description": "Distance in meters"
-					},
-					"duration": {
-						"type": "number",
-						"description": "Duration in seconds"
-					},
-					"elevationGain": {
-						"type": "number",
-						"description": "Elevation gain in meters"
-					},
-					"startAddress": {
-						"type": "string"
-					},
-					"endAddress": {
-						"type": "string"
-					},
-					"user": {
-						"$ref": "#/components/schemas/UserResponseDto"
-					},
-					"createdAt": {
-						"type": "string"
-					},
-					"updatedAt": {
-						"type": "string"
 					}
 				},
-				"required": ["id", "name", "visibility", "tags", "waypoints", "user", "createdAt", "updatedAt"]
+				"required": ["legs", "locations"]
 			},
 			"UpdateRouteDto": {
 				"type": "object",
@@ -2603,6 +2709,14 @@
 						"type": "string",
 						"description": "Human-readable ending address",
 						"example": "Times Square, New York, NY"
+					},
+					"routingPreferences": {
+						"description": "Inputs that produced this route's geometry. Optional: routes saved from clients without this metadata (e.g. legacy clients, GPX imports, agents that didn't capture the prefs) are persisted with `routingPreferences = null` and remain usable but cannot be recalculated against their original inputs.",
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/RoutingPreferencesDto"
+							}
+						]
 					}
 				}
 			},
@@ -2679,6 +2793,102 @@
 					}
 				},
 				"required": ["edges"]
+			},
+			"RouteLocationDto": {
+				"type": "object",
+				"properties": {
+					"lat": {
+						"type": "number",
+						"description": "Latitude in WGS84 degrees",
+						"example": 50.8467
+					},
+					"lon": {
+						"type": "number",
+						"description": "Longitude in WGS84 degrees",
+						"example": 4.3525
+					}
+				},
+				"required": ["lat", "lon"]
+			},
+			"RouteRequestDto": {
+				"type": "object",
+				"properties": {
+					"activity": {
+						"type": "string",
+						"description": "Activity that determines the Valhalla costing model (bicycle vs pedestrian).",
+						"enum": ["run", "cycle", "walk"],
+						"example": "cycle"
+					},
+					"preferences": {
+						"description": "Routes preferences inputs that shape the route. Translated to Valhalla costing server-side.",
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/RoutingPreferencesDto"
+							}
+						]
+					},
+					"locations": {
+						"description": "Locations to route through, in order. Capped at 25.",
+						"minItems": 2,
+						"maxItems": 25,
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/RouteLocationDto"
+						}
+					},
+					"walkingSpeedKmh": {
+						"type": "number",
+						"description": "Walking speed in kilometers per hour. Only applied to pedestrian routing.",
+						"minimum": 0.5,
+						"maximum": 25
+					}
+				},
+				"required": ["activity", "preferences", "locations"]
+			},
+			"RouteLegSummaryDto": {
+				"type": "object",
+				"properties": {
+					"length": {
+						"type": "number",
+						"description": "Leg length in kilometers."
+					},
+					"time": {
+						"type": "number",
+						"description": "Leg duration in seconds."
+					}
+				},
+				"required": ["length", "time"]
+			},
+			"RouteLegDto": {
+				"type": "object",
+				"properties": {
+					"shape": {
+						"type": "string",
+						"description": "Polyline6-encoded shape of the leg."
+					},
+					"summary": {
+						"$ref": "#/components/schemas/RouteLegSummaryDto"
+					}
+				},
+				"required": ["shape", "summary"]
+			},
+			"RouteSnappedLocationDto": {
+				"type": "object",
+				"properties": {
+					"lat": {
+						"type": "number",
+						"description": "Snapped latitude (may differ from input)."
+					},
+					"lon": {
+						"type": "number",
+						"description": "Snapped longitude (may differ from input)."
+					},
+					"original_index": {
+						"type": "number",
+						"description": "Index of the originally-supplied location, when Valhalla returns it."
+					}
+				},
+				"required": ["lat", "lon"]
 			}
 		}
 	}

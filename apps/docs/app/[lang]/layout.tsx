@@ -1,5 +1,6 @@
 import { I18nProvider } from "fumadocs-ui/contexts/i18n";
 import type { ReactNode } from "react";
+import { LangAttribute } from "@/app/components/lang-attribute";
 import { i18n, localeLabels } from "@/lib/i18n";
 
 export default async function LangLayout(props: { children: ReactNode; params: Promise<{ lang: string }> }) {
@@ -12,6 +13,7 @@ export default async function LangLayout(props: { children: ReactNode; params: P
 				locale: language,
 			}))}
 		>
+			<LangAttribute lang={lang} />
 			{props.children}
 		</I18nProvider>
 	);

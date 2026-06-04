@@ -3,27 +3,33 @@ title: Docker
 description: Building and running routess images.
 ---
 
-Each app has its own Dockerfile. Builds run from the **monorepo root** so `bun install` can resolve `workspace:*` deps.
+Each app has its own Dockerfile. Builds run from the **monorepo root** so `bun install` can resolve `workspace:*` deps. All app images build on top of a shared dependency image (`docker/Dockerfile.deps`) passed in as the `DEPS_IMAGE` build arg.
 
 ## Images published
 
 | Image | Source | Base | Notes |
 | --- | --- | --- | --- |
 | `ghcr.io/robbeverhelst/routess-web` | `apps/web/Dockerfile` | `nginx:alpine` | Static SPA, runtime env injection |
-| `ghcr.io/robbeverhelst/routess-api` | `apps/api/Dockerfile` | `node:20-alpine` | Read-only root filesystem |
-| `ghcr.io/robbeverhelst/routess-docs` | `apps/docs/Dockerfile` | `node:20-alpine` | Next.js standalone |
+| `ghcr.io/robbeverhelst/routess-api` | `apps/api/Dockerfile` | `oven/bun:alpine` | Read-only root filesystem |
+| `ghcr.io/robbeverhelst/routess-docs` | `apps/docs/Dockerfile` | `node:24-alpine` | Next.js standalone |
+| `ghcr.io/robbeverhelst/routess-landing` | `apps/landing/Dockerfile` | `node:24-alpine` | Next.js standalone |
 
 ## Build locally
 
+Build the shared deps image once, then bake all app images:
+
 ```sh
-# Web
-bun run docker:build:web
+# from the monorepo root
+docker build -f docker/Dockerfile.deps -t routess-deps .
 
-# API
-bun run docker:build:api
+# all images (web, api, docs, landing)
+DEPS_IMAGE=routess-deps bun run build:images
+```
 
-# Docs
-docker build -f apps/docs/Dockerfile -t routess-docs .
+To build a single image instead:
+
+```sh
+docker build --build-arg DEPS_IMAGE=routess-deps -f apps/web/Dockerfile -t routess-web .
 ```
 
 ## Run locally
@@ -35,6 +41,6 @@ docker run --rm -p 8080:8080 \
 	ghcr.io/robbeverhelst/routess-web:latest
 ```
 
-## Multi-arch
+## Architectures
 
-CI builds both `linux/amd64` and `linux/arm64` via `docker buildx`. The same image works on Apple Silicon and Intel/AMD servers.
+CI builds `linux/amd64` images via `docker buildx`. On Apple Silicon, Docker runs them through Rosetta emulation; native arm64 images are not published yet.

@@ -5,428 +5,632 @@ export const de: Page[] = [
 		path: "index.mdx",
 		content: `---
 title: Willkommen bei routess
-description: Ein kurzer Rundgang durch routess und das Benutzerhandbuch.
+description: Ein kurzer Rundgang durch routess und den Aufbau des Benutzerhandbuchs.
 translationStatus: machine-draft
 ---
 
-routess ist eine Routenplanungs-App. Du setzt mehrere Stopps auf einer Karte, passt die Route an und speicherst sie fuer spaeter.
+routess ist eine Routenplanungs-App, mit der du Wegpunkt für Wegpunkt eine Route auf einer Karte skizzierst und für später speicherst. Dieses Handbuch richtet sich an **Menschen, die die routess-App nutzen**: Programmierkenntnisse sind nicht nötig.
 
-> Screenshot-Platzhalter: Startansicht mit gespeicherter Route.
+> Screenshot-Platzhalter: Startansicht mit einer gespeicherten Route.
 
 ## Was du tun kannst
 
-- Mit Google anmelden
-- Wegpunkte hinzufuegen, verschieben, loeschen und neu sortieren
-- Distanz, Dauer und Routendetails ansehen
-- Routen in deinem Konto speichern
-- Sprache und Kartenstil wechseln
-
-Starte mit [Mit Google anmelden](/de/guide/getting-started/sign-in) oder plane [deine erste Route](/de/guide/getting-started/your-first-route).
-`,
-	},
-	{
-		path: "getting-started/sign-in.mdx",
-		content: `---
-title: Mit Google anmelden
-description: Melde dich mit deinem Google-Konto bei routess an.
-translationStatus: machine-draft
----
-
-routess nutzt Google fuer die Anmeldung. Du musst kein separates routess-Passwort verwalten.
-
-## Schritte
-
-1. Oeffne routess und klicke auf **Mit Google anmelden**.
-2. Waehle das Google-Konto aus.
-3. Bestaetige die angefragten Berechtigungen.
-4. Danach kehrst du zur Karte zurueck und dein Profil ist aktiv.
-
-> Screenshot-Platzhalter: Google-Anmeldebutton.
-
-## Wenn es nicht klappt
-
-Erlaube Pop-ups fuer die routess-Domain und pruefe, ob du bei accounts.google.com angemeldet bist.
-`,
-	},
-	{
-		path: "getting-started/your-first-route.mdx",
-		content: `---
-title: Deine erste Route
-description: Plane eine Route in weniger als drei Minuten.
-translationStatus: machine-draft
----
-
-Diese kurze Uebung zeigt die wichtigsten Grundlagen.
-
-> Screenshot-Platzhalter: leere Karte nach der Anmeldung.
-
-## 1. Startpunkt waehlen
-
-Klicke auf die Karte. Der erste Wegpunkt erscheint.
-
-## 2. Stopps hinzufuegen
-
-Klicke weitere Stellen auf der Karte an. routess zeichnet die Verbindung waehrend der Planung.
-
-## 3. Anpassen
-
-Ziehe einen Wegpunkt, um ihn zu verschieben. Pruefe die Reihenfolge in der Seitenleiste.
-
-## 4. Speichern
-
-Wenn du angemeldet bist, speichert routess deine Aenderungen automatisch.
-`,
-	},
-	{
-		path: "getting-started/interface-tour.mdx",
-		content: `---
-title: Rundgang durch die Oberflaeche
-description: Lerne die wichtigsten Bereiche von routess kennen.
-translationStatus: machine-draft
----
-
-> Screenshot-Platzhalter: gesamte App mit Markierungen.
-
-## Die Karte
-
-Die Karte nimmt den groessten Teil des Bildschirms ein. Ziehe zum Verschieben und zoome mit Mausrad, Touch-Geste oder Buttons.
-
-## Die Routenseitenleiste
-
-Sie zeigt Wegpunkte, Reihenfolge, Distanz und Dauer.
-
-## Das Kontomenue
-
-Oben rechts findest du Profil, Sprache und Kontoaktionen.
-
-## Kartensteuerung
-
-Mit den Kartenbuttons zoomst du, zeigst deinen Standort und wechselst den Kartenstil.
-`,
-	},
-	{
-		path: "routes/creating-routes.mdx",
-		content: `---
-title: Routen erstellen
-description: Fuege Wegpunkte hinzu und baue eine Route auf der Karte.
-translationStatus: machine-draft
----
-
-Eine Route ist eine Liste von Wegpunkten. Klicke auf die Karte, um einen Punkt hinzuzufuegen.
-
-> Screenshot-Platzhalter: Wegpunkt auf der Karte setzen.
-
-- Der erste Klick setzt den Startpunkt.
-- Weitere Klicks fuegen Stopps hinzu.
-- routess zeichnet die Verbindung zwischen den Punkten.
-- Die Seitenleiste aktualisiert sich sofort.
-
-## Tipp
-
-Zoome zuerst in den Bereich, den du planen willst. Setze grobe Punkte und verfeinere sie danach durch Ziehen.
-`,
-	},
-	{
-		path: "routes/editing-routes.mdx",
-		content: `---
-title: Routen bearbeiten
-description: Verschiebe, sortiere, loesche, mache rueckgaengig und bearbeite gespeicherte Routen.
-translationStatus: machine-draft
----
-
-> Screenshot-Platzhalter: Wegpunkt wird gezogen mit Anzeige fuer ungespeicherte Aenderungen.
-
-## Verschieben
-
-Ziehe einen Wegpunkt auf der Karte. routess aktualisiert die Route, wenn du ihn loslaesst.
-
-## Loeschen
-
-Rechtsklick (oder langer Druck) auf einen Wegpunkt entfernt ihn. Die Route wird um die Luecke neu berechnet.
-
-## Hover-Synchronisation zwischen Seitenleiste und Karte
-
-Fahre in der Seitenleiste ueber einen Wegpunkt, um ihn auf der Karte hervorzuheben, und umgekehrt. Praktisch bei langen Routen mit vielen Wegpunkten.
-
-## Rueckgaengig und wiederholen
-
-- **Rueckgaengig:** Undo-Button oder \`Strg/Cmd + Z\`
-- **Wiederholen:** Redo-Button oder \`Strg/Cmd + Umschalt + Z\`
-
-routess speichert die vollstaendige Bearbeitungshistorie der aktuellen Sitzung.
-
-## Gespeicherte Route direkt bearbeiten
-
-Oeffne eine Route aus deiner Bibliothek und bearbeite Name, Beschreibung, Sichtbarkeit oder Wegpunkte direkt. Eine Anzeige "Ungespeicherte Aenderungen" erscheint neben dem Titel, solange Aenderungen ausstehen. Klicke auf **Speichern**, um sie zu uebernehmen, oder auf **Verwerfen**, um zur letzten gespeicherten Version zurueckzukehren. Beim Verlassen mit ungespeicherten Aenderungen fragt routess zuerst nach.
-
-## Zuruecksetzen
-
-Klicke auf **Zuruecksetzen**, um die aktuelle Route komplett zu loeschen. Das ist sofort rueckgaengig zu machen.
-`,
-	},
-	{
-		path: "routes/saving-routes.mdx",
-		content: `---
-title: Routen speichern
-description: Wie routess deine Routen zwischen Sitzungen erhaelt.
-translationStatus: machine-draft
----
-
-Wenn du angemeldet bist, speichert routess deine Route automatisch.
-
-Deine Route bleibt verfuegbar nach:
-
-- Neuladen der Seite
-- Schliessen und erneutem Oeffnen des Browsers
-- Anmeldung auf einem anderen Geraet
-
-Es gibt keinen separaten Speichern-Button. routess speichert waehrend du arbeitest.
-
-## Ohne Konto
-
-Ohne Anmeldung kannst du planen, aber die Route bleibt nur lokal in deinem Browser.
-`,
-	},
-	{
-		path: "routes/route-info.mdx",
-		content: `---
-title: Routeninformationen
-description: Distanz, Dauer, Hoehe und Untergrund.
-translationStatus: machine-draft
----
-
-Die Seitenleiste zeigt Live-Informationen, waehrend du die Route erstellst.
-
-> Screenshot-Platzhalter: Seitenleiste mit Distanz, Dauer, Hoehe und Untergrund-Diagramm.
-
-## Gesamtwerte
-
-- **Distanz** — Summe aller Abschnitte, in km oder mi (im Konto einstellbar)
-- **Dauer** — geschaetzte Reisezeit fuer die gewaehlte Sportart
-- **Hoehenmeter** — Gesamtanstieg ueber die ganze Route
-
-## Werte pro Abschnitt
-
-Klicke auf einen Wegpunkt in der Seitenleiste, um ihn auszuklappen. Du siehst Distanz und Dauer des Abschnitts, der zu diesem Punkt fuehrt.
-
-## Hoehen- und Untergrund-Diagramm
-
-Unter den Werten zeigt ein einziges Diagramm das Hoehenprofil mit dem Untergrund als farbige Baender darunter. Bewege den Zeiger ueber das Diagramm, um an dieser Stelle Hoehe, Distanz und Untergrund zu sehen. Der entsprechende Punkt auf der Karte wird mit hervorgehoben.
-
-Die Routenlinie auf der Karte nutzt zudem Strichmuster fuer den Untergrund: durchgezogen fuer asphaltiert, gestrichelt fuer unbefestigt, gepunktet fuer Pfade. Diagramm und Karte teilen sich dieselbe Farbskala.
-
-## Wie Schaetzungen berechnet werden
-
-Die Dauer nutzt deine Geschwindigkeit pro Sportart aus **Einstellungen → Sportarten**. Jede Sportart (Gehen, Laufen, Radfahren, Fahren) hat eine eigene Standardgeschwindigkeit; passe sie an, falls sie nicht zu deinem tatsaechlichen Tempo passt. Hoehe kommt von Mapbox Terrain-RGB; Untergrund vom Routing-Motor.
-`,
-	},
-	{
-		path: "routes/sharing-routes.mdx",
-		content: `---
-title: Routen teilen
-description: Teile eine Route per Link oder ueber System-Teilen.
-translationStatus: machine-draft
----
-
-Oeffne eine gespeicherte Route und klicke auf **Teilen**, um den Teilen-Dialog zu oeffnen.
-
-> Screenshot-Platzhalter: Teilen-Dialog mit Link, Kopieren und systemweitem Teilen.
-
-## Was im Dialog steht
-
-- **Link kopieren** — kopiert die oeffentliche URL der Route in die Zwischenablage.
-- **System-Teilen** — auf dem Smartphone oeffnet sich das Teilen-Menue (WhatsApp, Nachrichten, Mail, ...).
-- **Vorschau** — Miniaturbild und Routenwerte, damit der Empfaenger weiss, was er bekommt.
-
-## Oeffentlich oder privat
-
-Eine Route zu teilen erfordert, dass sie **oeffentlich** ist. Bei einer privaten Route bittet der Dialog zuerst um Umschaltung der Sichtbarkeit und warnt, dass der Link dann fuer alle einsehbar ist. Spaeter kannst du ueber **Bearbeiten → Sichtbarkeit** wieder auf privat zurueck.
-
-## Was der Empfaenger sieht
-
-Jeder mit dem Link sieht die Route auf der Karte, die Werte, das Hoehen- und Untergrund-Diagramm und einen Button zum Herunterladen als GPX. Ein Konto ist zum Ansehen nicht noetig. Um eine Kopie in die eigene Bibliothek zu speichern, ist eine Anmeldung erforderlich.
-`,
-	},
-	{
-		path: "map/navigation.mdx",
-		content: `---
-title: Kartennavigation
-description: Karte verschieben, zoomen und ausrichten.
-translationStatus: machine-draft
----
-
-> Screenshot-Platzhalter: Kartensteuerung.
-
-## Verschieben
-
-Klicke und ziehe, um die Karte zu bewegen. Auf Touch-Geraeten ziehst du mit einem Finger.
-
-## Zoomen
-
-Nutze Mausrad, Pinch-Geste oder Zoombuttons.
-
-## Ausrichten
-
-Wenn Rotation aktiv ist, nutze die Standardgesten deines Geraets. Richte die Karte wieder nach Norden aus, wenn du mehr Uebersicht brauchst.
-`,
-	},
-	{
-		path: "map/styles.mdx",
-		content: `---
-title: Kartenstile
-description: Wechsle zwischen Kartenansichten.
-translationStatus: machine-draft
----
-
-routess bietet mehrere Kartenstile, damit die Karte zur Aufgabe passt.
-
-> Screenshot-Platzhalter: Menue fuer Kartenstile.
-
-## Verfuegbare Stile
-
-- **Strassen** fuer die normale Planung
-- **Satellit** zur Erkennung von Umgebung und Gelaende
-- **Dunkel** fuer wenig Licht
-
-Der gewaehlte Stil bleibt im Browser gespeichert.
-`,
-	},
-	{
-		path: "map/your-location.mdx",
-		content: `---
-title: Dein Standort
-description: Zeige deinen aktuellen Standort auf der Karte.
-translationStatus: machine-draft
----
-
-routess kann deinen Standort anzeigen, wenn dein Browser die Berechtigung hat.
-
-> Screenshot-Platzhalter: Standortpunkt auf der Karte.
-
-## Standort aktivieren
-
-Klicke auf **Mein Standort** und waehle **Erlauben**, wenn der Browser fragt.
-
-## Datenschutz
-
-Die Berechtigung wird vom Browser verwaltet. Du kannst sie spaeter in den Browser- oder Geraeteeinstellungen entziehen.
-`,
-	},
-	{
-		path: "account/profile.mdx",
-		content: `---
-title: Dein Profil
-description: Profil und Einstellungen pro Sportart ansehen und aktualisieren.
-translationStatus: machine-draft
----
-
-Oeffne das Menue oben rechts und klicke auf deinen Avatar.
-
-> Screenshot-Platzhalter: Profilansicht mit Sport-Einstellungen.
-
-## Was du aendern kannst
-
-- Anzeigename
-- Distanzeinheit (Kilometer oder Meilen)
-- Standard-Kartenstil
-- **Sportarten** — welche Sportarten du planst (Gehen, Laufen, Radfahren, Fahren) und ein Standardtempo je Sportart
-
-Deine E-Mail-Adresse kommt aus deinem Google-Konto und kann in routess nicht geaendert werden.
-
-## Sportarten und Tempo
-
-Waehle bei der Onboarding eine oder mehrere Sportarten oder passe sie spaeter in **Einstellungen → Sportarten** an. Die aktuell gewaehlte Sportart steuert die Zeitschaetzungen deiner Routen. Jede Sportart hat ein eigenes Standardtempo; passe es an, falls es nicht zu deinem tatsaechlichen Tempo passt. Die Aenderung wirkt bei der naechsten Routenneuberechnung.
-`,
-	},
-	{
-		path: "account/language.mdx",
-		content: `---
-title: Sprache
-description: Aendere die Sprache der App.
-translationStatus: machine-draft
----
-
-routess ist verfuegbar in:
-
-- English
-- Nederlands
-- Francais
-- Deutsch
-
-## Sprache wechseln
-
-Oeffne das Kontomenue und waehle die gewuenschte Sprache. Die Oberflaeche wird sofort aktualisiert.
-
-## Fuer Entwickler
-
-Wenn du eine Sprache hinzufuegen oder Uebersetzungen verbessern willst, lies die Dokumentation zum i18n-Paket.
-`,
-	},
-	{
-		path: "account/deleting-account.mdx",
-		content: `---
-title: Konto loeschen
-description: Loesche dein routess-Konto und deine Routen dauerhaft.
-translationStatus: machine-draft
----
-
-Du kannst dein routess-Konto jederzeit loeschen. Diese Aktion ist dauerhaft.
-
-## Was geloescht wird
-
-- Dein Profil
-- Alle gespeicherten Routen
-- Die Verbindung zu deiner Google-Anmeldung
-
-Pruefe vor dem Loeschen, ob du deine Routen noch brauchst. routess kann sie danach nicht wiederherstellen.
-`,
-	},
-	{
-		path: "troubleshooting.mdx",
-		content: `---
-title: Fehlerbehebung
-description: Loesungen fuer haeufige Probleme.
-translationStatus: machine-draft
----
-
-## Anmeldung klappt nicht
-
-- **Google-Pop-up wird blockiert.** Erlaube Pop-ups fuer die routess-Domain.
-- **Kein Konto sichtbar.** Melde dich zuerst bei accounts.google.com an.
-- **Ladeanzeige bleibt stehen.** Lade die Seite neu und versuche es erneut.
-
-## Karte laedt nicht
-
-Pruefe deine Internetverbindung und ob Scripts fuer die routess-Domain erlaubt sind.
-
-## Standort funktioniert nicht
-
-Pruefe die Standortberechtigung im Browser und auf dem Geraet.
+- Mit Google oder per E-Mail anmelden und in Sekunden mit der Routenplanung beginnen
+- Auf die Karte klicken, um Wegpunkte zu setzen, sie per Ziehen umsortieren und Änderungen rückgängig machen
+- Gesamtdistanz und geschätzte Dauer live aktualisieren sehen, während du bearbeitest
+- Routen in deinem Konto speichern, sodass sie Seitenaktualisierungen und Gerätewechsel überdauern
+- Die App auf Englisch, Niederländisch, Französisch oder Deutsch umstellen
+
+## Wie dieses Handbuch aufgebaut ist
+
+- **[Erste Schritte](/de/guide/getting-started/sign-in)**: Anmelden und in 3 Minuten deine erste Route planen
+- **[Routen](/de/guide/routes/creating-routes)**: Routen erstellen, bearbeiten, speichern und teilen
+- **[Karte](/de/guide/map/navigation)**: Verschieben, zoomen, Stile ändern, Standort verfolgen
+- **[Konto](/de/guide/account/profile)**: Profil, Sprache und Kontolöschung
+- **[Fehlerbehebung](/de/guide/troubleshooting)**: Lösungen für häufige Probleme
+- **[FAQ](/de/guide/faq)**: Schnelle Antworten
+
+Suchst du stattdessen die technische Dokumentation? Dann geht es zu den [Entwicklerdocs](/docs).
 `,
 	},
 	{
 		path: "faq.mdx",
 		content: `---
 title: FAQ
-description: Kurze Antworten auf haeufige Fragen.
+description: Schnelle Antworten auf häufige Fragen.
 translationStatus: machine-draft
 ---
 
 ## Ist routess kostenlos?
 
-Ja. routess ist Open Source. Die oeffentliche Version auf routess.com soll kostenlos nutzbar sein.
+Ja. routess ist quelloffen und selbst gehostet. Die gehostete Version unter routess.com ist ebenfalls kostenlos.
 
 ## Brauche ich ein Konto?
 
-Du kannst ohne Konto planen, aber fuer Routen ueber mehrere Geraete hinweg musst du angemeldet sein.
+Du kannst eine Route auch ohne Anmeldung planen, aber Routen, die du im abgemeldeten Zustand speicherst, bleiben nur in deinem Browser. Melde dich an, um sie über Sitzungen und Geräte hinweg zu behalten.
 
-## Kann ich Routen teilen?
+## Welche Daten speichert routess?
 
-Teilen ist Teil des geplanten Workflows. Bis dahin bleiben Routen in deinem Konto.
+- Deinen Namen und deine E-Mail-Adresse (aus der Google-Anmeldung oder der E-Mail-Registrierung)
+- Deine gespeicherten Routen (Wegpunkte und Metadaten)
 
-## Welche Sprachen werden unterstuetzt?
+routess erfasst anonyme Nutzungsereignisse auf einer selbst gehosteten Analyse-Instanz, um zu verstehen, welche Funktionen genutzt werden. Diese Ereignisse enthalten niemals deine E-Mail-Adresse, deine Routennamen oder deine rohe Konto-ID. Es gibt keine Tracker von Drittanbietern.
 
-English, Nederlands, Francais und Deutsch.
+## Kann ich meine Routen exportieren?
+
+Ja. Öffne eine Route und nutze **Als GPX speichern** in der Seitenleiste, um sie herunterzuladen. Du kannst GPX-Dateien auch in den Planer importieren. Importe für TCX, FIT und KML sind geplant.
+
+## Kann ich eine eigene Kopie betreiben?
+
+Ja, routess ist quelloffen. Siehe **[Entwicklerdocs → Betrieb](/docs/operations/self-host)**.
+
+## Wo melde ich einen Fehler?
+
+[GitHub Issues](https://github.com/robbeverhelst/routess/issues).
+`,
+	},
+	{
+		path: "troubleshooting.mdx",
+		content: `---
+title: Fehlerbehebung
+description: Lösungen für häufige Probleme.
+translationStatus: machine-draft
+---
+
+## Probleme beim Anmelden
+
+- **Das Google-Pop-up wird blockiert.** Erlaube Pop-ups für die routess-Domain und versuche es erneut.
+- **"Dieses Konto ist nicht autorisiert."** routess nutzt deine primäre Google-Identität; melde dich zuerst unter \`accounts.google.com\` an.
+- **Nach der Anmeldung bleibt ein Ladekreis hängen.** Lade die Seite neu. Falls das Problem bestehen bleibt, lösche die Cookies für die routess-Domain.
+
+## Karte lädt nicht
+
+- Prüfe deine Internetverbindung
+- Deaktiviere Werbeblocker und Datenschutz-Erweiterungen für die routess-Domain; Mapbox-Kacheln werden manchmal blockiert
+- Probiere einen anderen Browser, um ein Erweiterungsproblem auszuschließen
+
+## Meine Route ist verschwunden
+
+Wenn du nicht angemeldet warst, bleiben Routen nur in deinem Browser und wurden möglicherweise gelöscht. Melde dich beim nächsten Mal an, um sie zu behalten.
+
+## Standort funktioniert nicht
+
+Siehe [Karte → Dein Standort](/de/guide/map/your-location).
+
+Kommst du nicht weiter? [Erstelle ein Issue auf GitHub](https://github.com/robbeverhelst/routess/issues).
+`,
+	},
+	{
+		path: "support.mdx",
+		content: `---
+title: Support
+description: Wo du Hilfe bekommst, Fehler meldest und Funktionen vorschlägst.
+translationStatus: machine-draft
+---
+
+## Einen Fehler gefunden?
+
+Erstelle ein Issue auf [GitHub Issues](https://github.com/robbeverhelst/routess/issues). Gib dabei an:
+
+- Was du getan hast, was du erwartet hast und was stattdessen passiert ist
+- Deinen Browser und dein Betriebssystem
+- Einen Screenshot, falls das Problem optisch ist
+
+## Eine Funktion gewünscht?
+
+Funktionswünsche laufen ebenfalls über [GitHub Issues](https://github.com/robbeverhelst/routess/issues). Beschreibe das Problem, das du lösen willst, nicht nur die Lösung, die du dir vorstellst.
+
+## Fragen zu deinen Daten
+
+- **Alles exportieren**: Deine Profileinstellungen enthalten einen vollständigen Kontoexport (ein ZIP mit deinen Daten und einer GPX-Datei pro Route).
+- **Konto löschen**: Siehe [Konto löschen](/de/guide/account/deleting-account). Bei der Löschung gibt es eine 30-tägige Kulanzfrist, in der du es dir durch erneutes Anmelden anders überlegen kannst.
+- **Datenschutz**: Siehe [Datenschutz](/de/guide/privacy).
+
+## Häufige Probleme
+
+Sieh zuerst in der [Fehlerbehebung](/de/guide/troubleshooting) nach; die häufigsten Anmelde- und Kartenprobleme werden dort behandelt.
+`,
+	},
+	{
+		path: "privacy.mdx",
+		content: `---
+title: Datenschutz
+description: Welche Daten routess speichert und wie du sie kontrollierst.
+translationStatus: machine-draft
+---
+
+routess ist quelloffen und so gebaut, dass deine Daten dir gehören. Die vollständige Datenschutzerklärung findest du unter [routess.com/privacy](https://routess.com/privacy); diese Seite ist die Kurzfassung für App-Nutzende.
+
+## Was routess speichert
+
+- Deinen Namen und deine E-Mail-Adresse (aus der Google-Anmeldung oder der E-Mail-Registrierung)
+- Deine gespeicherten Routen (Wegpunkte und Metadaten wie Name, Aktivität und Sichtbarkeit)
+
+## Analyse
+
+routess nutzt Umami, ein datenschutzfreundliches, cookieloses Analysewerkzeug, selbst gehostet auf der routess-Infrastruktur. Nutzungsereignisse sind anonym: Sie enthalten niemals deine E-Mail-Adresse, deine Routennamen oder deine rohe Konto-ID. Es gibt keine Tracker von Drittanbietern und keine Werbeprofile.
+
+## Deine Kontrollmöglichkeiten
+
+- **Export**: Lade eine vollständige Kopie deines Kontos (JSON + GPX pro Route) aus deinen Profileinstellungen herunter.
+- **Sichtbarkeit**: Jede Route ist standardmäßig privat. Du entscheidest pro Route, ob sie privat, nicht gelistet oder öffentlich ist.
+- **Löschen**: Beim Löschen deines Kontos werden deine Routen und dein Profil nach einer 30-tägigen Kulanzfrist entfernt. Siehe [Konto löschen](/de/guide/account/deleting-account).
+
+## Selbst hosten
+
+Wenn du deine eigene routess-Instanz betreibst, bleiben deine Daten auf deiner Infrastruktur. Es ist kein Nachhausetelefonieren eingebaut.
+`,
+	},
+	{
+		path: "whats-new.mdx",
+		content: `---
+title: Neuigkeiten
+description: Wo du routess-Releases und -Änderungen verfolgst.
+translationStatus: machine-draft
+---
+
+routess wird kontinuierlich ausgeliefert: Jede zusammengeführte Verbesserung wird automatisch mit einer Versionsnummer und Release Notes veröffentlicht.
+
+- **Release Notes**: Die [GitHub-Releases-Seite](https://github.com/robbeverhelst/routess/releases) listet jede Version mit ihren Änderungen auf.
+- **Auf dem Laufenden bleiben**: Beobachte das [GitHub-Repository](https://github.com/robbeverhelst/routess), um über neue Releases benachrichtigt zu werden.
+
+Du hostest selbst? Lege mit der Variable \`ROUTESS_TAG\` eine bestimmte Version fest; siehe [Entwicklerdocs → Selbst hosten](/docs/operations/self-host).
+`,
+	},
+	{
+		path: "getting-started/sign-in.mdx",
+		content: `---
+title: Anmelden
+description: Melde dich mit Google oder per E-Mail und Passwort bei routess an.
+translationStatus: machine-draft
+---
+
+Du kannst dich bei routess mit deinem Google-Konto oder mit einer E-Mail-Adresse und einem Passwort anmelden.
+
+## Mit Google anmelden
+
+1. Öffne routess und klicke oben rechts auf **Mit Google anmelden**.
+2. Ein Google-Pop-up erscheint. Wähle das Konto aus, das du nutzen möchtest.
+3. Bestätige die angeforderten Berechtigungen.
+4. Du bist zurück in routess und angemeldet.
+
+> Screenshot-Platzhalter: Anmelde-Pop-up.
+
+### Was routess sehen kann
+
+- Deinen Namen und dein Profilbild
+- Deine E-Mail-Adresse (um dein Konto zu identifizieren)
+
+Mehr nicht. routess liest niemals dein Gmail, Drive oder deinen Kalender.
+
+## Per E-Mail anmelden
+
+1. Klicke im Anmeldebildschirm auf **Per E-Mail anmelden**.
+2. Um ein Konto zu erstellen, wähle **Konto erstellen**, gib deine E-Mail-Adresse und ein Passwort ein und bestätige den Verifizierungslink, den routess dir per E-Mail schickt.
+3. Um dich später anzumelden, gib dieselbe E-Mail-Adresse und dasselbe Passwort ein.
+
+Passwort vergessen? Nutze **Link zum Zurücksetzen senden** im Anmeldebildschirm und folge der E-Mail.
+
+Wenn du dich mit Google registriert hast, kannst du später in deinen Profileinstellungen ein Passwort hinzufügen, sodass beide Methoden für dasselbe Konto funktionieren.
+
+## Abmelden
+
+Öffne das Menü oben rechts und klicke auf **Abmelden**. Deine Routen bleiben auf dem Server gespeichert und erscheinen wieder, wenn du dich das nächste Mal anmeldest.
+
+## Probleme beim Anmelden?
+
+Siehe [Fehlerbehebung → Probleme beim Anmelden](/de/guide/troubleshooting).
+`,
+	},
+	{
+		path: "getting-started/your-first-route.mdx",
+		content: `---
+title: Deine erste Route
+description: Plane deine erste Route in unter 3 Minuten.
+translationStatus: machine-draft
+---
+
+Lass uns schnell eine Route von Grund auf planen.
+
+> Screenshot-Platzhalter: leere Karte nach der Anmeldung.
+
+## 1. Klicke deinen Startpunkt an
+
+Klicke irgendwo auf die Karte. Ein Wegpunkt erscheint: Das ist dein Startpunkt. Der erste Wegpunkt wird grün dargestellt.
+
+## 2. Wegpunkte hinzufügen
+
+Klicke erneut, um den nächsten Wegpunkt hinzuzufügen. routess verbindet deine Wegpunkte mit einer Linie und zeigt die Gesamtdistanz und -dauer in der Seitenleiste an.
+
+> Screenshot-Platzhalter: 3 Wegpunkte, die durch eine Routenlinie verbunden sind.
+
+## 3. Per Ziehen umsortieren
+
+Ziehe einen beliebigen Wegpunkt, um ihn umzusortieren. Die Route aktualisiert sich sofort.
+
+## 4. Einen Fehler rückgängig machen
+
+Falsch geklickt? Drücke **Rückgängig** (oder \`Ctrl/Cmd + Z\`). Du kannst Schritt für Schritt durch jede Änderung zurückgehen, die du vorgenommen hast.
+
+## 5. Deine Route speichern
+
+Routen werden automatisch gespeichert, sobald du angemeldet bist. Lade die Seite neu, und deine Route ist immer noch da.
+
+## Nächste Schritte
+
+- Lerne die Bearbeitungswerkzeuge in **[Routen → Routen bearbeiten](/de/guide/routes/editing-routes)** kennen
+- Passe das Aussehen unter **[Karte → Stile](/de/guide/map/styles)** an
+`,
+	},
+	{
+		path: "getting-started/interface-tour.mdx",
+		content: `---
+title: Rundgang durch die Oberfläche
+description: Ein kurzer Rundgang durch die routess-Oberfläche.
+translationStatus: machine-draft
+---
+
+> Screenshot-Platzhalter: Screenshot der gesamten App mit nummerierten Hinweisen.
+
+## Die Karte
+
+Nimmt den größten Teil des Bildschirms ein. Verschiebe sie durch Ziehen, zoome mit dem Scrollrad oder den Schaltflächen \`+\` / \`-\` unten rechts.
+
+## Die Routen-Seitenleiste
+
+Zeigt deine aktuelle Route: jeden Wegpunkt, die Distanz zwischen Wegpunkten und die Gesamtstatistik der Route. Klicke einen Wegpunkt an, um die Karte darauf zu fokussieren.
+
+## Die obere Leiste
+
+- **routess-Logo**: zurück zur Startansicht
+- **Suche**: einen Ort finden und die Karte dorthin springen lassen
+- **Sprachumschalter**: zu en/nl/fr/de wechseln
+- **Profilmenü**: dein Konto, abmelden
+
+## Bedienelemente
+
+- **Rückgängig / Wiederholen**: durch deine Bearbeitungen gehen
+- **Zurücksetzen**: die aktuelle Route leeren
+- **Mein Standort**: die Karte auf dich zentrieren (fragt beim ersten Mal nach Erlaubnis)
+
+Weiter geht es mit [Routen erstellen](/de/guide/routes/creating-routes).
+`,
+	},
+	{
+		path: "getting-started/keyboard-shortcuts.mdx",
+		content: `---
+title: Tastenkürzel
+description: Alle Tastenkürzel in routess.
+translationStatus: machine-draft
+---
+
+Alle Kürzel verwenden \`Ctrl\` unter Windows und Linux sowie \`Cmd\` unter macOS.
+
+| Kürzel | Aktion |
+| --- | --- |
+| \`Ctrl/Cmd + Z\` | Letzte Routenbearbeitung rückgängig machen |
+| \`Ctrl/Cmd + Shift + Z\` | Wiederholen |
+| \`Ctrl/Cmd + K\` | Befehlspalette öffnen |
+| \`Ctrl/Cmd + D\` | Dunkelmodus umschalten |
+| \`Esc\` | Das geöffnete Dialogfenster schließen |
+
+Die Befehlspalette ist der schnellste Weg, um zu Aktionen zu springen, ohne zur Maus zu greifen: Öffne sie und fang an zu tippen.
+`,
+	},
+	{
+		path: "routes/creating-routes.mdx",
+		content: `---
+title: Routen erstellen
+description: Wie du Wegpunkte hinzufügst und eine Route auf der Karte aufbaust.
+translationStatus: machine-draft
+---
+
+> Screenshot-Platzhalter: Klick auf die Karte, um einen Wegpunkt zu setzen.
+
+Eine Route ist einfach eine Liste von Wegpunkten. Um eine zu erstellen, klicke irgendwo auf die Karte.
+
+- Der erste Klick setzt deinen **Startpunkt** (grüner Marker).
+- Jeder Klick fügt einen Wegpunkt hinzu (nummerierter Marker).
+- routess zeichnet dabei fortlaufend eine Verbindungslinie zwischen ihnen.
+
+## Tipps
+
+- **Halten und ziehen** beim Setzen eines Markers für feine Anpassungen.
+- **Rechtsklick** (oder langes Drücken auf Touchgeräten), um einen Wegpunkt zu entfernen.
+- **Klicke auf einen leeren Bereich zwischen zwei Wegpunkten**, um in der Mitte einen Wegpunkt einzufügen.
+
+Weiter geht es mit [Routen bearbeiten](/de/guide/routes/editing-routes).
+`,
+	},
+	{
+		path: "routes/editing-routes.mdx",
+		content: `---
+title: Routen bearbeiten
+description: Ziehen, umsortieren, löschen, rückgängig machen, wiederholen und Metadaten gespeicherter Routen bearbeiten.
+translationStatus: machine-draft
+---
+
+> Screenshot-Platzhalter: Umsortieren per Ziehen in Aktion mit der Anzeige für ungespeicherte Änderungen.
+
+## Umsortieren
+
+Ziehe einen Wegpunkt-Marker auf der Karte. Die Route aktualisiert sich, sobald du loslässt.
+
+## Löschen
+
+Rechtsklick (oder langes Drücken) auf einen Wegpunkt, um ihn zu entfernen. Die Route wird um die Lücke herum neu berechnet.
+
+## Hover-Synchronisierung zwischen Seitenleiste und Karte
+
+Fahre mit dem Mauszeiger über einen Wegpunkt in der Seitenleiste, um ihn auf der Karte hervorzuheben, und über einen Marker auf der Karte, um seine Zeile in der Seitenleiste hervorzuheben. Das funktioniert in beide Richtungen, was praktisch ist, wenn eine lange Route viele Wegpunkte hat.
+
+## Rückgängig / Wiederholen
+
+- **Rückgängig:** Klicke auf die Schaltfläche Rückgängig oder drücke \`Ctrl/Cmd + Z\`
+- **Wiederholen:** Schaltfläche Wiederholen oder \`Ctrl/Cmd + Shift + Z\`
+
+routess behält deinen vollständigen Bearbeitungsverlauf für die aktuelle Sitzung.
+
+## Eine gespeicherte Route direkt bearbeiten
+
+Öffne eine Route aus deiner Bibliothek und bearbeite ihren Namen, ihre Beschreibung, ihre Sichtbarkeit oder ihre Wegpunkte direkt. Eine Anzeige "Ungespeicherte Änderungen" erscheint neben dem Titel, solange du ausstehende Bearbeitungen hast. Klicke auf **Speichern**, um sie zu übernehmen, oder auf **Verwerfen**, um zur zuletzt gespeicherten Version zurückzukehren. Wenn du die Seite mit ungespeicherten Änderungen verlässt, fragt routess vorher nach.
+
+## Zurücksetzen
+
+Klicke auf **Zurücksetzen**, um die aktuelle Route vollständig zu leeren. Das lässt sich sofort rückgängig machen, nützlich, falls du sie versehentlich geleert hast.
+`,
+	},
+	{
+		path: "routes/saving-routes.mdx",
+		content: `---
+title: Routen speichern
+description: Wie routess deine Routen über Sitzungen hinweg sichert.
+translationStatus: machine-draft
+---
+
+Sobald du angemeldet bist, wird deine aktuelle Route automatisch gespeichert und übersteht:
+
+- Seitenaktualisierungen
+- Schließen und erneutes Öffnen des Browsers
+- Anmelden auf einem anderen Gerät
+
+Es gibt keine **Speichern**-Schaltfläche; routess schreibt Änderungen, während du sie vornimmst.
+
+> Screenshot-Platzhalter: Route ist nach einer Seitenaktualisierung weiterhin vorhanden.
+
+## Was, wenn ich nicht angemeldet bin?
+
+Anonyme Routen bleiben nur in deinem Browser. Melde dich an (mit Google), um sie zu behalten.
+
+## Eine gespeicherte Route entfernen
+
+Klicke auf **Zurücksetzen**, um die Route von der Karte zu leeren. Der nächste Speichervorgang ersetzt den vorherigen.
+`,
+	},
+	{
+		path: "routes/route-info.mdx",
+		content: `---
+title: Routeninfo
+description: Distanz, Dauer, Höhe und Untergrund.
+translationStatus: machine-draft
+---
+
+Die Seitenleiste zeigt Live-Statistiken für deine Route, während du sie aufbaust.
+
+> Screenshot-Platzhalter: Seitenleiste mit Distanz, Dauer, Höhe und Untergrunddiagramm.
+
+## Gesamtstatistik
+
+- **Distanz**: Summe aller Abschnitte, in km oder mi (in deinem Konto eingestellt)
+- **Dauer**: geschätzte Reisezeit für die ausgewählte Sportart
+- **Höhenmeter**: gesamter Anstieg über die ganze Route
+
+## Statistik pro Abschnitt
+
+Klicke einen Wegpunkt in der Seitenleiste an, um ihn aufzuklappen. Du siehst die Distanz und Dauer des Abschnitts, der zu diesem Wegpunkt führt.
+
+## Höhen- und Untergrunddiagramm
+
+Unter der Statistik zeigt ein einzelnes Diagramm das Höhenprofil deiner Route, mit dem Untergrundtyp als farbige Bänder darunter. Fahre mit dem Mauszeiger über das Diagramm, um Höhe, Distanz und Untergrund an diesem Punkt der Route zu sehen. Der passende Punkt auf der Karte wird hervorgehoben, während du dich bewegst.
+
+Die Routenlinie auf der Karte nutzt außerdem Strichmuster, um den Untergrund anzudeuten: durchgezogen für befestigt, gestrichelt für unbefestigt, gepunktet für Pfade. Diagramm und Karte teilen sich dieselbe Farbskala, sodass du das eine auf einen Blick dem anderen zuordnen kannst.
+
+## Wie Schätzungen berechnet werden
+
+Die Dauer nutzt dein sportartspezifisches Tempo aus **Einstellungen → Sportarten**. Jede Sportart (Gehen, Laufen, Radfahren, Fahren) hat ihr eigenes Standardtempo; passe das Standardtempo an, wenn es nicht dazu passt, wie schnell du dich tatsächlich bewegst. Die Höhenmeter stammen aus Mapbox Terrain-RGB; der Untergrund kommt aus der Routing-Engine.
+`,
+	},
+	{
+		path: "routes/sharing-routes.mdx",
+		content: `---
+title: Routen teilen
+description: Eine Route über einen Link oder native Teilen-Ziele teilen.
+translationStatus: machine-draft
+---
+
+Klicke auf **Teilen** in der Routen-Seitenleiste, oder öffne eine gespeicherte Route und klicke auf ihre Teilen-Schaltfläche, um das Teilen-Dialogfenster aufzurufen.
+
+> Screenshot-Platzhalter: Teilen-Dialogfenster mit Link, Kopieren und nativen Teilen-Optionen.
+
+## Was im Dialogfenster steckt
+
+- **Link kopieren**: kopiert einen Link in deine Zwischenablage. Die Route selbst ist im Link codiert, sodass er immer die Route so wiedergibt, wie sie zum Zeitpunkt des Kopierens war.
+- **Natives Teilen**: Auf dem Mobilgerät öffnet das die Teilen-Ansicht deines Telefons (WhatsApp, Nachrichten, Mail usw.).
+- **Teilen-Ziele**: Sende die Route direkt an E-Mail, WhatsApp, Facebook oder X.
+- **GPX exportieren**: Lade die Route als GPX-Datei herunter, statt einen Link zu teilen.
+- **Vorschau**: ein Kartenvorschaubild und die Routenstatistik, damit die Person, der du sie schickst, weiß, was sie bekommt.
+
+## Was die empfangende Person sieht
+
+Wer den Link öffnet, sieht die Route im Planer geladen: den Pfad auf der Karte, die Statistik und das Höhen- und Untergrunddiagramm. Zum Ansehen ist kein Konto nötig, und sie kann die Route als GPX exportieren. Um eine Kopie in ihrer eigenen Bibliothek zu speichern, muss sie sich anmelden.
+
+## Sichtbarkeit: privat, nicht gelistet, öffentlich
+
+Gespeicherte Routen haben eine Sichtbarkeitseinstellung, die beim Speichern gewählt und später geändert werden kann:
+
+- **Privat**: Nur du siehst sie in deiner Bibliothek.
+- **Nicht gelistet**: Wer den Link hat, kann sie ansehen.
+- **Öffentlich**: für alle sichtbar.
+
+Du kannst unter **Einstellungen → Routing-Standards → Standardsichtbarkeit** eine Voreinstellung für neue Routen festlegen. Das Teilen eines Links über das Teilen-Dialogfenster ändert die Sichtbarkeit einer Route nicht, da der Link die Routendaten selbst trägt.
+`,
+	},
+	{
+		path: "map/navigation.mdx",
+		content: `---
+title: Kartennavigation
+description: Die Karte verschieben, zoomen und drehen.
+translationStatus: machine-draft
+---
+
+> Screenshot-Platzhalter: Kartenbedienelemente unten rechts.
+
+## Verschieben
+
+Klicke und ziehe, um dich zu bewegen. Auf Touchgeräten ziehst du mit einem Finger.
+
+## Zoomen
+
+- Nach oben scrollen, um hineinzuzoomen, nach unten, um herauszuzoomen
+- Doppelklick, um hineinzuzoomen
+- Auf Touchgeräten mit zwei Fingern zoomen
+- Die Schaltflächen \`+\` / \`-\` unten rechts nutzen
+
+## Drehen & Neigen
+
+Halte \`Ctrl\` (oder Rechtsklick) und ziehe, um zu drehen. Halte \`Ctrl + Shift\`, um die Karte in eine 3D-Perspektive zu neigen.
+
+## Neu zentrieren
+
+Klicke auf die Schaltfläche **Mein Standort**, um wieder auf deinen aktuellen Standort zu zentrieren (der Browser fragt beim ersten Mal nach Erlaubnis).
+`,
+	},
+	{
+		path: "map/styles.mdx",
+		content: `---
+title: Kartenstile
+description: Zwischen Kartendarstellungen wechseln.
+translationStatus: machine-draft
+---
+
+routess bietet einige eingebaute Kartenstile, zwischen denen du wechseln kannst.
+
+> Screenshot-Platzhalter: Menü zum Umschalten der Stile.
+
+## Verfügbare Stile
+
+- **Straßen**: detaillierte Standard-Straßenansicht
+- **Outdoor**: Höhenlinien und Wegdetails, nützlich zum Wandern
+- **Satellit**: Luftbilder
+- **Dunkel**: angenehm bei wenig Licht
+
+Der ausgewählte Stil wird über Sitzungen hinweg gemerkt.
+`,
+	},
+	{
+		path: "map/your-location.mdx",
+		content: `---
+title: Dein Standort
+description: Deinen Live-Standort auf der Karte anzeigen.
+translationStatus: machine-draft
+---
+
+routess kann deinen Standort auf der Karte anzeigen und dir folgen, während du dich bewegst.
+
+> Screenshot-Platzhalter: Standortpunkt auf der Karte.
+
+## Standort aktivieren
+
+Klicke in den Bedienelementen auf die Schaltfläche **Mein Standort**. Dein Browser fragt beim ersten Mal nach Erlaubnis; wähle **Erlauben**.
+
+Ein blauer Punkt erscheint auf der Karte an deiner aktuellen Position.
+
+## Datenschutz
+
+Dein Standort bleibt in deinem Browser. routess sendet deinen Live-Standort nicht an seine Server.
+
+## Probleme?
+
+- Stelle sicher, dass dein Browser den Standort für diese Seite verwenden darf
+- HTTPS ist erforderlich; Standorte funktionieren nicht über einfaches HTTP
+- Manche VPNs und Firmennetzwerke blockieren die Standortbestimmung
+`,
+	},
+	{
+		path: "account/profile.mdx",
+		content: `---
+title: Dein Profil
+description: Dein Profil und deine sportartspezifischen Einstellungen ansehen und aktualisieren.
+translationStatus: machine-draft
+---
+
+Öffne das Menü oben rechts und klicke auf deinen Avatar, um dein Profil anzusehen.
+
+> Screenshot-Platzhalter: Profilbildschirm mit Sportarteinstellungen.
+
+## Was du bearbeiten kannst
+
+- Anzeigename
+- Distanzeinheit (Kilometer oder Meilen)
+- Standard-Kartenstil
+- **Sportarten**: für welche Sportarten du planst (Gehen, Laufen, Radfahren, Fahren) und ein Standardtempo für jede
+
+Die E-Mail-Adresse wird aus deinem Google-Konto übernommen und kann in routess nicht geändert werden.
+
+## Sportarten und Tempo
+
+Wähle während des Onboardings eine oder mehrere Sportarten aus oder ändere sie später unter **Einstellungen → Sportarten**. Die aktuell ausgewählte Sportart bestimmt die Dauerschätzungen deiner Routen. Jede Sportart hat ihr eigenes Standardtempo; passe es an, wenn es nicht dazu passt, wie schnell du dich tatsächlich bewegst. Die Änderung wird beim nächsten Neuberechnen der Route wirksam.
+`,
+	},
+	{
+		path: "account/language.mdx",
+		content: `---
+title: Sprache
+description: Die App-Sprache ändern.
+translationStatus: machine-draft
+---
+
+routess ist verfügbar in:
+
+- English
+- Nederlands
+- Français
+- Deutsch
+
+> Screenshot-Platzhalter: Sprachumschalter in der oberen Leiste.
+
+Klicke auf den Sprachumschalter in der oberen Leiste, um zu wechseln. Die Wahl wird beim nächsten Besuch gemerkt.
+
+## Eine Sprache gewünscht, die wir nicht haben?
+
+routess ist quelloffen und Beiträge sind willkommen. Siehe [Entwicklerdocs → Pakete → i18n](/docs/packages/i18n), wie du eine Sprache hinzufügst.
+`,
+	},
+	{
+		path: "account/deleting-account.mdx",
+		content: `---
+title: Konto löschen
+description: Lösche dein routess-Konto und alle deine Routen dauerhaft.
+translationStatus: machine-draft
+---
+
+Du kannst dein routess-Konto jederzeit löschen. Das ist **dauerhaft und unwiderruflich**.
+
+## Was gelöscht wird
+
+- Dein Profil
+- Alle deine gespeicherten Routen
+- Deine Anmeldeverknüpfung mit Google
+
+## So löschst du
+
+1. Öffne das Menü → **Profil**
+2. Scrolle zu **Gefahrenbereich**
+3. Klicke auf **Konto löschen** und bestätige
+
+> Screenshot-Platzhalter: Bestätigungsdialog zum Löschen des Kontos.
+
+Nach dem Löschen wird durch erneutes Anmelden mit Google ein frisches Konto ohne Verlauf erstellt.
 `,
 	},
 ];

@@ -67,6 +67,6 @@ The CLI uses a stable exit-code taxonomy aligned with the API's domain error cod
 
 ## Scopes
 
-PATs carry one of two scopes: `read` (GET endpoints) or `write` (mutating endpoints — PATCH, DELETE). The CLI surfaces a `FORBIDDEN` (exit code 6) when you try to mutate a route with a read-only PAT; mint a write-scoped token in the web app and re-authenticate.
+PATs carry one of two scopes: `read` (GET endpoints) or `write` (mutating endpoints: PATCH, DELETE). The CLI surfaces a `FORBIDDEN` (exit code 6) when you try to mutate a route with a read-only PAT; mint a write-scoped token in the web app and re-authenticate.
 
 See the [API reference](../../api) for the full endpoint list and per-endpoint scope requirements.

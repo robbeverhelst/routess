@@ -1,19 +1,27 @@
 ---
-title: Depannage
-description: Solutions aux problemes courants.
+title: Dépannage
+description: Solutions aux problèmes courants.
 translationStatus: machine-draft
 ---
 
-## Probleme de connexion
+## Problèmes de connexion
 
-- **La pop-up Google est bloquee.** Autorisez les pop-ups pour le domaine routess.
-- **Aucun compte ne s'affiche.** Connectez-vous d'abord sur accounts.google.com.
-- **Chargement bloque.** Rechargez la page puis reessayez.
+- **La fenêtre pop-up Google est bloquée.** Autorisez les pop-ups pour le domaine routess et réessayez.
+- **« Ce compte n'est pas autorisé. »** routess utilise votre identité Google principale ; essayez de vous connecter d'abord depuis `accounts.google.com`.
+- **Bloqué sur un indicateur de chargement après la connexion.** Rechargez la page. Si cela persiste, effacez les cookies pour le domaine routess.
 
 ## La carte ne se charge pas
 
-Verifiez votre connexion et assurez-vous que les scripts routess sont autorises.
+- Vérifiez votre connexion Internet
+- Désactivez les bloqueurs de publicité et les extensions de confidentialité pour le domaine routess ; les tuiles Mapbox sont parfois bloquées
+- Essayez un autre navigateur pour écarter un problème d'extension
 
-## La position ne fonctionne pas
+## Mon itinéraire a disparu
 
-Verifiez l'autorisation de localisation dans le navigateur et sur l'appareil.
+Si vous n'étiez pas connecté, les itinéraires vivent uniquement dans votre navigateur et ont pu être effacés. Connectez-vous la prochaine fois pour les conserver.
+
+## La localisation ne fonctionne pas
+
+Consultez [Carte → Votre position](/fr/guide/map/your-location).
+
+Toujours bloqué ? [Ouvrez un ticket sur GitHub](https://github.com/robbeverhelst/routess/issues).

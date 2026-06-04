@@ -29,7 +29,7 @@ The API logs structured JSON to stdout. Anything collecting Kubernetes pod logs 
 
 ## Health endpoints
 
-- `GET /health/live` — process is alive
-- `GET /health/ready` — DB reachable, ready to serve
+- `GET /health/live`: process is alive
+- `GET /health/ready`: DB reachable, ready to serve
 
 These back the Kubernetes liveness and readiness probes.
