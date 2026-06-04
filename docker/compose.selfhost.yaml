@@ -74,7 +74,6 @@ services:
       VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?GOOGLE_CLIENT_ID is required}
       VITE_MAPBOX_ACCESS_TOKEN: ${VITE_MAPBOX_ACCESS_TOKEN:?VITE_MAPBOX_ACCESS_TOKEN is required}
       VITE_APP_VERSION: ${ROUTESS_TAG:-latest}
-      VITE_STADIA_API_KEY: ${VITE_STADIA_API_KEY:-}
       VITE_UMAMI_URL: ${VITE_UMAMI_URL:-}
       VITE_UMAMI_WEBSITE_ID: ${VITE_UMAMI_WEBSITE_ID:-}
       VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
@@ -88,6 +87,8 @@ services:
     environment:
       UMAMI_URL: ${UMAMI_URL:-}
       UMAMI_WEBSITE_ID: ${UMAMI_WEBSITE_ID:-}
+      # Canonical origin used in sitemap/robots/llms.txt links.
+      DOCS_PUBLIC_URL: ${PUBLIC_DOCS_URL:-http://localhost:${DOCS_PORT:-3002}}
     ports:
       - "${DOCS_PORT:-3002}:8080"
     restart: unless-stopped
