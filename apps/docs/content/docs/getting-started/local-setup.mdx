@@ -11,10 +11,10 @@ cp .env.example .env
 bun run dev
 ```
 
-`bun run dev` does three things:
+`bun run dev` does the following:
 
 1. Installs dependencies if `node_modules` is missing
-2. Picks free local ports for the API, docs, web app, Postgres, and pgAdmin
+2. Picks free local ports for the API, docs, web app, landing, Postgres, and pgAdmin
 3. Starts a Postgres container
 4. Starts pgAdmin
 5. Builds all `packages/*` (so the apps can import them)
@@ -25,10 +25,11 @@ Custom non-default port values in `.env` are treated as explicit overrides.
 
 You should see:
 
-- **Web** — http://localhost:5173
-- **API** — http://localhost:3000
-- **Docs** — http://localhost:3001 _(this site)_
-- **pgAdmin** — http://localhost:5050 _(or the `PGADMIN_PORT` from your root `.env`)_
+- **Web**: http://localhost:5173
+- **API**: http://localhost:3000
+- **Docs**: http://localhost:3001 _(this site)_
+- **Landing**: http://localhost:3002
+- **pgAdmin**: http://localhost:5050 _(or the `PGADMIN_PORT` from your root `.env`)_
 
 ## Environment variables
 
@@ -40,25 +41,26 @@ cp .env.example .env
 
 Required values:
 
-- `VITE_MAPBOX_ACCESS_TOKEN` — get one from [mapbox.com](https://mapbox.com)
-- `VITE_GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_ID` — from Google Cloud Console
-- `GOOGLE_CLIENT_SECRET` — from Google Cloud Console (used by API to exchange auth codes)
-- `JWT_SECRET` — any random string for local dev
+- `VITE_MAPBOX_ACCESS_TOKEN`: get one from [mapbox.com](https://mapbox.com)
+- `VITE_GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_ID`: from Google Cloud Console
+- `GOOGLE_CLIENT_SECRET`: from Google Cloud Console (used by API to exchange auth codes)
+- `JWT_SECRET`: any random string for local dev
 
 Optional local port overrides:
 
-- `PORT` — API port, defaults to `3000`
-- `DOCS_PORT` — docs port, defaults to `3001`
-- `WEB_PORT` — web port, defaults to `5173`
-- `DB_PORT` — change this when `5432` is already in use
-- `PGADMIN_PORT` — change this when `5050` is already in use
+- `PORT`: API port, defaults to `3000`
+- `DOCS_PORT`: docs port, defaults to `3001`
+- `WEB_PORT`: web port, defaults to `5173`
+- `LANDING_PORT`: landing port, defaults to `3002`
+- `DB_PORT`: change this when `5432` is already in use
+- `PGADMIN_PORT`: change this when `5050` is already in use
 
 ## Useful scripts
 
 ```sh
 bun run lint            # Biome check across the repo
 bun run check-types     # TypeScript across all workspaces
-bun run test            # Run the test suite (109 tests)
+bun run test            # Run the test suite
 bun run build           # Build everything (packages first, then apps)
 bun run ci              # Run the full CI pipeline locally
 ```

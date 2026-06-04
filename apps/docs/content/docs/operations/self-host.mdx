@@ -8,8 +8,8 @@ This walkthrough gets a routess instance running on your own machine or server i
 ## What you need
 
 - **Docker** and **Docker Compose v2** (modern Docker Desktop or Docker Engine ships with both).
-- A **Google OAuth client** — the only login provider supported today.
-- A **Mapbox access token** — free tier is fine.
+- A **Google OAuth client** for Google sign-in (the compose file requires it). Users can also sign in with email + password once the stack is up.
+- A **Mapbox access token**; the free tier is fine.
 - Long random strings for `JWT_SECRET`, `ANALYTICS_SALT`, `PAT_PEPPER`, and `DB_PASSWORD`. Generate with `openssl rand -base64 32`.
 
 Optional, gracefully disabled when unset:
@@ -73,12 +73,12 @@ The `.env` file in `docker/.env.selfhost.example` is the source of truth. The va
 
 | Variable                       | Required | Default                          | Purpose                                                                                  |
 | ------------------------------ | -------- | -------------------------------- | ---------------------------------------------------------------------------------------- |
-| `JWT_SECRET`                   | yes      | —                                | Signs session and API tokens. Rotating logs everyone out.                                |
-| `ANALYTICS_SALT`               | yes      | —                                | Hashes user IDs in analytics events. Rotating resets the analytics pseudonyms.            |
-| `PAT_PEPPER`                   | yes      | —                                | Hashes personal access tokens at rest. Rotating invalidates every existing PAT.          |
-| `DB_PASSWORD`                  | yes      | —                                | Postgres password.                                                                       |
-| `GOOGLE_CLIENT_ID/SECRET`      | yes      | —                                | Google OAuth credentials.                                                                |
-| `VITE_MAPBOX_ACCESS_TOKEN`     | yes      | —                                | Mapbox access token used by the web app.                                                 |
+| `JWT_SECRET`                   | yes      | -                                | Signs session and API tokens. Rotating logs everyone out.                                |
+| `ANALYTICS_SALT`               | yes      | -                                | Hashes user IDs in analytics events. Rotating resets the analytics pseudonyms.            |
+| `PAT_PEPPER`                   | yes      | -                                | Hashes personal access tokens at rest. Rotating invalidates every existing PAT.          |
+| `DB_PASSWORD`                  | yes      | -                                | Postgres password.                                                                       |
+| `GOOGLE_CLIENT_ID/SECRET`      | yes      | -                                | Google OAuth credentials.                                                                |
+| `VITE_MAPBOX_ACCESS_TOKEN`     | yes      | -                                | Mapbox access token used by the web app.                                                 |
 | `PUBLIC_WEB_URL`               | no       | `http://localhost:8080`          | Where users open the app. Used as OAuth redirect base.                                   |
 | `PUBLIC_API_URL`               | no       | `http://localhost:3000`          | Where the web app reaches the API.                                                       |
 | `ADMIN_EMAILS`                 | no       | empty                            | Comma-separated emails granted the admin role on login. Empty disables the admin panel. |
@@ -120,7 +120,7 @@ docker compose -f docker/compose.selfhost.yaml --project-directory . exec postgr
 
 ## Troubleshooting
 
-- **"address already in use"** on `:8080` or `:3000` — change `WEB_PORT` / `API_PORT` in `.env`.
-- **Google sign-in returns `redirect_uri_mismatch`** — the OAuth client's authorised redirect URI must exactly match `<PUBLIC_WEB_URL>/auth/callback`.
-- **Map tiles don't load** — verify `VITE_MAPBOX_ACCESS_TOKEN` is set; check browser devtools for 401s from `api.mapbox.com`.
-- **Verification emails not arriving** — set `RESEND_API_KEY` and `EMAIL_FROM`. Without them the API logs the verification URL to stdout; run `docker compose logs api | grep '\[email:console\]'`.
+- **"address already in use"** on `:8080` or `:3000`: change `WEB_PORT` / `API_PORT` in `.env`.
+- **Google sign-in returns `redirect_uri_mismatch`**: the OAuth client's authorised redirect URI must exactly match `<PUBLIC_WEB_URL>/auth/callback`.
+- **Map tiles don't load**: verify `VITE_MAPBOX_ACCESS_TOKEN` is set; check browser devtools for 401s from `api.mapbox.com`.
+- **Verification emails not arriving**: set `RESEND_API_KEY` and `EMAIL_FROM`. Without them the API logs the verification URL to stdout; run `docker compose logs api | grep '\[email:console\]'`.

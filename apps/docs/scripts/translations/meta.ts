@@ -4,21 +4,54 @@ export const meta = {
 	root: {
 		nl: {
 			title: "Gebruikersgids",
-			pages: ["index", "getting-started", "routes", "map", "account", "troubleshooting", "faq"],
+			pages: [
+				"index",
+				"getting-started",
+				"routes",
+				"map",
+				"account",
+				"troubleshooting",
+				"faq",
+				"support",
+				"privacy",
+				"whats-new",
+			],
 		},
 		fr: {
 			title: "Guide utilisateur",
-			pages: ["index", "getting-started", "routes", "map", "account", "troubleshooting", "faq"],
+			pages: [
+				"index",
+				"getting-started",
+				"routes",
+				"map",
+				"account",
+				"troubleshooting",
+				"faq",
+				"support",
+				"privacy",
+				"whats-new",
+			],
 		},
 		de: {
 			title: "Benutzerhandbuch",
-			pages: ["index", "getting-started", "routes", "map", "account", "troubleshooting", "faq"],
+			pages: [
+				"index",
+				"getting-started",
+				"routes",
+				"map",
+				"account",
+				"troubleshooting",
+				"faq",
+				"support",
+				"privacy",
+				"whats-new",
+			],
 		},
 	},
 	gettingStarted: {
-		nl: { title: "Aan de slag", pages: ["sign-in", "your-first-route", "interface-tour"] },
-		fr: { title: "Bien demarrer", pages: ["sign-in", "your-first-route", "interface-tour"] },
-		de: { title: "Erste Schritte", pages: ["sign-in", "your-first-route", "interface-tour"] },
+		nl: { title: "Aan de slag", pages: ["sign-in", "your-first-route", "interface-tour", "keyboard-shortcuts"] },
+		fr: { title: "Bien démarrer", pages: ["sign-in", "your-first-route", "interface-tour", "keyboard-shortcuts"] },
+		de: { title: "Erste Schritte", pages: ["sign-in", "your-first-route", "interface-tour", "keyboard-shortcuts"] },
 	},
 	routes: {
 		nl: {
@@ -26,7 +59,7 @@ export const meta = {
 			pages: ["creating-routes", "editing-routes", "saving-routes", "route-info", "sharing-routes"],
 		},
 		fr: {
-			title: "Itineraires",
+			title: "Itinéraires",
 			pages: ["creating-routes", "editing-routes", "saving-routes", "route-info", "sharing-routes"],
 		},
 		de: {

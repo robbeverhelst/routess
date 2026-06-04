@@ -1,4 +1,15 @@
 {
 	"title": "User Guide",
-	"pages": ["index", "getting-started", "routes", "map", "account", "troubleshooting", "faq"]
+	"pages": [
+		"index",
+		"getting-started",
+		"routes",
+		"map",
+		"account",
+		"troubleshooting",
+		"faq",
+		"support",
+		"privacy",
+		"whats-new"
+	]
 }

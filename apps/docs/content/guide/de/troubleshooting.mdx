@@ -1,19 +1,27 @@
 ---
 title: Fehlerbehebung
-description: Loesungen fuer haeufige Probleme.
+description: Lösungen für häufige Probleme.
 translationStatus: machine-draft
 ---
 
-## Anmeldung klappt nicht
+## Probleme beim Anmelden
 
-- **Google-Pop-up wird blockiert.** Erlaube Pop-ups fuer die routess-Domain.
-- **Kein Konto sichtbar.** Melde dich zuerst bei accounts.google.com an.
-- **Ladeanzeige bleibt stehen.** Lade die Seite neu und versuche es erneut.
+- **Das Google-Pop-up wird blockiert.** Erlaube Pop-ups für die routess-Domain und versuche es erneut.
+- **"Dieses Konto ist nicht autorisiert."** routess nutzt deine primäre Google-Identität; melde dich zuerst unter `accounts.google.com` an.
+- **Nach der Anmeldung bleibt ein Ladekreis hängen.** Lade die Seite neu. Falls das Problem bestehen bleibt, lösche die Cookies für die routess-Domain.
 
-## Karte laedt nicht
+## Karte lädt nicht
 
-Pruefe deine Internetverbindung und ob Scripts fuer die routess-Domain erlaubt sind.
+- Prüfe deine Internetverbindung
+- Deaktiviere Werbeblocker und Datenschutz-Erweiterungen für die routess-Domain; Mapbox-Kacheln werden manchmal blockiert
+- Probiere einen anderen Browser, um ein Erweiterungsproblem auszuschließen
+
+## Meine Route ist verschwunden
+
+Wenn du nicht angemeldet warst, bleiben Routen nur in deinem Browser und wurden möglicherweise gelöscht. Melde dich beim nächsten Mal an, um sie zu behalten.
 
 ## Standort funktioniert nicht
 
-Pruefe die Standortberechtigung im Browser und auf dem Geraet.
+Siehe [Karte → Dein Standort](/de/guide/map/your-location).
+
+Kommst du nicht weiter? [Erstelle ein Issue auf GitHub](https://github.com/robbeverhelst/routess/issues).

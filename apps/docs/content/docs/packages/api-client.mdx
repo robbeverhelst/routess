@@ -10,8 +10,8 @@ A thin wrapper over `fetch` that abstracts the differences between browser cooki
 | Subpath | Use it from |
 | --- | --- |
 | `@routess/api-client` | Common types and base client |
-| `@routess/api-client/web` | Browser — uses cookies for auth |
-| `@routess/api-client/mobile` | React Native — uses Bearer tokens from secure storage |
+| `@routess/api-client/web` | Browser; uses cookies for auth |
+| `@routess/api-client/mobile` | React Native; uses Bearer tokens from secure storage |
 
 ## Usage (web)
 
@@ -40,7 +40,7 @@ const api = createApiClient({
 
 All client methods throw `ApiError` on non-2xx responses. The error includes:
 
-- `status` — HTTP status code
-- `code` — machine-readable error code from the API
-- `message` — human-readable
-- `fieldErrors?` — for 422 validation errors
+- `status`: HTTP status code
+- `code`: machine-readable error code from the API
+- `message`: human-readable
+- `fieldErrors?`: for 422 validation errors

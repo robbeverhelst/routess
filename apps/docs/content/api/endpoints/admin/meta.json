@@ -1,0 +1,18 @@
+{
+	"title": "Admin",
+	"description": "Admin dashboard endpoints (admin role, session cookie only)",
+	"pages": [
+		"get-admin-stats-overview",
+		"get-admin-stats-users",
+		"get-admin-stats-routes",
+		"get-admin-routes",
+		"get-admin-routes-id",
+		"delete-admin-routes-id",
+		"get-admin-users",
+		"get-admin-users-id",
+		"delete-admin-users-id",
+		"delete-admin-users-id-sessions-sessionid",
+		"get-admin-system-health",
+		"get-admin-system-config-summary"
+	]
+}

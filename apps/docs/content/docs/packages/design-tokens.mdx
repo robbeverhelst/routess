@@ -7,11 +7,11 @@ Design values centralized so the web app, this docs site, and the future mobile 
 
 ## What's in it
 
-- **Colors** — light + dark palettes in OKLCH
-- **Typography** — font sizes, weights, line heights
-- **Spacing** — consistent scale (xs/sm/md/lg/xl)
-- **Border radius** — `--radius` system
-- **Animations** — fade, slide, scale, spin keyframes
+- **Colors**: light + dark palettes in OKLCH
+- **Typography**: font sizes, weights, line heights
+- **Spacing**: consistent scale (xs/sm/md/lg/xl)
+- **Border radius**: `--radius` system
+- **Animations**: fade, slide, scale, spin keyframes
 
 ## Web usage
 
@@ -32,7 +32,7 @@ Use the CSS variables directly:
 }
 ```
 
-Or the Tailwind v4 theme tokens (`bg-card`, `text-foreground`, etc.) — already wired via `@theme inline`.
+Or the Tailwind v4 theme tokens (`bg-card`, `text-foreground`, etc.), already wired via `@theme inline`.
 
 ## React Native usage
 
@@ -42,7 +42,7 @@ Import the JS exports:
 import { lightColors, darkColors, spacing } from "@routess/design-tokens";
 ```
 
-OKLCH isn't directly supported in RN — use the helper utilities in the package to get hex/rgb fallbacks.
+OKLCH isn't directly supported in RN; use the helper utilities in the package to get hex/rgb fallbacks.
 
 ## Dark mode
 

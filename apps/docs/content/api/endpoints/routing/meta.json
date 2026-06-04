@@ -1,5 +1,5 @@
 {
 	"title": "Routing",
 	"description": "Routing engine (Valhalla) proxy endpoints",
-	"pages": ["post-routing-trace-attributes"]
+	"pages": ["post-routing-trace-attributes", "post-routing-route"]
 }
