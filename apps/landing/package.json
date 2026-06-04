@@ -11,10 +11,11 @@
 		"check-types": "next typegen && tsc --noEmit",
 		"clean": "rm -rf .next",
 		"test": "bun test lib/",
-		"screenshot:hero": "bun scripts/screenshot-hero.ts"
+		"screenshots": "bun scripts/capture-screens.ts"
 	},
 	"dependencies": {
 		"@routess/design-tokens": "workspace:*",
+		"mapbox-gl": "^3.13.0",
 		"@tailwindcss/postcss": "^4.1.7",
 		"tailwindcss": "^4.1.7",
 		"postcss": "^8.4.47",

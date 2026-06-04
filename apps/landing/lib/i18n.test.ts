@@ -37,7 +37,8 @@ describe("dictionaries", () => {
 		const nl = getDict("nl");
 		expect(Object.keys(en).sort()).toEqual(Object.keys(nl).sort());
 		expect(en.hero.headlineLines.length).toBe(nl.hero.headlineLines.length);
-		expect(en.modes.items.length).toBe(nl.modes.items.length);
+		expect(en.mapStyles.items.length).toBe(nl.mapStyles.items.length);
+		expect(en.outside.bullets.length).toBe(nl.outside.bullets.length);
 		expect(en.surface.buckets.length).toBe(nl.surface.buckets.length);
 		expect(en.pricing.freePerks.length).toBe(nl.pricing.freePerks.length);
 		expect(en.pricing.proPerks.length).toBe(nl.pricing.proPerks.length);

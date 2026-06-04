@@ -75,6 +75,7 @@ export function Pricing({ dict }: { dict: Dict }) {
 					style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 22, maxWidth: 920, margin: "0 auto" }}
 				>
 					<div
+						className="reveal card-lift"
 						style={{
 							background: "oklch(0.22 0.02 270)",
 							border: "1px solid oklch(1 0 0 / 0.08)",
@@ -115,6 +116,7 @@ export function Pricing({ dict }: { dict: Dict }) {
 					</div>
 
 					<div
+						className="reveal card-lift"
 						style={{
 							background: "linear-gradient(160deg, oklch(0.42 0.19 280) 0%, oklch(0.32 0.14 280) 100%)",
 							border: "1px solid oklch(1 0 0 / 0.15)",

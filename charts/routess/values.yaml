@@ -196,6 +196,11 @@ landing:
     repository: ghcr.io/robbeverhelst/routess-landing
     tag: latest
     pullPolicy: IfNotPresent
+  env:
+    # Public (pk.*) Mapbox token for the live mini-planner map, read by the
+    # Next server at request time. Leave empty to fall back to the baked
+    # static preview image.
+    MAPBOX_PUBLIC_TOKEN: ""
   service:
     type: ClusterIP
     port: 80

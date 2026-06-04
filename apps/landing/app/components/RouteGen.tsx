@@ -1,18 +1,47 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import type { Dict } from "@/lib/content";
 import { AccentInline } from "./AccentText";
 
 export function RouteGen({ dict }: { dict: Dict }) {
 	const prompts = dict.routegen.prompts;
-	const [active, setActive] = useState(0);
+	// Typewriter: hold the current prompt, delete it, type the next one.
+	const [text, setText] = useState(prompts[0] ?? "");
 	useEffect(() => {
 		const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-		if (reduce) return;
-		const t = setInterval(() => setActive((i) => (i + 1) % prompts.length), 3500);
-		return () => clearInterval(t);
-	}, [prompts.length]);
+		if (reduce || prompts.length < 2) return;
+		let idx = 0;
+		let pos = (prompts[0] ?? "").length;
+		let deleting = true;
+		let timer: ReturnType<typeof setTimeout>;
+		const tick = () => {
+			const full = prompts[idx] ?? "";
+			if (deleting) {
+				pos = Math.max(0, pos - 3);
+				setText(full.slice(0, pos));
+				if (pos === 0) {
+					deleting = false;
+					idx = (idx + 1) % prompts.length;
+					timer = setTimeout(tick, 350);
+					return;
+				}
+				timer = setTimeout(tick, 20);
+			} else {
+				pos += 1;
+				setText((prompts[idx] ?? "").slice(0, pos));
+				if (pos >= (prompts[idx] ?? "").length) {
+					deleting = true;
+					timer = setTimeout(tick, 2400);
+					return;
+				}
+				timer = setTimeout(tick, 34);
+			}
+		};
+		timer = setTimeout(tick, 2400);
+		return () => clearTimeout(timer);
+	}, [prompts]);
 
 	return (
 		<section style={{ background: "var(--paper-2)" }}>
@@ -21,7 +50,7 @@ export function RouteGen({ dict }: { dict: Dict }) {
 					className="grid-2"
 					style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 60, alignItems: "center" }}
 				>
-					<div>
+					<div className="reveal">
 						<span className="eyebrow">{dict.routegen.eyebrow}</span>
 						<h2 className="display" style={{ fontSize: "clamp(36px, 4.4vw, 64px)", margin: "14px 0 18px" }}>
 							<AccentInline pieces={dict.routegen.title} color="var(--terracotta)" />
@@ -54,7 +83,7 @@ export function RouteGen({ dict }: { dict: Dict }) {
 						</ul>
 					</div>
 
-					<div style={{ position: "relative" }}>
+					<div className="reveal" style={{ position: "relative", "--reveal-delay": "120ms" } as React.CSSProperties}>
 						<div className="card" style={{ padding: 28, position: "relative", overflow: "hidden" }}>
 							<div className="eyebrow" style={{ marginBottom: 14 }}>
 								{dict.routegen.promptLabel}
@@ -72,7 +101,7 @@ export function RouteGen({ dict }: { dict: Dict }) {
 									color: "var(--ink)",
 								}}
 							>
-								<span>{prompts[active]}</span>
+								<span>{text}</span>
 								<span
 									style={{
 										display: "inline-block",
@@ -110,31 +139,23 @@ export function RouteGen({ dict }: { dict: Dict }) {
 							<div
 								style={{
 									marginTop: 20,
-									height: 140,
+									height: 160,
 									borderRadius: 12,
 									overflow: "hidden",
 									position: "relative",
 									background: "oklch(0.96 0.03 80)",
 								}}
 							>
-								<svg viewBox="0 0 400 140" style={{ width: "100%", height: "100%" }} aria-hidden="true">
-									<g stroke="white" strokeWidth="3" fill="none">
-										<path d="M0 30 L 400 30" />
-										<path d="M0 70 L 400 70" />
-										<path d="M0 110 L 400 110" />
-										<path d="M80 0 L 80 140" />
-										<path d="M200 0 L 200 140" />
-										<path d="M320 0 L 320 140" />
-									</g>
-									<path
-										d="M 50 100 Q 130 30, 200 60 T 350 50 Q 320 100, 250 110 T 100 100 Q 60 110, 50 100 Z"
-										fill="none"
-										stroke="var(--indigo)"
-										strokeWidth="3.5"
-										strokeLinejoin="round"
-									/>
-									<circle cx="50" cy="100" r="6" fill="var(--moss)" stroke="white" strokeWidth="2" />
-								</svg>
+								{/* Real map tiles: a loop routed via Mapbox Directions, baked
+								   by `bun run screenshots`. */}
+								<Image
+									src="/previews/routegen-loop.png"
+									alt=""
+									width={1280}
+									height={560}
+									sizes="(max-width: 900px) 100vw, 520px"
+									style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+								/>
 							</div>
 						</div>
 					</div>

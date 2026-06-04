@@ -1,103 +1,290 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import "mapbox-gl/dist/mapbox-gl.css";
+import Image from "next/image";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Dict } from "@/lib/content";
+import {
+	encodeShareRoute,
+	type LngLat,
+	MINI_PLANNER_CENTER,
+	MINI_PLANNER_START,
+	MINI_PLANNER_ZOOM,
+} from "@/lib/demo-routes";
 import { APP_HOST } from "@/lib/i18n";
 import { AccentInline } from "./AccentText";
 import { ArrowIcon, Dot } from "./Icons";
 
-interface Pt {
-	x: number;
-	y: number;
-}
+type MapboxMap = import("mapbox-gl").Map;
 
-const W = 640;
-const H = 420;
-
-const SURFACES = [
-	{ id: "paved", c: "var(--ink)" },
-	{ id: "mixed", c: "var(--sun)" },
-	{ id: "unpaved", c: "var(--terracotta)" },
-] as const;
-
-type SurfaceId = (typeof SURFACES)[number]["id"];
-
-const SVG_TO_LATLNG = (p: Pt) => {
-	// Pure illustration: map the SVG point to a plausible Belgian latlng so the
-	// "open in app" link can center the real planner there. Numbers are illustrative.
-	const lat = 51.04 + (p.y / H) * 0.04;
-	const lng = 4.27 + (p.x / W) * 0.08;
-	return { lat: lat.toFixed(5), lng: lng.toFixed(5) };
+// Mirrors the app's light map palette (apps/web/src/features/routing/managers/mapPalette.ts).
+const PALETTE = {
+	routeMain: "rgb(102, 56, 207)",
+	routeCasing: "rgba(0, 0, 0, 0.18)",
+	waypointStart: "rgb(63, 154, 90)",
+	waypointEnd: "rgb(204, 91, 56)",
+	waypointInter: "rgb(102, 56, 207)",
+	waypointStroke: "rgb(255, 255, 255)",
 };
 
-export function MiniPlanner({ dict }: { dict: Dict }) {
-	const [pts, setPts] = useState<Pt[]>([
-		{ x: 80, y: 320 },
-		{ x: 250, y: 200 },
-		{ x: 420, y: 280 },
-	]);
-	const [mode, setMode] = useState<keyof Dict["planner"]["modes"]>("run");
-	const [surface, setSurface] = useState<SurfaceId>("mixed");
+type Mode = keyof Dict["planner"]["modes"];
 
-	const path = useMemo(() => {
-		const head = pts[0];
-		if (!head || pts.length < 2) return "";
-		let d = `M ${head.x} ${head.y}`;
-		for (let i = 1; i < pts.length; i++) {
-			const p = pts[i - 1];
-			const n = pts[i];
-			if (!p || !n) continue;
-			const mx = (p.x + n.x) / 2;
-			const my = (p.y + n.y) / 2 - 12;
-			d += ` Q ${mx} ${my}, ${n.x} ${n.y}`;
-		}
-		return d;
-	}, [pts]);
+const PROFILE_BY_MODE: Record<Mode, "walking" | "cycling"> = {
+	run: "walking",
+	cycle: "cycling",
+	walk: "walking",
+};
 
-	const distance = useMemo(() => {
-		let total = 0;
-		for (let i = 1; i < pts.length; i++) {
-			const p = pts[i - 1];
-			const n = pts[i];
-			if (!p || !n) continue;
-			total += Math.hypot(n.x - p.x, n.y - p.y);
-		}
-		return (total / 18).toFixed(1);
-	}, [pts]);
+// km/h used for the time estimate, mirroring the app's per-activity pacing.
+const SPEED_BY_MODE: Record<Mode, number> = { run: 10, cycle: 18, walk: 4.8 };
 
-	const time = useMemo(() => {
-		const dist = parseFloat(distance);
-		const pace = mode === "run" ? 0.1 : mode === "cycle" ? 0.04 : 0.18;
-		return (dist * pace).toFixed(1);
-	}, [distance, mode]);
+interface RouteResult {
+	geometry: LngLat[];
+	distanceKm: number;
+	// Waypoints snapped onto the road network by Directions, so pins sit on
+	// the route instead of floating where the user clicked.
+	snapped: LngLat[] | null;
+}
 
-	const onSvgClick = (e: React.MouseEvent<SVGSVGElement>) => {
-		const svg = e.currentTarget;
-		const r = svg.getBoundingClientRect();
-		const x = ((e.clientX - r.left) / r.width) * W;
-		const y = ((e.clientY - r.top) / r.height) * H;
-		setPts((prev) => (prev.length >= 8 ? prev : [...prev, { x, y }]));
+function haversineKm(a: LngLat, b: LngLat): number {
+	const R = 6371;
+	const dLat = ((b[1] - a[1]) * Math.PI) / 180;
+	const dLng = ((b[0] - a[0]) * Math.PI) / 180;
+	const lat1 = (a[1] * Math.PI) / 180;
+	const lat2 = (b[1] * Math.PI) / 180;
+	const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+	return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+async function fetchRoute(waypoints: LngLat[], mode: Mode, token: string | undefined): Promise<RouteResult> {
+	const fallback: RouteResult = {
+		geometry: waypoints,
+		distanceKm: waypoints.slice(1).reduce((sum, wp, i) => sum + haversineKm(waypoints[i] as LngLat, wp), 0),
+		snapped: null,
 	};
+	if (!token || waypoints.length < 2) return fallback;
+	try {
+		const coords = waypoints.map(([lng, lat]) => `${lng},${lat}`).join(";");
+		const res = await fetch(
+			`https://api.mapbox.com/directions/v5/mapbox/${PROFILE_BY_MODE[mode]}/${coords}?geometries=geojson&overview=full&access_token=${token}`,
+		);
+		if (!res.ok) return fallback;
+		const data = (await res.json()) as {
+			routes?: { geometry: { coordinates: LngLat[] }; distance: number }[];
+			waypoints?: { location: LngLat }[];
+		};
+		const route = data.routes?.[0];
+		if (!route) return fallback;
+		return {
+			geometry: route.geometry.coordinates,
+			distanceKm: route.distance / 1000,
+			snapped: data.waypoints?.map((w) => w.location) ?? null,
+		};
+	} catch {
+		return fallback;
+	}
+}
 
-	const reset = () =>
-		setPts([
-			{ x: 80, y: 320 },
-			{ x: 250, y: 200 },
-			{ x: 420, y: 280 },
-		]);
+function lineFeature(coordinates: LngLat[]) {
+	return {
+		type: "FeatureCollection" as const,
+		features:
+			coordinates.length < 2
+				? []
+				: [
+						{
+							type: "Feature" as const,
+							properties: {},
+							geometry: { type: "LineString" as const, coordinates },
+						},
+					],
+	};
+}
 
-	const openInAppHref = useMemo(() => {
-		const base = `https://${APP_HOST}/`;
-		const first = pts[0];
-		if (!first) return base;
-		const { lat, lng } = SVG_TO_LATLNG(first);
-		return `${base}?center=${lat},${lng}&zoom=13`;
-	}, [pts]);
+function waypointFeatures(waypoints: LngLat[]) {
+	return {
+		type: "FeatureCollection" as const,
+		features: waypoints.map((coord, i) => ({
+			type: "Feature" as const,
+			properties: {
+				color:
+					i === 0 ? PALETTE.waypointStart : i === waypoints.length - 1 ? PALETTE.waypointEnd : PALETTE.waypointInter,
+			},
+			geometry: { type: "Point" as const, coordinates: coord },
+		})),
+	};
+}
+
+// Odometer-style tick toward a new value; jumps instantly under reduced motion.
+function useAnimatedNumber(value: number): number {
+	const [display, setDisplay] = useState(value);
+	const fromRef = useRef(value);
+	useEffect(() => {
+		if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+			fromRef.current = value;
+			setDisplay(value);
+			return;
+		}
+		const from = fromRef.current;
+		const start = performance.now();
+		const duration = 450;
+		let raf = 0;
+		const step = (now: number) => {
+			const p = Math.min(1, (now - start) / duration);
+			const eased = 1 - (1 - p) ** 3;
+			setDisplay(from + (value - from) * eased);
+			if (p < 1) {
+				raf = requestAnimationFrame(step);
+			} else {
+				fromRef.current = value;
+			}
+		};
+		raf = requestAnimationFrame(step);
+		return () => {
+			cancelAnimationFrame(raf);
+			fromRef.current = value;
+		};
+	}, [value]);
+	return display;
+}
+
+function formatTime(distanceKm: number, mode: Mode): string {
+	const minutes = (distanceKm / SPEED_BY_MODE[mode]) * 60;
+	if (minutes < 60) return `${Math.round(minutes)} min`;
+	const h = Math.floor(minutes / 60);
+	const m = Math.round(minutes % 60);
+	return `${h}:${m.toString().padStart(2, "0")} h`;
+}
+
+export function MiniPlanner({ dict, mapboxToken }: { dict: Dict; mapboxToken?: string }) {
+	const containerRef = useRef<HTMLDivElement | null>(null);
+	const mapRef = useRef<MapboxMap | null>(null);
+	const [mapReady, setMapReady] = useState(false);
+	const [waypoints, setWaypoints] = useState<LngLat[]>(MINI_PLANNER_START);
+	const [mode, setMode] = useState<Mode>("cycle");
+	const [route, setRoute] = useState<RouteResult>({ geometry: [], distanceKm: 0, snapped: null });
+	const [shareHref, setShareHref] = useState(`https://${APP_HOST}/`);
+
+	// Lazy-init the map the first time the section scrolls into view.
+	useEffect(() => {
+		const container = containerRef.current;
+		if (!container || !mapboxToken) return;
+		let cancelled = false;
+
+		const observer = new IntersectionObserver(
+			(entries) => {
+				if (!entries.some((e) => e.isIntersecting) || mapRef.current) return;
+				observer.disconnect();
+				import("mapbox-gl").then(({ default: mapboxgl }) => {
+					if (cancelled || mapRef.current) return;
+					mapboxgl.accessToken = mapboxToken;
+					const map = new mapboxgl.Map({
+						container,
+						style: "mapbox://styles/mapbox/standard",
+						center: MINI_PLANNER_CENTER,
+						zoom: MINI_PLANNER_ZOOM,
+						// No scroll-zoom: hovering the demo must not trap page scrolling.
+						scrollZoom: false,
+						attributionControl: false,
+					});
+					mapRef.current = map;
+					map.on("load", () => {
+						// Same source/layer recipe as the app's MapLayerManager:
+						// casing 5px under a 2.5px accent line, round joins.
+						map.addSource("demo-route", { type: "geojson", data: lineFeature([]) });
+						map.addSource("demo-waypoints", { type: "geojson", data: waypointFeatures([]) });
+						map.addLayer({
+							id: "demo-route-casing",
+							type: "line",
+							source: "demo-route",
+							layout: { "line-join": "round", "line-cap": "round" },
+							paint: { "line-color": PALETTE.routeCasing, "line-width": 5 },
+						});
+						map.addLayer({
+							id: "demo-route-main",
+							type: "line",
+							source: "demo-route",
+							layout: { "line-join": "round", "line-cap": "round" },
+							paint: { "line-color": PALETTE.routeMain, "line-width": 2.5, "line-emissive-strength": 1 },
+						});
+						map.addLayer({
+							id: "demo-waypoints",
+							type: "circle",
+							source: "demo-waypoints",
+							paint: {
+								"circle-radius": 6.5,
+								"circle-color": ["get", "color"],
+								"circle-stroke-color": PALETTE.waypointStroke,
+								"circle-stroke-width": 2,
+								"circle-emissive-strength": 1,
+							},
+						});
+						setMapReady(true);
+					});
+					map.on("click", (e) => {
+						setWaypoints((prev) => [...prev, [e.lngLat.lng, e.lngLat.lat] as LngLat]);
+					});
+				});
+			},
+			{ rootMargin: "200px" },
+		);
+		observer.observe(container);
+		return () => {
+			cancelled = true;
+			observer.disconnect();
+			mapRef.current?.remove();
+			mapRef.current = null;
+		};
+	}, [mapboxToken]);
+
+	// Re-route whenever pins or mode change.
+	useEffect(() => {
+		let stale = false;
+		fetchRoute(waypoints, mode, mapboxToken).then((result) => {
+			if (!stale) setRoute(result);
+		});
+		return () => {
+			stale = true;
+		};
+	}, [waypoints, mode, mapboxToken]);
+
+	// Push route + pins into the map sources.
+	useEffect(() => {
+		const map = mapRef.current;
+		if (!map || !mapReady) return;
+		const routeSource = map.getSource("demo-route") as { setData: (d: unknown) => void } | undefined;
+		const pinSource = map.getSource("demo-waypoints") as { setData: (d: unknown) => void } | undefined;
+		routeSource?.setData(lineFeature(route.geometry));
+		// Use snapped positions when they match the pin count; raw clicks
+		// otherwise (e.g. a just-added pin while routing is in flight).
+		const pins = route.snapped && route.snapped.length === waypoints.length ? route.snapped : waypoints;
+		pinSource?.setData(waypointFeatures(pins));
+	}, [route, waypoints, mapReady]);
+
+	// "Open in app" uses the app's real share-link wire format.
+	useEffect(() => {
+		let stale = false;
+		encodeShareRoute(waypoints).then((encoded) => {
+			if (stale) return;
+			setShareHref(encoded ? `https://${APP_HOST}/?route=${encoded}` : `https://${APP_HOST}/`);
+		});
+		return () => {
+			stale = true;
+		};
+	}, [waypoints]);
+
+	// Reset clears the canvas completely; the demo pins only seed the first view.
+	const reset = useCallback(() => setWaypoints([]), []);
+
+	// Both stats tick from the same animated km value, so they stay in sync.
+	const animatedKm = useAnimatedNumber(route.distanceKm);
+	const distance = animatedKm.toFixed(1);
+	const time = formatTime(animatedKm, mode);
 
 	return (
 		<section id="planner" style={{ background: "var(--paper-2)" }}>
 			<div className="container-x">
-				<div className="section-header">
+				<div className="section-header reveal">
 					<span className="eyebrow">{dict.planner.eyebrow}</span>
 					<h2 className="display">
 						<AccentInline pieces={dict.planner.title} />
@@ -107,59 +294,20 @@ export function MiniPlanner({ dict }: { dict: Dict }) {
 
 				<div className="grid-planner" style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 24 }}>
 					<div className="card" style={{ overflow: "hidden", padding: 0, position: "relative" }}>
-						{/* Decorative mouse-only enhancement; the Reset button and Open-in-app link are the real controls. */}
-						<svg
-							viewBox={`0 0 ${W} ${H}`}
-							onClick={onSvgClick}
-							style={{
-								width: "100%",
-								height: 420,
-								display: "block",
-								cursor: "crosshair",
-								background: "oklch(0.96 0.03 80)",
-							}}
-							aria-hidden="true"
-						>
-							<g>
-								<rect x="0" y="0" width={W} height={H} fill="oklch(0.96 0.03 80)" />
-								<path
-									d="M0 100 Q 100 80, 200 110 T 400 90 T 640 120 L 640 0 L 0 0 Z"
-									fill="oklch(0.92 0.08 145)"
-									opacity="0.55"
-								/>
-								<path
-									d="M380 280 Q 480 260, 560 300 T 700 360 L 700 420 L 380 420 Z"
-									fill="oklch(0.86 0.09 230)"
-									opacity="0.5"
-								/>
-								<ellipse cx="180" cy="320" rx="80" ry="40" fill="oklch(0.92 0.08 145)" opacity="0.5" />
-							</g>
-							<g stroke="white" strokeWidth="6" fill="none">
-								<path d="M-20 80 L 200 100 L 400 70 L 660 110" />
-								<path d="M-20 200 L 200 230 L 400 200 L 660 240" />
-								<path d="M-20 320 L 220 360 L 440 320 L 660 360" />
-								<path d="M120 -20 L 100 220 L 140 440" />
-								<path d="M340 -20 L 320 200 L 360 440" />
-								<path d="M520 -20 L 480 220 L 520 440" />
-							</g>
-							<g style={{ pointerEvents: "none" }}>
-								<path
-									d={path}
-									stroke="var(--indigo)"
-									strokeWidth="5"
-									fill="none"
-									strokeLinecap="round"
-									strokeDasharray={surface === "unpaved" ? "8 6" : "0"}
-								/>
-								{pts.map((p, i) => (
-									<g key={`${p.x.toFixed(2)},${p.y.toFixed(2)}`}>
-										<circle cx={p.x} cy={p.y} r="9" fill="white" stroke="var(--indigo)" strokeWidth="2.5" />
-										{i === 0 && <circle cx={p.x} cy={p.y} r="5" fill="var(--moss)" />}
-										{i === pts.length - 1 && i > 0 && <circle cx={p.x} cy={p.y} r="5" fill="var(--terracotta)" />}
-									</g>
-								))}
-							</g>
-						</svg>
+						{mapboxToken ? (
+							<div ref={containerRef} style={{ width: "100%", height: 420, cursor: "crosshair" }} />
+						) : (
+							// No token at build time: fall back to a baked static-tile
+							// preview of the same demo route.
+							<Image
+								src="/previews/mini-planner-fallback.png"
+								alt=""
+								width={1280}
+								height={840}
+								sizes="(max-width: 900px) 100vw, 640px"
+								style={{ width: "100%", height: 420, objectFit: "cover", display: "block" }}
+							/>
+						)}
 						<div style={{ position: "absolute", left: 16, bottom: 16, display: "flex", gap: 8 }}>
 							<button
 								type="button"
@@ -170,14 +318,16 @@ export function MiniPlanner({ dict }: { dict: Dict }) {
 								↻ {dict.planner.reset}
 							</button>
 							<span className="chip" style={{ background: "white" }}>
-								{pts.length} {dict.planner.waypoints}
+								{waypoints.length} {dict.planner.waypoints}
 							</span>
 						</div>
-						<div style={{ position: "absolute", right: 16, top: 16 }}>
-							<span className="chip" style={{ background: "white" }}>
-								<Dot color="var(--indigo)" /> {dict.planner.clickHint}
-							</span>
-						</div>
+						{mapboxToken && (
+							<div style={{ position: "absolute", right: 16, top: 16 }}>
+								<span className="chip" style={{ background: "white" }}>
+									<Dot color="var(--indigo)" /> {dict.planner.clickHint}
+								</span>
+							</div>
+						)}
 					</div>
 
 					<div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -185,7 +335,8 @@ export function MiniPlanner({ dict }: { dict: Dict }) {
 							<div className="eyebrow" style={{ marginBottom: 10 }}>
 								{dict.planner.mode}
 							</div>
-							<div style={{ display: "flex", gap: 6, padding: 4, background: "var(--paper-2)", borderRadius: 999 }}>
+							{/* Pill tabs styled like the app's activity switcher. */}
+							<div style={{ display: "flex", gap: 6 }}>
 								{(["run", "cycle", "walk"] as const).map((m) => (
 									<button
 										key={m}
@@ -193,61 +344,30 @@ export function MiniPlanner({ dict }: { dict: Dict }) {
 										onClick={() => setMode(m)}
 										style={{
 											flex: 1,
-											height: 36,
+											height: 32,
 											borderRadius: 999,
-											border: "none",
 											cursor: "pointer",
 											fontSize: 13,
 											fontWeight: 600,
-											background: mode === m ? "var(--ink)" : "transparent",
-											color: mode === m ? "var(--paper)" : "var(--ink-soft)",
+											border: mode === m ? "1px solid oklch(0.5 0.17 282)" : "1px solid var(--line)",
+											background: mode === m ? "oklch(0.5 0.17 282 / 0.12)" : "var(--paper)",
+											color: mode === m ? "oklch(0.5 0.17 282)" : "var(--ink-soft)",
+											transition: "all 120ms",
 										}}
 									>
 										{dict.planner.modes[m]}
 									</button>
 								))}
 							</div>
-
-							<div className="eyebrow" style={{ marginTop: 18, marginBottom: 10 }}>
-								{dict.planner.surface}
-							</div>
-							<div style={{ display: "flex", gap: 6 }}>
-								{SURFACES.map((s) => (
-									<button
-										key={s.id}
-										type="button"
-										onClick={() => setSurface(s.id)}
-										style={{
-											flex: 1,
-											height: 36,
-											borderRadius: 10,
-											cursor: "pointer",
-											border: surface === s.id ? "2px solid var(--indigo)" : "1.5px solid var(--line)",
-											background: "var(--paper)",
-											fontSize: 12,
-											fontWeight: 600,
-											color: "var(--ink-soft)",
-											display: "flex",
-											flexDirection: "column",
-											alignItems: "center",
-											justifyContent: "center",
-											gap: 3,
-											textTransform: "capitalize",
-										}}
-									>
-										<span style={{ width: "70%", height: 4, borderRadius: 2, background: s.c }} />
-										{dict.planner.surfaces[s.id]}
-									</button>
-								))}
-							</div>
 						</div>
 
-						<div className="card card-pad" style={{ background: "var(--ink)", color: "var(--paper)" }}>
+						{/* Stats card mirroring the app's floating route chip. */}
+						<div className="card card-pad">
 							<div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
 								<span
 									style={{
 										fontSize: 11,
-										opacity: 0.7,
+										color: "var(--muted-color)",
 										fontFamily: "var(--font-mono)",
 										letterSpacing: "0.08em",
 										textTransform: "uppercase",
@@ -255,47 +375,37 @@ export function MiniPlanner({ dict }: { dict: Dict }) {
 								>
 									{dict.planner.total}
 								</span>
-								<span style={{ fontSize: 11, opacity: 0.7, fontFamily: "var(--font-mono)" }}>
+								<span style={{ fontSize: 11, color: "var(--muted-color)", fontFamily: "var(--font-mono)" }}>
 									{dict.planner.computedLive}
 								</span>
 							</div>
-							<div style={{ display: "flex", gap: 22, marginTop: 8 }}>
-								<div>
-									<div className="display" style={{ fontSize: 36, color: "var(--paper)" }}>
-										{distance}
+							<div style={{ display: "flex", gap: 26, marginTop: 12 }}>
+								{[
+									{ label: "km", value: distance },
+									{ label: dict.planner.timeLabel, value: time },
+								].map((stat) => (
+									<div key={stat.label}>
+										<div style={{ fontSize: 26, fontWeight: 700, fontFamily: "var(--font-mono)", letterSpacing: -0.5 }}>
+											{stat.value}
+										</div>
+										<div
+											style={{
+												fontSize: 11,
+												color: "var(--muted-color)",
+												fontFamily: "var(--font-mono)",
+												textTransform: "uppercase",
+												letterSpacing: "0.08em",
+												marginTop: 2,
+											}}
+										>
+											{stat.label}
+										</div>
 									</div>
-									<div
-										style={{
-											fontSize: 11,
-											opacity: 0.6,
-											fontFamily: "var(--font-mono)",
-											textTransform: "uppercase",
-											letterSpacing: "0.08em",
-										}}
-									>
-										km
-									</div>
-								</div>
-								<div>
-									<div className="display" style={{ fontSize: 36, color: "var(--paper)" }}>
-										{time}
-									</div>
-									<div
-										style={{
-											fontSize: 11,
-											opacity: 0.6,
-											fontFamily: "var(--font-mono)",
-											textTransform: "uppercase",
-											letterSpacing: "0.08em",
-										}}
-									>
-										h
-									</div>
-								</div>
+								))}
 							</div>
 							<a
 								className="btn"
-								href={openInAppHref}
+								href={shareHref}
 								style={{
 									width: "100%",
 									marginTop: 18,

@@ -257,6 +257,7 @@ section.tight {
 }
 .nav.scrolled {
 	border-bottom-color: var(--line);
+	box-shadow: 0 6px 24px oklch(0.2 0.02 270 / 0.06);
 }
 
 /* Nav: desktop is one inline row (the menu wrapper dissolves via display:contents),
@@ -336,6 +337,9 @@ section.tight {
 	animation: marquee 40s linear infinite;
 	width: max-content;
 }
+.marquee:hover {
+	animation-play-state: paused;
+}
 
 @keyframes marquee {
 	to {
@@ -379,6 +383,25 @@ section.tight {
 .float {
 	animation: float 4s ease-in-out infinite;
 }
+.float-slow {
+	animation: float 6s ease-in-out infinite;
+}
+
+/* Hero shows the desktop capture; below 900px the layout flattens and the
+   real mobile capture takes over (a center-crop of the desktop UI reads as
+   mush at phone widths). */
+/* Mobile hero: the whole phone, framed, instead of a cropped desktop slice. */
+.hero-phone {
+	display: none;
+}
+.hero-phone-frame {
+	width: 240px;
+	border-radius: 36px;
+	border: 9px solid var(--ink);
+	background: var(--ink);
+	overflow: hidden;
+	box-shadow: 0 24px 50px oklch(0.2 0.02 270 / 0.22);
+}
 
 /* Hero "app screenshot": tilted, oversized, bleeds off the right column */
 .hero-screenshot-wrap {
@@ -411,6 +434,16 @@ section.tight {
 	display: flex;
 	flex-direction: column;
 	will-change: transform;
+	/* Settle-in on load: the keyframe has no `to`, so it eases into whatever
+	   transform the active media query gives the element. */
+	animation: hero-settle 800ms cubic-bezier(0.2, 0, 0, 1) backwards;
+}
+
+@keyframes hero-settle {
+	from {
+		opacity: 0;
+		transform: translateY(-46%) rotateY(-24deg) rotateX(8deg) rotateZ(0.5deg);
+	}
 }
 
 @media (max-width: 1200px) {
@@ -428,16 +461,16 @@ section.tight {
 
 @media (max-width: 900px) {
 	.hero-screenshot-wrap {
-		min-height: 360px;
+		min-height: 0;
 		perspective: none;
 	}
 	.hero-screenshot {
-		position: relative;
-		top: auto;
-		width: 100%;
-		max-width: 100%;
-		height: 420px;
-		transform: none;
+		display: none;
+	}
+	.hero-phone {
+		display: flex;
+		justify-content: center;
+		padding: 10px 0 4px;
 	}
 }
 
@@ -447,27 +480,77 @@ section.tight {
 	}
 }
 
-/* Reveal on scroll (CSS-only via animation-timeline where supported, JS fallback off) */
-.reveal {
+/* Reveal on scroll. The hidden state only applies once AnimationRoot has
+   mounted and set data-anim-ready on <html>, so content stays visible
+   without JS (and for crawlers). Stagger with --reveal-delay. */
+[data-anim-ready] .reveal {
 	opacity: 0;
-	transform: translateY(24px);
+	transform: translateY(18px);
 	transition:
-		opacity 700ms ease,
-		transform 700ms ease;
+		opacity 700ms cubic-bezier(0.2, 0, 0, 1),
+		transform 700ms cubic-bezier(0.2, 0, 0, 1);
+	transition-delay: var(--reveal-delay, 0ms);
 }
-.reveal.in {
+[data-anim-ready] .reveal.in {
 	opacity: 1;
 	transform: translateY(0);
+}
+
+/* Surface bar: segments grow in left-to-right once their .reveal parent is in. */
+[data-anim-ready] .reveal .surface-seg {
+	transform: scaleX(0);
+	transform-origin: left;
+	transition: transform 800ms cubic-bezier(0.2, 0, 0, 1);
+	transition-delay: var(--seg-delay, 0ms);
+}
+[data-anim-ready] .reveal.in .surface-seg {
+	transform: scaleX(1);
+}
+
+/* Card hover lift for image tiles and pricing cards. */
+.card-lift {
+	transition:
+		transform 160ms ease,
+		box-shadow 160ms ease;
+}
+.card-lift:hover {
+	transform: translateY(-3px);
+	box-shadow: 0 10px 30px oklch(0.2 0.02 270 / 0.12);
+}
+.card-lift img {
+	transition: transform 300ms ease;
+}
+.card-lift:hover img {
+	transform: scale(1.03);
+}
+
+/* CTA micro-interactions: arrow nudges along, gentle press. */
+.btn-primary svg,
+.btn-indigo svg {
+	transition: transform 160ms ease;
+}
+.btn-primary:hover svg,
+.btn-indigo:hover svg {
+	transform: translateX(3px);
+}
+.btn:active {
+	transform: scale(0.98);
 }
 
 /* Honour reduced motion */
 @media (prefers-reduced-motion: reduce) {
 	.marquee,
-	.float {
+	.float,
+	.float-slow,
+	.hero-screenshot {
 		animation: none;
 	}
-	.reveal {
+	[data-anim-ready] .reveal {
 		opacity: 1;
+		transform: none;
+		transition: none;
+	}
+	[data-anim-ready] .reveal .surface-seg {
 		transform: none;
 		transition: none;
 	}
@@ -476,4 +559,10 @@ section.tight {
 		animation-iteration-count: 1;
 		transition-duration: 0.001ms;
 	}
+}
+
+/* Mini-planner demo map: hide Mapbox chrome so nothing is accidentally clickable. */
+#planner .mapboxgl-ctrl-logo,
+#planner .mapboxgl-ctrl-attrib {
+	display: none;
 }

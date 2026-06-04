@@ -134,6 +134,7 @@
       "dependencies": {
         "@routess/design-tokens": "workspace:*",
         "@tailwindcss/postcss": "^4.1.7",
+        "mapbox-gl": "^3.13.0",
         "next": "^16.0.0",
         "postcss": "^8.4.47",
         "react": "^19.2.0",
