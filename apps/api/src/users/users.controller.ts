@@ -20,7 +20,6 @@ import { UsersService } from "./users.service";
 
 @ApiTags("users")
 @ApiBearerAuth("JWT-auth")
-@ApiBearerAuth("PAT-auth")
 @UseGuards(UnifiedAuthGuard, ScopeGuard)
 @Controller("users")
 export class UsersController {
@@ -35,8 +34,11 @@ export class UsersController {
 
 	@ApiOperation({
 		summary: "Get current user profile",
+		description:
+			"Returns the authenticated user's profile with route statistics. `/users/profile` is an alias of `/users/me`.",
 	})
 	@ApiResponse({ status: 200, type: UserProfileDto })
+	@ApiBearerAuth("PAT-auth")
 	@ThrottleModerate()
 	@RequireScope("read")
 	@Get(["me", "profile"])
@@ -49,8 +51,10 @@ export class UsersController {
 
 	@ApiOperation({
 		summary: "Update current user profile",
+		description: "Updates profile fields (display name, locale, preferences) on the authenticated user.",
 	})
 	@ApiResponse({ status: 200, type: UserProfileDto })
+	@ApiBearerAuth("PAT-auth")
 	@ThrottleModerate()
 	@RequireScope("write")
 	@Patch("me")
