@@ -302,6 +302,7 @@ export const nl: Record<string, string> = {
 	"common.close": "Sluiten",
 	"common.done": "Klaar",
 	"common.loading": "Laden…",
+	"map.loading": "Kaart laden…",
 	"common.tryAgain": "Probeer opnieuw.",
 	"common.share": "Delen",
 	"common.more": "Meer",

@@ -305,6 +305,12 @@
 	}
 }
 
+@keyframes rds-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
 @keyframes rds-sheet-in {
 	from {
 		transform: translateY(100%);
