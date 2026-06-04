@@ -1,5 +1,5 @@
 import type { RouteVisibility } from "@routess/core";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ComponentType, useEffect, useState } from "react";
 import { useLogout, useUserProfile } from "@/lib/api-queries";
 import { emitAppEvent } from "@/lib/app-events";
 import { type SupportedLanguage, t, tIn } from "@/lib/i18n";
@@ -15,7 +15,8 @@ import {
 import { useToastStore } from "@/stores/toastStore";
 import { type RedesignAccent, type RedesignActivity, useUiStore } from "@/stores/uiStore";
 import { I } from "../components/icons";
-import { Btn, RDS_COLORS, SecTitle, Toggle } from "../components/primitives";
+import { Btn, RDS_COLORS, Toggle } from "../components/primitives";
+import { Segmented, Select, SettingsBlock, SettingsRow, SettingsSection } from "../components/settings";
 import { ApiTokensSection } from "./ApiTokensSection";
 
 const LANGUAGE_OPTIONS: { value: SupportedLanguage; label: string }[] = [
@@ -25,7 +26,7 @@ const LANGUAGE_OPTIONS: { value: SupportedLanguage; label: string }[] = [
 	{ value: "de", label: "Deutsch" },
 ];
 
-const SPORT_OPTIONS: { key: RedesignActivity; labelKey: string; icon: React.ComponentType<{ size?: number }> }[] = [
+const SPORT_OPTIONS: { key: RedesignActivity; labelKey: string; icon: ComponentType<{ size?: number }> }[] = [
 	{ key: "run", labelKey: "sport.run", icon: I.run },
 	{ key: "cycle", labelKey: "sport.cycle", icon: I.bike },
 	{ key: "walk", labelKey: "sport.walk", icon: I.walk },
@@ -43,89 +44,6 @@ const VISIBILITY_OPTIONS: { key: RouteVisibility; labelKey: string; subKey: stri
 	{ key: "public", labelKey: "save.visibility.public", subKey: "save.visibility.publicSub" },
 ];
 
-function Group({ title, children }: { title: string; children: ReactNode }) {
-	return (
-		<div style={{ marginBottom: 22 }}>
-			<SecTitle style={{ marginBottom: 10 }}>{title}</SecTitle>
-			<div
-				style={{
-					background: RDS_COLORS.bgPanel,
-					border: `1px solid ${RDS_COLORS.border}`,
-					borderRadius: 10,
-					overflow: "hidden",
-				}}
-			>
-				{children}
-			</div>
-		</div>
-	);
-}
-
-function Row({ label, sub, control, last }: { label: string; sub?: string; control: ReactNode; last?: boolean }) {
-	return (
-		<div
-			style={{
-				display: "flex",
-				alignItems: "center",
-				gap: 12,
-				padding: "12px 14px",
-				borderBottom: last ? "none" : `1px solid ${RDS_COLORS.border}`,
-			}}
-		>
-			<div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
-				<div style={{ fontSize: 13, color: RDS_COLORS.fg }}>{label}</div>
-				{sub && <div style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle, marginTop: 2 }}>{sub}</div>}
-			</div>
-			{control}
-		</div>
-	);
-}
-
-function Segmented({
-	value,
-	onChange,
-	options,
-}: {
-	value: string;
-	onChange: (v: string) => void;
-	options: { value: string; label: string }[];
-}) {
-	return (
-		<div
-			style={{
-				display: "flex",
-				gap: 4,
-				background: RDS_COLORS.bgInput,
-				padding: 2,
-				borderRadius: 6,
-			}}
-		>
-			{options.map((o) => {
-				const on = value === o.value;
-				return (
-					<button
-						key={o.value}
-						type="button"
-						onClick={() => onChange(o.value)}
-						style={{
-							padding: "4px 10px",
-							borderRadius: 4,
-							background: on ? RDS_COLORS.bgPanel : "transparent",
-							border: 0,
-							fontSize: 12,
-							fontWeight: 500,
-							color: on ? RDS_COLORS.fg : RDS_COLORS.fgMuted,
-							cursor: "pointer",
-						}}
-					>
-						{o.label}
-					</button>
-				);
-			})}
-		</div>
-	);
-}
-
 const KM_PER_MILE = 1.609344;
 
 function formatSpeedDraft(kmh: number, units: "km" | "mi"): string {
@@ -141,7 +59,6 @@ function SpeedRow({
 	onChange,
 	onReset,
 	isDefault,
-	last,
 }: {
 	label: string;
 	sub: string;
@@ -150,7 +67,6 @@ function SpeedRow({
 	onChange: (kmh: number) => void;
 	onReset: () => void;
 	isDefault: boolean;
-	last?: boolean;
 }) {
 	const unitLabel = units === "mi" ? "mph" : "km/h";
 	const [draft, setDraft] = useState(() => formatSpeedDraft(kmh, units));
@@ -172,13 +88,12 @@ function SpeedRow({
 	};
 
 	return (
-		<Row
+		<SettingsRow
 			label={label}
 			sub={sub}
-			last={last}
 			control={
 				<div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-					<input
+					<TextInput
 						type="number"
 						inputMode="decimal"
 						min={units === "mi" ? Math.round((SPORT_SPEED_MIN_KMH / KM_PER_MILE) * 10) / 10 : SPORT_SPEED_MIN_KMH}
@@ -202,18 +117,7 @@ function SpeedRow({
 								e.currentTarget.blur();
 							}
 						}}
-						style={{
-							width: 68,
-							height: 30,
-							padding: "0 8px",
-							borderRadius: 6,
-							background: RDS_COLORS.bgInput,
-							border: `1px solid ${RDS_COLORS.border}`,
-							color: RDS_COLORS.fg,
-							fontSize: 12.5,
-							textAlign: "right",
-							fontVariantNumeric: "tabular-nums",
-						}}
+						style={{ width: 68, textAlign: "right", fontVariantNumeric: "tabular-nums" }}
 					/>
 					<span style={{ fontSize: 11.5, color: RDS_COLORS.fgMuted, width: 32 }}>{unitLabel}</span>
 					<Btn
@@ -324,13 +228,8 @@ export function SettingsPanel() {
 
 	return (
 		<div style={{ padding: "20px 20px", overflow: "auto", height: "100%" }}>
-			<Group title={t("settings.profile")}>
-				<div
-					style={{
-						padding: "14px 14px 16px",
-						borderBottom: `1px solid ${RDS_COLORS.border}`,
-					}}
-				>
+			<SettingsSection title={t("settings.profile")}>
+				<SettingsBlock>
 					<div style={{ fontSize: 13, color: RDS_COLORS.fg }}>{t("settings.sports.title")}</div>
 					<div
 						style={{
@@ -425,8 +324,8 @@ export function SettingsPanel() {
 							);
 						})}
 					</div>
-				</div>
-				<Row
+				</SettingsBlock>
+				<SettingsRow
 					label={t("settings.units.label")}
 					control={
 						<Segmented
@@ -438,17 +337,15 @@ export function SettingsPanel() {
 							]}
 						/>
 					}
-					last
 				/>
-			</Group>
+			</SettingsSection>
 
 			{selectedSports.length > 0 && (
-				<Group title={t("settings.pace.title")}>
-					{selectedSports.map((sport, idx) => {
+				<SettingsSection title={t("settings.pace.title")}>
+					{selectedSports.map((sport) => {
 						const cfg = SPORT_OPTIONS.find((s) => s.key === sport);
 						if (!cfg) return null;
 						const kmh = getSpeedForActivity(sport, sportSpeeds);
-						const isLast = idx === selectedSports.length - 1;
 						return (
 							<SpeedRow
 								key={sport}
@@ -459,39 +356,26 @@ export function SettingsPanel() {
 								onChange={(next) => setSportSpeed(sport, next)}
 								onReset={() => setSportSpeed(sport, DEFAULT_SPORT_SPEEDS_KMH[sport])}
 								isDefault={kmh === DEFAULT_SPORT_SPEEDS_KMH[sport]}
-								last={isLast}
 							/>
 						);
 					})}
-				</Group>
+				</SettingsSection>
 			)}
 
-			<Group title={t("settings.appearance")}>
-				<Row
+			<SettingsSection title={t("settings.appearance")}>
+				<SettingsRow
 					label={t("settings.language")}
 					control={
-						<select
-							value={language}
-							onChange={(e) => setLanguage(e.target.value as SupportedLanguage)}
-							style={{
-								height: 30,
-								padding: "0 8px",
-								borderRadius: 6,
-								background: RDS_COLORS.bgInput,
-								border: `1px solid ${RDS_COLORS.border}`,
-								color: RDS_COLORS.fg,
-								fontSize: 12.5,
-							}}
-						>
+						<Select value={language} onChange={(e) => setLanguage(e.target.value as SupportedLanguage)}>
 							{LANGUAGE_OPTIONS.map((o) => (
 								<option key={o.value} value={o.value}>
 									{o.label}
 								</option>
 							))}
-						</select>
+						</Select>
 					}
 				/>
-				<Row
+				<SettingsRow
 					label={t("settings.theme")}
 					control={
 						<Segmented
@@ -504,7 +388,7 @@ export function SettingsPanel() {
 						/>
 					}
 				/>
-				<Row
+				<SettingsRow
 					label={t("settings.accent.label")}
 					control={
 						<div style={{ display: "flex", gap: 6 }}>
@@ -516,6 +400,7 @@ export function SettingsPanel() {
 										type="button"
 										onClick={() => setAccent(a.key)}
 										title={t(a.labelKey)}
+										aria-pressed={on}
 										style={{
 											width: 22,
 											height: 22,
@@ -530,59 +415,45 @@ export function SettingsPanel() {
 							})}
 						</div>
 					}
-					last
 				/>
-			</Group>
+			</SettingsSection>
 
-			<Group title={t("settings.map.label")}>
-				<Row
+			<SettingsSection title={t("settings.map.label")}>
+				<SettingsRow
 					label={t("settings.map.styleLabel")}
 					control={
-						<select
-							value={mapStyle}
-							onChange={(e) => handleMapStyleChange(e.target.value as RedesignMapStyle)}
-							style={{
-								height: 30,
-								padding: "0 8px",
-								borderRadius: 6,
-								background: RDS_COLORS.bgInput,
-								border: `1px solid ${RDS_COLORS.border}`,
-								color: RDS_COLORS.fg,
-								fontSize: 12.5,
-							}}
-						>
+						<Select value={mapStyle} onChange={(e) => handleMapStyleChange(e.target.value as RedesignMapStyle)}>
 							<option value="streets">{t("settings.map.streets")}</option>
 							<option value="outdoors">{t("settings.map.outdoors")}</option>
 							<option value="satellite">{t("settings.map.satellite")}</option>
-						</select>
+						</Select>
 					}
 				/>
-				<Row
+				<SettingsRow
 					label={t("settings.map.pois")}
 					sub={t("common.comingSoon")}
 					control={<Toggle on={showPois} onChange={handleShowPoisChange} disabled />}
 				/>
-				<Row
+				<SettingsRow
 					label={t("settings.map.terrain3d")}
 					sub={t("common.comingSoon")}
 					control={<Toggle on={terrain3d} onChange={setTerrain3d} disabled />}
 				/>
-				<Row label={t("settings.map.autoSnap")} control={<Toggle on={autoSnap} onChange={setAutoSnap} />} />
-				<Row
+				<SettingsRow label={t("settings.map.autoSnap")} control={<Toggle on={autoSnap} onChange={setAutoSnap} />} />
+				<SettingsRow
 					label={t("settings.map.offTrackGuide")}
 					sub={t("settings.map.offTrackGuideSub")}
 					control={<Toggle on={showOffTrackGuideLine} onChange={setShowOffTrackGuideLine} />}
 				/>
-				<Row
+				<SettingsRow
 					label={t("settings.map.headingCone")}
 					sub={t("settings.map.headingConeSub")}
 					control={<Toggle on={showHeadingCone} onChange={setShowHeadingCone} />}
-					last
 				/>
-			</Group>
+			</SettingsSection>
 
-			<Group title={t("settings.privacy")}>
-				<Row
+			<SettingsSection title={t("settings.privacy")}>
+				<SettingsRow
 					label={t("settings.privacy.locationAccess")}
 					sub={t("common.comingSoon")}
 					control={
@@ -590,52 +461,40 @@ export function SettingsPanel() {
 							{t("settings.privacy.enable")}
 						</Btn>
 					}
-					last
 				/>
-			</Group>
+			</SettingsSection>
 
-			<Group title={t("settings.routingDefaults")}>
-				<Row
+			<SettingsSection title={t("settings.routingDefaults")}>
+				<SettingsRow
 					label={t("settings.routingDefaults.visibility")}
 					sub={t("settings.routingDefaults.visibilitySub")}
 					control={
-						<select
+						<Select
 							value={defaultRouteVisibility}
 							onChange={(e) => setDefaultRouteVisibility(e.target.value as RouteVisibility)}
-							style={{
-								height: 30,
-								padding: "0 8px",
-								borderRadius: 6,
-								background: RDS_COLORS.bgInput,
-								border: `1px solid ${RDS_COLORS.border}`,
-								color: RDS_COLORS.fg,
-								fontSize: 12.5,
-							}}
 						>
 							{VISIBILITY_OPTIONS.map((opt) => (
 								<option key={opt.key} value={opt.key}>
 									{t(opt.labelKey)}
 								</option>
 							))}
-						</select>
+						</Select>
 					}
-					last
 				/>
-			</Group>
+			</SettingsSection>
 
-			<Group title={t("settings.experimental")}>
-				<Row
+			<SettingsSection title={t("settings.experimental")}>
+				<SettingsRow
 					label={t("settings.experimental.nodeNetworkOverlays")}
 					sub={t("settings.experimental.nodeNetworkOverlaysSub")}
 					control={<Toggle on={showNodeNetworkOverlays} onChange={setShowNodeNetworkOverlays} />}
-					last
 				/>
-			</Group>
+			</SettingsSection>
 
 			{profile && <ApiTokensSection />}
 
-			<Group title={t("settings.account")}>
-				<Row
+			<SettingsSection title={t("settings.account")}>
+				<SettingsRow
 					label={profile ? t("settings.account.manage") : t("settings.account.signInPrompt")}
 					sub={profile ? t("settings.account.manageSub") : t("settings.account.signInSub")}
 					control={
@@ -647,21 +506,19 @@ export function SettingsPanel() {
 							{profile ? t("settings.account.open") : t("common.signIn")}
 						</Btn>
 					}
-					last
 				/>
-			</Group>
+			</SettingsSection>
 
-			<Group title={t("settings.about")}>
-				<Row
+			<SettingsSection title={t("settings.about")}>
+				<SettingsRow
 					label={t("settings.version")}
 					control={
 						<span style={{ fontSize: 12.5, color: RDS_COLORS.fgMuted, fontVariantNumeric: "tabular-nums" }}>
 							{getVersionDisplay()}
 						</span>
 					}
-					last
 				/>
-			</Group>
+			</SettingsSection>
 		</div>
 	);
 }

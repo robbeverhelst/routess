@@ -267,6 +267,11 @@
 	}
 }
 
+/* Settings group row dividers (replaces per-row `last` props) */
+[data-redesign] .rds-settings-group > *:not(:last-child) {
+	border-bottom: 1px solid var(--rds-border);
+}
+
 /* Bottom tab bar pill press feedback */
 [data-redesign] .rds-tab-btn:active .rds-tab-pill {
 	transform: scale(0.92);
