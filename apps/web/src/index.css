@@ -272,6 +272,10 @@
 	border-bottom: 1px solid var(--rds-border);
 }
 
+[data-redesign] .rds-settings-nav-row:hover {
+	background: var(--rds-bg-hover);
+}
+
 /* Bottom tab bar pill press feedback */
 [data-redesign] .rds-tab-btn:active .rds-tab-pill {
 	transform: scale(0.92);

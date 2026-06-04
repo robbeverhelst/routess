@@ -16,8 +16,37 @@ import { useToastStore } from "@/stores/toastStore";
 import { type RedesignAccent, type RedesignActivity, useUiStore } from "@/stores/uiStore";
 import { I } from "../components/icons";
 import { Btn, RDS_COLORS, Toggle } from "../components/primitives";
-import { Segmented, Select, SettingsBlock, SettingsRow, SettingsSection } from "../components/settings";
+import {
+	Segmented,
+	Select,
+	SettingsBlock,
+	SettingsDetailHeader,
+	SettingsNavRow,
+	SettingsRow,
+	SettingsSection,
+	TextInput,
+} from "../components/settings";
 import { ApiTokensSection } from "./ApiTokensSection";
+
+type SettingsSectionKey = "account" | "sports" | "mapDisplay" | "privacy" | "advanced";
+
+const SECTIONS: {
+	key: SettingsSectionKey;
+	icon: ComponentType<{ size?: number }>;
+	titleKey: string;
+	subKey: string;
+}[] = [
+	{ key: "account", icon: I.user, titleKey: "settings.section.account", subKey: "settings.section.accountSub" },
+	{ key: "sports", icon: I.activity, titleKey: "settings.section.sports", subKey: "settings.section.sportsSub" },
+	{
+		key: "mapDisplay",
+		icon: I.layers,
+		titleKey: "settings.section.mapDisplay",
+		subKey: "settings.section.mapDisplaySub",
+	},
+	{ key: "privacy", icon: I.shield, titleKey: "settings.section.privacy", subKey: "settings.section.privacySub" },
+	{ key: "advanced", icon: I.sliders, titleKey: "settings.section.advanced", subKey: "settings.section.advancedSub" },
+];
 
 const LANGUAGE_OPTIONS: { value: SupportedLanguage; label: string }[] = [
 	{ value: "en", label: "English" },
@@ -142,6 +171,7 @@ const ACCENT_OPTIONS: { key: RedesignAccent; labelKey: string; swatch: string }[
 ];
 
 export function SettingsPanel() {
+	const [section, setSection] = useState<SettingsSectionKey | null>(null);
 	const { data: profile } = useUserProfile();
 	const logout = useLogout();
 	const pushToast = useToastStore((s) => s.push);
@@ -149,10 +179,6 @@ export function SettingsPanel() {
 	const {
 		units,
 		setUnits,
-		showPois,
-		setShowPois,
-		terrain3d,
-		setTerrain3d,
 		setDefaultActivity,
 		selectedSports,
 		toggleSport,
@@ -206,14 +232,6 @@ export function SettingsPanel() {
 		emitAppEvent("routess:open-account");
 	};
 
-	const handleMapStyleChange = (nextStyle: RedesignMapStyle) => {
-		setMapStyle(nextStyle);
-	};
-
-	const handleShowPoisChange = (next: boolean) => {
-		setShowPois(next);
-	};
-
 	const handleSignOut = () => {
 		if (!profile) {
 			emitAppEvent("routess:open-login");
@@ -226,299 +244,313 @@ export function SettingsPanel() {
 		});
 	};
 
-	return (
-		<div style={{ padding: "20px 20px", overflow: "auto", height: "100%" }}>
-			<SettingsSection title={t("settings.profile")}>
-				<SettingsBlock>
-					<div style={{ fontSize: 13, color: RDS_COLORS.fg }}>{t("settings.sports.title")}</div>
-					<div
-						style={{
-							fontSize: 11.5,
-							color: RDS_COLORS.fgSubtle,
-							marginTop: 4,
-							maxWidth: 360,
-							lineHeight: 1.45,
-						}}
-					>
-						{t("settings.sports.subtitle")}
-					</div>
-					<div
-						style={{
-							display: "flex",
-							flexWrap: "wrap",
-							gap: 10,
-							marginTop: 14,
-						}}
-					>
-						{SPORT_OPTIONS.map((s) => {
-							const on = selectedSports.includes(s.key);
-							const isDefault = on && defaultSport === s.key;
-							const Icon = s.icon;
-							const sportLabel = t(s.labelKey);
-							return (
-								<div
-									key={s.key}
-									style={{
-										display: "inline-flex",
-										alignItems: "center",
-										gap: 6,
-										padding: 4,
-										borderRadius: 999,
-										background: on ? RDS_COLORS.accentSoft : RDS_COLORS.bgInput,
-										border: `1px solid ${on ? RDS_COLORS.accent : RDS_COLORS.border}`,
-									}}
-								>
-									<button
-										type="button"
-										onClick={() => handleToggleSport(s.key)}
-										aria-pressed={on}
-										title={
-											on
-												? t("settings.sports.removeAria", { sport: sportLabel })
-												: t("settings.sports.addAria", { sport: sportLabel })
-										}
-										style={{
-											display: "inline-flex",
-											alignItems: "center",
-											gap: 7,
-											padding: "6px 10px",
-											borderRadius: 999,
-											background: "transparent",
-											border: 0,
-											color: on ? RDS_COLORS.accent : RDS_COLORS.fgMuted,
-											fontSize: 12.5,
-											fontWeight: 600,
-											cursor: "pointer",
-										}}
-									>
-										<Icon size={12} />
-										{sportLabel}
-									</button>
-									<button
-										type="button"
-										onClick={() => handleSetDefault(s.key)}
-										aria-pressed={isDefault}
-										title={
-											isDefault
-												? t("settings.sports.defaultTitle")
-												: t("settings.sports.makeDefault", { sport: sportLabel })
-										}
-										style={{
-											width: 26,
-											height: 26,
-											padding: 0,
-											borderRadius: 999,
-											background: isDefault ? RDS_COLORS.accent : RDS_COLORS.bgPanel,
-											color: isDefault ? RDS_COLORS.accentFg : on ? RDS_COLORS.accent : RDS_COLORS.fgSubtle,
-											border: isDefault ? "none" : `1px solid ${on ? RDS_COLORS.accent : RDS_COLORS.border}`,
-											display: "inline-flex",
-											alignItems: "center",
-											justifyContent: "center",
-											cursor: isDefault ? "default" : "pointer",
-											boxShadow: isDefault ? "0 0 0 1px rgba(255,255,255,0.24) inset" : "none",
-										}}
-									>
-										<I.check size={12} />
-									</button>
-								</div>
-							);
-						})}
-					</div>
-				</SettingsBlock>
-				<SettingsRow
-					label={t("settings.units.label")}
-					control={
-						<Segmented
-							value={units}
-							onChange={(v) => setUnits(v as "km" | "mi")}
-							options={[
-								{ value: "km", label: t("settings.units.metric") },
-								{ value: "mi", label: t("settings.units.imperial") },
-							]}
-						/>
-					}
-				/>
-			</SettingsSection>
+	const active = section ? SECTIONS.find((s) => s.key === section) : null;
 
-			{selectedSports.length > 0 && (
-				<SettingsSection title={t("settings.pace.title")}>
-					{selectedSports.map((sport) => {
-						const cfg = SPORT_OPTIONS.find((s) => s.key === sport);
-						if (!cfg) return null;
-						const kmh = getSpeedForActivity(sport, sportSpeeds);
-						return (
-							<SpeedRow
-								key={sport}
-								label={t(cfg.labelKey)}
-								sub={t("settings.pace.subtitle")}
-								kmh={kmh}
-								units={units}
-								onChange={(next) => setSportSpeed(sport, next)}
-								onReset={() => setSportSpeed(sport, DEFAULT_SPORT_SPEEDS_KMH[sport])}
-								isDefault={kmh === DEFAULT_SPORT_SPEEDS_KMH[sport]}
-							/>
-						);
-					})}
+	if (!active) {
+		return (
+			<div style={{ padding: 20, overflow: "auto", height: "100%" }}>
+				<SettingsSection>
+					{SECTIONS.map((s) => (
+						<SettingsNavRow
+							key={s.key}
+							icon={s.icon}
+							label={t(s.titleKey)}
+							sub={t(s.subKey)}
+							onClick={() => setSection(s.key)}
+						/>
+					))}
+				</SettingsSection>
+				<div
+					style={{
+						textAlign: "center",
+						fontSize: 11.5,
+						color: RDS_COLORS.fgSubtle,
+						fontVariantNumeric: "tabular-nums",
+					}}
+				>
+					routess {getVersionDisplay()}
+				</div>
+			</div>
+		);
+	}
+
+	return (
+		<div style={{ padding: 20, overflow: "auto", height: "100%" }}>
+			<SettingsDetailHeader title={t(active.titleKey)} backLabel={t("nav.settings")} onBack={() => setSection(null)} />
+
+			{section === "account" && (
+				<SettingsSection>
+					<SettingsRow
+						label={profile ? t("settings.account.manage") : t("settings.account.signInPrompt")}
+						sub={profile ? t("settings.account.manageSub") : t("settings.account.signInSub")}
+						control={
+							<Btn
+								variant={profile ? "ghost" : "primary"}
+								onClick={profile ? handleEditProfile : handleSignOut}
+								disabled={!profile && logout.isPending}
+							>
+								{profile ? t("settings.account.open") : t("common.signIn")}
+							</Btn>
+						}
+					/>
 				</SettingsSection>
 			)}
 
-			<SettingsSection title={t("settings.appearance")}>
-				<SettingsRow
-					label={t("settings.language")}
-					control={
-						<Select value={language} onChange={(e) => setLanguage(e.target.value as SupportedLanguage)}>
-							{LANGUAGE_OPTIONS.map((o) => (
-								<option key={o.value} value={o.value}>
-									{o.label}
-								</option>
-							))}
-						</Select>
-					}
-				/>
-				<SettingsRow
-					label={t("settings.theme")}
-					control={
-						<Segmented
-							value={theme}
-							onChange={(v) => setTheme(v as "light" | "dark")}
-							options={[
-								{ value: "light", label: t("settings.theme.light") },
-								{ value: "dark", label: t("settings.theme.dark") },
-							]}
+			{section === "sports" && (
+				<>
+					<SettingsSection>
+						<SettingsBlock>
+							<div style={{ fontSize: 13, color: RDS_COLORS.fg }}>{t("settings.sports.title")}</div>
+							<div
+								style={{
+									fontSize: 11.5,
+									color: RDS_COLORS.fgSubtle,
+									marginTop: 4,
+									maxWidth: 360,
+									lineHeight: 1.45,
+								}}
+							>
+								{t("settings.sports.subtitle")}
+							</div>
+							<div
+								style={{
+									display: "flex",
+									flexWrap: "wrap",
+									gap: 10,
+									marginTop: 14,
+								}}
+							>
+								{SPORT_OPTIONS.map((s) => {
+									const on = selectedSports.includes(s.key);
+									const isDefault = on && defaultSport === s.key;
+									const Icon = s.icon;
+									const sportLabel = t(s.labelKey);
+									return (
+										<div
+											key={s.key}
+											style={{
+												display: "inline-flex",
+												alignItems: "center",
+												gap: 6,
+												padding: 4,
+												borderRadius: 999,
+												background: on ? RDS_COLORS.accentSoft : RDS_COLORS.bgInput,
+												border: `1px solid ${on ? RDS_COLORS.accent : RDS_COLORS.border}`,
+											}}
+										>
+											<button
+												type="button"
+												onClick={() => handleToggleSport(s.key)}
+												aria-pressed={on}
+												title={
+													on
+														? t("settings.sports.removeAria", { sport: sportLabel })
+														: t("settings.sports.addAria", { sport: sportLabel })
+												}
+												style={{
+													display: "inline-flex",
+													alignItems: "center",
+													gap: 7,
+													padding: "6px 10px",
+													borderRadius: 999,
+													background: "transparent",
+													border: 0,
+													color: on ? RDS_COLORS.accent : RDS_COLORS.fgMuted,
+													fontSize: 12.5,
+													fontWeight: 600,
+													cursor: "pointer",
+												}}
+											>
+												<Icon size={12} />
+												{sportLabel}
+											</button>
+											<button
+												type="button"
+												onClick={() => handleSetDefault(s.key)}
+												aria-pressed={isDefault}
+												title={
+													isDefault
+														? t("settings.sports.defaultTitle")
+														: t("settings.sports.makeDefault", { sport: sportLabel })
+												}
+												style={{
+													width: 26,
+													height: 26,
+													padding: 0,
+													borderRadius: 999,
+													background: isDefault ? RDS_COLORS.accent : RDS_COLORS.bgPanel,
+													color: isDefault ? RDS_COLORS.accentFg : on ? RDS_COLORS.accent : RDS_COLORS.fgSubtle,
+													border: isDefault ? "none" : `1px solid ${on ? RDS_COLORS.accent : RDS_COLORS.border}`,
+													display: "inline-flex",
+													alignItems: "center",
+													justifyContent: "center",
+													cursor: isDefault ? "default" : "pointer",
+													boxShadow: isDefault ? "0 0 0 1px rgba(255,255,255,0.24) inset" : "none",
+												}}
+											>
+												<I.check size={12} />
+											</button>
+										</div>
+									);
+								})}
+							</div>
+						</SettingsBlock>
+						<SettingsRow
+							label={t("settings.units.label")}
+							control={
+								<Segmented
+									value={units}
+									onChange={(v) => setUnits(v as "km" | "mi")}
+									options={[
+										{ value: "km", label: t("settings.units.metric") },
+										{ value: "mi", label: t("settings.units.imperial") },
+									]}
+								/>
+							}
 						/>
-					}
-				/>
-				<SettingsRow
-					label={t("settings.accent.label")}
-					control={
-						<div style={{ display: "flex", gap: 6 }}>
-							{ACCENT_OPTIONS.map((a) => {
-								const on = accent === a.key;
+					</SettingsSection>
+
+					{selectedSports.length > 0 && (
+						<SettingsSection title={t("settings.pace.title")}>
+							{selectedSports.map((sport) => {
+								const cfg = SPORT_OPTIONS.find((s) => s.key === sport);
+								if (!cfg) return null;
+								const kmh = getSpeedForActivity(sport, sportSpeeds);
 								return (
-									<button
-										key={a.key}
-										type="button"
-										onClick={() => setAccent(a.key)}
-										title={t(a.labelKey)}
-										aria-pressed={on}
-										style={{
-											width: 22,
-											height: 22,
-											borderRadius: 999,
-											background: a.swatch,
-											border: on ? `2px solid ${RDS_COLORS.fg}` : `2px solid ${RDS_COLORS.border}`,
-											cursor: "pointer",
-											padding: 0,
-										}}
+									<SpeedRow
+										key={sport}
+										label={t(cfg.labelKey)}
+										sub={t("settings.pace.subtitle")}
+										kmh={kmh}
+										units={units}
+										onChange={(next) => setSportSpeed(sport, next)}
+										onReset={() => setSportSpeed(sport, DEFAULT_SPORT_SPEEDS_KMH[sport])}
+										isDefault={kmh === DEFAULT_SPORT_SPEEDS_KMH[sport]}
 									/>
 								);
 							})}
-						</div>
-					}
-				/>
-			</SettingsSection>
+						</SettingsSection>
+					)}
+				</>
+			)}
 
-			<SettingsSection title={t("settings.map.label")}>
-				<SettingsRow
-					label={t("settings.map.styleLabel")}
-					control={
-						<Select value={mapStyle} onChange={(e) => handleMapStyleChange(e.target.value as RedesignMapStyle)}>
-							<option value="streets">{t("settings.map.streets")}</option>
-							<option value="outdoors">{t("settings.map.outdoors")}</option>
-							<option value="satellite">{t("settings.map.satellite")}</option>
-						</Select>
-					}
-				/>
-				<SettingsRow
-					label={t("settings.map.pois")}
-					sub={t("common.comingSoon")}
-					control={<Toggle on={showPois} onChange={handleShowPoisChange} disabled />}
-				/>
-				<SettingsRow
-					label={t("settings.map.terrain3d")}
-					sub={t("common.comingSoon")}
-					control={<Toggle on={terrain3d} onChange={setTerrain3d} disabled />}
-				/>
-				<SettingsRow label={t("settings.map.autoSnap")} control={<Toggle on={autoSnap} onChange={setAutoSnap} />} />
-				<SettingsRow
-					label={t("settings.map.offTrackGuide")}
-					sub={t("settings.map.offTrackGuideSub")}
-					control={<Toggle on={showOffTrackGuideLine} onChange={setShowOffTrackGuideLine} />}
-				/>
-				<SettingsRow
-					label={t("settings.map.headingCone")}
-					sub={t("settings.map.headingConeSub")}
-					control={<Toggle on={showHeadingCone} onChange={setShowHeadingCone} />}
-				/>
-			</SettingsSection>
+			{section === "mapDisplay" && (
+				<>
+					<SettingsSection title={t("settings.map.label")}>
+						<SettingsRow
+							label={t("settings.map.styleLabel")}
+							control={
+								<Select value={mapStyle} onChange={(e) => setMapStyle(e.target.value as RedesignMapStyle)}>
+									<option value="streets">{t("settings.map.streets")}</option>
+									<option value="outdoors">{t("settings.map.outdoors")}</option>
+									<option value="satellite">{t("settings.map.satellite")}</option>
+								</Select>
+							}
+						/>
+						<SettingsRow label={t("settings.map.autoSnap")} control={<Toggle on={autoSnap} onChange={setAutoSnap} />} />
+						<SettingsRow
+							label={t("settings.map.offTrackGuide")}
+							sub={t("settings.map.offTrackGuideSub")}
+							control={<Toggle on={showOffTrackGuideLine} onChange={setShowOffTrackGuideLine} />}
+						/>
+						<SettingsRow
+							label={t("settings.map.headingCone")}
+							sub={t("settings.map.headingConeSub")}
+							control={<Toggle on={showHeadingCone} onChange={setShowHeadingCone} />}
+						/>
+					</SettingsSection>
 
-			<SettingsSection title={t("settings.privacy")}>
-				<SettingsRow
-					label={t("settings.privacy.locationAccess")}
-					sub={t("common.comingSoon")}
-					control={
-						<Btn variant="ghost" disabled title={t("common.comingSoon")}>
-							{t("settings.privacy.enable")}
-						</Btn>
-					}
-				/>
-			</SettingsSection>
+					<SettingsSection title={t("settings.appearance")}>
+						<SettingsRow
+							label={t("settings.language")}
+							control={
+								<Select value={language} onChange={(e) => setLanguage(e.target.value as SupportedLanguage)}>
+									{LANGUAGE_OPTIONS.map((o) => (
+										<option key={o.value} value={o.value}>
+											{o.label}
+										</option>
+									))}
+								</Select>
+							}
+						/>
+						<SettingsRow
+							label={t("settings.theme")}
+							control={
+								<Segmented
+									value={theme}
+									onChange={(v) => setTheme(v as "light" | "dark")}
+									options={[
+										{ value: "light", label: t("settings.theme.light") },
+										{ value: "dark", label: t("settings.theme.dark") },
+									]}
+								/>
+							}
+						/>
+						<SettingsRow
+							label={t("settings.accent.label")}
+							control={
+								<div style={{ display: "flex", gap: 6 }}>
+									{ACCENT_OPTIONS.map((a) => {
+										const on = accent === a.key;
+										return (
+											<button
+												key={a.key}
+												type="button"
+												onClick={() => setAccent(a.key)}
+												title={t(a.labelKey)}
+												aria-pressed={on}
+												style={{
+													width: 22,
+													height: 22,
+													borderRadius: 999,
+													background: a.swatch,
+													border: on ? `2px solid ${RDS_COLORS.fg}` : `2px solid ${RDS_COLORS.border}`,
+													cursor: "pointer",
+													padding: 0,
+												}}
+											/>
+										);
+									})}
+								</div>
+							}
+						/>
+					</SettingsSection>
+				</>
+			)}
 
-			<SettingsSection title={t("settings.routingDefaults")}>
-				<SettingsRow
-					label={t("settings.routingDefaults.visibility")}
-					sub={t("settings.routingDefaults.visibilitySub")}
-					control={
-						<Select
-							value={defaultRouteVisibility}
-							onChange={(e) => setDefaultRouteVisibility(e.target.value as RouteVisibility)}
-						>
-							{VISIBILITY_OPTIONS.map((opt) => (
-								<option key={opt.key} value={opt.key}>
-									{t(opt.labelKey)}
-								</option>
-							))}
-						</Select>
-					}
-				/>
-			</SettingsSection>
+			{section === "privacy" && (
+				<SettingsSection title={t("settings.routingDefaults")}>
+					<SettingsRow
+						label={t("settings.routingDefaults.visibility")}
+						sub={t("settings.routingDefaults.visibilitySub")}
+						control={
+							<Select
+								value={defaultRouteVisibility}
+								onChange={(e) => setDefaultRouteVisibility(e.target.value as RouteVisibility)}
+							>
+								{VISIBILITY_OPTIONS.map((opt) => (
+									<option key={opt.key} value={opt.key}>
+										{t(opt.labelKey)}
+									</option>
+								))}
+							</Select>
+						}
+					/>
+				</SettingsSection>
+			)}
 
-			<SettingsSection title={t("settings.experimental")}>
-				<SettingsRow
-					label={t("settings.experimental.nodeNetworkOverlays")}
-					sub={t("settings.experimental.nodeNetworkOverlaysSub")}
-					control={<Toggle on={showNodeNetworkOverlays} onChange={setShowNodeNetworkOverlays} />}
-				/>
-			</SettingsSection>
-
-			{profile && <ApiTokensSection />}
-
-			<SettingsSection title={t("settings.account")}>
-				<SettingsRow
-					label={profile ? t("settings.account.manage") : t("settings.account.signInPrompt")}
-					sub={profile ? t("settings.account.manageSub") : t("settings.account.signInSub")}
-					control={
-						<Btn
-							variant={profile ? "ghost" : "primary"}
-							onClick={profile ? handleEditProfile : handleSignOut}
-							disabled={!profile && logout.isPending}
-						>
-							{profile ? t("settings.account.open") : t("common.signIn")}
-						</Btn>
-					}
-				/>
-			</SettingsSection>
-
-			<SettingsSection title={t("settings.about")}>
-				<SettingsRow
-					label={t("settings.version")}
-					control={
-						<span style={{ fontSize: 12.5, color: RDS_COLORS.fgMuted, fontVariantNumeric: "tabular-nums" }}>
-							{getVersionDisplay()}
-						</span>
-					}
-				/>
-			</SettingsSection>
+			{section === "advanced" && (
+				<>
+					{profile && <ApiTokensSection />}
+					<SettingsSection title={t("settings.experimental")}>
+						<SettingsRow
+							label={t("settings.experimental.nodeNetworkOverlays")}
+							sub={t("settings.experimental.nodeNetworkOverlaysSub")}
+							control={<Toggle on={showNodeNetworkOverlays} onChange={setShowNodeNetworkOverlays} />}
+						/>
+					</SettingsSection>
+				</>
+			)}
 		</div>
 	);
 }

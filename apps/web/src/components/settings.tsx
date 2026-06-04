@@ -1,4 +1,5 @@
 import {
+	type ComponentType,
 	type CSSProperties,
 	cloneElement,
 	type InputHTMLAttributes,
@@ -7,13 +8,14 @@ import {
 	type SelectHTMLAttributes,
 	useId,
 } from "react";
-import { RDS_COLORS, SecTitle } from "./primitives";
+import { I } from "./icons";
+import { IconBtn, RDS_COLORS, SecTitle } from "./primitives";
 
 // Shared settings primitives. All settings UI (SettingsPanel, AccountScreen,
 // ApiTokensSection) must compose these instead of hand-rolling rows/cards.
 
 interface SettingsSectionProps {
-	title: string;
+	title?: string;
 	footer?: ReactNode;
 	danger?: boolean;
 	children: ReactNode;
@@ -22,7 +24,9 @@ interface SettingsSectionProps {
 export function SettingsSection({ title, footer, danger, children }: SettingsSectionProps) {
 	return (
 		<section style={{ marginBottom: 22 }}>
-			<SecTitle style={{ marginBottom: 10, ...(danger ? { color: RDS_COLORS.danger } : null) }}>{title}</SecTitle>
+			{title && (
+				<SecTitle style={{ marginBottom: 10, ...(danger ? { color: RDS_COLORS.danger } : null) }}>{title}</SecTitle>
+			)}
 			<div
 				className="rds-settings-group"
 				style={{
@@ -97,6 +101,76 @@ export function Field({ label, children }: { label: string; children: ReactEleme
 				{label}
 			</label>
 			{cloneElement(children, { id })}
+		</div>
+	);
+}
+
+interface SettingsNavRowProps {
+	icon: ComponentType<{ size?: number }>;
+	label: string;
+	sub?: string;
+	onClick: () => void;
+}
+
+// Root-level section entry: icon + label + chevron, pushes a detail view.
+export function SettingsNavRow({ icon: Icon, label, sub, onClick }: SettingsNavRowProps) {
+	return (
+		<button
+			type="button"
+			onClick={onClick}
+			className="rds-settings-nav-row"
+			style={{
+				display: "flex",
+				alignItems: "center",
+				gap: 12,
+				width: "100%",
+				minHeight: 52,
+				padding: "12px 14px",
+				background: "transparent",
+				border: 0,
+				cursor: "pointer",
+				textAlign: "left",
+			}}
+		>
+			<span
+				style={{
+					width: 32,
+					height: 32,
+					borderRadius: 8,
+					background: RDS_COLORS.accentSoft,
+					color: RDS_COLORS.accent,
+					display: "inline-flex",
+					alignItems: "center",
+					justifyContent: "center",
+					flexShrink: 0,
+				}}
+			>
+				<Icon size={15} />
+			</span>
+			<span style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
+				<span style={{ fontSize: 13, fontWeight: 500, color: RDS_COLORS.fg }}>{label}</span>
+				{sub && <span style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle, marginTop: 2 }}>{sub}</span>}
+			</span>
+			<span style={{ display: "inline-flex", color: RDS_COLORS.fgSubtle, flexShrink: 0 }}>
+				<I.chevronR size={14} />
+			</span>
+		</button>
+	);
+}
+
+interface SettingsDetailHeaderProps {
+	title: string;
+	backLabel: string;
+	onBack: () => void;
+}
+
+export function SettingsDetailHeader({ title, backLabel, onBack }: SettingsDetailHeaderProps) {
+	return (
+		<div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 16 }}>
+			<IconBtn onClick={onBack} title={backLabel}>
+				<I.chevronL size={16} />
+			</IconBtn>
+			<div style={{ fontSize: 15, fontWeight: 600, color: RDS_COLORS.fg }}>{title}</div>
 		</div>
 	);
 }
