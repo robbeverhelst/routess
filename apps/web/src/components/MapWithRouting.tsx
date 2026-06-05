@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useLocalStorageInit } from "@/components/hooks/useLocalStorageInit";
 import { useMapWithRoutingState } from "@/components/hooks/useMapWithRoutingState";
+import { LibraryRoutePreview } from "@/components/map/LibraryRoutePreview";
 import { MapCanvas } from "@/components/map/MapCanvas";
 import { MapShortcutBindings } from "@/components/map/MapShortcutBindings";
 import { MapInteractionProvider } from "@/components/providers/MapInteractionProvider";
@@ -231,6 +232,7 @@ const MapWithRoutingContent: React.FC<MapboxMapProps> = ({
 	return (
 		<RouteDraftEditorProvider editor={editor}>
 			<UserLocationProvider mapRef={mapRef} hasRoute={hasRoute} isMapReady={mapRef.current !== null}>
+				<LibraryRoutePreview mapRef={mapRef} />
 				<MapConfigurationContent
 					mapRef={mapRef}
 					hasRoute={hasRoute}

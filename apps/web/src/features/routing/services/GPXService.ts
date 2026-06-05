@@ -29,17 +29,18 @@ export interface ParsedGpxWaypoint {
  * through this app preserve routed/direct semantics. Foreign tools ignore
  * unknown extensions cleanly.
  */
-export const generateGPXString = (waypoints: Waypoint[], routePath: Coordinate[]): string => {
+export const generateGPXString = (waypoints: Waypoint[], routePath: Coordinate[], name?: string): string => {
+	const routeName = name?.trim() ? escapeXml(name.trim()) : "Exported Route";
 	let gpxString = `<?xml version="1.0" encoding="UTF-8"?>
 <gpx version="1.1" creator="Routess" xmlns="http://www.topografix.com/GPX/1/1" xmlns:routess="${ROUTESS_GPX_NS}" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
   <metadata>
-    <name>Exported Route</name>
+    <name>${routeName}</name>
     <time>${new Date().toISOString()}</time>
   </metadata>
 `;
 
 	if (waypoints.length > 0) {
-		gpxString += `  <rte>\n    <name>Route Waypoints</name>\n`;
+		gpxString += `  <rte>\n    <name>${routeName}</name>\n`;
 		waypoints.forEach((waypoint) => {
 			const lat = waypoint.coord[1];
 			const lon = waypoint.coord[0];

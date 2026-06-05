@@ -12,6 +12,7 @@ import {
 	ArrayMaxSize,
 	ArrayMinSize,
 	IsArray,
+	IsBoolean,
 	IsIn,
 	IsNotEmpty,
 	IsNumber,
@@ -155,6 +156,14 @@ export class CreateRouteDto {
 	@IsString({ each: true })
 	@ArrayMaxSize(20)
 	tags?: string[];
+
+	@ApiPropertyOptional({
+		description: "Whether the owner marked this route as a favourite",
+		default: false,
+	})
+	@IsOptional()
+	@IsBoolean()
+	favourite?: boolean;
 
 	@ApiProperty({
 		description: "Array of waypoints that define the route",

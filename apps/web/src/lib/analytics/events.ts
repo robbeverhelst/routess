@@ -92,9 +92,15 @@ export type ProductEvent =
 			};
 	  }
 
-	// Library (feature pending, see #138)
+	// Library
 	| { name: "library_searched"; properties: { query_length_bucket: string; result_count_bucket: string } }
 	| { name: "library_filtered"; properties: { filter_type: string; result_count_bucket: string } }
+	| { name: "route_favourited"; properties: { favourite: boolean } }
+
+	// Collections
+	| { name: "collection_created"; properties: { visibility: RouteVisibility } }
+	| { name: "collection_deleted"; properties: EmptyProps }
+	| { name: "collection_share_link_copied"; properties: { visibility: RouteVisibility } }
 
 	// Payment (feature pending, see #135)
 	| { name: "payment_started"; properties: { plan: string; interval: "monthly" | "yearly" } }

@@ -9,13 +9,18 @@ import type {
 	AdminUserList,
 	AdminUserStats,
 	ApiClientConfig,
+	ApiCollection,
+	ApiCollectionDetail,
 	ApiPersonalAccessToken,
 	ApiPersonalAccessTokenWithSecret,
 	ApiRoute,
+	ApiRoutesPage,
 	ApiUser,
 	AuthResponse,
+	CreateCollectionRequest,
 	CreatePersonalAccessTokenRequest,
 	CreateRouteRequest,
+	UpdateCollectionRequest,
 	UpdateCurrentUserRequest,
 	UpdateRouteRequest,
 } from "../types";
@@ -30,7 +35,7 @@ export class ApiClient {
 	private async request<T>(
 		endpoint: string,
 		options: {
-			method?: "GET" | "POST" | "PATCH" | "DELETE";
+			method?: "GET" | "GET_WITH_HEADERS" | "POST" | "PUT" | "PATCH" | "DELETE";
 			body?: unknown;
 			headers?: Record<string, string>;
 		} = {},
@@ -54,10 +59,14 @@ export class ApiClient {
 			switch (method) {
 				case "GET":
 					return await httpClient.get<T>(url, requestOptions);
+				case "GET_WITH_HEADERS":
+					return (await httpClient.getWithHeaders(url, requestOptions)) as T;
 				case "DELETE":
 					return await httpClient.delete<T>(url, requestOptions);
 				case "POST":
 					return await httpClient.post<T>(url, body, requestOptions);
+				case "PUT":
+					return await httpClient.put<T>(url, body, requestOptions);
 				case "PATCH":
 					return await httpClient.patch<T>(url, body, requestOptions);
 			}
@@ -226,8 +235,31 @@ export class ApiClient {
 		});
 	}
 
+	// One page of the user's routes. The server caps `limit` at 200.
+	async getRoutesPage(params: { limit?: number; offset?: number } = {}): Promise<ApiRoutesPage> {
+		const query = new URLSearchParams();
+		if (params.limit !== undefined) query.set("limit", String(params.limit));
+		if (params.offset !== undefined) query.set("offset", String(params.offset));
+		const qs = query.toString();
+		const { data, headers } = await this.request<{ data: ApiRoute[]; headers: Record<string, string> }>(
+			`/routes${qs ? `?${qs}` : ""}`,
+			{ method: "GET_WITH_HEADERS" },
+		);
+		const total = Number.parseInt(headers["x-total-count"] ?? "", 10);
+		return { items: data, total: Number.isNaN(total) ? data.length : total };
+	}
+
+	// All of the user's routes, walking the paginated endpoint.
 	async getRoutes(): Promise<ApiRoute[]> {
-		return this.request<ApiRoute[]>("/routes");
+		const pageSize = 200;
+		const first = await this.getRoutesPage({ limit: pageSize, offset: 0 });
+		const items = [...first.items];
+		while (items.length < first.total) {
+			const next = await this.getRoutesPage({ limit: pageSize, offset: items.length });
+			if (next.items.length === 0) break;
+			items.push(...next.items);
+		}
+		return items;
 	}
 
 	async getRoute(id: number): Promise<ApiRoute> {
@@ -245,6 +277,33 @@ export class ApiClient {
 		await this.request<{ success: boolean; message: string }>(`/routes/${id}`, {
 			method: "DELETE",
 		});
+	}
+
+	// Collection management methods
+
+	async getCollections(): Promise<ApiCollection[]> {
+		return this.request<ApiCollection[]>("/collections");
+	}
+
+	async createCollection(body: CreateCollectionRequest): Promise<ApiCollection> {
+		return this.request<ApiCollection>("/collections", { method: "POST", body });
+	}
+
+	async getCollection(id: number): Promise<ApiCollectionDetail> {
+		return this.request<ApiCollectionDetail>(`/collections/${id}`);
+	}
+
+	async updateCollection(id: number, body: UpdateCollectionRequest): Promise<ApiCollection> {
+		return this.request<ApiCollection>(`/collections/${id}`, { method: "PATCH", body });
+	}
+
+	async deleteCollection(id: number): Promise<void> {
+		await this.request<{ success: boolean; message: string }>(`/collections/${id}`, { method: "DELETE" });
+	}
+
+	// Replaces the collection's full ordered membership.
+	async setCollectionRoutes(id: number, routeIds: number[]): Promise<ApiCollectionDetail> {
+		return this.request<ApiCollectionDetail>(`/collections/${id}/routes`, { method: "PUT", body: { routeIds } });
 	}
 
 	// Admin methods (gated server-side by JwtAuthGuard + RolesGuard)

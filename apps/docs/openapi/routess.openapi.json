@@ -697,12 +697,36 @@
 				"tags": ["routes"]
 			},
 			"get": {
-				"description": "Retrieves all routes belonging to the authenticated user (any visibility)",
+				"description": "Retrieves the authenticated user's routes (any visibility), newest first. Paginated via `limit` and `offset`; the total number of routes is returned in the `X-Total-Count` response header.",
 				"operationId": "RoutesController_findAll",
-				"parameters": [],
+				"parameters": [
+					{
+						"name": "limit",
+						"required": false,
+						"in": "query",
+						"description": "Page size",
+						"schema": {
+							"minimum": 1,
+							"maximum": 200,
+							"default": 100,
+							"type": "number"
+						}
+					},
+					{
+						"name": "offset",
+						"required": false,
+						"in": "query",
+						"description": "Number of routes to skip",
+						"schema": {
+							"minimum": 0,
+							"default": 0,
+							"type": "number"
+						}
+					}
+				],
 				"responses": {
 					"200": {
-						"description": "Routes retrieved successfully",
+						"description": "Routes retrieved successfully. X-Total-Count carries the total route count.",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -922,6 +946,297 @@
 				],
 				"summary": "Delete route",
 				"tags": ["routes"]
+			}
+		},
+		"/collections": {
+			"get": {
+				"description": "Retrieves all collections belonging to the authenticated user, newest first.",
+				"operationId": "CollectionsController_findAll",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"description": "",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"$ref": "#/components/schemas/CollectionResponseDto"
+									}
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Unauthorized"
+					}
+				},
+				"security": [
+					{
+						"PAT-auth": []
+					},
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Get all user collections",
+				"tags": ["collections"]
+			},
+			"post": {
+				"operationId": "CollectionsController_create",
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/CreateCollectionDto"
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/CollectionResponseDto"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Invalid collection data"
+					},
+					"401": {
+						"description": "Unauthorized"
+					}
+				},
+				"security": [
+					{
+						"PAT-auth": []
+					},
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Create a collection",
+				"tags": ["collections"]
+			}
+		},
+		"/collections/{id}": {
+			"get": {
+				"description": "Owners see the collection regardless of visibility. Non-owners (including anonymous viewers) only see public and unlisted collections, and private routes inside them are omitted. Private collections return 404 to non-owners.",
+				"operationId": "CollectionsController_findOne",
+				"parameters": [
+					{
+						"name": "id",
+						"required": true,
+						"in": "path",
+						"description": "Collection ID",
+						"schema": {
+							"type": "number"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/CollectionDetailResponseDto"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Collection not found"
+					}
+				},
+				"summary": "Get collection by ID",
+				"tags": ["collections"]
+			},
+			"patch": {
+				"operationId": "CollectionsController_update",
+				"parameters": [
+					{
+						"name": "id",
+						"required": true,
+						"in": "path",
+						"description": "Collection ID",
+						"schema": {
+							"type": "number"
+						}
+					},
+					{
+						"name": "X-Routess-Confirm",
+						"in": "header",
+						"description": "Set to `true` when a PAT call sets `visibility: public`. Cookie sessions ignore this header.",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/UpdateCollectionDto"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/CollectionResponseDto"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Unauthorized"
+					},
+					"404": {
+						"description": "Collection not found"
+					},
+					"428": {
+						"description": "PAT-authenticated call attempted to set visibility to public without `X-Routess-Confirm: true`. Surface the `impact` field of the response to the user and retry with the header set."
+					}
+				},
+				"security": [
+					{
+						"PAT-auth": []
+					},
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Update collection",
+				"tags": ["collections"]
+			},
+			"delete": {
+				"description": "Deletes the collection (soft-delete). Routes inside it are not deleted. PAT callers must set X-Routess-Confirm: true.",
+				"operationId": "CollectionsController_remove",
+				"parameters": [
+					{
+						"name": "id",
+						"required": true,
+						"in": "path",
+						"description": "Collection ID",
+						"schema": {
+							"type": "number"
+						}
+					},
+					{
+						"name": "X-Routess-Confirm",
+						"in": "header",
+						"description": "Required as `true` for PAT callers. Cookie sessions ignore this header.",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "",
+						"content": {
+							"application/json": {
+								"schema": {
+									"example": {
+										"success": true,
+										"message": "Collection deleted successfully"
+									}
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Unauthorized"
+					},
+					"404": {
+						"description": "Collection not found"
+					},
+					"428": {
+						"description": "PAT-authenticated DELETE without `X-Routess-Confirm: true`. Surface the `impact` field of the response to the user and retry with the header set."
+					}
+				},
+				"security": [
+					{
+						"PAT-auth": []
+					},
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Delete collection",
+				"tags": ["collections"]
+			}
+		},
+		"/collections/{id}/routes": {
+			"put": {
+				"description": "Replaces the collection's full ordered membership. All route IDs must reference routes owned by the caller; array order defines position.",
+				"operationId": "CollectionsController_setRoutes",
+				"parameters": [
+					{
+						"name": "id",
+						"required": true,
+						"in": "path",
+						"description": "Collection ID",
+						"schema": {
+							"type": "number"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/SetCollectionRoutesDto"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/CollectionDetailResponseDto"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Invalid or non-owned route IDs"
+					},
+					"401": {
+						"description": "Unauthorized"
+					},
+					"404": {
+						"description": "Collection not found"
+					}
+				},
+				"security": [
+					{
+						"PAT-auth": []
+					},
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Set collection routes",
+				"tags": ["collections"]
 			}
 		},
 		"/routing/trace-attributes": {
@@ -1656,6 +1971,10 @@
 		{
 			"name": "routes",
 			"description": "Route management"
+		},
+		{
+			"name": "collections",
+			"description": "Curated, ordered, shareable sets of routes"
 		},
 		{
 			"name": "routing",
@@ -2509,6 +2828,11 @@
 							"type": "string"
 						}
 					},
+					"favourite": {
+						"type": "boolean",
+						"description": "Whether the owner marked this route as a favourite",
+						"default": false
+					},
 					"waypoints": {
 						"description": "Array of waypoints that define the route",
 						"minItems": 1,
@@ -2657,6 +2981,11 @@
 							"type": "string"
 						}
 					},
+					"favourite": {
+						"type": "boolean",
+						"description": "Whether the owner marked this route as a favourite",
+						"default": false
+					},
 					"waypoints": {
 						"description": "Array of waypoints that define the route",
 						"minItems": 1,
@@ -2719,6 +3048,152 @@
 						]
 					}
 				}
+			},
+			"CollectionResponseDto": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "number"
+					},
+					"name": {
+						"type": "string"
+					},
+					"description": {
+						"type": "string"
+					},
+					"visibility": {
+						"type": "string",
+						"enum": ["private", "unlisted", "public"]
+					},
+					"routeIds": {
+						"description": "Ordered route IDs in this collection. For non-owners, private routes are omitted.",
+						"type": "array",
+						"items": {
+							"type": "number"
+						}
+					},
+					"routeCount": {
+						"type": "number",
+						"description": "Number of routes in the collection (after visibility filtering)"
+					},
+					"user": {
+						"$ref": "#/components/schemas/UserResponseDto"
+					},
+					"createdAt": {
+						"type": "string"
+					},
+					"updatedAt": {
+						"type": "string"
+					}
+				},
+				"required": ["id", "name", "visibility", "routeIds", "routeCount", "user", "createdAt", "updatedAt"]
+			},
+			"CreateCollectionDto": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string",
+						"description": "Name of the collection",
+						"example": "Alps 2026",
+						"minLength": 1,
+						"maxLength": 100
+					},
+					"description": {
+						"type": "string",
+						"description": "Optional description",
+						"maxLength": 255
+					},
+					"visibility": {
+						"type": "string",
+						"description": "Visibility of the collection. Same semantics as route visibility.",
+						"enum": ["private", "unlisted", "public"],
+						"default": "private"
+					}
+				},
+				"required": ["name"]
+			},
+			"CollectionDetailResponseDto": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "number"
+					},
+					"name": {
+						"type": "string"
+					},
+					"description": {
+						"type": "string"
+					},
+					"visibility": {
+						"type": "string",
+						"enum": ["private", "unlisted", "public"]
+					},
+					"routeIds": {
+						"description": "Ordered route IDs in this collection. For non-owners, private routes are omitted.",
+						"type": "array",
+						"items": {
+							"type": "number"
+						}
+					},
+					"routeCount": {
+						"type": "number",
+						"description": "Number of routes in the collection (after visibility filtering)"
+					},
+					"user": {
+						"$ref": "#/components/schemas/UserResponseDto"
+					},
+					"createdAt": {
+						"type": "string"
+					},
+					"updatedAt": {
+						"type": "string"
+					},
+					"routes": {
+						"description": "Ordered routes in this collection. For non-owners, private routes are omitted.",
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/RouteResponseDto"
+						}
+					}
+				},
+				"required": ["id", "name", "visibility", "routeIds", "routeCount", "user", "createdAt", "updatedAt", "routes"]
+			},
+			"UpdateCollectionDto": {
+				"type": "object",
+				"properties": {
+					"name": {
+						"type": "string",
+						"description": "Name of the collection",
+						"example": "Alps 2026",
+						"minLength": 1,
+						"maxLength": 100
+					},
+					"description": {
+						"type": "string",
+						"description": "Optional description",
+						"maxLength": 255
+					},
+					"visibility": {
+						"type": "string",
+						"description": "Visibility of the collection. Same semantics as route visibility.",
+						"enum": ["private", "unlisted", "public"],
+						"default": "private"
+					}
+				}
+			},
+			"SetCollectionRoutesDto": {
+				"type": "object",
+				"properties": {
+					"routeIds": {
+						"description": "Full ordered membership of the collection. Replaces the existing membership; order defines the position of each route.",
+						"example": [12, 7, 31],
+						"type": "array",
+						"items": {
+							"type": "number"
+						}
+					}
+				},
+				"required": ["routeIds"]
 			},
 			"TraceShapePointDto": {
 				"type": "object",

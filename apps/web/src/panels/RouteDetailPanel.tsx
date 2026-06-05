@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useComputedElevationProfile } from "@/features/routing/services/elevation";
 import { fetchSurfaceBreakdown, type SurfaceBreakdown } from "@/features/routing/services/SurfaceService";
 import type { ApiRoute } from "@/lib/api";
-import { useSaveRoute, useUpdateRoute } from "@/lib/api-queries";
+import { useSaveRoute, useToggleFavourite, useUpdateRoute } from "@/lib/api-queries";
 import { emitAppEvent, routeToLoadDetail } from "@/lib/app-events";
 import { useT } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
@@ -96,10 +96,9 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 	const openDelete = useModalsStore((s) => s.openDelete);
 	const openModal = useModalsStore((s) => s.openModal);
 	const pushToast = useToastStore((s) => s.push);
-	const favouriteRouteIds = useUiStore((s) => s.favouriteRouteIds);
-	const toggleFavourite = useUiStore((s) => s.toggleFavourite);
+	const toggleFavourite = useToggleFavourite();
 	const setContext = useUiStore((s) => s.setContext);
-	const favorited = favouriteRouteIds.includes(route.id);
+	const favorited = route.favourite;
 
 	// Saved routes don't persist the elevation profile array (only the gain
 	// number), so re-sample the stored geometry on view. Falls back to
@@ -195,7 +194,7 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 	};
 
 	const dispatchFavorite = () => {
-		toggleFavourite(route.id);
+		toggleFavourite.mutate({ routeId: route.id, favourite: !route.favourite });
 	};
 
 	const dispatchDuplicate = () => {

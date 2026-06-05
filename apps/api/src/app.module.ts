@@ -9,6 +9,7 @@ import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { AuthModule } from "./auth/auth.module";
 import { AuthAwareThrottlerGuard } from "./auth/guards/auth-aware-throttler.guard";
+import { CollectionsModule } from "./collections/collections.module";
 import type { AppConfig } from "./config/app-config";
 import { APP_CONFIG, ConfigModule } from "./config/config.module";
 import { HealthModule } from "./health/health.module";
@@ -63,6 +64,7 @@ import { UsersModule } from "./users/users.module";
 		UsersModule,
 		AuthModule,
 		RoutesModule,
+		CollectionsModule,
 		RoutingModule,
 		HealthModule,
 		TelemetryModule,

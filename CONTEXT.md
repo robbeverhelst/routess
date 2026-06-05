@@ -87,7 +87,15 @@ Live tracking of the user's GPS position on the map. Distinct from waypoints and
 The standard XML format for route exchange. Routess imports GPX files (deriving Waypoints with smart detection at significant Bearing changes) and exports Routes as GPX.
 
 **RouteLibrary**:
-The collection of Routes a User has saved. Surfaced in the UI as "My Routes."
+The set of Routes a User has saved. Surfaced in the UI as the library panel's "Routes" tab.
+
+**Collection**:
+A curated, manually ordered set of Routes within a User's RouteLibrary (e.g. "Alps 2026", "Commutes"). Routes and Collections are many-to-many: a Route can live in any number of Collections, and removing it from a Collection never deletes the Route. A Collection has its own **RouteVisibility** with the same semantics as a Route's; sharing a Collection by URL never exposes `private` Routes inside it to non-owners.
+_Avoid_: folder, playlist, group, list.
+
+**Favourite**:
+A per-Route boolean the owner toggles to pin a Route for quick retrieval. Stored on the Route entity (server-side, syncs across devices), surfaced as a heart toggle and a library filter. Not a Collection; favouriting is a flag, not membership.
+_Avoid_: like, star, bookmark.
 
 ## Identity
 
@@ -120,6 +128,8 @@ _Avoid_: API key, access token, bearer token (the term is **PAT** when discussin
 - A **RouteGeneration** produces a **Route** from **RouteType** + **SurfaceType** + **LoopDirection** + target distance, without manual Waypoint placement.
 - A **Route** has exactly one **RouteVisibility** (`private` | `unlisted` | `public`), defaulting from the owning User's preference.
 - A **User** owns zero or more **Routes**, accessed through their **RouteLibrary**.
+- A **User** owns zero or more **Collections**; each **Collection** holds an ordered set of that User's **Routes** (many-to-many, order is per-Collection).
+- A **Collection** has exactly one **RouteVisibility**; non-owners viewing a shared Collection never see its `private` Routes.
 - A **User** holds **RoutingPreferences defaults** keyed by **Activity** (`cycle`, `run`, `walk`); these are *copied* onto a new **RouteDraft** at creation, never read again for that draft.
 - A **Route** has its own **RoutingPreferences** (which produced its RoutePath) and a **Provenance** (how it was made). Both are immutable inputs to the Route; `Provenance` never changes after creation.
 - A **RouteDraft** is an in-progress **Route** held in `routingStore`. Its mode is either `unsaved` (will become a new Route on save) or `editing(routeId)` (bound to a saved Route, will PATCH it on save).
