@@ -31,7 +31,7 @@ export const routePlannersCompared: Article = {
 						[
 							["Komoot"],
 							["Community routes, voice navigation"],
-							["Free tier, paid maps and Premium"],
+							["Free tier, Premium subscription for new users"],
 							["Yes, own tours"],
 							["No"],
 						],
@@ -53,14 +53,14 @@ export const routePlannersCompared: Article = {
 				{
 					kind: "p",
 					content: [
-						"The biggest community of the bunch: route collections, highlights, and photos for nearly anywhere, plus polished native apps with voice turn-by-turn navigation and offline maps. The trade-offs are the pricing model around map regions and Premium, the account requirement, and a closed platform. For multi-day touring with navigation it is still the reference.",
+						"The biggest community of the bunch: route collections, highlights, and photos for nearly anywhere, plus polished native apps with voice turn-by-turn navigation and offline maps. The trade-offs: since early 2025 new users need the Premium subscription for most paid features, including sending routes to a Garmin or Wahoo, an account is required, and the platform is closed. For multi-day touring with navigation it is still the reference.",
 					],
 				},
 				{ kind: "h2", text: "Strava" },
 				{
 					kind: "p",
 					content: [
-						"Strava is a training and social platform first, a route planner second. The planner leans on global heatmap data, which is genuinely useful for finding where people actually ride and run, but route planning sits behind the subscription. If you live in Strava for segments and training load anyway, the planner is right there; few people pick Strava for planning alone.",
+						"Strava is a training and social platform first, a route planner second. The planner can overlay the global heatmap and favours popular roads, genuinely useful for finding where people actually ride and run, but creating routes sits behind the subscription. If you live in Strava for segments and training load anyway, the planner is right there; few people pick Strava for planning alone.",
 					],
 				},
 				{ kind: "h2", text: "RideWithGPS" },
@@ -74,7 +74,7 @@ export const routePlannersCompared: Article = {
 				{
 					kind: "p",
 					content: [
-						"A web planner with an emphasis on manual control: snap on or off per section, bulk editing tools, and flexible printing. The interface shows its age and the free tier has route length limits, but for meticulous manual editing it has a loyal following.",
+						"A web planner with an emphasis on manual control: snap on or off per section, bulk editing tools, and flexible printing. The interface shows its age and the free tier works with usage quotas (limited stops on auto-routing, one generated route per day, ads), but for meticulous manual editing it has a loyal following.",
 					],
 				},
 				{ kind: "h2", text: "Which one should you pick?" },
@@ -130,7 +130,7 @@ export const routePlannersCompared: Article = {
 						[
 							["Komoot"],
 							["Community-routes, gesproken navigatie"],
-							["Gratis instap, betaalde kaarten en Premium"],
+							["Gratis instap, Premium-abonnement voor nieuwe gebruikers"],
 							["Ja, eigen tochten"],
 							["Nee"],
 						],
@@ -158,14 +158,14 @@ export const routePlannersCompared: Article = {
 				{
 					kind: "p",
 					content: [
-						"De grootste community van allemaal: routecollecties, highlights en foto's voor bijna overal, plus afgewerkte native apps met gesproken turn-by-turn navigatie en offline kaarten. De keerzijde: het prijsmodel met kaartregio's en Premium, de accountverplichting en een gesloten platform. Voor meerdaagse tochten met navigatie blijft het de referentie.",
+						"De grootste community van allemaal: routecollecties, highlights en foto's voor bijna overal, plus afgewerkte native apps met gesproken turn-by-turn navigatie en offline kaarten. De keerzijde: sinds begin 2025 hebben nieuwe gebruikers het Premium-abonnement nodig voor de meeste betaalde functies, ook om routes naar een Garmin of Wahoo te sturen, een account is verplicht en het platform is gesloten. Voor meerdaagse tochten met navigatie blijft het de referentie.",
 					],
 				},
 				{ kind: "h2", text: "Strava" },
 				{
 					kind: "p",
 					content: [
-						"Strava is eerst een trainings- en sociaal platform, daarna pas een routeplanner. De planner leunt op de wereldwijde heatmap, oprecht handig om te zien waar mensen echt fietsen en lopen, maar routes plannen zit achter het abonnement. Leef je toch al in Strava voor segmenten en trainingsload, dan ligt de planner binnen handbereik; weinig mensen kiezen Strava puur om te plannen.",
+						"Strava is eerst een trainings- en sociaal platform, daarna pas een routeplanner. De planner kan de wereldwijde heatmap als laag tonen en verkiest populaire wegen, oprecht handig om te zien waar mensen echt fietsen en lopen, maar routes aanmaken zit achter het abonnement. Leef je toch al in Strava voor segmenten en trainingsload, dan ligt de planner binnen handbereik; weinig mensen kiezen Strava puur om te plannen.",
 					],
 				},
 				{ kind: "h2", text: "RideWithGPS" },
@@ -179,7 +179,7 @@ export const routePlannersCompared: Article = {
 				{
 					kind: "p",
 					content: [
-						"Een webplanner met nadruk op handmatige controle: snappen aan of uit per sectie, bulkbewerkingen en flexibel printen. De interface toont zijn leeftijd en de gratis laag beperkt de routelengte, maar voor secuur handwerk heeft het een trouwe aanhang.",
+						"Een webplanner met nadruk op handmatige controle: snappen aan of uit per sectie, bulkbewerkingen en flexibel printen. De interface toont zijn leeftijd en de gratis laag werkt met gebruikslimieten (beperkte stops bij automatisch routeren, één gegenereerde route per dag, advertenties), maar voor secuur handwerk heeft het een trouwe aanhang.",
 					],
 				},
 				{ kind: "h2", text: "Welke moet je kiezen?" },

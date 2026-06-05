@@ -20,7 +20,7 @@ export const komootAlternative: Article = {
 				{
 					kind: "p",
 					content: [
-						"Komoot is a polished product with a huge community. The usual reasons people go looking elsewhere: the pricing model around map regions and the Premium subscription, wanting route data in an open format that is not tied to one platform, and unease about where the product is heading since the company was acquired in 2025. If none of those bother you, Komoot remains a fine choice.",
+						"Komoot is a polished product with a huge community. The usual reasons people go looking elsewhere: since early 2025 new users need the Premium subscription for most paid features (the one-time region packs are legacy now, and even sending routes to a Garmin or Wahoo sits behind Premium), wanting route data in an open format that is not tied to one platform, and unease about where the product is heading since the company was acquired in March 2025. If none of those bother you, Komoot remains a fine choice.",
 					],
 				},
 				{ kind: "h2", text: "What routess does better" },
@@ -62,7 +62,7 @@ export const komootAlternative: Article = {
 						],
 						["A massive community library of routes, highlights, and photos built over more than a decade."],
 						["Mature offline maps in the mobile apps."],
-						["Multi-day tour planning."],
+						["Multi-day tour planning (a Premium feature)."],
 						["Sport-specific routing profiles refined over many years, including mountain biking."],
 					],
 				},
@@ -71,10 +71,10 @@ export const komootAlternative: Article = {
 					kind: "table",
 					headers: ["", "routess", "Komoot"],
 					rows: [
-						[["Price"], ["Free"], ["Free tier, paid maps and Premium subscription"]],
+						[["Price"], ["Free"], ["Free tier with one region, Premium subscription for the rest"]],
 						[["Account required"], ["Only to save routes"], ["Yes"]],
 						[["Open source"], ["Yes, MIT"], ["No"]],
-						[["GPX import and export"], ["Free, unlimited"], ["Supported for your own tours"]],
+						[["GPX import and export"], ["Free, unlimited"], ["Yes, if the route's start region is unlocked"]],
 						[["Surface data"], ["Free on every route"], ["Yes"]],
 						[["Voice navigation"], ["Not yet, follow the route in the web app"], ["Yes, native apps"]],
 						[["Community route library"], ["Not yet, planned"], ["Yes, huge"]],
@@ -135,7 +135,7 @@ export const komootAlternative: Article = {
 				{
 					kind: "p",
 					content: [
-						"Komoot is een afgewerkt product met een enorme community. De gebruikelijke redenen om toch rond te kijken: het prijsmodel met kaartregio's en het Premium-abonnement, je routedata in een open formaat willen dat niet aan één platform vasthangt, en onzekerheid over de koers sinds de overname van het bedrijf in 2025. Stoort geen van die dingen je, dan blijft Komoot een prima keuze.",
+						"Komoot is een afgewerkt product met een enorme community. De gebruikelijke redenen om toch rond te kijken: sinds begin 2025 hebben nieuwe gebruikers het Premium-abonnement nodig voor de meeste betaalde functies (de eenmalige regiopakketten zijn uitdovend, en zelfs routes naar een Garmin of Wahoo sturen zit achter Premium), je routedata in een open formaat willen dat niet aan één platform vasthangt, en onzekerheid over de koers sinds de overname van het bedrijf in maart 2025. Stoort geen van die dingen je, dan blijft Komoot een prima keuze.",
 					],
 				},
 				{ kind: "h2", text: "Wat routess beter doet" },
@@ -179,7 +179,7 @@ export const komootAlternative: Article = {
 							"Een gigantische community-bibliotheek met routes, highlights en foto's, opgebouwd over meer dan tien jaar.",
 						],
 						["Volwassen offline kaarten in de mobiele apps."],
-						["Meerdaagse tochten plannen."],
+						["Meerdaagse tochten plannen (een Premium-functie)."],
 						["Sportspecifieke routeprofielen die jarenlang verfijnd zijn, ook voor mountainbike."],
 					],
 				},
@@ -188,10 +188,10 @@ export const komootAlternative: Article = {
 					kind: "table",
 					headers: ["", "routess", "Komoot"],
 					rows: [
-						[["Prijs"], ["Gratis"], ["Gratis instap, betaalde kaarten en Premium-abonnement"]],
+						[["Prijs"], ["Gratis"], ["Gratis instap met één regio, Premium-abonnement voor de rest"]],
 						[["Account verplicht"], ["Alleen om routes op te slaan"], ["Ja"]],
 						[["Open source"], ["Ja, MIT"], ["Nee"]],
-						[["GPX-import en -export"], ["Gratis, onbeperkt"], ["Ondersteund voor je eigen tochten"]],
+						[["GPX-import en -export"], ["Gratis, onbeperkt"], ["Ja, als de startregio van de route ontgrendeld is"]],
 						[["Ondergronddata"], ["Gratis op elke route"], ["Ja"]],
 						[["Gesproken navigatie"], ["Nog niet, volg de route in de web-app"], ["Ja, native apps"]],
 						[["Community-routes"], ["Nog niet, gepland"], ["Ja, enorm veel"]],
