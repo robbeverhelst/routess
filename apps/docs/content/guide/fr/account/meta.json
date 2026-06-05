@@ -1,4 +1,4 @@
 {
 	"title": "Compte",
-	"pages": ["profile", "language", "deleting-account"]
+	"pages": ["profile", "language", "security", "api-tokens", "deleting-account"]
 }

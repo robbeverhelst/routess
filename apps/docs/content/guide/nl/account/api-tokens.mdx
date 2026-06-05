@@ -1,0 +1,34 @@
+---
+title: API-tokens
+description: Maak tokens voor scripts, agents en de routess-CLI.
+translationStatus: machine-draft
+---
+
+Met API-tokens kunnen scripts en tools met je routebibliotheek werken zonder je wachtwoord. Beheer ze onder **Instellingen → API-tokens** (zichtbaar wanneer je bent aangemeld).
+
+## Een token aanmaken
+
+1. Klik op **Token aanmaken**.
+2. Geef het een **label** dat je later herkent, bv. `backup-script (laptop)`.
+3. Kies een **scope**:
+   - **Lezen**: routes opvragen en inspecteren
+   - **Schrijven**: lezen plus hernoemen, zichtbaarheid wijzigen en verwijderen
+4. Stel eventueel een **verloopdatum** in. Leeg betekent dat hij nooit verloopt.
+
+Het token wordt **één keer** getoond. Kopieer het en bewaar het op een veilige plek; raak je het kwijt, trek het dan in en maak een nieuw token aan.
+
+## Gebruiken
+
+Stuur het token mee als bearer-token:
+
+```sh
+curl -H "Authorization: Bearer <jouw-token>" https://api.routess.com/api/v1/routes
+```
+
+Zie de [API-referentie](https://docs.routess.com/api) voor elk endpoint.
+
+## Een token intrekken
+
+Bij elk token zie je wanneer het is aangemaakt en voor het laatst is gebruikt. **Intrekken** schakelt het meteen uit; alles wat het nog gebruikt, stopt met werken.
+
+Vervang tokens die je niet meer herkent, en gebruik liefst één token per tool zodat het intrekken van één token de andere niet breekt.

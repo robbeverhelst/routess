@@ -1,4 +1,4 @@
 {
 	"title": "Kaart",
-	"pages": ["navigation", "styles", "your-location"]
+	"pages": ["navigation", "styles", "display-options", "your-location"]
 }
