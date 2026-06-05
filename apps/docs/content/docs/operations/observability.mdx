@@ -29,6 +29,8 @@ OTEL_RESOURCE_ATTRIBUTES=deployment.environment=prod
 
 The API appends `/v1/traces` to the endpoint; leave it unset to disable trace export. Authenticated collectors take extra headers via `OTEL_EXPORTER_OTLP_HEADERS` as a JSON object, e.g. `{"authorization":"Bearer …"}`.
 
+Any OTLP/HTTP receiver works as the endpoint: an in-cluster [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) or Grafana Alloy, or a hosted backend (Grafana Tempo, Honeycomb, Datadog) directly.
+
 ## Logs
 
 The API logs structured JSON to stdout. Anything collecting Kubernetes pod logs (Loki, Datadog, CloudWatch) will pick them up. Each log line includes `traceId` and `spanId` so you can pivot from a slow log line to its trace. Verbosity is controlled by `LOG_LEVEL` (default `info`).

@@ -98,6 +98,12 @@ The API exposes `GET /health/live` (process up) and `GET /health/ready` (databas
 
 PodDisruptionBudgets keep at least one replica of web, api, and landing during node drains (`podDisruptionBudget.minAvailable: 1`); docs runs a single replica with no PDB.
 
+## Scaling
+
+Each app ships an optional HorizontalPodAutoscaler: set `<app>.autoscaling.enabled=true` (defaults: min 2, max 5, target 80% CPU; docs scales 1 to 3). Web, docs, and landing are stateless and scale freely.
+
+For the API, remember each pod opens its own PostgreSQL connections; raising `maxReplicas` multiplies connection count. If you scale wide, put a pooler (PgBouncer, or your managed Postgres's built-in pooling) in front of the database.
+
 ## Swagger in production
 
 The chart sets `api.env.swaggerEnabled: "true"`, so interactive API docs are served at `/api` on the API host. The application default in production is off; set the value to `"false"` if you don't want them public.
