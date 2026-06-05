@@ -1,27 +1,25 @@
 ---
 title: Routing preferences
-description: Profiles and preferences that shape how routess routes you.
+description: Surface and avoidance preferences that shape how routess routes you.
 ---
 
 Open **Routing preferences** from the sliders icon at the top of the plan sidebar, or through the command palette (`Ctrl/Cmd + K`). Preferences are saved on your device and applied when you hit **Apply**.
 
-## Profiles
+![The routing preferences dialog](/guide/routing-preferences.jpg)
 
-Pick the profile that matches the ride or run you want:
+## Surface preference
 
-- **Fastest**: the default; the most direct sensible route
-- **Scenic**: trades up to ~15% extra time for nicer roads
-- **Safest**: prefers bike paths and calm streets
-- **Flat**: avoids hills where possible
+Bias the route toward roads with a surface type:
 
-## Fine-tuning
+- **Paved**: stick to sealed roads, good for road bikes
+- **Mixed**: the default; take whatever connects best
+- **Unpaved**: prefer gravel and trails
 
-Below the profile you can toggle individual preferences:
+When a calculated route can't honour your preference, the route info shows a surface mismatch warning so you know before you head out.
 
-- **Prefer bike infrastructure**: weigh cycle paths and lanes higher
-- **Avoid steep climbs**: steer around gradients, with a **max climb gradient (%)** slider
-- **Avoid unpaved**: stick to sealed surfaces
-- **Avoid highways**: exclude motorway segments
-- **Auto-snap waypoints**: dropped waypoints snap onto the nearest road
+## Avoidances
+
+- **Avoid highways**: excludes motorway segments from routing
+- **Avoid ferries**: skips routes that cross water by ferry
 
 **Reset** restores the defaults. After **Apply**, new routes and recalculations use your settings; existing legs aren't changed until you edit them.

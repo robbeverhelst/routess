@@ -118,6 +118,28 @@ async function skipSignIn(page: Page) {
 	throw new Error("could not enter the planner");
 }
 
+// The phone layout has no "Search location" toolbar button; the bottom tab
+// bar's labels are the readiness signal instead.
+async function skipSignInMobile(page: Page) {
+	for (let attempt = 0; attempt < 6; attempt++) {
+		await clickByText(page, "Continue without an account");
+		const ready = await poll(
+			() =>
+				page.evaluate(() => {
+					const text = document.body.textContent ?? "";
+					return text.includes("Library") && text.includes("Discover");
+				}),
+			10_000,
+		);
+		if (ready) {
+			await sleep(6000);
+			return;
+		}
+		log(`mobile planner not ready, retrying (${attempt + 1})`);
+	}
+	throw new Error("could not enter the mobile planner");
+}
+
 async function waitForWelcome(page: Page, timeout = 60_000) {
 	return poll(
 		() => page.evaluate(() => document.body.textContent?.includes("Continue without an account") === true),
@@ -192,6 +214,20 @@ async function main() {
 	await page.keyboard.press("Escape");
 	await sleep(1000);
 
+	// Routing preferences modal.
+	await clickButton(page, "Routing preferences");
+	await sleep(2000);
+	await fullShot(page, "routing-preferences");
+	await page.keyboard.press("Escape");
+	await sleep(1000);
+
+	// Import modal.
+	await clickButton(page, "Import GPX");
+	await sleep(2000);
+	await fullShot(page, "import-route");
+	await page.keyboard.press("Escape");
+	await sleep(1000);
+
 	// Map style switcher.
 	await clickButton(page, "Map style");
 	await sleep(1500);
@@ -208,6 +244,8 @@ async function main() {
 	await clickByText(page, "Map & display");
 	await sleep(2000);
 	await fullShot(page, "language");
+	// Same section also documents the display toggles.
+	await fullShot(page, "map-display");
 	await page.keyboard.press("Escape");
 	await sleep(1000);
 
@@ -236,6 +274,28 @@ async function main() {
 	await sleep(8000);
 	await fullShot(geoPage, "your-location");
 	await geoCtx.close();
+
+	// Pass 3: phone viewport, bottom tab bar and panel sheet.
+	const mobileCtx = await browser.newContext({
+		viewport: { width: 390, height: 844 },
+		deviceScaleFactor: 3,
+		isMobile: true,
+		hasTouch: true,
+		userAgent:
+			"Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+	});
+	const mobilePage = await mobileCtx.newPage();
+	await mobilePage.goto(demoRouteUrl(), { waitUntil: "load", timeout: 60_000 });
+	await sleep(4000);
+	if (await waitForWelcome(mobilePage, 15_000)) await skipSignInMobile(mobilePage);
+	await sleep(16_000);
+	await fullShot(mobilePage, "mobile-planner");
+
+	// Open the plan sheet via the bottom tab bar.
+	await clickByText(mobilePage, "Plan");
+	await sleep(2500);
+	await fullShot(mobilePage, "mobile-drawer");
+	await mobileCtx.close();
 
 	await browser.close();
 	log("done");
