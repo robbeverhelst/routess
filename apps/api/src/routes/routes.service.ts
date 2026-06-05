@@ -102,6 +102,19 @@ export class RoutesService {
 		this.events.emit(ROUTE_DELETED, { userId } satisfies RouteDeletedEvent);
 	}
 
+	async findForGpx(id: number, viewerId: number | null): Promise<Route> {
+		const route = await this.routeRepository.findOne({ id });
+		if (!route) {
+			throw new NotFoundException(`Route with ID ${id} not found`);
+		}
+		const ownerId = (route.user as unknown as { id: number }).id;
+		const isOwner = viewerId !== null && ownerId === viewerId;
+		if (!isOwner && route.visibility === "private") {
+			throw new NotFoundException(`Route with ID ${id} not found`);
+		}
+		return route;
+	}
+
 	async hardDelete(id: number, userId: number): Promise<void> {
 		const route = await this.routeRepository.findOne({ id, user: userId }, { filters: { softDelete: false } });
 		if (!route) {

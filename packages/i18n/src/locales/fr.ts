@@ -319,4 +319,33 @@ export const fr: Record<string, string> = {
 	"common.edit": "Modifier",
 	"common.delete": "Supprimer",
 	"map.loading": "Chargement de la carte…",
+
+	"route.updateFailed": "Échec de la mise à jour",
+	"route.field.activity": "Activité",
+	"route.field.visibility": "Visibilité",
+	"route.field.tags": "Tags",
+	"route.tag.addPlaceholder": "ajouter un tag…",
+	"route.tag.remove": "Supprimer le tag #{tag}",
+	"route.makePublic.title": "Rendre cet itinéraire public ?",
+	"route.makePublic.body":
+		"Les itinéraires publics sont visibles par toute personne disposant du lien et peuvent être archivés en externe. Revenir en privé plus tard ne retire pas l'accès à ceux qui ont déjà l'URL.",
+	"route.makePublic.confirm": "Rendre public",
+
+	"public.byOwner": "par {name}",
+	"public.anonymous": "un utilisateur routess",
+	"public.mapAlt": "Aperçu cartographique de {name}",
+	"public.noPreview": "Aucun aperçu disponible",
+	"public.openInRoutess": "Ouvrir dans routess",
+	"public.downloadGpx": "Télécharger le GPX",
+	"public.signIn": "Se connecter",
+	"public.loading": "Chargement de l'itinéraire…",
+	"public.notFound.title": "Itinéraire introuvable",
+	"public.notFound.body": "Cet itinéraire est privé ou n'existe plus.",
+	"public.footer.cta": "Planifiez votre propre sortie vélo, course ou randonnée.",
+	"public.footer.try": "Essayez routess",
+
+	"share.privateHint":
+		"Cet itinéraire enregistré est privé, vous seul pouvez donc ouvrir le lien canonique. L'URL ci-dessus contient les points de l'itinéraire dans le lien lui-même. Passez l'itinéraire en non répertorié ou public pour partager une adresse stable.",
+	"share.canonicalHint":
+		"Toute personne disposant de ce lien peut voir l'itinéraire. Les changements de visibilité prennent effet immédiatement.",
 };

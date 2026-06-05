@@ -15,6 +15,7 @@ import { CreateRouteDto } from "./dto/create-route.dto";
 import { ListRoutesQueryDto, ROUTES_PAGE_LIMIT_DEFAULT } from "./dto/list-routes-query.dto";
 import { RouteResponseDto } from "./dto/route-response.dto";
 import { UpdateRouteDto } from "./dto/update-route.dto";
+import { buildRouteGpx } from "./gpx";
 import { RoutesService } from "./routes.service";
 
 @ApiTags("routes")
@@ -84,6 +85,38 @@ export class RoutesController {
 	@Get("by-user/:userId")
 	findPublicByUser(@Param("userId", ParseIntPipe) userId: number): Promise<RouteResponseDto[]> {
 		return this.routesService.findPublicByOwner(userId);
+	}
+
+	@UseGuards(OptionalJwtAuthGuard)
+	@ApiOperation({
+		summary: "Download route as GPX",
+		description:
+			"Returns the route as a GPX 1.1 document with a routess-namespaced extension carrying per-waypoint Type. Owner can fetch any visibility; non-owners can fetch public and unlisted; private routes return 404 to non-owners. Unlisted responses carry X-Robots-Tag: noindex.",
+	})
+	@ApiParam({ name: "id", description: "Route ID", type: "number" })
+	@ApiResponse({ status: 200, description: "GPX document" })
+	@ApiResponse({ status: 404, description: "Route not found or not viewable" })
+	@ThrottleModerate()
+	@Get(":id/gpx")
+	async downloadGpx(
+		@Param("id", ParseIntPipe) id: number,
+		@OptionalCurrentUser() user: AuthenticatedUser | null,
+		@Res() res: Response,
+	): Promise<void> {
+		const route = await this.routesService.findForGpx(id, user?.id ?? null);
+		const gpx = buildRouteGpx({
+			name: route.name,
+			description: route.description,
+			waypoints: route.waypoints ?? [],
+			geometry: route.geometry,
+		});
+		const filename = `${route.name.replace(/[^a-z0-9-]+/gi, "-")}-${route.id}.gpx`;
+		res.setHeader("Content-Type", "application/gpx+xml; charset=utf-8");
+		res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+		if (route.visibility !== "public") {
+			res.setHeader("X-Robots-Tag", "noindex");
+		}
+		res.send(gpx);
 	}
 
 	@UseGuards(OptionalJwtAuthGuard)

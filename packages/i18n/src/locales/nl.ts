@@ -1166,4 +1166,32 @@ export const nl: Record<string, string> = {
 	"routing.ferries.label": "Veerboten vermijden",
 	"routing.ferries.hint": "Sla routes over die via een veerboot het water oversteken",
 	"route.provenance.mapboxLegacy": "Oorspronkelijk gepland met een vorige routeringsengine",
+
+	"route.updateFailed": "Bijwerken mislukt",
+	"route.field.activity": "Activiteit",
+	"route.field.visibility": "Zichtbaarheid",
+	"route.field.tags": "Tags",
+	"route.tag.addPlaceholder": "tag toevoegen…",
+	"route.tag.remove": "Tag #{tag} verwijderen",
+	"route.makePublic.title": "Deze route openbaar maken?",
+	"route.makePublic.body":
+		"Openbare routes zijn zichtbaar voor iedereen met de link en kunnen extern worden gearchiveerd. Later terugzetten naar privé maakt het niet ongedaan voor wie de URL al heeft.",
+	"route.makePublic.confirm": "Openbaar maken",
+
+	"public.byOwner": "door {name}",
+	"public.anonymous": "een routess-gebruiker",
+	"public.mapAlt": "Kaartvoorbeeld van {name}",
+	"public.noPreview": "Geen voorbeeld beschikbaar",
+	"public.openInRoutess": "Openen in routess",
+	"public.downloadGpx": "GPX downloaden",
+	"public.signIn": "Inloggen",
+	"public.loading": "Route laden…",
+	"public.notFound.title": "Route niet gevonden",
+	"public.notFound.body": "Deze route is privé of bestaat niet meer.",
+	"public.footer.cta": "Plan je eigen rit, loop of wandeling.",
+	"public.footer.try": "Probeer routess",
+
+	"share.privateHint":
+		"Deze opgeslagen route is privé, dus alleen jij kunt de canonieke link openen. De URL hierboven bevat de routepunten in de link zelf. Zet de route op niet-vermeld of openbaar om een vast adres te delen.",
+	"share.canonicalHint": "Iedereen met deze link kan de route bekijken. Wijzigingen in zichtbaarheid gaan meteen in.",
 };
