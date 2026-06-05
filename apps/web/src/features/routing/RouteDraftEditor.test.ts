@@ -122,6 +122,23 @@ describe("RouteDraftEditor — undo behavior", () => {
 		expect(useRoutingStore.getState().waypoints[1].coord).toEqual([0.01, 0]);
 	});
 
+	it("samples elevation when loading waypoints with stored geometry", async () => {
+		// Stored geometry skips the Valhalla recompute that normally kicks off
+		// elevation sampling; the exact path must be sampled directly.
+		const editor = createRouteDraftEditor({ map: mapStub, accessToken });
+		const exactRoutePath: Coordinate[] = [
+			[0, 0],
+			[0.005, 0],
+			[0.01, 0],
+		];
+
+		await editor.loadWaypoints([wp([0, 0], "direct"), wp([0.01, 0], "direct")], { exactRoutePath });
+		await flushMicrotasks();
+
+		expect(getDirectionsMock).not.toHaveBeenCalled();
+		expect(sampleAndComputeMock).toHaveBeenCalledWith(exactRoutePath, expect.anything());
+	});
+
 	it("undoes a reverse with a single undo press", async () => {
 		const original: Waypoint[] = [wp([0, 0], "direct"), wp([0.01, 0], "direct"), wp([0.02, 0], "direct")];
 		useRoutingStore.getState().setWaypoints(original);

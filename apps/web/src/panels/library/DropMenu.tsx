@@ -1,7 +1,13 @@
-import { type CSSProperties, type ReactNode, useEffect, useRef } from "react";
+import { type CSSProperties, type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { I, type IconKey } from "../../components/icons";
 import { RDS_COLORS } from "../../components/primitives";
 
+const VIEWPORT_MARGIN = 8;
+
+// Rendered in a portal with fixed positioning so ancestors with
+// overflow: hidden (e.g. rounded route cards) can't clip the menu.
+// The marker span's parent element is the anchor the menu attaches to.
 export function DropMenu({
 	open,
 	onClose,
@@ -18,6 +24,8 @@ export function DropMenu({
 	style?: CSSProperties;
 }) {
 	const ref = useRef<HTMLDivElement | null>(null);
+	const anchorRef = useRef<HTMLSpanElement | null>(null);
+	const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
 
 	useEffect(() => {
 		if (!open) return;
@@ -35,27 +43,74 @@ export function DropMenu({
 		};
 	}, [open, onClose]);
 
-	if (!open) return null;
+	useLayoutEffect(() => {
+		if (!open) {
+			setPos(null);
+			return;
+		}
+		const place = () => {
+			const anchor = anchorRef.current?.parentElement;
+			const menu = ref.current;
+			if (!anchor || !menu) return;
+			const rect = anchor.getBoundingClientRect();
+			const menuRect = menu.getBoundingClientRect();
+
+			let left = align === "right" ? rect.right - menuRect.width : rect.left;
+			left = Math.max(VIEWPORT_MARGIN, Math.min(left, window.innerWidth - menuRect.width - VIEWPORT_MARGIN));
+
+			// Below the anchor by default; flip above when there's no room.
+			let top = rect.bottom + 4;
+			if (top + menuRect.height > window.innerHeight - VIEWPORT_MARGIN) {
+				const above = rect.top - 4 - menuRect.height;
+				top =
+					above >= VIEWPORT_MARGIN
+						? above
+						: Math.max(VIEWPORT_MARGIN, window.innerHeight - menuRect.height - VIEWPORT_MARGIN);
+			}
+			setPos({ top, left });
+		};
+		place();
+		// Re-place when the content resizes (e.g. submenu views) or the
+		// anchor moves (panel scroll, window resize).
+		const resizeObserver = ref.current ? new ResizeObserver(place) : null;
+		if (ref.current) resizeObserver?.observe(ref.current);
+		window.addEventListener("resize", place);
+		window.addEventListener("scroll", place, true);
+		return () => {
+			resizeObserver?.disconnect();
+			window.removeEventListener("resize", place);
+			window.removeEventListener("scroll", place, true);
+		};
+	}, [open, align]);
+
 	return (
-		<div
-			ref={ref}
-			role="menu"
-			style={{
-				position: "absolute",
-				top: "calc(100% + 4px)",
-				...(align === "right" ? { right: 0 } : { left: 0 }),
-				minWidth: width,
-				background: RDS_COLORS.bgPanel,
-				border: `1px solid ${RDS_COLORS.border}`,
-				borderRadius: 8,
-				padding: 4,
-				boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
-				zIndex: 30,
-				...style,
-			}}
-		>
-			{children}
-		</div>
+		<>
+			<span ref={anchorRef} style={{ display: "none" }} />
+			{open &&
+				createPortal(
+					<div
+						ref={ref}
+						role="menu"
+						style={{
+							position: "fixed",
+							top: pos?.top ?? 0,
+							left: pos?.left ?? 0,
+							visibility: pos ? "visible" : "hidden",
+							minWidth: width,
+							background: RDS_COLORS.bgPanel,
+							border: `1px solid ${RDS_COLORS.border}`,
+							borderRadius: 8,
+							padding: 4,
+							boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
+							zIndex: 80,
+							...style,
+						}}
+					>
+						{children}
+					</div>,
+					document.body,
+				)}
+		</>
 	);
 }
 
