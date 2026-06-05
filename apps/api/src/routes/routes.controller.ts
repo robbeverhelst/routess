@@ -13,6 +13,7 @@ import { UnifiedAuthGuard } from "../auth/guards/unified-auth.guard";
 import { ThrottleModerate, ThrottleStrict } from "../common/decorators/throttle.decorator";
 import { CreateRouteDto } from "./dto/create-route.dto";
 import { ListRoutesQueryDto, ROUTES_PAGE_LIMIT_DEFAULT } from "./dto/list-routes-query.dto";
+import { PublicRouteSummaryDto } from "./dto/public-route-summary.dto";
 import { RouteResponseDto } from "./dto/route-response.dto";
 import { UpdateRouteDto } from "./dto/update-route.dto";
 import { buildRouteGpx } from "./gpx";
@@ -72,8 +73,28 @@ export class RoutesController {
 	}
 
 	// Static segment must be declared before the dynamic ":id" route below;
-	// otherwise NestJS would match "by-user" against ":id" and ParseIntPipe
+	// otherwise NestJS would match "public" against ":id" and ParseIntPipe
 	// would 400 before this handler was reached.
+	@ApiOperation({
+		summary: "List indexable public routes",
+		description:
+			"Returns public Routes that clear the Indexable quality gate (see CONTEXT.md), newest-updated first. Anonymous; feeds the landing sitemap and discovery surfaces. Total count in X-Total-Count.",
+	})
+	@ApiResponse({ status: 200, type: PublicRouteSummaryDto, isArray: true })
+	@ThrottleModerate()
+	@Get("public")
+	async findIndexablePublic(
+		@Query() query: ListRoutesQueryDto,
+		@Res({ passthrough: true }) res: Response,
+	): Promise<PublicRouteSummaryDto[]> {
+		const { items, total } = await this.routesService.findIndexablePublic(
+			query.limit ?? ROUTES_PAGE_LIMIT_DEFAULT,
+			query.offset ?? 0,
+		);
+		res.setHeader("X-Total-Count", String(total));
+		return items;
+	}
+
 	@UseGuards(OptionalJwtAuthGuard)
 	@ApiOperation({
 		summary: "Get a user's public routes",

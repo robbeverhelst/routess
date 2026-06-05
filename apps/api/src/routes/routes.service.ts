@@ -2,6 +2,7 @@ import { EntityManager, EntityRepository } from "@mikro-orm/core";
 import { InjectRepository } from "@mikro-orm/nestjs";
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { EventEmitter2 } from "@nestjs/event-emitter";
+import { INDEXABLE_MIN_DISTANCE_METERS, isRouteIndexable } from "@routess/core";
 import type { AppConfig } from "../config/app-config";
 import { APP_CONFIG } from "../config/config.module";
 import { Route } from "../entities/route.entity";
@@ -13,6 +14,7 @@ import {
 	type RouteDeletedEvent,
 } from "../telemetry/domain-events";
 import type { CreateRouteDto } from "./dto/create-route.dto";
+import type { PublicRouteSummaryDto } from "./dto/public-route-summary.dto";
 import type { RouteResponseDto } from "./dto/route-response.dto";
 import type { UpdateRouteDto } from "./dto/update-route.dto";
 import { toRouteResponseDto } from "./route.mapper";
@@ -74,6 +76,29 @@ export class RoutesService {
 			throw new NotFoundException(`Route with ID ${id} not found`);
 		}
 		return this.toResponseDto(route);
+	}
+
+	// Indexable public Routes for the landing sitemap and future RegionalHubs.
+	// SQL prefilters the cheap conditions; the canonical gate (isRouteIndexable
+	// in @routess/core) decides, so landing and API can never disagree. The
+	// in-memory window is acceptable while the indexable corpus is small.
+	async findIndexablePublic(limit: number, offset: number): Promise<{ items: PublicRouteSummaryDto[]; total: number }> {
+		const candidates = await this.routeRepository.find(
+			{ visibility: "public", distance: { $gte: INDEXABLE_MIN_DISTANCE_METERS } },
+			{
+				fields: ["id", "name", "distance", "description", "tags", "visibility", "updatedAt"],
+				orderBy: { updatedAt: "DESC" },
+				limit: 5000,
+			},
+		);
+		const indexable = candidates.filter((route) => isRouteIndexable(route));
+		const items = indexable.slice(offset, offset + limit).map((route) => ({
+			id: route.id,
+			name: route.name,
+			distance: route.distance,
+			updatedAt: route.updatedAt instanceof Date ? route.updatedAt.toISOString() : String(route.updatedAt),
+		}));
+		return { items, total: indexable.length };
 	}
 
 	// Public-only listing for someone else's library. Excludes 'private' and
