@@ -30,7 +30,15 @@ describe("Public route sharing E2E", () => {
 		const res = await supertest(app.getHttpServer())
 			.post("/api/v1/routes")
 			.set("Authorization", `Bearer ${token}`)
-			.send({ name: "Sunday Loop", waypoints, geometry, distance: 3500, duration: 1200, elevationGain: 25, ...overrides })
+			.send({
+				name: "Sunday Loop",
+				waypoints,
+				geometry,
+				distance: 3500,
+				duration: 1200,
+				elevationGain: 25,
+				...overrides,
+			})
 			.expect(201);
 		return res.body;
 	}
