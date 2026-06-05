@@ -1,7 +1,11 @@
 import type {
+	ApiCollection,
+	ApiCollectionDetail,
 	ApiPersonalAccessToken,
 	ApiPersonalAccessTokenWithSecret,
+	CreateCollectionRequest,
 	CreatePersonalAccessTokenRequest,
+	UpdateCollectionRequest,
 } from "@routess/api-client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRoutingStore } from "@/stores/routingStore";
@@ -161,6 +165,136 @@ export function useUpdateRoute() {
 		},
 		onError: (error) => {
 			Logger.error("Failed to update route:", error);
+		},
+	});
+}
+
+/**
+ * Toggle the server-persisted favourite flag with an optimistic list update.
+ */
+export function useToggleFavourite() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: async ({ routeId, favourite }: { routeId: number; favourite: boolean }) =>
+			apiService.updateRoute(routeId, { favourite }),
+		onMutate: async ({ routeId, favourite }) => {
+			await queryClient.cancelQueries({ queryKey: queryKeys.routes.list() });
+			const previous = queryClient.getQueryData<ApiRoute[]>(queryKeys.routes.list());
+			if (previous) {
+				queryClient.setQueryData(
+					queryKeys.routes.list(),
+					previous.map((r) => (r.id === routeId ? { ...r, favourite } : r)),
+				);
+			}
+			return { previous };
+		},
+		onSuccess: (_data, vars) => {
+			trackEvent({ name: "route_favourited", properties: { favourite: vars.favourite } });
+		},
+		onError: (error, _vars, context) => {
+			if (context?.previous) {
+				queryClient.setQueryData(queryKeys.routes.list(), context.previous);
+			}
+			Logger.error("Failed to toggle favourite:", error);
+		},
+		onSettled: (_data, _error, vars) => {
+			queryClient.invalidateQueries({ queryKey: queryKeys.routes.list() });
+			queryClient.invalidateQueries({ queryKey: queryKeys.routes.detail(vars.routeId.toString()) });
+		},
+	});
+}
+
+// ============================================================================
+// COLLECTION QUERIES
+// ============================================================================
+
+export function useCollections() {
+	const hasUser = hasStoredUser();
+
+	return useQuery<ApiCollection[]>({
+		queryKey: queryKeys.collections.list(),
+		queryFn: () => apiService.getCollections(),
+		enabled: hasUser,
+		staleTime: 2 * 60 * 1000,
+		retry: hasUser ? 2 : false,
+	});
+}
+
+/**
+ * Single collection with its ordered routes. Also works for shared
+ * (unlisted/public) collections viewed by non-owners or anonymous visitors.
+ */
+export function useCollection(collectionId: number | null) {
+	return useQuery<ApiCollectionDetail>({
+		queryKey: queryKeys.collections.detail(String(collectionId)),
+		queryFn: () => apiService.getCollection(collectionId as number),
+		enabled: collectionId != null,
+	});
+}
+
+export function useCreateCollection() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: (body: CreateCollectionRequest) => apiService.createCollection(body),
+		onSuccess: (collection) => {
+			queryClient.invalidateQueries({ queryKey: queryKeys.collections.list() });
+			trackEvent({ name: "collection_created", properties: { visibility: collection.visibility } });
+		},
+		onError: (error) => {
+			Logger.error("Failed to create collection:", error);
+		},
+	});
+}
+
+export function useUpdateCollection() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: ({ collectionId, updates }: { collectionId: number; updates: UpdateCollectionRequest }) =>
+			apiService.updateCollection(collectionId, updates),
+		onSuccess: (updated) => {
+			queryClient.invalidateQueries({ queryKey: queryKeys.collections.list() });
+			queryClient.invalidateQueries({ queryKey: queryKeys.collections.detail(String(updated.id)) });
+		},
+		onError: (error) => {
+			Logger.error("Failed to update collection:", error);
+		},
+	});
+}
+
+export function useDeleteCollection() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: (collectionId: number) => apiService.deleteCollection(collectionId),
+		onSuccess: (_, collectionId) => {
+			queryClient.invalidateQueries({ queryKey: queryKeys.collections.list() });
+			queryClient.removeQueries({ queryKey: queryKeys.collections.detail(String(collectionId)) });
+			trackEvent({ name: "collection_deleted", properties: {} });
+		},
+		onError: (error) => {
+			Logger.error("Failed to delete collection:", error);
+		},
+	});
+}
+
+/**
+ * Replace a collection's full ordered membership (add, remove, reorder).
+ */
+export function useSetCollectionRoutes() {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: ({ collectionId, routeIds }: { collectionId: number; routeIds: number[] }) =>
+			apiService.setCollectionRoutes(collectionId, routeIds),
+		onSuccess: (detail) => {
+			queryClient.setQueryData(queryKeys.collections.detail(String(detail.id)), detail);
+			queryClient.invalidateQueries({ queryKey: queryKeys.collections.list() });
+		},
+		onError: (error) => {
+			Logger.error("Failed to update collection routes:", error);
 		},
 	});
 }

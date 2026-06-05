@@ -11,6 +11,7 @@ import { type SupportedLanguage, t } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
 import { queryKeys } from "@/lib/query-client";
 import { useUnits } from "@/lib/units";
+import { useLibraryStore } from "@/stores/libraryStore";
 import { useModalsStore } from "@/stores/modalsStore";
 import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 import {
@@ -213,6 +214,18 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 	useEffect(() => {
 		document.documentElement.classList.toggle("dark", theme === "dark");
 	}, [theme]);
+
+	// ?collection=<id> deep link: open the shared-collection view in the
+	// library panel. Works for anonymous visitors (unlisted/public collections).
+	useEffect(() => {
+		const raw = new URLSearchParams(window.location.search).get("collection");
+		if (!raw) return;
+		const id = Number.parseInt(raw, 10);
+		if (Number.isNaN(id)) return;
+		useLibraryStore.getState().setSharedCollectionId(id);
+		setContext("library");
+		useUiStore.getState().setPanelCollapsed(false);
+	}, [setContext]);
 
 	useEffect(() => {
 		const onKey = (e: KeyboardEvent) => {
