@@ -7,14 +7,17 @@
  * Run from apps/docs: `bun run guide:screenshots`
  * Override the target with GUIDE_SCREENSHOT_URL (e.g. a local dev server).
  */
-import { mkdir } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { deflateSync } from "node:zlib";
 import type { Page } from "playwright";
+import sharp from "sharp";
 
 const APP_URL = process.env.GUIDE_SCREENSHOT_URL ?? "https://app.routess.com";
 const OUT_DIR = resolve(import.meta.dirname, "..", "public", "guide");
 const VIEWPORT = { width: 1440, height: 900 };
+// Docs content renders at ~720px, so 1440px sources are 2x-retina sharp.
+const MAX_WIDTH = 1440;
 const GHENT = { latitude: 51.0543, longitude: 3.7174, accuracy: 25 };
 
 // A scenic demo ride through Ghent: Citadelpark, up the Coupure canal, to the
@@ -57,7 +60,13 @@ async function shot(page: Page, name: string, options: Parameters<Page["screensh
 }
 
 async function fullShot(page: Page, name: string) {
-	await shot(page, `${name}.jpg`, { path: resolve(OUT_DIR, `${name}.jpg`), type: "jpeg", quality: 88 });
+	const path = resolve(OUT_DIR, `${name}.jpg`);
+	await shot(page, `${name}.jpg`, { path, type: "jpeg", quality: 88 });
+	const optimized = await sharp(path)
+		.resize({ width: MAX_WIDTH, withoutEnlargement: true })
+		.jpeg({ quality: 80, mozjpeg: true })
+		.toBuffer();
+	await writeFile(path, optimized);
 }
 
 async function clipShot(page: Page, name: string, clip: { x: number; y: number; width: number; height: number }) {
@@ -278,7 +287,7 @@ async function main() {
 	// Pass 3: phone viewport, bottom tab bar and panel sheet.
 	const mobileCtx = await browser.newContext({
 		viewport: { width: 390, height: 844 },
-		deviceScaleFactor: 3,
+		deviceScaleFactor: 2,
 		isMobile: true,
 		hasTouch: true,
 		userAgent:

@@ -2,6 +2,7 @@ import defaultMdxComponents from "fumadocs-ui/mdx";
 import { DocsBody, DocsDescription, DocsPage, DocsTitle } from "fumadocs-ui/page";
 import { notFound } from "next/navigation";
 import { i18n } from "@/lib/i18n";
+import { ScreenshotImage } from "@/lib/screenshot-image";
 import { guideSource } from "@/lib/source";
 
 export default async function Page(props: { params: Promise<{ lang: string; slug?: string[] }> }) {
@@ -25,7 +26,7 @@ export default async function Page(props: { params: Promise<{ lang: string; slug
 			<DocsTitle>{page.data.title}</DocsTitle>
 			<DocsDescription>{page.data.description}</DocsDescription>
 			<DocsBody>
-				<MDX components={defaultMdxComponents} />
+				<MDX components={{ ...defaultMdxComponents, img: ScreenshotImage }} />
 			</DocsBody>
 		</DocsPage>
 	);
