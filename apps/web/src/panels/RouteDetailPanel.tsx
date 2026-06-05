@@ -497,9 +497,7 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 								}}
 							>
 								{s.value}
-								{s.unit && (
-									<span style={{ fontSize: 11, color: RDS_COLORS.fgSubtle, fontWeight: 400 }}>{s.unit}</span>
-								)}
+								{s.unit && <span style={{ fontSize: 11, color: RDS_COLORS.fgSubtle, fontWeight: 400 }}>{s.unit}</span>}
 							</div>
 						</div>
 					))}
