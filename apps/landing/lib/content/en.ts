@@ -237,6 +237,18 @@ export const en: Dict = {
 			},
 		],
 	},
+	routePage: {
+		eyebrow: "Shared route",
+		activities: { run: "running route", cycle: "cycling route", walk: "walking route", route: "route" },
+		stats: { distance: "Distance", elevation: "Elevation gain", duration: "Estimated time" },
+		openInApp: "Open in routess",
+		downloadGpx: "Download GPX",
+		planYourOwn: "Plan your own route",
+		about: "About this route",
+		mapAlt: "Map of the route",
+		summaryTemplate:
+			"A {distance} {activity} with {elevation} m of climbing. View it, edit it, and export the GPX free with routess.",
+	},
 	meta: {
 		landing: {
 			title: "routess · plan routes for running, cycling & hiking",
