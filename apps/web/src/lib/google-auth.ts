@@ -1,5 +1,5 @@
 import { type ApiUser, type AuthResponse, apiService } from "./api";
-import { authStorageKeys, clearStoredAuthState, getStoredUser, notifyAuthStateChange, storeUser } from "./auth-state";
+import { clearStoredAuthState, getStoredUser, notifyAuthStateChange, storeUser } from "./auth-state";
 import { Logger } from "./logger";
 import { getRuntimeConfig } from "./runtime-config";
 import { breadcrumb } from "./telemetry";
@@ -26,11 +26,10 @@ export interface GoogleUser {
 	family_name?: string;
 }
 
-// Auth state interface
+// Auth state interface. Cookie-only auth: there is no client-readable token.
 export interface AuthState {
 	isAuthenticated: boolean;
 	user: ApiUser | null;
-	accessToken: string | null;
 }
 
 export interface GoogleCodeResponse {
@@ -96,7 +95,6 @@ class GoogleAuthService {
 				return {
 					isAuthenticated: true,
 					user,
-					accessToken: null,
 				};
 			}
 		} catch (error) {
@@ -106,7 +104,6 @@ class GoogleAuthService {
 		return {
 			isAuthenticated: false,
 			user: null,
-			accessToken: null,
 		};
 	}
 
@@ -137,10 +134,6 @@ class GoogleAuthService {
 
 	getCurrentUser(): ApiUser | null {
 		return this.getAuthState().user;
-	}
-
-	getAccessToken(): string | null {
-		return localStorage.getItem(authStorageKeys.accessToken);
 	}
 
 	getClientId(): string {

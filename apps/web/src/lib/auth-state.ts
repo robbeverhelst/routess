@@ -1,15 +1,17 @@
 import type { ApiUser } from "./api";
 
-const ACCESS_TOKEN_KEY = "access_token";
+// Auth is cookie-only; localStorage holds the profile snapshot, never a
+// credential. "access_token" is a legacy key from older builds, removed on
+// bootstrap and on sign-out.
+const LEGACY_ACCESS_TOKEN_KEY = "access_token";
 const USER_KEY = "user";
 
 export const authStorageKeys = {
-	accessToken: ACCESS_TOKEN_KEY,
 	user: USER_KEY,
 } as const;
 
 export const clearStoredAuthState = () => {
-	localStorage.removeItem(ACCESS_TOKEN_KEY);
+	localStorage.removeItem(LEGACY_ACCESS_TOKEN_KEY);
 	localStorage.removeItem(USER_KEY);
 };
 
@@ -37,8 +39,8 @@ export const notifyAuthStateChange = () => {
 	window.dispatchEvent(new CustomEvent("auth-change"));
 	window.dispatchEvent(
 		new StorageEvent("storage", {
-			key: ACCESS_TOKEN_KEY,
-			newValue: localStorage.getItem(ACCESS_TOKEN_KEY),
+			key: USER_KEY,
+			newValue: localStorage.getItem(USER_KEY),
 			oldValue: null,
 		}),
 	);

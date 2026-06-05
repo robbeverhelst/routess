@@ -24,24 +24,31 @@ describe("runBootstrap", () => {
 	});
 
 	it("leaves ad-hoc keys alone on the very first boot", () => {
-		localStorage.setItem("access_token", "tok");
 		localStorage.setItem("user", '{"id":"u1"}');
 		localStorage.setItem("lastKnownLocation", "[4.35,50.85]");
 		localStorage.setItem("mapWaypoints", '{"waypoints":[]}');
 
 		runBootstrap();
 
-		expect(localStorage.getItem("access_token")).toBe("tok");
 		expect(localStorage.getItem("user")).toBe('{"id":"u1"}');
 		expect(localStorage.getItem("lastKnownLocation")).toBe("[4.35,50.85]");
 		expect(localStorage.getItem("mapWaypoints")).toBe('{"waypoints":[]}');
 		expect(getProfile).not.toHaveBeenCalled();
 	});
 
+	it("always purges the legacy access token, even on first boot", () => {
+		localStorage.setItem("access_token", "tok");
+		localStorage.setItem("user", '{"id":"u1"}');
+
+		runBootstrap();
+
+		expect(localStorage.getItem("access_token")).toBeNull();
+		expect(localStorage.getItem("user")).toBe('{"id":"u1"}');
+	});
+
 	it("purges unversioned ad-hoc keys but keeps auth state when the build version changes", async () => {
 		getProfile.mockResolvedValue({ id: "u1", email: "fresh@example.com" });
 		localStorage.setItem("maps-app-version", JSON.stringify({ current: "1.1.0", lastChecked: Date.now() - 1000 }));
-		localStorage.setItem("access_token", "tok");
 		localStorage.setItem("user", '{"id":"u1"}');
 		localStorage.setItem("lastKnownLocation", "[4.35,50.85]");
 		localStorage.setItem("mapWaypoints", '{"waypoints":[]}');
@@ -50,7 +57,6 @@ describe("runBootstrap", () => {
 
 		runBootstrap();
 
-		expect(localStorage.getItem("access_token")).toBe("tok");
 		expect(localStorage.getItem("lastKnownLocation")).toBeNull();
 		expect(localStorage.getItem("mapWaypoints")).toBeNull();
 		// Zustand-persisted stores keep their own versioning - leave them alone.
@@ -67,13 +73,11 @@ describe("runBootstrap", () => {
 	it("keeps the stored user when the profile refresh fails", async () => {
 		getProfile.mockRejectedValue(new Error("network down"));
 		localStorage.setItem("maps-app-version", JSON.stringify({ current: "1.1.0", lastChecked: Date.now() - 1000 }));
-		localStorage.setItem("access_token", "tok");
 		localStorage.setItem("user", '{"id":"u1"}');
 
 		runBootstrap();
 
 		await vi.waitFor(() => expect(getProfile).toHaveBeenCalled());
-		expect(localStorage.getItem("access_token")).toBe("tok");
 		expect(localStorage.getItem("user")).toBe('{"id":"u1"}');
 	});
 
@@ -90,11 +94,11 @@ describe("runBootstrap", () => {
 
 	it("does nothing when the build version is unchanged", () => {
 		localStorage.setItem("maps-app-version", JSON.stringify({ current: "1.2.0", lastChecked: Date.now() - 1000 }));
-		localStorage.setItem("access_token", "tok");
+		localStorage.setItem("user", '{"id":"u1"}');
 
 		runBootstrap();
 
-		expect(localStorage.getItem("access_token")).toBe("tok");
+		expect(localStorage.getItem("user")).toBe('{"id":"u1"}');
 		expect(getProfile).not.toHaveBeenCalled();
 	});
 });

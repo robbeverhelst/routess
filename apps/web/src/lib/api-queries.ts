@@ -46,13 +46,13 @@ export function useUserRoutes() {
 }
 
 /**
- * Hook to fetch a specific route by ID
+ * Hook to fetch a specific route by numeric ID or 32-hex share token.
  */
-export function useRoute(routeId: number) {
+export function useRoute(routeRef: number | string) {
 	return useQuery({
-		queryKey: queryKeys.routes.detail(routeId.toString()),
-		queryFn: () => apiService.getRoute(routeId),
-		enabled: !!routeId, // Only run if routeId exists
+		queryKey: queryKeys.routes.detail(String(routeRef)),
+		queryFn: () => apiService.getRoute(routeRef),
+		enabled: !!routeRef, // Only run if a ref exists
 	});
 }
 

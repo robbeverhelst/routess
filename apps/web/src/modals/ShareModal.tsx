@@ -123,7 +123,10 @@ export function ShareModal() {
 		if (canShareCanonical && savedRouteId !== null && savedRoute) {
 			// Canonical page is on the landing host once VITE_PUBLIC_ROUTE_BASE_URL is set (ADR 0025); else this origin.
 			const base = (getRuntimeConfig("VITE_PUBLIC_ROUTE_BASE_URL") ?? window.location.origin).replace(/\/+$/, "");
-			return `${base}/r/${buildRouteSlugId(savedRoute.name, savedRouteId)}`;
+			// Public routes link by id (canonical, SEO); unlisted by the
+			// unguessable share token, since unlisted ids 404 to anonymous viewers.
+			const ref = savedRoute.visibility === "public" ? savedRouteId : savedRoute.shareToken;
+			return `${base}/r/${buildRouteSlugId(savedRoute.name, ref)}`;
 		}
 		try {
 			const encoded = serializeAndCompress(waypoints, isMapLocked);
