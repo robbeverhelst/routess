@@ -15,6 +15,7 @@ interface UseMapPositioningProps {
 	lastKnownLocationFromStorage: [number, number] | null;
 	detectedRouteInLocalStorageOnInit: boolean;
 	pendingSharedRoute: boolean;
+	hasSavedMapView: boolean;
 	mapPitch: number;
 }
 
@@ -29,6 +30,7 @@ export const useMapPositioning = ({
 	lastKnownLocationFromStorage,
 	detectedRouteInLocalStorageOnInit,
 	pendingSharedRoute,
+	hasSavedMapView,
 	mapPitch,
 }: UseMapPositioningProps) => {
 	const hasInitiallyZoomedToUser = useRef(false);
@@ -83,6 +85,14 @@ export const useMapPositioning = ({
 			return;
 		}
 
+		// The camera was restored from the last saved map view; flying to a
+		// (last known) location would snap the user away from where they left off.
+		if (hasSavedMapView) {
+			Logger.info("[useMapPositioning] Saved map view restored, skipping location fly-to");
+			hasInitiallyZoomedToUser.current = true;
+			return;
+		}
+
 		// Priority 2: Zoom to current user location if available
 		if (userLocation && !isUserLocationLoading && !locationError) {
 			Logger.info("[useMapPositioning] Priority 2: Zooming to current user location");
@@ -125,6 +135,7 @@ export const useMapPositioning = ({
 		lastKnownLocationFromStorage,
 		detectedRouteInLocalStorageOnInit,
 		pendingSharedRoute,
+		hasSavedMapView,
 		mapPitch,
 		mapRef,
 	]);
