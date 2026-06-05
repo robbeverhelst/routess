@@ -244,6 +244,18 @@ export const nl: Dict = {
 			},
 		],
 	},
+	routePage: {
+		eyebrow: "Gedeelde route",
+		activities: { run: "looproute", cycle: "fietsroute", walk: "wandelroute", route: "route" },
+		stats: { distance: "Afstand", elevation: "Hoogtemeters", duration: "Geschatte tijd" },
+		openInApp: "Open in routess",
+		downloadGpx: "Download GPX",
+		planYourOwn: "Plan je eigen route",
+		about: "Over deze route",
+		mapAlt: "Kaart van de route",
+		summaryTemplate:
+			"Een {activity} van {distance} met {elevation} hoogtemeters. Bekijk, bewerk en exporteer de GPX gratis met routess.",
+	},
 	meta: {
 		landing: {
 			title: "routess · plan routes om te lopen, fietsen & wandelen",
