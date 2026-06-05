@@ -54,12 +54,11 @@ export class AuthController {
 	@ApiOperation({
 		summary: "Email + password signup (request)",
 		description:
-			"Step 1 of email+password signup. Validates the password (length 12-128, HIBP breach check) and emails a verification link. The User row is NOT created until the verification link is clicked. Rejected with 409 if an account with this email already exists.",
+			"Step 1 of email+password signup. Validates the password (length 12-128, HIBP breach check) and emails a verification link. The User row is NOT created until the verification link is clicked. Always returns 200 regardless of whether the email is already registered (no enumeration); existing accounts get a 'you already have an account' email instead of a verification link.",
 	})
 	@ApiBody({ type: EmailSignupDto })
-	@ApiResponse({ status: 200, description: "Verification email sent" })
+	@ApiResponse({ status: 200, description: "Request accepted (always 200, even if the email is already registered)" })
 	@ApiResponse({ status: 400, description: "Invalid password (too short, too long, or breached)" })
-	@ApiResponse({ status: 409, description: "Email already in use" })
 	@HttpCode(200)
 	@ThrottleAuth()
 	@Post("signup-email")

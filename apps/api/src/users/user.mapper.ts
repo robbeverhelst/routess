@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { normalizeUserPreferences } from "@routess/core";
 import type { User } from "../entities/user.entity";
-import { UserProfileDto, UserResponseDto } from "./dto/user-response.dto";
+import { PublicUserDto, UserProfileDto, UserResponseDto } from "./dto/user-response.dto";
 
 type SerializableUser = Pick<
 	User,
@@ -18,6 +18,17 @@ type SerializableUser = Pick<
 
 function hashUserId(salt: string, userId: number): string {
 	return createHash("sha256").update(`${salt}:${userId}`).digest("hex");
+}
+
+// Owner shape embedded in route/collection responses, which other users (and
+// anonymous visitors on public/unlisted pages) can see. Never add PII here.
+export function toPublicUserDto(user: Pick<User, "id" | "name" | "avatar">, analyticsSalt: string): PublicUserDto {
+	return {
+		id: user.id,
+		name: user.name,
+		avatar: user.avatar,
+		idHash: hashUserId(analyticsSalt, user.id),
+	};
 }
 
 // `hasPassword` is computed by the caller (typically by querying

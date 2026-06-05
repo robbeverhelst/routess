@@ -53,4 +53,13 @@ describe("parseRouteSlugId", () => {
 	it("rejects non-positive ids", () => {
 		expect(parseRouteSlugId("loop-0")).toBeNull();
 	});
+
+	it("parses a 32-hex share token tail as a token, not an id", () => {
+		const token = "9f86d081884c7d659a2feaa0c55ad015";
+		expect(parseRouteSlugId(`sunday-loop-${token}`)).toEqual({ slug: "sunday-loop", token });
+	});
+
+	it("does not treat shorter hex tails as tokens", () => {
+		expect(parseRouteSlugId("sunday-loop-abcdef")).toBeNull();
+	});
 });

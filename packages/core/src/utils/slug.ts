@@ -11,11 +11,25 @@ export function toRouteSlug(name: string): string {
 	return slug || "route";
 }
 
-export function buildRouteSlugId(name: string, id: number): string {
-	return `${toRouteSlug(name)}-${id}`;
+// `ref` is a numeric route id (public routes: canonical, SEO-friendly) or a
+// 32-hex share token (unlisted routes: unguessable, since sequential ids
+// would make "only people with the link" enumerable).
+export function buildRouteSlugId(name: string, ref: number | string): string {
+	return `${toRouteSlug(name)}-${ref}`;
 }
 
-export function parseRouteSlugId(slugId: string): { slug: string; id: number } | null {
+const SHARE_TOKEN_SLUG_PATTERN = /^(.*?)-([0-9a-f]{32})$/;
+
+export type ParsedRouteSlugId =
+	| { slug: string; id: number; token?: undefined }
+	| { slug: string; token: string; id?: undefined };
+
+export function parseRouteSlugId(slugId: string): ParsedRouteSlugId | null {
+	// Token first: a 32-hex tail is unambiguous (real ids are far shorter).
+	const tokenMatch = SHARE_TOKEN_SLUG_PATTERN.exec(slugId);
+	if (tokenMatch?.[2]) {
+		return { slug: tokenMatch[1] ?? "", token: tokenMatch[2] };
+	}
 	const match = /^(.*?)-(\d+)$/.exec(slugId);
 	if (!match) return null;
 	const id = Number(match[2]);

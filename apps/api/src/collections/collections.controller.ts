@@ -1,4 +1,16 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Put, UseGuards } from "@nestjs/common";
+import {
+	BadRequestException,
+	Body,
+	Controller,
+	Delete,
+	Get,
+	Param,
+	ParseIntPipe,
+	Patch,
+	Post,
+	Put,
+	UseGuards,
+} from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiHeader, ApiOperation, ApiParam, ApiResponse, ApiTags } from "@nestjs/swagger";
 import type { AuthenticatedUser } from "../auth/authenticated-user";
 import { CurrentUser, OptionalCurrentUser } from "../auth/decorators/current-user.decorator";
@@ -9,6 +21,7 @@ import { OptionalJwtAuthGuard } from "../auth/guards/optional-jwt-auth.guard";
 import { ScopeGuard } from "../auth/guards/scope.guard";
 import { UnifiedAuthGuard } from "../auth/guards/unified-auth.guard";
 import { ThrottleModerate, ThrottleStrict } from "../common/decorators/throttle.decorator";
+import { isShareToken } from "../common/share-token";
 import { CollectionsService } from "./collections.service";
 import { CollectionDetailResponseDto, CollectionResponseDto } from "./dto/collection-response.dto";
 import { CreateCollectionDto } from "./dto/create-collection.dto";
@@ -53,20 +66,26 @@ export class CollectionsController {
 
 	@UseGuards(OptionalJwtAuthGuard)
 	@ApiOperation({
-		summary: "Get collection by ID",
+		summary: "Get collection by ID or share token",
 		description:
-			"Owners see the collection regardless of visibility. Non-owners (including anonymous viewers) only see public and unlisted collections, and private routes inside them are omitted. Private collections return 404 to non-owners.",
+			"`ref` is a numeric collection ID (owners: any visibility; non-owners: public only, so sequential IDs can't be walked to discover unlisted collections) or a 32-hex share token (public and unlisted). Private routes inside are omitted for non-owners. Private collections return 404 to non-owners.",
 	})
-	@ApiParam({ name: "id", description: "Collection ID", type: "number" })
+	@ApiParam({ name: "ref", description: "Collection ID or 32-hex share token", type: "string" })
 	@ApiResponse({ status: 200, type: CollectionDetailResponseDto })
 	@ApiResponse({ status: 404, description: "Collection not found" })
 	@ThrottleModerate()
-	@Get(":id")
+	@Get(":ref")
 	findOne(
-		@Param("id", ParseIntPipe) id: number,
+		@Param("ref") ref: string,
 		@OptionalCurrentUser() user: AuthenticatedUser | null,
 	): Promise<CollectionDetailResponseDto> {
-		return this.collectionsService.findOne(id, user?.id ?? null);
+		if (isShareToken(ref)) {
+			return this.collectionsService.findOneByShareToken(ref, user?.id ?? null);
+		}
+		if (!/^\d+$/.test(ref)) {
+			throw new BadRequestException("Collection reference must be a numeric ID or a share token");
+		}
+		return this.collectionsService.findOne(Number(ref), user?.id ?? null);
 	}
 
 	@ApiBearerAuth("JWT-auth")

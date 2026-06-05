@@ -33,7 +33,17 @@ import { UsersModule } from "./users/users.module";
 			useFactory: (appConfig: AppConfig) => ({
 				pinoHttp: {
 					level: process.env.LOG_LEVEL || (appConfig.app.isTest ? "silent" : "info"),
-					redact: ["req.headers.authorization", "req.body.password"],
+					// The req serializer below already strips bodies/headers down to
+					// id/method/url; this list is defense-in-depth in case the
+					// serializer is ever widened.
+					redact: [
+						"req.headers.authorization",
+						"req.headers.cookie",
+						"req.body.password",
+						"req.body.currentPassword",
+						"req.body.newPassword",
+						"req.body.token",
+					],
 					serializers: {
 						req: (req) => ({
 							id: req.id || req.headers["x-request-id"],

@@ -183,15 +183,18 @@ describe("Collections Integration Tests", () => {
 				.expect(404);
 		});
 
-		it("serves unlisted collections to anyone with the URL, omitting private routes", async () => {
-			const { id } = await createCollection({ name: "Shared trip", visibility: "unlisted" });
+		it("serves unlisted collections via the share token, omitting private routes; numeric id 404s", async () => {
+			const { id, shareToken } = await createCollection({ name: "Shared trip", visibility: "unlisted" });
 			await supertest(app.getHttpServer())
 				.put(`/api/v1/collections/${id}/routes`)
 				.set("Authorization", `Bearer ${authToken}`)
 				.send({ routeIds: [privateRoute.id, publicRoute.id, unlistedRoute.id] })
 				.expect(200);
 
-			const response = await supertest(app.getHttpServer()).get(`/api/v1/collections/${id}`).expect(200);
+			// Sequential ids must not expose unlisted collections to anonymous viewers.
+			await supertest(app.getHttpServer()).get(`/api/v1/collections/${id}`).expect(404);
+
+			const response = await supertest(app.getHttpServer()).get(`/api/v1/collections/${shareToken}`).expect(200);
 			expect(response.body.routeIds).toEqual([publicRoute.id, unlistedRoute.id]);
 			expect(response.body.routeCount).toBe(2);
 			expect(response.body.routes.map((r: { name: string }) => r.name)).toEqual(["Public Route", "Unlisted Route"]);

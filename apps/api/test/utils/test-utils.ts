@@ -1,6 +1,7 @@
 import { MikroORM, RequestContext } from "@mikro-orm/core";
 import type { INestApplication } from "@nestjs/common";
 import { Test, type TestingModule, type TestingModuleBuilder } from "@nestjs/testing";
+import { ThrottlerStorage } from "@nestjs/throttler";
 import { configureApplication } from "../../src/app/app-setup";
 import { SessionService } from "../../src/auth/session.service";
 import { getAppConfig, loadEnvironment } from "../../src/config/app-config";
@@ -43,6 +44,10 @@ export async function clearDatabase(app: INestApplication) {
 		const generator = orm.getSchemaGenerator();
 		await generator.refreshDatabase();
 	});
+	// Rate-limit buckets are in-memory and would otherwise accumulate across
+	// tests within one app instance, making test outcomes order-dependent.
+	const throttlerStorage = app.get<{ storage: Map<string, unknown> }>(ThrottlerStorage, { strict: false });
+	throttlerStorage?.storage?.clear();
 }
 
 export async function closeTestApp(app: INestApplication) {

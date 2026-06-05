@@ -1,4 +1,17 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, Res, UseGuards } from "@nestjs/common";
+import {
+	BadRequestException,
+	Body,
+	Controller,
+	Delete,
+	Get,
+	Param,
+	ParseIntPipe,
+	Patch,
+	Post,
+	Query,
+	Res,
+	UseGuards,
+} from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiHeader, ApiOperation, ApiParam, ApiResponse, ApiTags } from "@nestjs/swagger";
 import type { Response } from "express";
 import type { AuthenticatedUser } from "../auth/authenticated-user";
@@ -11,6 +24,7 @@ import { OptionalJwtAuthGuard } from "../auth/guards/optional-jwt-auth.guard";
 import { ScopeGuard } from "../auth/guards/scope.guard";
 import { UnifiedAuthGuard } from "../auth/guards/unified-auth.guard";
 import { ThrottleModerate, ThrottleStrict } from "../common/decorators/throttle.decorator";
+import { isShareToken } from "../common/share-token";
 import { CreateRouteDto } from "./dto/create-route.dto";
 import { ListRoutesQueryDto, ROUTES_PAGE_LIMIT_DEFAULT } from "./dto/list-routes-query.dto";
 import { RouteResponseDto } from "./dto/route-response.dto";
@@ -91,19 +105,21 @@ export class RoutesController {
 	@ApiOperation({
 		summary: "Download route as GPX",
 		description:
-			"Returns the route as a GPX 1.1 document with a routess-namespaced extension carrying per-waypoint Type. Owner can fetch any visibility; non-owners can fetch public and unlisted; private routes return 404 to non-owners. Unlisted responses carry X-Robots-Tag: noindex.",
+			"Returns the route as a GPX 1.1 document with a routess-namespaced extension carrying per-waypoint Type. `ref` is a numeric route ID (owner: any visibility; non-owners: public only) or a 32-hex share token (public and unlisted). Private routes return 404 to non-owners. Unlisted responses carry X-Robots-Tag: noindex.",
 	})
-	@ApiParam({ name: "id", description: "Route ID", type: "number" })
+	@ApiParam({ name: "ref", description: "Route ID or 32-hex share token", type: "string" })
 	@ApiResponse({ status: 200, description: "GPX document" })
 	@ApiResponse({ status: 404, description: "Route not found or not viewable" })
 	@ThrottleModerate()
-	@Get(":id/gpx")
+	@Get(":ref/gpx")
 	async downloadGpx(
-		@Param("id", ParseIntPipe) id: number,
+		@Param("ref") ref: string,
 		@OptionalCurrentUser() user: AuthenticatedUser | null,
 		@Res() res: Response,
 	): Promise<void> {
-		const route = await this.routesService.findForGpx(id, user?.id ?? null);
+		const route = isShareToken(ref)
+			? await this.routesService.findForGpxByShareToken(ref)
+			: await this.routesService.findForGpx(parseRouteId(ref), user?.id ?? null);
 		const gpx = buildRouteGpx({
 			name: route.name,
 			description: route.description,
@@ -121,20 +137,20 @@ export class RoutesController {
 
 	@UseGuards(OptionalJwtAuthGuard)
 	@ApiOperation({
-		summary: "Get route by ID",
+		summary: "Get route by ID or share token",
 		description:
-			"Returns the route. Owners see it regardless of visibility; non-owners (including anonymous viewers) only see public and unlisted routes. Private routes return 404 to non-owners. PATs hit this through the cookie-or-bearer JWT path; PAT-as-Bearer is not yet supported here (use GET /routes to list and filter).",
+			"Returns the route. `ref` is either a numeric route ID (owners see any visibility; non-owners only public, so sequential IDs can't be walked to discover unlisted routes) or a 32-hex share token (serves public and unlisted to anyone with the link). Private routes return 404 to non-owners. PATs hit this through the cookie-or-bearer JWT path; PAT-as-Bearer is not yet supported here (use GET /routes to list and filter).",
 	})
-	@ApiParam({ name: "id", description: "Route ID", type: "number" })
+	@ApiParam({ name: "ref", description: "Route ID or 32-hex share token", type: "string" })
 	@ApiResponse({ status: 200, description: "Route retrieved successfully", type: RouteResponseDto })
 	@ApiResponse({ status: 404, description: "Route not found" })
 	@ThrottleModerate()
-	@Get(":id")
-	findOne(
-		@Param("id", ParseIntPipe) id: number,
-		@OptionalCurrentUser() user: AuthenticatedUser | null,
-	): Promise<RouteResponseDto> {
-		return this.routesService.findOne(id, user?.id ?? null);
+	@Get(":ref")
+	findOne(@Param("ref") ref: string, @OptionalCurrentUser() user: AuthenticatedUser | null): Promise<RouteResponseDto> {
+		if (isShareToken(ref)) {
+			return this.routesService.findOneByShareToken(ref);
+		}
+		return this.routesService.findOne(parseRouteId(ref), user?.id ?? null);
 	}
 
 	@ApiBearerAuth("JWT-auth")
@@ -212,4 +228,13 @@ export class RoutesController {
 		await this.routesService.remove(id, user.id);
 		return { success: true, message: "Route deleted successfully" };
 	}
+}
+
+// The read endpoints accept either a numeric id or a share token, so they
+// can't use ParseIntPipe; this mirrors its behavior for the id branch.
+function parseRouteId(ref: string): number {
+	if (!/^\d+$/.test(ref)) {
+		throw new BadRequestException("Route reference must be a numeric ID or a share token");
+	}
+	return Number(ref);
 }

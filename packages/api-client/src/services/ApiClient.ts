@@ -262,13 +262,16 @@ export class ApiClient {
 		return items;
 	}
 
-	async getRoute(id: number): Promise<ApiRoute> {
-		return this.request<ApiRoute>(`/routes/${id}`);
+	// `ref` is a numeric route id (owner: any visibility; anonymous: public
+	// only) or a 32-hex share token (public and unlisted).
+	async getRoute(ref: number | string): Promise<ApiRoute> {
+		return this.request<ApiRoute>(`/routes/${ref}`);
 	}
 
 	// Direct <a href> link; resolves against the configured API origin (like exportDataUrl).
-	routeGpxUrl(id: number): string {
-		return `${this.config.baseUrl}/api/v1/routes/${id}/gpx`;
+	// Same ref semantics as getRoute.
+	routeGpxUrl(ref: number | string): string {
+		return `${this.config.baseUrl}/api/v1/routes/${ref}/gpx`;
 	}
 
 	async updateRoute(id: number, route: UpdateRouteRequest): Promise<ApiRoute> {
@@ -294,8 +297,9 @@ export class ApiClient {
 		return this.request<ApiCollection>("/collections", { method: "POST", body });
 	}
 
-	async getCollection(id: number): Promise<ApiCollectionDetail> {
-		return this.request<ApiCollectionDetail>(`/collections/${id}`);
+	// Same ref semantics as getRoute: numeric id or 32-hex share token.
+	async getCollection(ref: number | string): Promise<ApiCollectionDetail> {
+		return this.request<ApiCollectionDetail>(`/collections/${ref}`);
 	}
 
 	async updateCollection(id: number, body: UpdateCollectionRequest): Promise<ApiCollection> {

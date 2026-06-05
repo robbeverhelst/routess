@@ -22,6 +22,11 @@ import { SessionService } from "./session.service";
 
 const VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000;
 const PASSWORD_RESET_TTL_MS = 30 * 60 * 1000;
+// Per-account lockout: after this many consecutive failed passwords, the
+// method locks for the window below. Completing a password reset clears the
+// lock implicitly (the reset flow replaces the hash and revokes sessions).
+const LOGIN_LOCKOUT_THRESHOLD = 10;
+const LOGIN_LOCKOUT_MS = 15 * 60 * 1000;
 
 interface SessionContext {
 	userAgent?: string | string[];
@@ -48,9 +53,10 @@ export class EmailAuthService {
 
 	// Step 1 of email+password signup. Validates the password, hashes it, stores
 	// it on a pending_signup token, and emails a verification link. The User
-	// row is NOT created here — it's created on token consumption. Email is
-	// rejected outright if a User already exists with that address (the user
-	// should sign in via their existing method and add a password from settings).
+	// row is NOT created here — it's created on token consumption. If a User
+	// already exists with that address, the HTTP response is identical to a
+	// fresh signup (no enumeration oracle, mirroring requestPasswordReset) and
+	// a "you already have an account" email is sent instead.
 	async signupRequest(email: string, name: string, password: string): Promise<void> {
 		const normalisedEmail = email.toLowerCase().trim();
 		await this.passwordService.validateOrThrow(password);
@@ -60,9 +66,12 @@ export class EmailAuthService {
 			{ filters: { softDelete: false } },
 		);
 		if (existingUser) {
-			throw new ConflictException(
-				"An account with this email already exists. Sign in instead, then add a password from settings.",
-			);
+			// Hash anyway so this branch costs the same as a fresh signup;
+			// otherwise the response time would leak which emails exist.
+			await this.passwordService.hash(password);
+			// Signed-out visitors land on the sign-in view at the app root.
+			await this.emailService.sendAccountExistsEmail(normalisedEmail, this.config.app.frontendUrl);
+			return;
 		}
 
 		// Invalidate any prior pending_signup tokens for this email so only the
@@ -171,14 +180,38 @@ export class EmailAuthService {
 			await this.passwordService.verify("$argon2id$v=19$m=19456,t=2,p=1$AAAA$AAAA", password);
 			throw new UnauthorizedException("Email or password is incorrect.");
 		}
+
+		// Per-account lockout against distributed credential stuffing (the
+		// per-IP throttle alone is bypassable with enough IPs). Locked logins
+		// fail with the same generic message and still burn an argon2 verify,
+		// so neither the response nor its timing reveals the lock.
+		if (method.lockedUntil && method.lockedUntil.getTime() > Date.now()) {
+			this.emitLoginAttempt("invalid_token");
+			await this.passwordService.verify("$argon2id$v=19$m=19456,t=2,p=1$AAAA$AAAA", password);
+			throw new UnauthorizedException("Email or password is incorrect.");
+		}
+
 		const ok = await this.passwordService.verify(method.passwordHash, password);
 		if (!ok) {
+			method.failedLoginAttempts += 1;
+			if (method.failedLoginAttempts >= LOGIN_LOCKOUT_THRESHOLD) {
+				method.lockedUntil = new Date(Date.now() + LOGIN_LOCKOUT_MS);
+				method.failedLoginAttempts = 0;
+				// Tell the owner (fire-and-forget: awaiting would make the
+				// lock-tripping attempt measurably slower, leaking lock state).
+				void this.emailService
+					.sendAccountLockedEmail(normalisedEmail, this.config.app.frontendUrl)
+					.catch(() => undefined);
+			}
+			await this.em.persistAndFlush(method);
 			this.emitLoginAttempt("invalid_token");
 			throw new UnauthorizedException("Email or password is incorrect.");
 		}
 
 		const user = method.user as unknown as User;
 		method.lastUsedAt = new Date();
+		method.failedLoginAttempts = 0;
+		method.lockedUntil = null;
 		await this.em.persistAndFlush(method);
 
 		const accessToken = await this.sessionService.createSession(user.id, {
@@ -275,23 +308,35 @@ export class EmailAuthService {
 	// ALL sessions for the user (including any session that initiated the reset)
 	// because reset implies the old credentials may be compromised.
 	async resetPassword(token: string, newPassword: string): Promise<void> {
-		const tokenRow = await this.tokenRepository.findOne({ token, purpose: "password_reset" }, { populate: ["user"] });
-		if (!tokenRow || tokenRow.usedAt || tokenRow.expiresAt.getTime() < Date.now()) {
-			throw new BadRequestException("This reset link is invalid or has expired.");
-		}
+		// Validate before claiming so a rejected password (too short, breached)
+		// doesn't burn the single-use token.
 		await this.passwordService.validateOrThrow(newPassword);
 
-		const user = tokenRow.user as unknown as User;
-		const method = await this.authMethodRepository.findOne({ provider: "email", providerId: user.email });
+		// Atomically claim the token (same pattern as verifyEmail) so two
+		// concurrent requests can't both consume it.
+		const claimedRows = (await this.em.getConnection().execute(
+			`update "verification_token"
+			 set "used_at" = now(), "updated_at" = now()
+			 where "token" = ? and "purpose" = 'password_reset' and "used_at" is null and "expires_at" > now()
+			 returning "id", "email", "user_id"`,
+			[token],
+		)) as Array<{ id: number; email: string; user_id: number }>;
+		const claimed = claimedRows[0];
+		if (!claimed) {
+			throw new BadRequestException("This reset link is invalid or has expired.");
+		}
+
+		const method = await this.authMethodRepository.findOne({ provider: "email", providerId: claimed.email });
 		if (!method) {
 			throw new BadRequestException("Cannot reset password for an account without a password set up.");
 		}
 
 		method.passwordHash = await this.passwordService.hash(newPassword);
 		method.lastUsedAt = new Date();
-		tokenRow.usedAt = new Date();
-		await this.em.persistAndFlush([method, tokenRow]);
-		await this.sessionService.invalidateUserSessions(user.id, "invalidated");
+		method.failedLoginAttempts = 0;
+		method.lockedUntil = null;
+		await this.em.persistAndFlush(method);
+		await this.sessionService.invalidateUserSessions(claimed.user_id, "invalidated");
 	}
 
 	private emitLoginAttempt(result: AuthLoginAttemptedEvent["result"]) {

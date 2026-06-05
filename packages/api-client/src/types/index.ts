@@ -33,6 +33,16 @@ export type ApiUserRole = "user" | "admin";
 
 export type ApiUserDeletionStatus = "active" | "pending_hard_delete";
 
+// Owner shape embedded in routes/collections, which other users (including
+// anonymous visitors on public/unlisted pages) can see. Deliberately PII-free.
+export interface ApiPublicUser {
+	id: number;
+	name: string;
+	avatar?: string;
+	// Pseudonymous user identifier for ProductEvent tracking. See ADR-0020.
+	idHash: string;
+}
+
 export interface ApiUser {
 	id: number;
 	email: string;
@@ -239,7 +249,10 @@ export interface ApiRoute {
 	endAddress?: string;
 	routingPreferences?: RoutingPreferences | null;
 	provenance: Provenance;
-	user: ApiUser;
+	// Unguessable 32-hex handle for share links. Unlisted routes are only
+	// reachable anonymously via this token (numeric ids are public-only).
+	shareToken: string;
+	user: ApiPublicUser;
 	createdAt: string;
 	updatedAt: string;
 }
@@ -296,7 +309,9 @@ export interface ApiCollection {
 	// Ordered. For non-owners, private routes are omitted server-side.
 	routeIds: number[];
 	routeCount: number;
-	user: ApiUser;
+	// Unguessable 32-hex handle for share links; see ApiRoute.shareToken.
+	shareToken: string;
+	user: ApiPublicUser;
 	createdAt: string;
 	updatedAt: string;
 }

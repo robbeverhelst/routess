@@ -2,7 +2,7 @@ import { HttpException, HttpStatus, Inject, Injectable, Logger, ServiceUnavailab
 import { valhallaCostingFromPreferences } from "@routess/core";
 import type { AppConfig } from "../config/app-config";
 import { APP_CONFIG } from "../config/config.module";
-import type { RouteLegDto, RouteRequestDto, RouteResponseDto, RouteSnappedLocationDto } from "./dto/route.dto";
+import type { RouteLegDto, RouteRequestDto, RouteSnappedLocationDto, RoutingRouteResponseDto } from "./dto/route.dto";
 import type {
 	TraceAttributesEdgeDto,
 	TraceAttributesRequestDto,
@@ -36,9 +36,16 @@ interface ValhallaRouteResponse {
 
 const VALHALLA_TIMEOUT_MS = 8000;
 
+// The routing endpoints are reachable without auth (planning works before
+// sign-in), so per-IP throttling alone can be sidestepped with enough IPs.
+// This cap bounds the total concurrent upstream work one API replica can
+// drive into Valhalla; excess requests are shed with a 503 instead of queued.
+const MAX_CONCURRENT_VALHALLA_CALLS = 32;
+
 @Injectable()
 export class RoutingService {
 	private readonly logger = new Logger(RoutingService.name);
+	private inFlightValhallaCalls = 0;
 
 	constructor(
 		@Inject(APP_CONFIG)
@@ -62,7 +69,7 @@ export class RoutingService {
 		};
 	}
 
-	async route(request: RouteRequestDto): Promise<RouteResponseDto> {
+	async route(request: RouteRequestDto): Promise<RoutingRouteResponseDto> {
 		const costing = valhallaCostingFromPreferences(request.activity, request.preferences, {
 			walkingSpeedKmh: request.walkingSpeedKmh,
 		});
@@ -108,6 +115,12 @@ export class RoutingService {
 			throw new ServiceUnavailableException("Valhalla routing is not configured");
 		}
 
+		if (this.inFlightValhallaCalls >= MAX_CONCURRENT_VALHALLA_CALLS) {
+			this.logger.warn(`Valhalla concurrency cap (${MAX_CONCURRENT_VALHALLA_CALLS}) reached, shedding request`);
+			throw new ServiceUnavailableException("Routing is busy, try again shortly");
+		}
+
+		this.inFlightValhallaCalls++;
 		const controller = new AbortController();
 		const timeout = setTimeout(() => controller.abort(), VALHALLA_TIMEOUT_MS);
 		let response: Response;
@@ -124,6 +137,7 @@ export class RoutingService {
 			throw new ServiceUnavailableException("Valhalla request failed");
 		} finally {
 			clearTimeout(timeout);
+			this.inFlightValhallaCalls--;
 		}
 
 		if (!response.ok) {

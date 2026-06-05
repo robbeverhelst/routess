@@ -104,7 +104,7 @@ describe("Email Auth Integration Tests", () => {
 			}
 		});
 
-		it("rejects signup with email of an existing user with 409", async () => {
+		it("returns 200 for an existing user's email without creating a signup token (no enumeration)", async () => {
 			// Pre-create a user with the same email (any provider).
 			await withRequestContext(app, async () => {
 				const orm = app.get(MikroORM);
@@ -118,10 +118,23 @@ describe("Email Auth Integration Tests", () => {
 				await orm.em.persistAndFlush(user);
 			});
 
+			// Same status as a fresh signup so the endpoint can't be used to
+			// probe which emails are registered; the account gets a "you
+			// already have an account" email instead of a verification link.
 			await supertest(app.getHttpServer())
 				.post("/api/v1/auth/signup-email")
 				.send({ email: "alice@example.com", password: SAFE_PASSWORD })
-				.expect(409);
+				.expect(200);
+
+			await withRequestContext(app, async () => {
+				const orm = app.get(MikroORM);
+				const token = await orm.em.findOne(VerificationToken, {
+					email: "alice@example.com",
+					purpose: "pending_signup",
+					usedAt: null,
+				});
+				expect(token).toBeNull();
+			});
 		});
 
 		it("invalidates the previous pending_signup token when called twice", async () => {
@@ -265,6 +278,53 @@ describe("Email Auth Integration Tests", () => {
 				.send({ email: "ghost@example.com", password: SAFE_PASSWORD })
 				.expect(401);
 			expect(response.body.message?.toLowerCase()).toContain("email or password");
+		});
+
+		it("locks the account after consecutive failures and rejects even the correct password generically", async () => {
+			// Arrange 9 prior failures directly (simulating attempts spread
+			// across IPs, which the per-IP throttle would not stop).
+			await withRequestContext(app, async () => {
+				const orm = app.get(MikroORM);
+				const method = await orm.em.findOneOrFail(UserAuthMethod, { provider: "email", providerId: email });
+				method.failedLoginAttempts = 9;
+				await orm.em.persistAndFlush(method);
+			});
+
+			// The 10th failure trips the lock.
+			await supertest(app.getHttpServer())
+				.post("/api/v1/auth/login-email")
+				.send({ email, password: `${SAFE_PASSWORD}-wrong` })
+				.expect(401);
+
+			// While locked, even the correct password gets the same generic 401
+			// (no oracle for "this account exists and is locked").
+			const locked = await supertest(app.getHttpServer())
+				.post("/api/v1/auth/login-email")
+				.send({ email, password: SAFE_PASSWORD })
+				.expect(401);
+			expect(locked.body.message?.toLowerCase()).toContain("email or password");
+
+			// Once the lock expires, the correct password works and resets state.
+			await withRequestContext(app, async () => {
+				const orm = app.get(MikroORM);
+				const method = await orm.em.findOneOrFail(UserAuthMethod, { provider: "email", providerId: email });
+				expect(method.lockedUntil).toBeTruthy();
+				method.lockedUntil = new Date(Date.now() - 1000);
+				await orm.em.persistAndFlush(method);
+			});
+
+			await supertest(app.getHttpServer())
+				.post("/api/v1/auth/login-email")
+				.send({ email, password: SAFE_PASSWORD })
+				.expect(200);
+
+			await withRequestContext(app, async () => {
+				const orm = app.get(MikroORM);
+				orm.em.clear();
+				const method = await orm.em.findOneOrFail(UserAuthMethod, { provider: "email", providerId: email });
+				expect(method.failedLoginAttempts).toBe(0);
+				expect(method.lockedUntil).toBeNull();
+			});
 		});
 	});
 

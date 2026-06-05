@@ -143,6 +143,68 @@ ${footerNote}`;
 		await this.send({ to, subject, text, html });
 	}
 
+	// Sent instead of a 409 when someone signs up with an email that already
+	// has an account: the HTTP response stays identical to a fresh signup so
+	// the endpoint can't be used to probe which emails are registered.
+	async sendAccountExistsEmail(to: string, loginUrl: string): Promise<void> {
+		const subject = "You already have a routess account";
+		const heading = "You already have an account";
+		const intro =
+			"Someone (hopefully you) tried to sign up for routess with this email, but an account already exists. Sign in instead; if you forgot your password, you can reset it from the sign-in page.";
+		const buttonLabel = "Sign in";
+		const fallbackLabel = "If the button above doesn't work, paste this link into your browser:";
+		const footerNote = "If this wasn't you, you can ignore this email. No new account was created.";
+
+		const text = `You already have a routess account
+
+${intro}
+
+${loginUrl}
+
+${footerNote}`;
+		const html = renderHtml({
+			preheader: intro,
+			heading,
+			intro,
+			buttonLabel,
+			url: loginUrl,
+			fallbackLabel,
+			footerNote,
+		});
+		await this.send({ to, subject, text, html });
+	}
+
+	// Sent when the per-account login lockout trips. The HTTP responses stay
+	// generic (no lock-state oracle for attackers); this tells the legitimate
+	// owner what happened and how to regain access immediately.
+	async sendAccountLockedEmail(to: string, loginUrl: string): Promise<void> {
+		const subject = "Failed sign-in attempts on your routess account";
+		const heading = "We noticed failed sign-in attempts";
+		const intro =
+			"Someone made several failed attempts to sign in to your routess account, so sign-in with a password is paused for 15 minutes. If this was you, just wait and try again. If it wasn't, resetting your password from the sign-in page restores access immediately and signs out all sessions.";
+		const buttonLabel = "Go to sign-in";
+		const fallbackLabel = "If the button above doesn't work, paste this link into your browser:";
+		const footerNote = "No one got in: the attempts failed. Resetting your password also clears the pause.";
+
+		const text = `Failed sign-in attempts on your routess account
+
+${intro}
+
+${loginUrl}
+
+${footerNote}`;
+		const html = renderHtml({
+			preheader: intro,
+			heading,
+			intro,
+			buttonLabel,
+			url: loginUrl,
+			fallbackLabel,
+			footerNote,
+		});
+		await this.send({ to, subject, text, html });
+	}
+
 	async sendPasswordResetEmail(to: string, resetUrl: string): Promise<void> {
 		const subject = "Reset your routess password";
 		const heading = "Reset your password";
