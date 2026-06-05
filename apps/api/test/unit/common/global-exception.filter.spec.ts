@@ -59,6 +59,29 @@ describe("GlobalExceptionFilter", () => {
 		});
 	});
 
+	it("surfaces a 4xx middleware error (e.g. PayloadTooLarge) instead of a 500", () => {
+		// body-parser throws a plain Error with a statusCode, not an HttpException.
+		const tooLarge = Object.assign(new Error("request entity too large"), { statusCode: 413 });
+		filter.catch(tooLarge, mockArgumentsHost);
+
+		expect(mockResponse.status).toHaveBeenCalledWith(413);
+		expect(mockResponse.json).toHaveBeenCalledWith(
+			expect.objectContaining({ statusCode: 413, message: "request entity too large" }),
+		);
+	});
+
+	it("still treats a 5xx-coded non-HttpException as INTERNAL", () => {
+		const upstream = Object.assign(new Error("bad gateway"), { statusCode: 502 });
+		filter.catch(upstream, mockArgumentsHost);
+
+		expect(mockResponse.status).toHaveBeenCalledWith(500);
+		expect(mockResponse.json).toHaveBeenCalledWith({
+			statusCode: 500,
+			code: "INTERNAL",
+			message: "Internal server error",
+		});
+	});
+
 	it("collapses a multi-message validation body into details.messages", () => {
 		const exceptionResponse = {
 			message: ["Validation failed", "Name is required"],
