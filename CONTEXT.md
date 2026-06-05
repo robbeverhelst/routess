@@ -165,6 +165,16 @@ _Avoid_: API key, access token, bearer token (the term is **PAT** when discussin
 - **"Profile" in provider terms** (e.g. Mapbox's `cycling` / `walking` / `driving` profile, or Valhalla's `bicycle` / `pedestrian` costing) is an *implementation detail* derived from **Activity**, not a domain concept the user picks directly.
 - **"Metric" / "analytics"** are overloaded across four distinct uses. The **Metrics** section above defines _route metrics_, properties of a Route (Distance, Duration, ElevationGain). Separately the API exposes _operational metrics_ (HTTP request rate, route-generation latency, event loop lag) via Prometheus at `/metrics`. _ProductEvents_ are behavioural events (a user did X at moment T) sent to self-hosted Umami; they are the raw stream from which funnels and retention are derived. The admin API surfaces _business analytics_ (signup counts, top creators, retention) computed from Postgres aggregate queries, **not** from Umami — Postgres is authoritative for per-entity KPIs. In ambiguous conversations, qualify: **route metric**, **operational metric**, **ProductEvent**, or **business analytic**.
 
+## Public discovery
+
+**Indexable** (of a Route):
+A derived property: a `public` Route is Indexable when it clears the quality gate (has a real name, meets a minimum length, and carries a description or tags). Only Indexable Routes appear in sitemaps and are eligible for search-engine indexing; public Routes below the bar still render but carry `noindex`. `unlisted` Routes are never Indexable regardless of quality (the URL is the capability). The gate may loosen over time; tightening after indexing is costly, so it starts strict.
+_Avoid_: published, listed, searchable.
+
+**RegionalHub**:
+A curated landing page per (activity, place) pair, e.g. "fietsroutes in Gent", listing that place's Indexable Routes with local context. Lives on the landing hosts with the keyword-in-URL localized per ccTLD (`routess.be/fietsroutes/gent`, `routess.com/cycling-routes/ghent`, hreflang-paired). A RegionalHub exists only once its place has at least 5 Indexable Routes; below that threshold the page must not exist (thin-content rule).
+_Avoid_: city page, SEO page, directory.
+
 ## Product analytics
 
 **ProductEvent**:

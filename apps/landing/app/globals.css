@@ -566,3 +566,84 @@ section.tight {
 #planner .mapboxgl-ctrl-attrib {
 	display: none;
 }
+
+/* Articles (compare / guides) */
+.article-h2 {
+	font-size: 30px;
+	margin: 44px 0 12px;
+}
+.article-h3 {
+	font-size: 22px;
+	margin: 32px 0 8px;
+}
+.article-p {
+	margin: 0 0 18px;
+}
+.article-ul {
+	margin: 0 0 18px;
+	padding-left: 22px;
+}
+.article-ul li {
+	margin-bottom: 8px;
+}
+.article-link {
+	color: var(--ink);
+	text-decoration: underline;
+	text-underline-offset: 3px;
+}
+.article-note {
+	border: 1px solid var(--line);
+	background: var(--paper-2);
+	border-radius: 12px;
+	padding: 14px 18px;
+	margin: 0 0 18px;
+	font-size: 16px;
+	line-height: 1.5;
+	color: var(--ink-soft);
+}
+.article-cta {
+	margin: 28px 0;
+}
+.article-table-wrap {
+	overflow-x: auto;
+	margin: 0 0 24px;
+	border: 1px solid var(--line);
+	border-radius: 12px;
+}
+.article-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 15px;
+	line-height: 1.45;
+}
+.article-table th {
+	text-align: left;
+	font-family: var(--font-mono);
+	font-size: 12px;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--ink-soft);
+	background: var(--paper-2);
+	padding: 12px 14px;
+	border-bottom: 1px solid var(--line);
+	white-space: nowrap;
+}
+.article-table td {
+	padding: 12px 14px;
+	border-bottom: 1px solid var(--line);
+	vertical-align: top;
+}
+.article-table tr:last-child td {
+	border-bottom: none;
+}
+.article-list-item {
+	display: block;
+	border: 1px solid var(--line);
+	border-radius: 16px;
+	padding: 22px 24px;
+	margin-bottom: 16px;
+	transition: background 160ms ease;
+}
+.article-list-item:hover {
+	background: var(--paper-2);
+}
