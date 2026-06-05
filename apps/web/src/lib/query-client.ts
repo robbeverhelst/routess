@@ -41,6 +41,12 @@ export const queryKeys = {
 		detail: (id: string) => [...queryKeys.routes.all, "detail", id] as const,
 		byUser: (userId: number) => [...queryKeys.routes.all, "byUser", userId] as const,
 	},
+	// Collection-related queries
+	collections: {
+		all: ["collections"] as const,
+		list: () => [...queryKeys.collections.all, "list"] as const,
+		detail: (id: string) => [...queryKeys.collections.all, "detail", id] as const,
+	},
 	// Auth-related queries
 	auth: {
 		all: ["auth"] as const,

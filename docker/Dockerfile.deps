@@ -6,6 +6,7 @@ COPY package.json bun.lock ./
 COPY apps/api/package.json ./apps/api/
 COPY apps/cli/package.json ./apps/cli/
 COPY apps/docs/package.json ./apps/docs/
+COPY apps/landing/package.json ./apps/landing/
 COPY apps/web/package.json ./apps/web/
 COPY packages/api-client/package.json ./packages/api-client/
 COPY packages/core/package.json ./packages/core/

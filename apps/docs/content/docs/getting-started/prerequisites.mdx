@@ -5,9 +5,9 @@ description: Tools you need installed locally.
 
 | Tool | Version | Why |
 | --- | --- | --- |
-| Bun | 1.3.11 | Workspace package manager + runtime |
+| Bun | 1.3+ (repo pins the exact version in `package.json` → `packageManager`) | Workspace package manager + runtime |
 | Docker | latest | Local Postgres + image builds |
-| Node | 20.x | Some build tools (Vite, Next) require Node |
+| Node | 24.x | Some build tools (Vite, Next) require Node; CI and the Docker images use Node 24 |
 | Git | latest | Source control |
 
 ## Install
@@ -16,7 +16,7 @@ description: Tools you need installed locally.
 # macOS
 brew install oven-sh/bun/bun
 brew install --cask docker
-brew install node@20
+brew install node@24
 
 # verify
 bun --version
@@ -26,6 +26,6 @@ node --version
 
 ## Optional
 
-- **Helm 3.16+** — to validate the chart locally
-- **kubectl** — to deploy to a cluster
-- **VS Code + Biome extension** — best dev UX
+- **Helm 3.16+**: to validate the chart locally
+- **kubectl**: to deploy to a cluster
+- **VS Code + Biome extension**: best dev UX

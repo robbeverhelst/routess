@@ -1,0 +1,568 @@
+/** biome-ignore-all lint/complexity/noImportantStyles: mobile media queries override inline style props */
+@import "tailwindcss";
+@import "@routess/design-tokens/css/tokens.css";
+
+@theme inline {
+	--font-sans: var(--font-body);
+	--font-display: var(--font-display);
+	--font-mono: var(--font-mono);
+}
+
+@layer base {
+	*,
+	*::before,
+	*::after {
+		box-sizing: border-box;
+	}
+	html,
+	body {
+		margin: 0;
+		padding: 0;
+		overflow-x: clip;
+	}
+	body {
+		font-family: var(--font-body);
+		background: var(--paper);
+		color: var(--ink);
+		-webkit-font-smoothing: antialiased;
+		font-feature-settings: "ss01", "cv11";
+	}
+	a {
+		color: inherit;
+		text-decoration: none;
+	}
+	button {
+		font: inherit;
+	}
+	@media (prefers-color-scheme: dark) {
+		:root:not(.light) {
+			color-scheme: dark;
+		}
+	}
+}
+
+/* Landing-specific utilities */
+
+.display {
+	font-family: var(--font-display);
+	font-weight: 600;
+	letter-spacing: -0.025em;
+	line-height: 1;
+	text-wrap: balance;
+}
+
+.display-italic {
+	font-family: var(--font-display);
+	font-style: italic;
+	font-weight: 500;
+}
+
+.eyebrow {
+	font-family: var(--font-mono);
+	font-size: 12px;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: var(--ink-soft);
+}
+
+.body-lg {
+	font-size: 19px;
+	line-height: 1.55;
+	color: var(--ink-soft);
+	text-wrap: pretty;
+}
+
+.mono {
+	font-family: var(--font-mono);
+}
+
+.container-x {
+	max-width: 1280px;
+	margin: 0 auto;
+	padding: 0 32px;
+}
+
+/* Mobile overrides: !important is required to defeat inline style props on the
+   layout containers (Hero, MiniPlanner, etc.). The components set inline grids
+   for desktop; these classes collapse them on small screens. */
+@media (max-width: 900px) {
+	.container-x {
+		padding: 0 22px;
+	}
+	section {
+		padding: 70px 0;
+	}
+	.section-header h2 {
+		font-size: 32px;
+	}
+	.grid-hero,
+	.grid-2,
+	.grid-3,
+	.grid-planner,
+	.grid-pricing,
+	.grid-sharing,
+	.grid-footer {
+		grid-template-columns: 1fr !important;
+		gap: 32px !important;
+	}
+	.grid-share-actions {
+		grid-template-columns: 1fr 1fr 1fr !important;
+		gap: 8px !important;
+	}
+	.hide-mobile {
+		display: none !important;
+	}
+	.hero-side {
+		height: auto !important;
+		min-height: 360px;
+	}
+	.hero-stat-card {
+		left: auto !important;
+		right: auto !important;
+		bottom: auto !important;
+		top: auto !important;
+		position: relative !important;
+	}
+}
+
+@media (max-width: 600px) {
+	.grid-share-actions {
+		grid-template-columns: 1fr 1fr 1fr !important;
+	}
+	.btn {
+		font-size: 14px;
+		height: 44px;
+		padding: 0 18px;
+	}
+	.section-header h2 {
+		font-size: 28px;
+	}
+	.body-lg {
+		font-size: 17px;
+	}
+}
+
+/* Buttons */
+.btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	height: 48px;
+	padding: 0 22px;
+	border-radius: 999px;
+	font-weight: 600;
+	font-size: 15px;
+	cursor: pointer;
+	border: none;
+	transition:
+		transform 160ms ease,
+		box-shadow 160ms ease,
+		background 160ms ease;
+	white-space: nowrap;
+}
+.btn:hover {
+	transform: translateY(-1px);
+}
+.btn:active {
+	transform: translateY(0);
+}
+
+.btn-primary {
+	background: var(--ink);
+	color: var(--paper);
+	box-shadow: 0 4px 14px oklch(0.18 0.02 270 / 0.25);
+}
+.btn-primary:hover {
+	box-shadow: 0 8px 22px oklch(0.18 0.02 270 / 0.3);
+}
+
+.btn-ghost {
+	background: transparent;
+	color: var(--ink);
+	border: 1.5px solid var(--line);
+}
+.btn-ghost:hover {
+	background: var(--paper-2);
+}
+
+.btn-indigo {
+	background: var(--indigo);
+	color: white;
+}
+
+.chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	height: 32px;
+	padding: 0 14px;
+	border-radius: 999px;
+	background: var(--paper-2);
+	border: 1px solid var(--line);
+	font-size: 13px;
+	color: var(--ink-soft);
+	font-weight: 500;
+}
+
+.topo-bg {
+	background-image:
+		radial-gradient(circle at 0% 0%, oklch(0.96 0.02 80 / 0.6) 0, transparent 60%),
+		radial-gradient(circle at 100% 100%, oklch(0.94 0.04 280 / 0.4) 0, transparent 50%);
+}
+
+section {
+	position: relative;
+	padding: 110px 0;
+}
+section.tight {
+	padding: 70px 0;
+}
+
+.section-header {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+	margin-bottom: 56px;
+	max-width: 720px;
+}
+.section-header h2 {
+	font-size: clamp(36px, 4vw, 56px);
+	margin: 0;
+}
+.section-header p {
+	margin: 0;
+}
+
+.card {
+	background: var(--paper);
+	border: 1px solid var(--line);
+	border-radius: 22px;
+	box-shadow:
+		0 1px 2px rgba(20, 14, 40, 0.04),
+		0 2px 8px rgba(20, 14, 40, 0.04);
+}
+.card-pad {
+	padding: 24px;
+}
+
+/* Sticky nav */
+.nav {
+	position: sticky;
+	top: 0;
+	z-index: 50;
+	backdrop-filter: blur(14px);
+	background: oklch(from var(--paper) l c h / 0.78);
+	border-bottom: 1px solid transparent;
+	transition: border-color 200ms ease;
+}
+.nav.scrolled {
+	border-bottom-color: var(--line);
+	box-shadow: 0 6px 24px oklch(0.2 0.02 270 / 0.06);
+}
+
+/* Nav: desktop is one inline row (the menu wrapper dissolves via display:contents),
+   so logo / links / actions stay in their space-between positions. */
+.nav-menu {
+	display: contents;
+}
+.nav-links {
+	display: flex;
+	gap: 28px;
+	font-size: 14px;
+	font-weight: 500;
+}
+.nav-actions {
+	display: flex;
+	gap: 10px;
+	align-items: center;
+}
+.nav-toggle {
+	display: none;
+	width: 40px;
+	height: 40px;
+	align-items: center;
+	justify-content: center;
+	border: 1px solid var(--line);
+	border-radius: 10px;
+	background: var(--paper);
+	color: var(--ink);
+	cursor: pointer;
+}
+
+/* Nav: below 860px the desktop row no longer fits, collapse into a hamburger
+   dropdown. The menu wrapper becomes a real positioned panel. */
+@media (max-width: 860px) {
+	.nav-toggle {
+		display: inline-flex;
+	}
+	.nav-menu {
+		position: absolute;
+		top: 72px;
+		left: 0;
+		right: 0;
+		display: none;
+		flex-direction: column;
+		gap: 18px;
+		padding: 18px 22px 24px;
+		background: var(--paper);
+		border-bottom: 1px solid var(--line);
+		box-shadow: 0 14px 28px oklch(0 0 0 / 0.1);
+	}
+	.nav-menu.open {
+		display: flex;
+	}
+	.nav-links {
+		flex-direction: column;
+		gap: 16px;
+		font-size: 16px;
+	}
+	.nav-actions {
+		flex-direction: column;
+		align-items: stretch;
+		gap: 12px;
+	}
+	.nav-actions .btn {
+		width: 100%;
+		justify-content: center;
+	}
+	.nav-actions .nav-lang {
+		align-self: flex-start;
+	}
+}
+
+/* Marquee */
+.marquee {
+	display: flex;
+	gap: 20px;
+	animation: marquee 40s linear infinite;
+	width: max-content;
+}
+.marquee:hover {
+	animation-play-state: paused;
+}
+
+@keyframes marquee {
+	to {
+		transform: translateX(-50%);
+	}
+}
+
+@keyframes draw-route {
+	to {
+		stroke-dashoffset: 0;
+	}
+}
+@keyframes pin-drop {
+	0% {
+		opacity: 0;
+		transform: translateY(-30px) scale(0.6);
+	}
+	60% {
+		opacity: 1;
+		transform: translateY(4px) scale(1.05);
+	}
+	100% {
+		transform: translateY(0) scale(1);
+	}
+}
+@keyframes float {
+	0%,
+	100% {
+		transform: translateY(0);
+	}
+	50% {
+		transform: translateY(-6px);
+	}
+}
+@keyframes blink {
+	50% {
+		opacity: 0;
+	}
+}
+
+.float {
+	animation: float 4s ease-in-out infinite;
+}
+.float-slow {
+	animation: float 6s ease-in-out infinite;
+}
+
+/* Hero shows the desktop capture; below 900px the layout flattens and the
+   real mobile capture takes over (a center-crop of the desktop UI reads as
+   mush at phone widths). */
+/* Mobile hero: the whole phone, framed, instead of a cropped desktop slice. */
+.hero-phone {
+	display: none;
+}
+.hero-phone-frame {
+	width: 240px;
+	border-radius: 36px;
+	border: 9px solid var(--ink);
+	background: var(--ink);
+	overflow: hidden;
+	box-shadow: 0 24px 50px oklch(0.2 0.02 270 / 0.22);
+}
+
+/* Hero "app screenshot": tilted, oversized, bleeds off the right column */
+.hero-screenshot-wrap {
+	position: relative;
+	width: 100%;
+	height: 100%;
+	min-height: 540px;
+	perspective: 2200px;
+	perspective-origin: 30% 50%;
+}
+
+.hero-screenshot {
+	position: absolute;
+	top: 50%;
+	left: 0;
+	width: 920px;
+	max-width: none;
+	height: 560px;
+	border-radius: 18px;
+	overflow: hidden;
+	background: var(--paper);
+	border: 1px solid oklch(0.86 0.012 80);
+	box-shadow:
+		0 1px 0 oklch(1 0 0 / 0.6) inset,
+		0 6px 16px rgba(20, 14, 40, 0.08),
+		0 30px 60px rgba(20, 14, 40, 0.18),
+		0 60px 120px rgba(20, 14, 40, 0.12);
+	transform: translateY(-50%) rotateY(-14deg) rotateX(5deg) rotateZ(0.5deg);
+	transform-origin: left center;
+	display: flex;
+	flex-direction: column;
+	will-change: transform;
+	/* Settle-in on load: the keyframe has no `to`, so it eases into whatever
+	   transform the active media query gives the element. */
+	animation: hero-settle 800ms cubic-bezier(0.2, 0, 0, 1) backwards;
+}
+
+@keyframes hero-settle {
+	from {
+		opacity: 0;
+		transform: translateY(-46%) rotateY(-24deg) rotateX(8deg) rotateZ(0.5deg);
+	}
+}
+
+@media (max-width: 1200px) {
+	.hero-screenshot {
+		width: 820px;
+	}
+}
+
+@media (max-width: 1000px) {
+	.hero-screenshot {
+		width: 720px;
+		transform: translateY(-50%) rotateY(-12deg) rotateX(4deg);
+	}
+}
+
+@media (max-width: 900px) {
+	.hero-screenshot-wrap {
+		min-height: 0;
+		perspective: none;
+	}
+	.hero-screenshot {
+		display: none;
+	}
+	.hero-phone {
+		display: flex;
+		justify-content: center;
+		padding: 10px 0 4px;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.hero-screenshot {
+		transform: translateY(-50%);
+	}
+}
+
+/* Reveal on scroll. The hidden state only applies once AnimationRoot has
+   mounted and set data-anim-ready on <html>, so content stays visible
+   without JS (and for crawlers). Stagger with --reveal-delay. */
+[data-anim-ready] .reveal {
+	opacity: 0;
+	transform: translateY(18px);
+	transition:
+		opacity 700ms cubic-bezier(0.2, 0, 0, 1),
+		transform 700ms cubic-bezier(0.2, 0, 0, 1);
+	transition-delay: var(--reveal-delay, 0ms);
+}
+[data-anim-ready] .reveal.in {
+	opacity: 1;
+	transform: translateY(0);
+}
+
+/* Surface bar: segments grow in left-to-right once their .reveal parent is in. */
+[data-anim-ready] .reveal .surface-seg {
+	transform: scaleX(0);
+	transform-origin: left;
+	transition: transform 800ms cubic-bezier(0.2, 0, 0, 1);
+	transition-delay: var(--seg-delay, 0ms);
+}
+[data-anim-ready] .reveal.in .surface-seg {
+	transform: scaleX(1);
+}
+
+/* Card hover lift for image tiles and pricing cards. */
+.card-lift {
+	transition:
+		transform 160ms ease,
+		box-shadow 160ms ease;
+}
+.card-lift:hover {
+	transform: translateY(-3px);
+	box-shadow: 0 10px 30px oklch(0.2 0.02 270 / 0.12);
+}
+.card-lift img {
+	transition: transform 300ms ease;
+}
+.card-lift:hover img {
+	transform: scale(1.03);
+}
+
+/* CTA micro-interactions: arrow nudges along, gentle press. */
+.btn-primary svg,
+.btn-indigo svg {
+	transition: transform 160ms ease;
+}
+.btn-primary:hover svg,
+.btn-indigo:hover svg {
+	transform: translateX(3px);
+}
+.btn:active {
+	transform: scale(0.98);
+}
+
+/* Honour reduced motion */
+@media (prefers-reduced-motion: reduce) {
+	.marquee,
+	.float,
+	.float-slow,
+	.hero-screenshot {
+		animation: none;
+	}
+	[data-anim-ready] .reveal {
+		opacity: 1;
+		transform: none;
+		transition: none;
+	}
+	[data-anim-ready] .reveal .surface-seg {
+		transform: none;
+		transition: none;
+	}
+	* {
+		animation-duration: 0.001ms;
+		animation-iteration-count: 1;
+		transition-duration: 0.001ms;
+	}
+}
+
+/* Mini-planner demo map: hide Mapbox chrome so nothing is accidentally clickable. */
+#planner .mapboxgl-ctrl-logo,
+#planner .mapboxgl-ctrl-attrib {
+	display: none;
+}

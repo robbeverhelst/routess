@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { apiService } from "@/lib/api";
 import { useAuthStatus, useLogout } from "@/lib/api-queries";
 import { emitAppEvent } from "@/lib/app-events";
@@ -9,6 +9,7 @@ import { Logger } from "@/lib/logger";
 import { queryKeys } from "@/lib/query-client";
 import { useToastStore } from "@/stores/toastStore";
 import { Btn, RDS_COLORS, SecTitle } from "../components/primitives";
+import { Field, SettingsBlock, SettingsRow, SettingsSection, TextInput } from "../components/settings";
 
 const dash = "—";
 
@@ -42,40 +43,6 @@ function initialsFromName(name: string | null | undefined, email: string | null 
 	if (!source) return "?";
 	const parts = source.split(/\s+/).slice(0, 2);
 	return parts.map((p) => p[0]?.toUpperCase() ?? "").join("") || source[0]?.toUpperCase() || "?";
-}
-
-function Card({ title, children }: { title: string; children: ReactNode }) {
-	return (
-		<div
-			style={{
-				marginTop: 20,
-				padding: 20,
-				background: RDS_COLORS.bgPanel,
-				border: `1px solid ${RDS_COLORS.border}`,
-				borderRadius: 12,
-			}}
-		>
-			<SecTitle style={{ marginBottom: 14 }}>{title}</SecTitle>
-			{children}
-		</div>
-	);
-}
-
-function Row({ label, children, last }: { label: string; children: ReactNode; last?: boolean }) {
-	return (
-		<div
-			style={{
-				display: "flex",
-				alignItems: "center",
-				gap: 12,
-				padding: "10px 0",
-				borderBottom: last ? "none" : `1px solid ${RDS_COLORS.border}`,
-			}}
-		>
-			<div style={{ fontSize: 13, color: RDS_COLORS.fgMuted, width: 110 }}>{label}</div>
-			<div style={{ flex: 1, display: "flex", alignItems: "center", gap: 8 }}>{children}</div>
-		</div>
-	);
 }
 
 export function AccountScreen() {
@@ -326,303 +293,251 @@ export function AccountScreen() {
 					</div>
 				)}
 
-				<Card title={t("account.title")}>
-					<div style={{ display: "flex", alignItems: "center", gap: 16, padding: "4px 0 16px" }}>
-						<div
-							style={{
-								width: avatarSize,
-								height: avatarSize,
-								borderRadius: 999,
-								background: user?.avatar ? "transparent" : RDS_COLORS.bgInput,
-								border: `1px solid ${RDS_COLORS.border}`,
-								overflow: "hidden",
-								display: "flex",
-								alignItems: "center",
-								justifyContent: "center",
-								color: RDS_COLORS.fgMuted,
-								fontSize: 22,
-								fontWeight: 600,
-								flexShrink: 0,
-							}}
-						>
-							{user?.avatar ? (
-								<img src={user.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-							) : (
-								initialsFromName(user?.name, user?.email)
-							)}
-						</div>
-						<div style={{ display: "flex", flexDirection: "column", gap: 6, flex: 1 }}>
-							<input
-								ref={fileInputRef}
-								type="file"
-								accept="image/*"
-								onChange={handleAvatarFile}
-								style={{ display: "none" }}
-							/>
-							<div style={{ display: "flex", gap: 8 }}>
-								<Btn variant="default" onClick={handleAvatarClick} disabled={avatarUploading}>
-									{avatarUploading ? t("account.uploading") : t("settings.profile.avatar.upload")}
-								</Btn>
-								{user?.avatar && (
-									<Btn variant="ghost" onClick={handleClearAvatar} disabled={avatarUploading}>
-										{t("settings.profile.avatar.clear")}
-									</Btn>
+				<div style={{ marginTop: 24 }}>
+					<SettingsSection title={t("account.title")}>
+						<SettingsBlock style={{ display: "flex", alignItems: "center", gap: 16 }}>
+							<div
+								style={{
+									width: avatarSize,
+									height: avatarSize,
+									borderRadius: 999,
+									background: user?.avatar ? "transparent" : RDS_COLORS.bgInput,
+									border: `1px solid ${RDS_COLORS.border}`,
+									overflow: "hidden",
+									display: "flex",
+									alignItems: "center",
+									justifyContent: "center",
+									color: RDS_COLORS.fgMuted,
+									fontSize: 22,
+									fontWeight: 600,
+									flexShrink: 0,
+								}}
+							>
+								{user?.avatar ? (
+									<img src={user.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+								) : (
+									initialsFromName(user?.name, user?.email)
 								)}
 							</div>
-							<div style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle }}>{t("settings.profile.avatar.sub")}</div>
-						</div>
-					</div>
-
-					<Row label={t("account.field.name")}>
-						{editingName ? (
-							<>
+							<div style={{ display: "flex", flexDirection: "column", gap: 6, flex: 1 }}>
 								<input
-									value={name}
-									onChange={(e) => setName(e.target.value)}
-									// biome-ignore lint/a11y/noAutofocus: clicking Edit toggles this row into edit mode; focusing the field is the expected affordance
-									autoFocus
-									style={{
-										flex: 1,
-										height: 32,
-										padding: "0 10px",
-										borderRadius: 6,
-										background: RDS_COLORS.bgInput,
-										border: `1px solid ${RDS_COLORS.borderStrong}`,
-										color: RDS_COLORS.fg,
-										fontSize: 13,
-										outline: "none",
-									}}
+									ref={fileInputRef}
+									type="file"
+									accept="image/*"
+									onChange={handleAvatarFile}
+									style={{ display: "none" }}
 								/>
-								<Btn variant="primary" onClick={handleSaveName} disabled={savingName}>
-									{savingName ? t("account.saving") : t("common.save")}
-								</Btn>
-								<Btn variant="ghost" onClick={handleCancelName} disabled={savingName}>
-									{t("common.cancel")}
-								</Btn>
-							</>
+								<div style={{ display: "flex", gap: 8 }}>
+									<Btn variant="default" onClick={handleAvatarClick} disabled={avatarUploading}>
+										{avatarUploading ? t("account.uploading") : t("settings.profile.avatar.upload")}
+									</Btn>
+									{user?.avatar && (
+										<Btn variant="ghost" onClick={handleClearAvatar} disabled={avatarUploading}>
+											{t("settings.profile.avatar.clear")}
+										</Btn>
+									)}
+								</div>
+								<div style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle }}>{t("settings.profile.avatar.sub")}</div>
+							</div>
+						</SettingsBlock>
+
+						{editingName ? (
+							<SettingsBlock>
+								<form
+									onSubmit={(e) => {
+										e.preventDefault();
+										void handleSaveName();
+									}}
+									style={{ display: "flex", flexDirection: "column", gap: 10 }}
+								>
+									<Field label={t("account.field.name")}>
+										<TextInput value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+									</Field>
+									<div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+										<Btn variant="ghost" onClick={handleCancelName} disabled={savingName}>
+											{t("common.cancel")}
+										</Btn>
+										<Btn type="submit" variant="primary" disabled={savingName}>
+											{savingName ? t("account.saving") : t("common.save")}
+										</Btn>
+									</div>
+								</form>
+							</SettingsBlock>
 						) : (
-							<>
-								<div style={{ flex: 1, fontSize: 13 }}>{user?.name || dash}</div>
-								<Btn variant="ghost" onClick={() => setEditingName(true)}>
-									{t("common.edit")}
-								</Btn>
-							</>
+							<SettingsRow
+								label={t("account.field.name")}
+								control={
+									<>
+										<span style={{ fontSize: 13, color: RDS_COLORS.fgMuted }}>{user?.name || dash}</span>
+										<Btn variant="ghost" onClick={() => setEditingName(true)}>
+											{t("common.edit")}
+										</Btn>
+									</>
+								}
+							/>
 						)}
-					</Row>
 
-					<Row label={t("account.field.email")}>
-						<div style={{ flex: 1, fontSize: 13 }}>{user?.email || dash}</div>
-						<span style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle }}>{t("account.emailReadonly")}</span>
-					</Row>
+						<SettingsRow
+							label={t("account.field.email")}
+							sub={t("account.emailReadonly")}
+							control={<span style={{ fontSize: 13, color: RDS_COLORS.fgMuted }}>{user?.email || dash}</span>}
+						/>
 
-					{editingPassword ? (
-						<div
-							style={{
-								padding: "12px 0",
-								borderTop: `1px solid ${RDS_COLORS.border}`,
-							}}
-						>
-							<div style={{ fontSize: 13, fontWeight: 500, color: RDS_COLORS.fg, marginBottom: 4 }}>
-								{user?.hasPassword ? t("account.password.changeTitle") : t("account.password.setTitle")}
-							</div>
-							<div style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle, marginBottom: 12 }}>
-								{user?.hasPassword ? t("account.password.changeHint") : t("account.password.setHint")}
-							</div>
-							<form onSubmit={handleSavePassword} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-								{user?.hasPassword && (
-									<input
+						{editingPassword ? (
+							<SettingsBlock>
+								<div style={{ fontSize: 13, fontWeight: 500, color: RDS_COLORS.fg, marginBottom: 4 }}>
+									{user?.hasPassword ? t("account.password.changeTitle") : t("account.password.setTitle")}
+								</div>
+								<div style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle, marginBottom: 12 }}>
+									{user?.hasPassword ? t("account.password.changeHint") : t("account.password.setHint")}
+								</div>
+								<form onSubmit={handleSavePassword} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+									{user?.hasPassword && (
+										<TextInput
+											type="password"
+											autoComplete="current-password"
+											required
+											placeholder={t("account.password.currentPlaceholder")}
+											value={currentPassword}
+											onChange={(e) => setCurrentPassword(e.target.value)}
+										/>
+									)}
+									<TextInput
 										type="password"
-										autoComplete="current-password"
+										autoComplete="new-password"
 										required
-										placeholder={t("account.password.currentPlaceholder")}
-										value={currentPassword}
-										onChange={(e) => setCurrentPassword(e.target.value)}
+										minLength={12}
+										placeholder={t("account.password.newPlaceholder")}
+										value={newPassword}
+										onChange={(e) => setNewPassword(e.target.value)}
+									/>
+									<TextInput
+										type="password"
+										autoComplete="new-password"
+										required
+										minLength={12}
+										placeholder={t("account.password.confirmPlaceholder")}
+										value={confirmPassword}
+										onChange={(e) => setConfirmPassword(e.target.value)}
 										style={{
-											height: 36,
-											padding: "0 12px",
-											borderRadius: 8,
-											background: RDS_COLORS.bgInput,
-											border: `1px solid ${RDS_COLORS.border}`,
-											color: RDS_COLORS.fg,
-											fontSize: 13,
-											outline: "none",
+											borderColor: confirmPassword && confirmPassword !== newPassword ? RDS_COLORS.danger : undefined,
 										}}
 									/>
-								)}
-								<input
-									type="password"
-									autoComplete="new-password"
-									required
-									minLength={12}
-									placeholder={t("account.password.newPlaceholder")}
-									value={newPassword}
-									onChange={(e) => setNewPassword(e.target.value)}
-									style={{
-										height: 36,
-										padding: "0 12px",
-										borderRadius: 8,
-										background: RDS_COLORS.bgInput,
-										border: `1px solid ${RDS_COLORS.border}`,
-										color: RDS_COLORS.fg,
-										fontSize: 13,
-										outline: "none",
-									}}
-								/>
-								<input
-									type="password"
-									autoComplete="new-password"
-									required
-									minLength={12}
-									placeholder={t("account.password.confirmPlaceholder")}
-									value={confirmPassword}
-									onChange={(e) => setConfirmPassword(e.target.value)}
-									style={{
-										height: 36,
-										padding: "0 12px",
-										borderRadius: 8,
-										background: RDS_COLORS.bgInput,
-										border: `1px solid ${confirmPassword && confirmPassword !== newPassword ? RDS_COLORS.danger : RDS_COLORS.border}`,
-										color: RDS_COLORS.fg,
-										fontSize: 13,
-										outline: "none",
-									}}
-								/>
-								{passwordError && (
-									<div
-										style={{
-											padding: 10,
-											borderRadius: 8,
-											background: `color-mix(in oklch, ${RDS_COLORS.danger} 14%, ${RDS_COLORS.bgPanel})`,
-											color: RDS_COLORS.fg,
-											fontSize: 12.5,
-											lineHeight: 1.5,
+									{passwordError && (
+										<div
+											style={{
+												padding: 10,
+												borderRadius: 8,
+												background: `color-mix(in oklch, ${RDS_COLORS.danger} 14%, ${RDS_COLORS.bgPanel})`,
+												color: RDS_COLORS.fg,
+												fontSize: 12.5,
+												lineHeight: 1.5,
+											}}
+										>
+											{passwordError}
+										</div>
+									)}
+									<div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 2 }}>
+										<Btn variant="ghost" type="button" onClick={handleCancelPassword} disabled={savingPassword}>
+											{t("common.cancel")}
+										</Btn>
+										<Btn
+											type="submit"
+											variant="primary"
+											disabled={savingPassword || newPassword.length < 12 || newPassword !== confirmPassword}
+										>
+											{savingPassword ? t("account.saving") : t("common.save")}
+										</Btn>
+									</div>
+								</form>
+							</SettingsBlock>
+						) : (
+							<SettingsRow
+								label={t("account.field.password")}
+								sub={user?.hasPassword ? t("account.password.placeholderDisplay") : t("account.password.notSet")}
+								control={
+									<Btn
+										variant="ghost"
+										onClick={() => {
+											resetPasswordForm();
+											setEditingPassword(true);
 										}}
 									>
-										{passwordError}
-									</div>
-								)}
-								<div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 2 }}>
-									<Btn variant="ghost" type="button" onClick={handleCancelPassword} disabled={savingPassword}>
+										{user?.hasPassword ? t("settings.security.changePasswordAction") : t("account.password.setAction")}
+									</Btn>
+								}
+							/>
+						)}
+					</SettingsSection>
+
+					<SettingsSection title={t("account.sessions")}>
+						<SettingsRow
+							label={t("account.sessions.thisDevice")}
+							sub={t("account.sessions.thisDeviceHint")}
+							control={
+								<Btn variant="ghost" onClick={handleSignOut} disabled={logout.isPending}>
+									{logout.isPending ? t("common.signingOut") : t("common.signOut")}
+								</Btn>
+							}
+						/>
+						<SettingsRow
+							label={t("settings.security.logoutEverywhere")}
+							sub={t("settings.security.logoutEverywhereSub")}
+							control={
+								<Btn variant="ghost" onClick={handleLogoutEverywhere} style={{ color: RDS_COLORS.danger }}>
+									{t("settings.security.logoutEverywhereAction")}
+								</Btn>
+							}
+						/>
+					</SettingsSection>
+
+					<SettingsSection title={t("account.data")}>
+						<SettingsRow
+							label={t("settings.account.exportAll")}
+							sub={t("settings.account.exportAllSub")}
+							control={
+								<Btn variant="ghost" onClick={handleExportData}>
+									{t("account.data.export")}
+								</Btn>
+							}
+						/>
+					</SettingsSection>
+
+					<SettingsSection title={t("account.danger")} danger>
+						{confirmingDelete ? (
+							<SettingsBlock>
+								<div style={{ fontSize: 13, fontWeight: 600, color: RDS_COLORS.fg, marginBottom: 6 }}>
+									{t("account.deleteAccount")}
+								</div>
+								<div style={{ fontSize: 12.5, color: RDS_COLORS.fgMuted, marginBottom: 14, lineHeight: 1.5 }}>
+									{t("settings.account.deleteConfirm")}
+								</div>
+								<div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+									<Btn variant="ghost" onClick={() => setConfirmingDelete(false)} disabled={deleting}>
 										{t("common.cancel")}
 									</Btn>
-									<Btn
-										type="submit"
-										variant="primary"
-										disabled={savingPassword || newPassword.length < 12 || newPassword !== confirmPassword}
-									>
-										{savingPassword ? t("account.saving") : t("common.save")}
+									<Btn variant="danger" onClick={handleDeleteAccount} disabled={deleting}>
+										{deleting ? t("account.deleting") : t("account.deleteConfirmAction")}
 									</Btn>
 								</div>
-							</form>
-						</div>
-					) : (
-						<Row label={t("account.field.password")} last>
-							<div style={{ flex: 1, fontSize: 13, color: RDS_COLORS.fgMuted }}>
-								{user?.hasPassword ? t("account.password.placeholderDisplay") : t("account.password.notSet")}
-							</div>
-							<Btn
-								variant="ghost"
-								onClick={() => {
-									resetPasswordForm();
-									setEditingPassword(true);
-								}}
-							>
-								{user?.hasPassword ? t("settings.security.changePasswordAction") : t("account.password.setAction")}
-							</Btn>
-						</Row>
-					)}
-				</Card>
-
-				<Card title={t("account.sessions")}>
-					<Row label={t("account.sessions.thisDevice")}>
-						<div style={{ flex: 1, fontSize: 13, color: RDS_COLORS.fgMuted }}>
-							{t("account.sessions.thisDeviceHint")}
-						</div>
-						<Btn variant="ghost" onClick={handleSignOut} disabled={logout.isPending}>
-							{logout.isPending ? t("common.signingOut") : t("common.signOut")}
-						</Btn>
-					</Row>
-					<Row label={t("settings.security.logoutEverywhere")} last>
-						<div style={{ flex: 1, fontSize: 13, color: RDS_COLORS.fgMuted }}>
-							{t("settings.security.logoutEverywhereSub")}
-						</div>
-						<Btn variant="ghost" onClick={handleLogoutEverywhere} style={{ color: RDS_COLORS.danger }}>
-							{t("settings.security.logoutEverywhereAction")}
-						</Btn>
-					</Row>
-				</Card>
-
-				<Card title={t("account.data")}>
-					<Row label={t("settings.account.exportAll")} last>
-						<div style={{ flex: 1, fontSize: 13, color: RDS_COLORS.fgMuted }}>{t("settings.account.exportAllSub")}</div>
-						<Btn variant="ghost" onClick={handleExportData}>
-							{t("account.data.export")}
-						</Btn>
-					</Row>
-				</Card>
-
-				<div
-					style={{
-						marginTop: 24,
-						padding: 20,
-						border: `1px solid color-mix(in oklch, ${RDS_COLORS.danger} 40%, ${RDS_COLORS.border})`,
-						borderRadius: 12,
-					}}
-				>
-					<SecTitle style={{ marginBottom: 12, color: RDS_COLORS.danger }}>{t("account.danger")}</SecTitle>
-					{confirmingDelete ? (
-						<div
-							style={{
-								padding: 14,
-								borderRadius: 10,
-								background: `color-mix(in oklch, ${RDS_COLORS.danger} 10%, ${RDS_COLORS.bgPanel})`,
-								border: `1px solid color-mix(in oklch, ${RDS_COLORS.danger} 60%, ${RDS_COLORS.border})`,
-							}}
-						>
-							<div style={{ fontSize: 13, fontWeight: 600, color: RDS_COLORS.fg, marginBottom: 6 }}>
-								{t("account.deleteAccount")}
-							</div>
-							<div style={{ fontSize: 12.5, color: RDS_COLORS.fgMuted, marginBottom: 14, lineHeight: 1.5 }}>
-								{t("settings.account.deleteConfirm")}
-							</div>
-							<div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-								<Btn variant="ghost" onClick={() => setConfirmingDelete(false)} disabled={deleting}>
-									{t("common.cancel")}
-								</Btn>
-								<Btn
-									onClick={handleDeleteAccount}
-									disabled={deleting}
-									style={{
-										background: RDS_COLORS.danger,
-										color: "white",
-										borderColor: RDS_COLORS.danger,
-									}}
-								>
-									{deleting ? t("account.deleting") : t("account.deleteConfirmAction")}
-								</Btn>
-							</div>
-						</div>
-					) : (
-						<div style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 0" }}>
-							<div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
-								<div style={{ fontSize: 13, fontWeight: 500 }}>{t("account.deleteAccount")}</div>
-								<div style={{ fontSize: 12, color: RDS_COLORS.fgMuted, marginTop: 2 }}>
-									{t("account.deleteAccountSub")}
-								</div>
-							</div>
-							<Btn
-								onClick={() => setConfirmingDelete(true)}
-								disabled={isPendingDeletion}
-								style={{
-									background: "transparent",
-									color: RDS_COLORS.danger,
-									borderColor: `color-mix(in oklch, ${RDS_COLORS.danger} 40%, ${RDS_COLORS.border})`,
-								}}
-							>
-								{t("common.delete")}
-							</Btn>
-						</div>
-					)}
+							</SettingsBlock>
+						) : (
+							<SettingsRow
+								label={t("account.deleteAccount")}
+								sub={t("account.deleteAccountSub")}
+								control={
+									<Btn
+										variant="ghost"
+										onClick={() => setConfirmingDelete(true)}
+										disabled={isPendingDeletion}
+										style={{ color: RDS_COLORS.danger }}
+									>
+										{t("common.delete")}
+									</Btn>
+								}
+							/>
+						)}
+					</SettingsSection>
 				</div>
 			</div>
 		</div>

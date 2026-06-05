@@ -122,11 +122,69 @@ Docs service account name
 {{- end }}
 
 {{/*
-Frontend URLs from web ingress hosts
+Frontend URLs from web ingress hosts (these are the origins allowed by the API CORS policy)
 */}}
 {{- define "routess.frontendUrls" -}}
 {{- range $index, $host := .Values.ingress.web.hosts -}}
 {{- if $index }},{{ end -}}
 {{- printf "https://%s" $host -}}
 {{- end -}}
+{{- end }}
+
+{{/*
+Landing labels
+*/}}
+{{- define "routess.landing.labels" -}}
+{{ include "routess.labels" . }}
+{{ include "routess.landing.selectorLabels" . }}
+{{- end }}
+
+{{/*
+Landing selector labels
+*/}}
+{{- define "routess.landing.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "routess.name" . }}-landing
+app.kubernetes.io/instance: {{ .Release.Name }}
+app.kubernetes.io/component: landing
+{{- end }}
+
+{{/*
+Landing service account name
+*/}}
+{{- define "routess.landing.serviceAccountName" -}}
+{{- if .Values.serviceAccount.landing.create }}
+{{- default (printf "%s-landing" (include "routess.fullname" .)) .Values.serviceAccount.landing.name }}
+{{- else }}
+{{- default "default" .Values.serviceAccount.landing.name }}
+{{- end }}
+{{- end }}
+
+{{/*
+Shared Umami analytics env. Plain UMAMI_* names (landing + docs read them at
+runtime, server-side). Emits nothing when unset.
+*/}}
+{{- define "routess.umamiEnv" -}}
+{{- if .Values.global.umami.url }}
+- name: UMAMI_URL
+  value: {{ .Values.global.umami.url | quote }}
+{{- end }}
+{{- if .Values.global.umami.websiteId }}
+- name: UMAMI_WEBSITE_ID
+  value: {{ .Values.global.umami.websiteId | quote }}
+{{- end }}
+{{- end }}
+
+{{/*
+Shared Umami analytics env, VITE_ names for the web app (substituted into
+env-config.js by its entrypoint at container start).
+*/}}
+{{- define "routess.umamiEnvVite" -}}
+{{- if .Values.global.umami.url }}
+- name: VITE_UMAMI_URL
+  value: {{ .Values.global.umami.url | quote }}
+{{- end }}
+{{- if .Values.global.umami.websiteId }}
+- name: VITE_UMAMI_WEBSITE_ID
+  value: {{ .Values.global.umami.websiteId | quote }}
+{{- end }}
 {{- end }}

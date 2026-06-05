@@ -45,6 +45,10 @@ spec:
             - name: http
               containerPort: {{ .Values.docs.service.targetPort }}
               protocol: TCP
+          {{- if or .Values.global.umami.url .Values.global.umami.websiteId }}
+          env:
+            {{- include "routess.umamiEnv" . | nindent 12 }}
+          {{- end }}
           securityContext:
             {{- toYaml .Values.docs.containerSecurityContext | nindent 12 }}
           resources:

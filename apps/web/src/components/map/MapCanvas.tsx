@@ -7,14 +7,16 @@ import { useMapInitialization } from "@/components/hooks/useMapInitialization";
 import { useMapPositioning } from "@/components/hooks/useMapPositioning";
 import { useMapRecovery } from "@/components/hooks/useMapRecovery";
 import { useMapViewBindings } from "@/components/hooks/useMapViewBindings";
+import { useMapViewPersistence } from "@/components/hooks/useMapViewPersistence";
 import { MapPopup, type PopupInfo as MapPopupInfo } from "@/components/map/MapPopup";
 import { SunPositionIndicator } from "@/components/map/SunPositionIndicator";
 import { useUserLocation } from "@/components/providers/UserLocationProvider";
 import { NodesOverlay } from "@/features/overlays/NodesOverlay";
 import { useServiceWorker } from "@/hooks/useServiceWorker";
 import { useErrorHandler } from "@/lib/errors";
-import type { SupportedLanguage } from "@/lib/i18n";
+import { type SupportedLanguage, useT } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
+import { getTimezoneFallbackLocation } from "@/lib/timezoneLocation";
 import { useMapViewStore } from "@/stores/mapViewStore";
 import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 import { useRoutingStore } from "@/stores/routingStore";
@@ -50,18 +52,47 @@ const FALLBACK_STYLE_VARIANT: MapStyleVariant = {
 	supportsLightPreset: true,
 };
 
-function MapLoadingShell({ isSatellite, theme }: { isSatellite: boolean; theme: "light" | "dark" }) {
+function MapLoadingShell({
+	isSatellite,
+	theme,
+	showSpinner = true,
+}: {
+	isSatellite: boolean;
+	theme: "light" | "dark";
+	showSpinner?: boolean;
+}) {
+	const t = useT();
 	// Match the map's resting tone so a cold-start (e.g. a discarded PWA
 	// reloading) just fades the map in over the same colour, instead of
 	// flashing a dark-blue loading screen.
+	const isDark = isSatellite || theme === "dark";
 	const background = isSatellite ? "#1b261f" : theme === "dark" ? "#0c1320" : "#e7ecec";
+	const fg = isDark ? "rgba(231, 236, 236, 0.75)" : "rgba(12, 19, 32, 0.65)";
+	const track = isDark ? "rgba(231, 236, 236, 0.18)" : "rgba(12, 19, 32, 0.14)";
 	return (
 		<div
 			data-testid="map-loading-shell"
-			aria-hidden="true"
-			className="absolute inset-0 transition-opacity duration-300"
+			role="status"
+			className="absolute inset-0 flex flex-col items-center justify-center gap-3 transition-opacity duration-300"
 			style={{ background }}
-		/>
+		>
+			{showSpinner && (
+				<>
+					<div
+						aria-hidden="true"
+						style={{
+							width: 28,
+							height: 28,
+							borderRadius: 999,
+							border: `2.5px solid ${track}`,
+							borderTopColor: `var(--rds-accent, ${fg})`,
+							animation: "rds-spin 0.8s linear infinite",
+						}}
+					/>
+					<span style={{ fontSize: 12.5, fontWeight: 500, letterSpacing: 0.2, color: fg }}>{t("map.loading")}</span>
+				</>
+			)}
+		</div>
 	);
 }
 
@@ -219,6 +250,10 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
 	const { location: userLocation, error: locationError, isLoading: isUserLocationLoading } = useUserLocation();
 	const { isOnline } = useServiceWorker();
 	const { onMapStyleLoaded } = useMapViewBindings({ map: mapRef.current, userLocation, isOnline });
+
+	// Persist the camera so reloads (and version bumps, which purge the ad-hoc
+	// location keys) restore the user's region instead of the timezone fallback.
+	useMapViewPersistence(mapRef, isMapLoaded);
 
 	const { handleMapError } = useErrorHandler();
 	const isSatelliteStyle = currentMapStyleKey === "satellite";
@@ -396,6 +431,19 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
 			};
 		}
 
+		// First visit without any stored or granted location: approximate from
+		// the browser timezone so the map at least opens in the user's region.
+		const timezoneLocation = getTimezoneFallbackLocation();
+		if (timezoneLocation) {
+			return {
+				longitude: timezoneLocation[0],
+				latitude: timezoneLocation[1],
+				zoom: 9,
+				bearing: 0,
+				pitch: 0,
+			};
+		}
+
 		return DEFAULT_VIEW_STATE;
 	}, [
 		initialCenter,
@@ -425,6 +473,7 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
 		lastKnownLocationFromStorage,
 		detectedRouteInLocalStorageOnInit,
 		pendingSharedRoute,
+		hasSavedMapView: Boolean(lastSavedMapView),
 		mapPitch: MAP_PITCH,
 	});
 
@@ -490,7 +539,7 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
 	if (hasInvalidMapboxToken) {
 		return (
 			<div ref={containerRef} className="relative" style={{ width, height }}>
-				<MapLoadingShell isSatellite={isSatelliteStyle} theme={mapTheme} />
+				<MapLoadingShell isSatellite={isSatelliteStyle} theme={mapTheme} showSpinner={false} />
 				<MapUnavailablePanel
 					title="Mapbox token required"
 					message="The map cannot load because VITE_MAPBOX_ACCESS_TOKEN is missing or still set to the example value. Put a real public Mapbox token in the repo root .env file and restart bun dev."
@@ -573,7 +622,9 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
 					<NodesOverlay />
 				</MapGL>
 
-				{!isMapLoaded && <MapLoadingShell isSatellite={isSatelliteStyle} theme={mapTheme} />}
+				{!isMapLoaded && (
+					<MapLoadingShell isSatellite={isSatelliteStyle} theme={mapTheme} showSpinner={!loadTimedOut} />
+				)}
 				{loadTimedOut && (
 					<MapUnavailablePanel
 						title="Map is still loading"

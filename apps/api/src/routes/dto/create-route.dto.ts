@@ -12,6 +12,7 @@ import {
 	ArrayMaxSize,
 	ArrayMinSize,
 	IsArray,
+	IsBoolean,
 	IsIn,
 	IsNotEmpty,
 	IsNumber,
@@ -173,6 +174,14 @@ export class CreateRouteDto {
 		message: "each tag must be lowercase alphanumeric plus '-', 1 to 24 chars, starting with [a-z0-9]",
 	})
 	tags?: string[];
+
+	@ApiPropertyOptional({
+		description: "Whether the owner marked this route as a favourite",
+		default: false,
+	})
+	@IsOptional()
+	@IsBoolean()
+	favourite?: boolean;
 
 	@ApiProperty({
 		description: "Array of waypoints that define the route",

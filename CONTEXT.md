@@ -50,7 +50,7 @@ _Avoid_: privacy, sharing, share level, access level.
 
 **Tag**:
 A short free-form lowercase keyword attached to a Route, used to organise and filter the RouteLibrary. Each Tag matches `[a-z0-9][a-z0-9-]{0,23}` (1 to 24 characters, lowercase alphanumeric plus hyphen, must start with a letter or digit). A Route has zero to 10 Tags. Tags are owned per Route and never shared as standalone entities. Surfaced in the library filter row and in the route detail meta editor.
-_Avoid_: label, category, group, folder, collection (no folder/collection hierarchy exists in the domain).
+_Avoid_: label, category, group, folder. A Tag is not a **Collection**: Tags are flat, cross-cutting, per-Route filter keywords; a Collection is a curated, ordered, shareable set of Routes. See ADR 0026.
 
 ## Metrics
 
@@ -92,7 +92,15 @@ Live tracking of the user's GPS position on the map. Distinct from waypoints and
 The standard XML format for route exchange. Routess imports GPX files (deriving Waypoints with smart detection at significant Bearing changes) and exports Routes as GPX.
 
 **RouteLibrary**:
-The collection of Routes a User has saved. Surfaced in the UI as "My Routes."
+The set of Routes a User has saved. Surfaced in the UI as the library panel's "Routes" tab.
+
+**Collection**:
+A curated, manually ordered set of Routes within a User's RouteLibrary (e.g. "Alps 2026", "Commutes"). Routes and Collections are many-to-many: a Route can live in any number of Collections, and removing it from a Collection never deletes the Route. A Collection has its own **RouteVisibility** with the same semantics as a Route's; sharing a Collection by URL never exposes `private` Routes inside it to non-owners.
+_Avoid_: folder, playlist, group, list.
+
+**Favourite**:
+A per-Route boolean the owner toggles to pin a Route for quick retrieval. Stored on the Route entity (server-side, syncs across devices), surfaced as a heart toggle and a library filter. Not a Collection; favouriting is a flag, not membership.
+_Avoid_: like, star, bookmark.
 
 ## Identity
 
@@ -126,6 +134,8 @@ _Avoid_: API key, access token, bearer token (the term is **PAT** when discussin
 - A **Route** has exactly one **RouteVisibility** (`private` | `unlisted` | `public`), defaulting from the owning User's preference.
 - A **Route** has zero or more **Tags**; Tags are flat (no hierarchy, no folder grouping).
 - A **User** owns zero or more **Routes**, accessed through their **RouteLibrary**.
+- A **User** owns zero or more **Collections**; each **Collection** holds an ordered set of that User's **Routes** (many-to-many, order is per-Collection).
+- A **Collection** has exactly one **RouteVisibility**; non-owners viewing a shared Collection never see its `private` Routes.
 - A **User** holds **RoutingPreferences defaults** keyed by **Activity** (`cycle`, `run`, `walk`); these are *copied* onto a new **RouteDraft** at creation, never read again for that draft.
 - A **Route** has its own **RoutingPreferences** (which produced its RoutePath) and a **Provenance** (how it was made). Both are immutable inputs to the Route; `Provenance` never changes after creation.
 - A **RouteDraft** is an in-progress **Route** held in `routingStore`. Its mode is either `unsaved` (will become a new Route on save) or `editing(routeId)` (bound to a saved Route, will PATCH it on save).
@@ -149,6 +159,7 @@ _Avoid_: API key, access token, bearer token (the term is **PAT** when discussin
 - **"Snap"** is implementation jargon for "find the nearest road and adjust the Waypoint to lie on it." Use it for engineering conversation, not for user-facing copy or domain modelling.
 - **"Loop"** is a **RouteType** value, not a synonym for "cycle" or "ride". A Route's RouteType is either `a-to-b` or `loop`.
 - **"Account" / "Profile"** are not Routess concepts. The domain only has **User**.
+- **"Pin" in marketing copy**: the avoid-list above governs engineering, in-app UI, and domain conversation. Marketing copy on the public landing page may use "pin" as a verb-phrase ("pin it", "drop pins") because in that register it's a universally-understood action verb, not a name for the **Waypoint** entity. The carve-out is verb-only: copy must still not refer to a Waypoint as a "pin" (noun). If "the API returns pins" or "the user has 5 pins saved" appears anywhere, that's a leak — fix it.
 - **"Surface"** is overloaded: **SurfaceType** is a routing *preference* (3 values, an input), **SurfaceBucket** is a per-segment *classification* (4 values, an observation on the resulting RoutePath). Don't conflate them; in conversation, name the specific term.
 - **"Profile" / "routing profile" / "routing mode"**: the legacy `routingPreferencesStore.profile` field (`fast | scenic | safe | flat`) is being retired with the Valhalla migration (#137). These are not domain terms and should not appear in new code or user-facing copy. The replacement is **RoutingPreferences** (a structured object), not a single enum. "Mode" remains on the avoid list (it collides with Waypoint **Type**).
 - **"Profile" in provider terms** (e.g. Mapbox's `cycling` / `walking` / `driving` profile, or Valhalla's `bicycle` / `pedestrian` costing) is an *implementation detail* derived from **Activity**, not a domain concept the user picks directly.

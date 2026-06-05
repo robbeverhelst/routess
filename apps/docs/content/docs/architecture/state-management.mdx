@@ -7,13 +7,13 @@ routess uses **Zustand** for client state. Stores live in `packages/core/src/sto
 
 ## Stores
 
-- **routingStore** — current route waypoints, derived stats, undo/redo history
-- **authStore** — current user, OAuth state
-- **uiStore** — map style, sidebar open state, language
+- **routingStore**: current route waypoints, derived stats, undo/redo history
+- **authStore**: current user, OAuth state
+- **uiStore**: map style, sidebar open state, language
 
 ## Why Zustand (not Redux/Jotai)
 
-- Tiny API — no actions/reducers boilerplate
+- Tiny API, no actions/reducers boilerplate
 - Works outside React (so packages can use it)
 - Built-in middleware: `persist`, `subscribeWithSelector`
 

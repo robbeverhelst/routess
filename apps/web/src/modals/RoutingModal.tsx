@@ -223,7 +223,11 @@ export function RoutingModal() {
 							{t("routing.pref.highwaysSub")}
 						</div>
 					</div>
-					<Toggle on={pending.avoidHighways} onChange={(v) => update({ avoidHighways: v })} />
+					<Toggle
+						on={pending.avoidHighways}
+						onChange={(v) => update({ avoidHighways: v })}
+						label={t("routing.pref.highways")}
+					/>
 				</div>
 			)}
 
@@ -254,7 +258,11 @@ export function RoutingModal() {
 					<div style={{ fontSize: 13, fontWeight: 500 }}>{t("routing.ferries.label")}</div>
 					<div style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle, marginTop: 2 }}>{t("routing.ferries.hint")}</div>
 				</div>
-				<Toggle on={pending.avoidFerries} onChange={(v) => update({ avoidFerries: v })} />
+				<Toggle
+					on={pending.avoidFerries}
+					onChange={(v) => update({ avoidFerries: v })}
+					label={t("routing.ferries.label")}
+				/>
 			</div>
 		</ModalShell>
 	);

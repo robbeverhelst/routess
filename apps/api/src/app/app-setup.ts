@@ -65,6 +65,7 @@ export function configureApplication(app: INestApplication, config: AppConfig = 
 		credentials: true,
 		methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
 		allowedHeaders: ["Content-Type", "Authorization", "X-Request-ID", "X-Routess-Confirm"],
+		exposedHeaders: ["X-Total-Count"],
 	});
 
 	if (!config.docs.enabled) {
@@ -114,8 +115,11 @@ export function createOpenApiDocument(app: INestApplication, config: AppConfig =
 			.addServer(`http://localhost:${config.app.port}`, "Local development")
 			.addTag("auth", "Authentication endpoints")
 			.addTag("routes", "Route management")
+			.addTag("collections", "Curated, ordered, shareable sets of routes")
 			.addTag("routing", "Routing engine (Valhalla) proxy endpoints")
 			.addTag("users", "User profile management")
+			.addTag("sessions", "Active session management")
+			.addTag("admin", "Admin dashboard endpoints (admin role, session cookie only)")
 			.addTag("app", "API root metadata")
 			.addTag("health", "Health and monitoring")
 			.addTag("metrics", "Prometheus metrics")

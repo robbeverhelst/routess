@@ -1,15 +1,5 @@
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, Res, UseGuards } from "@nestjs/common";
-import {
-	ApiBearerAuth,
-	ApiBody,
-	ApiHeader,
-	ApiOperation,
-	ApiParam,
-	ApiQuery,
-	ApiResponse,
-	ApiTags,
-} from "@nestjs/swagger";
-import { ROUTE_ACTIVITIES, ROUTE_VISIBILITIES, type RouteActivity, type RouteVisibility } from "@routess/core";
+import { ApiBearerAuth, ApiBody, ApiHeader, ApiOperation, ApiParam, ApiResponse, ApiTags } from "@nestjs/swagger";
 import type { Response } from "express";
 import type { AuthenticatedUser } from "../auth/authenticated-user";
 import { CurrentUser, OptionalCurrentUser } from "../auth/decorators/current-user.decorator";
@@ -22,19 +12,11 @@ import { ScopeGuard } from "../auth/guards/scope.guard";
 import { UnifiedAuthGuard } from "../auth/guards/unified-auth.guard";
 import { ThrottleModerate, ThrottleStrict } from "../common/decorators/throttle.decorator";
 import { CreateRouteDto } from "./dto/create-route.dto";
+import { ListRoutesQueryDto, ROUTES_PAGE_LIMIT_DEFAULT } from "./dto/list-routes-query.dto";
 import { RouteResponseDto } from "./dto/route-response.dto";
 import { UpdateRouteDto } from "./dto/update-route.dto";
 import { buildRouteGpx } from "./gpx";
-import { type RouteListSort, RoutesService } from "./routes.service";
-
-const ROUTE_LIST_SORTS: RouteListSort[] = ["recent", "created", "name", "distance", "elevation"];
-
-function parseTagsParam(raw: string | string[] | undefined): string[] | undefined {
-	if (raw === undefined) return undefined;
-	const list = Array.isArray(raw) ? raw : raw.split(",");
-	const cleaned = list.map((t) => t.trim().toLowerCase()).filter(Boolean);
-	return cleaned.length > 0 ? cleaned : undefined;
-}
+import { RoutesService } from "./routes.service";
 
 @ApiTags("routes")
 @Controller("routes")
@@ -63,74 +45,30 @@ export class RoutesController {
 	@ApiOperation({
 		summary: "Get all user routes",
 		description:
-			"Retrieves the authenticated user's routes (any visibility), optionally filtered by activity, visibility, tags, and a free-text search across name and description. Sort options: recent (updatedAt desc, default), created, name, distance, elevation.",
+			"Retrieves the authenticated user's routes (any visibility), newest first. Paginated via `limit` and `offset`; the total number of routes is returned in the `X-Total-Count` response header.",
 	})
-	@ApiQuery({
-		name: "q",
-		required: false,
-		description: "Substring match against name and description (case-insensitive)",
+	@ApiResponse({
+		status: 200,
+		description: "Routes retrieved successfully. X-Total-Count carries the total route count.",
+		type: RouteResponseDto,
+		isArray: true,
 	})
-	@ApiQuery({ name: "activity", required: false, enum: ROUTE_ACTIVITIES })
-	@ApiQuery({ name: "visibility", required: false, enum: ROUTE_VISIBILITIES })
-	@ApiQuery({
-		name: "tags",
-		required: false,
-		description: "Comma-separated tag list; routes must contain all listed tags",
-	})
-	@ApiQuery({ name: "sort", required: false, enum: ROUTE_LIST_SORTS })
-	@ApiResponse({ status: 200, description: "Routes retrieved successfully", type: RouteResponseDto, isArray: true })
 	@ApiResponse({ status: 401, description: "Unauthorized" })
 	@ThrottleModerate()
 	@RequireScope("read")
 	@Get()
-	findAll(
+	async findAll(
 		@CurrentUser() user: AuthenticatedUser,
-		@Query("q") q?: string,
-		@Query("activity") activity?: string,
-		@Query("visibility") visibility?: string,
-		@Query("tags") tags?: string | string[],
-		@Query("sort") sort?: string,
+		@Query() query: ListRoutesQueryDto,
+		@Res({ passthrough: true }) res: Response,
 	): Promise<RouteResponseDto[]> {
-		const activityParam =
-			activity && (ROUTE_ACTIVITIES as readonly string[]).includes(activity) ? (activity as RouteActivity) : undefined;
-		const visibilityParam =
-			visibility && (ROUTE_VISIBILITIES as readonly string[]).includes(visibility)
-				? (visibility as RouteVisibility)
-				: undefined;
-		const sortParam =
-			sort && (ROUTE_LIST_SORTS as readonly string[]).includes(sort) ? (sort as RouteListSort) : undefined;
-		return this.routesService.findAll(user.id, {
-			q,
-			activity: activityParam,
-			visibility: visibilityParam,
-			tags: parseTagsParam(tags),
-			sort: sortParam,
-		});
-	}
-
-	@ApiBearerAuth("JWT-auth")
-	@ApiBearerAuth("PAT-auth")
-	@UseGuards(UnifiedAuthGuard, ScopeGuard)
-	@ApiOperation({
-		summary: "List tags used by the current user's routes",
-		description: "Returns the distinct tag values across the caller's routes with usage counts, sorted by count desc.",
-	})
-	@ApiResponse({
-		status: 200,
-		schema: {
-			type: "array",
-			items: {
-				type: "object",
-				properties: { tag: { type: "string" }, count: { type: "integer" } },
-				required: ["tag", "count"],
-			},
-		},
-	})
-	@ThrottleModerate()
-	@RequireScope("read")
-	@Get("tags")
-	listTags(@CurrentUser() user: AuthenticatedUser): Promise<Array<{ tag: string; count: number }>> {
-		return this.routesService.listTags(user.id);
+		const { items, total } = await this.routesService.findAll(
+			user.id,
+			query.limit ?? ROUTES_PAGE_LIMIT_DEFAULT,
+			query.offset ?? 0,
+		);
+		res.setHeader("X-Total-Count", String(total));
+		return items;
 	}
 
 	// Static segment must be declared before the dynamic ":id" route below;

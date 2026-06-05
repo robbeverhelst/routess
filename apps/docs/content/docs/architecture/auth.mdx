@@ -1,11 +1,11 @@
 ---
 title: Authentication
-description: Google OAuth sign-in and session management.
+description: Google OAuth and email sign-in, plus session management.
 ---
 
-routess uses **Google OAuth (one-tap)** on the web and a **JWT session cookie** on the API.
+routess supports two sign-in methods, **Google OAuth (one-tap)** and **email + password**, both ending in the same **JWT session cookie** on the API.
 
-## Flow
+## Google flow
 
 1. The web app loads the Google Identity Services SDK and renders the sign-in button.
 2. On success, Google returns an **ID token** to the browser.
@@ -13,6 +13,17 @@ routess uses **Google OAuth (one-tap)** on the web and a **JWT session cookie** 
 4. The API verifies the token's signature and audience against Google's JWKS.
 5. The API upserts the user (by Google `sub`), issues its own JWT, and sets it as an `HttpOnly`, `Secure`, `SameSite=Lax` cookie.
 6. Subsequent API calls include the cookie automatically.
+
+## Email flow
+
+1. `POST /api/v1/auth/signup-email` registers the account (passwords are at least 12 characters, hashed at rest) and sends a verification link, valid for 24 hours.
+2. `POST /api/v1/auth/verify-email` consumes the link's token and signs the user in.
+3. `POST /api/v1/auth/login-email` signs in on later visits and issues the same session cookie as the Google flow.
+4. `POST /api/v1/auth/request-password-reset` emails a reset link valid for 30 minutes; `POST /api/v1/auth/reset-password` consumes it.
+
+Email delivery goes through Resend when `RESEND_API_KEY` is set; otherwise verification and reset URLs are logged to stdout (the dev/self-host console transport).
+
+A Google-created account can add a password later (`POST /api/v1/users/me/password`), so both methods work for the same user.
 
 ## Why a server-issued JWT?
 

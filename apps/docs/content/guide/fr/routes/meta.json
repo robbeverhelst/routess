@@ -1,4 +1,12 @@
 {
-	"title": "Itineraires",
-	"pages": ["creating-routes", "editing-routes", "saving-routes", "route-info", "sharing-routes"]
+	"title": "Itinéraires",
+	"pages": [
+		"creating-routes",
+		"editing-routes",
+		"routing-preferences",
+		"importing-routes",
+		"saving-routes",
+		"route-info",
+		"sharing-routes"
+	]
 }

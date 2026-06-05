@@ -1,8 +1,7 @@
-import { EntityManager, EntityRepository, type FilterQuery, wrap } from "@mikro-orm/core";
+import { EntityManager, EntityRepository } from "@mikro-orm/core";
 import { InjectRepository } from "@mikro-orm/nestjs";
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { EventEmitter2 } from "@nestjs/event-emitter";
-import type { RouteActivity, RouteVisibility } from "@routess/core";
 import type { AppConfig } from "../config/app-config";
 import { APP_CONFIG } from "../config/config.module";
 import { Route } from "../entities/route.entity";
@@ -13,35 +12,10 @@ import {
 	type RouteCreatedEvent,
 	type RouteDeletedEvent,
 } from "../telemetry/domain-events";
-import { toUserResponseDto } from "../users/user.mapper";
 import type { CreateRouteDto } from "./dto/create-route.dto";
 import type { RouteResponseDto } from "./dto/route-response.dto";
 import type { UpdateRouteDto } from "./dto/update-route.dto";
-
-export type RouteListSort = "recent" | "created" | "name" | "distance" | "elevation";
-
-export interface RouteListQuery {
-	q?: string;
-	activity?: RouteActivity;
-	visibility?: RouteVisibility;
-	tags?: string[];
-	sort?: RouteListSort;
-}
-
-const LIST_LIMIT = 500;
-
-type SerializableUser = Pick<
-	User,
-	| "id"
-	| "email"
-	| "name"
-	| "avatar"
-	| "isEmailVerified"
-	| "role"
-	| "preferences"
-	| "deletionStatus"
-	| "deletionRequestedAt"
->;
+import { toRouteResponseDto } from "./route.mapper";
 
 @Injectable()
 export class RoutesService {
@@ -57,27 +31,7 @@ export class RoutesService {
 	) {}
 
 	private toResponseDto(route: Route): RouteResponseDto {
-		const serializedUser = wrap(route.user).toJSON() as SerializableUser;
-		return {
-			id: route.id,
-			name: route.name,
-			description: route.description,
-			activity: route.activity,
-			visibility: route.visibility,
-			tags: route.tags,
-			waypoints: route.waypoints,
-			geometry: route.geometry,
-			distance: route.distance,
-			duration: route.duration,
-			elevationGain: route.elevationGain,
-			startAddress: route.startAddress,
-			endAddress: route.endAddress,
-			routingPreferences: route.routingPreferences ?? null,
-			provenance: route.provenance,
-			user: toUserResponseDto(serializedUser, this.config.analytics.salt),
-			createdAt: route.createdAt.toISOString(),
-			updatedAt: route.updatedAt.toISOString(),
-		};
+		return toRouteResponseDto(route, this.config.analytics.salt);
 	}
 
 	async create(createRouteDto: CreateRouteDto, userId: number): Promise<RouteResponseDto> {
@@ -87,6 +41,7 @@ export class RoutesService {
 			...createRouteDto,
 			visibility: createRouteDto.visibility ?? ownerDefault,
 			tags: createRouteDto.tags ?? [],
+			favourite: createRouteDto.favourite ?? false,
 			provenance: createRouteDto.provenance ?? "valhalla",
 			user: userId,
 		});
@@ -96,52 +51,12 @@ export class RoutesService {
 		return this.toResponseDto(route);
 	}
 
-	async findAll(userId: number, query: RouteListQuery = {}): Promise<RouteResponseDto[]> {
-		const where: FilterQuery<Route> = { user: userId };
-		if (query.activity) where.activity = query.activity;
-		if (query.visibility) where.visibility = query.visibility;
-		if (query.q?.trim()) {
-			const term = `%${query.q.trim()}%`;
-			(where as Record<string, unknown>).$or = [{ name: { $ilike: term } }, { description: { $ilike: term } }];
-		}
-		if (query.tags && query.tags.length > 0) {
-			(where as Record<string, unknown>).tags = { $contains: query.tags };
-		}
-		const orderBy = this.resolveOrderBy(query.sort ?? "recent");
-		const routes = await this.routeRepository.find(where, {
-			populate: ["user"],
-			orderBy,
-			limit: LIST_LIMIT,
-		});
-		return routes.map((route) => this.toResponseDto(route));
-	}
-
-	private resolveOrderBy(sort: RouteListSort): Record<string, "ASC" | "DESC"> {
-		switch (sort) {
-			case "created":
-				return { createdAt: "DESC" };
-			case "name":
-				return { name: "ASC" };
-			case "distance":
-				return { distance: "DESC" };
-			case "elevation":
-				return { elevationGain: "DESC" };
-			default:
-				return { updatedAt: "DESC" };
-		}
-	}
-
-	async listTags(userId: number): Promise<Array<{ tag: string; count: number }>> {
-		const routes = await this.routeRepository.find({ user: userId }, { fields: ["tags"], limit: LIST_LIMIT });
-		const counts = new Map<string, number>();
-		for (const route of routes) {
-			for (const tag of route.tags ?? []) {
-				counts.set(tag, (counts.get(tag) ?? 0) + 1);
-			}
-		}
-		return Array.from(counts.entries())
-			.map(([tag, count]) => ({ tag, count }))
-			.sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag));
+	async findAll(userId: number, limit: number, offset: number): Promise<{ items: RouteResponseDto[]; total: number }> {
+		const [routes, total] = await this.routeRepository.findAndCount(
+			{ user: userId },
+			{ populate: ["user"], orderBy: { createdAt: "DESC" }, limit, offset },
+		);
+		return { items: routes.map((route) => this.toResponseDto(route)), total };
 	}
 
 	// findOne: returns the Route if the viewer is the owner, OR if the route's

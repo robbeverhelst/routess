@@ -37,3 +37,23 @@ spec:
     matchLabels:
       {{- include "routess.api.selectorLabels" . | nindent 6 }}
 {{- end }}
+---
+{{- if and .Values.landing .Values.landing.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "routess.fullname" . }}-landing
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "routess.landing.labels" . | nindent 4 }}
+spec:
+  {{- if .Values.landing.podDisruptionBudget.minAvailable }}
+  minAvailable: {{ .Values.landing.podDisruptionBudget.minAvailable }}
+  {{- end }}
+  {{- if .Values.landing.podDisruptionBudget.maxUnavailable }}
+  maxUnavailable: {{ .Values.landing.podDisruptionBudget.maxUnavailable }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "routess.landing.selectorLabels" . | nindent 6 }}
+{{- end }}

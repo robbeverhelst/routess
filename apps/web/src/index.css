@@ -267,6 +267,15 @@
 	}
 }
 
+/* Settings group row dividers (replaces per-row `last` props) */
+[data-redesign] .rds-settings-group > *:not(:last-child) {
+	border-bottom: 1px solid var(--rds-border);
+}
+
+[data-redesign] .rds-settings-nav-row:hover {
+	background: var(--rds-bg-hover);
+}
+
 /* Bottom tab bar pill press feedback */
 [data-redesign] .rds-tab-btn:active .rds-tab-pill {
 	transform: scale(0.92);
@@ -293,6 +302,12 @@
 	}
 	50% {
 		opacity: 0.55;
+	}
+}
+
+@keyframes rds-spin {
+	to {
+		transform: rotate(360deg);
 	}
 }
 

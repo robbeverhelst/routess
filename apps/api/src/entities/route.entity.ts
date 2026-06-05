@@ -28,6 +28,9 @@ export class Route extends BaseEntity {
 	@Property({ type: "json" })
 	tags: string[] = [];
 
+	@Property({ default: false })
+	favourite = false;
+
 	@Property({ type: "json" })
 	waypoints!: Waypoint[];
 

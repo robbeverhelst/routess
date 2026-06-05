@@ -1,4 +1,4 @@
 {
 	"title": "Erste Schritte",
-	"pages": ["sign-in", "your-first-route", "interface-tour"]
+	"pages": ["sign-in", "onboarding", "your-first-route", "interface-tour", "keyboard-shortcuts"]
 }

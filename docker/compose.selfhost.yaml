@@ -53,6 +53,7 @@ services:
       ADMIN_EMAILS: ${ADMIN_EMAILS:-}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       EMAIL_FROM: ${EMAIL_FROM:-routess <noreply@routess.app>}
+      VALHALLA_URL: ${VALHALLA_URL:-}
     ports:
       - "${API_PORT:-3000}:3000"
     healthcheck:
@@ -74,7 +75,6 @@ services:
       VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?GOOGLE_CLIENT_ID is required}
       VITE_MAPBOX_ACCESS_TOKEN: ${VITE_MAPBOX_ACCESS_TOKEN:?VITE_MAPBOX_ACCESS_TOKEN is required}
       VITE_APP_VERSION: ${ROUTESS_TAG:-latest}
-      VITE_STADIA_API_KEY: ${VITE_STADIA_API_KEY:-}
       VITE_UMAMI_URL: ${VITE_UMAMI_URL:-}
       VITE_UMAMI_WEBSITE_ID: ${VITE_UMAMI_WEBSITE_ID:-}
       VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
@@ -85,6 +85,11 @@ services:
 
   docs:
     image: ghcr.io/robbeverhelst/routess-docs:${ROUTESS_TAG:-latest}
+    environment:
+      UMAMI_URL: ${UMAMI_URL:-}
+      UMAMI_WEBSITE_ID: ${UMAMI_WEBSITE_ID:-}
+      # Canonical origin used in sitemap/robots/llms.txt links.
+      DOCS_PUBLIC_URL: ${PUBLIC_DOCS_URL:-http://localhost:${DOCS_PORT:-3002}}
     ports:
       - "${DOCS_PORT:-3002}:8080"
     restart: unless-stopped

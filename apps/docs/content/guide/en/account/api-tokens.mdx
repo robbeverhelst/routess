@@ -1,0 +1,33 @@
+---
+title: API tokens
+description: Create tokens for scripts, agents, and the routess CLI.
+---
+
+API tokens let scripts and tools work with your route library without your password. Manage them under **Settings → API tokens** (visible when you're signed in).
+
+## Create a token
+
+1. Click **Create token**.
+2. Give it a **label** you'll recognise later, e.g. `backup script (laptop)`.
+3. Pick a **scope**:
+   - **Read**: list and inspect routes
+   - **Write**: read plus rename, change visibility, and delete
+4. Optionally set an **expiry date**. Empty means it never expires.
+
+The token is shown **once**. Copy it and store it somewhere safe; if you lose it, revoke it and create a new one.
+
+## Use it
+
+Send the token as a bearer token:
+
+```sh
+curl -H "Authorization: Bearer <your-token>" https://api.routess.com/api/v1/routes
+```
+
+See the [API reference](https://docs.routess.com/api) for every endpoint.
+
+## Revoke a token
+
+Each token shows when it was created and last used. **Revoke** kills it immediately; anything still using it stops working.
+
+Rotate tokens you no longer recognise, and prefer one token per tool so revoking one doesn't break the others.

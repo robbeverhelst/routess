@@ -13,7 +13,8 @@
 		"postinstall": "fumadocs-mdx",
 		"openapi:generate": "bun scripts/generate-openapi-docs.ts",
 		"guide:sync-translations": "bun scripts/sync-guide-translations.ts",
-		"test": "bun run check-types"
+		"test": "bun run check-types",
+		"guide:screenshots": "bun scripts/capture-guide-screenshots.ts"
 	},
 	"dependencies": {
 		"@routess/design-tokens": "workspace:*",
@@ -33,6 +34,8 @@
 		"@types/node": "^25.0.0",
 		"@types/react": "^19.1.0",
 		"@types/react-dom": "^19.1.0",
-		"typescript": "~6.0.0"
+		"typescript": "~6.0.0",
+		"playwright": "^1.60.0",
+		"sharp": "^0.34.0"
 	}
 }

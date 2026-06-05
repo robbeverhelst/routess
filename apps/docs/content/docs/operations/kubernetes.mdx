@@ -3,9 +3,16 @@ title: Kubernetes
 description: Deploying routess with the bundled Helm chart.
 ---
 
-The chart at `charts/routess` deploys all three apps (web, api, docs) plus their services, ingresses, and security policies. Postgres is **not** managed by the chart — bring your own database.
+The chart at `charts/routess` deploys all four apps (web, api, docs, landing) plus their services, ingresses, and security policies. Postgres is **not** managed by the chart; bring your own database.
 
 For chart-level details, see [`charts/routess/README.md`](https://github.com/robbeverhelst/routess/blob/main/charts/routess/README.md).
+
+## Prerequisites
+
+- A Kubernetes cluster and `kubectl` access
+- **Helm 3.16+**
+- A reachable PostgreSQL instance (the chart does not create one)
+- Secrets at hand: JWT secret, analytics salt, PAT pepper, Google OAuth credentials, database credentials
 
 ## Install from GHCR
 
@@ -17,9 +24,11 @@ helm install routess oci://ghcr.io/robbeverhelst/charts/routess \
   -f my-values.yaml
 ```
 
-Find the latest chart version on the [releases page](https://github.com/robbeverhelst/routess/releases) — chart version tracks app version.
+Find the latest chart version on the [releases page](https://github.com/robbeverhelst/routess/releases); the chart version tracks the app version.
 
 ## Pick an ingress strategy
+
+The default `ingress.className` is `cloudflare-tunnel`, which is **not** a standard ingress class; it assumes a Cloudflare Tunnel controller is installed. On any other setup, override it (the nginx overlay below sets `className: nginx`).
 
 The chart ships with two example overlays:
 
@@ -66,18 +75,38 @@ Pass these from your secret manager (1Password Connect, External Secrets Operato
 
 The API refuses to start without `JWT_SECRET`, `ANALYTICS_SALT`, and `PAT_PEPPER`. See [ADR-0022](https://github.com/robbeverhelst/routess/blob/main/docs/adr/0022-personal-access-tokens-for-non-browser-clients.md).
 
+Two related values live under `api.env`, not `api.secrets`: `api.env.dbName` (default `routess`) and `api.env.dbPort` (default `"5432"`). Override them if your database differs. `api.secrets.resendApiKey` is optional; empty means verification emails are logged to stdout instead of sent.
+
+Rotation impact: rotating `jwtSecret` logs every user out, rotating `patPepper` invalidates every personal access token, and rotating `analyticsSalt` resets analytics pseudonyms.
+
 ## Values structure
 
 Top-level keys:
 
-- `global` — namespace, etc.
-- `web`, `api`, `docs` — per-app deployment config (replicas, resources, probes, security)
-- `ingress` — host configuration per service
-- `networkPolicies` — default-deny + app-specific allows ([ADR-0006](https://github.com/robbeverhelst/routess/blob/main/docs/adr/0006-kubernetes-deny-all-network-policy-baseline.md))
-- `monitoring.serviceMonitor` — Prometheus Operator integration
-- `serviceAccount` — minimal RBAC per service
+- `global`: namespace, shared Umami analytics config
+- `web`, `api`, `docs`, `landing`: per-app deployment config (replicas, resources, probes, security)
+- `ingress`: host configuration per service
+- `networkPolicies`: default-deny + app-specific allows ([ADR-0006](https://github.com/robbeverhelst/routess/blob/main/docs/adr/0006-kubernetes-deny-all-network-policy-baseline.md))
+- `monitoring.serviceMonitor`: Prometheus Operator integration
+- `serviceAccount`: minimal RBAC per service
 
 See [`values.yaml`](https://github.com/robbeverhelst/routess/blob/main/charts/routess/values.yaml) for the full reference.
+
+## Probes and disruption budgets
+
+The API exposes `GET /health/live` (process up) and `GET /health/ready` (database reachable); the chart wires them as liveness and readiness probes. Web, docs, and landing probe `GET /`.
+
+PodDisruptionBudgets keep at least one replica of web, api, and landing during node drains (`podDisruptionBudget.minAvailable: 1`); docs runs a single replica with no PDB.
+
+## Scaling
+
+Each app ships an optional HorizontalPodAutoscaler: set `<app>.autoscaling.enabled=true` (defaults: min 2, max 5, target 80% CPU; docs scales 1 to 3). Web, docs, and landing are stateless and scale freely.
+
+For the API, remember each pod opens its own PostgreSQL connections; raising `maxReplicas` multiplies connection count. If you scale wide, put a pooler (PgBouncer, or your managed Postgres's built-in pooling) in front of the database.
+
+## Swagger in production
+
+The chart sets `api.env.swaggerEnabled: "true"`, so interactive API docs are served at `/api` on the API host. The application default in production is off; set the value to `"false"` if you don't want them public.
 
 ## Render locally
 
@@ -95,6 +124,8 @@ helm template test ./charts/routess \
 
 ## Upgrade
 
+Snapshot the database first; migrations are forward-only and `helm rollback` does not undo schema changes. A pre-upgrade `pg_dump` is your rollback path.
+
 ```sh
 helm upgrade routess oci://ghcr.io/robbeverhelst/charts/routess \
   --version <NEW_VERSION> \
@@ -102,4 +133,4 @@ helm upgrade routess oci://ghcr.io/robbeverhelst/charts/routess \
   -f my-values.yaml
 ```
 
-The API runs MikroORM migrations on startup. Standard rolling-update mechanics apply.
+The API runs MikroORM migrations on startup. Standard rolling-update mechanics apply: the first new API pod migrates the schema, so watch its logs before letting the rest roll.

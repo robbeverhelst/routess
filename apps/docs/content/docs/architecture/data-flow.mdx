@@ -1,13 +1,13 @@
 ---
 title: Data flow
-description: A complete trip through the stack — creating a route end-to-end.
+description: A complete route through the stack, from map click to database row.
 ---
 
 Walking through a route create:
 
 1. **User clicks the map.** Mapbox emits a click with lng/lat. The web app's map component calls `addWaypoint(coords)` on the routing Zustand store from `@routess/core`.
 2. **Store updates.** The store appends the waypoint, recalculates total distance/duration locally, and notifies subscribers. The sidebar re-renders.
-3. **Persistence side-effect.** A subscriber in `apps/web` calls `apiClient.routes.upsertCurrent(state)` — debounced ~500ms.
+3. **Persistence side-effect.** A subscriber in `apps/web` calls `apiClient.routes.upsertCurrent(state)`, debounced ~500ms.
 4. **HTTP request.** `@routess/api-client` issues `PATCH /api/v1/routes/:id` with the JWT cookie attached.
 5. **API receives.** NestJS authenticates the cookie, validates the body via DTOs, and persists via MikroORM.
 6. **Response.** The API returns the canonical route. The store reconciles (if the server normalized anything).
@@ -18,6 +18,6 @@ routess prefers fast local state with eventual server reconciliation. The map ne
 
 ## Failure modes
 
-- **Server unreachable** — local edits keep working; the persistence layer queues and retries with exponential backoff.
-- **Auth expired** — server returns 401; web redirects to sign-in.
-- **Validation failure** — server returns 422 with field-level errors; web shows a toast and keeps the local edit.
+- **Server unreachable**: local edits keep working; the persistence layer queues and retries with exponential backoff.
+- **Auth expired**: server returns 401; web redirects to sign-in.
+- **Validation failure**: server returns 422 with field-level errors; web shows a toast and keeps the local edit.

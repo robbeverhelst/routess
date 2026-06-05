@@ -3,7 +3,7 @@ title: Testing
 description: How tests are organized and run.
 ---
 
-The repo has a **109-test suite** that runs on every PR.
+The repo has a test suite that runs on every PR.
 
 ## Frameworks
 
@@ -25,8 +25,8 @@ bun run --filter './packages/*' test
 
 - Test files live next to source: `foo.ts` + `foo.test.ts`
 - Web tests use **MSW** to mock the API at the network layer (no jest mocks of the api-client)
-- API tests run against a real Postgres in CI (Docker service container) — no mocked DB
+- API tests run against a real Postgres in CI (Docker service container), no mocked DB
 
 ## Coverage
 
-Web has `vitest --coverage` wired up. CI doesn't gate on coverage — it's a guideline, not a rule.
+Web has `vitest --coverage` wired up. CI doesn't gate on coverage; it's a guideline, not a rule.

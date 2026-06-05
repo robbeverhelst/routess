@@ -229,6 +229,7 @@ export interface ApiRoute {
 	activity?: RouteActivity;
 	visibility: RouteVisibility;
 	tags: string[];
+	favourite: boolean;
 	waypoints: Waypoint[];
 	geometry?: [number, number][];
 	distance?: number;
@@ -249,6 +250,7 @@ export interface CreateRouteRequest {
 	activity?: RouteActivity;
 	visibility?: RouteVisibility;
 	tags?: string[];
+	favourite?: boolean;
 	waypoints: Waypoint[];
 	geometry?: [number, number][];
 	distance?: number;
@@ -260,22 +262,13 @@ export interface CreateRouteRequest {
 	provenance?: Provenance;
 }
 
-export type RouteListSort = "recent" | "created" | "name" | "distance" | "elevation";
-
-export interface RouteListQuery {
-	q?: string;
-	activity?: RouteActivity;
-	visibility?: RouteVisibility;
-	tags?: string[];
-	sort?: RouteListSort;
-}
-
 export interface UpdateRouteRequest {
 	name?: string;
 	description?: string;
 	activity?: RouteActivity;
 	visibility?: RouteVisibility;
 	tags?: string[];
+	favourite?: boolean;
 	waypoints?: Waypoint[];
 	geometry?: [number, number][];
 	distance?: number;
@@ -284,6 +277,44 @@ export interface UpdateRouteRequest {
 	startAddress?: string;
 	endAddress?: string;
 	routingPreferences?: RoutingPreferences;
+}
+
+export interface ApiRoutesPage {
+	items: ApiRoute[];
+	total: number;
+}
+
+// ========== Collections ==========
+// Curated, manually ordered, shareable sets of routes. Many-to-many with
+// routes; visibility has the same semantics as route visibility.
+
+export interface ApiCollection {
+	id: number;
+	name: string;
+	description?: string;
+	visibility: RouteVisibility;
+	// Ordered. For non-owners, private routes are omitted server-side.
+	routeIds: number[];
+	routeCount: number;
+	user: ApiUser;
+	createdAt: string;
+	updatedAt: string;
+}
+
+export interface ApiCollectionDetail extends ApiCollection {
+	routes: ApiRoute[];
+}
+
+export interface CreateCollectionRequest {
+	name: string;
+	description?: string;
+	visibility?: RouteVisibility;
+}
+
+export interface UpdateCollectionRequest {
+	name?: string;
+	description?: string;
+	visibility?: RouteVisibility;
 }
 
 export interface UpdateCurrentUserRequest {
@@ -295,7 +326,10 @@ export interface UpdateCurrentUserRequest {
 // HTTP Client Interface
 export interface HttpClient {
 	get<T>(url: string, options?: RequestOptions): Promise<T>;
+	// Like get, but also surfaces response headers (e.g. X-Total-Count).
+	getWithHeaders<T>(url: string, options?: RequestOptions): Promise<{ data: T; headers: Record<string, string> }>;
 	post<T>(url: string, body?: unknown, options?: RequestOptions): Promise<T>;
+	put<T>(url: string, body?: unknown, options?: RequestOptions): Promise<T>;
 	patch<T>(url: string, body?: unknown, options?: RequestOptions): Promise<T>;
 	delete<T>(url: string, options?: RequestOptions): Promise<T>;
 }

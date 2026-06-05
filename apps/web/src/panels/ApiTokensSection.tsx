@@ -1,9 +1,12 @@
 import type { ApiPatScope, ApiPersonalAccessToken } from "@routess/api-client";
-import { type CSSProperties, useState } from "react";
+import { useState } from "react";
 import { useCreatePersonalAccessToken, usePersonalAccessTokens, useRevokePersonalAccessToken } from "@/lib/api-queries";
 import { t } from "@/lib/i18n";
+import { API_REFERENCE_URL } from "@/lib/links";
 import { useToastStore } from "@/stores/toastStore";
-import { Badge, Btn, RDS_COLORS, SecTitle } from "../components/primitives";
+import { I } from "../components/icons";
+import { Badge, Btn, RDS_COLORS } from "../components/primitives";
+import { Field, Select, SettingsBlock, SettingsRow, SettingsSection, TextInput } from "../components/settings";
 
 // API tokens section of SettingsPanel. The mint endpoint returns the
 // plaintext exactly once; we show it in a clearly-marked panel with a
@@ -25,12 +28,7 @@ function formatRelative(iso: string | null): string {
 	return when.toLocaleDateString();
 }
 
-interface TokenRowProps {
-	token: ApiPersonalAccessToken;
-	last?: boolean;
-}
-
-function TokenRow({ token, last }: TokenRowProps) {
+function TokenRow({ token }: { token: ApiPersonalAccessToken }) {
 	const revoke = useRevokePersonalAccessToken();
 	const pushToast = useToastStore((s) => s.push);
 
@@ -53,28 +51,22 @@ function TokenRow({ token, last }: TokenRowProps) {
 	].join(" · ");
 
 	return (
-		<div
-			style={{
-				display: "flex",
-				alignItems: "center",
-				gap: 12,
-				padding: "12px 14px",
-				borderBottom: last ? "none" : `1px solid ${RDS_COLORS.border}`,
-			}}
-		>
-			<div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
-				<div style={{ fontSize: 13, color: RDS_COLORS.fg, display: "flex", alignItems: "center", gap: 8 }}>
+		<SettingsRow
+			label={
+				<span style={{ display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0 }}>
 					<span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{token.label}</span>
 					<Badge variant={token.scope === "write" ? "accent" : "default"}>
 						{token.scope === "write" ? t("settings.tokens.scopeWriteShort") : t("settings.tokens.scopeReadShort")}
 					</Badge>
-				</div>
-				<div style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle, marginTop: 2 }}>{subtitle}</div>
-			</div>
-			<Btn variant="ghost" onClick={handleRevoke} disabled={revoke.isPending} style={{ color: RDS_COLORS.danger }}>
-				{revoke.isPending ? t("settings.tokens.revoking") : t("settings.tokens.revoke")}
-			</Btn>
-		</div>
+				</span>
+			}
+			sub={subtitle}
+			control={
+				<Btn variant="ghost" onClick={handleRevoke} disabled={revoke.isPending} style={{ color: RDS_COLORS.danger }}>
+					{revoke.isPending ? t("settings.tokens.revoking") : t("settings.tokens.revoke")}
+				</Btn>
+			}
+		/>
 	);
 }
 
@@ -112,58 +104,42 @@ function CreateForm({ onSecretRevealed, onCancel }: CreateFormProps) {
 		);
 	};
 
-	const inputStyle: CSSProperties = {
-		width: "100%",
-		padding: "8px 10px",
-		fontSize: 13,
-		borderRadius: "var(--rds-radius-sm)",
-		background: RDS_COLORS.bgInput,
-		color: RDS_COLORS.fg,
-		border: `1px solid ${RDS_COLORS.border}`,
-	};
-
 	return (
-		<form
-			onSubmit={handleSubmit}
-			style={{ padding: "14px 14px 16px", display: "flex", flexDirection: "column", gap: 10 }}
-		>
-			<label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-				<span style={{ fontSize: 12, color: RDS_COLORS.fgMuted }}>{t("settings.tokens.labelField")}</span>
-				<input
-					type="text"
-					value={label}
-					onChange={(e) => setLabel(e.target.value)}
-					placeholder={t("settings.tokens.labelPlaceholder")}
-					maxLength={80}
-					style={inputStyle}
-				/>
-			</label>
-			<label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-				<span style={{ fontSize: 12, color: RDS_COLORS.fgMuted }}>{t("settings.tokens.scopeField")}</span>
-				<select value={scope} onChange={(e) => setScope(e.target.value as ApiPatScope)} style={inputStyle}>
-					<option value="read">{t("settings.tokens.scopeRead")}</option>
-					<option value="write">{t("settings.tokens.scopeWrite")}</option>
-				</select>
-			</label>
-			<label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-				<span style={{ fontSize: 12, color: RDS_COLORS.fgMuted }}>{t("settings.tokens.expiresField")}</span>
-				<input
-					type="date"
-					value={expiresAt}
-					onChange={(e) => setExpiresAt(e.target.value)}
-					placeholder={t("settings.tokens.expiresPlaceholder")}
-					style={inputStyle}
-				/>
-			</label>
-			<div style={{ display: "flex", gap: 8, marginTop: 4 }}>
-				<Btn type="submit" variant="primary" disabled={!canSubmit}>
-					{t("settings.tokens.create")}
-				</Btn>
-				<Btn variant="ghost" onClick={onCancel} disabled={create.isPending}>
-					{t("settings.tokens.cancel")}
-				</Btn>
-			</div>
-		</form>
+		<SettingsBlock>
+			<form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+				<Field label={t("settings.tokens.labelField")}>
+					<TextInput
+						type="text"
+						value={label}
+						onChange={(e) => setLabel(e.target.value)}
+						placeholder={t("settings.tokens.labelPlaceholder")}
+						maxLength={80}
+					/>
+				</Field>
+				<Field label={t("settings.tokens.scopeField")}>
+					<Select value={scope} onChange={(e) => setScope(e.target.value as ApiPatScope)}>
+						<option value="read">{t("settings.tokens.scopeRead")}</option>
+						<option value="write">{t("settings.tokens.scopeWrite")}</option>
+					</Select>
+				</Field>
+				<Field label={t("settings.tokens.expiresField")}>
+					<TextInput
+						type="date"
+						value={expiresAt}
+						onChange={(e) => setExpiresAt(e.target.value)}
+						placeholder={t("settings.tokens.expiresPlaceholder")}
+					/>
+				</Field>
+				<div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+					<Btn type="submit" variant="primary" disabled={!canSubmit}>
+						{t("settings.tokens.create")}
+					</Btn>
+					<Btn variant="ghost" onClick={onCancel} disabled={create.isPending}>
+						{t("settings.tokens.cancel")}
+					</Btn>
+				</div>
+			</form>
+		</SettingsBlock>
 	);
 }
 
@@ -185,7 +161,7 @@ function Reveal({ token, onDone }: RevealProps) {
 		}
 	};
 	return (
-		<div style={{ padding: "14px 14px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
+		<SettingsBlock style={{ display: "flex", flexDirection: "column", gap: 10 }}>
 			<div style={{ fontSize: 13, color: RDS_COLORS.fg, fontWeight: 500 }}>{t("settings.tokens.revealTitle")}</div>
 			<div style={{ fontSize: 12, color: RDS_COLORS.fgMuted }}>{t("settings.tokens.revealBody")}</div>
 			<textarea
@@ -214,7 +190,7 @@ function Reveal({ token, onDone }: RevealProps) {
 					{t("settings.tokens.done")}
 				</Btn>
 			</div>
-		</div>
+		</SettingsBlock>
 	);
 }
 
@@ -225,41 +201,38 @@ export function ApiTokensSection() {
 	const tokens = tokensQuery.data ?? [];
 
 	return (
-		<div style={{ marginBottom: 22 }}>
-			<SecTitle style={{ marginBottom: 10 }}>{t("settings.tokens.title")}</SecTitle>
-			<div
-				style={{
-					background: RDS_COLORS.bgPanel,
-					border: `1px solid ${RDS_COLORS.border}`,
-					borderRadius: 10,
-					overflow: "hidden",
-				}}
-			>
-				{tokens.length === 0 && mode === "list" && (
-					<div style={{ padding: "12px 14px", fontSize: 12.5, color: RDS_COLORS.fgSubtle }}>
-						{t("settings.tokens.empty")}
-					</div>
-				)}
-				{tokens.map((token, index) => (
-					<TokenRow key={token.id} token={token} last={index === tokens.length - 1 && mode === "list"} />
-				))}
-				{mode === "creating" && (
-					<CreateForm onSecretRevealed={(token) => setMode({ reveal: token })} onCancel={() => setMode("list")} />
-				)}
-				{typeof mode === "object" && "reveal" in mode && <Reveal token={mode.reveal} onDone={() => setMode("list")} />}
-				{mode === "list" && (
-					<div
-						style={{
-							padding: "10px 14px",
-							borderTop: tokens.length === 0 ? "none" : `1px solid ${RDS_COLORS.border}`,
-						}}
-					>
-						<Btn variant="ghost" onClick={() => setMode("creating")}>
-							{t("settings.tokens.create")}
-						</Btn>
-					</div>
-				)}
-			</div>
-		</div>
+		<SettingsSection
+			title={t("settings.tokens.title")}
+			footer={
+				<a
+					href={API_REFERENCE_URL}
+					target="_blank"
+					rel="noreferrer"
+					style={{ display: "inline-flex", alignItems: "center", gap: 4, color: RDS_COLORS.fgMuted }}
+				>
+					{t("settings.tokens.docs")} <I.externalLink size={11} />
+				</a>
+			}
+		>
+			{tokens.length === 0 && mode === "list" && (
+				<div style={{ padding: "12px 14px", fontSize: 12.5, color: RDS_COLORS.fgSubtle }}>
+					{t("settings.tokens.empty")}
+				</div>
+			)}
+			{tokens.map((token) => (
+				<TokenRow key={token.id} token={token} />
+			))}
+			{mode === "creating" && (
+				<CreateForm onSecretRevealed={(token) => setMode({ reveal: token })} onCancel={() => setMode("list")} />
+			)}
+			{typeof mode === "object" && "reveal" in mode && <Reveal token={mode.reveal} onDone={() => setMode("list")} />}
+			{mode === "list" && (
+				<div style={{ padding: "10px 14px" }}>
+					<Btn variant="ghost" onClick={() => setMode("creating")}>
+						{t("settings.tokens.create")}
+					</Btn>
+				</div>
+			)}
+		</SettingsSection>
 	);
 }

@@ -2,13 +2,16 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef } from "react";
 import { type ApiUser, apiService } from "@/lib/api";
 import { authStorageKeys } from "@/lib/auth-state";
+import { t } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
 import { queryKeys } from "@/lib/query-client";
+import { usePreferencesSyncStore } from "@/stores/preferencesSyncStore";
 import {
 	DEFAULT_REDESIGN_SETTINGS,
 	normalizeRedesignSettings,
 	useRedesignSettingsStore,
 } from "@/stores/redesignSettingsStore";
+import { useToastStore } from "@/stores/toastStore";
 
 const SAVE_DEBOUNCE_MS = 750;
 
@@ -34,8 +37,11 @@ export function useAccountPreferencesSync(auth: AuthStatusSnapshot | undefined) 
 	const overlays = useRedesignSettingsStore((state) => state.overlays);
 	const defaultRouteVisibility = useRedesignSettingsStore((state) => state.defaultRouteVisibility);
 	const replaceAllSettings = useRedesignSettingsStore((state) => state.replaceAllSettings);
+	const setSyncStatus = usePreferencesSyncStore((state) => state.setStatus);
+	const pushToast = useToastStore((state) => state.push);
 
 	const applyingServerStateRef = useRef(false);
+	const statusResetTimerRef = useRef<number | null>(null);
 	const lastSyncedPreferencesRef = useRef<string | null>(null);
 	const bootstrappedUserIdRef = useRef<number | null>(null);
 	const lastStoredUserRef = useRef<string | null>(null);
@@ -159,7 +165,19 @@ export function useAccountPreferencesSync(auth: AuthStatusSnapshot | undefined) 
 			return;
 		}
 
+		const scheduleStatusReset = (status: "saved" | "error", revertAfterMs: number) => {
+			setSyncStatus(status);
+			if (statusResetTimerRef.current !== null) {
+				window.clearTimeout(statusResetTimerRef.current);
+			}
+			statusResetTimerRef.current = window.setTimeout(() => {
+				setSyncStatus("idle");
+				statusResetTimerRef.current = null;
+			}, revertAfterMs);
+		};
+
 		const saveTimer = window.setTimeout(() => {
+			setSyncStatus("saving");
 			void apiService
 				.updateCurrentUser({ preferences })
 				.then((updatedUser) => {
@@ -173,9 +191,12 @@ export function useAccountPreferencesSync(auth: AuthStatusSnapshot | undefined) 
 					queryClient.setQueryData(queryKeys.user.profile(), updatedUser);
 
 					localStorage.setItem(authStorageKeys.user, JSON.stringify(updatedUser));
+					scheduleStatusReset("saved", 2000);
 				})
 				.catch((error) => {
 					Logger.error("[useAccountPreferencesSync] Failed to sync account preferences:", error);
+					scheduleStatusReset("error", 4000);
+					pushToast({ kind: "error", title: t("settings.sync.failed") });
 				});
 		}, SAVE_DEBOUNCE_MS);
 
@@ -187,8 +208,10 @@ export function useAccountPreferencesSync(auth: AuthStatusSnapshot | undefined) 
 		authUserPreferences,
 		isAuthenticated,
 		preferences,
+		pushToast,
 		queryClient,
 		serializedDefaultPreferences,
 		serializedPreferences,
+		setSyncStatus,
 	]);
 }

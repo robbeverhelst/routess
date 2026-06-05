@@ -1,4 +1,17 @@
 {
 	"title": "Guide utilisateur",
-	"pages": ["index", "getting-started", "routes", "map", "account", "troubleshooting", "faq"]
+	"pages": [
+		"index",
+		"getting-started",
+		"routes",
+		"map",
+		"account",
+		"offline",
+		"mobile",
+		"troubleshooting",
+		"faq",
+		"support",
+		"privacy",
+		"whats-new"
+	]
 }

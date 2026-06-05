@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { useMapViewPersistence } from "@/components/hooks/useMapViewPersistence";
 import { useRouteActions } from "@/components/hooks/useRouteActions";
 import { useWaypointError } from "@/components/hooks/useWaypointError";
 import { useMapInteraction } from "@/components/providers/MapInteractionProvider";
@@ -36,8 +35,6 @@ export const useMapWithRoutingState = ({ mapboxToken: _mapboxToken }: UseMapWith
 		setPopup,
 		handleWaypointError,
 	});
-
-	useMapViewPersistence(mapRef);
 
 	useEffect(() => {
 		const cleanup = handleKeyboardShortcuts(canUndo, canRedo, routeActions.handleUndo, routeActions.handleRedo);

@@ -8,8 +8,8 @@ export default function HomePage() {
 					<p className="docs-home__eyebrow">routess documentation</p>
 					<h1 className="docs-home__title">Plan a route. Pick the path.</h1>
 					<p className="docs-home__lede">
-						routess is the open-source route planner for cyclists and runners. Use it, host it, or hook into it. Start
-						wherever you are.
+						routess is the open-source route planner for cyclists, runners, and hikers. Use it, host it, or hook into
+						it. Start wherever you are.
 					</p>
 
 					<div className="docs-home__actions">

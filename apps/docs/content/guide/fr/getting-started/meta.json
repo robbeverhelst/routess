@@ -1,4 +1,4 @@
 {
-	"title": "Bien demarrer",
-	"pages": ["sign-in", "your-first-route", "interface-tour"]
+	"title": "Bien démarrer",
+	"pages": ["sign-in", "onboarding", "your-first-route", "interface-tour", "keyboard-shortcuts"]
 }

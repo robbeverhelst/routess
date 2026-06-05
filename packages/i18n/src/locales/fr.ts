@@ -318,6 +318,7 @@ export const fr: Record<string, string> = {
 	"common.retry": "Réessayer",
 	"common.edit": "Modifier",
 	"common.delete": "Supprimer",
+	"map.loading": "Chargement de la carte…",
 
 	"route.updateFailed": "Échec de la mise à jour",
 	"route.field.activity": "Activité",
@@ -329,14 +330,6 @@ export const fr: Record<string, string> = {
 	"route.makePublic.body":
 		"Les itinéraires publics sont visibles par toute personne disposant du lien et peuvent être archivés en externe. Revenir en privé plus tard ne retire pas l'accès à ceux qui ont déjà l'URL.",
 	"route.makePublic.confirm": "Rendre public",
-
-	"library.visibilityFilter.all": "Toute visibilité",
-	"library.sort.label": "Trier les itinéraires",
-	"library.sort.recent": "Récemment modifiés",
-	"library.sort.created": "Récemment créés",
-	"library.sort.name": "Nom (A à Z)",
-	"library.sort.distance": "Distance la plus longue",
-	"library.sort.elevation": "Plus de dénivelé",
 
 	"public.byOwner": "par {name}",
 	"public.anonymous": "un utilisateur routess",
