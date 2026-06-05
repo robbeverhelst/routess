@@ -21,7 +21,9 @@ const samePath = (a: Coordinate[], b: Coordinate[]): boolean => {
 	return true;
 };
 
-const computeElevationInBackground = (routePath: Coordinate[], accessToken: string): void => {
+// Also used when a route loads with stored geometry (no Valhalla recompute),
+// so the elevation profile still gets sampled for the exact path.
+export const computeElevationInBackground = (routePath: Coordinate[], accessToken: string): void => {
 	if (!accessToken || routePath.length < 2) {
 		useRoutingStore.getState().clearElevation();
 		useRoutingStore.getState().setIsComputingElevation(false);

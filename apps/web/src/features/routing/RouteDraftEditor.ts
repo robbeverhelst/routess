@@ -16,6 +16,7 @@ import {
 import { generateGPXString, parseGPXFile, processGPXWaypoints } from "./services/GPXService";
 import {
 	clearCurrentRoutePath,
+	computeElevationInBackground,
 	getCurrentRoutePath,
 	getRoute as getRouteFromService,
 	setCurrentRoutePath,
@@ -287,6 +288,10 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 			isOffline: false,
 		});
 		store.setHasRoute(exactRoutePath.length >= 2);
+
+		// Stored geometry skips the Valhalla recompute, which is what normally
+		// kicks off elevation sampling. Sample the exact path directly.
+		computeElevationInBackground(exactRoutePath, accessToken);
 	};
 
 	const loadWaypoints = async (waypoints: Waypoint[], options: LoadOptions = {}): Promise<EditResult> => {
