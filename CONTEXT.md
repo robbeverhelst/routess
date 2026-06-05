@@ -45,6 +45,7 @@ Who can view a Route. One of `private`, `unlisted`, or `public`.
 - `unlisted`: viewable by anyone with the URL; never appears in listings, search, or feeds; not indexable.
 - `public`: viewable by anyone with the URL _and_ eligible for future discovery surfaces (listings, search, feeds).
 The URL is the capability: changing visibility takes immediate effect for everyone, there is no separable share-token to rotate.
+A `public` or `unlisted` Route has a public route page at `/r/{slug}-{id}`. The canonical shareable URL lives on the landing host (`routess.com`/`routess.be`), server-rendered for link previews and search; the same path on the app origin is the interactive in-app view. Both surfaces share the URL contract and slug logic verbatim. See ADR 0025.
 _Avoid_: privacy, sharing, share level, access level.
 
 **Tag**:

@@ -542,7 +542,7 @@ export const en: Record<string, string> = {
 
 	// Public route page
 	"public.byOwner": "by {name}",
-	"public.anonymous": "a Routess user",
+	"public.anonymous": "a routess user",
 	"public.mapAlt": "Map preview of {name}",
 	"public.noPreview": "No preview available",
 	"public.openInRoutess": "Open in routess",

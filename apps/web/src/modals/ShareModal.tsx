@@ -1,11 +1,12 @@
+import { buildRouteSlugId } from "@routess/core";
 import { type CSSProperties, type ReactNode, useEffect, useMemo, useState } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { trackEvent } from "@/lib/analytics/track";
 import { useRoute } from "@/lib/api-queries";
 import { emitAppEvent } from "@/lib/app-events";
 import { t } from "@/lib/i18n";
+import { getRuntimeConfig } from "@/lib/runtime-config";
 import { serializeAndCompress } from "@/lib/shareUtils";
-import { buildRouteSlugId } from "@/lib/slug";
 import { buildMapboxStaticPreviewUrl } from "@/lib/utils/mapboxStaticPreview";
 import { buildRouteShareCard } from "@/lib/utils/routeShareCard";
 import { useMapViewStore } from "@/stores/mapViewStore";
@@ -120,7 +121,9 @@ export function ShareModal() {
 
 	const url = useMemo(() => {
 		if (canShareCanonical && savedRouteId !== null && savedRoute) {
-			return `${window.location.origin}/r/${buildRouteSlugId(savedRoute.name, savedRouteId)}`;
+			// Canonical page is on the landing host once VITE_PUBLIC_ROUTE_BASE_URL is set (ADR 0025); else this origin.
+			const base = (getRuntimeConfig("VITE_PUBLIC_ROUTE_BASE_URL") ?? window.location.origin).replace(/\/+$/, "");
+			return `${base}/r/${buildRouteSlugId(savedRoute.name, savedRouteId)}`;
 		}
 		try {
 			const encoded = serializeAndCompress(waypoints, isMapLocked);

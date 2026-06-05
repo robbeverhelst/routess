@@ -13,6 +13,9 @@ web:
     VITE_GOOGLE_CLIENT_ID: ""
     VITE_APP_URL: ""
     VITE_API_URL: ""
+    # Origin that serves the canonical public route page (the landing host, e.g.
+    # https://routess.com). Empty falls back to the app origin. See ADR 0025.
+    VITE_PUBLIC_ROUTE_BASE_URL: ""
     VITE_APP_VERSION: ""
     # Sentry/GlitchTip error reporting. Leave VITE_SENTRY_DSN empty to disable.
     VITE_SENTRY_DSN: ""

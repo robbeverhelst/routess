@@ -8,7 +8,7 @@ A future folder/collection feature is not foreclosed: it would attach a Collecti
 
 ## Considered options
 
-- **Folders only, no Tags** — rejected: forces every Route into a single bucket and makes cross-cutting concepts ("hilly", "with friends", "race-prep") impossible without duplicating Routes. The flat-tag shape already covers the cross-cutting case, and the bucket case is well-covered by `RouteActivity` plus `RouteVisibility`.
-- **Tags and folders together** — rejected for v1: doubles the surface area of the library filter UI and forces a decision about whether folders are private or shareable. Defer until evidence demands it.
-- **Strava-style "collections" (named ordered lists of Routes a User curates and can share)** — rejected for v1: a meaningfully different feature with its own sharing/visibility semantics. Worth doing later as its own ticket; not the right anchor for the v1 library cleanup.
-- **No Tags at all, free-text search only** — rejected: search misses the "give me anything I tagged `hilly`" use case, which is the one the user actually performs while planning a Sunday ride.
+- **Folders only, no Tags.** Rejected: forces every Route into a single bucket and makes cross-cutting concepts ("hilly", "with friends", "race-prep") impossible without duplicating Routes. The flat-tag shape already covers the cross-cutting case, and the bucket case is well-covered by `RouteActivity` plus `RouteVisibility`.
+- **Tags and folders together.** Rejected for v1: doubles the surface area of the library filter UI and forces a decision about whether folders are private or shareable. Defer until evidence demands it.
+- **Strava-style "collections" (named ordered lists of Routes a User curates and can share).** Rejected for v1: a meaningfully different feature with its own sharing/visibility semantics. Worth doing later as its own ticket; not the right anchor for the v1 library cleanup.
+- **No Tags at all, free-text search only.** Rejected: search misses the "give me anything I tagged `hilly`" use case, which is the one the user actually performs while planning a Sunday ride.

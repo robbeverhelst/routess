@@ -7,7 +7,7 @@ import {
 	type RouteActivity,
 	type RouteVisibility,
 } from "@routess/core";
-import { Type } from "class-transformer";
+import { Transform, Type } from "class-transformer";
 import {
 	ArrayMaxSize,
 	ArrayMinSize,
@@ -28,6 +28,11 @@ import { RoutingPreferencesDto } from "../../common/routing-preferences.dto";
 
 const TAG_PATTERN = /^[a-z0-9][a-z0-9-]{0,23}$/;
 const MAX_TAGS = 10;
+
+function normaliseTags(value: unknown): unknown {
+	if (!Array.isArray(value)) return value;
+	return value.map((tag) => (typeof tag === "string" ? tag.trim().toLowerCase().replace(/\s+/g, "-") : tag));
+}
 
 const MAX_WAYPOINTS = 100;
 const MAX_GEOMETRY_POINTS = 20_000;
@@ -161,6 +166,7 @@ export class CreateRouteDto {
 	@IsString({ each: true })
 	@ArrayMaxSize(MAX_TAGS)
 	@Type(() => String)
+	@Transform(({ value }) => normaliseTags(value))
 	@MaxLength(24, { each: true })
 	@Matches(TAG_PATTERN, {
 		each: true,

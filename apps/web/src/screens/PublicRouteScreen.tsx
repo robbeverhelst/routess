@@ -1,9 +1,9 @@
+import { toRouteSlug } from "@routess/core";
 import { useEffect, useMemo } from "react";
-import type { ApiRoute } from "@/lib/api";
+import { type ApiRoute, apiService } from "@/lib/api";
 import { useRoute } from "@/lib/api-queries";
 import { useT } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
-import { toRouteSlug } from "@/lib/slug";
 import { useUnits } from "@/lib/units";
 import { buildMapboxStaticPreviewUrl } from "@/lib/utils/mapboxStaticPreview";
 
@@ -144,7 +144,7 @@ function PublicRouteHero({ route, expectedSlug }: { route: ApiRoute; expectedSlu
 				>
 					<I.play size={14} /> {t("public.openInRoutess")}
 				</Btn>
-				<a href={`/api/v1/routes/${route.id}/gpx`} style={{ textDecoration: "none" }}>
+				<a href={apiService.routeGpxUrl(route.id)} style={{ textDecoration: "none" }}>
 					<Btn>
 						<I.download size={14} /> {t("public.downloadGpx")}
 					</Btn>
@@ -190,7 +190,7 @@ export function PublicRouteScreen({ slug, routeId }: { slug: string; routeId: nu
 
 		const description =
 			route.description?.trim() ||
-			`Route by ${route.user?.name ?? "a Routess user"}${distanceKm ? `, ${distanceKm}` : ""}${
+			`Route by ${route.user?.name ?? "a routess user"}${distanceKm ? `, ${distanceKm}` : ""}${
 				route.elevationGain ? `, ${Math.round(route.elevationGain)} m elevation` : ""
 			}.`;
 

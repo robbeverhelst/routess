@@ -1,5 +1,5 @@
+import { parseRouteSlugId } from "@routess/core";
 import { createFileRoute, notFound } from "@tanstack/react-router";
-import { parseRouteSlugId } from "@/lib/slug";
 import { PublicRouteScreen } from "@/screens/PublicRouteScreen";
 
 export const Route = createFileRoute("/r/$slugId")({
