@@ -1,0 +1,72 @@
+---
+title: CLI
+description: L'interface en ligne de commande `routess`.
+---
+
+`routess` est le CLI officiel. Il enveloppe la même API REST que l'application web et constitue le point d'entrée pour les agents et la CI afin de lire et modifier des itinéraires sans navigateur.
+
+## Installation
+
+```sh
+npm install -g routess
+```
+
+Le binaire est `routess`. Il nécessite Node 20+ (le bundle publié est en ESM).
+
+## S'authentifier
+
+Le CLI parle à l'API avec un Personal Access Token (PAT). Génère-en un dans l'application web sous **Settings -> API Tokens**, puis connecte-toi une fois ou passe le token via une variable d'environnement.
+
+```sh
+# Interactive: persists the token to ~/.config/routess/auth.json (mode 0600).
+routess auth login --token routess_pat_...
+
+# Stateless: skip local storage. Useful for CI and ephemeral containers.
+export ROUTESS_TOKEN=routess_pat_...
+```
+
+`ROUTESS_TOKEN` a priorité sur le fichier sur disque. Le stockage du token suit la convention XDG : `$XDG_CONFIG_HOME/routess/auth.json` quand elle est définie, sinon `~/.config/routess/auth.json`.
+
+Pointe vers une autre API avec `ROUTESS_API_URL` ou le flag `--api-url` au moment de la connexion. La valeur par défaut est `https://api.routess.com`.
+
+```sh
+routess auth whoami       # confirm you're signed in
+routess auth logout       # delete the on-disk token
+```
+
+## Commandes
+
+```sh
+routess routes list
+routess routes get <id>
+routess routes update <id> --name "New name"
+routess routes update <id> --visibility public --confirm
+routess routes delete <id> --confirm
+```
+
+Ajoute `--json` à n'importe quelle commande pour une sortie lisible par une machine. En mode `--json`, les erreurs émettent un `DomainErrorPayload` sur stderr qui reflète la forme d'erreur de l'API, pour que les agents puissent brancher directement sur `code`.
+
+## Codes de sortie
+
+Le CLI utilise une taxonomie de codes de sortie stable, alignée sur les codes d'erreur de domaine de l'API. Les agents branchent dessus de la même manière, que l'échec se soit produit localement ou soit revenu du serveur.
+
+| Code | Signification             |
+| ---- | ------------------------ |
+| 0    | OK                       |
+| 1    | Erreur générique / inconnue |
+| 2    | Erreur d'utilisation     |
+| 3    | Échec de validation      |
+| 4    | Non trouvé               |
+| 5    | Non autorisé (pas de token, ou token rejeté) |
+| 6    | Interdit (le token n'a pas le scope requis) |
+| 7    | Conflit                  |
+| 8    | Limite de débit atteinte |
+| 9    | Précondition requise     |
+| 10   | Erreur réseau            |
+| 11   | Erreur interne du serveur |
+
+## Scopes
+
+Les PAT portent l'un de deux scopes : `read` (endpoints GET) ou `write` (endpoints mutants : PATCH, DELETE). Le CLI remonte un `FORBIDDEN` (code de sortie 6) quand tu essaies de muter un itinéraire avec un PAT en lecture seule ; génère un token de scope `write` dans l'application web et ré-authentifie-toi.
+
+Voir la [référence de l'API](../../api) pour la liste complète des endpoints et les exigences de scope par endpoint.

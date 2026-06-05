@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { i18n } from "@/lib/i18n";
 import { SITE_URL } from "@/lib/site";
 import { apiSource, docsSource, guideSource } from "@/lib/source";
 
@@ -7,14 +8,14 @@ import { apiSource, docsSource, guideSource } from "@/lib/source";
 export const dynamic = "force-dynamic";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-	const urls = new Set<string>(["/"]);
+	const urls = new Set<string>();
 
-	for (const page of guideSource.getPages()) urls.add(page.url);
-	for (const language of guideSource._i18n?.languages ?? []) {
-		for (const page of guideSource.getPages(language)) urls.add(page.url);
+	for (const language of i18n.languages) {
+		urls.add(`/${language}`);
+		for (const source of [guideSource, docsSource, apiSource]) {
+			for (const page of source.getPages(language)) urls.add(page.url);
+		}
 	}
-	for (const page of docsSource.getPages()) urls.add(page.url);
-	for (const page of apiSource.getPages()) urls.add(page.url);
 
-	return [...urls].map((url) => ({ url: url === "/" ? SITE_URL : `${SITE_URL}${url}` }));
+	return [...urls].map((url) => ({ url: `${SITE_URL}${url}` }));
 }

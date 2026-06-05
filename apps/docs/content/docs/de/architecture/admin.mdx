@@ -1,0 +1,31 @@
+---
+title: Admin-Panel
+description: Wie die In-App-Admin-UI verdrahtet ist.
+---
+
+routess wird mit einem In-App-Admin-Panel für Betreiber ausgeliefert. Es liegt unter `/admin` in der Web-App und wird von `/admin/*`-Endpunkten auf der API gestützt.
+
+## Zugriffskontrolle
+
+Die Admin-Rolle wird bei der Anmeldung vergeben. Jede E-Mail, die in der `ADMIN_EMAILS`-Umgebungsvariable der API gelistet ist (kommagetrennt), erhält bei der nächsten Anmeldung `role: "admin"` in ihr Session-JWT geschrieben. Andere Nutzer sehen keine `/admin`-Route in der Navigation, und API-Requests werden vom `RolesGuard` abgelehnt.
+
+Lässt man `ADMIN_EMAILS` leer, ist das Panel vollständig deaktiviert. Es gibt kein Superuser-Bootstrap; du provisionierst Admins, indem du die Umgebungsvariable bearbeitest und die API neu startest.
+
+## Oberflächen
+
+| Panel              | Route                | Zweck                                                        |
+| ------------------ | -------------------- | -------------------------------------------------------------- |
+| Übersichts-Dashboard | `/admin`             | KPIs: Nutzer, Routen, Anmeldungen, Churn, jüngste Aktivität           |
+| Users              | `/admin/users`       | Paginierte + durchsuchbare Liste, Detail pro Nutzer, Session-Widerruf   |
+| Routes             | `/admin/routes`      | Paginierte + durchsuchbare Liste, Detail pro Route, Soft-Delete     |
+| System             | `/admin/system`      | API-Health, Version, Uptime, DB-Erreichbarkeit, Runtime-Konfiguration   |
+
+Alle Endpunkte liegen auf der API unter dem passenden Pfad unterhalb von `/admin/*` (z. B. `/admin/stats/overview`, `/admin/users/:id`, `/admin/system/health`).
+
+## Audit-Trail
+
+Jeder mutierende Aufruf (Soft-Delete, Session-Widerruf) durchläuft einen `AuditInterceptor`, der eine strukturierte Logzeile schreibt, inklusive der User-ID des Admins, der Aktion und des Ziels. Aggregiere diese zusammen mit den übrigen API-Logs.
+
+## Metriken
+
+Admin-Aktionen und die Daten-Fetches des Panels sind Teil derselben `/metrics`-Oberfläche wie der Rest der API. Siehe [Observability](../operations/observability).

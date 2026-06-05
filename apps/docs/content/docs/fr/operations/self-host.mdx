@@ -1,0 +1,167 @@
+---
+title: Auto-hébergement
+description: Faire tourner ta propre instance routess avec Docker Compose.
+---
+
+Ce guide pas à pas met une instance routess en route sur ta propre machine ou ton serveur en environ cinq minutes. Pour Kubernetes, voir [Kubernetes](./kubernetes).
+
+## Ce dont tu as besoin
+
+- **Docker** et **Docker Compose v2** (un Docker Desktop moderne ou Docker Engine est livré avec les deux).
+- Un **client Google OAuth** pour la connexion Google (le fichier compose l'exige). Les utilisateurs peuvent aussi se connecter avec e-mail + mot de passe une fois la stack en place.
+- Un **token d'accès Mapbox** ; le tier gratuit suffit.
+- Des chaînes aléatoires longues pour `JWT_SECRET`, `ANALYTICS_SALT`, `PAT_PEPPER` et `DB_PASSWORD`. Génère-les avec `openssl rand -base64 32`.
+
+Optionnels, désactivés proprement quand non définis :
+
+- **Resend** pour les e-mails transactionnels (sans lui, les URL de vérification sont écrites sur stdout).
+- **Valhalla** pour l'analyse du type de surface sur les itinéraires planifiés.
+- **Sentry / GlitchTip** pour le reporting d'erreurs du navigateur.
+- **Umami** pour l'analytics produit.
+- **Rôle admin** pour accéder au panneau d'administration intégré à l'application.
+
+## Configurer Google OAuth
+
+1. Ouvre la [page des identifiants de la Google Cloud Console](https://console.cloud.google.com/apis/credentials).
+2. Crée un **OAuth 2.0 Client ID** de type **Web application**.
+3. Sous **Authorized JavaScript origins**, ajoute l'URL que tes utilisateurs ouvriront (par ex. `http://localhost:8080` ou `https://routess.example.com`).
+4. Sous **Authorized redirect URIs**, ajoute `<your-web-url>/auth/callback`.
+5. Copie le **Client ID** et le **Client secret**.
+
+## Obtenir un token Mapbox
+
+1. Inscris-toi sur [account.mapbox.com](https://account.mapbox.com).
+2. Crée un token d'accès public (`pk.…`) sous **Access tokens**.
+3. Restreins-le à ton domaine quand tu passes en production.
+
+## Le lancer
+
+```sh
+git clone https://github.com/robbeverhelst/routess.git
+cd routess
+cp docker/.env.selfhost.example .env
+# edit .env and fill in the required values
+docker compose -f docker/compose.selfhost.yaml --project-directory . up -d
+```
+
+Ouvre ensuite [http://localhost:8080](http://localhost:8080).
+
+La stack démarre quatre conteneurs :
+
+| Service  | Image                                      | Port par défaut |
+| -------- | ------------------------------------------ | ------------ |
+| Postgres | `postgres:18`                              | (interne)    |
+| API      | `ghcr.io/robbeverhelst/routess-api`        | `3000`       |
+| Web      | `ghcr.io/robbeverhelst/routess-web`        | `8080`       |
+| Docs     | `ghcr.io/robbeverhelst/routess-docs`       | `3002`       |
+
+Change les ports hôtes via `WEB_PORT`, `API_PORT`, `DOCS_PORT` dans `.env`.
+
+## Figer une version
+
+Le tag par défaut est `latest`. Pour la production, fige une release précise :
+
+```sh
+ROUTESS_TAG=1.122.7 docker compose -f docker/compose.selfhost.yaml --project-directory . up -d
+```
+
+Ou définis `ROUTESS_TAG` dans `.env`. Voir la [page des releases](https://github.com/robbeverhelst/routess/releases) pour les tags disponibles.
+
+## Variables d'environnement
+
+Le fichier `.env` dans `docker/.env.selfhost.example` fait foi. Les variables que tu manipuleras le plus souvent :
+
+| Variable                       | Requise | Défaut                          | Objectif                                                                                  |
+| ------------------------------ | -------- | -------------------------------- | ---------------------------------------------------------------------------------------- |
+| `JWT_SECRET`                   | oui      | -                                | Signe les tokens de session et d'API. La rotation déconnecte tout le monde.                                |
+| `ANALYTICS_SALT`               | oui      | -                                | Hache les ID utilisateurs dans les événements d'analytics. La rotation réinitialise les pseudonymes d'analytics.            |
+| `PAT_PEPPER`                   | oui      | -                                | Hache les personal access tokens au repos. La rotation invalide tous les PAT existants.          |
+| `DB_PASSWORD`                  | oui      | -                                | Mot de passe Postgres.                                                                       |
+| `GOOGLE_CLIENT_ID/SECRET`      | oui      | -                                | Identifiants Google OAuth.                                                                |
+| `VITE_MAPBOX_ACCESS_TOKEN`     | oui      | -                                | Token d'accès Mapbox utilisé par l'application web.                                                 |
+| `PUBLIC_WEB_URL`               | non      | `http://localhost:8080`          | Où les utilisateurs ouvrent l'app. Utilisé comme base de redirection OAuth.                                   |
+| `PUBLIC_API_URL`               | non      | `http://localhost:3000`          | Où l'application web atteint l'API.                                                       |
+| `ADMIN_EMAILS`                 | non      | vide                             | E-mails (séparés par des virgules) auxquels le rôle admin est accordé à la connexion. Vide désactive le panneau d'administration. |
+| `RESEND_API_KEY`               | non      | vide                             | Clé d'API Resend. Vide se rabat sur l'écriture des URL de vérification sur stdout.                 |
+| `EMAIL_FROM`                   | non      | `routess <noreply@routess.app>`  | Adresse d'expéditeur utilisée par Resend.                                                           |
+| `VALHALLA_URL`                 | non      | vide                             | URL de base d'une instance Valhalla auto-hébergée pour l'analyse de surface. Vide la désactive.     |
+| `VITE_UMAMI_URL` / `_WEBSITE_ID` | non    | vide                             | Endpoint et site ID Umami pour l'application web. Vide désactive l'analytics produit.            |
+| `UMAMI_URL` / `_WEBSITE_ID`    | non      | vide                             | Mêmes endpoint et site ID Umami pour le site de documentation (Next les lit côté serveur).         |
+| `VITE_SENTRY_DSN`              | non      | vide                             | DSN Sentry / GlitchTip pour le reporting d'erreurs du navigateur.                                       |
+| `VITE_SENTRY_ENVIRONMENT`      | non      | `production`                     | Tag d'environnement attaché aux rapports d'erreurs du navigateur.                                       |
+| `PUBLIC_DOCS_URL`              | non      | `http://localhost:3002`          | Origine canonique du site de documentation, utilisée dans ses liens sitemap, robots.txt et llms.txt.  |
+
+## Variables avancées
+
+L'API comprend plus de réglages que ce que le fichier compose transmet. Pour en utiliser un, ajoute-le sous le service `api` dans `environment` dans `docker/compose.selfhost.yaml` (ou ton propre fichier de surcharge) :
+
+| Variable                       | Défaut             | Objectif                                                                                      |
+| ------------------------------ | ------------------ | -------------------------------------------------------------------------------------------- |
+| `LOG_LEVEL`                    | `info`             | Niveau de log Pino pour l'API (`debug`, `info`, `warn`, `error`).                               |
+| `SESSION_TTL_DAYS`             | `7`                | Combien de temps une session de navigateur reste valide.                                                      |
+| `SESSION_COOKIE_NAME`          | `routess_session`  | Nom du cookie de session HTTP-only.                                                            |
+| `JWT_EXPIRES_IN`               | `7d`               | Durée de vie du token JWT.                                                                          |
+| `FRONTEND_URLS`                | vide               | Liste d'origines web autorisées, séparées par des virgules ou des retours à la ligne ; surcharge `FRONTEND_URL` quand elle est définie.  |
+| `SWAGGER_ENABLED`              | `false` en prod    | Sert la doc API interactive sur `SWAGGER_PATH`.                                                |
+| `SWAGGER_PATH`                 | `/api`             | Chemin de l'UI Swagger quand elle est activée.                                                |
+| `TELEMETRY_ENABLED`            | `true`             | Interrupteur principal pour OpenTelemetry (métriques + traces).                                          |
+| `METRICS_ENABLED`              | `true`             | Métriques Prometheus sur `/metrics` sur le port de l'API. Renvoie 503 quand désactivé.                 |
+| `OTEL_EXPORTER_OTLP_ENDPOINT`  | vide               | URL de base du collecteur OTLP pour les traces (`/v1/traces` est ajouté). Vide désactive l'export de traces.  |
+| `OTEL_EXPORTER_OTLP_HEADERS`   | vide               | En-têtes OTLP supplémentaires sous forme d'objet JSON, par ex. `{"authorization":"Bearer …"}`.                    |
+| `GRAFANA_URLS`                 | vide               | Objet JSON de liens de dashboards affichés dans le panneau d'administration : `{"apiOverview":"…","apiLatency":"…","runtime":"…"}`. |
+
+Pour le conteneur web :
+
+| Variable                          | Défaut  | Objectif                                                              |
+| --------------------------------- | ------- | --------------------------------------------------------------------- |
+| `VITE_SENTRY_TRACES_SAMPLE_RATE`  | `0.1`   | Fraction des sessions de navigateur tracées quand Sentry est activé.           |
+| `VITE_SENTRY_LOGS_ENABLED`        | `false` | Transmet les logs du navigateur à Sentry.                                       |
+| `VITE_SENTRY_DEBUG`               | `false` | Logging verbeux du SDK Sentry.                                           |
+
+Le logging de la console du navigateur est par défaut à `warn`. Pour déboguer un seul navigateur, mets `localStorage["routess:log-level"]` à `debug`, `info`, `warn`, `error` ou `none` et recharge.
+
+## Le mettre derrière un reverse proxy
+
+Le compose par défaut expose les ports directement. Pour le TLS et un vrai domaine, place les services `web` et `api` derrière un reverse proxy (Caddy, Traefik, ingress-nginx, Cloudflare Tunnel) et surcharge les URL publiques dans `.env` :
+
+```sh
+PUBLIC_WEB_URL=https://routess.example.com
+PUBLIC_API_URL=https://api.routess.example.com
+```
+
+`PUBLIC_WEB_URL` est aussi utilisé comme base de redirection OAuth, il doit donc correspondre à ce que tu as configuré dans Google Cloud.
+
+## Mettre à jour
+
+Fais d'abord une sauvegarde de la base de données (voir ci-dessous) ; les migrations sont uniquement en avant, donc un snapshot est ton chemin de rollback. Ensuite :
+
+```sh
+docker compose -f docker/compose.selfhost.yaml --project-directory . pull
+docker compose -f docker/compose.selfhost.yaml --project-directory . up -d
+```
+
+L'API exécute les migrations automatiquement au démarrage. Il n'y a pas d'étape de migration manuelle. Pour revenir en arrière, restaure le dump d'avant mise à jour et fige `ROUTESS_TAG` sur la release précédente.
+
+## Sauvegarder
+
+Les données Postgres vivent dans le volume nommé `postgres_data`. Un `pg_dump` standard fonctionne :
+
+```sh
+docker compose -f docker/compose.selfhost.yaml --project-directory . exec postgres \
+  pg_dump -U routess routess > routess-$(date +%F).sql
+```
+
+Restaure dans un volume frais avec `psql` :
+
+```sh
+docker compose -f docker/compose.selfhost.yaml --project-directory . exec -T postgres \
+  psql -U routess routess < routess-2026-06-04.sql
+```
+
+## Dépannage
+
+- **L'API est-elle en bonne santé ?** `curl http://localhost:3000/health/ready` renvoie 200 quand l'API peut atteindre la base de données ; `/health/live` vérifie seulement que le processus est actif.
+- **« address already in use »** sur `:8080` ou `:3000` : change `WEB_PORT` / `API_PORT` dans `.env`.
+- **La connexion Google renvoie `redirect_uri_mismatch`** : l'URI de redirection autorisée du client OAuth doit correspondre exactement à `<PUBLIC_WEB_URL>/auth/callback`.
+- **Les tuiles de carte ne se chargent pas** : vérifie que `VITE_MAPBOX_ACCESS_TOKEN` est défini ; regarde les devtools du navigateur pour des 401 venant de `api.mapbox.com`.
+- **Les e-mails de vérification n'arrivent pas** : définis `RESEND_API_KEY` et `EMAIL_FROM`. Sans eux, l'API écrit l'URL de vérification sur stdout ; lance `docker compose logs api | grep '\[email:console\]'`.

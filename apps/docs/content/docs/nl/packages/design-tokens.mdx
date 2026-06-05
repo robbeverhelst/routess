@@ -1,0 +1,49 @@
+---
+title: "@routess/design-tokens"
+description: Kleuren, typografie, spacing en animaties gedeeld over web en mobile.
+---
+
+Designwaarden gecentraliseerd zodat de webapp, deze docs-site en de toekomstige mobiele app er allemaal hetzelfde uitzien.
+
+## Wat zit erin
+
+- **Kleuren**: light- + dark-paletten in OKLCH
+- **Typografie**: lettergroottes, gewichten, regelhoogtes
+- **Spacing**: consistente schaal (xs/sm/md/lg/xl)
+- **Border radius**: `--radius`-systeem
+- **Animaties**: fade-, slide-, scale-, spin-keyframes
+
+## Gebruik op web
+
+Importeer de CSS één keer bij de app-entry:
+
+```ts
+import "@routess/design-tokens/css/tokens.css";
+```
+
+Gebruik de CSS-variabelen rechtstreeks:
+
+```css
+.card {
+	background: var(--card);
+	color: var(--card-foreground);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-lg);
+}
+```
+
+Of de Tailwind v4-thematokens (`bg-card`, `text-foreground`, enz.), al bedraad via `@theme inline`.
+
+## Gebruik op React Native
+
+Importeer de JS-exports:
+
+```ts
+import { lightColors, darkColors, spacing } from "@routess/design-tokens";
+```
+
+OKLCH wordt niet rechtstreeks ondersteund in RN; gebruik de helper-utilities in de package om hex/rgb-fallbacks te krijgen.
+
+## Dark mode
+
+Voeg de `dark`-klasse toe aan `<html>` (of `<body>`) en de dark-tokenwaarden nemen het over. De webapp en de docs-site volgen standaard allebei de systeemvoorkeur van de gebruiker.

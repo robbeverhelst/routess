@@ -1,0 +1,31 @@
+---
+title: Prérequis
+description: Les outils à installer en local.
+---
+
+| Outil | Version | Pourquoi |
+| --- | --- | --- |
+| Bun | 1.3+ (le repo fige la version exacte dans `package.json` → `packageManager`) | Gestionnaire de packages du workspace + runtime |
+| Docker | dernière | Postgres en local + builds d'images |
+| Node | 24.x | Certains outils de build (Vite, Next) nécessitent Node ; la CI et les images Docker utilisent Node 24 |
+| Git | dernière | Gestion de versions |
+
+## Installation
+
+```sh
+# macOS
+brew install oven-sh/bun/bun
+brew install --cask docker
+brew install node@24
+
+# verify
+bun --version
+docker --version
+node --version
+```
+
+## Optionnel
+
+- **Helm 3.16+** : pour valider le chart en local
+- **kubectl** : pour déployer sur un cluster
+- **VS Code + extension Biome** : la meilleure expérience de développement

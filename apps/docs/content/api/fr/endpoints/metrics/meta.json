@@ -1,0 +1,5 @@
+{
+	"title": "Metrics",
+	"description": "Prometheus metrics",
+	"pages": ["get-metrics"]
+}

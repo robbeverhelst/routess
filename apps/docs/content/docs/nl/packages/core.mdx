@@ -1,0 +1,34 @@
+---
+title: "@routess/core"
+description: Gedeelde types, Zustand-stores en platformonafhankelijke utilities.
+---
+
+De fundamentpackage. Alles wat veilig is voor zowel web als React Native staat hier.
+
+## Exports
+
+| Subpath | Inhoud |
+| --- | --- |
+| `@routess/core` | Re-exports van stores, types, utils, logger |
+| `@routess/core/stores` | Zustand-stores: routing, auth, ui |
+| `@routess/core/types` | Gedeelde TypeScript-types |
+| `@routess/core/utils` | Geospatiale helpers, formatters, validators |
+
+## Noemenswaardige types
+
+- `Coordinate`: `[lng, lat]`-tuple
+- `Waypoint`: `{ coord: Coordinate, type: 'routed' | 'direct', name?, timestamp? }`
+- `RouteActivity`: `'run' | 'cycle' | 'walk'` (met de `ROUTE_ACTIVITIES`-array voor validatie tijdens runtime)
+- `RouteVisibility`: `'private' | 'unlisted' | 'public'` (met `ROUTE_VISIBILITIES`)
+- `RoutingPreferences`: `{ surfacePreference: SurfaceType, avoidFerries, avoidHighways }`
+
+## Een nieuwe util toevoegen
+
+1. Voeg de functie toe in `src/utils/`
+2. Re-export vanuit `src/utils/index.ts`
+3. Zet er een unit test naast
+4. Bump niets; de package is `workspace:*` en wordt niet gepubliceerd
+
+## Een store toevoegen
+
+Stores staan onder `src/stores/`. Houd ze framework-vrij: geen React-imports, geen DOM. Gebruik `subscribeWithSelector` als je gerichte subscribers nodig hebt.

@@ -1,0 +1,34 @@
+---
+title: Overzicht
+description: Hoe routess op hoofdlijnen is opgebouwd.
+---
+
+routess is een klassieke three-tier app:
+
+```
+┌──────────────┐      ┌──────────────┐      ┌──────────────┐
+│   Web (SPA)  │ ───▶ │   API (Nest) │ ───▶ │  PostgreSQL  │
+│  Vite/React  │      │   NestJS 11  │      │      15      │
+└──────────────┘      └──────────────┘      └──────────────┘
+       │                     │
+       │                     ├──▶  Google OAuth (token verification)
+       │                     └──▶  OpenTelemetry exporter
+       │
+       └──▶  Mapbox tiles + geocoding
+```
+
+Gedeelde code staat in `packages/*` en wordt door beide apps geconsumeerd via Bun-workspaces.
+
+## Grenzen
+
+- **Web** is eigenaar van rendering en clientstate. Het roept de API aan voor persistentie.
+- **API** is eigenaar van auth, validatie en opslag. Waar mogelijk geen businesslogica in de webapp.
+- **Packages** zijn platformonafhankelijk waar dat kan (`core`, `i18n`) en hebben expliciete web/mobile-adapters waar dat niet kan (`api-client`).
+
+## Out-of-process-dependencies
+
+| Service | Gebruikt door | Waarom |
+| --- | --- | --- |
+| Mapbox | Web | Tiles, styles, geocoding |
+| Google OAuth | API | Verificatie van aanmeldtokens |
+| PostgreSQL | API | Persistentie van users + routes |

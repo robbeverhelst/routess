@@ -1,0 +1,31 @@
+---
+title: Vereisten
+description: Tools die je lokaal geïnstalleerd moet hebben.
+---
+
+| Tool | Versie | Waarom |
+| --- | --- | --- |
+| Bun | 1.3+ (de repo pint de exacte versie in `package.json` → `packageManager`) | Workspace-packagemanager + runtime |
+| Docker | latest | Lokale Postgres + image builds |
+| Node | 24.x | Sommige buildtools (Vite, Next) hebben Node nodig; CI en de Docker-images gebruiken Node 24 |
+| Git | latest | Versiebeheer |
+
+## Installeren
+
+```sh
+# macOS
+brew install oven-sh/bun/bun
+brew install --cask docker
+brew install node@24
+
+# verify
+bun --version
+docker --version
+node --version
+```
+
+## Optioneel
+
+- **Helm 3.16+**: om de chart lokaal te valideren
+- **kubectl**: om naar een cluster te deployen
+- **VS Code + Biome-extensie**: de beste dev-ervaring

@@ -1,0 +1,4 @@
+{
+	"title": "Pakete",
+	"pages": ["core", "api-client", "i18n", "design-tokens"]
+}

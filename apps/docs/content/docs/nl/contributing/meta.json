@@ -1,0 +1,4 @@
+{
+	"title": "Bijdragen",
+	"pages": ["coding-standards", "testing", "commit-conventions", "release-process"]
+}

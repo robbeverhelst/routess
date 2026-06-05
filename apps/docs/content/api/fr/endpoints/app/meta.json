@@ -1,0 +1,5 @@
+{
+	"title": "App",
+	"description": "API root metadata",
+	"pages": ["get"]
+}

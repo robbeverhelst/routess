@@ -1,0 +1,32 @@
+---
+title: Tests
+description: Comment les tests sont organisés et exécutés.
+---
+
+Le repo a une suite de tests qui s'exécute à chaque PR.
+
+## Frameworks
+
+| Surface | Framework |
+| --- | --- |
+| Web (`apps/web`) | Vitest + React Testing Library + MSW |
+| API (`apps/api`) | Vitest + conteneur de test Postgres |
+| Packages | Vitest |
+
+## Les lancer
+
+```sh
+bun run test                    # All tests across the workspace
+bun run --filter './apps/web' test
+bun run --filter './packages/*' test
+```
+
+## Conventions
+
+- Les fichiers de test vivent à côté de la source : `foo.ts` + `foo.test.ts`
+- Les tests web utilisent **MSW** pour mocker l'API au niveau réseau (pas de mocks jest de l'api-client)
+- Les tests API tournent contre un vrai Postgres en CI (conteneur de service Docker), pas de BD mockée
+
+## Couverture
+
+Le web a `vitest --coverage` câblé. La CI ne bloque pas sur la couverture ; c'est une recommandation, pas une règle.

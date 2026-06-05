@@ -1,0 +1,118 @@
+---
+title: API Reference
+description: REST endpoints, auth, and data models.
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+<Callout type="info" title="Generated from OpenAPI">
+	The endpoint pages under [Endpoints](/en/api-reference/endpoints) are generated from `apps/docs/openapi/routess.openapi.json`. Regenerate them with `bun run docs:generate-api`.
+</Callout>
+
+## Base URL
+
+- Production: `https://api.routess.com`
+- Local: `http://localhost:3000`
+
+Versioned routes live under `/api/v1`. Health and metrics endpoints (`/health`, `/health/live`, `/health/ready`, `/metrics`) are not versioned and live at the root.
+
+## Authentication
+
+The API accepts two authentication modes.
+
+### Session cookie (browser)
+
+`POST /api/v1/auth/google` exchanges a Google ID token for a session cookie, and `POST /api/v1/auth/signup-email` / `POST /api/v1/auth/login-email` do the same for email + password accounts. Subsequent calls send the cookie automatically. This is what the routess web app uses. See [Developer Docs → Architecture → Auth](/en/docs/architecture/auth) for the full flow.
+
+### Personal access token (CLI / scripts)
+
+Non-browser clients authenticate by sending a personal access token as a Bearer header:
+
+```http
+Authorization: Bearer routess_pat_<random>
+```
+
+Mint tokens in the web app under **Settings → API Tokens**. Each token carries one of two scopes:
+
+- `read`: list and get routes, export GPX, read profile.
+- `write`: everything in `read` plus metadata-only mutations on owned routes and on preferences.
+
+#### Scope per endpoint
+
+| Scope required | Endpoints |
+| --- | --- |
+| none (public) | `GET /api/v1/routes/by-user/:userId`, `POST /api/v1/routing/route`, `POST /api/v1/routing/trace-attributes`, `GET /health/*`, `GET /metrics` |
+| `read` | `GET /api/v1/users/me`, `GET /api/v1/users/profile`, `GET /api/v1/routes` |
+| `write` | `PATCH /api/v1/users/me`, `PATCH /api/v1/routes/:id`, `DELETE /api/v1/routes/:id` |
+| PAT-blocked (session cookie only) | `POST /api/v1/routes`, `GET /api/v1/routes/:id`, `DELETE /api/v1/users/me`, `POST /api/v1/users/me/password`, `GET /api/v1/users/me/export`, `/api/v1/me/sessions*`, `/api/v1/auth/*`, `/api/v1/admin/*` |
+
+If you call an endpoint with a token that lacks the required scope, the API responds with `403 FORBIDDEN`. The CLI surfaces this as exit code 6 (see [CLI exit codes](../docs/apps/cli)).
+
+PATs are blocked from `/admin/*` and from `DELETE /users/me`. Destructive operations (changing a route's visibility to public, deleting a route) require an `X-Routess-Confirm: true` header and otherwise return `428 PRECONDITION_REQUIRED` with an `impact` field describing the change. See ADR-0022 and ADR-0023.
+
+The `routess` CLI (`npm install -g routess`) is the easiest way to drive the API with a PAT; for ad-hoc usage, `curl` works the same way:
+
+```bash
+curl -H "Authorization: Bearer routess_pat_…" https://api.routess.com/api/v1/users/me
+```
+
+The CLI persists its token at `~/.config/routess/auth.json` (mode 0600), or `$XDG_CONFIG_HOME/routess/auth.json` if that is set. `ROUTESS_TOKEN` and `ROUTESS_API_URL` env vars take precedence over the on-disk values, which is convenient in CI and containers.
+
+## Errors
+
+Every error response uses one JSON shape:
+
+```json
+{
+	"statusCode": 403,
+	"code": "FORBIDDEN",
+	"message": "This endpoint is not accessible via personal access tokens",
+	"details": {}
+}
+```
+
+`code` is a stable machine-readable string: `VALIDATION_FAILED`, `NOT_FOUND`, `UNAUTHORIZED`, `FORBIDDEN`, `CONFLICT`, `PRECONDITION_REQUIRED`, `RATE_LIMITED`, or `INTERNAL`. `details` is optional and carries structured context (validation messages, the `impact` of a destructive operation, and so on).
+
+## Rate limiting
+
+Limits are enforced per user (or per token for PATs) in a 60-second window. Exceeding a limit returns `429` with code `RATE_LIMITED`.
+
+| Tier | Limit | Applied to |
+| --- | --- | --- |
+| Auth | 5/min | Login, signup, password reset |
+| Strict | 10/min | Destructive or expensive calls (account deletion, export, password change) |
+| Moderate | 60/min | Profile, routes CRUD, routing engine proxy |
+| Default | 300/min | Everything else |
+
+## Endpoints (overview)
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| POST | `/api/v1/auth/google` | Exchange Google ID token for a session |
+| POST | `/api/v1/auth/signup-email` | Create an account with email + password |
+| POST | `/api/v1/auth/login-email` | Sign in with email + password |
+| POST | `/api/v1/auth/verify-email` | Verify an email address |
+| POST | `/api/v1/auth/request-password-reset` | Request a password reset email |
+| POST | `/api/v1/auth/reset-password` | Reset password with a token |
+| POST | `/api/v1/auth/logout` | Clear the session |
+| GET / POST / DELETE | `/api/v1/auth/tokens(/:id)` | Mint / list / revoke personal access tokens |
+| GET | `/api/v1/me/sessions` | List active sessions |
+| DELETE | `/api/v1/me/sessions/:id` | Revoke one session |
+| POST | `/api/v1/me/sessions/logout-everywhere` | Revoke all sessions |
+| GET / PATCH / DELETE | `/api/v1/users/me` | Manage the current user |
+| GET | `/api/v1/users/profile` | Public-facing alias of `/users/me` |
+| POST | `/api/v1/users/me/password` | Set or change password |
+| GET | `/api/v1/users/me/export` | Download account data as a ZIP (GDPR export) |
+| POST | `/api/v1/users/me/cancel-deletion` | Cancel a pending account deletion |
+| GET | `/api/v1/routes` | List the current user's routes |
+| POST | `/api/v1/routes` | Create a route |
+| GET | `/api/v1/routes/:id` | Read a route (session-cookie only; PATs cannot read by id, use `/routes` and filter) |
+| PATCH / DELETE | `/api/v1/routes/:id` | Update or delete a route |
+| GET | `/api/v1/routes/by-user/:userId` | List a user's public routes (no auth) |
+| POST | `/api/v1/routing/route` | Compute a route through ordered locations (Valhalla proxy) |
+| POST | `/api/v1/routing/trace-attributes` | Snap a recorded shape to the road network and return per-edge surface data (Valhalla proxy) |
+| GET / DELETE | `/api/v1/admin/*` | Admin dashboard endpoints (admin role, session cookie only) |
+| GET | `/health`, `/health/live`, `/health/ready` | Liveness/readiness probes (root path) |
+| GET | `/metrics` | Prometheus metrics, internal-only (root path) |
+
+The endpoint pages linked in the sidebar are the source of truth for request/response shapes and per-endpoint auth requirements.

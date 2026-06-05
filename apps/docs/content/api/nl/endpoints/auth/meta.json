@@ -1,0 +1,16 @@
+{
+	"title": "Auth",
+	"description": "Authentication endpoints",
+	"pages": [
+		"post-auth-google",
+		"post-auth-signup-email",
+		"post-auth-verify-email",
+		"post-auth-login-email",
+		"post-auth-request-password-reset",
+		"post-auth-reset-password",
+		"post-auth-logout",
+		"get-auth-tokens",
+		"post-auth-tokens",
+		"delete-auth-tokens-id"
+	]
+}

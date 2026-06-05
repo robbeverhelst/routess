@@ -1,0 +1,66 @@
+---
+title: Lokales Setup
+description: Bring den vollständigen Stack auf deiner Maschine zum Laufen.
+---
+
+```sh
+git clone https://github.com/robbeverhelst/routess.git
+cd routess
+bun install
+cp .env.example .env
+bun run dev
+```
+
+`bun run dev` macht Folgendes:
+
+1. Installiert Abhängigkeiten, falls `node_modules` fehlt
+2. Wählt freie lokale Ports für die API, Docs, Web-App, Landing, Postgres und pgAdmin
+3. Startet einen Postgres-Container
+4. Startet pgAdmin
+5. Baut alle `packages/*` (damit die Apps sie importieren können)
+6. Führt jede `apps/*` parallel im Dev-Modus aus
+
+Falls ein Standard-Port bereits belegt ist, wählt `bun run dev` automatisch den nächsten freien lokalen Port.
+Eigene, vom Standard abweichende Port-Werte in `.env` werden als explizite Overrides behandelt.
+
+Du solltest sehen:
+
+- **Web**: http://localhost:5173
+- **API**: http://localhost:3000
+- **Docs**: http://localhost:3001 _(diese Seite)_
+- **Landing**: http://localhost:3002
+- **pgAdmin**: http://localhost:5050 _(oder das `PGADMIN_PORT` aus deiner Root-`.env`)_
+
+## Umgebungsvariablen
+
+Das Repo nutzt eine gemeinsame Root-`.env`. Kopieren und ausfüllen:
+
+```sh
+cp .env.example .env
+```
+
+Erforderliche Werte:
+
+- `VITE_MAPBOX_ACCESS_TOKEN`: hol dir einen unter [mapbox.com](https://mapbox.com)
+- `VITE_GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_ID`: aus der Google Cloud Console
+- `GOOGLE_CLIENT_SECRET`: aus der Google Cloud Console (von der API genutzt, um Auth-Codes auszutauschen)
+- `JWT_SECRET`: ein beliebiger zufälliger String für die lokale Entwicklung
+
+Optionale lokale Port-Overrides:
+
+- `PORT`: API-Port, Standard `3000`
+- `DOCS_PORT`: Docs-Port, Standard `3001`
+- `WEB_PORT`: Web-Port, Standard `5173`
+- `LANDING_PORT`: Landing-Port, Standard `3002`
+- `DB_PORT`: ändere dies, wenn `5432` bereits belegt ist
+- `PGADMIN_PORT`: ändere dies, wenn `5050` bereits belegt ist
+
+## Nützliche Skripte
+
+```sh
+bun run lint            # Biome check across the repo
+bun run check-types     # TypeScript across all workspaces
+bun run test            # Run the test suite
+bun run build           # Build everything (packages first, then apps)
+bun run ci              # Run the full CI pipeline locally
+```

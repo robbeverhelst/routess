@@ -1,0 +1,23 @@
+---
+title: Datenfluss
+description: Ein vollständiger Weg durch den Stack, vom Kartenklick bis zur Datenbankzeile.
+---
+
+Ein Durchlauf beim Erstellen einer Route:
+
+1. **Der Nutzer klickt auf die Karte.** Mapbox emittiert einen Klick mit lng/lat. Die Map-Komponente der Web-App ruft `addWaypoint(coords)` auf dem Routing-Zustand-Store aus `@routess/core` auf.
+2. **Der Store aktualisiert sich.** Der Store hängt den Wegpunkt an, berechnet Gesamtdistanz/-dauer lokal neu und benachrichtigt die Subscriber. Die Sidebar rendert neu.
+3. **Persistenz-Seiteneffekt.** Ein Subscriber in `apps/web` ruft `apiClient.routes.upsertCurrent(state)` auf, debounced ~500 ms.
+4. **HTTP-Request.** `@routess/api-client` setzt einen `PATCH /api/v1/routes/:id` mit angehängtem JWT-Cookie ab.
+5. **API empfängt.** NestJS authentifiziert das Cookie, validiert den Body über DTOs und persistiert über MikroORM.
+6. **Response.** Die API gibt die kanonische Route zurück. Der Store gleicht ab (falls der Server etwas normalisiert hat).
+
+## Warum Client-First-State?
+
+routess bevorzugt schnellen lokalen State mit eventueller Server-Abgleichung. Die Karte muss sich augenblicklich anfühlen; ein Roundtrip bei jedem Klick würde träge wirken.
+
+## Fehlerfälle
+
+- **Server nicht erreichbar**: lokale Bearbeitungen funktionieren weiter; die Persistenzschicht stellt in eine Queue und wiederholt mit exponentiellem Backoff.
+- **Auth abgelaufen**: Server gibt 401 zurück; Web leitet zur Anmeldung um.
+- **Validierungsfehler**: Server gibt 422 mit feldspezifischen Fehlern zurück; Web zeigt einen Toast und behält die lokale Bearbeitung.

@@ -1,0 +1,49 @@
+---
+title: "@routess/design-tokens"
+description: Couleurs, typographie, espacements et animations partagés entre web et mobile.
+---
+
+Des valeurs de design centralisées pour que l'application web, ce site de documentation et la future application mobile aient tous le même rendu.
+
+## Ce qu'il contient
+
+- **Couleurs** : palettes claire + sombre en OKLCH
+- **Typographie** : tailles de police, graisses, hauteurs de ligne
+- **Espacement** : échelle cohérente (xs/sm/md/lg/xl)
+- **Rayon de bordure** : système `--radius`
+- **Animations** : keyframes fade, slide, scale, spin
+
+## Utilisation web
+
+Importe le CSS une seule fois à l'entrée de l'app :
+
+```ts
+import "@routess/design-tokens/css/tokens.css";
+```
+
+Utilise directement les variables CSS :
+
+```css
+.card {
+	background: var(--card);
+	color: var(--card-foreground);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-lg);
+}
+```
+
+Ou les tokens de thème Tailwind v4 (`bg-card`, `text-foreground`, etc.), déjà câblés via `@theme inline`.
+
+## Utilisation React Native
+
+Importe les exports JS :
+
+```ts
+import { lightColors, darkColors, spacing } from "@routess/design-tokens";
+```
+
+OKLCH n'est pas directement pris en charge dans RN ; utilise les utilitaires d'aide du package pour obtenir des fallbacks hex/rgb.
+
+## Mode sombre
+
+Ajoute la classe `dark` à `<html>` (ou `<body>`) et les valeurs de tokens sombres prennent le relais. L'application web et le site de documentation suivent par défaut la préférence système de l'utilisateur.
