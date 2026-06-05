@@ -1,0 +1,118 @@
+---
+title: API-Referenz
+description: REST-Endpunkte, Auth und Datenmodelle.
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+<Callout type="info" title="Generiert aus OpenAPI">
+	Die Endpunkt-Seiten unter [Endpoints](/de/api-reference/endpoints) werden aus `apps/docs/openapi/routess.openapi.json` generiert. Regeneriere sie mit `bun run docs:generate-api`.
+</Callout>
+
+## Basis-URL
+
+- Produktion: `https://api.routess.com`
+- Lokal: `http://localhost:3000`
+
+Versionierte Routen liegen unter `/api/v1`. Health- und Metrics-Endpunkte (`/health`, `/health/live`, `/health/ready`, `/metrics`) sind nicht versioniert und liegen im Root.
+
+## Authentifizierung
+
+Die API akzeptiert zwei Authentifizierungsmodi.
+
+### Session-Cookie (Browser)
+
+`POST /api/v1/auth/google` tauscht ein Google-ID-Token gegen ein Session-Cookie, und `POST /api/v1/auth/signup-email` / `POST /api/v1/auth/login-email` tun dasselbe für E-Mail-+-Passwort-Konten. Nachfolgende Aufrufe senden das Cookie automatisch. Das nutzt die routess-Web-App. Den vollständigen Flow findest du unter [Entwicklerdocs → Architektur → Auth](/de/docs/architecture/auth).
+
+### Personal Access Token (CLI / Skripte)
+
+Nicht-Browser-Clients authentifizieren sich, indem sie ein Personal Access Token als Bearer-Header senden:
+
+```http
+Authorization: Bearer routess_pat_<random>
+```
+
+Erstelle Tokens in der Web-App unter **Settings → API Tokens**. Jedes Token trägt einen von zwei Scopes:
+
+- `read`: Routen auflisten und abrufen, GPX exportieren, Profil lesen.
+- `write`: alles aus `read` plus rein metadatenbezogene Mutationen an eigenen Routen und an Präferenzen.
+
+#### Scope pro Endpunkt
+
+| Erforderlicher Scope | Endpunkte |
+| --- | --- |
+| keiner (öffentlich) | `GET /api/v1/routes/by-user/:userId`, `POST /api/v1/routing/route`, `POST /api/v1/routing/trace-attributes`, `GET /health/*`, `GET /metrics` |
+| `read` | `GET /api/v1/users/me`, `GET /api/v1/users/profile`, `GET /api/v1/routes` |
+| `write` | `PATCH /api/v1/users/me`, `PATCH /api/v1/routes/:id`, `DELETE /api/v1/routes/:id` |
+| PAT-blockiert (nur Session-Cookie) | `POST /api/v1/routes`, `GET /api/v1/routes/:id`, `DELETE /api/v1/users/me`, `POST /api/v1/users/me/password`, `GET /api/v1/users/me/export`, `/api/v1/me/sessions*`, `/api/v1/auth/*`, `/api/v1/admin/*` |
+
+Wenn du einen Endpunkt mit einem Token aufrufst, dem der erforderliche Scope fehlt, antwortet die API mit `403 FORBIDDEN`. Die CLI meldet das als Exit-Code 6 (siehe [CLI-Exit-Codes](../docs/apps/cli)).
+
+PATs sind von `/admin/*` und von `DELETE /users/me` blockiert. Destruktive Operationen (die Sichtbarkeit einer Route auf öffentlich ändern, eine Route löschen) erfordern einen `X-Routess-Confirm: true`-Header und geben andernfalls `428 PRECONDITION_REQUIRED` mit einem `impact`-Feld zurück, das die Änderung beschreibt. Siehe ADR-0022 und ADR-0023.
+
+Die `routess`-CLI (`npm install -g routess`) ist der einfachste Weg, die API mit einem PAT zu steuern; für Ad-hoc-Nutzung funktioniert `curl` genauso:
+
+```bash
+curl -H "Authorization: Bearer routess_pat_…" https://api.routess.com/api/v1/users/me
+```
+
+Die CLI persistiert ihr Token unter `~/.config/routess/auth.json` (Modus 0600) oder `$XDG_CONFIG_HOME/routess/auth.json`, falls das gesetzt ist. Die Umgebungsvariablen `ROUTESS_TOKEN` und `ROUTESS_API_URL` haben Vorrang vor den Werten auf der Festplatte, was in CI und Containern praktisch ist.
+
+## Fehler
+
+Jede Fehler-Response nutzt ein einziges JSON-Format:
+
+```json
+{
+	"statusCode": 403,
+	"code": "FORBIDDEN",
+	"message": "This endpoint is not accessible via personal access tokens",
+	"details": {}
+}
+```
+
+`code` ist ein stabiler, maschinenlesbarer String: `VALIDATION_FAILED`, `NOT_FOUND`, `UNAUTHORIZED`, `FORBIDDEN`, `CONFLICT`, `PRECONDITION_REQUIRED`, `RATE_LIMITED` oder `INTERNAL`. `details` ist optional und trägt strukturierten Kontext (Validierungsmeldungen, den `impact` einer destruktiven Operation usw.).
+
+## Rate-Limiting
+
+Limits werden pro Nutzer (oder pro Token bei PATs) in einem 60-Sekunden-Fenster durchgesetzt. Das Überschreiten eines Limits gibt `429` mit dem Code `RATE_LIMITED` zurück.
+
+| Stufe | Limit | Angewandt auf |
+| --- | --- | --- |
+| Auth | 5/min | Login, Signup, Passwort-Reset |
+| Strict | 10/min | Destruktive oder teure Aufrufe (Kontolöschung, Export, Passwortänderung) |
+| Moderate | 60/min | Profil, Routen-CRUD, Routing-Engine-Proxy |
+| Default | 300/min | Alles andere |
+
+## Endpunkte (Überblick)
+
+| Methode | Pfad | Zweck |
+| --- | --- | --- |
+| POST | `/api/v1/auth/google` | Google-ID-Token gegen eine Session tauschen |
+| POST | `/api/v1/auth/signup-email` | Ein Konto mit E-Mail + Passwort erstellen |
+| POST | `/api/v1/auth/login-email` | Mit E-Mail + Passwort anmelden |
+| POST | `/api/v1/auth/verify-email` | Eine E-Mail-Adresse verifizieren |
+| POST | `/api/v1/auth/request-password-reset` | Eine Passwort-Reset-E-Mail anfordern |
+| POST | `/api/v1/auth/reset-password` | Passwort mit einem Token zurücksetzen |
+| POST | `/api/v1/auth/logout` | Die Session löschen |
+| GET / POST / DELETE | `/api/v1/auth/tokens(/:id)` | Personal Access Tokens erstellen / auflisten / widerrufen |
+| GET | `/api/v1/me/sessions` | Aktive Sessions auflisten |
+| DELETE | `/api/v1/me/sessions/:id` | Eine Session widerrufen |
+| POST | `/api/v1/me/sessions/logout-everywhere` | Alle Sessions widerrufen |
+| GET / PATCH / DELETE | `/api/v1/users/me` | Den aktuellen Nutzer verwalten |
+| GET | `/api/v1/users/profile` | Öffentlicher Alias von `/users/me` |
+| POST | `/api/v1/users/me/password` | Passwort setzen oder ändern |
+| GET | `/api/v1/users/me/export` | Kontodaten als ZIP herunterladen (DSGVO-Export) |
+| POST | `/api/v1/users/me/cancel-deletion` | Eine ausstehende Kontolöschung abbrechen |
+| GET | `/api/v1/routes` | Die Routen des aktuellen Nutzers auflisten |
+| POST | `/api/v1/routes` | Eine Route erstellen |
+| GET | `/api/v1/routes/:id` | Eine Route lesen (nur Session-Cookie; PATs können nicht per id lesen, nutze `/routes` und filtere) |
+| PATCH / DELETE | `/api/v1/routes/:id` | Eine Route aktualisieren oder löschen |
+| GET | `/api/v1/routes/by-user/:userId` | Die öffentlichen Routen eines Nutzers auflisten (keine Auth) |
+| POST | `/api/v1/routing/route` | Eine Route durch geordnete Orte berechnen (Valhalla-Proxy) |
+| POST | `/api/v1/routing/trace-attributes` | Eine aufgezeichnete Form auf das Straßennetz snappen und Belagsdaten pro Edge zurückgeben (Valhalla-Proxy) |
+| GET / DELETE | `/api/v1/admin/*` | Admin-Dashboard-Endpunkte (Admin-Rolle, nur Session-Cookie) |
+| GET | `/health`, `/health/live`, `/health/ready` | Liveness-/Readiness-Probes (Root-Pfad) |
+| GET | `/metrics` | Prometheus-Metriken, nur intern (Root-Pfad) |
+
+Die in der Seitenleiste verlinkten Endpunkt-Seiten sind die maßgebliche Quelle für Request-/Response-Formate und die Auth-Anforderungen pro Endpunkt.

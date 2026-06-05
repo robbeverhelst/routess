@@ -1,0 +1,40 @@
+---
+title: Authentification
+description: Google OAuth et connexion par e-mail, plus la gestion des sessions.
+---
+
+routess prend en charge deux méthodes de connexion, **Google OAuth (one-tap)** et **e-mail + mot de passe**, qui aboutissent toutes les deux au même **cookie de session JWT** sur l'API.
+
+## Flux Google
+
+1. L'application web charge le SDK Google Identity Services et affiche le bouton de connexion.
+2. En cas de succès, Google renvoie un **ID token** au navigateur.
+3. Le web envoie l'ID token à `POST /api/v1/auth/google`.
+4. L'API vérifie la signature et l'audience du token contre le JWKS de Google.
+5. L'API crée ou met à jour l'utilisateur (par le `sub` Google), émet son propre JWT et le pose comme cookie `HttpOnly`, `Secure`, `SameSite=Lax`.
+6. Les appels API suivants incluent le cookie automatiquement.
+
+## Flux e-mail
+
+1. `POST /api/v1/auth/signup-email` enregistre le compte (les mots de passe font au moins 12 caractères, hachés au repos) et envoie un lien de vérification valable 24 heures.
+2. `POST /api/v1/auth/verify-email` consomme le token du lien et connecte l'utilisateur.
+3. `POST /api/v1/auth/login-email` connecte lors des visites ultérieures et émet le même cookie de session que le flux Google.
+4. `POST /api/v1/auth/request-password-reset` envoie par e-mail un lien de réinitialisation valable 30 minutes ; `POST /api/v1/auth/reset-password` le consomme.
+
+L'envoi d'e-mails passe par Resend lorsque `RESEND_API_KEY` est défini ; sinon, les URL de vérification et de réinitialisation sont écrites sur stdout (le transport console dev/self-host).
+
+Un compte créé via Google peut ajouter un mot de passe plus tard (`POST /api/v1/users/me/password`), pour que les deux méthodes fonctionnent pour le même utilisateur.
+
+## Pourquoi un JWT émis par le serveur ?
+
+- Nous permet d'ajouter des claims spécifiques à l'application (rôle utilisateur, unité par défaut)
+- Découple la durée de vie de la session du token de Google
+- Nous évite d'appeler Google à chaque requête
+
+## Déconnexion
+
+`POST /api/v1/auth/logout` efface le cookie. L'application web efface aussi l'état d'authentification Zustand.
+
+## Rafraîchissement de session
+
+Les JWT ont une courte durée de vie (15 minutes). L'API les rafraîchit silencieusement à chaque requête authentifiée, en renvoyant un cookie frais. Si l'utilisateur s'absente trop longtemps, le cookie expire et il se reconnecte via la ré-authentification silencieuse de Google (sans interaction utilisateur dans la plupart des cas).

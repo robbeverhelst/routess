@@ -1,0 +1,47 @@
+---
+title: CI/CD
+description: Hoe code van een PR naar een draaiend cluster komt.
+---
+
+routess gebruikt **GitHub Actions** die draaien op een self-hosted runner met het label `arc-routess`.
+
+## Pipeline (`.github/workflows/ci.yml`)
+
+```
+PR / push  ──▶  test  ──┐
+                        ├──▶  release (semantic-release)  ──▶  publish-images
+PR / push  ──▶  helm-validate  ┘                                          │
+                                                                          │
+                                                              publish-helm  ──▶  GHCR (chart)
+```
+
+## Stages
+
+| Stage | Wat het doet |
+| --- | --- |
+| **test** | `bun install` → Biome → type-check → tests draaien met een Postgres service container → alles bouwen |
+| **helm-validate** | `helm lint` + `helm template` om chart-fouten op te vangen |
+| **release** | Draait alleen bij een push naar `main`. `semantic-release` leest conventional commits, bepaalt de versie, maakt tag + release notes |
+| **publish-images** | Matrix-builds van de web/api/docs/landing Docker-images, pusht naar GHCR met `version`-, `minor`-, `major`- en `sha`-tags |
+| **publish-helm** | Werkt de Chart.yaml-versie bij, `helm package`, `helm push` naar het GHCR OCI-register |
+| **publish-cli** | Publiceert de `routess`-CLI naar npm met provenance. Draait op een GitHub-hosted runner omdat npm provenance-attestaties van self-hosted runners weigert |
+
+## Builddetails
+
+- De gedeelde deps-image wordt gecachet in GHCR (`routess-deps:cache`, BuildKit registry cache), zodat app-image-builds alleen opnieuw draaien wanneer de lockfile verandert.
+- Credentials voor de Sentry-source-map-upload komen uit 1Password en bereiken `docker buildx bake` via een BuildKit **secret mount**; ze komen nooit in de image-lagen terecht.
+- `VITE_APP_VERSION` wordt bij het bouwen vastgezet op de release-versie zodat de Sentry-release overeenkomt met wat `env-config.js` tijdens runtime rapporteert.
+
+## Versionering
+
+`semantic-release` leest de commits sinds de laatste tag:
+
+- `feat:` → minor bump
+- `fix:` → patch bump
+- `feat!:` of `BREAKING CHANGE:` → major bump
+
+Dezelfde versie stroomt door naar de Docker-tags en de Helm-chart. Draai `bun run release` alleen lokaal als je weet wat je doet; de pipeline doet het voor je.
+
+## Self-hosted runner
+
+`arc-routess` is een Actions Runner Controller-deployment in hetzelfde cluster. Builds gebeuren dicht bij het register, wat de cache-hits hoog houdt.

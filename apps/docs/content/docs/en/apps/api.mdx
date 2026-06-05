@@ -1,0 +1,52 @@
+---
+title: API
+description: NestJS 11 + MikroORM + PostgreSQL backend in apps/api.
+---
+
+The API is a **NestJS 11** application persisting to PostgreSQL via **MikroORM 6**.
+
+## Structure
+
+```
+apps/api/
+├── src/
+│   ├── auth/          # Google OAuth + email auth + JWT
+│   ├── users/         # User CRUD (self-only)
+│   ├── routes/        # Route CRUD
+│   ├── health/        # /health/live, /health/ready
+│   ├── config/        # Env validation, MikroORM config
+│   └── main.ts        # Entry
+├── migrations/        # MikroORM SQL migrations
+└── Dockerfile
+```
+
+## Public endpoints
+
+For full request/response shapes, see the [API Reference](/en/api-reference).
+
+| Method | Path | Auth |
+| --- | --- | --- |
+| POST | `/api/v1/auth/google` | none |
+| POST | `/api/v1/auth/signup-email`, `/auth/verify-email`, `/auth/login-email` | none |
+| POST | `/api/v1/auth/request-password-reset`, `/auth/reset-password` | none |
+| POST | `/api/v1/auth/logout` | cookie |
+| GET / DELETE / POST | `/api/v1/me/sessions(/:id, /logout-everywhere)` | cookie |
+| GET / POST / DELETE | `/api/v1/auth/tokens(/:id)` | cookie |
+| GET / PATCH / DELETE | `/api/v1/users/me` | cookie / PAT |
+| GET / POST / PATCH / DELETE | `/api/v1/routes(/:id)` | cookie / PAT (`GET /:id` is cookie-only) |
+| GET | `/health`, `/health/live`, `/health/ready` | none |
+| GET | `/metrics` | none (internal-only via NetworkPolicy) |
+
+## Environment variables
+
+See `apps/api/.env.example`. Required at runtime:
+
+- `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`
+- `JWT_SECRET`
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
+- `NODE_ENV`, `PORT`
+
+## Observability
+
+The API exposes Prometheus-style metrics at `/metrics` and emits OpenTelemetry traces (configurable via `OTEL_*` env vars).

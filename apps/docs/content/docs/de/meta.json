@@ -1,0 +1,4 @@
+{
+	"title": "Entwicklerdocs",
+	"pages": ["index", "getting-started", "architecture", "apps", "packages", "operations", "contributing"]
+}

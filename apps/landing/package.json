@@ -14,6 +14,7 @@
 		"screenshots": "bun scripts/capture-screens.ts"
 	},
 	"dependencies": {
+		"@routess/core": "workspace:*",
 		"@routess/design-tokens": "workspace:*",
 		"mapbox-gl": "^3.13.0",
 		"@tailwindcss/postcss": "^4.1.7",

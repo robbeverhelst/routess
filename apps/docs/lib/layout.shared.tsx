@@ -2,11 +2,13 @@ import type { BaseLayoutProps } from "fumadocs-ui/layouts/shared";
 import Image from "next/image";
 import { i18n, localeLabels } from "@/lib/i18n";
 
-export function baseOptions(locale: string = "en"): BaseLayoutProps {
+export function baseOptions(locale: string = "en", options: { languageSwitch?: boolean } = {}): BaseLayoutProps {
 	const guideUrl = `/${locale}/guide`;
 
 	return {
-		i18n,
+		// The language switch only belongs on the guide (the one translated
+		// section); on English-only sections it produced /nl/docs-style 404s.
+		...(options.languageSwitch ? { i18n } : {}),
 		nav: {
 			title: (
 				<span className="docs-wordmark">
@@ -15,7 +17,8 @@ export function baseOptions(locale: string = "en"): BaseLayoutProps {
 					<span className="docs-wordmark__tag">docs</span>
 				</span>
 			),
-			url: locale === "en" ? "/" : `/${locale}`,
+			// The docs home only exists unprefixed; /nl etc. used to 404.
+			url: "/",
 		},
 		links: [
 			{

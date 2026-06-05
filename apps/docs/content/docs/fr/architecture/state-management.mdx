@@ -1,0 +1,26 @@
+---
+title: Gestion de l'état
+description: Stores Zustand, persistance et annuler/rétablir.
+---
+
+routess utilise **Zustand** pour l'état client. Les stores vivent dans `packages/core/src/stores/` afin que l'application web et (future) mobile puissent les partager.
+
+## Stores
+
+- **routingStore** : points de passage de l'itinéraire courant, stats dérivées, historique annuler/rétablir
+- **authStore** : utilisateur courant, état OAuth
+- **uiStore** : style de carte, état d'ouverture du panneau latéral, langue
+
+## Pourquoi Zustand (et pas Redux/Jotai)
+
+- API minuscule, aucun boilerplate d'actions/reducers
+- Fonctionne en dehors de React (pour que les packages puissent l'utiliser)
+- Middleware intégrés : `persist`, `subscribeWithSelector`
+
+## Persistance
+
+L'application web enveloppe `routingStore` et `uiStore` avec le middleware `persist` adossé à `localStorage`. L'application mobile le remplacera par `AsyncStorage` (voir la phase 5 du plan mobile).
+
+## Annuler / rétablir
+
+Le store de routage conserve un historique borné des états passés. Chaque mutation empile l'état courant sur la pile d'annulation avant de l'appliquer. Rétablir restaure depuis la pile de rétablissement à chaque annulation. Les piles sont réinitialisées au changement d'authentification.

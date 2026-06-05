@@ -1,0 +1,50 @@
+---
+title: "@routess/i18n"
+description: Vertaaldienst met ondersteuning voor en/nl/fr/de.
+---
+
+Een kleine i18n-dienst die framework-onafhankelijk is en wordt hergebruikt op web en mobile.
+
+## Ondersteunde talen
+
+- Engels (`en`), de standaard
+- Nederlands (`nl`)
+- Frans (`fr`)
+- Duits (`de`)
+
+## Gebruik
+
+```ts
+import { createI18nService } from "@routess/i18n";
+import { logger } from "@routess/core";
+
+const i18n = createI18nService(logger);
+
+i18n.setLocale("nl");
+i18n.t("nav.signIn"); // → "Inloggen"
+i18n.t("greeting", { name: "Robbe" }); // → "Hallo, Robbe!"
+```
+
+## Structuur van de locales
+
+```
+packages/i18n/src/locales/
+├── en.ts
+├── nl.ts
+├── fr.ts
+└── de.ts
+```
+
+Elke locale exporteert een plat object met keys.
+
+## Een key toevoegen
+
+1. Voeg de key toe aan **elk** localebestand (begin met `en.ts`)
+2. Gebruik `i18n.t("your.key")` in code
+3. De TypeScript-types worden automatisch bijgewerkt; ontbrekende vertalingen verschijnen als type-fouten
+
+## Een locale toevoegen
+
+1. Voeg `xx.ts` toe in `src/locales/` met alle keys vertaald
+2. Registreer de locale in de service-factory
+3. Voeg de taal toe aan de `i18n.ts` van de docs-site als je ook vertalingen van de Gebruikersgids wilt

@@ -1,0 +1,30 @@
+---
+title: Processus de release
+description: Comment une branche main verte produit une release versionnée.
+---
+
+Les releases sont entièrement automatisées : tu ne lances pas `npm version` ni ne pousses de tags.
+
+## Déclencheur
+
+Chaque push sur `main` déclenche le job `release`. S'il n'y a aucun commit digne d'une release depuis le dernier tag, rien ne se passe.
+
+## Ce qui s'exécute
+
+1. `semantic-release` analyse les commits, décide la prochaine version (ou saute)
+2. Crée un tag git (par ex. `2.3.4`) et une GitHub Release avec des notes auto-générées
+3. Met à jour les versions de `package.json` dans chaque app/package
+4. Pousse un commit `chore(release): X.Y.Z [skip ci]` de retour sur main
+
+Puis, en parallèle :
+
+- `publish-images` build et push les images Docker vers GHCR avec les tags `X.Y.Z`, `X.Y`, `X` et `sha-…`
+- `publish-helm` met à jour les `version` et `appVersion` du chart, le package, le push vers GHCR OCI, l'attache à la GitHub Release
+
+## Correctifs urgents
+
+Utilise des commits `fix:` ; ils produisent une release patch. Il n'y a pas de branche hotfix séparée, `main` est toujours livrable.
+
+## Annuler une release
+
+Ne supprime pas le tag ni la release. Produis un nouveau commit `revert: ...` ou `fix: ...` qui annule le changement. Le prochain run du pipeline produit une nouvelle release patch.

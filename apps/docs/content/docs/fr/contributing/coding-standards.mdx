@@ -1,0 +1,30 @@
+---
+title: Standards de code
+description: À quoi le code doit ressembler et comment il doit se comporter dans ce repo.
+---
+
+## Outillage
+
+- **Biome** est le formateur et le linter. Lance `bun run lint` et `bun run format`.
+- **Mode strict TypeScript**. `any` est autorisé mais signalé par un avertissement. Les variables/imports inutilisés sont des erreurs.
+- **Pas de débat tabulations vs espaces** : Biome impose les tabulations et une largeur de ligne de 120 caractères.
+
+## Conventions
+
+- Préfère les **exports nommés** aux exports par défaut
+- Colocalise les tests avec la source : `foo.ts` + `foo.test.ts`
+- Les hooks vont dans `hooks/`, les composants dans `components/`, les fichiers de routes dans `routes/`
+- Le code côté serveur n'importe jamais depuis des chemins client uniquement (et vice versa)
+
+## Quoi va où
+
+- Logique vraiment partagée → `packages/core`
+- Logique web uniquement → `apps/web/src`
+- Logique API uniquement → `apps/api/src`
+- Tout ce qui est conscient de la plateforme (stockage d'authentification, fetch) → `packages/api-client/{web,mobile}`
+
+## À éviter
+
+- N'ajoute pas de `console.log` dans le code committé ; utilise le `logger` de `@routess/core`
+- N'introduis pas de nouvelle bibliothèque d'état ; Zustand et React Query suffisent
+- N'ajoute pas de bibliothèque CSS-in-JS ; nous avons Tailwind v4 + design tokens

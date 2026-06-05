@@ -1,0 +1,5 @@
+{
+	"title": "Health",
+	"description": "Health and monitoring",
+	"pages": ["get-health", "get-health-ready", "get-health-live"]
+}

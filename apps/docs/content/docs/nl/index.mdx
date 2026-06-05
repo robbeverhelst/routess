@@ -1,0 +1,58 @@
+---
+title: Developer Docs
+description: Architectuur, packages, deployment en bijdragen.
+---
+
+<div className="docs-hub">
+	<div className="docs-hub__intro">
+		<p className="docs-hub__eyebrow">Bouw aan routess</p>
+		<p className="docs-hub__lead">
+			Deze docs zijn voor wie aan routess bouwt, het deployt of eraan bijdraagt. Gebruik je de app zelf, ga dan naar de{" "}
+			<a href="/nl/guide">Gebruikersgids</a>.
+		</p>
+	</div>
+
+	<div className="docs-hub__grid">
+		<a href="/nl/docs/getting-started/local-setup" className="docs-hub__card">
+			<span className="docs-hub__card-title">De repo draaiend krijgen</span>
+			<span className="docs-hub__card-copy">Clone de monorepo, installeer de dependencies en start de stack lokaal op.</span>
+		</a>
+
+		<a href="/nl/docs/architecture/overview" className="docs-hub__card">
+			<span className="docs-hub__card-title">Het systeem begrijpen</span>
+			<span className="docs-hub__card-copy">Zie hoe de webapp, de API, de gedeelde packages en de deployment-onderdelen in elkaar passen.</span>
+		</a>
+
+		<a href="/nl/docs/operations/docker" className="docs-hub__card">
+			<span className="docs-hub__card-title">Uitrollen en beheren</span>
+			<span className="docs-hub__card-copy">Docker, Kubernetes, CI/CD, veilige standaardinstellingen en workflows richting productie.</span>
+		</a>
+	</div>
+
+	<div className="docs-hub__stack-grid">
+		<div className="docs-hub__stack">
+			<h2 className="docs-hub__stack-title">Verken per onderdeel</h2>
+			<ul>
+				<li>
+					<a href="/nl/docs/apps/web">Apps</a> voor de webclient, de API, de CLI, de landingssite en het mobiele plan
+				</li>
+				<li>
+					<a href="/nl/docs/packages/core">Packages</a> voor gedeelde businesslogica en clienthulpmiddelen
+				</li>
+				<li>
+					<a href="/nl/docs/contributing/coding-standards">Bijdragen</a> voor codeerregels, testen en releases
+				</li>
+			</ul>
+		</div>
+
+		<div className="docs-hub__stack">
+			<h2 className="docs-hub__stack-title">De tech stack in één oogopslag</h2>
+			<ul>
+				<li>Web: React 19, Vite, TanStack Router, Mapbox GL, Zustand, Tailwind v4</li>
+				<li>API: NestJS 11, MikroORM, PostgreSQL</li>
+				<li>Tooling: Bun, Biome, semantic-release, Helm, GitHub Actions</li>
+			</ul>
+		</div>
+
+	</div>
+</div>

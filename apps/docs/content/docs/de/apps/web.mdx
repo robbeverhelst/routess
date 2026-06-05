@@ -1,0 +1,49 @@
+---
+title: Web-App
+description: Die React 19 + Vite + Mapbox SPA in apps/web.
+---
+
+Die Web-App ist eine Single-Page-Application, gebaut mit **React 19**, **Vite 8** und **Mapbox GL 3**.
+
+## Struktur
+
+```
+apps/web/
+├── src/
+│   ├── components/    # Map, sidebar, controls
+│   ├── routes/        # TanStack Router routes
+│   ├── lib/           # Web-specific glue
+│   ├── hooks/         # React hooks
+│   └── main.tsx       # Entry
+├── public/            # Static assets
+├── nginx.conf         # Production server config
+├── entrypoint.sh      # Runtime env injection
+├── Dockerfile         # Multi-stage build → nginx
+└── vite.config.ts
+```
+
+## Wichtige Abhängigkeiten
+
+| Library | Wofür |
+| --- | --- |
+| `mapbox-gl` + `react-map-gl` | Die Karte |
+| `@tanstack/react-router` | Typsicheres Routing mit code-gesplitteten Routen |
+| `@tanstack/react-query` | Caching von Server-State |
+| `zustand` | Client-State (aus `@routess/core`) |
+| `tailwindcss` v4 | Styling, thematisiert über `@routess/design-tokens` |
+| `@radix-ui/*` | Headless-UI-Primitives |
+| `@react-oauth/google` | Google-Anmeldebutton |
+
+## Runtime-Konfiguration
+
+Das Dockerfile baut mit **Platzhalterwerten**. Beim Container-Start ersetzt `entrypoint.sh` die echten Werte aus den Umgebungsvariablen in den gebauten JS-Dateien. So lässt sich ein Image ohne Neubau über mehrere Umgebungen hinweg promoten.
+
+## Skripte
+
+```sh
+bun run dev              # Vite dev server
+bun run build            # Production build
+bun run preview          # Preview the production build locally
+bun run test             # Vitest
+bun run check-types      # tsc --noEmit
+```

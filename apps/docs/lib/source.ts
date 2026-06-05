@@ -10,10 +10,12 @@ export const guideSource = loader({
 
 export const docsSource = loader({
 	baseUrl: "/docs",
+	i18n,
 	source: developerDocs.toFumadocsSource(),
 });
 
 export const apiSource = loader({
 	baseUrl: "/api-reference",
+	i18n,
 	source: apiReference.toFumadocsSource(),
 });

@@ -1,0 +1,41 @@
+---
+title: Landingssite
+description: De Next.js-marketingsite in apps/landing.
+---
+
+De landingssite is een kleine **Next.js**-app die de publieke marketingpagina's op het apex-domein serveert. Ze staat los van de webapp (de planner) en van deze docs-site.
+
+## Structuur
+
+```
+apps/landing/
+├── app/
+│   ├── page.tsx           # Home page
+│   ├── developers/        # Developer-facing pitch page
+│   ├── privacy/           # Privacy policy
+│   ├── opengraph-image.tsx# OG image generation
+│   ├── robots.ts          # robots.txt
+│   └── sitemap.ts         # sitemap.xml
+├── lib/
+│   ├── i18n.ts            # Locale-from-host resolution
+│   └── content/           # Localized copy
+├── proxy.ts               # www → apex redirect + locale header
+└── Dockerfile             # Next.js standalone image
+```
+
+## Lokalisatie
+
+De landingssite leidt zijn locale af uit de aanvragende hostname (ccTLD-split, zie ADR `0017-cctld-locale-split`): `routess.com` serveert Engels en `routess.be` serveert Nederlands. Er is geen taalwisselaar aan clientzijde; het domein beslist.
+
+## Runtime
+
+Gebouwd als een Next.js **standalone**-image (`ghcr.io/robbeverhelst/routess-landing`) en gedeployd via dezelfde Helm-chart als de andere apps.
+
+## Scripts
+
+```sh
+bun run dev              # Next dev server (defaults to port 3002)
+bun run build            # Production build
+bun run test             # Unit tests for lib/
+bun run check-types      # tsc --noEmit
+```

@@ -134,6 +134,7 @@
       "name": "landing",
       "version": "0.1.0",
       "dependencies": {
+        "@routess/core": "workspace:*",
         "@routess/design-tokens": "workspace:*",
         "@tailwindcss/postcss": "^4.1.7",
         "mapbox-gl": "^3.13.0",

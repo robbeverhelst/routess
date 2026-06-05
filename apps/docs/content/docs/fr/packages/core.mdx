@@ -1,0 +1,34 @@
+---
+title: "@routess/core"
+description: Types partagés, stores Zustand et utilitaires indépendants de la plateforme.
+---
+
+Le package de base. Tout ce qui est sûr à la fois pour le web et React Native vit ici.
+
+## Exports
+
+| Sous-chemin | Contenu |
+| --- | --- |
+| `@routess/core` | Ré-exports des stores, types, utils, logger |
+| `@routess/core/stores` | Stores Zustand : routing, auth, ui |
+| `@routess/core/types` | Types TypeScript partagés |
+| `@routess/core/utils` | Helpers géospatiaux, formateurs, validateurs |
+
+## Types notables
+
+- `Coordinate` : tuple `[lng, lat]`
+- `Waypoint` : `{ coord: Coordinate, type: 'routed' | 'direct', name?, timestamp? }`
+- `RouteActivity` : `'run' | 'cycle' | 'walk'` (avec le tableau `ROUTE_ACTIVITIES` pour la validation au runtime)
+- `RouteVisibility` : `'private' | 'unlisted' | 'public'` (avec `ROUTE_VISIBILITIES`)
+- `RoutingPreferences` : `{ surfacePreference: SurfaceType, avoidFerries, avoidHighways }`
+
+## Ajouter un nouvel util
+
+1. Ajoute la fonction dans `src/utils/`
+2. Ré-exporte-la depuis `src/utils/index.ts`
+3. Ajoute un test unitaire à côté
+4. Ne bump rien ; le package est `workspace:*` et n'est pas publié
+
+## Ajouter un store
+
+Les stores vivent sous `src/stores/`. Garde-les sans framework : pas d'imports React, pas de DOM. Utilise `subscribeWithSelector` si tu as besoin d'abonnés ciblés.

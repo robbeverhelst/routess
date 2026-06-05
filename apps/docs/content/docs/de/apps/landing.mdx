@@ -1,0 +1,41 @@
+---
+title: Landingpage
+description: Die Next.js-Marketing-Seite in apps/landing.
+---
+
+Die Landingpage ist eine kleine **Next.js**-App, die die öffentlichen Marketing-Seiten auf der Apex-Domain ausliefert. Sie ist getrennt von der Web-App (dem Planer) und von dieser Docs-Seite.
+
+## Struktur
+
+```
+apps/landing/
+├── app/
+│   ├── page.tsx           # Home page
+│   ├── developers/        # Developer-facing pitch page
+│   ├── privacy/           # Privacy policy
+│   ├── opengraph-image.tsx# OG image generation
+│   ├── robots.ts          # robots.txt
+│   └── sitemap.ts         # sitemap.xml
+├── lib/
+│   ├── i18n.ts            # Locale-from-host resolution
+│   └── content/           # Localized copy
+├── proxy.ts               # www → apex redirect + locale header
+└── Dockerfile             # Next.js standalone image
+```
+
+## Lokalisierung
+
+Die Landingpage ermittelt ihre Locale aus dem anfragenden Hostnamen (ccTLD-Split, siehe ADR `0017-cctld-locale-split`): `routess.com` liefert Englisch und `routess.be` liefert Niederländisch. Es gibt keinen clientseitigen Sprachumschalter; die Domain entscheidet.
+
+## Runtime
+
+Gebaut als Next.js-**standalone**-Image (`ghcr.io/robbeverhelst/routess-landing`) und über denselben Helm-Chart wie die anderen Apps deployt.
+
+## Skripte
+
+```sh
+bun run dev              # Next dev server (defaults to port 3002)
+bun run build            # Production build
+bun run test             # Unit tests for lib/
+bun run check-types      # tsc --noEmit
+```

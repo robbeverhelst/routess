@@ -1,0 +1,136 @@
+---
+title: Kubernetes
+description: routess mit dem mitgelieferten Helm-Chart deployen.
+---
+
+Der Chart unter `charts/routess` deployt alle vier Apps (web, api, docs, landing) plus ihre Services, Ingresses und Sicherheitsrichtlinien. Postgres wird vom Chart **nicht** verwaltet; bring deine eigene Datenbank mit.
+
+Für Details auf Chart-Ebene siehe [`charts/routess/README.md`](https://github.com/robbeverhelst/routess/blob/main/charts/routess/README.md).
+
+## Voraussetzungen
+
+- Ein Kubernetes-Cluster und `kubectl`-Zugriff
+- **Helm 3.16+**
+- Eine erreichbare PostgreSQL-Instanz (der Chart erstellt keine)
+- Secrets griffbereit: JWT-Secret, Analytics-Salt, PAT-Pepper, Google-OAuth-Anmeldedaten, Datenbank-Anmeldedaten
+
+## Aus GHCR installieren
+
+```sh
+helm install routess oci://ghcr.io/robbeverhelst/charts/routess \
+  --version <VERSION> \
+  --namespace routess \
+  --create-namespace \
+  -f my-values.yaml
+```
+
+Die neueste Chart-Version findest du auf der [Releases-Seite](https://github.com/robbeverhelst/routess/releases); die Chart-Version folgt der App-Version.
+
+## Eine Ingress-Strategie wählen
+
+Der Standard-`ingress.className` ist `cloudflare-tunnel`, was **keine** Standard-Ingress-Klasse ist; er setzt voraus, dass ein Cloudflare-Tunnel-Controller installiert ist. In jedem anderen Setup überschreibe ihn (das nginx-Overlay unten setzt `className: nginx`).
+
+Der Chart liefert zwei Beispiel-Overlays:
+
+### Cloudflare Tunnel
+
+```sh
+helm install routess oci://ghcr.io/robbeverhelst/charts/routess \
+  -f charts/routess/values.example.cloudflare.yaml \
+  --set ingress.web.hosts[0]=routess.example.com \
+  --set ingress.api.hosts[0]=api.routess.example.com \
+  --set ingress.docs.hosts[0]=docs.routess.example.com \
+  --set networkPolicies.cloudflareNamespace=cloudflare \
+  ...
+```
+
+### ingress-nginx + cert-manager
+
+```sh
+helm install routess oci://ghcr.io/robbeverhelst/charts/routess \
+  -f charts/routess/values.example.nginx.yaml \
+  --set ingress.web.hosts[0]=routess.example.com \
+  --set ingress.api.hosts[0]=api.routess.example.com \
+  --set ingress.docs.hosts[0]=docs.routess.example.com \
+  ...
+```
+
+Setzt voraus, dass `ingress-nginx`, `cert-manager` und ein `ClusterIssuer` namens `letsencrypt-prod` bereits im Cluster vorhanden sind.
+
+## Erforderliche Secrets
+
+Übergib diese aus deinem Secret-Manager (1Password Connect, External Secrets Operator, sealed-secrets usw.):
+
+```sh
+--set api.secrets.jwtSecret=<random> \
+--set api.secrets.analyticsSalt=<random> \
+--set api.secrets.patPepper=<random> \
+--set api.secrets.googleClientId=<from-google> \
+--set api.secrets.googleClientSecret=<from-google> \
+--set api.secrets.dbHost=<postgres-host> \
+--set api.secrets.dbUser=<postgres-user> \
+--set api.secrets.dbPassword=<postgres-password> \
+--set networkPolicies.postgresEgress.host=<postgres-host>
+```
+
+Die API verweigert den Start ohne `JWT_SECRET`, `ANALYTICS_SALT` und `PAT_PEPPER`. Siehe [ADR-0022](https://github.com/robbeverhelst/routess/blob/main/docs/adr/0022-personal-access-tokens-for-non-browser-clients.md).
+
+Zwei verwandte Werte liegen unter `api.env`, nicht `api.secrets`: `api.env.dbName` (Standard `routess`) und `api.env.dbPort` (Standard `"5432"`). Überschreibe sie, wenn deine Datenbank abweicht. `api.secrets.resendApiKey` ist optional; leer bedeutet, dass Verifizierungs-E-Mails auf stdout geloggt statt versendet werden.
+
+Rotations-Auswirkung: das Rotieren von `jwtSecret` meldet jeden Nutzer ab, das Rotieren von `patPepper` invalidiert jedes Personal Access Token, und das Rotieren von `analyticsSalt` setzt die Analytics-Pseudonyme zurück.
+
+## Aufbau der Values
+
+Top-Level-Keys:
+
+- `global`: Namespace, geteilte Umami-Analytics-Konfiguration
+- `web`, `api`, `docs`, `landing`: Deployment-Konfiguration pro App (Replicas, Resources, Probes, Security)
+- `ingress`: Host-Konfiguration pro Service
+- `networkPolicies`: Default-Deny + app-spezifische Allows ([ADR-0006](https://github.com/robbeverhelst/routess/blob/main/docs/adr/0006-kubernetes-deny-all-network-policy-baseline.md))
+- `monitoring.serviceMonitor`: Prometheus-Operator-Integration
+- `serviceAccount`: minimales RBAC pro Service
+
+Die vollständige Referenz findest du in [`values.yaml`](https://github.com/robbeverhelst/routess/blob/main/charts/routess/values.yaml).
+
+## Probes und Disruption-Budgets
+
+Die API stellt `GET /health/live` (Prozess läuft) und `GET /health/ready` (Datenbank erreichbar) bereit; der Chart verdrahtet sie als Liveness- und Readiness-Probes. Web, docs und landing proben `GET /`.
+
+PodDisruptionBudgets halten während Node-Drains mindestens ein Replica von web, api und landing aufrecht (`podDisruptionBudget.minAvailable: 1`); docs läuft als einzelnes Replica ohne PDB.
+
+## Skalierung
+
+Jede App liefert einen optionalen HorizontalPodAutoscaler: setze `<app>.autoscaling.enabled=true` (Defaults: min 2, max 5, Ziel 80 % CPU; docs skaliert 1 bis 3). Web, docs und landing sind zustandslos und skalieren frei.
+
+Für die API: denke daran, dass jeder Pod seine eigenen PostgreSQL-Verbindungen öffnet; ein Erhöhen von `maxReplicas` vervielfacht die Verbindungsanzahl. Wenn du breit skalierst, stelle einen Pooler (PgBouncer oder das eingebaute Pooling deines managed Postgres) vor die Datenbank.
+
+## Swagger in Produktion
+
+Der Chart setzt `api.env.swaggerEnabled: "true"`, sodass interaktive API-Docs unter `/api` auf dem API-Host bereitgestellt werden. Der Anwendungs-Default in Produktion ist aus; setze den Wert auf `"false"`, wenn du sie nicht öffentlich haben willst.
+
+## Lokal rendern
+
+```sh
+helm template test ./charts/routess \
+  --set api.secrets.jwtSecret=test \
+  --set api.secrets.analyticsSalt=test \
+  --set api.secrets.patPepper=test \
+  --set api.secrets.googleClientId=test \
+  --set api.secrets.googleClientSecret=test \
+  --set api.secrets.dbHost=10.0.0.1 \
+  --set api.secrets.dbUser=test \
+  --set api.secrets.dbPassword=test
+```
+
+## Upgraden
+
+Snapshotte zuerst die Datenbank; Migrationen sind nur vorwärts gerichtet, und `helm rollback` macht Schema-Änderungen nicht rückgängig. Ein `pg_dump` vor dem Upgrade ist dein Rollback-Pfad.
+
+```sh
+helm upgrade routess oci://ghcr.io/robbeverhelst/charts/routess \
+  --version <NEW_VERSION> \
+  -n routess \
+  -f my-values.yaml
+```
+
+Die API führt MikroORM-Migrationen beim Start aus. Es gelten die üblichen Rolling-Update-Mechaniken: der erste neue API-Pod migriert das Schema, beobachte also seine Logs, bevor du den Rest rollen lässt.
