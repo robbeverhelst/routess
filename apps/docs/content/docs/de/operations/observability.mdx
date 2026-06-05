@@ -1,0 +1,45 @@
+---
+title: Observability
+description: Metriken, Traces und Logs.
+---
+
+Die API wird mit verdrahtetem **OpenTelemetry** ausgeliefert.
+
+## Metriken
+
+`GET /metrics` auf dem API-Port stellt Metriken im Prometheus-Format bereit. Der Endpunkt ist standardmäßig nur von innerhalb des Namespace erreichbar. Scrape ihn von deinem Prometheus-Deployment aus mit einem `ServiceMonitor`; der Chart liefert einen unter `charts/routess/templates/api-servicemonitor.yaml`, standardmäßig deaktiviert, den du mit `monitoring.serviceMonitor.enabled=true` aktivierst.
+
+Zwei Umgebungsvariablen steuern die Erfassung: `TELEMETRY_ENABLED` (Hauptschalter für Metriken und Traces) und `METRICS_ENABLED` (nur Metriken). Beide stehen standardmäßig auf `true`; sind die Metriken aus, gibt `/metrics` 503 zurück.
+
+## Admin-Panel
+
+Betreiber, deren E-Mail in `ADMIN_EMAILS` gelistet ist, sehen ein In-App-Admin-Panel unter `/admin`, das ein Übersichts-Dashboard, Nutzer, Routen und eine System-Health-Seite abdeckt. Das Panel wird von den `/admin/*`-API-Endpunkten gestützt, alle durch die `admin`-Rolle geschützt. Das Datenmodell und die Endpunkte findest du in [`docs/architecture/admin`](../architecture/admin).
+
+Die System-Seite kann auf deine Grafana-Dashboards verlinken. Setze `GRAFANA_URLS` auf ein JSON-Objekt: `{"apiOverview":"https://…","apiLatency":"https://…","runtime":"https://…"}` (im Chart: `monitoring.grafanaUrls`).
+
+## Traces
+
+Die API instrumentiert eingehendes HTTP, ausgehendes HTTP und Datenbankabfragen über `@opentelemetry/auto-instrumentations-node`. Konfiguriere den Exporter über die standardmäßigen `OTEL_*`-Umgebungsvariablen:
+
+```sh
+OTEL_EXPORTER_OTLP_ENDPOINT=https://otel-collector:4318
+OTEL_SERVICE_NAME=routess-api
+OTEL_RESOURCE_ATTRIBUTES=deployment.environment=prod
+```
+
+Die API hängt `/v1/traces` an den Endpunkt an; lass ihn ungesetzt, um den Trace-Export zu deaktivieren. Authentifizierte Collectors nehmen zusätzliche Header über `OTEL_EXPORTER_OTLP_HEADERS` als JSON-Objekt entgegen, z. B. `{"authorization":"Bearer …"}`.
+
+Jeder OTLP/HTTP-Receiver funktioniert als Endpunkt: ein In-Cluster-[OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) oder Grafana Alloy oder direkt ein gehostetes Backend (Grafana Tempo, Honeycomb, Datadog).
+
+## Logs
+
+Die API loggt strukturiertes JSON auf stdout. Alles, was Kubernetes-Pod-Logs sammelt (Loki, Datadog, CloudWatch), greift sie ab. Jede Logzeile enthält `traceId` und `spanId`, sodass du von einer langsamen Logzeile zu ihrem Trace springen kannst. Die Ausführlichkeit wird über `LOG_LEVEL` gesteuert (Standard `info`).
+
+Im Browser loggt die Web-App standardmäßig auf `warn`. Um eine Session zu debuggen, setze `localStorage["routess:log-level"]` auf `debug` und lade neu. Mit konfiguriertem `VITE_SENTRY_DSN` stellt der Web-Container außerdem einen First-Party-Tunnel `/__t` bereit, der Browser-Fehler-Envelopes an Sentry/GlitchTip proxyt, sodass Berichte Werbeblocker überleben.
+
+## Health-Endpunkte
+
+- `GET /health/live`: Prozess lebt
+- `GET /health/ready`: DB erreichbar, bereit zu bedienen
+
+Diese stützen die Kubernetes-Liveness- und Readiness-Probes.

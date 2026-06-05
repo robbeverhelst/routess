@@ -1,0 +1,40 @@
+---
+title: Sécurité
+description: Le durcissement de sécurité intégré au chart Helm.
+---
+
+routess est livré avec des réglages de sécurité Kubernetes prêts pour la production.
+
+## Network Policies
+
+Une politique default-deny bloque tout l'ingress et l'egress dans le namespace `routess`. Les autorisations sont explicites :
+
+- **Web** : ingress depuis le namespace du tunnel Cloudflare uniquement
+- **API** : ingress depuis le tunnel Cloudflare + intra-namespace ; egress vers Postgres + DNS + externe (pour Google OAuth)
+- **Docs / Landing** : ingress depuis le tunnel Cloudflare uniquement
+
+L'egress DNS est autorisé à l'échelle du namespace sur UDP/TCP 53.
+
+## Pod Security Standards
+
+Chaque pod tourne :
+
+- **Non-root** : web en UID 101 (nginx), api en 1000, docs et landing en 1001
+- **Pas d'escalade de privilèges** : `allowPrivilegeEscalation: false`
+- **Capabilities supprimées** : `capabilities.drop: [ALL]`
+- **Seccomp** : profil `RuntimeDefault`
+- **Système de fichiers racine en lecture seule** : api uniquement (le web a besoin des répertoires temp de nginx)
+
+## ServiceAccounts
+
+Chaque service a un ServiceAccount dédié avec `automountServiceAccountToken: false`. Aucune des charges de travail n'a besoin d'appeler l'API Kubernetes.
+
+## Secrets
+
+Les secrets de l'API (secret JWT, sel d'analytics, poivre de PAT, identifiants Google OAuth, identifiants de BD, clé Resend) sont stockés dans des objets `Secret` Kubernetes et injectés en tant que variables d'environnement via `secretKeyRef`. La CI tire les valeurs de 1Password et les injecte via `helm install --set`.
+
+Planifie les rotations : faire tourner le secret JWT déconnecte tous les utilisateurs, faire tourner le poivre de PAT invalide tous les personal access tokens, et faire tourner le sel d'analytics réinitialise les pseudonymes d'analytics.
+
+## Limites de ressources
+
+Des limites de CPU, mémoire et stockage éphémère sont définies sur chaque conteneur pour empêcher l'épuisement des ressources.

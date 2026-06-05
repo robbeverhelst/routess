@@ -1,0 +1,46 @@
+---
+title: "@routess/api-client"
+description: Client HTTP avec adaptateurs web et mobile.
+---
+
+Un fin wrapper autour de `fetch` qui abstrait les différences entre les cookies du navigateur et les en-têtes d'authentification de React Native.
+
+## Exports
+
+| Sous-chemin | À utiliser depuis |
+| --- | --- |
+| `@routess/api-client` | Types communs et client de base |
+| `@routess/api-client/web` | Navigateur ; utilise les cookies pour l'authentification |
+| `@routess/api-client/mobile` | React Native ; utilise des tokens Bearer depuis le stockage sécurisé |
+
+## Utilisation (web)
+
+```ts
+import { createApiClient } from "@routess/api-client/web";
+
+const api = createApiClient({ baseURL: import.meta.env.VITE_API_URL });
+
+const me = await api.auth.me();
+const routes = await api.routes.list();
+```
+
+## Utilisation (mobile)
+
+```ts
+import { createApiClient } from "@routess/api-client/mobile";
+import * as SecureStore from "expo-secure-store";
+
+const api = createApiClient({
+	baseURL: process.env.EXPO_PUBLIC_API_URL!,
+	getToken: () => SecureStore.getItemAsync("authToken"),
+});
+```
+
+## Gestion des erreurs
+
+Toutes les méthodes du client lèvent `ApiError` sur les réponses non-2xx. L'erreur inclut :
+
+- `status` : code de statut HTTP
+- `code` : code d'erreur lisible par une machine, renvoyé par l'API
+- `message` : lisible par un humain
+- `fieldErrors?` : pour les erreurs de validation 422

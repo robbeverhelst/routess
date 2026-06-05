@@ -1,0 +1,46 @@
+---
+title: "@routess/api-client"
+description: HTTP-client met web- en mobile-adapters.
+---
+
+Een dunne wrapper rond `fetch` die de verschillen abstraheert tussen browsercookies en React Native-auth-headers.
+
+## Exports
+
+| Subpath | Gebruik het vanuit |
+| --- | --- |
+| `@routess/api-client` | Gemeenschappelijke types en base client |
+| `@routess/api-client/web` | Browser; gebruikt cookies voor auth |
+| `@routess/api-client/mobile` | React Native; gebruikt Bearer-tokens uit secure storage |
+
+## Gebruik (web)
+
+```ts
+import { createApiClient } from "@routess/api-client/web";
+
+const api = createApiClient({ baseURL: import.meta.env.VITE_API_URL });
+
+const me = await api.auth.me();
+const routes = await api.routes.list();
+```
+
+## Gebruik (mobile)
+
+```ts
+import { createApiClient } from "@routess/api-client/mobile";
+import * as SecureStore from "expo-secure-store";
+
+const api = createApiClient({
+	baseURL: process.env.EXPO_PUBLIC_API_URL!,
+	getToken: () => SecureStore.getItemAsync("authToken"),
+});
+```
+
+## Foutafhandeling
+
+Alle clientmethodes gooien `ApiError` bij niet-2xx-responses. De fout bevat:
+
+- `status`: HTTP-statuscode
+- `code`: machineleesbare foutcode van de API
+- `message`: leesbaar voor mensen
+- `fieldErrors?`: voor 422-validatiefouten

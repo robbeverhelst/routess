@@ -1,0 +1,5 @@
+{
+	"title": "Sessions",
+	"description": "Active session management",
+	"pages": ["get-me-sessions", "delete-me-sessions-id", "post-me-sessions-logout-everywhere"]
+}

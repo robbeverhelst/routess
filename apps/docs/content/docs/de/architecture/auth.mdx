@@ -1,0 +1,40 @@
+---
+title: Authentifizierung
+description: Google OAuth und E-Mail-Anmeldung plus Session-Verwaltung.
+---
+
+routess unterstützt zwei Anmeldemethoden, **Google OAuth (One-Tap)** und **E-Mail + Passwort**, die beide im selben **JWT-Session-Cookie** auf der API enden.
+
+## Google-Flow
+
+1. Die Web-App lädt das Google Identity Services SDK und rendert den Anmeldebutton.
+2. Bei Erfolg gibt Google ein **ID-Token** an den Browser zurück.
+3. Web postet das ID-Token an `POST /api/v1/auth/google`.
+4. Die API verifiziert die Signatur und die Audience des Tokens gegen Googles JWKS.
+5. Die API legt den Nutzer an oder aktualisiert ihn (per Google `sub`), stellt ihr eigenes JWT aus und setzt es als `HttpOnly`-, `Secure`-, `SameSite=Lax`-Cookie.
+6. Nachfolgende API-Aufrufe enthalten das Cookie automatisch.
+
+## E-Mail-Flow
+
+1. `POST /api/v1/auth/signup-email` registriert das Konto (Passwörter sind mindestens 12 Zeichen lang, im Ruhezustand gehasht) und versendet einen Verifizierungslink, gültig für 24 Stunden.
+2. `POST /api/v1/auth/verify-email` konsumiert das Token des Links und meldet den Nutzer an.
+3. `POST /api/v1/auth/login-email` meldet bei späteren Besuchen an und stellt dasselbe Session-Cookie aus wie der Google-Flow.
+4. `POST /api/v1/auth/request-password-reset` mailt einen Reset-Link, gültig für 30 Minuten; `POST /api/v1/auth/reset-password` konsumiert ihn.
+
+Der E-Mail-Versand läuft über Resend, wenn `RESEND_API_KEY` gesetzt ist; andernfalls werden Verifizierungs- und Reset-URLs auf stdout geloggt (der Dev-/Self-Host-Konsolen-Transport).
+
+Ein per Google angelegtes Konto kann später ein Passwort hinzufügen (`POST /api/v1/users/me/password`), sodass beide Methoden für denselben Nutzer funktionieren.
+
+## Warum ein vom Server ausgestelltes JWT?
+
+- Erlaubt uns, app-spezifische Claims hinzuzufügen (Nutzerrolle, Standardeinheit)
+- Entkoppelt die Session-Lebensdauer vom Token von Google
+- Wir müssen nicht bei jedem Request Google aufrufen
+
+## Abmelden
+
+`POST /api/v1/auth/logout` löscht das Cookie. Die Web-App löscht außerdem den Zustand-Auth-State.
+
+## Session-Refresh
+
+JWTs sind kurzlebig (15 Minuten). Die API erneuert bei jedem authentifizierten Request still und gibt ein frisches Cookie zurück. Ist der Nutzer zu lange weg, läuft das Cookie ab und er meldet sich über Googles stille Re-Authentifizierung erneut an (in den meisten Fällen ohne Nutzerinteraktion).

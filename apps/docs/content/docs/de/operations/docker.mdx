@@ -1,0 +1,46 @@
+---
+title: Docker
+description: routess-Images bauen und ausführen.
+---
+
+Jede App hat ihr eigenes Dockerfile. Builds laufen vom **Monorepo-Root**, damit `bun install` die `workspace:*`-Abhängigkeiten auflösen kann. Alle App-Images bauen auf einem geteilten Dependency-Image (`docker/Dockerfile.deps`) auf, das als Build-Arg `DEPS_IMAGE` übergeben wird.
+
+## Veröffentlichte Images
+
+| Image | Quelle | Basis | Hinweise |
+| --- | --- | --- | --- |
+| `ghcr.io/robbeverhelst/routess-web` | `apps/web/Dockerfile` | `nginx:alpine` | Statische SPA, Runtime-Env-Injection |
+| `ghcr.io/robbeverhelst/routess-api` | `apps/api/Dockerfile` | `oven/bun:alpine` | Read-only-Root-Dateisystem |
+| `ghcr.io/robbeverhelst/routess-docs` | `apps/docs/Dockerfile` | `node:24-alpine` | Next.js standalone |
+| `ghcr.io/robbeverhelst/routess-landing` | `apps/landing/Dockerfile` | `node:24-alpine` | Next.js standalone |
+
+## Lokal bauen
+
+Baue das geteilte Deps-Image einmal und bake dann alle App-Images:
+
+```sh
+# from the monorepo root
+docker build -f docker/Dockerfile.deps -t routess-deps .
+
+# all images (web, api, docs, landing)
+DEPS_IMAGE=routess-deps bun run build:images
+```
+
+Um stattdessen ein einzelnes Image zu bauen:
+
+```sh
+docker build --build-arg DEPS_IMAGE=routess-deps -f apps/web/Dockerfile -t routess-web .
+```
+
+## Lokal ausführen
+
+```sh
+docker run --rm -p 8080:8080 \
+	-e VITE_API_URL=http://localhost:3000 \
+	-e VITE_MAPBOX_ACCESS_TOKEN=pk.xxx \
+	ghcr.io/robbeverhelst/routess-web:latest
+```
+
+## Architekturen
+
+CI baut `linux/amd64`-Images über `docker buildx`. Auf Apple Silicon führt Docker sie per Rosetta-Emulation aus; native arm64-Images werden noch nicht veröffentlicht.

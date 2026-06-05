@@ -1,0 +1,4 @@
+{
+	"title": "Documentation développeur",
+	"pages": ["index", "getting-started", "architecture", "apps", "packages", "operations", "contributing"]
+}

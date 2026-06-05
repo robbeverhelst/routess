@@ -1,0 +1,47 @@
+---
+title: CI/CD
+description: Comment le code passe d'une PR à un cluster en fonctionnement.
+---
+
+routess utilise **GitHub Actions** sur un runner auto-hébergé labellisé `arc-routess`.
+
+## Pipeline (`.github/workflows/ci.yml`)
+
+```
+PR / push  ──▶  test  ──┐
+                        ├──▶  release (semantic-release)  ──▶  publish-images
+PR / push  ──▶  helm-validate  ┘                                          │
+                                                                          │
+                                                              publish-helm  ──▶  GHCR (chart)
+```
+
+## Étapes
+
+| Étape | Ce qu'elle fait |
+| --- | --- |
+| **test** | `bun install` → Biome → vérification de types → exécution des tests avec un conteneur de service Postgres → build de tout |
+| **helm-validate** | `helm lint` + `helm template` pour détecter les erreurs du chart |
+| **release** | S'exécute uniquement sur un push `main`. `semantic-release` lit les commits conventionnels, décide la version, crée le tag + les notes de release |
+| **publish-images** | Builds en matrice des images Docker web/api/docs/landing, push vers GHCR avec les tags `version`, `minor`, `major` et `sha` |
+| **publish-helm** | Met à jour la version dans Chart.yaml, `helm package`, `helm push` vers le registre OCI GHCR |
+| **publish-cli** | Publie le CLI `routess` sur npm avec provenance. S'exécute sur un runner hébergé par GitHub car npm rejette les attestations de provenance issues de runners auto-hébergés |
+
+## Détails du build
+
+- L'image de deps partagée est mise en cache dans GHCR (`routess-deps:cache`, cache de registre BuildKit), donc les builds d'images d'app ne se relancent que lorsque le lockfile change.
+- Les identifiants d'upload des source-maps Sentry viennent de 1Password et atteignent `docker buildx bake` via un **secret mount** BuildKit ; ils n'entrent jamais dans les couches d'image.
+- `VITE_APP_VERSION` est figé à la version de release au moment du build pour que la release Sentry corresponde à ce que `env-config.js` rapporte au runtime.
+
+## Versioning
+
+`semantic-release` lit les commits depuis le dernier tag :
+
+- `feat:` → bump mineur
+- `fix:` → bump patch
+- `feat!:` ou `BREAKING CHANGE:` → bump majeur
+
+La même version se propage dans les tags Docker et le chart Helm. Lance `bun run release` en local uniquement si tu sais ce que tu fais ; le pipeline le fait pour toi.
+
+## Runner auto-hébergé
+
+`arc-routess` est un déploiement Actions Runner Controller dans le même cluster. Les builds ont lieu près du registre, ce qui maintient un taux de hits de cache élevé.

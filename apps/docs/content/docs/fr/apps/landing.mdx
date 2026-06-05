@@ -1,0 +1,41 @@
+---
+title: Site vitrine
+description: Le site marketing Next.js dans apps/landing.
+---
+
+Le site vitrine est une petite application **Next.js** qui sert les pages marketing publiques sur le domaine apex. Il est distinct de l'application web (le planificateur) et de ce site de documentation.
+
+## Structure
+
+```
+apps/landing/
+├── app/
+│   ├── page.tsx           # Home page
+│   ├── developers/        # Developer-facing pitch page
+│   ├── privacy/           # Privacy policy
+│   ├── opengraph-image.tsx# OG image generation
+│   ├── robots.ts          # robots.txt
+│   └── sitemap.ts         # sitemap.xml
+├── lib/
+│   ├── i18n.ts            # Locale-from-host resolution
+│   └── content/           # Localized copy
+├── proxy.ts               # www → apex redirect + locale header
+└── Dockerfile             # Next.js standalone image
+```
+
+## Localisation
+
+Le site vitrine résout sa locale à partir du nom d'hôte de la requête (découpage par ccTLD, voir l'ADR `0017-cctld-locale-split`) : `routess.com` sert l'anglais et `routess.be` sert le néerlandais. Il n'y a pas de sélecteur de langue côté client ; le domaine décide.
+
+## Runtime
+
+Build en tant qu'image Next.js **standalone** (`ghcr.io/robbeverhelst/routess-landing`) et déployé via le même chart Helm que les autres apps.
+
+## Scripts
+
+```sh
+bun run dev              # Next dev server (defaults to port 3002)
+bun run build            # Production build
+bun run test             # Unit tests for lib/
+bun run check-types      # tsc --noEmit
+```

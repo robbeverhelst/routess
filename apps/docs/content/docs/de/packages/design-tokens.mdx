@@ -1,0 +1,49 @@
+---
+title: "@routess/design-tokens"
+description: Farben, Typografie, Abstände und Animationen, geteilt über Web und Mobile.
+---
+
+Design-Werte zentralisiert, damit die Web-App, diese Docs-Seite und die künftige Mobile-App alle gleich aussehen.
+
+## Was drin ist
+
+- **Farben**: helle + dunkle Paletten in OKLCH
+- **Typografie**: Schriftgrößen, -gewichte, Zeilenhöhen
+- **Abstände**: konsistente Skala (xs/sm/md/lg/xl)
+- **Border-Radius**: `--radius`-System
+- **Animationen**: fade-, slide-, scale-, spin-Keyframes
+
+## Nutzung (Web)
+
+Importiere das CSS einmal am App-Einstiegspunkt:
+
+```ts
+import "@routess/design-tokens/css/tokens.css";
+```
+
+Nutze die CSS-Variablen direkt:
+
+```css
+.card {
+	background: var(--card);
+	color: var(--card-foreground);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-lg);
+}
+```
+
+Oder die Tailwind-v4-Theme-Tokens (`bg-card`, `text-foreground` usw.), bereits über `@theme inline` verdrahtet.
+
+## Nutzung (React Native)
+
+Importiere die JS-Exports:
+
+```ts
+import { lightColors, darkColors, spacing } from "@routess/design-tokens";
+```
+
+OKLCH wird in RN nicht direkt unterstützt; nutze die Helfer-Utilities im Paket, um hex/rgb-Fallbacks zu erhalten.
+
+## Dark Mode
+
+Füge die `dark`-Klasse zu `<html>` (oder `<body>`) hinzu, und die dunklen Token-Werte übernehmen. Die Web-App und die Docs-Seite folgen beide standardmäßig der Systemvorgabe des Nutzers.

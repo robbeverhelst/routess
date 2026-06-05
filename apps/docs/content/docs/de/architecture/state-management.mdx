@@ -1,0 +1,26 @@
+---
+title: State-Management
+description: Zustand-Stores, Persistenz und Undo/Redo.
+---
+
+routess nutzt **Zustand** für den Client-State. Die Stores liegen in `packages/core/src/stores/`, sodass die Web- und die (künftige) Mobile-App sie teilen können.
+
+## Stores
+
+- **routingStore**: Wegpunkte der aktuellen Route, abgeleitete Statistiken, Undo/Redo-Historie
+- **authStore**: aktueller Nutzer, OAuth-State
+- **uiStore**: Kartenstil, Status der geöffneten Sidebar, Sprache
+
+## Warum Zustand (nicht Redux/Jotai)
+
+- Winzige API, kein Actions/Reducers-Boilerplate
+- Funktioniert außerhalb von React (sodass Pakete es nutzen können)
+- Eingebaute Middleware: `persist`, `subscribeWithSelector`
+
+## Persistenz
+
+Die Web-App umhüllt `routingStore` und `uiStore` mit der `persist`-Middleware auf Basis von `localStorage`. Die Mobile-App wird das durch `AsyncStorage` ersetzen (siehe Phase 5 des Mobile-Plans).
+
+## Undo / Redo
+
+Der Routing-Store hält eine begrenzte Historie vergangener States. Jede Mutation legt den aktuellen State auf den Undo-Stack, bevor sie angewendet wird. Redo stellt bei jedem Undo aus dem Redo-Stack wieder her. Die Stacks werden bei einem Auth-Wechsel zurückgesetzt.

@@ -1,0 +1,31 @@
+---
+title: Adminpaneel
+description: Hoe de admin-UI in de app aan elkaar hangt.
+---
+
+routess komt met een ingebouwd adminpaneel voor operators. Het leeft onder `/admin` in de webapp en wordt aangedreven door `/admin/*`-endpoints op de API.
+
+## Toegangscontrole
+
+De adminrol wordt bij het aanmelden toegekend. Elk e-mailadres dat in de `ADMIN_EMAILS`-omgevingsvariabele op de API staat (kommagescheiden) krijgt bij de volgende login `role: "admin"` op zijn sessie-JWT geschreven. Andere gebruikers zien geen `/admin`-route in de navigatie, en API-requests worden geweigerd door de `RolesGuard`.
+
+`ADMIN_EMAILS` leeg laten schakelt het paneel volledig uit. Er is geen super-user-bootstrap; je voorziet admins door de omgevingsvariabele aan te passen en de API te herstarten.
+
+## Onderdelen
+
+| Paneel              | Route                | Doel                                                        |
+| ------------------ | -------------------- | -------------------------------------------------------------- |
+| Overzichtsdashboard | `/admin`             | KPI's: gebruikers, routes, aanmeldingen, churn, recente activiteit |
+| Gebruikers              | `/admin/users`       | Gepagineerde + doorzoekbare lijst, detail per gebruiker, sessie intrekken   |
+| Routes             | `/admin/routes`      | Gepagineerde + doorzoekbare lijst, detail per route, soft-delete     |
+| Systeem             | `/admin/system`      | API-health, versie, uptime, DB-bereikbaarheid, runtime-config   |
+
+Alle endpoints leven op de API op het overeenkomstige pad onder `/admin/*` (bv. `/admin/stats/overview`, `/admin/users/:id`, `/admin/system/health`).
+
+## Audit trail
+
+Elke muterende aanroep (soft-delete, sessie intrekken) gaat door een `AuditInterceptor` die een gestructureerde logregel schrijft met de user-ID van de admin, de actie en het doelwit. Aggregeer deze samen met de rest van de API-logs.
+
+## Metrics
+
+Adminacties en de data-fetches van het paneel maken deel uit van hetzelfde `/metrics`-oppervlak als de rest van de API. Zie [Observability](../operations/observability).

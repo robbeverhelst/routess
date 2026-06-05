@@ -1,0 +1,58 @@
+---
+title: Entwicklerdocs
+description: Architektur, Pakete, Deployment und Mitwirken.
+---
+
+<div className="docs-hub">
+	<div className="docs-hub__intro">
+		<p className="docs-hub__eyebrow">routess entwickeln</p>
+		<p className="docs-hub__lead">
+			Diese Docs richten sich an Menschen, die routess entwickeln, deployen oder dazu beitragen. Wenn du die App nutzt, springe stattdessen zum{" "}
+			<a href="/de/guide">Benutzerhandbuch</a>.
+		</p>
+	</div>
+
+	<div className="docs-hub__grid">
+		<a href="/de/docs/getting-started/local-setup" className="docs-hub__card">
+			<span className="docs-hub__card-title">Das Repo zum Laufen bringen</span>
+			<span className="docs-hub__card-copy">Klone das Monorepo, installiere die Abhängigkeiten und starte den Stack lokal.</span>
+		</a>
+
+		<a href="/de/docs/architecture/overview" className="docs-hub__card">
+			<span className="docs-hub__card-title">Das System verstehen</span>
+			<span className="docs-hub__card-copy">Sieh dir an, wie die Web-App, die API, die geteilten Pakete und die Deployment-Bausteine zusammenpassen.</span>
+		</a>
+
+		<a href="/de/docs/operations/docker" className="docs-hub__card">
+			<span className="docs-hub__card-title">Ausliefern und betreiben</span>
+			<span className="docs-hub__card-copy">Docker, Kubernetes, CI/CD, Sicherheits-Defaults und produktionsnahe Workflows.</span>
+		</a>
+	</div>
+
+	<div className="docs-hub__stack-grid">
+		<div className="docs-hub__stack">
+			<h2 className="docs-hub__stack-title">Nach Bereich erkunden</h2>
+			<ul>
+				<li>
+					<a href="/de/docs/apps/web">Apps</a> für den Web-Client, die API, die CLI, die Landingpage und den Mobile-Plan
+				</li>
+				<li>
+					<a href="/de/docs/packages/core">Pakete</a> für geteilte Geschäftslogik und Client-Utilities
+				</li>
+				<li>
+					<a href="/de/docs/contributing/coding-standards">Mitwirken</a> für Coding-Regeln, Tests und Releases
+				</li>
+			</ul>
+		</div>
+
+		<div className="docs-hub__stack">
+			<h2 className="docs-hub__stack-title">Tech-Stack auf einen Blick</h2>
+			<ul>
+				<li>Web: React 19, Vite, TanStack Router, Mapbox GL, Zustand, Tailwind v4</li>
+				<li>API: NestJS 11, MikroORM, PostgreSQL</li>
+				<li>Tooling: Bun, Biome, semantic-release, Helm, GitHub Actions</li>
+			</ul>
+		</div>
+
+	</div>
+</div>

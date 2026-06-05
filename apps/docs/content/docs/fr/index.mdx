@@ -1,0 +1,58 @@
+---
+title: Documentation développeur
+description: Architecture, packages, déploiement et contribution.
+---
+
+<div className="docs-hub">
+	<div className="docs-hub__intro">
+		<p className="docs-hub__eyebrow">Construire routess</p>
+		<p className="docs-hub__lead">
+			Cette documentation s'adresse aux personnes qui construisent, déploient ou contribuent à routess. Si tu utilises l'application, rends-toi plutôt sur le{" "}
+			<a href="/fr/guide">Guide utilisateur</a>.
+		</p>
+	</div>
+
+	<div className="docs-hub__grid">
+		<a href="/fr/docs/getting-started/local-setup" className="docs-hub__card">
+			<span className="docs-hub__card-title">Faire tourner le repo</span>
+			<span className="docs-hub__card-copy">Clone le monorepo, installe les dépendances et démarre la stack en local.</span>
+		</a>
+
+		<a href="/fr/docs/architecture/overview" className="docs-hub__card">
+			<span className="docs-hub__card-title">Comprendre le système</span>
+			<span className="docs-hub__card-copy">Découvre comment l'application web, l'API, les packages partagés et les éléments de déploiement s'assemblent.</span>
+		</a>
+
+		<a href="/fr/docs/operations/docker" className="docs-hub__card">
+			<span className="docs-hub__card-title">Livrer et opérer</span>
+			<span className="docs-hub__card-copy">Docker, Kubernetes, CI/CD, réglages de sécurité par défaut et workflows orientés production.</span>
+		</a>
+	</div>
+
+	<div className="docs-hub__stack-grid">
+		<div className="docs-hub__stack">
+			<h2 className="docs-hub__stack-title">Explorer par domaine</h2>
+			<ul>
+				<li>
+					<a href="/fr/docs/apps/web">Apps</a> pour le client web, l'API, le CLI, le site vitrine et le plan mobile
+				</li>
+				<li>
+					<a href="/fr/docs/packages/core">Packages</a> pour la logique métier partagée et les utilitaires client
+				</li>
+				<li>
+					<a href="/fr/docs/contributing/coding-standards">Contribuer</a> pour les règles de code, les tests et les releases
+				</li>
+			</ul>
+		</div>
+
+		<div className="docs-hub__stack">
+			<h2 className="docs-hub__stack-title">La stack technique en un coup d'œil</h2>
+			<ul>
+				<li>Web : React 19, Vite, TanStack Router, Mapbox GL, Zustand, Tailwind v4</li>
+				<li>API : NestJS 11, MikroORM, PostgreSQL</li>
+				<li>Outillage : Bun, Biome, semantic-release, Helm, GitHub Actions</li>
+			</ul>
+		</div>
+
+	</div>
+</div>

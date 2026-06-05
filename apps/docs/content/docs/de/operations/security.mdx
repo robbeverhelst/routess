@@ -1,0 +1,40 @@
+---
+title: Sicherheit
+description: In den Helm-Chart eingebaute Sicherheitshärtung.
+---
+
+routess wird mit produktionsreifen Kubernetes-Sicherheits-Defaults ausgeliefert.
+
+## Network Policies
+
+Eine Default-Deny-Policy blockiert sämtlichen Ingress und Egress im `routess`-Namespace. Allows sind explizit:
+
+- **Web**: Ingress nur aus dem Cloudflare-Tunnel-Namespace
+- **API**: Ingress aus Cloudflare-Tunnel + innerhalb des Namespace; Egress zu Postgres + DNS + extern (für Google OAuth)
+- **Docs / Landing**: Ingress nur aus dem Cloudflare-Tunnel
+
+DNS-Egress ist namespace-weit auf UDP/TCP 53 erlaubt.
+
+## Pod Security Standards
+
+Jeder Pod läuft:
+
+- **Non-root**: web als UID 101 (nginx), api als 1000, docs und landing als 1001
+- **Keine Privilege-Escalation**: `allowPrivilegeEscalation: false`
+- **Verworfene Capabilities**: `capabilities.drop: [ALL]`
+- **Seccomp**: `RuntimeDefault`-Profil
+- **Read-only-Root-Dateisystem**: nur api (web braucht nginx-Temp-Verzeichnisse)
+
+## ServiceAccounts
+
+Jeder Service hat einen dedizierten ServiceAccount mit `automountServiceAccountToken: false`. Keine der Workloads muss die Kubernetes-API aufrufen.
+
+## Secrets
+
+API-Secrets (JWT-Secret, Analytics-Salt, PAT-Pepper, Google-OAuth-Anmeldedaten, DB-Anmeldedaten, Resend-Key) werden in Kubernetes-`Secret`-Objekten abgelegt und über `secretKeyRef` als Umgebungsvariablen injiziert. CI zieht die Werte aus 1Password und injiziert sie über `helm install --set`.
+
+Plane Rotationen: das Rotieren des JWT-Secrets meldet jeden Nutzer ab, das Rotieren des PAT-Peppers invalidiert jedes Personal Access Token, und das Rotieren des Analytics-Salts setzt die Analytics-Pseudonyme zurück.
+
+## Resource-Limits
+
+CPU-, Speicher- und Ephemeral-Storage-Limits sind auf jedem Container gesetzt, um Ressourcenerschöpfung zu verhindern.

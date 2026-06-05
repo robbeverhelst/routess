@@ -1,0 +1,66 @@
+---
+title: Installation locale
+description: Faire tourner toute la stack sur ta machine.
+---
+
+```sh
+git clone https://github.com/robbeverhelst/routess.git
+cd routess
+bun install
+cp .env.example .env
+bun run dev
+```
+
+`bun run dev` fait ce qui suit :
+
+1. Installe les dépendances si `node_modules` est absent
+2. Choisit des ports locaux libres pour l'API, la doc, l'application web, le site vitrine, Postgres et pgAdmin
+3. Démarre un conteneur Postgres
+4. Démarre pgAdmin
+5. Build tous les `packages/*` (pour que les apps puissent les importer)
+6. Lance chaque `apps/*` en mode dev en parallèle
+
+Si un port par défaut est déjà utilisé, `bun run dev` choisira automatiquement le prochain port local libre.
+Les valeurs de port non par défaut définies dans `.env` sont traitées comme des surcharges explicites.
+
+Tu devrais voir :
+
+- **Web** : http://localhost:5173
+- **API** : http://localhost:3000
+- **Docs** : http://localhost:3001 _(ce site)_
+- **Landing** : http://localhost:3002
+- **pgAdmin** : http://localhost:5050 _(ou le `PGADMIN_PORT` de ton `.env` racine)_
+
+## Variables d'environnement
+
+Le repo utilise un `.env` racine partagé. Copie-le et complète-le :
+
+```sh
+cp .env.example .env
+```
+
+Valeurs requises :
+
+- `VITE_MAPBOX_ACCESS_TOKEN` : à obtenir sur [mapbox.com](https://mapbox.com)
+- `VITE_GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_ID` : depuis la Google Cloud Console
+- `GOOGLE_CLIENT_SECRET` : depuis la Google Cloud Console (utilisé par l'API pour échanger les codes d'authentification)
+- `JWT_SECRET` : n'importe quelle chaîne aléatoire pour le dev local
+
+Surcharges de ports locaux optionnelles :
+
+- `PORT` : port de l'API, par défaut `3000`
+- `DOCS_PORT` : port de la doc, par défaut `3001`
+- `WEB_PORT` : port du web, par défaut `5173`
+- `LANDING_PORT` : port du site vitrine, par défaut `3002`
+- `DB_PORT` : à changer quand `5432` est déjà utilisé
+- `PGADMIN_PORT` : à changer quand `5050` est déjà utilisé
+
+## Scripts utiles
+
+```sh
+bun run lint            # Biome check across the repo
+bun run check-types     # TypeScript across all workspaces
+bun run test            # Run the test suite
+bun run build           # Build everything (packages first, then apps)
+bun run ci              # Run the full CI pipeline locally
+```

@@ -1,0 +1,72 @@
+---
+title: CLI
+description: De `routess` command-line interface.
+---
+
+`routess` is de officiële CLI. Hij omhult dezelfde REST API die de webapp gebruikt en is het startpunt voor agents en CI om routes te lezen en te bewerken zonder browser.
+
+## Installeren
+
+```sh
+npm install -g routess
+```
+
+De binary is `routess`. Hij vereist Node 20+ (de gepubliceerde bundle is ESM).
+
+## Authenticeren
+
+De CLI praat met de API via een Personal Access Token (PAT). Maak er een aan in de webapp onder **Settings -> API Tokens** en log daarna eenmalig in of geef het token mee via een omgevingsvariabele.
+
+```sh
+# Interactive: persists the token to ~/.config/routess/auth.json (mode 0600).
+routess auth login --token routess_pat_...
+
+# Stateless: skip local storage. Useful for CI and ephemeral containers.
+export ROUTESS_TOKEN=routess_pat_...
+```
+
+`ROUTESS_TOKEN` heeft voorrang op het bestand op schijf. De tokenopslag volgt de XDG-conventie: `$XDG_CONFIG_HOME/routess/auth.json` indien gezet, anders `~/.config/routess/auth.json`.
+
+Wijs naar een andere API met `ROUTESS_API_URL` of de `--api-url`-flag bij het inloggen. De standaard is `https://api.routess.com`.
+
+```sh
+routess auth whoami       # confirm you're signed in
+routess auth logout       # delete the on-disk token
+```
+
+## Commands
+
+```sh
+routess routes list
+routess routes get <id>
+routess routes update <id> --name "New name"
+routess routes update <id> --visibility public --confirm
+routess routes delete <id> --confirm
+```
+
+Voeg `--json` toe aan elk command voor machineleesbare output. Fouten in `--json`-modus geven een `DomainErrorPayload` op stderr die de foutvorm van de API spiegelt, zodat agents direct op `code` kunnen vertakken.
+
+## Exit codes
+
+De CLI gebruikt een stabiele taxonomie van exit codes die aansluit op de domeinfoutcodes van de API. Agents vertakken hier op dezelfde manier op, ongeacht of de fout lokaal optrad of terugkwam van de server.
+
+| Code | Betekenis                  |
+| ---- | ------------------------ |
+| 0    | OK                       |
+| 1    | Algemene / onbekende fout  |
+| 2    | Gebruiksfout              |
+| 3    | Validatie mislukt        |
+| 4    | Niet gevonden            |
+| 5    | Niet-geautoriseerd (geen token, of token geweigerd) |
+| 6    | Verboden (token mist de vereiste scope) |
+| 7    | Conflict                 |
+| 8    | Rate limited             |
+| 9    | Preconditie vereist    |
+| 10   | Netwerkfout            |
+| 11   | Interne serverfout     |
+
+## Scopes
+
+PAT's dragen een van twee scopes: `read` (GET-endpoints) of `write` (muterende endpoints: PATCH, DELETE). De CLI geeft een `FORBIDDEN` (exit code 6) wanneer je een route probeert te muteren met een alleen-lezen PAT; maak een token met write-scope aan in de webapp en authenticeer opnieuw.
+
+Zie de [API-referentie](../../api) voor de volledige lijst met endpoints en de scope-vereisten per endpoint.

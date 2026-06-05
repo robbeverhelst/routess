@@ -1,0 +1,30 @@
+---
+title: Codeerstandaarden
+description: Hoe code eruit moet zien en zich moet gedragen in deze repo.
+---
+
+## Tooling
+
+- **Biome** is de formatter en linter. Draai `bun run lint` en `bun run format`.
+- **TypeScript strict mode**. `any` is toegestaan maar geeft een waarschuwing. Ongebruikte variabelen/imports zijn fouten.
+- **Geen discussie over tabs vs spaces**: Biome dwingt tabs en een regelbreedte van 120 tekens af.
+
+## Conventies
+
+- Geef de voorkeur aan **named exports** boven default exports
+- Plaats tests naast de broncode: `foo.ts` + `foo.test.ts`
+- Hooks horen in `hooks/`, componenten in `components/`, routebestanden in `routes/`
+- Code aan serverzijde importeert nooit uit client-only paden (en omgekeerd)
+
+## Wat hoort waar
+
+- Echt gedeelde logica → `packages/core`
+- Web-only logica → `apps/web/src`
+- API-only logica → `apps/api/src`
+- Alles wat platformbewust is (auth storage, fetch) → `packages/api-client/{web,mobile}`
+
+## Niet doen
+
+- Voeg geen `console.log` toe aan gecommitte code; gebruik de `logger` uit `@routess/core`
+- Introduceer geen nieuwe state-library; Zustand en React Query dekken het
+- Voeg geen CSS-in-JS-library toe; we hebben Tailwind v4 + design tokens
