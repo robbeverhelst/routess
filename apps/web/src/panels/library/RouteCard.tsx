@@ -16,7 +16,7 @@ import { useModalsStore } from "@/stores/modalsStore";
 import { useToastStore } from "@/stores/toastStore";
 import { useUiStore } from "@/stores/uiStore";
 import { I, type IconKey } from "../../components/icons";
-import { Btn, IconBtn, RDS_COLORS } from "../../components/primitives";
+import { IconBtn, RDS_COLORS } from "../../components/primitives";
 import { DropMenu, MenuDivider, MenuItem } from "./DropMenu";
 import { RouteThumb } from "./RouteThumb";
 
@@ -177,13 +177,11 @@ function TagsEditor({ route, onDone }: { route: ApiRoute; onDone: () => void }) 
 export function RouteCard({
 	route,
 	selected,
-	onSelect,
 	onOpen,
 	onTagClick,
 }: {
 	route: ApiRoute;
 	selected: boolean;
-	onSelect: () => void;
 	onOpen: () => void;
 	onTagClick?: (tag: string) => void;
 }) {
@@ -299,13 +297,12 @@ export function RouteCard({
 	const borderColor = selected ? RDS_COLORS.accent : hover ? RDS_COLORS.borderStrong : RDS_COLORS.border;
 
 	return (
-		// biome-ignore lint/a11y/noStaticElementInteractions: card click is selection-only; all primary actions are real buttons inside
+		// biome-ignore lint/a11y/noStaticElementInteractions: card click opens details; all other actions are real buttons inside
 		<div
-			onClick={onSelect}
+			onClick={onOpen}
 			onKeyDown={(e) => {
-				if (e.key === "Enter") onSelect();
+				if (e.key === "Enter") onOpen();
 			}}
-			onDoubleClick={editInPlanner}
 			onMouseEnter={() => setHover(true)}
 			onMouseLeave={() => setHover(false)}
 			data-selected={selected || undefined}
@@ -360,6 +357,20 @@ export function RouteCard({
 					</div>
 					<div
 						style={{
+							opacity: hover || selected || menuOpen ? 1 : 0,
+							transition: "opacity 120ms",
+							pointerEvents: hover || selected || menuOpen ? "auto" : "none",
+							background: "color-mix(in oklch, var(--rds-bg-panel) 80%, transparent)",
+							borderRadius: 8,
+							backdropFilter: "blur(4px)",
+						}}
+					>
+						<IconBtn title={t("route.delete")} onClick={() => openDelete(route.id)} style={{ width: 28, height: 28 }}>
+							<I.trash size={14} />
+						</IconBtn>
+					</div>
+					<div
+						style={{
 							position: "relative",
 							opacity: hover || selected || menuOpen ? 1 : 0,
 							transition: "opacity 120ms",
@@ -380,8 +391,7 @@ export function RouteCard({
 						<DropMenu open={menuOpen} onClose={closeMenu} width={210}>
 							{menuView === "root" ? (
 								<>
-									<MenuItem icon="route" label={t("library.card.open")} onClick={editInPlanner} />
-									<MenuItem icon="maximize" label={t("library.card.details")} onClick={onOpen} />
+									<MenuItem icon="route" label={t("library.card.editInPlanner")} onClick={editInPlanner} />
 									<MenuItem
 										icon="pencil"
 										label={t("library.card.rename")}
@@ -536,22 +546,6 @@ export function RouteCard({
 			</div>
 
 			{editingTags && <TagsEditor route={route} onDone={() => setEditingTags(false)} />}
-
-			{selected && !editingTags && (
-				// biome-ignore lint/a11y/noStaticElementInteractions: container only stops click bubbling so the footer button doesn't re-toggle selection
-				<div
-					style={{ display: "flex", gap: 8, padding: "8px 12px 12px" }}
-					onClick={(e) => e.stopPropagation()}
-					onKeyDown={(e) => e.stopPropagation()}
-				>
-					<Btn variant="primary" style={{ flex: 1, height: 32 }} onClick={editInPlanner}>
-						<I.route size={13} /> {t("library.card.open")}
-					</Btn>
-					<Btn style={{ height: 32 }} onClick={onOpen} title={t("library.card.details")}>
-						<I.maximize size={13} />
-					</Btn>
-				</div>
-			)}
 			<div style={{ height: editingTags ? 0 : 8 }} />
 		</div>
 	);

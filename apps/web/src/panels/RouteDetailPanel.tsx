@@ -5,7 +5,7 @@ import {
 	type RouteActivity,
 	type RouteVisibility,
 } from "@routess/core";
-import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
+import { type KeyboardEvent, useEffect, useMemo, useState } from "react";
 import { useComputedElevationProfile } from "@/features/routing/services/elevation";
 import { fetchSurfaceBreakdown, type SurfaceBreakdown } from "@/features/routing/services/SurfaceService";
 import type { ApiRoute } from "@/lib/api";
@@ -208,8 +208,6 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 	const paceStr = speedParts ? speedParts.value : "—";
 	const paceUnit = speedParts ? speedParts.unit : "";
 
-	const [moreOpen, setMoreOpen] = useState(false);
-	const moreRef = useRef<HTMLDivElement | null>(null);
 	const saveRoute = useSaveRoute();
 	const updateRoute = useUpdateRoute();
 	const openDelete = useModalsStore((s) => s.openDelete);
@@ -306,17 +304,6 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 		return () => setDrawerSnap(MOBILE_DRAWER_SNAPS[1]);
 	}, [setDrawerSnap]);
 
-	useEffect(() => {
-		if (!moreOpen) return;
-		const onDocClick = (e: MouseEvent) => {
-			if (moreRef.current && !moreRef.current.contains(e.target as Node)) {
-				setMoreOpen(false);
-			}
-		};
-		document.addEventListener("mousedown", onDocClick);
-		return () => document.removeEventListener("mousedown", onDocClick);
-	}, [moreOpen]);
-
 	const dispatchLoadRoute = () => {
 		emitAppEvent("routess:load-route", routeToLoadDetail(route));
 		setContext("plan");
@@ -364,7 +351,6 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 						title: t("route.duplicated"),
 						body: newRoute.name,
 					});
-					setMoreOpen(false);
 				},
 				onError: () => {
 					pushToast({
@@ -379,7 +365,18 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 
 	const dispatchDelete = () => {
 		openDelete(route.id);
-		setMoreOpen(false);
+	};
+
+	const renameRoute = (next: string | undefined) => {
+		if (!next || next === route.name) return;
+		updateRoute.mutate(
+			{ routeId: route.id, updates: { name: next } },
+			{
+				onError: () => {
+					pushToast({ kind: "danger", title: t("route.renameFailed"), body: t("common.tryAgain") });
+				},
+			},
+		);
 	};
 
 	const dispatchExport = () => {
@@ -430,145 +427,128 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 					<I.chevronL size={16} />
 				</IconBtn>
 				<span style={{ fontSize: 13, color: RDS_COLORS.fgMuted }}>{t("route.library")}</span>
-				<I.chevronR size={12} />
-				<span
-					style={{
-						fontSize: 13,
-						fontWeight: 600,
-						overflow: "hidden",
-						textOverflow: "ellipsis",
-						whiteSpace: "nowrap",
-					}}
-				>
-					{route.name}
-				</span>
 				<div style={{ flex: 1 }} />
 				<IconBtn title={favorited ? t("route.removeFavourite") : t("route.makeFavourite")} onClick={dispatchFavorite}>
 					<I.heart size={14} style={favorited ? { color: RDS_COLORS.danger, fill: "currentColor" } : undefined} />
 				</IconBtn>
-				<IconBtn title={t("route.share")} onClick={dispatchShare}>
-					<I.share size={14} />
+				<IconBtn
+					title={saveRoute.isPending ? t("route.duplicating") : t("route.duplicate")}
+					onClick={dispatchDuplicate}
+					disabled={saveRoute.isPending}
+				>
+					<I.copy size={14} />
 				</IconBtn>
-				<div ref={moreRef} style={{ position: "relative" }}>
-					<IconBtn title={t("route.more")} onClick={() => setMoreOpen((v) => !v)} pressed={moreOpen}>
-						<I.more size={14} />
-					</IconBtn>
-					{moreOpen && (
-						<div
-							style={{
-								position: "absolute",
-								top: "calc(100% + 4px)",
-								right: 0,
-								minWidth: 160,
-								background: RDS_COLORS.bgPanel,
-								border: `1px solid ${RDS_COLORS.border}`,
-								borderRadius: 8,
-								padding: 4,
-								boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
-								zIndex: 10,
-							}}
-						>
-							<button
-								type="button"
-								onClick={dispatchDuplicate}
-								disabled={saveRoute.isPending}
-								style={{
-									display: "flex",
-									alignItems: "center",
-									gap: 8,
-									width: "100%",
-									padding: "8px 10px",
-									background: "transparent",
-									border: 0,
-									borderRadius: 6,
-									cursor: "pointer",
-									fontSize: 13,
-									color: RDS_COLORS.fg,
-									textAlign: "left",
-								}}
-								onMouseEnter={(e) => {
-									e.currentTarget.style.background = RDS_COLORS.bgHover;
-								}}
-								onMouseLeave={(e) => {
-									e.currentTarget.style.background = "transparent";
-								}}
-							>
-								<I.copy size={14} /> {saveRoute.isPending ? t("route.duplicating") : t("route.duplicate")}
-							</button>
-							<button
-								type="button"
-								onClick={dispatchDelete}
-								style={{
-									display: "flex",
-									alignItems: "center",
-									gap: 8,
-									width: "100%",
-									padding: "8px 10px",
-									background: "transparent",
-									border: 0,
-									borderRadius: 6,
-									cursor: "pointer",
-									fontSize: 13,
-									color: RDS_COLORS.danger,
-									textAlign: "left",
-								}}
-								onMouseEnter={(e) => {
-									e.currentTarget.style.background = RDS_COLORS.bgHover;
-								}}
-								onMouseLeave={(e) => {
-									e.currentTarget.style.background = "transparent";
-								}}
-							>
-								<I.trash size={14} /> {t("route.delete")}
-							</button>
-						</div>
-					)}
-				</div>
 			</div>
 
 			<div style={{ flex: 1, minHeight: 0, overflow: "auto", padding: 20 }}>
-				<h2 style={{ margin: "0 0 4px", fontSize: 22, fontWeight: 600, letterSpacing: -0.4 }}>{route.name}</h2>
-				<p className="rds-mono" style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle, margin: 0 }}>
+				<EditableLabel
+					value={route.name}
+					placeholder={t("route.field.namePlaceholder")}
+					onSave={renameRoute}
+					disabled={updateRoute.isPending}
+					ariaLabel={t("library.card.rename")}
+					style={{ fontSize: 22, fontWeight: 600, letterSpacing: -0.4, width: "100%" }}
+				/>
+				<p className="rds-mono" style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle, margin: "4px 0 0" }}>
 					{t("route.created", {
 						date: new Date(route.createdAt).toLocaleDateString(),
 						count: String(route.waypoints?.length ?? 0),
 					})}
 				</p>
 
-				<div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12 }}>
-					<div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10 }}>
-						<span style={{ fontSize: 11, color: RDS_COLORS.fgSubtle, minWidth: 64 }}>{t("route.field.activity")}</span>
-						<SegmentedSelector<RouteActivity>
-							value={route.activity}
-							options={ROUTE_ACTIVITIES.map((a) => ({
-								value: a,
-								label: t(ACTIVITY_LABEL[a].labelKey),
-								icon: ACTIVITY_LABEL[a].icon,
-							}))}
-							onChange={(next) => mutateMeta({ activity: next })}
-							disabled={updateRoute.isPending}
+				{/* Stat strip */}
+				<div
+					style={{
+						display: "grid",
+						gridTemplateColumns: "repeat(4, 1fr)",
+						marginTop: 14,
+						padding: 14,
+						background: RDS_COLORS.bgPanelElev,
+						borderRadius: 10,
+						border: `1px solid ${RDS_COLORS.border}`,
+					}}
+				>
+					{stats.map((s, i) => (
+						<div
+							key={s.label}
+							style={{
+								borderLeft: i ? `1px solid ${RDS_COLORS.border}` : "none",
+								paddingLeft: i ? 14 : 0,
+							}}
+						>
+							<SecTitle>{s.label}</SecTitle>
+							<div className="rds-mono" style={{ fontSize: 22, fontWeight: 600, lineHeight: 1.1, marginTop: 4 }}>
+								{s.value}
+								{s.unit && (
+									<span
+										style={{
+											fontSize: 11,
+											color: RDS_COLORS.fgSubtle,
+											marginLeft: 3,
+											fontWeight: 400,
+										}}
+									>
+										{s.unit}
+									</span>
+								)}
+							</div>
+						</div>
+					))}
+				</div>
+
+				{elevationGeometry.length >= 2 && (
+					<div data-vaul-no-drag style={{ marginTop: 18 }}>
+						<SecTitle style={{ marginBottom: 8 }}>{t("route.elevation")}</SecTitle>
+						<RouteProfileChart
+							profile={computedProfile}
+							breakdown={surfaceBreakdown}
+							elevationLoading={elevationLoading}
+							surfaceLoading={surfaceLoading}
+							gradientId={`rds-elev-${route.id}`}
+							style={{ marginTop: 0 }}
 						/>
 					</div>
-					<div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10 }}>
-						<span style={{ fontSize: 11, color: RDS_COLORS.fgSubtle, minWidth: 64 }}>
-							{t("route.field.visibility")}
-						</span>
-						<SegmentedSelector<RouteVisibility>
-							value={route.visibility}
-							options={ROUTE_VISIBILITIES.map((v) => ({
-								value: v,
-								label: t(VISIBILITY_LABEL[v].labelKey),
-								icon: VISIBILITY_LABEL[v].icon,
-							}))}
-							onChange={onVisibilityChange}
-							disabled={updateRoute.isPending}
-						/>
-					</div>
-					<div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-start", gap: 10 }}>
-						<span style={{ fontSize: 11, color: RDS_COLORS.fgSubtle, minWidth: 64, paddingTop: 4 }}>
-							{t("route.field.tags")}
-						</span>
-						<TagEditor tags={tags} disabled={updateRoute.isPending} onChange={(next) => mutateMeta({ tags: next })} />
+				)}
+
+				<div style={{ marginTop: 18 }}>
+					<SecTitle style={{ marginBottom: 10 }}>{t("route.properties")}</SecTitle>
+					<div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+						<div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10 }}>
+							<span style={{ fontSize: 11, color: RDS_COLORS.fgSubtle, minWidth: 64 }}>
+								{t("route.field.activity")}
+							</span>
+							<SegmentedSelector<RouteActivity>
+								value={route.activity}
+								options={ROUTE_ACTIVITIES.map((a) => ({
+									value: a,
+									label: t(ACTIVITY_LABEL[a].labelKey),
+									icon: ACTIVITY_LABEL[a].icon,
+								}))}
+								onChange={(next) => mutateMeta({ activity: next })}
+								disabled={updateRoute.isPending}
+							/>
+						</div>
+						<div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10 }}>
+							<span style={{ fontSize: 11, color: RDS_COLORS.fgSubtle, minWidth: 64 }}>
+								{t("route.field.visibility")}
+							</span>
+							<SegmentedSelector<RouteVisibility>
+								value={route.visibility}
+								options={ROUTE_VISIBILITIES.map((v) => ({
+									value: v,
+									label: t(VISIBILITY_LABEL[v].labelKey),
+									icon: VISIBILITY_LABEL[v].icon,
+								}))}
+								onChange={onVisibilityChange}
+								disabled={updateRoute.isPending}
+							/>
+						</div>
+						<div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-start", gap: 10 }}>
+							<span style={{ fontSize: 11, color: RDS_COLORS.fgSubtle, minWidth: 64, paddingTop: 4 }}>
+								{t("route.field.tags")}
+							</span>
+							<TagEditor tags={tags} disabled={updateRoute.isPending} onChange={(next) => mutateMeta({ tags: next })} />
+						</div>
 					</div>
 				</div>
 				{pendingPublicVisibility && (
@@ -623,60 +603,6 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 						{route.description}
 					</p>
 				)}
-
-				{elevationGeometry.length >= 2 && (
-					<div data-vaul-no-drag style={{ marginTop: 18 }}>
-						<SecTitle style={{ marginBottom: 8 }}>{t("route.elevation")}</SecTitle>
-						<RouteProfileChart
-							profile={computedProfile}
-							breakdown={surfaceBreakdown}
-							elevationLoading={elevationLoading}
-							surfaceLoading={surfaceLoading}
-							gradientId={`rds-elev-${route.id}`}
-							style={{ marginTop: 0 }}
-						/>
-					</div>
-				)}
-
-				{/* Stat strip */}
-				<div
-					style={{
-						display: "grid",
-						gridTemplateColumns: "repeat(4, 1fr)",
-						marginTop: 18,
-						padding: 14,
-						background: RDS_COLORS.bgPanelElev,
-						borderRadius: 10,
-						border: `1px solid ${RDS_COLORS.border}`,
-					}}
-				>
-					{stats.map((s, i) => (
-						<div
-							key={s.label}
-							style={{
-								borderLeft: i ? `1px solid ${RDS_COLORS.border}` : "none",
-								paddingLeft: i ? 14 : 0,
-							}}
-						>
-							<SecTitle>{s.label}</SecTitle>
-							<div className="rds-mono" style={{ fontSize: 22, fontWeight: 600, lineHeight: 1.1, marginTop: 4 }}>
-								{s.value}
-								{s.unit && (
-									<span
-										style={{
-											fontSize: 11,
-											color: RDS_COLORS.fgSubtle,
-											marginLeft: 3,
-											fontWeight: 400,
-										}}
-									>
-										{s.unit}
-									</span>
-								)}
-							</div>
-						</div>
-					))}
-				</div>
 
 				{route.waypoints && route.waypoints.length > 0 && (
 					<div style={{ marginTop: 18 }}>
@@ -824,13 +750,20 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 				}}
 			>
 				<Btn variant="primary" style={{ flex: 1 }} onClick={dispatchLoadRoute}>
-					<I.play size={12} /> {t("route.loadOnMap")}
+					<I.route size={13} /> {t("route.editRoute")}
+				</Btn>
+				<Btn onClick={dispatchShare} title={t("route.share")}>
+					<I.share size={14} />
 				</Btn>
 				<Btn onClick={dispatchExport} title={t("route.downloadGpx")}>
 					<I.download size={14} />
 				</Btn>
-				<Btn onClick={dispatchShare} title={t("route.share")}>
-					<I.share size={14} />
+				<Btn
+					onClick={dispatchDelete}
+					title={t("route.delete")}
+					style={{ color: RDS_COLORS.danger, borderColor: RDS_COLORS.danger }}
+				>
+					<I.trash size={14} />
 				</Btn>
 			</div>
 		</div>

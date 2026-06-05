@@ -305,8 +305,12 @@ export function RoutesTab({
 						key={r.id}
 						route={r}
 						selected={selectedRoute?.id === r.id}
-						onSelect={() => selectRoute(r)}
-						onOpen={() => onOpen(r)}
+						onOpen={() => {
+							// Keep the route selected so the map previews it behind the
+							// details panel; selectRoute toggles, so skip when already set.
+							if (selectedRoute?.id !== r.id) selectRoute(r);
+							onOpen(r);
+						}}
 						onTagClick={(tag) => {
 							if (!tagFilters.includes(tag)) toggleTagFilter(tag);
 						}}
