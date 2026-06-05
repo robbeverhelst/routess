@@ -90,14 +90,25 @@ Umami captures these automatically from the request. Do not duplicate them as ev
 
 A generated route that gets *saved* fires `route_created` with `creation_source: "generated"` — there is no separate `route_generation_accepted`.
 
-## Library (feature pending — #138)
+## Library
 
 | Event | When | Properties |
 |---|---|---|
 | `library_searched` | Search input settled (1s debounce) or explicit submit | `query_length_bucket`, `result_count_bucket` |
 | `library_filtered` | Filter applied | `filter_type`, `result_count_bucket` |
+| `route_favourited` | Heart toggled on a route | `favourite` (new state) |
 
 `library_searched` must not fire on every keystroke — debounce at the input layer.
+
+## Collections
+
+| Event | When | Properties |
+|---|---|---|
+| `collection_created` | Collection created from the library panel | `visibility` |
+| `collection_deleted` | Collection deleted (after confirm) | — |
+| `collection_share_link_copied` | Share link copied to clipboard | `visibility` (after any auto private→unlisted flip) |
+
+Membership changes (add/remove/reorder) are deliberately not events — too noisy, and `collection_created` + route counts in Postgres answer the adoption question.
 
 ## Payment (feature pending — #135)
 
