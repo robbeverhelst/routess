@@ -7,6 +7,7 @@ import { useMapInitialization } from "@/components/hooks/useMapInitialization";
 import { useMapPositioning } from "@/components/hooks/useMapPositioning";
 import { useMapRecovery } from "@/components/hooks/useMapRecovery";
 import { useMapViewBindings } from "@/components/hooks/useMapViewBindings";
+import { useMapViewPersistence } from "@/components/hooks/useMapViewPersistence";
 import { MapPopup, type PopupInfo as MapPopupInfo } from "@/components/map/MapPopup";
 import { SunPositionIndicator } from "@/components/map/SunPositionIndicator";
 import { useUserLocation } from "@/components/providers/UserLocationProvider";
@@ -250,6 +251,10 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
 	const { isOnline } = useServiceWorker();
 	const { onMapStyleLoaded } = useMapViewBindings({ map: mapRef.current, userLocation, isOnline });
 
+	// Persist the camera so reloads (and version bumps, which purge the ad-hoc
+	// location keys) restore the user's region instead of the timezone fallback.
+	useMapViewPersistence(mapRef, isMapLoaded);
+
 	const { handleMapError } = useErrorHandler();
 	const isSatelliteStyle = currentMapStyleKey === "satellite";
 	const styleVariant = REDESIGN_MAP_STYLE_VARIANTS[currentMapStyleKey] ?? FALLBACK_STYLE_VARIANT;
@@ -468,6 +473,7 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
 		lastKnownLocationFromStorage,
 		detectedRouteInLocalStorageOnInit,
 		pendingSharedRoute,
+		hasSavedMapView: Boolean(lastSavedMapView),
 		mapPitch: MAP_PITCH,
 	});
 

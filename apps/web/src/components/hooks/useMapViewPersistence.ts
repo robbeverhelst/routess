@@ -2,10 +2,12 @@ import type { Map as MapboxMap } from "mapbox-gl";
 import { useEffect } from "react";
 import { saveLastMapViewToLocalStorage } from "@/features/routing/services/LocalStorageService";
 
-export const useMapViewPersistence = (mapRef: React.RefObject<MapboxMap | null>) => {
+// isMapReady must flip to true once the map has loaded; mapRef.current is
+// null at mount, so without it the effect would bail and never attach.
+export const useMapViewPersistence = (mapRef: React.RefObject<MapboxMap | null>, isMapReady: boolean) => {
 	useEffect(() => {
 		const currentMapRef = mapRef.current;
-		if (!currentMapRef) return;
+		if (!isMapReady || !currentMapRef) return;
 
 		const handleMoveEnd = () => {
 			if (currentMapRef) {
@@ -28,5 +30,5 @@ export const useMapViewPersistence = (mapRef: React.RefObject<MapboxMap | null>)
 		return () => {
 			currentMapRef.off("moveend", handleMoveEnd);
 		};
-	}, [mapRef]);
+	}, [mapRef, isMapReady]);
 };
