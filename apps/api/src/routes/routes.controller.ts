@@ -1,5 +1,6 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, Res, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiHeader, ApiOperation, ApiParam, ApiResponse, ApiTags } from "@nestjs/swagger";
+import type { Response } from "express";
 import type { AuthenticatedUser } from "../auth/authenticated-user";
 import { CurrentUser, OptionalCurrentUser } from "../auth/decorators/current-user.decorator";
 import { RequireConfirmation } from "../auth/decorators/require-confirmation.decorator";
@@ -11,6 +12,7 @@ import { ScopeGuard } from "../auth/guards/scope.guard";
 import { UnifiedAuthGuard } from "../auth/guards/unified-auth.guard";
 import { ThrottleModerate, ThrottleStrict } from "../common/decorators/throttle.decorator";
 import { CreateRouteDto } from "./dto/create-route.dto";
+import { ListRoutesQueryDto, ROUTES_PAGE_LIMIT_DEFAULT } from "./dto/list-routes-query.dto";
 import { RouteResponseDto } from "./dto/route-response.dto";
 import { UpdateRouteDto } from "./dto/update-route.dto";
 import { RoutesService } from "./routes.service";
@@ -41,15 +43,31 @@ export class RoutesController {
 	@UseGuards(UnifiedAuthGuard, ScopeGuard)
 	@ApiOperation({
 		summary: "Get all user routes",
-		description: "Retrieves all routes belonging to the authenticated user (any visibility)",
+		description:
+			"Retrieves the authenticated user's routes (any visibility), newest first. Paginated via `limit` and `offset`; the total number of routes is returned in the `X-Total-Count` response header.",
 	})
-	@ApiResponse({ status: 200, description: "Routes retrieved successfully", type: RouteResponseDto, isArray: true })
+	@ApiResponse({
+		status: 200,
+		description: "Routes retrieved successfully. X-Total-Count carries the total route count.",
+		type: RouteResponseDto,
+		isArray: true,
+	})
 	@ApiResponse({ status: 401, description: "Unauthorized" })
 	@ThrottleModerate()
 	@RequireScope("read")
 	@Get()
-	findAll(@CurrentUser() user: AuthenticatedUser): Promise<RouteResponseDto[]> {
-		return this.routesService.findAll(user.id);
+	async findAll(
+		@CurrentUser() user: AuthenticatedUser,
+		@Query() query: ListRoutesQueryDto,
+		@Res({ passthrough: true }) res: Response,
+	): Promise<RouteResponseDto[]> {
+		const { items, total } = await this.routesService.findAll(
+			user.id,
+			query.limit ?? ROUTES_PAGE_LIMIT_DEFAULT,
+			query.offset ?? 0,
+		);
+		res.setHeader("X-Total-Count", String(total));
+		return items;
 	}
 
 	// Static segment must be declared before the dynamic ":id" route below;

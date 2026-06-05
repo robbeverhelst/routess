@@ -52,6 +52,9 @@ export class RouteResponseDto {
 	@ApiProperty({ type: [String] })
 	tags!: string[];
 
+	@ApiProperty({ description: "Whether the owner marked this route as a favourite" })
+	favourite!: boolean;
+
 	@ApiProperty({
 		type: [WaypointResponseDto],
 	})

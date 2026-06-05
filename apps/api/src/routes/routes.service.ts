@@ -1,4 +1,4 @@
-import { EntityManager, EntityRepository, wrap } from "@mikro-orm/core";
+import { EntityManager, EntityRepository } from "@mikro-orm/core";
 import { InjectRepository } from "@mikro-orm/nestjs";
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { EventEmitter2 } from "@nestjs/event-emitter";
@@ -12,23 +12,10 @@ import {
 	type RouteCreatedEvent,
 	type RouteDeletedEvent,
 } from "../telemetry/domain-events";
-import { toUserResponseDto } from "../users/user.mapper";
 import type { CreateRouteDto } from "./dto/create-route.dto";
 import type { RouteResponseDto } from "./dto/route-response.dto";
 import type { UpdateRouteDto } from "./dto/update-route.dto";
-
-type SerializableUser = Pick<
-	User,
-	| "id"
-	| "email"
-	| "name"
-	| "avatar"
-	| "isEmailVerified"
-	| "role"
-	| "preferences"
-	| "deletionStatus"
-	| "deletionRequestedAt"
->;
+import { toRouteResponseDto } from "./route.mapper";
 
 @Injectable()
 export class RoutesService {
@@ -44,27 +31,7 @@ export class RoutesService {
 	) {}
 
 	private toResponseDto(route: Route): RouteResponseDto {
-		const serializedUser = wrap(route.user).toJSON() as SerializableUser;
-		return {
-			id: route.id,
-			name: route.name,
-			description: route.description,
-			activity: route.activity,
-			visibility: route.visibility,
-			tags: route.tags,
-			waypoints: route.waypoints,
-			geometry: route.geometry,
-			distance: route.distance,
-			duration: route.duration,
-			elevationGain: route.elevationGain,
-			startAddress: route.startAddress,
-			endAddress: route.endAddress,
-			routingPreferences: route.routingPreferences ?? null,
-			provenance: route.provenance,
-			user: toUserResponseDto(serializedUser, this.config.analytics.salt),
-			createdAt: route.createdAt.toISOString(),
-			updatedAt: route.updatedAt.toISOString(),
-		};
+		return toRouteResponseDto(route, this.config.analytics.salt);
 	}
 
 	async create(createRouteDto: CreateRouteDto, userId: number): Promise<RouteResponseDto> {
@@ -74,6 +41,7 @@ export class RoutesService {
 			...createRouteDto,
 			visibility: createRouteDto.visibility ?? ownerDefault,
 			tags: createRouteDto.tags ?? [],
+			favourite: createRouteDto.favourite ?? false,
 			provenance: createRouteDto.provenance ?? "valhalla",
 			user: userId,
 		});
@@ -83,12 +51,12 @@ export class RoutesService {
 		return this.toResponseDto(route);
 	}
 
-	async findAll(userId: number): Promise<RouteResponseDto[]> {
-		const routes = await this.routeRepository.find(
+	async findAll(userId: number, limit: number, offset: number): Promise<{ items: RouteResponseDto[]; total: number }> {
+		const [routes, total] = await this.routeRepository.findAndCount(
 			{ user: userId },
-			{ populate: ["user"], orderBy: { createdAt: "DESC" }, limit: 100 },
+			{ populate: ["user"], orderBy: { createdAt: "DESC" }, limit, offset },
 		);
-		return routes.map((route) => this.toResponseDto(route));
+		return { items: routes.map((route) => this.toResponseDto(route)), total };
 	}
 
 	// findOne: returns the Route if the viewer is the owner, OR if the route's

@@ -177,6 +177,51 @@ describe("Routes Integration Tests", () => {
 		it("should fail without authentication", async () => {
 			await supertest(app.getHttpServer()).get("/api/v1/routes").expect(401);
 		});
+
+		it("should expose the total count and paginate with limit/offset", async () => {
+			const firstPage = await supertest(app.getHttpServer())
+				.get("/api/v1/routes?limit=1&offset=0")
+				.set("Authorization", `Bearer ${authToken}`)
+				.expect(200);
+
+			expect(firstPage.headers["x-total-count"]).toBe("2");
+			expect(firstPage.body).toHaveLength(1);
+
+			const secondPage = await supertest(app.getHttpServer())
+				.get("/api/v1/routes?limit=1&offset=1")
+				.set("Authorization", `Bearer ${authToken}`)
+				.expect(200);
+
+			expect(secondPage.body).toHaveLength(1);
+			expect(secondPage.body[0].id).not.toBe(firstPage.body[0].id);
+		});
+
+		it("should reject an out-of-range limit", async () => {
+			await supertest(app.getHttpServer())
+				.get("/api/v1/routes?limit=5000")
+				.set("Authorization", `Bearer ${authToken}`)
+				.expect(400);
+		});
+
+		it("should default favourite to false and persist toggling it", async () => {
+			const list = await supertest(app.getHttpServer())
+				.get("/api/v1/routes")
+				.set("Authorization", `Bearer ${authToken}`)
+				.expect(200);
+			expect(list.body.every((r: { favourite: boolean }) => r.favourite === false)).toBe(true);
+
+			await supertest(app.getHttpServer())
+				.patch(`/api/v1/routes/${userRoute1.id}`)
+				.set("Authorization", `Bearer ${authToken}`)
+				.send({ favourite: true })
+				.expect(200);
+
+			const refreshed = await supertest(app.getHttpServer())
+				.get(`/api/v1/routes/${userRoute1.id}`)
+				.set("Authorization", `Bearer ${authToken}`)
+				.expect(200);
+			expect(refreshed.body.favourite).toBe(true);
+		});
 	});
 
 	describe("GET /routes/:id", () => {

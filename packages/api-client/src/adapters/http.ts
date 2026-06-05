@@ -19,27 +19,43 @@ export class FetchHttpClient implements HttpClient {
 	}
 
 	async get<T>(url: string, options: RequestOptions = {}): Promise<T> {
+		const { data } = await this.request<T>(url, "GET", undefined, options);
+		return data;
+	}
+
+	async getWithHeaders<T>(
+		url: string,
+		options: RequestOptions = {},
+	): Promise<{ data: T; headers: Record<string, string> }> {
 		return this.request<T>(url, "GET", undefined, options);
 	}
 
 	async post<T>(url: string, body?: unknown, options: RequestOptions = {}): Promise<T> {
-		return this.request<T>(url, "POST", body, options);
+		const { data } = await this.request<T>(url, "POST", body, options);
+		return data;
+	}
+
+	async put<T>(url: string, body?: unknown, options: RequestOptions = {}): Promise<T> {
+		const { data } = await this.request<T>(url, "PUT", body, options);
+		return data;
 	}
 
 	async patch<T>(url: string, body?: unknown, options: RequestOptions = {}): Promise<T> {
-		return this.request<T>(url, "PATCH", body, options);
+		const { data } = await this.request<T>(url, "PATCH", body, options);
+		return data;
 	}
 
 	async delete<T>(url: string, options: RequestOptions = {}): Promise<T> {
-		return this.request<T>(url, "DELETE", undefined, options);
+		const { data } = await this.request<T>(url, "DELETE", undefined, options);
+		return data;
 	}
 
 	private async request<T>(
 		url: string,
-		method: "GET" | "POST" | "PATCH" | "DELETE",
+		method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
 		body: unknown,
 		options: RequestOptions,
-	): Promise<T> {
+	): Promise<{ data: T; headers: Record<string, string> }> {
 		const { headers = {}, timeout } = options;
 		const effectiveTimeout = timeout ?? this.defaultTimeoutMs;
 
@@ -59,7 +75,12 @@ export class FetchHttpClient implements HttpClient {
 				throw await errorFromResponse(response);
 			}
 
-			return await response.json();
+			const responseHeaders: Record<string, string> = {};
+			response.headers.forEach((value, key) => {
+				responseHeaders[key.toLowerCase()] = value;
+			});
+
+			return { data: await response.json(), headers: responseHeaders };
 		} finally {
 			if (timeoutId) clearTimeout(timeoutId);
 		}
