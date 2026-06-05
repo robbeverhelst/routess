@@ -313,4 +313,33 @@ export const de: Record<string, string> = {
 	"common.edit": "Bearbeiten",
 	"common.delete": "Löschen",
 	"map.loading": "Karte wird geladen…",
+
+	"route.updateFailed": "Aktualisierung fehlgeschlagen",
+	"route.field.activity": "Aktivität",
+	"route.field.visibility": "Sichtbarkeit",
+	"route.field.tags": "Tags",
+	"route.tag.addPlaceholder": "Tag hinzufügen…",
+	"route.tag.remove": "Tag #{tag} entfernen",
+	"route.makePublic.title": "Diese Route öffentlich machen?",
+	"route.makePublic.body":
+		"Öffentliche Routen sind für alle mit dem Link sichtbar und können extern archiviert werden. Ein späteres Zurücksetzen auf privat entzieht denjenigen, die die URL bereits haben, nicht den Zugriff.",
+	"route.makePublic.confirm": "Öffentlich machen",
+
+	"public.byOwner": "von {name}",
+	"public.anonymous": "ein routess-Nutzer",
+	"public.mapAlt": "Kartenvorschau von {name}",
+	"public.noPreview": "Keine Vorschau verfügbar",
+	"public.openInRoutess": "In routess öffnen",
+	"public.downloadGpx": "GPX herunterladen",
+	"public.signIn": "Anmelden",
+	"public.loading": "Route wird geladen…",
+	"public.notFound.title": "Route nicht gefunden",
+	"public.notFound.body": "Diese Route ist privat oder existiert nicht mehr.",
+	"public.footer.cta": "Plane deine eigene Tour, deinen Lauf oder deine Wanderung.",
+	"public.footer.try": "routess ausprobieren",
+
+	"share.privateHint":
+		"Diese gespeicherte Route ist privat, daher kannst nur du den kanonischen Link öffnen. Die URL oben enthält die Wegpunkte der Route im Link selbst. Stelle die Route auf ungelistet oder öffentlich, um eine feste Adresse zu teilen.",
+	"share.canonicalHint":
+		"Jeder mit diesem Link kann die Route ansehen. Änderungen der Sichtbarkeit werden sofort wirksam.",
 };

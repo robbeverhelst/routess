@@ -266,6 +266,11 @@ export class ApiClient {
 		return this.request<ApiRoute>(`/routes/${id}`);
 	}
 
+	// Direct <a href> link; resolves against the configured API origin (like exportDataUrl).
+	routeGpxUrl(id: number): string {
+		return `${this.config.baseUrl}/api/v1/routes/${id}/gpx`;
+	}
+
 	async updateRoute(id: number, route: UpdateRouteRequest): Promise<ApiRoute> {
 		return this.request<ApiRoute>(`/routes/${id}`, {
 			method: "PATCH",

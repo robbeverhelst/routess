@@ -1,8 +1,11 @@
+import { buildRouteSlugId } from "@routess/core";
 import { type CSSProperties, type ReactNode, useEffect, useMemo, useState } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { trackEvent } from "@/lib/analytics/track";
+import { useRoute } from "@/lib/api-queries";
 import { emitAppEvent } from "@/lib/app-events";
 import { t } from "@/lib/i18n";
+import { getRuntimeConfig } from "@/lib/runtime-config";
 import { serializeAndCompress } from "@/lib/shareUtils";
 import { buildMapboxStaticPreviewUrl } from "@/lib/utils/mapboxStaticPreview";
 import { buildRouteShareCard } from "@/lib/utils/routeShareCard";
@@ -110,7 +113,18 @@ export function ShareModal() {
 		setCanNativeShare(typeof navigator !== "undefined" && typeof navigator.share === "function");
 	}, []);
 
+	const mode = useRoutingStore((s) => s.mode);
+	const savedRouteId = mode.kind === "editing" ? mode.routeId : null;
+	const { data: savedRoute } = useRoute(savedRouteId ?? 0);
+	const savedVisibility = savedRouteId && savedRoute?.id === savedRouteId ? savedRoute.visibility : null;
+	const canShareCanonical = savedRouteId !== null && (savedVisibility === "public" || savedVisibility === "unlisted");
+
 	const url = useMemo(() => {
+		if (canShareCanonical && savedRouteId !== null && savedRoute) {
+			// Canonical page is on the landing host once VITE_PUBLIC_ROUTE_BASE_URL is set (ADR 0025); else this origin.
+			const base = (getRuntimeConfig("VITE_PUBLIC_ROUTE_BASE_URL") ?? window.location.origin).replace(/\/+$/, "");
+			return `${base}/r/${buildRouteSlugId(savedRoute.name, savedRouteId)}`;
+		}
 		try {
 			const encoded = serializeAndCompress(waypoints, isMapLocked);
 			if (!encoded) return window.location.origin;
@@ -118,7 +132,7 @@ export function ShareModal() {
 		} catch {
 			return window.location.origin;
 		}
-	}, [waypoints, isMapLocked]);
+	}, [waypoints, isMapLocked, canShareCanonical, savedRouteId, savedRoute]);
 
 	const hasRoute = waypoints.length > 0;
 	const previewPoints = useMemo<Coordinate[]>(() => {
@@ -444,6 +458,24 @@ export function ShareModal() {
 							{copied ? t("common.copied") : t("common.copy")}
 						</Btn>
 					</div>
+					{savedRouteId !== null && savedVisibility === "private" && (
+						<div
+							style={{
+								fontSize: 11.5,
+								color: RDS_COLORS.fgSubtle,
+								lineHeight: 1.5,
+								padding: "8px 10px",
+								borderRadius: 8,
+								background: `color-mix(in oklch, ${RDS_COLORS.warn} 8%, transparent)`,
+								border: `1px solid color-mix(in oklch, ${RDS_COLORS.warn} 25%, transparent)`,
+							}}
+						>
+							{t("share.privateHint")}
+						</div>
+					)}
+					{canShareCanonical && (
+						<div style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle }}>{t("share.canonicalHint")}</div>
+					)}
 				</div>
 
 				<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>

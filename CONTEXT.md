@@ -45,7 +45,12 @@ Who can view a Route. One of `private`, `unlisted`, or `public`.
 - `unlisted`: viewable by anyone with the URL; never appears in listings, search, or feeds; not indexable.
 - `public`: viewable by anyone with the URL _and_ eligible for future discovery surfaces (listings, search, feeds).
 The URL is the capability: changing visibility takes immediate effect for everyone, there is no separable share-token to rotate.
+A `public` or `unlisted` Route has a public route page at `/r/{slug}-{id}`. The canonical shareable URL lives on the landing host (`routess.com`/`routess.be`), server-rendered for link previews and search; the same path on the app origin is the interactive in-app view. Both surfaces share the URL contract and slug logic verbatim. See ADR 0025.
 _Avoid_: privacy, sharing, share level, access level.
+
+**Tag**:
+A short free-form lowercase keyword attached to a Route, used to organise and filter the RouteLibrary. Each Tag matches `[a-z0-9][a-z0-9-]{0,23}` (1 to 24 characters, lowercase alphanumeric plus hyphen, must start with a letter or digit). A Route has zero to 10 Tags. Tags are owned per Route and never shared as standalone entities. Surfaced in the library filter row and in the route detail meta editor.
+_Avoid_: label, category, group, folder. A Tag is not a **Collection**: Tags are flat, cross-cutting, per-Route filter keywords; a Collection is a curated, ordered, shareable set of Routes. See ADR 0026.
 
 ## Metrics
 
@@ -127,6 +132,7 @@ _Avoid_: API key, access token, bearer token (the term is **PAT** when discussin
 - A **Route** has computed **Distance**, **Duration**, and **ElevationGain** metrics derived from its **RoutePath**.
 - A **RouteGeneration** produces a **Route** from **RouteType** + **SurfaceType** + **LoopDirection** + target distance, without manual Waypoint placement.
 - A **Route** has exactly one **RouteVisibility** (`private` | `unlisted` | `public`), defaulting from the owning User's preference.
+- A **Route** has zero or more **Tags**; Tags are flat (no hierarchy, no folder grouping).
 - A **User** owns zero or more **Routes**, accessed through their **RouteLibrary**.
 - A **User** owns zero or more **Collections**; each **Collection** holds an ordered set of that User's **Routes** (many-to-many, order is per-Collection).
 - A **Collection** has exactly one **RouteVisibility**; non-owners viewing a shared Collection never see its `private` Routes.

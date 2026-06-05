@@ -1,5 +1,11 @@
-import type { Coordinate, RouteActivity, RouteVisibility } from "@routess/core";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+	type Coordinate,
+	ROUTE_ACTIVITIES,
+	ROUTE_VISIBILITIES,
+	type RouteActivity,
+	type RouteVisibility,
+} from "@routess/core";
+import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useComputedElevationProfile } from "@/features/routing/services/elevation";
 import { fetchSurfaceBreakdown, type SurfaceBreakdown } from "@/features/routing/services/SurfaceService";
 import type { ApiRoute } from "@/lib/api";
@@ -29,48 +35,161 @@ const VISIBILITY_LABEL: Record<RouteVisibility, { labelKey: string; icon: IconKe
 	public: { labelKey: "save.visibility.public", icon: "globe" },
 };
 
-function MetaChip({ icon, label }: { icon: IconKey; label: string }) {
-	const Icon = I[icon];
+const TAG_PATTERN = /^[a-z0-9][a-z0-9-]{0,23}$/;
+const MAX_TAGS = 10;
+
+function normaliseTag(input: string): string {
+	return input.trim().toLowerCase().replace(/\s+/g, "-").slice(0, 24);
+}
+
+function TagEditor({
+	tags,
+	disabled,
+	onChange,
+}: {
+	tags: string[];
+	disabled?: boolean;
+	onChange: (next: string[]) => void;
+}) {
+	const t = useT();
+	const [draft, setDraft] = useState("");
+
+	const commit = () => {
+		const next = normaliseTag(draft);
+		setDraft("");
+		if (!next || tags.includes(next) || tags.length >= MAX_TAGS || !TAG_PATTERN.test(next)) return;
+		onChange([...tags, next]);
+	};
+
+	const removeTag = (tag: string) => onChange(tags.filter((t) => t !== tag));
+
+	const onKey = (e: KeyboardEvent<HTMLInputElement>) => {
+		if (e.key === "Enter" || e.key === ",") {
+			e.preventDefault();
+			commit();
+		} else if (e.key === "Backspace" && draft === "" && tags.length > 0) {
+			removeTag(tags[tags.length - 1]);
+		}
+	};
+
 	return (
-		<span
-			style={{
-				display: "inline-flex",
-				alignItems: "center",
-				gap: 6,
-				padding: "4px 10px",
-				height: 24,
-				borderRadius: 999,
-				background: RDS_COLORS.bgInput,
-				border: `1px solid ${RDS_COLORS.border}`,
-				color: RDS_COLORS.fgMuted,
-				fontSize: 11.5,
-				fontWeight: 500,
-				whiteSpace: "nowrap",
-			}}
-		>
-			<Icon size={11} /> {label}
-		</span>
+		<div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6 }}>
+			{tags.map((tag) => (
+				<span
+					key={tag}
+					style={{
+						display: "inline-flex",
+						alignItems: "center",
+						gap: 4,
+						padding: "2px 4px 2px 10px",
+						height: 24,
+						borderRadius: 999,
+						background: RDS_COLORS.accentSoft,
+						color: RDS_COLORS.accent,
+						fontSize: 11.5,
+						fontWeight: 500,
+					}}
+				>
+					#{tag}
+					<button
+						type="button"
+						onClick={() => removeTag(tag)}
+						disabled={disabled}
+						aria-label={t("route.tag.remove", { tag })}
+						style={{
+							display: "inline-flex",
+							alignItems: "center",
+							justifyContent: "center",
+							width: 16,
+							height: 16,
+							borderRadius: 999,
+							border: 0,
+							background: "transparent",
+							color: RDS_COLORS.accent,
+							cursor: disabled ? "not-allowed" : "pointer",
+						}}
+					>
+						<I.close size={10} />
+					</button>
+				</span>
+			))}
+			{tags.length < MAX_TAGS && (
+				<input
+					value={draft}
+					onChange={(e) => setDraft(e.target.value)}
+					onKeyDown={onKey}
+					onBlur={commit}
+					disabled={disabled}
+					placeholder={t("route.tag.addPlaceholder")}
+					style={{
+						height: 24,
+						minWidth: 100,
+						background: "transparent",
+						border: `1px dashed ${RDS_COLORS.border}`,
+						borderRadius: 999,
+						padding: "0 10px",
+						fontSize: 11.5,
+						color: "inherit",
+						outline: "none",
+					}}
+				/>
+			)}
+		</div>
 	);
 }
 
-function TagChip({ label }: { label: string }) {
+function SegmentedSelector<T extends string>({
+	value,
+	options,
+	onChange,
+	disabled,
+}: {
+	value: T | undefined;
+	options: Array<{ value: T; label: string; icon: IconKey }>;
+	onChange: (next: T) => void;
+	disabled?: boolean;
+}) {
 	return (
-		<span
+		<div
 			style={{
 				display: "inline-flex",
-				alignItems: "center",
-				padding: "4px 10px",
-				height: 24,
+				gap: 4,
+				padding: 3,
 				borderRadius: 999,
-				background: RDS_COLORS.accentSoft,
-				color: RDS_COLORS.accent,
-				fontSize: 11.5,
-				fontWeight: 500,
-				whiteSpace: "nowrap",
+				background: RDS_COLORS.bgInput,
+				border: `1px solid ${RDS_COLORS.border}`,
 			}}
 		>
-			#{label}
-		</span>
+			{options.map((opt) => {
+				const on = value === opt.value;
+				const Icon = I[opt.icon];
+				return (
+					<button
+						key={opt.value}
+						type="button"
+						onClick={() => !disabled && onChange(opt.value)}
+						disabled={disabled}
+						style={{
+							display: "inline-flex",
+							alignItems: "center",
+							gap: 6,
+							height: 24,
+							padding: "0 10px",
+							borderRadius: 999,
+							border: 0,
+							background: on ? RDS_COLORS.bgPanel : "transparent",
+							color: on ? RDS_COLORS.fg : RDS_COLORS.fgMuted,
+							boxShadow: on ? `0 0 0 1px ${RDS_COLORS.border}` : "none",
+							fontSize: 11.5,
+							fontWeight: 500,
+							cursor: disabled ? "not-allowed" : "pointer",
+						}}
+					>
+						<Icon size={11} /> {opt.label}
+					</button>
+				);
+			})}
+		</div>
 	);
 }
 
@@ -149,10 +268,33 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 		};
 	}, [elevationGeometry, surfaceActivity]);
 
-	const activityMeta = route.activity ? ACTIVITY_LABEL[route.activity] : null;
-	const visibilityMeta = route.visibility ? VISIBILITY_LABEL[route.visibility] : null;
 	const tags = route.tags ?? [];
-	const hasMetaChips = Boolean(activityMeta) || Boolean(visibilityMeta) || tags.length > 0;
+	const [pendingPublicVisibility, setPendingPublicVisibility] = useState(false);
+
+	const mutateMeta = (updates: { activity?: RouteActivity; visibility?: RouteVisibility; tags?: string[] }) => {
+		updateRoute.mutate(
+			{ routeId: route.id, updates },
+			{
+				onError: () => {
+					pushToast({ kind: "danger", title: t("route.updateFailed"), body: t("common.tryAgain") });
+				},
+			},
+		);
+	};
+
+	const onVisibilityChange = (next: RouteVisibility) => {
+		if (next === route.visibility) return;
+		if (next === "public" && route.visibility !== "public") {
+			setPendingPublicVisibility(true);
+			return;
+		}
+		mutateMeta({ visibility: next });
+	};
+
+	const confirmPublic = () => {
+		setPendingPublicVisibility(false);
+		mutateMeta({ visibility: "public" });
+	};
 
 	// On mobile, open the drawer at the half-snap so the map stays visible
 	// above the elevation chart and the user can scrub to inspect surface and
@@ -202,10 +344,16 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 			{
 				name: `${route.name} (copy)`,
 				description: route.description,
+				activity: route.activity,
+				visibility: "private",
+				tags: route.tags,
 				waypoints: route.waypoints,
+				geometry: route.geometry,
 				distance: route.distance,
 				duration: route.duration,
 				elevationGain: route.elevationGain,
+				startAddress: route.startAddress,
+				endAddress: route.endAddress,
 				provenance: route.provenance,
 				...(route.routingPreferences ? { routingPreferences: route.routingPreferences } : {}),
 			},
@@ -387,13 +535,66 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 					})}
 				</p>
 
-				{hasMetaChips && (
-					<div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 12 }}>
-						{activityMeta && <MetaChip icon={activityMeta.icon} label={t(activityMeta.labelKey)} />}
-						{visibilityMeta && <MetaChip icon={visibilityMeta.icon} label={t(visibilityMeta.labelKey)} />}
-						{tags.map((tag) => (
-							<TagChip key={tag} label={tag} />
-						))}
+				<div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12 }}>
+					<div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10 }}>
+						<span style={{ fontSize: 11, color: RDS_COLORS.fgSubtle, minWidth: 64 }}>{t("route.field.activity")}</span>
+						<SegmentedSelector<RouteActivity>
+							value={route.activity}
+							options={ROUTE_ACTIVITIES.map((a) => ({
+								value: a,
+								label: t(ACTIVITY_LABEL[a].labelKey),
+								icon: ACTIVITY_LABEL[a].icon,
+							}))}
+							onChange={(next) => mutateMeta({ activity: next })}
+							disabled={updateRoute.isPending}
+						/>
+					</div>
+					<div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10 }}>
+						<span style={{ fontSize: 11, color: RDS_COLORS.fgSubtle, minWidth: 64 }}>
+							{t("route.field.visibility")}
+						</span>
+						<SegmentedSelector<RouteVisibility>
+							value={route.visibility}
+							options={ROUTE_VISIBILITIES.map((v) => ({
+								value: v,
+								label: t(VISIBILITY_LABEL[v].labelKey),
+								icon: VISIBILITY_LABEL[v].icon,
+							}))}
+							onChange={onVisibilityChange}
+							disabled={updateRoute.isPending}
+						/>
+					</div>
+					<div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-start", gap: 10 }}>
+						<span style={{ fontSize: 11, color: RDS_COLORS.fgSubtle, minWidth: 64, paddingTop: 4 }}>
+							{t("route.field.tags")}
+						</span>
+						<TagEditor tags={tags} disabled={updateRoute.isPending} onChange={(next) => mutateMeta({ tags: next })} />
+					</div>
+				</div>
+				{pendingPublicVisibility && (
+					<div
+						role="alertdialog"
+						aria-modal="true"
+						style={{
+							marginTop: 12,
+							padding: 12,
+							border: `1px solid ${RDS_COLORS.warn}`,
+							borderRadius: 10,
+							background: `color-mix(in oklch, ${RDS_COLORS.warn} 10%, transparent)`,
+						}}
+					>
+						<div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>{t("route.makePublic.title")}</div>
+						<div style={{ fontSize: 12, color: RDS_COLORS.fgMuted, marginBottom: 10, lineHeight: 1.45 }}>
+							{t("route.makePublic.body")}
+						</div>
+						<div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+							<Btn variant="ghost" onClick={() => setPendingPublicVisibility(false)}>
+								{t("common.cancel")}
+							</Btn>
+							<Btn variant="primary" onClick={confirmPublic}>
+								{t("route.makePublic.confirm")}
+							</Btn>
+						</div>
 					</div>
 				)}
 
