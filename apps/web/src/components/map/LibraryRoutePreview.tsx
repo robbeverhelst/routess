@@ -84,11 +84,13 @@ export function LibraryRoutePreview({ mapRef }: { mapRef: React.RefObject<Mapbox
 		if (map.isStyleLoaded()) {
 			apply();
 		} else {
-			map.once("load", apply);
+			// "load" only fires once per map lifetime; "idle" also fires while
+			// other layers are still settling, so a deferred apply always runs.
+			map.once("idle", apply);
 		}
 		map.on("style.load", reapply);
 		return () => {
-			map.off("load", apply);
+			map.off("idle", apply);
 			map.off("style.load", reapply);
 			if (map.isStyleLoaded()) removePreview(map);
 		};

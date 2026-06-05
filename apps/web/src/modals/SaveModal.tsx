@@ -14,6 +14,7 @@ import {
 	useElevationGain,
 	useRouteDistance,
 	useRouteDuration,
+	useRoutePath,
 	useWaypoints,
 } from "@/stores/routingStore";
 import { useToastStore } from "@/stores/toastStore";
@@ -38,6 +39,7 @@ export function SaveModal() {
 	const t = useT();
 	const closeModal = useModalsStore((s) => s.closeModal);
 	const waypoints = useWaypoints();
+	const routePath = useRoutePath();
 	const distance = useRouteDistance();
 	const duration = useRouteDuration();
 	const distanceMeters = useDistanceMeters();
@@ -83,6 +85,7 @@ export function SaveModal() {
 				visibility,
 				tags,
 				waypoints,
+				...(routePath.length >= 2 ? { geometry: routePath } : {}),
 				distance: distanceMeters ?? 0,
 				duration: durationSeconds ?? undefined,
 				elevationGain: elevationGain != null ? Math.round(elevationGain) : 0,
