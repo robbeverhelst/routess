@@ -22,7 +22,7 @@
 		"tailwindcss": "^4.1.7",
 		"postcss": "^8.4.47",
 		"fumadocs-core": "^16.8.5",
-		"fumadocs-mdx": "^14.3.2",
+		"fumadocs-mdx": "^15.0.0",
 		"fumadocs-openapi": "^10.0.0",
 		"fumadocs-ui": "^16.8.5",
 		"next": "^16.0.0",
