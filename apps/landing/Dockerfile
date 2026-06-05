@@ -13,6 +13,11 @@ COPY packages ./packages
 
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# @routess/core resolves to its built dist (the route pages import slug and
+# static-map helpers), so compile it before the Next build.
+RUN cd /app/packages/core && \
+	node /app/node_modules/.bin/tsc -b --force
+
 RUN cd /app/apps/landing && \
 	node node_modules/.bin/next build
 
