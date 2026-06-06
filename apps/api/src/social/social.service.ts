@@ -274,12 +274,18 @@ export class SocialService {
 			// Unlisted routes are only reachable via the share token; public ones
 			// keep the canonical id URL (#247).
 			const ref = route.visibility === "public" ? route.id : route.shareToken;
-			const url = `${this.config.app.frontendUrl}/r/${buildRouteSlugId(route.name, ref)}`;
+			const slugId = buildRouteSlugId(route.name, ref);
+			const url = `${this.config.app.frontendUrl}/r/${slugId}`;
+			// Map preview served by the landing host's og.png proxy (it injects
+			// the Referer the URL-restricted Mapbox token needs; email clients
+			// fetch through proxies that send none).
+			const imageUrl = `${this.config.app.publicSiteUrl}/r/${slugId}/og.png`;
 			await this.emailService.sendRouteShareEmail(recipient.email, {
 				senderName: sender.name,
 				routeName: route.name,
 				message: share.message,
 				url,
+				imageUrl,
 			});
 			share.emailedAt = new Date();
 			await this.em.persistAndFlush(share);
