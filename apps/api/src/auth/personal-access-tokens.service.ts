@@ -64,7 +64,7 @@ export class PersonalAccessTokensService {
 			scope,
 			expiresAt,
 		});
-		await this.em.persistAndFlush(record);
+		await this.em.persist(record).flush();
 		return { ...this.toResponseDto(record), token: plaintext };
 	}
 
@@ -85,7 +85,7 @@ export class PersonalAccessTokensService {
 			return;
 		}
 		record.revokedAt = new Date();
-		await this.em.persistAndFlush(record);
+		await this.em.persist(record).flush();
 	}
 
 	// Used by the bearer-auth strategy. Returns the populated record if the

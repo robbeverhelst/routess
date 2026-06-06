@@ -1,4 +1,5 @@
-import { Filter, OptionalProps, Property } from "@mikro-orm/core";
+import { OptionalProps } from "@mikro-orm/core";
+import { Filter, Property } from "@mikro-orm/decorators/legacy";
 
 export const SOFT_DELETE_FILTER = "softDelete";
 

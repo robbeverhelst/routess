@@ -61,7 +61,7 @@ export class UsersService {
 			user.preferences = mergeUserPreferences(user.preferences, updateUserDto.preferences);
 		}
 
-		await this.em.persistAndFlush(user);
+		await this.em.persist(user).flush();
 		return user;
 	}
 
@@ -82,7 +82,7 @@ export class UsersService {
 			route.deletedAt = now;
 		}
 
-		await this.em.persistAndFlush(user);
+		await this.em.persist(user).flush();
 		await this.em.flush();
 		await this.sessionService.invalidateUserSessions(id);
 	}
@@ -101,7 +101,7 @@ export class UsersService {
 		user.deletedAt = undefined;
 		user.deletionStatus = "active";
 		user.deletionRequestedAt = undefined;
-		await this.em.persistAndFlush(user);
+		await this.em.persist(user).flush();
 		await this.em.getConnection().execute(`update "route" set "deleted_at" = null where "user_id" = ?`, [id]);
 		return user;
 	}

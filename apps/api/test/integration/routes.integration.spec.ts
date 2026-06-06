@@ -36,7 +36,7 @@ describe("Routes Integration Tests", () => {
 			avatar: "https://example.com/other.jpg",
 		});
 
-		await orm.em.persistAndFlush([testUser, otherUser]);
+		await orm.em.persist([testUser, otherUser]).flush();
 
 		// Generate auth tokens
 		authToken = await generateTestJWT(testUser.id, testUser.email, app);
@@ -146,7 +146,7 @@ describe("Routes Integration Tests", () => {
 				// duration: 1800,
 			});
 
-			await orm.em.persistAndFlush([userRoute1, userRoute2, otherUserRoute]);
+			await orm.em.persist([userRoute1, userRoute2, otherUserRoute]).flush();
 		});
 
 		it("should return only authenticated user's routes", async () => {
@@ -235,7 +235,7 @@ describe("Routes Integration Tests", () => {
 				distance: 1000,
 				// duration: 600,
 			});
-			await orm.em.persistAndFlush(testRoute);
+			await orm.em.persist(testRoute).flush();
 		});
 
 		it("should return route by id for owner", async () => {
@@ -285,7 +285,7 @@ describe("Routes Integration Tests", () => {
 				distance: 1000,
 				// duration: 600,
 			});
-			await orm.em.persistAndFlush(testRoute);
+			await orm.em.persist(testRoute).flush();
 		});
 
 		it("should update route for owner", async () => {
@@ -344,7 +344,7 @@ describe("Routes Integration Tests", () => {
 				distance: 1000,
 				// duration: 600,
 			});
-			await orm.em.persistAndFlush(testRoute);
+			await orm.em.persist(testRoute).flush();
 		});
 
 		it("should soft delete route for owner", async () => {

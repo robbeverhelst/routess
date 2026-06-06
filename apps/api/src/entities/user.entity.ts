@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
-import { Entity, Index, type Opt, PrimaryKey, Property } from "@mikro-orm/core";
+import { type Opt } from "@mikro-orm/core";
+import { Entity, Index, PrimaryKey, Property } from "@mikro-orm/decorators/legacy";
 import type { UserPreferences } from "@routess/core";
 import { BaseEntity } from "./base.entity";
 

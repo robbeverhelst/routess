@@ -62,7 +62,7 @@ describe("Account Lifecycle Integration Tests", () => {
 					visibility: "private",
 					tags: [],
 				});
-				await orm.em.persistAndFlush(route);
+				await orm.em.persist(route).flush();
 			});
 
 			await supertest(app.getHttpServer())
@@ -112,7 +112,7 @@ describe("Account Lifecycle Integration Tests", () => {
 					visibility: "private",
 					tags: [],
 				});
-				await orm.em.persistAndFlush(route);
+				await orm.em.persist(route).flush();
 			});
 			await supertest(app.getHttpServer())
 				.delete("/api/v1/users/me")
@@ -190,7 +190,7 @@ describe("Account Lifecycle Integration Tests", () => {
 					providerId: "expired@example.com",
 					passwordHash: "doesntmatter",
 				});
-				await orm.em.persistAndFlush([route, method]);
+				await orm.em.persist([route, method]).flush();
 			});
 
 			// Alice and Bob both initiated deletion; only Alice is past the grace.

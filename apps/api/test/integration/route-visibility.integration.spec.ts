@@ -24,7 +24,7 @@ async function createRoute(
 			visibility,
 			tags: [],
 		});
-		await orm.em.persistAndFlush(route);
+		await orm.em.persist(route).flush();
 		return { id: route.id, shareToken: route.shareToken };
 	});
 }
@@ -154,7 +154,7 @@ describe("Route Visibility Integration Tests", () => {
 					overlays: { heatmap: true, contour: false, bike: true, surface: false, wind: false },
 					defaultRouteVisibility: "unlisted",
 				};
-				await orm.em.persistAndFlush(u);
+				await orm.em.persist(u).flush();
 			});
 
 			const response = await supertest(app.getHttpServer())

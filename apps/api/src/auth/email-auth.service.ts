@@ -96,7 +96,7 @@ export class EmailAuthService {
 		// Cache the chosen display name on the token row by abusing the email
 		// field is wrong — store in a side channel. For v1 we re-derive name
 		// from the email at consumption time and let the user edit later.
-		await this.em.persistAndFlush(tokenRow);
+		await this.em.persist(tokenRow).flush();
 
 		// Display name: keep it simple. We don't store name on the token; it
 		// defaults to the email local-part on consume. User can change it in
@@ -148,7 +148,7 @@ export class EmailAuthService {
 			role: desiredRole ?? "user",
 			deletionStatus: "active",
 		});
-		await this.em.persistAndFlush(user);
+		await this.em.persist(user).flush();
 
 		const method = this.authMethodRepository.create({
 			user: user.id,
@@ -157,7 +157,7 @@ export class EmailAuthService {
 			passwordHash: claimed.password_hash,
 			lastUsedAt: new Date(),
 		});
-		await this.em.persistAndFlush(method);
+		await this.em.persist(method).flush();
 
 		this.events.emit(USER_REGISTERED, { source: "email" } satisfies UserRegisteredEvent);
 
@@ -208,7 +208,7 @@ export class EmailAuthService {
 					.sendAccountLockedEmail(normalisedEmail, this.config.app.frontendUrl)
 					.catch(() => undefined);
 			}
-			await this.em.persistAndFlush(method);
+			await this.em.persist(method).flush();
 			this.emitLoginAttempt("invalid_token");
 			throw new UnauthorizedException("Email or password is incorrect.");
 		}
@@ -217,7 +217,7 @@ export class EmailAuthService {
 		method.lastUsedAt = new Date();
 		method.failedLoginAttempts = 0;
 		method.lockedUntil = null;
-		await this.em.persistAndFlush(method);
+		await this.em.persist(method).flush();
 
 		const accessToken = await this.sessionService.createSession(user.id, {
 			userAgent: this.normaliseUserAgent(sessionContext?.userAgent),
@@ -254,7 +254,7 @@ export class EmailAuthService {
 		if (existing) {
 			existing.passwordHash = newHash;
 			existing.lastUsedAt = new Date();
-			await this.em.persistAndFlush(existing);
+			await this.em.persist(existing).flush();
 		} else {
 			const method = this.authMethodRepository.create({
 				user: user.id,
@@ -263,7 +263,7 @@ export class EmailAuthService {
 				passwordHash: newHash,
 				lastUsedAt: new Date(),
 			});
-			await this.em.persistAndFlush(method);
+			await this.em.persist(method).flush();
 		}
 	}
 
@@ -303,7 +303,7 @@ export class EmailAuthService {
 			user: user.id,
 			expiresAt: new Date(Date.now() + PASSWORD_RESET_TTL_MS),
 		});
-		await this.em.persistAndFlush(tokenRow);
+		await this.em.persist(tokenRow).flush();
 
 		const resetUrl = `${this.config.app.frontendUrl}/auth/reset-password?token=${token}`;
 		await this.emailService.sendPasswordResetEmail(normalisedEmail, resetUrl);
@@ -340,7 +340,7 @@ export class EmailAuthService {
 		method.lastUsedAt = new Date();
 		method.failedLoginAttempts = 0;
 		method.lockedUntil = null;
-		await this.em.persistAndFlush(method);
+		await this.em.persist(method).flush();
 		await this.sessionService.invalidateUserSessions(claimed.user_id, "invalidated");
 	}
 
