@@ -6,7 +6,7 @@ import { EventEmitter2 } from "@nestjs/event-emitter";
 import type { AppConfig } from "../config/app-config";
 import { APP_CONFIG } from "../config/config.module";
 import { EmailService } from "../email/email.service";
-import { User } from "../entities/user.entity";
+import { randomHandle, User } from "../entities/user.entity";
 import { UserAuthMethod } from "../entities/user-auth-method.entity";
 import { VerificationToken } from "../entities/verification-token.entity";
 import {
@@ -15,7 +15,7 @@ import {
 	USER_REGISTERED,
 	type UserRegisteredEvent,
 } from "../telemetry/domain-events";
-import { generateUniqueHandle } from "../users/handle.util";
+import { generateUniqueHandle, isHandleUniqueViolation } from "../users/handle.util";
 import { toUserResponseDto } from "../users/user.mapper";
 import type { AuthResponseDto } from "./dto";
 import { PasswordService } from "./password.service";
@@ -148,7 +148,14 @@ export class EmailAuthService {
 			role: desiredRole ?? "user",
 			deletionStatus: "active",
 		});
-		await this.em.persistAndFlush(user);
+		try {
+			await this.em.persistAndFlush(user);
+		} catch (error) {
+			// Lost the handle race to a concurrent signup; retry once random.
+			if (!isHandleUniqueViolation(error)) throw error;
+			user.handle = randomHandle();
+			await this.em.persistAndFlush(user);
+		}
 
 		const method = this.authMethodRepository.create({
 			user: user.id,

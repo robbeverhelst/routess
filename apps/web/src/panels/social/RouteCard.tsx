@@ -1,4 +1,5 @@
 import type { ApiProfileRoute } from "@routess/api-client";
+import { useT } from "@/lib/i18n";
 import { useUnits } from "@/lib/units";
 import { I } from "../../components/icons";
 import { RDS_COLORS } from "../../components/primitives";
@@ -14,6 +15,7 @@ export function SocialRouteCard({
 	header?: React.ReactNode;
 	footer?: React.ReactNode;
 }) {
+	const t = useT();
 	const { formatDistanceParts, formatElevationParts } = useUnits();
 	const distance = route.distance ? formatDistanceParts(route.distance / 1000) : null;
 	const elevation = route.elevationGain ? formatElevationParts(route.elevationGain) : null;
@@ -44,7 +46,7 @@ export function SocialRouteCard({
 						alignItems: "center",
 					}}
 				>
-					{route.activity && <span>{route.activity}</span>}
+					{route.activity && <span>{t(`sport.${route.activity}`)}</span>}
 					{distance && (
 						<span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
 							<I.route size={12} />

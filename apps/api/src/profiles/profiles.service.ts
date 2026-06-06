@@ -32,7 +32,9 @@ export class ProfilesService {
 
 		const publicRoutes = await this.routeRepository.find(
 			{ user: user.id, visibility: "public" },
-			{ orderBy: { publishedAt: "desc nulls last" }, limit: PROFILE_ROUTE_LIMIT },
+			// id tiebreaker: publishedAt ties (backfill, bulk publishes) would
+			// otherwise make paging skip or repeat routes.
+			{ orderBy: { publishedAt: "desc nulls last", id: "DESC" }, limit: PROFILE_ROUTE_LIMIT },
 		);
 		// Stats over public Routes only (CONTEXT.md "Profile"): aggregated in
 		// SQL so they stay correct beyond the listing window.
@@ -49,13 +51,20 @@ export class ProfilesService {
 			this.followRepository.count({ follower: user.id }),
 		]);
 		const stats = statsRows[0] ?? { count: 0, distance: 0, elevation: 0 };
+		// null for anonymous viewers and for the owner (no self-follow).
 		const isFollowing =
-			viewerId === null ? null : (await this.followRepository.count({ follower: viewerId, followee: user.id })) > 0;
+			viewerId === null || viewerId === user.id
+				? null
+				: (await this.followRepository.count({ follower: viewerId, followee: user.id })) > 0;
 
-		// Indexable Profile gate (CONTEXT.md): >= 3 Indexable Routes. Computed
-		// over the listing window, which is fine — a profile with 50+ public
-		// routes clears the bar long before the window matters.
-		const indexableCount = publicRoutes.filter((r) => isRouteIndexable(r)).length;
+		// Indexable Profile gate (CONTEXT.md): >= 3 Indexable Routes. Counted
+		// over all public routes, not the listing window, so the page's
+		// noindex decision matches the sitemap gate (findIndexable).
+		const indexableCandidates = await this.routeRepository.find(
+			{ user: user.id, visibility: "public", distance: { $gte: INDEXABLE_MIN_DISTANCE_METERS } },
+			{ fields: ["id", "name", "distance", "description", "tags", "visibility"] },
+		);
+		const indexableCount = indexableCandidates.filter((r) => isRouteIndexable(r)).length;
 
 		return {
 			handle: user.handle,

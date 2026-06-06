@@ -103,7 +103,9 @@ export class SocialService {
 		}
 		const [routes, total] = await this.routeRepository.findAndCount(
 			{ user: { $in: followeeIds }, visibility: "public", publishedAt: { $ne: null } },
-			{ populate: ["user"], orderBy: { publishedAt: "desc nulls last" }, limit, offset },
+			// id tiebreaker: backfilled/bulk publishedAt values collide, and
+			// offset paging over an unstable order skips or repeats routes.
+			{ populate: ["user"], orderBy: { publishedAt: "desc nulls last", id: "DESC" }, limit, offset },
 		);
 		return {
 			items: routes.map((route) => ({

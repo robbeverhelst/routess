@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import Script from "next/script";
 import { getDict } from "@/lib/content";
 import { APP_HOST, HTML_LANG, type Locale, SELF_HOST, SISTER_HOST } from "@/lib/i18n";
+import { serializeJsonLd } from "@/lib/json-ld";
 import { getLocale } from "@/lib/locale";
 import { fetchPublicProfile, type PublicProfile } from "@/lib/profile-api";
 import { Footer } from "../../components/Footer";
@@ -154,7 +155,7 @@ export default async function PublicProfilePage({ params }: { params: Promise<Pa
 				id="ld-profile"
 				type="application/ld+json"
 				// biome-ignore lint/security/noDangerouslySetInnerHtml: serialized JSON-LD
-				dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd(profile, locale)) }}
+				dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd(profile, locale)) }}
 			/>
 		</>
 	);

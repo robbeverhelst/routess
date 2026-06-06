@@ -80,6 +80,13 @@ function ShareCard({ share, onOpenProfile }: { share: ApiRouteShare; onOpenProfi
 				<div style={{ fontSize: 13, color: RDS_COLORS.fgSubtle, fontStyle: "italic" }}>
 					{t("social.inbox.unavailable")}
 				</div>
+				{unread && (
+					<div style={{ display: "flex", gap: 8 }}>
+						<Btn variant="ghost" onClick={() => markRead.mutate(share.id)}>
+							<I.check size={13} /> {t("social.inbox.markRead")}
+						</Btn>
+					</div>
+				)}
 			</div>
 		);
 	}

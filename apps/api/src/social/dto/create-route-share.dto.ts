@@ -8,6 +8,7 @@ export class CreateRouteShareDto {
 
 	@ApiProperty({ example: "jane-doe" })
 	@IsString()
+	@MaxLength(30)
 	recipientHandle!: string;
 
 	@ApiPropertyOptional({ example: "Route for Sunday's ride!" })

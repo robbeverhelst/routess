@@ -4,7 +4,7 @@ import { Inject, Injectable, UnauthorizedException } from "@nestjs/common";
 import { EventEmitter2 } from "@nestjs/event-emitter";
 import type { AppConfig } from "../config/app-config";
 import { APP_CONFIG } from "../config/config.module";
-import { User, type UserRole } from "../entities/user.entity";
+import { randomHandle, User, type UserRole } from "../entities/user.entity";
 import { UserAuthMethod } from "../entities/user-auth-method.entity";
 import {
 	AUTH_LOGIN_ATTEMPTED,
@@ -15,7 +15,7 @@ import {
 	type UserRegisteredEvent,
 	type UserUndeletedEvent,
 } from "../telemetry/domain-events";
-import { generateUniqueHandle } from "../users/handle.util";
+import { generateUniqueHandle, isHandleUniqueViolation } from "../users/handle.util";
 import { toUserResponseDto } from "../users/user.mapper";
 import type { AuthResponseDto, GoogleAuthDto } from "./dto";
 import { GOOGLE_IDENTITY_VERIFIER, type GoogleIdentity, type GoogleIdentityVerifier } from "./google-identity-verifier";
@@ -84,7 +84,14 @@ export class AuthService {
 				role: desiredRole ?? "user",
 				deletionStatus: "active",
 			});
-			await this.entityManager.persistAndFlush(user);
+			try {
+				await this.entityManager.persistAndFlush(user);
+			} catch (error) {
+				// Lost the handle race to a concurrent signup; retry once random.
+				if (!isHandleUniqueViolation(error)) throw error;
+				user.handle = randomHandle();
+				await this.entityManager.persistAndFlush(user);
+			}
 			await this.upsertGoogleAuthMethod(user, googleId);
 			this.events.emit(USER_REGISTERED, { source: "google" } satisfies UserRegisteredEvent);
 		} else {
