@@ -751,6 +751,54 @@
 				"tags": ["routes"]
 			}
 		},
+		"/routes/public": {
+			"get": {
+				"description": "Returns public Routes that clear the Indexable quality gate (see CONTEXT.md), newest-updated first. Anonymous; feeds the landing sitemap and discovery surfaces. Total count in X-Total-Count.",
+				"operationId": "RoutesController_findIndexablePublic",
+				"parameters": [
+					{
+						"name": "limit",
+						"required": false,
+						"in": "query",
+						"description": "Page size",
+						"schema": {
+							"minimum": 1,
+							"maximum": 200,
+							"default": 100,
+							"type": "number"
+						}
+					},
+					{
+						"name": "offset",
+						"required": false,
+						"in": "query",
+						"description": "Number of routes to skip",
+						"schema": {
+							"minimum": 0,
+							"default": 0,
+							"type": "number"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"$ref": "#/components/schemas/PublicRouteSummaryDto"
+									}
+								}
+							}
+						}
+					}
+				},
+				"summary": "List indexable public routes",
+				"tags": ["routes"]
+			}
+		},
 		"/routes/by-user/{userId}": {
 			"get": {
 				"description": "Returns the public Routes owned by the given user. Excludes private and unlisted routes.",
@@ -3084,6 +3132,25 @@
 					"createdAt",
 					"updatedAt"
 				]
+			},
+			"PublicRouteSummaryDto": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "number"
+					},
+					"name": {
+						"type": "string"
+					},
+					"distance": {
+						"type": "number",
+						"description": "Distance in meters"
+					},
+					"updatedAt": {
+						"type": "string"
+					}
+				},
+				"required": ["id", "name", "updatedAt"]
 			},
 			"UpdateRouteDto": {
 				"type": "object",

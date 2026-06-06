@@ -21,7 +21,7 @@ web:
     VITE_API_URL: "https://api.routess.com"
     # Origin that serves the canonical public route page (the landing host, e.g.
     # https://routess.com). Empty falls back to the app origin. See ADR 0025.
-    VITE_PUBLIC_ROUTE_BASE_URL: ""
+    VITE_PUBLIC_ROUTE_BASE_URL: "https://routess.com"
     VITE_APP_VERSION: ""
     # Sentry/GlitchTip error reporting. Leave VITE_SENTRY_DSN empty to disable.
     VITE_SENTRY_DSN: ""
@@ -203,10 +203,17 @@ landing:
     tag: latest
     pullPolicy: IfNotPresent
   env:
-    # Public (pk.*) Mapbox token for the live mini-planner map, read by the
-    # Next server at request time. Leave empty to fall back to the baked
-    # static preview image.
+    # Public (pk.*) Mapbox token for the live mini-planner map and the public
+    # route page's og.png proxy, read by the Next server at request time.
+    # Leave empty to fall back to the baked static preview image.
     MAPBOX_PUBLIC_TOKEN: ""
+    # Server-side API base for public route pages and the sitemap. Set to the
+    # in-cluster service URL to skip the public hop; empty falls back to
+    # https://api.routess.com.
+    API_URL: ""
+    # Browser-facing API base rendered into hrefs (GPX download). Empty falls
+    # back to https://api.routess.com.
+    PUBLIC_API_URL: ""
   service:
     type: ClusterIP
     port: 80

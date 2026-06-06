@@ -1,12 +1,24 @@
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { generateFiles } from "fumadocs-openapi";
 import { createOpenAPI } from "fumadocs-openapi/server";
 
 const docsRoot = process.cwd();
 const schemaPath = resolve(docsRoot, "openapi/routess.openapi.json");
-const outputDir = resolve(docsRoot, "content/api/endpoints");
+// English is the generation target; the other locales get a verbatim mirror of
+// the endpoint pages below (operation text comes from the OpenAPI spec and is
+// English by construction). Authored files (index.mdx) are NOT touched here.
+const outputDir = resolve(docsRoot, "content/api/en/endpoints");
 const schema = JSON.parse(await readFile(schemaPath, "utf8")) as Record<string, unknown>;
+
+const MIRROR_LOCALES = ["nl", "fr", "de"] as const;
+
+const META_TITLES: Record<string, string> = {
+	en: "API Reference",
+	nl: "API-referentie",
+	fr: "Référence API",
+	de: "API-Referenz",
+};
 
 function slugify(value: string) {
 	return value
@@ -42,16 +54,24 @@ await generateFiles({
 	},
 });
 
-await mkdir(resolve(docsRoot, "content/api"), { recursive: true });
-await writeFile(
-	resolve(docsRoot, "content/api/meta.json"),
-	`${JSON.stringify(
-		{
-			title: "API Reference",
-			pages: ["index", "endpoints"],
-		},
-		null,
-		"\t",
-	)}\n`,
-	"utf8",
-);
+for (const locale of ["en", ...MIRROR_LOCALES]) {
+	const localeDir = resolve(docsRoot, "content/api", locale);
+	await mkdir(localeDir, { recursive: true });
+	if (locale !== "en") {
+		const mirrorDir = resolve(localeDir, "endpoints");
+		await rm(mirrorDir, { force: true, recursive: true });
+		await cp(outputDir, mirrorDir, { recursive: true });
+	}
+	await writeFile(
+		resolve(localeDir, "meta.json"),
+		`${JSON.stringify(
+			{
+				title: META_TITLES[locale] ?? META_TITLES.en,
+				pages: ["index", "endpoints"],
+			},
+			null,
+			"\t",
+		)}\n`,
+		"utf8",
+	);
+}

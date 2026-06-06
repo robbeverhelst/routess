@@ -1,0 +1,31 @@
+---
+title: Panneau d'administration
+description: Comment l'interface d'administration intégrée à l'application est câblée.
+---
+
+routess est livré avec un panneau d'administration intégré pour les opérateurs. Il vit sous `/admin` dans l'application web et s'appuie sur les endpoints `/admin/*` de l'API.
+
+## Contrôle d'accès
+
+Le rôle d'administrateur est accordé à la connexion. Toute adresse e-mail listée dans la variable d'environnement `ADMIN_EMAILS` de l'API (séparées par des virgules) se voit attribuer `role: "admin"` dans son JWT de session à la prochaine connexion. Les autres utilisateurs ne voient aucune route `/admin` dans la navigation, et les requêtes API sont rejetées par le `RolesGuard`.
+
+Laisser `ADMIN_EMAILS` vide désactive entièrement le panneau. Il n'y a pas d'amorçage de super-utilisateur ; tu provisionnes les administrateurs en modifiant la variable d'environnement et en redémarrant l'API.
+
+## Surfaces
+
+| Panneau            | Route                | Objectif                                                       |
+| ------------------ | -------------------- | -------------------------------------------------------------- |
+| Tableau de bord d'aperçu | `/admin`       | KPI : utilisateurs, itinéraires, inscriptions, attrition, activité récente |
+| Utilisateurs       | `/admin/users`       | Liste paginée et recherchable, détail par utilisateur, révocation de session |
+| Itinéraires        | `/admin/routes`      | Liste paginée et recherchable, détail par itinéraire, suppression douce |
+| Système            | `/admin/system`      | Santé de l'API, version, uptime, accessibilité de la BD, configuration runtime |
+
+Tous les endpoints vivent sur l'API au chemin correspondant sous `/admin/*` (par ex. `/admin/stats/overview`, `/admin/users/:id`, `/admin/system/health`).
+
+## Piste d'audit
+
+Chaque appel mutant (suppression douce, révocation de session) passe par un `AuditInterceptor` qui écrit une ligne de log structurée incluant l'ID utilisateur de l'administrateur, l'action et la cible. Agrège-les avec le reste des logs de l'API.
+
+## Métriques
+
+Les actions d'administration et les récupérations de données du panneau font partie de la même surface `/metrics` que le reste de l'API. Voir [Observabilité](../operations/observability).

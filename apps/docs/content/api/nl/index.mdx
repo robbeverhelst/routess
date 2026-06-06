@@ -1,0 +1,118 @@
+---
+title: API-referentie
+description: REST-endpoints, auth en datamodellen.
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+<Callout type="info" title="Gegenereerd uit OpenAPI">
+	De endpoint-pagina's onder [Endpoints](/nl/api-reference/endpoints) worden gegenereerd uit `apps/docs/openapi/routess.openapi.json`. Genereer ze opnieuw met `bun run docs:generate-api`.
+</Callout>
+
+## Base-URL
+
+- Productie: `https://api.routess.com`
+- Lokaal: `http://localhost:3000`
+
+Geversioneerde routes leven onder `/api/v1`. De health- en metrics-endpoints (`/health`, `/health/live`, `/health/ready`, `/metrics`) zijn niet geversioneerd en leven op de root.
+
+## Authenticatie
+
+De API accepteert twee authenticatiemodi.
+
+### Sessiecookie (browser)
+
+`POST /api/v1/auth/google` wisselt een Google ID-token in voor een sessiecookie, en `POST /api/v1/auth/signup-email` / `POST /api/v1/auth/login-email` doen hetzelfde voor accounts met e-mail + wachtwoord. Volgende aanroepen sturen de cookie automatisch mee. Dit is wat de routess-webapp gebruikt. Zie [Developer Docs → Architectuur → Auth](/nl/docs/architecture/auth) voor de volledige flow.
+
+### Personal access token (CLI / scripts)
+
+Niet-browserclients authenticeren door een personal access token als Bearer-header te sturen:
+
+```http
+Authorization: Bearer routess_pat_<random>
+```
+
+Maak tokens aan in de webapp onder **Settings → API Tokens**. Elk token draagt een van twee scopes:
+
+- `read`: routes lijsten en ophalen, GPX exporteren, profiel lezen.
+- `write`: alles uit `read` plus alleen-metadata-mutaties op eigen routes en op voorkeuren.
+
+#### Scope per endpoint
+
+| Vereiste scope | Endpoints |
+| --- | --- |
+| geen (publiek) | `GET /api/v1/routes/by-user/:userId`, `POST /api/v1/routing/route`, `POST /api/v1/routing/trace-attributes`, `GET /health/*`, `GET /metrics` |
+| `read` | `GET /api/v1/users/me`, `GET /api/v1/users/profile`, `GET /api/v1/routes` |
+| `write` | `PATCH /api/v1/users/me`, `PATCH /api/v1/routes/:id`, `DELETE /api/v1/routes/:id` |
+| PAT-geblokkeerd (alleen sessiecookie) | `POST /api/v1/routes`, `GET /api/v1/routes/:id`, `DELETE /api/v1/users/me`, `POST /api/v1/users/me/password`, `GET /api/v1/users/me/export`, `/api/v1/me/sessions*`, `/api/v1/auth/*`, `/api/v1/admin/*` |
+
+Als je een endpoint aanroept met een token dat de vereiste scope mist, antwoordt de API met `403 FORBIDDEN`. De CLI geeft dit weer als exit code 6 (zie [CLI exit codes](../docs/apps/cli)).
+
+PAT's zijn geblokkeerd voor `/admin/*` en voor `DELETE /users/me`. Destructieve operaties (de zichtbaarheid van een route op public zetten, een route verwijderen) vereisen een `X-Routess-Confirm: true`-header en geven anders `428 PRECONDITION_REQUIRED` terug met een `impact`-veld dat de wijziging beschrijft. Zie ADR-0022 en ADR-0023.
+
+De `routess`-CLI (`npm install -g routess`) is de eenvoudigste manier om de API met een PAT aan te sturen; voor ad-hocgebruik werkt `curl` op dezelfde manier:
+
+```bash
+curl -H "Authorization: Bearer routess_pat_…" https://api.routess.com/api/v1/users/me
+```
+
+De CLI persisteert zijn token op `~/.config/routess/auth.json` (mode 0600), of `$XDG_CONFIG_HOME/routess/auth.json` als dat gezet is. De omgevingsvariabelen `ROUTESS_TOKEN` en `ROUTESS_API_URL` hebben voorrang op de waarden op schijf, wat handig is in CI en containers.
+
+## Fouten
+
+Elke foutresponse gebruikt één JSON-vorm:
+
+```json
+{
+	"statusCode": 403,
+	"code": "FORBIDDEN",
+	"message": "This endpoint is not accessible via personal access tokens",
+	"details": {}
+}
+```
+
+`code` is een stabiele machineleesbare string: `VALIDATION_FAILED`, `NOT_FOUND`, `UNAUTHORIZED`, `FORBIDDEN`, `CONFLICT`, `PRECONDITION_REQUIRED`, `RATE_LIMITED` of `INTERNAL`. `details` is optioneel en draagt gestructureerde context (validatieberichten, de `impact` van een destructieve operatie, enzovoort).
+
+## Rate limiting
+
+Limieten worden afgedwongen per gebruiker (of per token voor PAT's) in een venster van 60 seconden. Een limiet overschrijden geeft `429` met code `RATE_LIMITED`.
+
+| Tier | Limiet | Toegepast op |
+| --- | --- | --- |
+| Auth | 5/min | Login, signup, wachtwoordreset |
+| Strict | 10/min | Destructieve of dure aanroepen (account verwijderen, export, wachtwoordwijziging) |
+| Moderate | 60/min | Profiel, routes-CRUD, proxy naar de routing-engine |
+| Default | 300/min | Al de rest |
+
+## Endpoints (overzicht)
+
+| Method | Path | Doel |
+| --- | --- | --- |
+| POST | `/api/v1/auth/google` | Google ID-token inwisselen voor een sessie |
+| POST | `/api/v1/auth/signup-email` | Een account aanmaken met e-mail + wachtwoord |
+| POST | `/api/v1/auth/login-email` | Aanmelden met e-mail + wachtwoord |
+| POST | `/api/v1/auth/verify-email` | Een e-mailadres verifiëren |
+| POST | `/api/v1/auth/request-password-reset` | Een wachtwoordreset-e-mail aanvragen |
+| POST | `/api/v1/auth/reset-password` | Wachtwoord resetten met een token |
+| POST | `/api/v1/auth/logout` | De sessie wissen |
+| GET / POST / DELETE | `/api/v1/auth/tokens(/:id)` | Personal access tokens aanmaken / lijsten / intrekken |
+| GET | `/api/v1/me/sessions` | Actieve sessies lijsten |
+| DELETE | `/api/v1/me/sessions/:id` | Eén sessie intrekken |
+| POST | `/api/v1/me/sessions/logout-everywhere` | Alle sessies intrekken |
+| GET / PATCH / DELETE | `/api/v1/users/me` | De huidige gebruiker beheren |
+| GET | `/api/v1/users/profile` | Publieke alias van `/users/me` |
+| POST | `/api/v1/users/me/password` | Wachtwoord instellen of wijzigen |
+| GET | `/api/v1/users/me/export` | Accountdata downloaden als ZIP (GDPR-export) |
+| POST | `/api/v1/users/me/cancel-deletion` | Een lopende accountverwijdering annuleren |
+| GET | `/api/v1/routes` | De routes van de huidige gebruiker lijsten |
+| POST | `/api/v1/routes` | Een route aanmaken |
+| GET | `/api/v1/routes/:id` | Een route lezen (alleen sessiecookie; PAT's kunnen niet op id lezen, gebruik `/routes` en filter) |
+| PATCH / DELETE | `/api/v1/routes/:id` | Een route bijwerken of verwijderen |
+| GET | `/api/v1/routes/by-user/:userId` | De publieke routes van een gebruiker lijsten (geen auth) |
+| POST | `/api/v1/routing/route` | Een route berekenen door geordende locaties (Valhalla-proxy) |
+| POST | `/api/v1/routing/trace-attributes` | Een opgenomen vorm op het wegennet snappen en wegdekdata per edge teruggeven (Valhalla-proxy) |
+| GET / DELETE | `/api/v1/admin/*` | Endpoints voor het admindashboard (adminrol, alleen sessiecookie) |
+| GET | `/health`, `/health/live`, `/health/ready` | Liveness/readiness-probes (root-pad) |
+| GET | `/metrics` | Prometheus-metrics, intern-only (root-pad) |
+
+De endpoint-pagina's waarnaar in de sidebar wordt gelinkt zijn de bron van waarheid voor request/response-vormen en auth-vereisten per endpoint.

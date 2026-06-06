@@ -1,0 +1,26 @@
+---
+title: State management
+description: Zustand-stores, persistentie en undo/redo.
+---
+
+routess gebruikt **Zustand** voor clientstate. Stores staan in `packages/core/src/stores/` zodat de webapp en de (toekomstige) mobiele app ze kunnen delen.
+
+## Stores
+
+- **routingStore**: huidige route-waypoints, afgeleide stats, undo/redo-historie
+- **authStore**: huidige gebruiker, OAuth-state
+- **uiStore**: kaartstijl, open-state van de sidebar, taal
+
+## Waarom Zustand (niet Redux/Jotai)
+
+- Kleine API, geen boilerplate met actions/reducers
+- Werkt buiten React (zodat packages het kunnen gebruiken)
+- Ingebouwde middleware: `persist`, `subscribeWithSelector`
+
+## Persistentie
+
+De webapp omhult `routingStore` en `uiStore` met de `persist`-middleware op basis van `localStorage`. De mobiele app wisselt dat in voor `AsyncStorage` (zie fase 5 van het mobiele plan).
+
+## Undo / redo
+
+De routing-store houdt een begrensde historie van eerdere states bij. Elke mutatie zet de huidige state op de undo-stack voordat ze wordt toegepast. Redo herstelt vanaf de redo-stack bij elke undo. De stacks worden gereset bij een auth-wijziging.

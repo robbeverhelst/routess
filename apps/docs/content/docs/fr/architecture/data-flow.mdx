@@ -1,0 +1,23 @@
+---
+title: Flux de données
+description: Un parcours complet à travers la stack, du clic sur la carte à la ligne en base.
+---
+
+Déroulons une création d'itinéraire :
+
+1. **L'utilisateur clique sur la carte.** Mapbox émet un clic avec lng/lat. Le composant carte de l'application web appelle `addWaypoint(coords)` sur le store Zustand de routage de `@routess/core`.
+2. **Le store se met à jour.** Le store ajoute le point de passage, recalcule la distance/durée totale localement et notifie les abonnés. Le panneau latéral se réaffiche.
+3. **Effet de bord de persistance.** Un abonné dans `apps/web` appelle `apiClient.routes.upsertCurrent(state)`, avec un debounce d'environ 500 ms.
+4. **Requête HTTP.** `@routess/api-client` émet `PATCH /api/v1/routes/:id` avec le cookie JWT attaché.
+5. **L'API reçoit.** NestJS authentifie le cookie, valide le corps via des DTO et persiste via MikroORM.
+6. **Réponse.** L'API renvoie l'itinéraire canonique. Le store réconcilie (si le serveur a normalisé quoi que ce soit).
+
+## Pourquoi un état client-first ?
+
+routess privilégie un état local rapide avec une réconciliation serveur à terme. La carte doit donner une impression d'instantanéité ; faire un aller-retour à chaque clic donnerait une sensation de latence.
+
+## Modes de défaillance
+
+- **Serveur injoignable** : les éditions locales continuent de fonctionner ; la couche de persistance met en file d'attente et réessaie avec un backoff exponentiel.
+- **Authentification expirée** : le serveur renvoie 401 ; le web redirige vers la connexion.
+- **Échec de validation** : le serveur renvoie 422 avec des erreurs au niveau des champs ; le web affiche un toast et conserve l'édition locale.

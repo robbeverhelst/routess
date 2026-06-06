@@ -1,0 +1,36 @@
+---
+title: Commitconventies
+description: Conventional Commits + hoe versies worden afgeleid.
+---
+
+routess gebruikt **Conventional Commits**. `semantic-release` leest commits om de volgende versie te bepalen.
+
+## Formaat
+
+```
+<type>(<scope>)?: <subject>
+
+[body]
+
+[footer]
+```
+
+## Types
+
+| Type | Bumpt | Voorbeeld |
+| --- | --- | --- |
+| `feat` | minor | `feat(routes): add gpx export` |
+| `fix` | patch | `fix(api): handle 401 from google jwks` |
+| `chore`, `docs`, `style`, `refactor`, `test`, `ci`, `perf`, `build` | geen | `chore: update deps` |
+| `feat!:` of `BREAKING CHANGE:` in de body | major | `feat!: drop /v1, switch to /v2` |
+
+## Tips
+
+- Houd het subject onder ~70 tekens
+- Gebruik de kleine-letter gebiedende wijs ("add", niet "Adds" of "Added")
+- Scopes zijn optioneel maar helpen: `feat(web)`, `fix(api)`, `docs(packages)`
+
+## Niet doen
+
+- Squash geen ongerelateerde wijzigingen in één commit
+- Gebruik geen `chore` voor zichtbare wijzigingen voor gebruikers; die komen niet in de changelog

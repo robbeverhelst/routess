@@ -1,0 +1,14 @@
+{
+	"title": "Routes",
+	"description": "Route management",
+	"pages": [
+		"get-routes",
+		"post-routes",
+		"get-routes-public",
+		"get-routes-by-user-userid",
+		"get-routes-ref-gpx",
+		"get-routes-ref",
+		"patch-routes-id",
+		"delete-routes-id"
+	]
+}

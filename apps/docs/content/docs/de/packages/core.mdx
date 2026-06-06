@@ -1,0 +1,34 @@
+---
+title: "@routess/core"
+description: Geteilte Typen, Zustand-Stores und plattformunabhängige Utilities.
+---
+
+Das Fundament-Paket. Alles, was sowohl für Web als auch React Native sicher ist, liegt hier.
+
+## Exports
+
+| Subpath | Inhalt |
+| --- | --- |
+| `@routess/core` | Re-Exports von Stores, Typen, Utils, Logger |
+| `@routess/core/stores` | Zustand-Stores: routing, auth, ui |
+| `@routess/core/types` | Geteilte TypeScript-Typen |
+| `@routess/core/utils` | Geospatiale Helfer, Formatter, Validatoren |
+
+## Nennenswerte Typen
+
+- `Coordinate`: `[lng, lat]`-Tupel
+- `Waypoint`: `{ coord: Coordinate, type: 'routed' | 'direct', name?, timestamp? }`
+- `RouteActivity`: `'run' | 'cycle' | 'walk'` (mit dem `ROUTE_ACTIVITIES`-Array für die Laufzeit-Validierung)
+- `RouteVisibility`: `'private' | 'unlisted' | 'public'` (mit `ROUTE_VISIBILITIES`)
+- `RoutingPreferences`: `{ surfacePreference: SurfaceType, avoidFerries, avoidHighways }`
+
+## Ein neues Util hinzufügen
+
+1. Füge die Funktion in `src/utils/` hinzu
+2. Re-exportiere sie aus `src/utils/index.ts`
+3. Lege einen Unit-Test daneben
+4. Bumpe nichts; das Paket ist `workspace:*` und wird nicht veröffentlicht
+
+## Einen Store hinzufügen
+
+Stores liegen unter `src/stores/`. Halte sie frameworkfrei: keine React-Imports, kein DOM. Nutze `subscribeWithSelector`, wenn du gezielte Subscriber brauchst.

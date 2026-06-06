@@ -34,5 +34,6 @@ bun run build:images # docker buildx bake all images
 
 - Issue tracker conventions: `docs/agents/issue-tracker.md`
 - Triage labels: `docs/agents/triage-labels.md`
+- SEO conventions: `docs/agents/seo.md`
 - Domain conventions: `docs/agents/domain.md` and `CONTEXT.md`
 - Architecture decisions: `docs/adr/`

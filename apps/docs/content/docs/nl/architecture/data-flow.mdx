@@ -1,0 +1,23 @@
+---
+title: Dataflow
+description: Een complete route door de stack, van kaartklik tot databaserij.
+---
+
+Een route-aanmaak stap voor stap:
+
+1. **De gebruiker klikt op de kaart.** Mapbox stuurt een klik uit met lng/lat. De kaartcomponent van de webapp roept `addWaypoint(coords)` aan op de routing-Zustand-store uit `@routess/core`.
+2. **Store werkt bij.** De store voegt het waypoint toe, herberekent de totale afstand/duur lokaal en stelt subscribers op de hoogte. De sidebar rendert opnieuw.
+3. **Persistentie als side-effect.** Een subscriber in `apps/web` roept `apiClient.routes.upsertCurrent(state)` aan, gedebouncet op ~500ms.
+4. **HTTP-request.** `@routess/api-client` doet `PATCH /api/v1/routes/:id` met de JWT-cookie eraan gehecht.
+5. **API ontvangt.** NestJS authenticeert de cookie, valideert de body via DTO's en persisteert via MikroORM.
+6. **Response.** De API geeft de canonieke route terug. De store verzoent (als de server iets genormaliseerd heeft).
+
+## Waarom client-first state?
+
+routess kiest voor snelle lokale state met uiteindelijke serververzoening. De kaart moet onmiddellijk aanvoelen; bij elke klik heen en weer naar de server zou traag aanvoelen.
+
+## Faalmodi
+
+- **Server onbereikbaar**: lokale bewerkingen blijven werken; de persistentielaag plaatst ze in de wachtrij en probeert opnieuw met exponentiële backoff.
+- **Auth verlopen**: de server geeft 401; web stuurt door naar aanmelden.
+- **Validatiefout**: de server geeft 422 met fouten op veldniveau; web toont een toast en behoudt de lokale bewerking.

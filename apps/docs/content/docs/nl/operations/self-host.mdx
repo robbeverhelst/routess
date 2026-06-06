@@ -1,0 +1,167 @@
+---
+title: Self-host
+description: Draai je eigen routess-instantie met Docker Compose.
+---
+
+Deze handleiding krijgt een routess-instantie op je eigen machine of server draaiend in ongeveer vijf minuten. Voor Kubernetes, zie [Kubernetes](./kubernetes).
+
+## Wat je nodig hebt
+
+- **Docker** en **Docker Compose v2** (een moderne Docker Desktop of Docker Engine komt met allebei).
+- Een **Google OAuth-client** voor Google-aanmelding (het compose-bestand vereist het). Gebruikers kunnen ook met e-mail + wachtwoord aanmelden zodra de stack draait.
+- Een **Mapbox access token**; de gratis tier volstaat.
+- Lange willekeurige strings voor `JWT_SECRET`, `ANALYTICS_SALT`, `PAT_PEPPER` en `DB_PASSWORD`. Genereer ze met `openssl rand -base64 32`.
+
+Optioneel, netjes uitgeschakeld wanneer niet gezet:
+
+- **Resend** voor transactionele e-mail (zonder dit worden verificatie-URL's naar stdout gelogd).
+- **Valhalla** voor analyse van het wegdektype op geplande routes.
+- **Sentry / GlitchTip** voor het rapporteren van browserfouten.
+- **Umami** voor productanalytics.
+- **Adminrol** voor toegang tot het ingebouwde adminpaneel.
+
+## Google OAuth instellen
+
+1. Open de [credentials-pagina van de Google Cloud Console](https://console.cloud.google.com/apis/credentials).
+2. Maak een **OAuth 2.0 Client ID** van het type **Web application**.
+3. Voeg onder **Authorized JavaScript origins** de URL toe die je gebruikers openen (bv. `http://localhost:8080` of `https://routess.example.com`).
+4. Voeg onder **Authorized redirect URIs** `<your-web-url>/auth/callback` toe.
+5. Kopieer de **Client ID** en het **Client secret**.
+
+## Een Mapbox-token ophalen
+
+1. Meld je aan op [account.mapbox.com](https://account.mapbox.com).
+2. Maak een public access token (`pk.…`) onder **Access tokens**.
+3. Beperk het tot je domein wanneer je naar productie gaat.
+
+## Draaien
+
+```sh
+git clone https://github.com/robbeverhelst/routess.git
+cd routess
+cp docker/.env.selfhost.example .env
+# edit .env and fill in the required values
+docker compose -f docker/compose.selfhost.yaml --project-directory . up -d
+```
+
+Open daarna [http://localhost:8080](http://localhost:8080).
+
+De stack start vier containers:
+
+| Service  | Image                                      | Standaardpoort |
+| -------- | ------------------------------------------ | ------------ |
+| Postgres | `postgres:18`                              | (intern)   |
+| API      | `ghcr.io/robbeverhelst/routess-api`        | `3000`       |
+| Web      | `ghcr.io/robbeverhelst/routess-web`        | `8080`       |
+| Docs     | `ghcr.io/robbeverhelst/routess-docs`       | `3002`       |
+
+Wijzig de host-poorten via `WEB_PORT`, `API_PORT`, `DOCS_PORT` in `.env`.
+
+## Een versie pinnen
+
+De standaardtag is `latest`. Pin voor productie naar een specifieke release:
+
+```sh
+ROUTESS_TAG=1.122.7 docker compose -f docker/compose.selfhost.yaml --project-directory . up -d
+```
+
+Of zet `ROUTESS_TAG` in `.env`. Zie de [releases-pagina](https://github.com/robbeverhelst/routess/releases) voor de beschikbare tags.
+
+## Omgevingsvariabelen
+
+Het `.env`-bestand in `docker/.env.selfhost.example` is de bron van waarheid. De variabelen die je het vaakst aanraakt:
+
+| Variabele                       | Vereist | Standaard                          | Doel                                                                                  |
+| ------------------------------ | -------- | -------------------------------- | ---------------------------------------------------------------------------------------- |
+| `JWT_SECRET`                   | ja      | -                                | Tekent sessie- en API-tokens. Roteren logt iedereen uit.                                |
+| `ANALYTICS_SALT`               | ja      | -                                | Hasht user-ID's in analytics-events. Roteren reset de analytics-pseudoniemen.            |
+| `PAT_PEPPER`                   | ja      | -                                | Hasht personal access tokens in rust. Roteren maakt elke bestaande PAT ongeldig.          |
+| `DB_PASSWORD`                  | ja      | -                                | Postgres-wachtwoord.                                                                       |
+| `GOOGLE_CLIENT_ID/SECRET`      | ja      | -                                | Google OAuth-credentials.                                                                |
+| `VITE_MAPBOX_ACCESS_TOKEN`     | ja      | -                                | Mapbox access token gebruikt door de webapp.                                                 |
+| `PUBLIC_WEB_URL`               | nee       | `http://localhost:8080`          | Waar gebruikers de app openen. Gebruikt als OAuth-redirect-basis.                                   |
+| `PUBLIC_API_URL`               | nee       | `http://localhost:3000`          | Waar de webapp de API bereikt.                                                       |
+| `ADMIN_EMAILS`                 | nee       | leeg                            | Kommagescheiden e-mailadressen die bij login de adminrol krijgen. Leeg schakelt het adminpaneel uit. |
+| `RESEND_API_KEY`               | nee       | leeg                            | Resend API-key. Leeg valt terug op het loggen van verificatie-URL's naar stdout.                 |
+| `EMAIL_FROM`                   | nee       | `routess <noreply@routess.app>`  | Afzenderadres gebruikt door Resend.                                                           |
+| `VALHALLA_URL`                 | nee       | leeg                            | Base-URL van een self-hosted Valhalla-instantie voor wegdekanalyse. Leeg schakelt het uit.     |
+| `VITE_UMAMI_URL` / `_WEBSITE_ID` | nee     | leeg                            | Umami-endpoint en site-ID voor de webapp. Leeg schakelt productanalytics uit.            |
+| `UMAMI_URL` / `_WEBSITE_ID`    | nee       | leeg                            | Hetzelfde Umami-endpoint en site-ID voor de docs-site (Next leest ze aan serverzijde).         |
+| `VITE_SENTRY_DSN`              | nee       | leeg                            | Sentry / GlitchTip DSN voor het rapporteren van browserfouten.                                      |
+| `VITE_SENTRY_ENVIRONMENT`      | nee       | `production`                     | Omgevingslabel dat aan browserfoutrapporten wordt gehangen.                            |
+| `PUBLIC_DOCS_URL`              | nee       | `http://localhost:3002`          | Canonieke origin van de docs-site, gebruikt in zijn sitemap-, robots.txt- en llms.txt-links.  |
+
+## Geavanceerde variabelen
+
+De API begrijpt meer knoppen dan het compose-bestand doorgeeft. Om er een te gebruiken, voeg je hem toe onder de `environment` van de `api`-service in `docker/compose.selfhost.yaml` (of je eigen override-bestand):
+
+| Variabele                       | Standaard            | Doel                                                                                      |
+| ------------------------------ | ------------------ | -------------------------------------------------------------------------------------------- |
+| `LOG_LEVEL`                    | `info`             | Pino-loglevel voor de API (`debug`, `info`, `warn`, `error`).                               |
+| `SESSION_TTL_DAYS`             | `7`                | Hoe lang een browsersessie geldig blijft.                                                      |
+| `SESSION_COOKIE_NAME`          | `routess_session`  | Naam van de HTTP-only sessiecookie.                                                        |
+| `JWT_EXPIRES_IN`               | `7d`               | Levensduur van het JWT-token.                                                                          |
+| `FRONTEND_URLS`                | leeg              | Komma- of newline-gescheiden lijst van toegestane web-origins; overschrijft `FRONTEND_URL` indien gezet.  |
+| `SWAGGER_ENABLED`              | `false` in prod    | Serveert interactieve API-docs op `SWAGGER_PATH`.                                                |
+| `SWAGGER_PATH`                 | `/api`             | Pad voor de Swagger UI wanneer ingeschakeld.                                                        |
+| `TELEMETRY_ENABLED`            | `true`             | Hoofdschakelaar voor OpenTelemetry (metrics + traces).                                          |
+| `METRICS_ENABLED`              | `true`             | Prometheus-metrics op `/metrics` op de API-poort. Geeft 503 wanneer uitgeschakeld.                 |
+| `OTEL_EXPORTER_OTLP_ENDPOINT`  | leeg              | OTLP-collector base-URL voor traces (`/v1/traces` wordt aangevuld). Leeg schakelt trace-export uit.  |
+| `OTEL_EXPORTER_OTLP_HEADERS`   | leeg              | Extra OTLP-headers als JSON-object, bv. `{"authorization":"Bearer …"}`.                    |
+| `GRAFANA_URLS`                 | leeg              | JSON-object met dashboardlinks die in het adminpaneel worden getoond: `{"apiOverview":"…","apiLatency":"…","runtime":"…"}`. |
+
+Voor de web-container:
+
+| Variabele                          | Standaard | Doel                                                              |
+| --------------------------------- | ------- | --------------------------------------------------------------------- |
+| `VITE_SENTRY_TRACES_SAMPLE_RATE`  | `0.1`   | Fractie van browsersessies die getraced wordt wanneer Sentry is ingeschakeld.           |
+| `VITE_SENTRY_LOGS_ENABLED`        | `false` | Stuurt browserlogs door naar Sentry.                                       |
+| `VITE_SENTRY_DEBUG`               | `false` | Uitgebreide logging van de Sentry SDK.                                           |
+
+Console-logging in de browser staat standaard op `warn`. Om één browser te debuggen, zet je `localStorage["routess:log-level"]` op `debug`, `info`, `warn`, `error` of `none` en herlaad je.
+
+## Achter een reverse proxy zetten
+
+De standaard-compose stelt poorten rechtstreeks beschikbaar. Voor TLS en een echt domein zet je een reverse proxy (Caddy, Traefik, ingress-nginx, Cloudflare Tunnel) voor de `web`- en `api`-services en override je de publieke URL's in `.env`:
+
+```sh
+PUBLIC_WEB_URL=https://routess.example.com
+PUBLIC_API_URL=https://api.routess.example.com
+```
+
+`PUBLIC_WEB_URL` wordt ook gebruikt als OAuth-redirect-basis, dus die moet overeenkomen met wat je in Google Cloud hebt geconfigureerd.
+
+## Upgraden
+
+Maak eerst een databaseback-up (zie hieronder); migraties zijn alleen voorwaarts, dus een snapshot is je terugrol-pad. Daarna:
+
+```sh
+docker compose -f docker/compose.selfhost.yaml --project-directory . pull
+docker compose -f docker/compose.selfhost.yaml --project-directory . up -d
+```
+
+De API draait migraties automatisch bij het opstarten. Er is geen handmatige migratiestap. Om terug te rollen, herstel je de dump van voor de upgrade en pin je `ROUTESS_TAG` op de vorige release.
+
+## Back-up maken
+
+De Postgres-data staat in het named volume `postgres_data`. Standaard `pg_dump` werkt:
+
+```sh
+docker compose -f docker/compose.selfhost.yaml --project-directory . exec postgres \
+  pg_dump -U routess routess > routess-$(date +%F).sql
+```
+
+Herstel in een vers volume met `psql`:
+
+```sh
+docker compose -f docker/compose.selfhost.yaml --project-directory . exec -T postgres \
+  psql -U routess routess < routess-2026-06-04.sql
+```
+
+## Probleemoplossing
+
+- **Is de API gezond?** `curl http://localhost:3000/health/ready` geeft 200 wanneer de API de database kan bereiken; `/health/live` controleert enkel of het proces draait.
+- **"address already in use"** op `:8080` of `:3000`: wijzig `WEB_PORT` / `API_PORT` in `.env`.
+- **Google-aanmelding geeft `redirect_uri_mismatch`**: de geautoriseerde redirect-URI van de OAuth-client moet exact overeenkomen met `<PUBLIC_WEB_URL>/auth/callback`.
+- **Kaarttegels laden niet**: controleer of `VITE_MAPBOX_ACCESS_TOKEN` is gezet; kijk in de browser-devtools naar 401's van `api.mapbox.com`.
+- **Verificatie-e-mails komen niet aan**: zet `RESEND_API_KEY` en `EMAIL_FROM`. Zonder die logt de API de verificatie-URL naar stdout; draai `docker compose logs api | grep '\[email:console\]'`.

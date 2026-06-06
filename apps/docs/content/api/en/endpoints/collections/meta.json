@@ -1,0 +1,12 @@
+{
+	"title": "Collections",
+	"description": "Curated, ordered, shareable sets of routes",
+	"pages": [
+		"get-collections",
+		"post-collections",
+		"get-collections-ref",
+		"patch-collections-id",
+		"delete-collections-id",
+		"put-collections-id-routes"
+	]
+}

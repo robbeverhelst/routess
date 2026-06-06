@@ -1,0 +1,46 @@
+---
+title: Projektaufbau
+description: Wo die Dinge im Monorepo liegen.
+---
+
+```
+routess/
+├── apps/
+│   ├── web/          # React 19 + Vite + Mapbox SPA
+│   ├── api/          # NestJS REST API
+│   ├── cli/          # `routess` CLI (npm)
+│   ├── landing/      # Marketing site (Next.js)
+│   └── docs/         # This site (Next.js + Fumadocs)
+├── packages/
+│   ├── core/         # Shared types, stores, utils
+│   ├── api-client/   # HTTP client (web + mobile adapters)
+│   ├── i18n/         # Translation service + locales
+│   └── design-tokens/# Colors, typography, spacing
+├── charts/
+│   └── routess/      # Helm chart for k8s deployment
+├── docker/
+│   ├── docker-bake.hcl       # Build pipeline for app images
+│   ├── Dockerfile.deps       # Shared deps stage
+│   ├── compose.yaml          # Local Postgres + pgAdmin (dev)
+│   ├── compose.selfhost.yaml # Full self-host stack
+│   └── .env.selfhost.example # Self-host env template
+├── .github/
+│   └── workflows/    # CI/CD (single ci.yml)
+├── biome.json          # Lint/format rules
+└── package.json        # Bun workspace root
+```
+
+## Workspace-Abhängigkeiten
+
+Apps hängen über `workspace:*` von Paketen ab:
+
+```json
+{
+	"dependencies": {
+		"@routess/core": "workspace:*",
+		"@routess/i18n": "workspace:*"
+	}
+}
+```
+
+Bun löst diese auf das lokale Paket auf; kein Publishing nötig.

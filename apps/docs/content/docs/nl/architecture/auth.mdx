@@ -1,0 +1,40 @@
+---
+title: Authenticatie
+description: Google OAuth en aanmelden met e-mail, plus sessiebeheer.
+---
+
+routess ondersteunt twee aanmeldmethodes, **Google OAuth (one-tap)** en **e-mail + wachtwoord**, die beide eindigen in dezelfde **JWT-sessiecookie** op de API.
+
+## Google-flow
+
+1. De webapp laadt de Google Identity Services SDK en rendert de aanmeldknop.
+2. Bij succes geeft Google een **ID-token** terug aan de browser.
+3. Web post het ID-token naar `POST /api/v1/auth/google`.
+4. De API verifieert de handtekening en audience van het token tegen de JWKS van Google.
+5. De API upsert de gebruiker (op Google `sub`), geeft een eigen JWT uit en zet die als een `HttpOnly`, `Secure`, `SameSite=Lax`-cookie.
+6. Volgende API-aanroepen bevatten de cookie automatisch.
+
+## E-mailflow
+
+1. `POST /api/v1/auth/signup-email` registreert het account (wachtwoorden zijn minstens 12 tekens, gehasht opgeslagen) en stuurt een verificatielink die 24 uur geldig is.
+2. `POST /api/v1/auth/verify-email` verbruikt het token uit de link en meldt de gebruiker aan.
+3. `POST /api/v1/auth/login-email` meldt aan bij latere bezoeken en geeft dezelfde sessiecookie uit als de Google-flow.
+4. `POST /api/v1/auth/request-password-reset` mailt een resetlink die 30 minuten geldig is; `POST /api/v1/auth/reset-password` verbruikt die.
+
+E-mailbezorging gaat via Resend wanneer `RESEND_API_KEY` is gezet; anders worden verificatie- en reset-URL's naar stdout gelogd (de dev/self-host console-transport).
+
+Een via Google aangemaakt account kan later een wachtwoord toevoegen (`POST /api/v1/users/me/password`), zodat beide methodes werken voor dezelfde gebruiker.
+
+## Waarom een door de server uitgegeven JWT?
+
+- Laat ons app-specifieke claims toevoegen (gebruikersrol, standaardeenheid)
+- Ontkoppelt de sessieduur van het token van Google
+- We hoeven Google niet bij elke request aan te roepen
+
+## Afmelden
+
+`POST /api/v1/auth/logout` wist de cookie. De webapp wist ook de Zustand-auth-state.
+
+## Sessievernieuwing
+
+JWT's zijn kortlevend (15 minuten). De API vernieuwt stilletjes bij elke geauthenticeerde request en geeft een verse cookie terug. Als de gebruiker te lang weg is, verloopt de cookie en meldt hij zich opnieuw aan via de stille her-authenticatie van Google (in de meeste gevallen zonder interactie van de gebruiker).

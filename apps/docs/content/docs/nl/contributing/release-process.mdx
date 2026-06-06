@@ -1,0 +1,30 @@
+---
+title: Releaseproces
+description: Hoe een groene main een geversioneerde release oplevert.
+---
+
+Releases zijn volledig geautomatiseerd: je draait geen `npm version` en pusht geen tags.
+
+## Trigger
+
+Elke push naar `main` triggert de `release`-job. Als er sinds de laatste tag geen release-waardige commits zijn, gebeurt er niets.
+
+## Wat er draait
+
+1. `semantic-release` analyseert commits, bepaalt de volgende versie (of slaat over)
+2. Maakt een git-tag (bv. `2.3.4`) en een GitHub Release met automatisch gegenereerde notes
+3. Werkt de `package.json`-versies in elke app/package bij
+4. Pusht een `chore(release): X.Y.Z [skip ci]`-commit terug naar main
+
+Daarna, parallel:
+
+- `publish-images` bouwt en pusht Docker-images naar GHCR met de tags `X.Y.Z`, `X.Y`, `X` en `sha-…`
+- `publish-helm` werkt de `version` en `appVersion` van de chart bij, pakt ze in, pusht naar GHCR OCI en hangt ze aan de GitHub Release
+
+## Hotfixes
+
+Gebruik `fix:`-commits; die snijden een patch-release aan. Er is geen aparte hotfix-branch, `main` is altijd shipbaar.
+
+## Een release terugdraaien
+
+Verwijder de tag of de release niet. Snijd een nieuwe `revert: ...`- of `fix: ...`-commit aan die de wijziging ongedaan maakt. De volgende pipeline-run levert een nieuwe patch-release op.

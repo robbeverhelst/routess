@@ -1,0 +1,36 @@
+---
+title: Conventions de commit
+description: Conventional Commits + comment les versions sont dérivées.
+---
+
+routess utilise les **Conventional Commits**. `semantic-release` lit les commits pour décider la prochaine version.
+
+## Format
+
+```
+<type>(<scope>)?: <subject>
+
+[body]
+
+[footer]
+```
+
+## Types
+
+| Type | Bump | Exemple |
+| --- | --- | --- |
+| `feat` | mineur | `feat(routes): add gpx export` |
+| `fix` | patch | `fix(api): handle 401 from google jwks` |
+| `chore`, `docs`, `style`, `refactor`, `test`, `ci`, `perf`, `build` | aucun | `chore: update deps` |
+| `feat!:` ou `BREAKING CHANGE:` dans le body | majeur | `feat!: drop /v1, switch to /v2` |
+
+## Astuces
+
+- Garde le sujet sous environ 70 caractères
+- Utilise l'impératif en minuscules ("add", pas "Adds" ni "Added")
+- Les scopes sont optionnels mais aident : `feat(web)`, `fix(api)`, `docs(packages)`
+
+## À éviter
+
+- Ne regroupe pas des changements sans rapport dans un seul commit
+- N'utilise pas `chore` pour des changements visibles par l'utilisateur ; ils n'apparaîtront pas dans le changelog

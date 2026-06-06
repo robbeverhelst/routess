@@ -202,7 +202,13 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 		route.distance && route.duration ? formatSpeedParts(route.distance / 1000 / (route.duration / 3600) || 0) : null;
 	const distanceStr = distanceParts ? distanceParts.value : "—";
 	const distanceUnit = distanceParts ? distanceParts.unit : "";
-	const durationStr = route.duration ? `${Math.round(route.duration / 60)} min` : "—";
+	const totalMinutes = route.duration ? Math.round(route.duration / 60) : 0;
+	const durationStr = route.duration
+		? totalMinutes >= 60
+			? `${Math.floor(totalMinutes / 60)}:${String(totalMinutes % 60).padStart(2, "0")}`
+			: String(totalMinutes)
+		: "—";
+	const durationUnit = route.duration ? (totalMinutes >= 60 ? "h" : "min") : "";
 	const elevStr = elevParts ? elevParts.value : "—";
 	const elevUnit = elevParts ? elevParts.unit : "";
 	const paceStr = speedParts ? speedParts.value : "—";
@@ -407,7 +413,7 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 
 	const stats = [
 		{ label: t("route.distance"), value: distanceStr, unit: distanceUnit },
-		{ label: t("route.duration"), value: durationStr, unit: "" },
+		{ label: t("route.duration"), value: durationStr, unit: durationUnit },
 		{ label: t("route.elev"), value: elevStr, unit: elevUnit },
 		{ label: t("route.avgSpeed"), value: paceStr, unit: paceUnit },
 	];
@@ -476,21 +482,22 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 								paddingLeft: i ? 14 : 0,
 							}}
 						>
-							<SecTitle>{s.label}</SecTitle>
-							<div className="rds-mono" style={{ fontSize: 22, fontWeight: 600, lineHeight: 1.1, marginTop: 4 }}>
+							<SecTitle style={{ fontSize: 10, whiteSpace: "nowrap" }}>{s.label}</SecTitle>
+							<div
+								className="rds-mono"
+								style={{
+									display: "flex",
+									alignItems: "baseline",
+									gap: 3,
+									fontSize: 20,
+									fontWeight: 600,
+									lineHeight: 1.1,
+									marginTop: 4,
+									whiteSpace: "nowrap",
+								}}
+							>
 								{s.value}
-								{s.unit && (
-									<span
-										style={{
-											fontSize: 11,
-											color: RDS_COLORS.fgSubtle,
-											marginLeft: 3,
-											fontWeight: 400,
-										}}
-									>
-										{s.unit}
-									</span>
-								)}
+								{s.unit && <span style={{ fontSize: 11, color: RDS_COLORS.fgSubtle, fontWeight: 400 }}>{s.unit}</span>}
 							</div>
 						</div>
 					))}

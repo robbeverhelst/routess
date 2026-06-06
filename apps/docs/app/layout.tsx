@@ -4,7 +4,6 @@ import type { Metadata } from "next";
 import { JetBrains_Mono, Manrope, Space_Grotesk } from "next/font/google";
 import Script from "next/script";
 import type { ReactNode } from "react";
-import { i18n, localeLabels } from "@/lib/i18n";
 import { SITE_URL } from "@/lib/site";
 import "./global.css";
 
@@ -41,19 +40,15 @@ export const metadata: Metadata = {
 	},
 };
 
-const locales = i18n.languages.map((language) => ({
-	name: localeLabels[language] ?? language,
-	locale: language,
-}));
-
 export default function RootLayout({ children }: { children: ReactNode }) {
 	return (
 		<html lang="en" suppressHydrationWarning>
 			<body className={`${bodyFont.variable} ${displayFont.variable} ${monoFont.variable}`}>
 				<RootProvider>
-					<I18nProvider locale="en" locales={locales}>
-						{children}
-					</I18nProvider>
+					{/* No locales here: the list drives the language toggle, which only
+					    belongs on the translated guide ([lang]/layout.tsx provides it).
+					    English-only sections offered a switch into /nl/docs-style 404s. */}
+					<I18nProvider locale="en">{children}</I18nProvider>
 				</RootProvider>
 				{/* The loader route reads the Umami env (set by Helm) at request time,
 				    so pages can stay statically rendered. It returns an empty script

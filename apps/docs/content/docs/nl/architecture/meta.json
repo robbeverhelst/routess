@@ -1,0 +1,4 @@
+{
+	"title": "Architectuur",
+	"pages": ["overview", "data-flow", "state-management", "auth", "admin"]
+}

@@ -125,6 +125,17 @@ export interface Dict {
 		};
 		sections: ReadonlyArray<{ eyebrow: string; title: string; body: string; bullets: ReadonlyArray<string> }>;
 	};
+	routePage: {
+		eyebrow: string;
+		activities: { run: string; cycle: string; walk: string; route: string };
+		stats: { distance: string; elevation: string; duration: string };
+		openInApp: string;
+		downloadGpx: string;
+		planYourOwn: string;
+		about: string;
+		mapAlt: string;
+		summaryTemplate: string;
+	};
 	meta: {
 		landing: { title: string; description: string };
 		developers: { title: string; description: string };

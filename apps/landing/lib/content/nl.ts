@@ -187,6 +187,8 @@ export const nl: Dict = {
 			title: "Meer",
 			items: [
 				{ label: "Docs", href: "https://docs.routess.com" },
+				{ label: "Gidsen", href: "/gids" },
+				{ label: "Vergelijk", href: "/vergelijk" },
 				{ label: "Privacy", href: "/privacy" },
 				{ label: "Licentie (MIT)", href: "https://github.com/robbeverhelst/routess/blob/main/LICENSE" },
 			],
@@ -241,6 +243,18 @@ export const nl: Dict = {
 				],
 			},
 		],
+	},
+	routePage: {
+		eyebrow: "Gedeelde route",
+		activities: { run: "looproute", cycle: "fietsroute", walk: "wandelroute", route: "route" },
+		stats: { distance: "Afstand", elevation: "Hoogtemeters", duration: "Geschatte tijd" },
+		openInApp: "Open in routess",
+		downloadGpx: "Download GPX",
+		planYourOwn: "Plan je eigen route",
+		about: "Over deze route",
+		mapAlt: "Kaart van de route",
+		summaryTemplate:
+			"Een {activity} van {distance} met {elevation} hoogtemeters. Bekijk, bewerk en exporteer de GPX gratis met routess.",
 	},
 	meta: {
 		landing: {

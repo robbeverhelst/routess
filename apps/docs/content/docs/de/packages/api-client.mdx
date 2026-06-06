@@ -1,0 +1,46 @@
+---
+title: "@routess/api-client"
+description: HTTP-Client mit Web- und Mobile-Adaptern.
+---
+
+Ein dünner Wrapper über `fetch`, der die Unterschiede zwischen Browser-Cookies und React-Native-Auth-Headern abstrahiert.
+
+## Exports
+
+| Subpath | Nutze ihn aus |
+| --- | --- |
+| `@routess/api-client` | Gemeinsame Typen und Basis-Client |
+| `@routess/api-client/web` | Browser; nutzt Cookies für Auth |
+| `@routess/api-client/mobile` | React Native; nutzt Bearer-Tokens aus dem sicheren Storage |
+
+## Nutzung (web)
+
+```ts
+import { createApiClient } from "@routess/api-client/web";
+
+const api = createApiClient({ baseURL: import.meta.env.VITE_API_URL });
+
+const me = await api.auth.me();
+const routes = await api.routes.list();
+```
+
+## Nutzung (mobile)
+
+```ts
+import { createApiClient } from "@routess/api-client/mobile";
+import * as SecureStore from "expo-secure-store";
+
+const api = createApiClient({
+	baseURL: process.env.EXPO_PUBLIC_API_URL!,
+	getToken: () => SecureStore.getItemAsync("authToken"),
+});
+```
+
+## Fehlerbehandlung
+
+Alle Client-Methoden werfen bei Nicht-2xx-Responses ein `ApiError`. Der Fehler enthält:
+
+- `status`: HTTP-Statuscode
+- `code`: maschinenlesbarer Fehlercode aus der API
+- `message`: menschenlesbar
+- `fieldErrors?`: für 422-Validierungsfehler
