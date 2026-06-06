@@ -29,9 +29,10 @@ interface IconBtnProps {
 	pressed?: boolean;
 	style?: CSSProperties;
 	disabled?: boolean;
-	draggable?: boolean;
-	onDragStart?: (e: React.DragEvent<HTMLButtonElement>) => void;
-	onDragEnd?: (e: React.DragEvent<HTMLButtonElement>) => void;
+	onPointerDown?: (e: React.PointerEvent<HTMLButtonElement>) => void;
+	onPointerMove?: (e: React.PointerEvent<HTMLButtonElement>) => void;
+	onPointerUp?: (e: React.PointerEvent<HTMLButtonElement>) => void;
+	onPointerCancel?: (e: React.PointerEvent<HTMLButtonElement>) => void;
 }
 
 export function IconBtn({
@@ -41,9 +42,10 @@ export function IconBtn({
 	pressed,
 	style,
 	disabled,
-	draggable,
-	onDragStart,
-	onDragEnd,
+	onPointerDown,
+	onPointerMove,
+	onPointerUp,
+	onPointerCancel,
 }: IconBtnProps) {
 	return (
 		<button
@@ -52,9 +54,10 @@ export function IconBtn({
 			title={title}
 			aria-pressed={pressed}
 			disabled={disabled}
-			draggable={draggable}
-			onDragStart={onDragStart}
-			onDragEnd={onDragEnd}
+			onPointerDown={onPointerDown}
+			onPointerMove={onPointerMove}
+			onPointerUp={onPointerUp}
+			onPointerCancel={onPointerCancel}
 			className="rds-icon-btn"
 			style={{
 				display: "inline-flex",

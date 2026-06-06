@@ -1,10 +1,12 @@
-import type { Map as MapboxMap, MapLayerMouseEvent, MapMouseEvent, MapTouchEvent } from "mapbox-gl";
+import type { Map as MapboxMap, MapLayerMouseEvent, MapMouseEvent, MapTouchEvent, PointLike } from "mapbox-gl";
 import type { Dispatch, SetStateAction } from "react";
 // Dispatch/SetStateAction kept for setPopup which is still a React setter.
 import {
+	animateWaypointSpawn,
 	ROUTE_HOVER_LAYER_ID,
 	ROUTE_LAYER_ID,
 	ROUTE_SOURCE_ID,
+	setLiftedWaypoint,
 	TEMP_DRAG_LINES_LAYER_ID,
 	updateDragLinesLayer,
 	WAYPOINTS_LAYER_ID,
@@ -23,8 +25,16 @@ export interface PopupInfo {
 	message?: string;
 }
 
-const LONG_PRESS_DURATION = 750;
+// Touch grammar (see ADR-0028): tap = actions, long-press = grab. Mouse keeps
+// its own grammar (mousedown-drag, right-click popup) and is unchanged.
+const LONG_PRESS_DURATION = 500;
 const MAX_MOVE_THRESHOLD = 10;
+// Fingers are imprecise: hit-test a padded box instead of a single pixel so a
+// tap that misses a waypoint by a few px doesn't read as "empty map".
+const TOUCH_HIT_PADDING = 12;
+// Ignore taps right after a pinch so a sloppy two-finger gesture never adds a
+// waypoint via the click Mapbox synthesizes for the last finger.
+const GESTURE_COOLDOWN_MS = 300;
 
 // Mapbox doesn't auto-wrap event.lngLat — panning the world east a few
 // times yields lng > 180, which the Directions API rejects with 422.
@@ -38,13 +48,25 @@ type PointerPoint = { x: number; y: number };
 type HitTarget = { kind: "waypoint"; index: number } | { kind: "route" } | { kind: "empty" };
 type DragMode = "mouse" | "touch";
 
+// One finger-down-to-finger-up episode. Resolves into exactly one of: tap
+// (quick release), long-press (held still), or pan (moved — session cleared).
+interface TouchSession {
+	startPoint: PointerPoint;
+	startLngLat: Coordinate;
+	target: HitTarget;
+	longPressTimeoutId: number | null;
+	longPressFired: boolean;
+}
+
 interface InteractionState {
 	isDragging: boolean;
 	draggedWaypointIndex: number;
 	currentLngLat: Coordinate | null;
-	longPressTimeoutId: number | null;
-	touchStartPos: PointerPoint | null;
-	currentLongPressId: number | null;
+	dragMoved: boolean;
+	dragWasInserted: boolean;
+	dragMode: DragMode | null;
+	touchSession: TouchSession | null;
+	lastMultiTouchAt: number;
 	hoveredRouteFeatureId: string | number | undefined;
 	suppressNextClick: boolean;
 }
@@ -53,9 +75,11 @@ const createInitialState = (): InteractionState => ({
 	isDragging: false,
 	draggedWaypointIndex: -1,
 	currentLngLat: null,
-	longPressTimeoutId: null,
-	touchStartPos: null,
-	currentLongPressId: null,
+	dragMoved: false,
+	dragWasInserted: false,
+	dragMode: null,
+	touchSession: null,
+	lastMultiTouchAt: 0,
 	hoveredRouteFeatureId: undefined,
 	suppressNextClick: false,
 });
@@ -108,17 +132,18 @@ export const initializeMapInteractions = (
 	editor: RouteDraftEditor,
 	setPopup: Dispatch<SetStateAction<PopupInfo | null>>,
 	isMapLockedRef: { current: boolean },
+	popupRef: { current: PopupInfo | null },
 ): (() => void) => {
 	const mapCanvas = map.getCanvas();
 	const state = createInitialState();
 
-	const resetLongPress = () => {
-		if (state.longPressTimeoutId !== null) {
-			clearTimeout(state.longPressTimeoutId);
-			state.longPressTimeoutId = null;
+	const clearTouchSession = () => {
+		const session = state.touchSession;
+		if (session?.longPressTimeoutId != null) {
+			clearTimeout(session.longPressTimeoutId);
+			session.longPressTimeoutId = null;
 		}
-		state.touchStartPos = null;
-		state.currentLongPressId = null;
+		state.touchSession = null;
 	};
 
 	const clearRouteHover = () => {
@@ -130,9 +155,15 @@ export const initializeMapInteractions = (
 	};
 
 	const resetDragState = () => {
+		if (state.draggedWaypointIndex !== -1 && state.dragMode === "touch") {
+			setLiftedWaypoint(map, state.draggedWaypointIndex, null);
+		}
 		state.isDragging = false;
 		state.draggedWaypointIndex = -1;
 		state.currentLngLat = null;
+		state.dragMoved = false;
+		state.dragWasInserted = false;
+		state.dragMode = null;
 		updateDragLinesLayer(map, []);
 		mapCanvas.style.cursor = "";
 		map.dragPan.enable();
@@ -149,31 +180,47 @@ export const initializeMapInteractions = (
 		return null;
 	};
 
-	const getHitTarget = (point: PointerPoint): HitTarget => {
-		const waypointFeature = map.queryRenderedFeatures([point.x, point.y], {
+	const getHitTarget = (point: PointerPoint, padding = 0): HitTarget => {
+		const queryGeometry: PointLike | [PointLike, PointLike] =
+			padding > 0
+				? [
+						[point.x - padding, point.y - padding],
+						[point.x + padding, point.y + padding],
+					]
+				: [point.x, point.y];
+
+		const waypointFeatures = map.queryRenderedFeatures(queryGeometry, {
 			layers: [WAYPOINTS_LAYER_ID],
-		})[0];
+		});
+		const waypointCount = useRoutingStore.getState().waypoints.length;
 
-		if (waypointFeature) {
-			const waypointIndex = parseWaypointIndex(
-				waypointFeature.properties?.waypointIndex,
-				useRoutingStore.getState().waypoints.length,
-			);
-			if (waypointIndex !== null) {
-				return { kind: "waypoint", index: waypointIndex };
+		// The padded box can cover several waypoints; pick the one closest to
+		// the actual pointer position.
+		let nearest: { index: number; distance: number } | null = null;
+		for (const feature of waypointFeatures) {
+			const index = parseWaypointIndex(feature.properties?.waypointIndex, waypointCount);
+			if (index === null) {
+				Logger.error(
+					"[MapInteractionManager] Invalid waypoint index on feature query:",
+					feature.properties?.waypointIndex,
+				);
+				continue;
 			}
-
-			Logger.error(
-				"[MapInteractionManager] Invalid waypoint index on feature query:",
-				waypointFeature.properties?.waypointIndex,
-			);
-			return { kind: "empty" };
+			const coords = (feature.geometry as GeoJSON.Point).coordinates;
+			const projected = map.project([coords[0], coords[1]]);
+			const distance = Math.hypot(projected.x - point.x, projected.y - point.y);
+			if (!nearest || distance < nearest.distance) {
+				nearest = { index, distance };
+			}
+		}
+		if (nearest) {
+			return { kind: "waypoint", index: nearest.index };
 		}
 
-		const routeFeatures = map.queryRenderedFeatures([point.x, point.y], {
+		const routeFeatures = map.queryRenderedFeatures(queryGeometry, {
 			layers: [ROUTE_HOVER_LAYER_ID, ROUTE_LAYER_ID],
 		});
-		if (routeFeatures.length > 0 && useRoutingStore.getState().waypoints.length >= 1) {
+		if (routeFeatures.length > 0 && waypointCount >= 1) {
 			return { kind: "route" };
 		}
 
@@ -210,9 +257,13 @@ export const initializeMapInteractions = (
 		state.isDragging = true;
 		state.draggedWaypointIndex = index;
 		state.currentLngLat = [...startCoord] as Coordinate;
+		state.dragMoved = false;
+		state.dragMode = mode;
 		map.dragPan.disable();
 		if (mode === "touch") {
 			map.touchZoomRotate.disable();
+			// Visual lift: the marker grows so the grab is acknowledged.
+			setLiftedWaypoint(map, null, index);
 		}
 		mapCanvas.style.cursor = "grabbing";
 		clearRouteHover();
@@ -221,6 +272,7 @@ export const initializeMapInteractions = (
 
 	const renderDragPreview = (nextCoord: Coordinate) => {
 		state.currentLngLat = nextCoord;
+		state.dragMoved = true;
 		const dragLineFeatures = buildDragLineFeatures(
 			useRoutingStore.getState().waypoints,
 			state.draggedWaypointIndex,
@@ -235,6 +287,13 @@ export const initializeMapInteractions = (
 			return;
 		}
 
+		// Releasing without moving an existing waypoint: nothing to commit.
+		// A just-inserted waypoint still needs the recompute its insert skipped.
+		if (!state.dragMoved && !state.dragWasInserted) {
+			resetDragState();
+			return;
+		}
+
 		const waypointIndex = state.draggedWaypointIndex;
 		const nextCoord = [...state.currentLngLat] as Coordinate;
 
@@ -242,6 +301,16 @@ export const initializeMapInteractions = (
 			await editor.moveWaypoint(waypointIndex, nextCoord);
 		} finally {
 			resetDragState();
+		}
+	};
+
+	// Abort a drag without dropping. If the dragged waypoint was inserted for
+	// this drag, revert the insert too (it never had its route computed).
+	const cancelDrag = async () => {
+		const undoInsert = state.dragWasInserted;
+		resetDragState();
+		if (undoInsert) {
+			await editor.undo();
 		}
 	};
 
@@ -255,28 +324,81 @@ export const initializeMapInteractions = (
 
 		const insertedWaypoint = useRoutingStore.getState().waypoints[result.newIndex];
 		startDrag(result.newIndex, insertedWaypoint ? insertedWaypoint.coord : coord, mode);
+		state.dragWasInserted = true;
 	};
 
-	const scheduleLongPress = (lngLat: { lng: number; lat: number }, point: PointerPoint) => {
-		resetLongPress();
-		state.touchStartPos = point;
-		const pressId = Date.now();
-		state.currentLongPressId = pressId;
-		state.longPressTimeoutId = window.setTimeout(() => {
-			if (state.currentLongPressId === pressId && state.touchStartPos) {
-				setPopup(getPopupInfo(lngLat, state.touchStartPos));
-				// Touch end after a long-press can synthesize a click on the
-				// canvas. Swallow that one click so we don't add a stray
-				// `routed` waypoint at the spot the user opened the popup.
-				state.suppressNextClick = true;
+	// Long-press resolved: grab what's under the finger, or offer the direct
+	// waypoint popup on empty map.
+	const fireLongPress = async (session: TouchSession) => {
+		// The click Mapbox synthesizes after the eventual touchend must not
+		// add a waypoint or dismiss the popup this gesture produced.
+		state.suppressNextClick = true;
+
+		if (session.target.kind === "waypoint") {
+			const waypoint = useRoutingStore.getState().waypoints[session.target.index];
+			startDrag(session.target.index, waypoint ? waypoint.coord : session.startLngLat, "touch");
+			return;
+		}
+
+		if (session.target.kind === "route") {
+			const result = await editor.insertWaypointOnRoute(session.startLngLat, { skipRouteCalc: true });
+			if (!result.success || typeof result.newIndex !== "number") {
+				Logger.warn("[MapInteractionManager] Failed to insert waypoint on route for dragging.", result.message);
+				return;
 			}
-			state.longPressTimeoutId = null;
-		}, LONG_PRESS_DURATION);
+			if (state.touchSession !== session) {
+				// Finger lifted while the insert was in flight; revert it.
+				await editor.undo();
+				return;
+			}
+			const insertedWaypoint = useRoutingStore.getState().waypoints[result.newIndex];
+			startDrag(result.newIndex, insertedWaypoint ? insertedWaypoint.coord : session.startLngLat, "touch");
+			state.dragWasInserted = true;
+			return;
+		}
+
+		setPopup({
+			longitude: session.startLngLat[0],
+			latitude: session.startLngLat[1],
+			type: "direct",
+		});
+	};
+
+	// Quick release without movement. Taps only ever act on one thing:
+	// dismiss an open popup, open a waypoint's popup, or (via the synthesized
+	// click) add a waypoint on empty map.
+	const handleTouchTap = (session: TouchSession) => {
+		if (popupRef.current !== null) {
+			state.suppressNextClick = true;
+			setPopup(null);
+			return;
+		}
+
+		if (session.target.kind === "waypoint") {
+			state.suppressNextClick = true;
+			const waypoint = useRoutingStore.getState().waypoints[session.target.index];
+			setPopup({
+				longitude: waypoint ? waypoint.coord[0] : session.startLngLat[0],
+				latitude: waypoint ? waypoint.coord[1] : session.startLngLat[1],
+				type: "remove",
+				waypointIndex: session.target.index,
+			});
+			return;
+		}
+
+		if (session.target.kind === "route") {
+			// Inserting on the route goes through long-press; a tap is inert.
+			state.suppressNextClick = true;
+			return;
+		}
+
+		if (Date.now() - state.lastMultiTouchAt < GESTURE_COOLDOWN_MS) {
+			state.suppressNextClick = true;
+		}
 	};
 
 	const handleMapClick = async (event: MapMouseEvent) => {
 		if (isMapLockedRef.current) return;
-		resetLongPress();
 
 		if (state.suppressNextClick) {
 			state.suppressNextClick = false;
@@ -301,11 +423,17 @@ export const initializeMapInteractions = (
 
 		if (!result.success) {
 			Logger.warn("[MapInteractionManager] Waypoint addition failed - action cancelled");
+			return;
 		}
+
+		animateWaypointSpawn(map, useRoutingStore.getState().waypoints.length - 1);
 	};
 
 	const handleContextMenu = (event: MapMouseEvent | MapTouchEvent) => {
 		if (isMapLockedRef.current) return;
+		// Android fires contextmenu on long-press; the touch session owns
+		// that gesture, so only honor contextmenu for real right-clicks.
+		if (state.touchSession || state.isDragging) return;
 
 		const point = getEventPoint(event);
 		if (!point) {
@@ -336,27 +464,38 @@ export const initializeMapInteractions = (
 		await insertAndStartDrag(wrappedLngLat(event.lngLat), "mouse");
 	};
 
-	const handleTouchStart = async (event: MapTouchEvent) => {
-		if (isMapLockedRef.current || event.points.length !== 1) return;
+	const handleTouchStart = (event: MapTouchEvent) => {
+		if (isMapLockedRef.current) return;
+
+		if (event.points.length !== 1) {
+			state.lastMultiTouchAt = Date.now();
+			clearTouchSession();
+			if (state.isDragging) {
+				void cancelDrag();
+			}
+			return;
+		}
 
 		state.suppressNextClick = false;
 
+		// Note: no preventDefault and no drag here. The finger may be about
+		// to pan the map even if it landed on a waypoint; only a completed
+		// long-press grabs.
 		const point = event.points[0];
-		const hitTarget = getHitTarget(point);
-
-		if (hitTarget.kind === "waypoint") {
-			event.preventDefault();
-			startDrag(hitTarget.index, wrappedLngLat(event.lngLat), "touch");
-			return;
-		}
-
-		if (hitTarget.kind === "route") {
-			event.preventDefault();
-			await insertAndStartDrag(wrappedLngLat(event.lngLat), "touch");
-			return;
-		}
-
-		scheduleLongPress({ lng: event.lngLat.lng, lat: event.lngLat.lat }, point);
+		const session: TouchSession = {
+			startPoint: point,
+			startLngLat: wrappedLngLat(event.lngLat),
+			target: getHitTarget(point, TOUCH_HIT_PADDING),
+			longPressTimeoutId: null,
+			longPressFired: false,
+		};
+		state.touchSession = session;
+		session.longPressTimeoutId = window.setTimeout(() => {
+			session.longPressTimeoutId = null;
+			if (state.touchSession !== session) return;
+			session.longPressFired = true;
+			void fireLongPress(session);
+		}, LONG_PRESS_DURATION);
 	};
 
 	const handleMouseMove = (event: MapMouseEvent) => {
@@ -374,44 +513,62 @@ export const initializeMapInteractions = (
 	const handleTouchMove = (event: MapTouchEvent) => {
 		if (isMapLockedRef.current) return;
 
-		if (state.isDragging) {
-			if (event.points.length !== 1) {
-				resetDragState();
-				return;
+		if (event.points.length !== 1) {
+			state.lastMultiTouchAt = Date.now();
+			clearTouchSession();
+			if (state.isDragging) {
+				void cancelDrag();
 			}
+			return;
+		}
 
+		if (state.isDragging) {
 			event.preventDefault();
 			renderDragPreview(wrappedLngLat(event.lngLat));
 			return;
 		}
 
-		if (!state.touchStartPos || state.longPressTimeoutId === null) {
-			return;
-		}
-
-		if (event.points.length !== 1) {
-			resetLongPress();
-			return;
-		}
+		const session = state.touchSession;
+		if (!session) return;
 
 		const currentPoint = event.points[0];
-		const deltaX = Math.abs(currentPoint.x - state.touchStartPos.x);
-		const deltaY = Math.abs(currentPoint.y - state.touchStartPos.y);
+		const deltaX = Math.abs(currentPoint.x - session.startPoint.x);
+		const deltaY = Math.abs(currentPoint.y - session.startPoint.y);
 		if (deltaX > MAX_MOVE_THRESHOLD || deltaY > MAX_MOVE_THRESHOLD) {
-			resetLongPress();
+			// The finger is panning the map. Mapbox can still synthesize a
+			// click for a small pan; swallow it so it never adds a waypoint.
+			state.suppressNextClick = true;
+			clearTouchSession();
 		}
 	};
 
 	const handleTouchEnd = async () => {
-		resetLongPress();
-		if (!state.isDragging) {
-			map.dragPan.enable();
-			map.touchZoomRotate.enable();
-			mapCanvas.style.cursor = "";
+		const session = state.touchSession;
+		clearTouchSession();
+
+		if (state.isDragging) {
+			state.suppressNextClick = true;
+			await commitDrag();
 			return;
 		}
 
-		await commitDrag();
+		mapCanvas.style.cursor = "";
+		map.dragPan.enable();
+		map.touchZoomRotate.enable();
+
+		if (!session || session.longPressFired) return;
+		handleTouchTap(session);
+	};
+
+	const handleTouchCancel = () => {
+		clearTouchSession();
+		if (state.isDragging) {
+			void cancelDrag();
+			return;
+		}
+		mapCanvas.style.cursor = "";
+		map.dragPan.enable();
+		map.touchZoomRotate.enable();
 	};
 
 	const handleRouteMouseEnter = (event: MapLayerMouseEvent) => {
@@ -482,7 +639,7 @@ export const initializeMapInteractions = (
 	map.on("touchstart", handleTouchStart);
 	map.on("touchmove", handleTouchMove);
 	map.on("touchend", handleTouchEnd);
-	map.on("touchcancel", handleTouchEnd);
+	map.on("touchcancel", handleTouchCancel);
 	map.on("mouseenter", ROUTE_LAYER_ID, handleRouteMouseEnter);
 	map.on("mouseleave", ROUTE_LAYER_ID, handleRouteMouseLeave);
 	map.on("mouseenter", WAYPOINTS_LAYER_ID, handleWaypointMouseEnter);
@@ -499,7 +656,7 @@ export const initializeMapInteractions = (
 		map.off("touchstart", handleTouchStart);
 		map.off("touchmove", handleTouchMove);
 		map.off("touchend", handleTouchEnd);
-		map.off("touchcancel", handleTouchEnd);
+		map.off("touchcancel", handleTouchCancel);
 		map.off("mouseenter", ROUTE_LAYER_ID, handleRouteMouseEnter);
 		map.off("mouseleave", ROUTE_LAYER_ID, handleRouteMouseLeave);
 		map.off("mouseenter", WAYPOINTS_LAYER_ID, handleWaypointMouseEnter);
@@ -507,7 +664,7 @@ export const initializeMapInteractions = (
 		map.off("mouseleave", WAYPOINTS_LAYER_ID, handleWaypointMouseLeave);
 		window.removeEventListener("mouseup", handleWindowMouseUp);
 		useWaypointHoverStore.getState().clearHover();
-		resetLongPress();
+		clearTouchSession();
 		clearRouteHover();
 		resetDragState();
 	};

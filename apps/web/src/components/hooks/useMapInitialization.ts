@@ -15,6 +15,7 @@ import { useToastStore } from "@/stores/toastStore";
 interface UseMapInitializationProps {
 	mapboxToken: string;
 	setPopup: Dispatch<SetStateAction<MIMPopupInfo | null>>;
+	popupRef: { current: MIMPopupInfo | null };
 	setEditor: (editor: RouteDraftEditor | null) => void;
 	handleWaypointError: (message: string | null) => void;
 	isMapLockedRef: { current: boolean };
@@ -25,6 +26,7 @@ interface UseMapInitializationProps {
 export const useMapInitialization = ({
 	mapboxToken,
 	setPopup,
+	popupRef,
 	setEditor,
 	handleWaypointError,
 	isMapLockedRef,
@@ -59,7 +61,7 @@ export const useMapInitialization = ({
 			});
 			setEditor(editor);
 
-			routingDisposerRef.current = initializeMapInteractions(map, editor, setPopup, isMapLockedRef);
+			routingDisposerRef.current = initializeMapInteractions(map, editor, setPopup, isMapLockedRef, popupRef);
 
 			map.setConfigProperty("basemap", "lightPreset", currentLightPreset);
 
@@ -93,7 +95,17 @@ export const useMapInitialization = ({
 				}
 			}
 		},
-		[mapboxToken, setPopup, setEditor, handleWaypointError, isMapLockedRef, currentLightPreset, routeId, pushToast],
+		[
+			mapboxToken,
+			setPopup,
+			popupRef,
+			setEditor,
+			handleWaypointError,
+			isMapLockedRef,
+			currentLightPreset,
+			routeId,
+			pushToast,
+		],
 	);
 
 	useEffect(() => {

@@ -65,9 +65,13 @@ const WAYPOINT_SCALING_CONFIG = {
 	],
 };
 
+// Extra growth on top of hover while a waypoint is lifted by a touch drag.
+const LIFTED_SIZE_MULTIPLIER = 1.3;
+
 // Mapbox requires "zoom" to sit directly under a top-level "interpolate" or
-// "step", so we embed the hover branch in each output value instead of
-// wrapping the whole interpolate in a "case".
+// "step", so we embed the state branches in each output value instead of
+// wrapping the whole interpolate in a "case". The `spawn` feature-state
+// (-1..0, animated by animateWaypointSpawn) scales a fresh waypoint in.
 const interpolateZoomStops = (column: 1 | 2 | 3 | 4, hoverMultiplier = 1): unknown[] => [
 	"interpolate",
 	["linear"],
@@ -76,7 +80,18 @@ const interpolateZoomStops = (column: 1 | 2 | 3 | 4, hoverMultiplier = 1): unkno
 		stop[0],
 		hoverMultiplier === 1
 			? stop[column]
-			: ["case", ["boolean", ["feature-state", "hover"], false], stop[column] * hoverMultiplier, stop[column]],
+			: [
+					"*",
+					[
+						"case",
+						["boolean", ["feature-state", "lifted"], false],
+						stop[column] * hoverMultiplier * LIFTED_SIZE_MULTIPLIER,
+						["boolean", ["feature-state", "hover"], false],
+						stop[column] * hoverMultiplier,
+						stop[column],
+					],
+					["+", 1, ["coalesce", ["feature-state", "spawn"], 0]],
+				],
 	]),
 ];
 
@@ -585,6 +600,44 @@ export const setHoveredWaypoint = (map: MapboxMap, previousIndex: number | null,
 	if (nextIndex !== null) {
 		map.setFeatureState({ source: WAYPOINTS_SOURCE_ID, id: waypointFeatureIdFromIndex(nextIndex) }, { hover: true });
 	}
+};
+
+// Marks a waypoint as lifted by a touch drag so the marker grows under the
+// finger. Pass null for either side to only set or only clear.
+export const setLiftedWaypoint = (map: MapboxMap, previousIndex: number | null, nextIndex: number | null): void => {
+	if (!map?.getSource(WAYPOINTS_SOURCE_ID)) return;
+	if (previousIndex !== null) {
+		map.removeFeatureState({ source: WAYPOINTS_SOURCE_ID, id: waypointFeatureIdFromIndex(previousIndex) }, "lifted");
+	}
+	if (nextIndex !== null) {
+		map.setFeatureState({ source: WAYPOINTS_SOURCE_ID, id: waypointFeatureIdFromIndex(nextIndex) }, { lifted: true });
+	}
+};
+
+// Pop-in for a freshly added waypoint: eases the `spawn` feature-state from
+// -1 (zero size) to 0 (resting size) with a slight overshoot so the add is
+// noticeable. Feature-state changes don't transition, hence the rAF loop.
+export const animateWaypointSpawn = (map: MapboxMap, index: number): void => {
+	if (!map?.getSource(WAYPOINTS_SOURCE_ID)) return;
+	const id = waypointFeatureIdFromIndex(index);
+	const duration = 320;
+	const start = performance.now();
+	const easeOutBack = (t: number): number => {
+		const c1 = 1.70158;
+		const c3 = c1 + 1;
+		return 1 + c3 * (t - 1) ** 3 + c1 * (t - 1) ** 2;
+	};
+	const step = (now: number) => {
+		if (!map.getSource(WAYPOINTS_SOURCE_ID)) return;
+		const t = Math.min(1, (now - start) / duration);
+		if (t >= 1) {
+			map.removeFeatureState({ source: WAYPOINTS_SOURCE_ID, id }, "spawn");
+			return;
+		}
+		map.setFeatureState({ source: WAYPOINTS_SOURCE_ID, id }, { spawn: easeOutBack(t) - 1 });
+		requestAnimationFrame(step);
+	};
+	requestAnimationFrame(step);
 };
 
 export const updateWaypointsLayer = (map: MapboxMap, waypoints: Waypoint[], isMapLocked: boolean): void => {

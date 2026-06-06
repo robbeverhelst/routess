@@ -31,6 +31,9 @@ Use the [template](0000-template.md) when adding a new one. Number sequentially 
 ### Frontend state
 - [0002 — Zustand for RouteDraft state](0002-zustand-for-routedraft-state.md)
 
+### Frontend interaction
+- [0028 — Touch gets its own gesture grammar on the planning map](0028-touch-gesture-grammar-for-map-editing.md)
+
 ### Identity & access
 - [0015 — Admin role reconciled from `ADMIN_EMAILS` env var on every login](0015-admin-role-reconciled-from-env-var.md)
 - [0016 — User soft-delete cascades to routes and sessions](0016-user-soft-delete-cascades.md)
