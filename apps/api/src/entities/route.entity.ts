@@ -68,6 +68,18 @@ export class Route extends BaseEntity {
 	@Property({ type: "string", unique: true })
 	shareToken: string & Opt = generateShareToken();
 
+	// Set on the first transition to 'public', never bumped (CONTEXT.md
+	// "PublishedAt"); re-publishing restores feed position rather than topping.
+	@Property({ type: "timestamp", nullable: true })
+	publishedAt?: Date;
+
+	// Lineage when this Route was saved as a copy of a shared Route.
+	@Property({ nullable: true })
+	copiedFromRouteId?: number;
+
+	@Property({ nullable: true })
+	copiedFromUserId?: number;
+
 	@ManyToOne(() => User)
 	user!: Ref<User>;
 }

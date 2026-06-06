@@ -53,4 +53,14 @@ export const queryKeys = {
 		session: () => [...queryKeys.auth.all, "session"] as const,
 		tokens: () => [...queryKeys.auth.all, "tokens"] as const,
 	},
+	// Social queries (profiles, follows, feed, share inbox)
+	social: {
+		all: ["social"] as const,
+		profile: (handle: string) => [...queryKeys.social.all, "profile", handle] as const,
+		follows: () => [...queryKeys.social.all, "follows"] as const,
+		feed: () => [...queryKeys.social.all, "feed"] as const,
+		inbox: () => [...queryKeys.social.all, "inbox"] as const,
+		unread: () => [...queryKeys.social.all, "unread"] as const,
+		search: (q: string) => [...queryKeys.social.all, "search", q] as const,
+	},
 } as const;

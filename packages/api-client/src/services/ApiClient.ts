@@ -11,15 +11,22 @@ import type {
 	ApiClientConfig,
 	ApiCollection,
 	ApiCollectionDetail,
+	ApiFeedItem,
+	ApiFeedPage,
+	ApiFollows,
 	ApiPersonalAccessToken,
 	ApiPersonalAccessTokenWithSecret,
+	ApiProfile,
+	ApiProfileSummary,
 	ApiRoute,
+	ApiRouteShare,
 	ApiRoutesPage,
 	ApiUser,
 	AuthResponse,
 	CreateCollectionRequest,
 	CreatePersonalAccessTokenRequest,
 	CreateRouteRequest,
+	SendRouteShareRequest,
 	UpdateCollectionRequest,
 	UpdateCurrentUserRequest,
 	UpdateRouteRequest,
@@ -313,6 +320,64 @@ export class ApiClient {
 	// Replaces the collection's full ordered membership.
 	async setCollectionRoutes(id: number, routeIds: number[]): Promise<ApiCollectionDetail> {
 		return this.request<ApiCollectionDetail>(`/collections/${id}/routes`, { method: "PUT", body: { routeIds } });
+	}
+
+	// Social methods (issue #245). Browser-session only on the server side.
+
+	async getPublicProfile(handle: string): Promise<ApiProfile> {
+		return this.request<ApiProfile>(`/profiles/${encodeURIComponent(handle)}`);
+	}
+
+	async followUser(handle: string): Promise<void> {
+		await this.request<void>(`/social/follows/${encodeURIComponent(handle)}`, { method: "POST" });
+	}
+
+	async unfollowUser(handle: string): Promise<void> {
+		await this.request<void>(`/social/follows/${encodeURIComponent(handle)}`, { method: "DELETE" });
+	}
+
+	async getFollows(): Promise<ApiFollows> {
+		return this.request<ApiFollows>("/social/follows");
+	}
+
+	async getFeed(params: { limit?: number; offset?: number } = {}): Promise<ApiFeedPage> {
+		const query = new URLSearchParams();
+		if (params.limit !== undefined) query.set("limit", String(params.limit));
+		if (params.offset !== undefined) query.set("offset", String(params.offset));
+		const qs = query.toString();
+		const { data, headers } = await this.request<{ data: ApiFeedItem[]; headers: Record<string, string> }>(
+			`/social/feed${qs ? `?${qs}` : ""}`,
+			{ method: "GET_WITH_HEADERS" },
+		);
+		const total = Number.parseInt(headers["x-total-count"] ?? "", 10);
+		return { items: data, total: Number.isNaN(total) ? data.length : total };
+	}
+
+	async sendRouteShare(body: SendRouteShareRequest): Promise<ApiRouteShare> {
+		return this.request<ApiRouteShare>("/social/shares", { method: "POST", body });
+	}
+
+	async getShareInbox(): Promise<ApiRouteShare[]> {
+		return this.request<ApiRouteShare[]>("/social/shares/inbox");
+	}
+
+	async getShareUnreadCount(): Promise<number> {
+		const res = await this.request<{ unread: number }>("/social/shares/unread-count");
+		return res.unread;
+	}
+
+	async markShareRead(id: number): Promise<void> {
+		await this.request<void>(`/social/shares/${id}/read`, { method: "POST" });
+	}
+
+	// Clones the shared route into the caller's library (keeps provenance,
+	// records copiedFrom lineage, starts private).
+	async copySharedRoute(id: number): Promise<ApiRoute> {
+		return this.request<ApiRoute>(`/social/shares/${id}/copy`, { method: "POST" });
+	}
+
+	async searchUsers(q: string): Promise<ApiProfileSummary[]> {
+		return this.request<ApiProfileSummary[]>(`/social/users/search?q=${encodeURIComponent(q)}`);
 	}
 
 	// Admin methods (gated server-side by JwtAuthGuard + RolesGuard)

@@ -84,8 +84,17 @@ function PublicRouteHero({ route, expectedSlug }: { route: ApiRoute; expectedSlu
 	return (
 		<div style={{ display: "flex", flexDirection: "column", gap: 20, padding: 20, maxWidth: 960, margin: "0 auto" }}>
 			<div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-				<div className="rds-mono" style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle, letterSpacing: 0.4 }}>
-					{t("public.byOwner", { name: route.user?.name ?? t("public.anonymous") })}
+				<div
+					className="rds-mono"
+					style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle, letterSpacing: 0.4, display: "flex", gap: 8 }}
+				>
+					{route.user?.handle ? (
+						<a href={`/u/${route.user.handle}`} style={{ color: RDS_COLORS.accent, textDecoration: "none" }}>
+							{t("public.byOwner", { name: route.user.name })}
+						</a>
+					) : (
+						<span>{t("public.byOwner", { name: route.user?.name ?? t("public.anonymous") })}</span>
+					)}
 				</div>
 				<h1 style={{ margin: 0, fontSize: 32, fontWeight: 700, letterSpacing: -0.6 }}>{route.name}</h1>
 				{route.description && (

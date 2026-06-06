@@ -1,10 +1,16 @@
 import type {
 	ApiCollection,
 	ApiCollectionDetail,
+	ApiFeedPage,
+	ApiFollows,
 	ApiPersonalAccessToken,
 	ApiPersonalAccessTokenWithSecret,
+	ApiProfile,
+	ApiProfileSummary,
+	ApiRouteShare,
 	CreateCollectionRequest,
 	CreatePersonalAccessTokenRequest,
+	SendRouteShareRequest,
 	UpdateCollectionRequest,
 } from "@routess/api-client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -295,6 +301,147 @@ export function useSetCollectionRoutes() {
 		},
 		onError: (error) => {
 			Logger.error("Failed to update collection routes:", error);
+		},
+	});
+}
+
+// ============================================================================
+// SOCIAL QUERIES (issue #245)
+// ============================================================================
+
+/**
+ * Public profile by handle. Works for anonymous viewers (isFollowing = null).
+ */
+export function usePublicProfile(handle: string | null) {
+	return useQuery<ApiProfile>({
+		queryKey: queryKeys.social.profile(handle ?? ""),
+		queryFn: () => apiService.getPublicProfile(handle as string),
+		enabled: handle != null && handle.length > 0,
+		staleTime: 60 * 1000,
+	});
+}
+
+export function useFeed() {
+	const hasUser = hasStoredUser();
+	return useQuery<ApiFeedPage>({
+		queryKey: queryKeys.social.feed(),
+		queryFn: () => apiService.getFeed({ limit: 50 }),
+		enabled: hasUser,
+		staleTime: 60 * 1000,
+	});
+}
+
+export function useFollows() {
+	const hasUser = hasStoredUser();
+	return useQuery<ApiFollows>({
+		queryKey: queryKeys.social.follows(),
+		queryFn: () => apiService.getFollows(),
+		enabled: hasUser,
+		staleTime: 60 * 1000,
+	});
+}
+
+export function useShareInbox() {
+	const hasUser = hasStoredUser();
+	return useQuery<ApiRouteShare[]>({
+		queryKey: queryKeys.social.inbox(),
+		queryFn: () => apiService.getShareInbox(),
+		enabled: hasUser,
+		staleTime: 30 * 1000,
+	});
+}
+
+/**
+ * Unread share count for the social tab badge. Polled lazily; the inbox is
+ * not a real-time surface.
+ */
+export function useShareUnreadCount() {
+	const hasUser = hasStoredUser();
+	return useQuery<number>({
+		queryKey: queryKeys.social.unread(),
+		queryFn: () => apiService.getShareUnreadCount(),
+		enabled: hasUser,
+		staleTime: 60 * 1000,
+		refetchInterval: 5 * 60 * 1000,
+	});
+}
+
+export function useUserSearch(q: string) {
+	const hasUser = hasStoredUser();
+	return useQuery<ApiProfileSummary[]>({
+		queryKey: queryKeys.social.search(q),
+		queryFn: () => apiService.searchUsers(q),
+		enabled: hasUser && q.trim().length >= 2,
+		staleTime: 30 * 1000,
+	});
+}
+
+export function useFollowUser() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({ handle }: { handle: string; source: "profile" | "search" | "public_route" | "feed" }) =>
+			apiService.followUser(handle),
+		onSuccess: (_data, vars) => {
+			queryClient.invalidateQueries({ queryKey: queryKeys.social.all });
+			trackEvent({ name: "profile_followed", properties: { source: vars.source } });
+		},
+		onError: (error) => {
+			Logger.error("Failed to follow:", error);
+		},
+	});
+}
+
+export function useUnfollowUser() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (handle: string) => apiService.unfollowUser(handle),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: queryKeys.social.all });
+			trackEvent({ name: "profile_unfollowed", properties: {} });
+		},
+		onError: (error) => {
+			Logger.error("Failed to unfollow:", error);
+		},
+	});
+}
+
+export function useSendRouteShare() {
+	return useMutation({
+		mutationFn: ({ body }: { body: SendRouteShareRequest; visibility: "unlisted" | "public" }) =>
+			apiService.sendRouteShare(body),
+		onSuccess: (_data, vars) => {
+			trackEvent({
+				name: "route_share_sent",
+				properties: { has_message: !!vars.body.message, visibility: vars.visibility },
+			});
+		},
+		onError: (error) => {
+			Logger.error("Failed to share route:", error);
+		},
+	});
+}
+
+export function useMarkShareRead() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (id: number) => apiService.markShareRead(id),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: queryKeys.social.inbox() });
+			queryClient.invalidateQueries({ queryKey: queryKeys.social.unread() });
+		},
+	});
+}
+
+export function useCopySharedRoute() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (id: number) => apiService.copySharedRoute(id),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: queryKeys.routes.list() });
+			trackEvent({ name: "route_share_copied", properties: {} });
+		},
+		onError: (error) => {
+			Logger.error("Failed to copy shared route:", error);
 		},
 	});
 }

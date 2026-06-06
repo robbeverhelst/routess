@@ -1,6 +1,11 @@
-import { Entity, Index, PrimaryKey, Property } from "@mikro-orm/core";
+import { randomBytes } from "node:crypto";
+import { Entity, Index, type Opt, PrimaryKey, Property } from "@mikro-orm/core";
 import type { UserPreferences } from "@routess/core";
 import { BaseEntity } from "./base.entity";
+
+export function randomHandle(): string {
+	return `user-${randomBytes(4).toString("hex")}`;
+}
 
 export type UserRole = "user" | "admin";
 
@@ -22,6 +27,12 @@ export class User extends BaseEntity {
 
 	@Property()
 	name!: string;
+
+	// Public address of the User's Profile (CONTEXT.md "Handle"). Generated at
+	// signup from the display name (never the email); the onCreate fallback
+	// keeps fixtures and edge paths valid with a random handle.
+	@Property({ unique: true, onCreate: (user: User) => user.handle ?? randomHandle() })
+	handle!: string & Opt;
 
 	@Property({ nullable: true })
 	avatar?: string;

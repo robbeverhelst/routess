@@ -47,6 +47,9 @@ export class RoutesService {
 			provenance: createRouteDto.provenance ?? "valhalla",
 			user: userId,
 		});
+		if (route.visibility === "public") {
+			route.publishedAt = new Date();
+		}
 		await this.em.persistAndFlush(route);
 		await this.em.populate(route, ["user"]);
 		this.events.emit(ROUTE_CREATED, { userId } satisfies RouteCreatedEvent);
@@ -127,6 +130,11 @@ export class RoutesService {
 	async update(id: number, updateRouteDto: UpdateRouteDto, userId: number): Promise<RouteResponseDto> {
 		const route = await this.findOwnedRouteOrFail(id, userId);
 		this.routeRepository.assign(route, updateRouteDto);
+		// PublishedAt: stamped on the first transition to public, never bumped
+		// afterward — re-publishing restores feed position (CONTEXT.md).
+		if (route.visibility === "public" && !route.publishedAt) {
+			route.publishedAt = new Date();
+		}
 		await this.em.persistAndFlush(route);
 		await this.em.populate(route, ["user"]);
 		return this.toResponseDto(route);

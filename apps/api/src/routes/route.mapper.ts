@@ -5,8 +5,9 @@ import { toPublicUserDto } from "../users/user.mapper";
 import type { RouteResponseDto } from "./dto/route-response.dto";
 
 // Routes can be served to non-owners (public/unlisted), so the embedded
-// owner is the PII-free public shape.
-type SerializableUser = Pick<User, "id" | "name" | "avatar">;
+// owner is the PII-free public shape. The Handle is part of that shape by
+// design: it is the Profile's public address (CONTEXT.md "Handle").
+type SerializableUser = Pick<User, "id" | "name" | "handle" | "avatar">;
 
 export function toRouteResponseDto(route: Route, analyticsSalt: string): RouteResponseDto {
 	const serializedUser = wrap(route.user).toJSON() as SerializableUser;

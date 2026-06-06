@@ -30,6 +30,12 @@ export class UserResponseDto {
 	})
 	name!: string;
 
+	@ApiProperty({
+		example: "jane-doe",
+		description: "Public address of the user's Profile (see CONTEXT.md 'Handle').",
+	})
+	handle!: string;
+
 	@ApiPropertyOptional({
 		example: "https://example.com/avatar.jpg",
 	})
@@ -100,6 +106,12 @@ export class PublicUserDto {
 		example: "Jane Doe",
 	})
 	name!: string;
+
+	@ApiProperty({
+		example: "jane-doe",
+		description: "Public address of the owner's Profile (CONTEXT.md 'Handle'). Deliberately public, not PII.",
+	})
+	handle!: string;
 
 	@ApiPropertyOptional({
 		example: "https://example.com/avatar.jpg",

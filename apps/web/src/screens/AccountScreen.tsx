@@ -1,5 +1,7 @@
+import { isValidHandle } from "@routess/core";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
+import { trackEvent } from "@/lib/analytics/track";
 import { apiService } from "@/lib/api";
 import { useAuthStatus, useLogout } from "@/lib/api-queries";
 import { emitAppEvent } from "@/lib/app-events";
@@ -8,7 +10,7 @@ import { t } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
 import { queryKeys } from "@/lib/query-client";
 import { useToastStore } from "@/stores/toastStore";
-import { Btn, RDS_COLORS, SecTitle } from "../components/primitives";
+import { Btn, RDS_COLORS, SecTitle, Toggle } from "../components/primitives";
 import { Field, SettingsBlock, SettingsRow, SettingsSection, TextInput } from "../components/settings";
 
 const dash = "—";
@@ -54,6 +56,10 @@ export function AccountScreen() {
 	const [name, setName] = useState(user?.name ?? "");
 	const [editingName, setEditingName] = useState(false);
 	const [savingName, setSavingName] = useState(false);
+	const [handle, setHandle] = useState(user?.handle ?? "");
+	const [editingHandle, setEditingHandle] = useState(false);
+	const [savingHandle, setSavingHandle] = useState(false);
+	const [savingSharePref, setSavingSharePref] = useState(false);
 	const [avatarUploading, setAvatarUploading] = useState(false);
 	const [deleting, setDeleting] = useState(false);
 	const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -105,6 +111,50 @@ export function AccountScreen() {
 	const handleCancelName = () => {
 		setEditingName(false);
 		setName(user?.name ?? "");
+	};
+
+	// Handle change (CONTEXT.md "Handle"): old profile URLs 404 afterwards,
+	// the freed handle returns to the pool.
+	const handleSaveHandle = async () => {
+		const trimmed = handle.trim().toLowerCase();
+		if (!trimmed || trimmed === user?.handle) {
+			setEditingHandle(false);
+			setHandle(user?.handle ?? "");
+			return;
+		}
+		if (!isValidHandle(trimmed)) {
+			pushToast({ kind: "warn", title: t("account.handleInvalid") });
+			return;
+		}
+		setSavingHandle(true);
+		try {
+			const updated = await apiService.updateCurrentUser({ handle: trimmed });
+			storeUser(updated);
+			await refreshUser();
+			trackEvent({ name: "profile_handle_changed", properties: {} });
+			pushToast({ kind: "success", title: t("account.handleUpdated") });
+			setEditingHandle(false);
+		} catch (error) {
+			Logger.error("Update handle failed", error);
+			const taken = error instanceof Error && error.message.includes("409");
+			pushToast({ kind: "danger", title: taken ? t("account.handleTaken") : t("account.handleUpdateFailed") });
+		} finally {
+			setSavingHandle(false);
+		}
+	};
+
+	const handleToggleShareEmails = async (next: boolean) => {
+		setSavingSharePref(true);
+		try {
+			const updated = await apiService.updateCurrentUser({ preferences: { emailOnRouteShare: next } });
+			storeUser(updated);
+			await refreshUser();
+		} catch (error) {
+			Logger.error("Update share email preference failed", error);
+			pushToast({ kind: "danger", title: t("common.tryAgain") });
+		} finally {
+			setSavingSharePref(false);
+		}
 	};
 
 	const handleAvatarClick = () => fileInputRef.current?.click();
@@ -377,10 +427,75 @@ export function AccountScreen() {
 							/>
 						)}
 
+						{editingHandle ? (
+							<SettingsBlock>
+								<form
+									onSubmit={(e) => {
+										e.preventDefault();
+										void handleSaveHandle();
+									}}
+									style={{ display: "flex", flexDirection: "column", gap: 10 }}
+								>
+									<Field label={t("account.field.handle")}>
+										<TextInput value={handle} onChange={(e) => setHandle(e.target.value)} autoFocus />
+									</Field>
+									<div style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle }}>{t("account.handleHint")}</div>
+									<div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+										<Btn
+											variant="ghost"
+											onClick={() => {
+												setEditingHandle(false);
+												setHandle(user?.handle ?? "");
+											}}
+											disabled={savingHandle}
+										>
+											{t("common.cancel")}
+										</Btn>
+										<Btn type="submit" variant="primary" disabled={savingHandle}>
+											{savingHandle ? t("account.saving") : t("common.save")}
+										</Btn>
+									</div>
+								</form>
+							</SettingsBlock>
+						) : (
+							<SettingsRow
+								label={t("account.field.handle")}
+								sub={t("account.handleSub")}
+								control={
+									<>
+										<span className="rds-mono" style={{ fontSize: 13, color: RDS_COLORS.fgMuted }}>
+											@{user?.handle || dash}
+										</span>
+										<Btn
+											variant="ghost"
+											onClick={() => {
+												setHandle(user?.handle ?? "");
+												setEditingHandle(true);
+											}}
+										>
+											{t("common.edit")}
+										</Btn>
+									</>
+								}
+							/>
+						)}
+
 						<SettingsRow
 							label={t("account.field.email")}
 							sub={t("account.emailReadonly")}
 							control={<span style={{ fontSize: 13, color: RDS_COLORS.fgMuted }}>{user?.email || dash}</span>}
+						/>
+
+						<SettingsRow
+							label={t("account.shareEmails")}
+							sub={t("account.shareEmailsSub")}
+							control={
+								<Toggle
+									on={user?.preferences?.emailOnRouteShare ?? true}
+									disabled={savingSharePref}
+									onChange={(next) => void handleToggleShareEmails(next)}
+								/>
+							}
 						/>
 
 						{editingPassword ? (

@@ -102,6 +102,13 @@ export type ProductEvent =
 	| { name: "collection_deleted"; properties: EmptyProps }
 	| { name: "collection_share_link_copied"; properties: { visibility: RouteVisibility } }
 
+	// Social (issue #245)
+	| { name: "profile_followed"; properties: { source: "profile" | "search" | "public_route" | "feed" } }
+	| { name: "profile_unfollowed"; properties: EmptyProps }
+	| { name: "route_share_sent"; properties: { has_message: boolean; visibility: RouteVisibility } }
+	| { name: "route_share_copied"; properties: EmptyProps }
+	| { name: "profile_handle_changed"; properties: EmptyProps }
+
 	// Payment (feature pending, see #135)
 	| { name: "payment_started"; properties: { plan: string; interval: "monthly" | "yearly" } }
 	| { name: "payment_completed"; properties: { plan: string; interval: "monthly" | "yearly" } }

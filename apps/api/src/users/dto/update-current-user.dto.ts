@@ -13,6 +13,15 @@ export class UpdateCurrentUserDto {
 	name?: string;
 
 	@ApiPropertyOptional({
+		example: "jane-doe",
+		description:
+			"New Handle for the user's Profile. Lowercase alphanumeric plus hyphen, 3-30 chars. Old profile URLs 404 after a change; the freed handle returns to the pool.",
+	})
+	@IsOptional()
+	@IsString()
+	handle?: string;
+
+	@ApiPropertyOptional({
 		example: "https://example.com/avatar.jpg",
 		description: "Avatar image URL. Must be https: clients render it, so no other schemes are accepted.",
 	})

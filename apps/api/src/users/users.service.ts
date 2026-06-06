@@ -1,8 +1,8 @@
 import { EntityManager, EntityRepository } from "@mikro-orm/core";
 import { InjectRepository } from "@mikro-orm/nestjs";
-import { Injectable, Logger, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
-import { mergeUserPreferences } from "@routess/core";
+import { isValidHandle, mergeUserPreferences } from "@routess/core";
 import { SessionService } from "../auth/session.service";
 import { Route } from "../entities/route.entity";
 import { User } from "../entities/user.entity";
@@ -38,6 +38,21 @@ export class UsersService {
 
 		if (updateUserDto.name !== undefined) {
 			user.name = updateUserDto.name;
+		}
+		if (updateUserDto.handle !== undefined && updateUserDto.handle !== user.handle) {
+			if (!isValidHandle(updateUserDto.handle)) {
+				throw new BadRequestException(
+					"Handle must be 3-30 lowercase letters, digits or hyphens, and not a reserved word",
+				);
+			}
+			const taken = await this.userRepository.findOne(
+				{ handle: updateUserDto.handle },
+				{ filters: { softDelete: false } },
+			);
+			if (taken) {
+				throw new ConflictException("This handle is already taken");
+			}
+			user.handle = updateUserDto.handle;
 		}
 		if (updateUserDto.avatar !== undefined) {
 			user.avatar = updateUserDto.avatar;
