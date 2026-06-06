@@ -18,6 +18,7 @@ import { useUiStore } from "@/stores/uiStore";
 import { EditableLabel } from "../../components/EditableLabel";
 import { I, type IconKey } from "../../components/icons";
 import { Btn, IconBtn, RDS_COLORS } from "../../components/primitives";
+import { Tooltip } from "../../components/Tooltip";
 import { DropMenu, MenuDivider, MenuItem } from "./DropMenu";
 import { RouteThumb } from "./RouteThumb";
 
@@ -299,12 +300,11 @@ export function CollectionDetail({
 						))}
 				</div>
 				{detail && VisIcon && (
-					<span
-						title={t(`library.visibility.${detail.visibility}`)}
-						style={{ color: RDS_COLORS.fgSubtle, display: "inline-flex" }}
-					>
-						<VisIcon size={13} />
-					</span>
+					<Tooltip label={t(`library.visibility.${detail.visibility}`)}>
+						<span style={{ color: RDS_COLORS.fgSubtle, display: "inline-flex" }}>
+							<VisIcon size={13} />
+						</span>
+					</Tooltip>
 				)}
 				{editable && detail && (
 					<div style={{ position: "relative" }}>

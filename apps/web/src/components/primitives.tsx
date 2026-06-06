@@ -1,5 +1,6 @@
 import type React from "react";
 import type { CSSProperties, ReactNode } from "react";
+import { Tooltip } from "./Tooltip";
 
 export const RDS_COLORS = {
 	bgCanvas: "var(--rds-bg-canvas)",
@@ -48,45 +49,47 @@ export function IconBtn({
 	onPointerCancel,
 }: IconBtnProps) {
 	return (
-		<button
-			type="button"
-			onClick={onClick}
-			title={title}
-			aria-pressed={pressed}
-			disabled={disabled}
-			onPointerDown={onPointerDown}
-			onPointerMove={onPointerMove}
-			onPointerUp={onPointerUp}
-			onPointerCancel={onPointerCancel}
-			className="rds-icon-btn"
-			style={{
-				display: "inline-flex",
-				alignItems: "center",
-				justifyContent: "center",
-				borderRadius: "var(--rds-radius-sm)",
-				background: pressed ? RDS_COLORS.bgActive : "transparent",
-				border: "1px solid transparent",
-				color: pressed ? RDS_COLORS.fg : RDS_COLORS.fgMuted,
-				transition: "background 120ms, color 120ms, border 120ms",
-				cursor: disabled ? "not-allowed" : "pointer",
-				opacity: disabled ? 0.5 : 1,
-				flexShrink: 0,
-				padding: 0,
-				...style,
-			}}
-			onMouseEnter={(e) => {
-				if (disabled || pressed) return;
-				e.currentTarget.style.background = RDS_COLORS.bgHover;
-				e.currentTarget.style.color = RDS_COLORS.fg;
-			}}
-			onMouseLeave={(e) => {
-				if (disabled || pressed) return;
-				e.currentTarget.style.background = "transparent";
-				e.currentTarget.style.color = RDS_COLORS.fgMuted;
-			}}
-		>
-			{children}
-		</button>
+		<Tooltip label={title}>
+			<button
+				type="button"
+				onClick={onClick}
+				aria-label={title}
+				aria-pressed={pressed}
+				disabled={disabled}
+				onPointerDown={onPointerDown}
+				onPointerMove={onPointerMove}
+				onPointerUp={onPointerUp}
+				onPointerCancel={onPointerCancel}
+				className="rds-icon-btn"
+				style={{
+					display: "inline-flex",
+					alignItems: "center",
+					justifyContent: "center",
+					borderRadius: "var(--rds-radius-sm)",
+					background: pressed ? RDS_COLORS.bgActive : "transparent",
+					border: "1px solid transparent",
+					color: pressed ? RDS_COLORS.fg : RDS_COLORS.fgMuted,
+					transition: "background 120ms, color 120ms, border 120ms",
+					cursor: disabled ? "not-allowed" : "pointer",
+					opacity: disabled ? 0.5 : 1,
+					flexShrink: 0,
+					padding: 0,
+					...style,
+				}}
+				onMouseEnter={(e) => {
+					if (disabled || pressed) return;
+					e.currentTarget.style.background = RDS_COLORS.bgHover;
+					e.currentTarget.style.color = RDS_COLORS.fg;
+				}}
+				onMouseLeave={(e) => {
+					if (disabled || pressed) return;
+					e.currentTarget.style.background = "transparent";
+					e.currentTarget.style.color = RDS_COLORS.fgMuted;
+				}}
+			>
+				{children}
+			</button>
+		</Tooltip>
 	);
 }
 
@@ -139,27 +142,28 @@ export function Btn({ children, onClick, variant = "default", style, disabled, t
 		},
 	};
 	return (
-		<button
-			type={type}
-			onClick={onClick}
-			disabled={disabled}
-			title={title}
-			style={{ ...base, ...variants[variant], ...style }}
-			onMouseEnter={(e) => {
-				if (disabled) return;
-				if (variant === "primary" || variant === "danger") e.currentTarget.style.filter = "brightness(1.06)";
-				else e.currentTarget.style.background = RDS_COLORS.bgHover;
-			}}
-			onMouseLeave={(e) => {
-				if (disabled) return;
-				e.currentTarget.style.filter = "";
-				if (variant !== "primary" && variant !== "danger") {
-					e.currentTarget.style.background = variant === "ghost" ? "transparent" : RDS_COLORS.bgInput;
-				}
-			}}
-		>
-			{children}
-		</button>
+		<Tooltip label={title}>
+			<button
+				type={type}
+				onClick={onClick}
+				disabled={disabled}
+				style={{ ...base, ...variants[variant], ...style }}
+				onMouseEnter={(e) => {
+					if (disabled) return;
+					if (variant === "primary" || variant === "danger") e.currentTarget.style.filter = "brightness(1.06)";
+					else e.currentTarget.style.background = RDS_COLORS.bgHover;
+				}}
+				onMouseLeave={(e) => {
+					if (disabled) return;
+					e.currentTarget.style.filter = "";
+					if (variant !== "primary" && variant !== "danger") {
+						e.currentTarget.style.background = variant === "ghost" ? "transparent" : RDS_COLORS.bgInput;
+					}
+				}}
+			>
+				{children}
+			</button>
+		</Tooltip>
 	);
 }
 
@@ -168,9 +172,10 @@ interface BadgeProps {
 	variant?: "default" | "accent" | "success" | "warn";
 	dot?: boolean;
 	style?: CSSProperties;
+	title?: string;
 }
 
-export function Badge({ children, variant = "default", dot, style }: BadgeProps) {
+export function Badge({ children, variant = "default", dot, style, title }: BadgeProps) {
 	const variants = {
 		default: { bg: RDS_COLORS.bgInput, fg: RDS_COLORS.fgMuted },
 		accent: { bg: RDS_COLORS.accentSoft, fg: RDS_COLORS.accent },
@@ -179,34 +184,36 @@ export function Badge({ children, variant = "default", dot, style }: BadgeProps)
 	} as const;
 	const v = variants[variant];
 	return (
-		<span
-			style={{
-				display: "inline-flex",
-				alignItems: "center",
-				gap: 6,
-				padding: "2px 8px",
-				height: 22,
-				borderRadius: 999,
-				background: v.bg,
-				color: v.fg,
-				fontSize: 11.5,
-				fontWeight: 500,
-				...style,
-			}}
-		>
-			{dot && (
-				<span
-					style={{
-						display: "inline-block",
-						width: 6,
-						height: 6,
-						borderRadius: 999,
-						background: "currentColor",
-					}}
-				/>
-			)}
-			{children}
-		</span>
+		<Tooltip label={title}>
+			<span
+				style={{
+					display: "inline-flex",
+					alignItems: "center",
+					gap: 6,
+					padding: "2px 8px",
+					height: 22,
+					borderRadius: 999,
+					background: v.bg,
+					color: v.fg,
+					fontSize: 11.5,
+					fontWeight: 500,
+					...style,
+				}}
+			>
+				{dot && (
+					<span
+						style={{
+							display: "inline-block",
+							width: 6,
+							height: 6,
+							borderRadius: 999,
+							background: "currentColor",
+						}}
+					/>
+				)}
+				{children}
+			</span>
+		</Tooltip>
 	);
 }
 
@@ -310,56 +317,60 @@ export function Toggle({
 	onChange,
 	disabled,
 	label,
+	title,
 }: {
 	on: boolean;
 	onChange?: (v: boolean) => void;
 	disabled?: boolean;
 	label?: string;
+	title?: string;
 }) {
 	return (
-		<button
-			type="button"
-			role="switch"
-			aria-checked={on}
-			aria-label={label}
-			onClick={() => !disabled && onChange?.(!on)}
-			disabled={disabled}
-			style={{
-				// transparent padding enlarges the hit area without changing the visual
-				padding: 6,
-				margin: -6,
-				background: "transparent",
-				border: 0,
-				cursor: disabled ? "not-allowed" : "pointer",
-				opacity: disabled ? 0.5 : 1,
-				display: "inline-flex",
-				flexShrink: 0,
-			}}
-		>
-			<span
+		<Tooltip label={title}>
+			<button
+				type="button"
+				role="switch"
+				aria-checked={on}
+				aria-label={label}
+				onClick={() => !disabled && onChange?.(!on)}
+				disabled={disabled}
 				style={{
-					width: 32,
-					height: 18,
-					borderRadius: 999,
-					background: on ? RDS_COLORS.accent : RDS_COLORS.borderStrong,
-					position: "relative",
-					transition: "background 120ms",
-					display: "inline-block",
+					// transparent padding enlarges the hit area without changing the visual
+					padding: 6,
+					margin: -6,
+					background: "transparent",
+					border: 0,
+					cursor: disabled ? "not-allowed" : "pointer",
+					opacity: disabled ? 0.5 : 1,
+					display: "inline-flex",
+					flexShrink: 0,
 				}}
 			>
 				<span
 					style={{
-						position: "absolute",
-						top: 2,
-						left: on ? 16 : 2,
-						width: 14,
-						height: 14,
+						width: 32,
+						height: 18,
 						borderRadius: 999,
-						background: "white",
-						transition: "left 120ms",
+						background: on ? RDS_COLORS.accent : RDS_COLORS.borderStrong,
+						position: "relative",
+						transition: "background 120ms",
+						display: "inline-block",
 					}}
-				/>
-			</span>
-		</button>
+				>
+					<span
+						style={{
+							position: "absolute",
+							top: 2,
+							left: on ? 16 : 2,
+							width: 14,
+							height: 14,
+							borderRadius: 999,
+							background: "white",
+							transition: "left 120ms",
+						}}
+					/>
+				</span>
+			</button>
+		</Tooltip>
 	);
 }

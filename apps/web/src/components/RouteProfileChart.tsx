@@ -4,6 +4,7 @@ import type { SurfaceBreakdown, SurfaceBucket } from "@/features/routing/service
 import { useUnits } from "@/lib/units";
 import { useRouteScrubStore } from "@/stores/routeScrubStore";
 import { RDS_COLORS, SecTitle } from "./primitives";
+import { Tooltip } from "./Tooltip";
 
 const CHART_W = 300;
 const CURVE_H = 56;
@@ -442,23 +443,25 @@ export function RouteProfileChart({
 					{hasSurface ? (
 						<div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "4px 10px" }}>
 							{shares.map((s) => (
-								<div
+								<Tooltip
 									key={s.bucket}
-									style={{ display: "inline-flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}
+									label={`${BUCKET_LABEL[s.bucket]} · ${formatDistance((breakdown?.meters[s.bucket] ?? 0) / 1000)}`}
 								>
-									<span
-										style={{
-											width: 8,
-											height: 8,
-											borderRadius: 999,
-											background: BUCKET_COLOR[s.bucket],
-											flexShrink: 0,
-										}}
-									/>
-									<span style={{ fontSize: 11, color: RDS_COLORS.fgMuted }}>
-										{BUCKET_LABEL[s.bucket]} <span className="rds-mono">{Math.round(s.pct)}%</span>
-									</span>
-								</div>
+									<div style={{ display: "inline-flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
+										<span
+											style={{
+												width: 8,
+												height: 8,
+												borderRadius: 999,
+												background: BUCKET_COLOR[s.bucket],
+												flexShrink: 0,
+											}}
+										/>
+										<span style={{ fontSize: 11, color: RDS_COLORS.fgMuted }}>
+											{BUCKET_LABEL[s.bucket]} <span className="rds-mono">{Math.round(s.pct)}%</span>
+										</span>
+									</div>
+								</Tooltip>
 							))}
 						</div>
 					) : (
