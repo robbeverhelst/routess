@@ -1,4 +1,9 @@
 import { useRef, useState } from "react";
+import { parseGPXFile } from "@/features/routing/services/GPXService";
+import { buildLibraryRoutePayload } from "@/features/routing/services/importToLibrary";
+import { useIsAuthenticated } from "@/hooks/useAuthState";
+import { trackEvent } from "@/lib/analytics/track";
+import { useSaveRoute } from "@/lib/api-queries";
 import { emitAppEvent } from "@/lib/app-events";
 import { useT } from "@/lib/i18n";
 import { useModalsStore } from "@/stores/modalsStore";
@@ -17,14 +22,18 @@ const ACTIVITY_KEYS = [
 ] as const;
 
 type ActivityKey = (typeof ACTIVITY_KEYS)[number]["key"];
+type ImportTarget = "draft" | "library";
 
 export function ImportModal() {
 	const closeModal = useModalsStore((s) => s.closeModal);
 	const pushToast = useToastStore((s) => s.push);
 	const t = useT();
+	const isAuthenticated = useIsAuthenticated();
+	const saveRoute = useSaveRoute();
 	const inputRef = useRef<HTMLInputElement>(null);
 	const [file, setFile] = useState<File | null>(null);
 	const [activity, setActivity] = useState<ActivityKey>("auto");
+	const [target, setTarget] = useState<ImportTarget>("draft");
 	const [isDragging, setIsDragging] = useState(false);
 	const [isImporting, setIsImporting] = useState(false);
 
@@ -33,6 +42,26 @@ export function ImportModal() {
 	const onFile = (f: File | null | undefined) => {
 		if (!f) return;
 		setFile(f);
+	};
+
+	const saveToLibrary = async (gpxString: string, fileName: string) => {
+		const parsed = await parseGPXFile(gpxString);
+		if (parsed.error || !parsed.waypoints || parsed.waypoints.length === 0) {
+			throw new Error(parsed.error ?? "No valid waypoints were found in the GPX file.");
+		}
+		const payload = buildLibraryRoutePayload(parsed, fileName, activity === "auto" ? undefined : activity);
+		trackEvent({
+			name: "gpx_imported",
+			properties: {
+				waypoint_count: payload.waypoints.length,
+				distance_m: payload.distance ?? 0,
+				had_names: parsed.waypoints.some((wp) => !!wp.name),
+				source: "file_upload",
+				target: "library",
+			},
+		});
+		const created = await saveRoute.mutateAsync({ ...payload, creationSource: "imported" });
+		return created.name;
 	};
 
 	const onImport = async () => {
@@ -49,12 +78,21 @@ export function ImportModal() {
 		setIsImporting(true);
 		try {
 			const gpxString = await file.text();
-			emitAppEvent("routess:import-gpx", { gpxString, fileName: file.name });
-			pushToast({
-				kind: "success",
-				title: t("import.toast.imported"),
-				body: file.name,
-			});
+			if (target === "library") {
+				const savedName = await saveToLibrary(gpxString, file.name);
+				pushToast({
+					kind: "success",
+					title: t("import.toast.savedToLibrary"),
+					body: savedName,
+				});
+			} else {
+				emitAppEvent("routess:import-gpx", { gpxString, fileName: file.name });
+				pushToast({
+					kind: "success",
+					title: t("import.toast.imported"),
+					body: file.name,
+				});
+			}
 			closeModal();
 		} catch (err) {
 			pushToast({
@@ -217,6 +255,50 @@ export function ImportModal() {
 						>
 							<I.zap size={11} /> {t("import.ready")}
 						</span>
+					</div>
+
+					<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+						<SecTitle>{t("import.target")}</SecTitle>
+						<div style={{ display: "flex", gap: 8 }}>
+							{(
+								[
+									{ key: "draft", labelKey: "import.target.draft", icon: I.pin },
+									{ key: "library", labelKey: "import.target.library", icon: I.library },
+								] as const
+							).map((opt) => {
+								const Icon = opt.icon;
+								const disabled = opt.key === "library" && !isAuthenticated;
+								const on = target === opt.key;
+								return (
+									<button
+										key={opt.key}
+										type="button"
+										disabled={disabled}
+										onClick={() => setTarget(opt.key)}
+										style={{
+											display: "inline-flex",
+											alignItems: "center",
+											justifyContent: "center",
+											gap: 6,
+											flex: 1,
+											height: 34,
+											borderRadius: 8,
+											border: on ? `1px solid ${RDS_COLORS.accent}` : `1px solid ${RDS_COLORS.border}`,
+											background: on ? RDS_COLORS.accentSoft : RDS_COLORS.bgInput,
+											color: on ? RDS_COLORS.accent : RDS_COLORS.fgMuted,
+											fontSize: 12,
+											cursor: disabled ? "not-allowed" : "pointer",
+											opacity: disabled ? 0.5 : 1,
+										}}
+									>
+										<Icon size={13} /> {t(opt.labelKey)}
+									</button>
+								);
+							})}
+						</div>
+						{!isAuthenticated && (
+							<div style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle }}>{t("import.target.signInHint")}</div>
+						)}
 					</div>
 
 					<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>

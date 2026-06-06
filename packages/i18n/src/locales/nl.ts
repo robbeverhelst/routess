@@ -718,6 +718,11 @@ export const nl: Record<string, string> = {
 	"import.note": "Alleen GPX wordt nu ondersteund. Imports voor TCX, FIT en KML komen later.",
 	"import.importing": "Importeren…",
 	"import.ready": "Klaar",
+	"import.target": "Importeren naar",
+	"import.target.draft": "Openen in planner",
+	"import.target.library": "Opslaan in bibliotheek",
+	"import.target.signInHint": "Meld je aan om imports direct in je bibliotheek op te slaan.",
+	"import.toast.savedToLibrary": "Opgeslagen in bibliotheek",
 
 	// ConfirmDeleteModal
 	"confirm.delete.title": "Route verwijderen?",

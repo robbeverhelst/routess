@@ -43,4 +43,39 @@ describe("GPXService", () => {
 
 		expect(parsed.error).toContain("Invalid GPX file");
 	});
+
+	it("round-trips the route name through metadata", async () => {
+		const gpxString = generateGPXString([{ coord: [4.3517, 50.8503], type: "routed" }], [], "Kanaalroute Gent");
+		const parsed = await parseGPXFile(gpxString);
+
+		expect(parsed.name).toBe("Kanaalroute Gent");
+	});
+
+	it("reads the rte name when metadata has none, without grabbing rtept names", async () => {
+		const gpx = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="OtherApp" xmlns="http://www.topografix.com/GPX/1/1">
+  <rte>
+    <rtept lat="50.8503" lon="4.3517"><name>First stop</name></rtept>
+  </rte>
+</gpx>`;
+		const parsed = await parseGPXFile(gpx);
+
+		expect(parsed.name).toBeUndefined();
+		expect(parsed.waypoints?.[0]?.name).toBe("First stop");
+	});
+
+	it("derives waypoints from a track-only file and keeps the raw track", async () => {
+		const trkpts = Array.from({ length: 20 }, (_, i) => `<trkpt lat="${50.8 + i * 0.01}" lon="4.35"></trkpt>`).join("");
+		const gpx = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="OtherApp" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk><name>Morning ride</name><trkseg>${trkpts}</trkseg></trk>
+</gpx>`;
+		const parsed = await parseGPXFile(gpx);
+
+		expect(parsed.error).toBeUndefined();
+		expect(parsed.name).toBe("Morning ride");
+		expect(parsed.waypointsDerivedFromTrack).toBe(true);
+		expect(parsed.trackPoints).toHaveLength(20);
+		expect(parsed.waypoints?.length).toBeGreaterThan(0);
+	});
 });

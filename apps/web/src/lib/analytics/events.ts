@@ -50,6 +50,7 @@ export type ProductEvent =
 				distance_m: number;
 				had_names: boolean;
 				source: "file_upload" | "drag_drop" | "url";
+				target: "draft" | "library";
 			};
 	  }
 	| {

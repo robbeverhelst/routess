@@ -9,6 +9,7 @@ import type {
 } from "@routess/api-client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRoutingStore } from "@/stores/routingStore";
+import type { CreationSource } from "./analytics/events";
 import { trackEvent } from "./analytics/track";
 import { type ApiRoute, apiService, type CreateRouteRequest } from "./api";
 import { getStoredUser, hasStoredUser } from "./auth-state";
@@ -61,13 +62,17 @@ export function useRoute(routeRef: number | string) {
 // ============================================================================
 
 /**
- * Hook to save a new route
+ * Hook to save a new route. `creationSource` only feeds the route_created
+ * event and is stripped before the API call.
  */
 export function useSaveRoute() {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: async (routeData: CreateRouteRequest) => {
+		mutationFn: async ({
+			creationSource: _,
+			...routeData
+		}: CreateRouteRequest & { creationSource?: CreationSource }) => {
 			Logger.info("Saving route:", routeData.name);
 			return apiService.createRoute(routeData);
 		},
@@ -89,9 +94,9 @@ export function useSaveRoute() {
 					visibility: vars.visibility ?? "private",
 					tag_count: vars.tags?.length ?? 0,
 					is_first_route: isFirstRoute,
-					// RouteDraft does not yet track origin; revisit when route
-					// generation (#136) and GPX-imported drafts can be differentiated.
-					creation_source: "manual",
+					// Drafts loaded from GPX are not differentiated yet; revisit
+					// with route generation (#136).
+					creation_source: vars.creationSource ?? "manual",
 				},
 			});
 

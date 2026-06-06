@@ -742,6 +742,11 @@ export const en: Record<string, string> = {
 	"import.note": "Only GPX is supported right now. TCX, FIT, and KML imports are coming in a follow-up.",
 	"import.importing": "Importing…",
 	"import.ready": "Ready",
+	"import.target": "Import to",
+	"import.target.draft": "Open in planner",
+	"import.target.library": "Save to library",
+	"import.target.signInHint": "Sign in to save imports straight to your library.",
+	"import.toast.savedToLibrary": "Saved to library",
 
 	// ConfirmDeleteModal
 	"confirm.delete.title": "Delete route?",
