@@ -5,7 +5,16 @@
 	"private": false,
 	"type": "module",
 	"bin": {
-		"routess": "./dist/index.js"
+		"routess": "dist/index.js"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/robbeverhelst/routess.git",
+		"directory": "apps/cli"
+	},
+	"homepage": "https://github.com/robbeverhelst/routess/tree/main/apps/cli#readme",
+	"bugs": {
+		"url": "https://github.com/robbeverhelst/routess/issues"
 	},
 	"files": [
 		"dist",
