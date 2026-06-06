@@ -67,6 +67,11 @@ const ROUTE_CACHE_PREFIX = "/__routess_route_cache__/";
 const SHARED_FILE_CACHE_KEY = "/__routess_shared_file__";
 const SHARE_TARGET_PATH = "/share-target";
 
+// Match regardless of server Vary headers: install-time addAll stores
+// no-cors requests while module scripts arrive in cors mode, and a
+// Vary: Origin response would otherwise never match offline.
+const MATCH_OPTS = { ignoreVary: true };
+
 // Runtime-substituted at container startup; caching it cache-first would pin
 // users to the env vars of a previous deploy. Handled network-first instead.
 const RUNTIME_CONFIG_PATH = "/env-config.js";
@@ -77,7 +82,10 @@ self.addEventListener("install", (event) => {
 		(async () => {
 			try {
 				const appShellCache = await caches.open(CACHE_NAMES.APP_SHELL);
-				const precacheUrls = new Set(APP_SHELL_FILES);
+				// env-config.js is requested before this worker controls the page,
+				// so runtime caching never captures it; precache it here or an
+				// offline cold start boots without its runtime config.
+				const precacheUrls = new Set([...APP_SHELL_FILES, RUNTIME_CONFIG_PATH]);
 				for (const entry of PRECACHE_MANIFEST) {
 					precacheUrls.add(new URL(entry.url, self.location.origin).pathname);
 				}
@@ -186,8 +194,9 @@ async function handleRequest(request) {
 
 		// Runtime config - Network First, but always usable from cache when
 		// offline (no expiry) so an offline cold start still gets its config.
+		// Falls back to its own cached copy only, never the "/" HTML.
 		if (url.origin === self.location.origin && url.pathname === RUNTIME_CONFIG_PATH) {
-			return await networkFirstForNavigation(request, CACHE_NAMES.APP_SHELL);
+			return await networkFirstNoExpiry(request, CACHE_NAMES.APP_SHELL);
 		}
 
 		// App Shell (hashed JS/CSS, icons, manifest) - Cache First (filenames are immutable)
@@ -216,7 +225,7 @@ async function handleRequest(request) {
 		// Fallback for navigation requests
 		if (request.mode === "navigate") {
 			const cache = await caches.open(CACHE_NAMES.APP_SHELL);
-			return (await cache.match("/")) || new Response("App offline", { status: 503 });
+			return (await cache.match("/", MATCH_OPTS)) || new Response("App offline", { status: 503 });
 		}
 
 		return new Response("Network error", { status: 503 });
@@ -278,7 +287,28 @@ async function networkFirstForNavigation(request, cacheName) {
 		}
 		return networkResponse;
 	} catch (error) {
-		const cachedResponse = (await cache.match(request)) || (await cache.match("/"));
+		const cachedResponse = (await cache.match(request, MATCH_OPTS)) || (await cache.match("/", MATCH_OPTS));
+		if (cachedResponse) {
+			return cachedResponse;
+		}
+		throw error;
+	}
+}
+
+// Network First, cache fallback without expiry and without the "/" HTML
+// fallback - for the runtime config, which must be fresh online and present
+// offline but must never be answered with index.html.
+async function networkFirstNoExpiry(request, cacheName) {
+	const cache = await caches.open(cacheName);
+
+	try {
+		const networkResponse = await fetch(request);
+		if (networkResponse.ok) {
+			cache.put(request, networkResponse.clone());
+		}
+		return networkResponse;
+	} catch (error) {
+		const cachedResponse = await cache.match(request, MATCH_OPTS);
 		if (cachedResponse) {
 			return cachedResponse;
 		}
@@ -289,7 +319,7 @@ async function networkFirstForNavigation(request, cacheName) {
 // Cache First - Good for hashed static assets
 async function cacheFirst(request, cacheName) {
 	const cache = await caches.open(cacheName);
-	const cachedResponse = await cache.match(request);
+	const cachedResponse = await cache.match(request, MATCH_OPTS);
 
 	if (cachedResponse) {
 		return cachedResponse;
@@ -319,7 +349,7 @@ async function networkFirstWithCacheFallback(request, cacheName) {
 
 		return networkResponse;
 	} catch (error) {
-		const cachedResponse = await cache.match(request);
+		const cachedResponse = await cache.match(request, MATCH_OPTS);
 
 		if (cachedResponse) {
 			// Check if cached response is still valid
@@ -335,7 +365,7 @@ async function networkFirstWithCacheFallback(request, cacheName) {
 // Cache First with Network Fallback - Good for map assets
 async function cacheFirstWithNetworkFallback(request, cacheName) {
 	const cache = await caches.open(cacheName);
-	const cachedResponse = await cache.match(request);
+	const cachedResponse = await cache.match(request, MATCH_OPTS);
 
 	if (cachedResponse && (await isCacheEntryValid(cachedResponse, cacheName))) {
 		return cachedResponse;
@@ -359,7 +389,7 @@ async function cacheFirstWithNetworkFallback(request, cacheName) {
 // Stale While Revalidate - Good for map tiles
 async function staleWhileRevalidate(request, cacheName) {
 	const cache = await caches.open(cacheName);
-	const cachedResponse = await cache.match(request);
+	const cachedResponse = await cache.match(request, MATCH_OPTS);
 
 	// Always try to fetch in background
 	const fetchPromise = fetch(request)
