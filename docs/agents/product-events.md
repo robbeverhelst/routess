@@ -73,7 +73,7 @@ Umami captures these automatically from the request. Do not duplicate them as ev
 
 | Event | When | Properties |
 |---|---|---|
-| `gpx_imported` | After successful GPX parse, before waypoints are applied to the draft | `waypoint_count`, `distance_m`, `had_names`, `source: "file_upload" \| "drag_drop" \| "url"` |
+| `gpx_imported` | After successful GPX parse, before the route lands in its target | `waypoint_count`, `distance_m`, `had_names`, `source: "file_upload" \| "drag_drop" \| "url"`, `target: "draft" \| "library"` |
 | `gpx_exported` | After GPX blob download triggered | `waypoint_count`, `distance_m`, `route_was_saved` |
 | `route_share_link_copied` | Share URL successfully copied to clipboard | `route_was_saved`, `url_length_bucket: "short" \| "medium" \| "long"` |
 | `route_share_link_opened` | A shared route URL is loaded on the receiving end | — |

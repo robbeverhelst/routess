@@ -97,6 +97,21 @@ const parseRtept = (rtept: Element): ParsedGpxWaypoint | null => {
 	return { coord: [lon, lat], ...(type ? { type } : {}), ...(name ? { name } : {}) };
 };
 
+// Direct-child lookup: rte.getElementsByTagName("name") would also match
+// rtept names, so only immediate children count.
+const directChildText = (parent: Element | undefined, tagName: string): string | undefined => {
+	if (!parent) return undefined;
+	for (let i = 0; i < parent.children.length; i++) {
+		if (parent.children[i].tagName === tagName) return parent.children[i].textContent?.trim() || undefined;
+	}
+	return undefined;
+};
+
+const readRouteName = (xmlDoc: Document): string | undefined =>
+	directChildText(xmlDoc.getElementsByTagName("metadata")[0], "name") ??
+	directChildText(xmlDoc.getElementsByTagName("rte")[0], "name") ??
+	directChildText(xmlDoc.getElementsByTagName("trk")[0], "name");
+
 const parseTrkpt = (trkpt: Element): Coordinate | null => {
 	const latStr = trkpt.getAttribute("lat");
 	const lonStr = trkpt.getAttribute("lon");
@@ -112,13 +127,18 @@ const parseTrkpt = (trkpt: Element): Coordinate | null => {
  * a routess:type extension that is read directly. Foreign files leave Type
  * undefined; processGPXWaypoints falls back to a road-proximity heuristic.
  */
-export const parseGPXFile = async (
-	gpxString: string,
-): Promise<{
+export interface ParsedGpxFile {
 	waypoints?: ParsedGpxWaypoint[];
 	trackPoints?: Coordinate[];
+	name?: string;
+	// True when the file had no rtepts and waypoints were thinned out of the
+	// track. The draft flow then re-routes via the road-proximity heuristic
+	// instead of pinning the raw track as exact geometry.
+	waypointsDerivedFromTrack?: boolean;
 	error?: string;
-}> => {
+}
+
+export const parseGPXFile = async (gpxString: string): Promise<ParsedGpxFile> => {
 	if (typeof window === "undefined" || typeof window.DOMParser === "undefined") {
 		Logger.error("[GPXService.parseGPXFile] DOMParser is not available.");
 		return { error: "GPX parsing is not available in this environment. DOMParser not found." };
@@ -137,6 +157,8 @@ export const parseGPXFile = async (
 
 		const rteptElements = Array.from(xmlDoc.getElementsByTagName("rtept"));
 		const trkptElements = Array.from(xmlDoc.getElementsByTagName("trkpt"));
+		const name = readRouteName(xmlDoc);
+		const named = name ? { name } : {};
 
 		if (rteptElements.length > 0) {
 			const waypoints = rteptElements.map(parseRtept).filter((wp): wp is ParsedGpxWaypoint => wp !== null);
@@ -148,11 +170,11 @@ export const parseGPXFile = async (
 			if (trkptElements.length > 0) {
 				const trackPoints = trkptElements.map(parseTrkpt).filter((c): c is Coordinate => c !== null);
 				Logger.info(`[GPXService] Parsed ${waypoints.length} waypoints + ${trackPoints.length} track points.`);
-				return { waypoints, trackPoints };
+				return { waypoints, trackPoints, ...named };
 			}
 
 			Logger.info(`[GPXService] Parsed ${waypoints.length} waypoints.`);
-			return { waypoints };
+			return { waypoints, ...named };
 		}
 
 		if (trkptElements.length > 0) {
@@ -163,7 +185,7 @@ export const parseGPXFile = async (
 			const smartCoords = selectSmartWaypoints(allTrackPoints);
 			const waypoints: ParsedGpxWaypoint[] = smartCoords.map((coord) => ({ coord }));
 			Logger.info(`[GPXService] Converted ${allTrackPoints.length} track points to ${waypoints.length} waypoints.`);
-			return { waypoints };
+			return { waypoints, trackPoints: allTrackPoints, waypointsDerivedFromTrack: true, ...named };
 		}
 
 		return { error: "No route or track points found in the GPX file." };
