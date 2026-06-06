@@ -100,6 +100,38 @@ export function PlanPanel() {
 		emitAppEvent("routess:recalculate-route");
 	};
 
+	// Reorder via pointer events on the grip so it works for mouse and touch
+	// alike (HTML5 drag-and-drop never fires on mobile browsers). The grip has
+	// touch-action: none, so grabbing it drags the row while the rest of the
+	// row still scrolls the list normally.
+	const handleGripPointerDown = (index: number) => (e: React.PointerEvent<HTMLButtonElement>) => {
+		e.preventDefault();
+		e.currentTarget.setPointerCapture(e.pointerId);
+		setDraggingIdx(index);
+	};
+
+	const handleGripPointerMove = (e: React.PointerEvent<HTMLButtonElement>) => {
+		if (draggingIdx === null) return;
+		const row = document.elementFromPoint(e.clientX, e.clientY)?.closest("[data-waypoint-row]");
+		const target = row instanceof HTMLElement ? Number(row.dataset.waypointRow) : Number.NaN;
+		setDragOverIdx(Number.isInteger(target) ? target : null);
+	};
+
+	const handleGripPointerEnd = (e: React.PointerEvent<HTMLButtonElement>) => {
+		if (draggingIdx === null) return;
+		if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+			e.currentTarget.releasePointerCapture(e.pointerId);
+		}
+		if (dragOverIdx !== null && dragOverIdx !== draggingIdx) {
+			const next = waypoints.slice();
+			const [moved] = next.splice(draggingIdx, 1);
+			next.splice(dragOverIdx, 0, moved);
+			handleReorderWaypoints(next);
+		}
+		setDraggingIdx(null);
+		setDragOverIdx(null);
+	};
+
 	const mode = useDraftMode();
 	const draftActivity = useDraftActivity();
 	const setEditingName = useSetEditingName();
@@ -631,6 +663,7 @@ export function PlanPanel() {
 								<div
 									// biome-ignore lint/suspicious/noArrayIndexKey: waypoints can repeat coords; combine coord with index for stable key
 									key={`${w.coord[0]}-${w.coord[1]}-${i}`}
+									data-waypoint-row={i}
 									onMouseEnter={() => setWaypointHover(i)}
 									onMouseLeave={() => {
 										if (hoveredWaypointIndex === i) clearWaypointHover();
@@ -638,24 +671,6 @@ export function PlanPanel() {
 									onFocusCapture={() => setWaypointHover(i)}
 									onBlurCapture={() => {
 										if (hoveredWaypointIndex === i) clearWaypointHover();
-									}}
-									onDragOver={(e) => {
-										if (draggingIdx === null) return;
-										e.preventDefault();
-										if (dragOverIdx !== i) setDragOverIdx(i);
-									}}
-									onDragLeave={() => {
-										if (dragOverIdx === i) setDragOverIdx(null);
-									}}
-									onDrop={(e) => {
-										if (draggingIdx === null || draggingIdx === i) return;
-										e.preventDefault();
-										const next = waypoints.slice();
-										const [moved] = next.splice(draggingIdx, 1);
-										next.splice(i, 0, moved);
-										handleReorderWaypoints(next);
-										setDraggingIdx(null);
-										setDragOverIdx(null);
 									}}
 									style={{
 										display: "flex",
@@ -742,16 +757,15 @@ export function PlanPanel() {
 									>
 										<IconBtn
 											title={t("plan.dragToReorder")}
-											draggable
-											onDragStart={(e) => {
-												e.dataTransfer.effectAllowed = "move";
-												setDraggingIdx(i);
+											onPointerDown={handleGripPointerDown(i)}
+											onPointerMove={handleGripPointerMove}
+											onPointerUp={handleGripPointerEnd}
+											onPointerCancel={handleGripPointerEnd}
+											style={{
+												cursor: draggingIdx === i ? "grabbing" : "grab",
+												color: RDS_COLORS.fgSubtle,
+												touchAction: "none",
 											}}
-											onDragEnd={() => {
-												setDraggingIdx(null);
-												setDragOverIdx(null);
-											}}
-											style={{ cursor: draggingIdx === i ? "grabbing" : "grab", color: RDS_COLORS.fgSubtle }}
 										>
 											<I.grip size={14} />
 										</IconBtn>

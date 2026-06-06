@@ -233,6 +233,12 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
 	lastSavedMapView,
 }) => {
 	const isMapLockedRef = useRef(false);
+	// Live mirror of the popup state so non-React map handlers (touch tap
+	// logic in MapInteractionManager) can read "is a popup open" synchronously.
+	const popupRef = useRef<MapPopupInfo | null>(popup);
+	useEffect(() => {
+		popupRef.current = popup;
+	}, [popup]);
 	const internalMapRef = useRef<MapRef | null>(null);
 	const containerRef = useRef<HTMLDivElement | null>(null);
 	const animationFrameIdRef = useRef<number | null>(null);
@@ -378,6 +384,7 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
 	const { handleMapLoad } = useMapInitialization({
 		mapboxToken,
 		setPopup,
+		popupRef,
 		setEditor,
 		handleWaypointError,
 		isMapLockedRef,

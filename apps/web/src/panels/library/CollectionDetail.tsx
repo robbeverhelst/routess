@@ -25,6 +25,7 @@ const VISIBILITY_ICON: Record<RouteVisibility, IconKey> = { private: "lock", unl
 
 function RouteRow({
 	route,
+	index,
 	selected,
 	editable,
 	dragging,
@@ -33,13 +34,12 @@ function RouteRow({
 	onClick,
 	onRemove,
 	onLoad,
-	onDragStart,
-	onDragEnd,
-	onDragOver,
-	onDragLeave,
-	onDrop,
+	onGripPointerDown,
+	onGripPointerMove,
+	onGripPointerEnd,
 }: {
 	route: ApiRoute;
+	index: number;
 	selected: boolean;
 	editable: boolean;
 	dragging: boolean;
@@ -48,24 +48,20 @@ function RouteRow({
 	onClick: () => void;
 	onRemove: () => void;
 	onLoad: () => void;
-	onDragStart: () => void;
-	onDragEnd: () => void;
-	onDragOver: (e: React.DragEvent) => void;
-	onDragLeave: () => void;
-	onDrop: (e: React.DragEvent) => void;
+	onGripPointerDown: (e: React.PointerEvent<HTMLButtonElement>) => void;
+	onGripPointerMove: (e: React.PointerEvent<HTMLButtonElement>) => void;
+	onGripPointerEnd: (e: React.PointerEvent<HTMLButtonElement>) => void;
 }) {
 	const t = useT();
 	const [hover, setHover] = useState(false);
 	return (
 		// biome-ignore lint/a11y/noStaticElementInteractions: row click is selection-only; actionable controls are buttons inside
 		<div
+			data-collection-row={index}
 			onClick={onClick}
 			onKeyDown={(e) => e.key === "Enter" && onClick()}
 			onMouseEnter={() => setHover(true)}
 			onMouseLeave={() => setHover(false)}
-			onDragOver={onDragOver}
-			onDragLeave={onDragLeave}
-			onDrop={onDrop}
 			style={{
 				display: "flex",
 				alignItems: "center",
@@ -80,18 +76,27 @@ function RouteRow({
 			}}
 		>
 			{editable && (
-				<IconBtn
-					title={t("plan.dragToReorder")}
-					draggable
-					onDragStart={(e) => {
-						e.dataTransfer.effectAllowed = "move";
-						onDragStart();
-					}}
-					onDragEnd={onDragEnd}
-					style={{ cursor: dragging ? "grabbing" : "grab", color: RDS_COLORS.fgSubtle }}
+				// biome-ignore lint/a11y/noStaticElementInteractions: wrapper only stops the post-drag click from selecting the row
+				<div
+					onClick={(e) => e.stopPropagation()}
+					onKeyDown={(e) => e.stopPropagation()}
+					style={{ display: "inline-flex" }}
 				>
-					<I.grip size={14} />
-				</IconBtn>
+					<IconBtn
+						title={t("plan.dragToReorder")}
+						onPointerDown={onGripPointerDown}
+						onPointerMove={onGripPointerMove}
+						onPointerUp={onGripPointerEnd}
+						onPointerCancel={onGripPointerEnd}
+						style={{
+							cursor: dragging ? "grabbing" : "grab",
+							color: RDS_COLORS.fgSubtle,
+							touchAction: "none",
+						}}
+					>
+						<I.grip size={14} />
+					</IconBtn>
+				</div>
 			)}
 			<div
 				style={{
@@ -235,6 +240,33 @@ export function CollectionDetail({
 		setRouteIds(ids);
 	};
 
+	// Reorder via pointer events on the grip so it works for mouse and touch
+	// alike (HTML5 drag-and-drop never fires on mobile browsers).
+	const handleGripPointerDown = (index: number) => (e: React.PointerEvent<HTMLButtonElement>) => {
+		e.preventDefault();
+		e.currentTarget.setPointerCapture(e.pointerId);
+		setDraggingIdx(index);
+	};
+
+	const handleGripPointerMove = (e: React.PointerEvent<HTMLButtonElement>) => {
+		if (draggingIdx === null) return;
+		const row = document.elementFromPoint(e.clientX, e.clientY)?.closest("[data-collection-row]");
+		const target = row instanceof HTMLElement ? Number(row.dataset.collectionRow) : Number.NaN;
+		setDragOverIdx(Number.isInteger(target) ? target : null);
+	};
+
+	const handleGripPointerEnd = (e: React.PointerEvent<HTMLButtonElement>) => {
+		if (draggingIdx === null) return;
+		if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+			e.currentTarget.releasePointerCapture(e.pointerId);
+		}
+		if (dragOverIdx !== null && dragOverIdx !== draggingIdx) {
+			reorder(draggingIdx, dragOverIdx);
+		}
+		setDraggingIdx(null);
+		setDragOverIdx(null);
+	};
+
 	const VisIcon = detail ? I[VISIBILITY_ICON[detail.visibility]] : null;
 
 	return (
@@ -335,6 +367,7 @@ export function CollectionDetail({
 					<RouteRow
 						key={route.id}
 						route={route}
+						index={i}
 						selected={selectedRoute?.id === route.id}
 						editable={editable}
 						dragging={draggingIdx === i}
@@ -343,26 +376,9 @@ export function CollectionDetail({
 						onClick={() => selectRoute(route)}
 						onLoad={() => loadOnMap(route)}
 						onRemove={() => setRouteIds(routes.filter((r) => r.id !== route.id).map((r) => r.id))}
-						onDragStart={() => setDraggingIdx(i)}
-						onDragEnd={() => {
-							setDraggingIdx(null);
-							setDragOverIdx(null);
-						}}
-						onDragOver={(e) => {
-							if (draggingIdx === null) return;
-							e.preventDefault();
-							if (dragOverIdx !== i) setDragOverIdx(i);
-						}}
-						onDragLeave={() => {
-							if (dragOverIdx === i) setDragOverIdx(null);
-						}}
-						onDrop={(e) => {
-							if (draggingIdx === null || draggingIdx === i) return;
-							e.preventDefault();
-							reorder(draggingIdx, i);
-							setDraggingIdx(null);
-							setDragOverIdx(null);
-						}}
+						onGripPointerDown={handleGripPointerDown(i)}
+						onGripPointerMove={handleGripPointerMove}
+						onGripPointerEnd={handleGripPointerEnd}
 					/>
 				))}
 
