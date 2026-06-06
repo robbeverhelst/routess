@@ -75,7 +75,10 @@ async function clipShot(page: Page, name: string, clip: { x: number; y: number; 
 
 // The headless map renders through software WebGL, which starves Playwright's
 // rAF-based locator polling. Poll and click at the DOM level instead.
-const buttonSelector = (title: string) => `button[title="${title}"], button[aria-label="${title}"]`;
+// Icon-only plan-panel buttons carry no title/aria-label in older builds, so
+// callers can pass a lucide icon name as a fallback selector.
+const buttonSelector = (title: string, icon?: string) =>
+	`button[title="${title}"], button[aria-label="${title}"]${icon ? `, button:has(svg[class*="lucide-${icon}"])` : ""}`;
 
 async function poll(predicate: () => Promise<boolean>, timeout: number) {
 	const deadline = Date.now() + timeout;
@@ -86,9 +89,9 @@ async function poll(predicate: () => Promise<boolean>, timeout: number) {
 	return false;
 }
 
-async function waitForButton(page: Page, title: string, timeout = 30_000) {
+async function waitForButton(page: Page, title: string, icon?: string, timeout = 30_000) {
 	const found = await poll(
-		() => page.evaluate((sel) => document.querySelector(sel) !== null, buttonSelector(title)),
+		() => page.evaluate((sel) => document.querySelector(sel) !== null, buttonSelector(title, icon)),
 		timeout,
 	);
 	if (!found) {
@@ -97,9 +100,9 @@ async function waitForButton(page: Page, title: string, timeout = 30_000) {
 	}
 }
 
-async function clickButton(page: Page, title: string) {
-	await waitForButton(page, title);
-	await page.evaluate((sel) => (document.querySelector(sel) as HTMLButtonElement).click(), buttonSelector(title));
+async function clickButton(page: Page, title: string, icon?: string) {
+	await waitForButton(page, title, icon);
+	await page.evaluate((sel) => (document.querySelector(sel) as HTMLButtonElement).click(), buttonSelector(title, icon));
 }
 
 async function clickByText(page: Page, text: string) {
@@ -210,38 +213,39 @@ async function main() {
 	await sleep(8000);
 	await fullShot(page, "route-overview");
 
-	// Sidebar with stats, elevation, and surface chart.
-	await clipShot(page, "route-info", { x: 0, y: 0, width: 380, height: VIEWPORT.height });
+	// Sidebar with stats, elevation, and surface chart (56px rail + 360px panel).
+	await clipShot(page, "route-info", { x: 0, y: 0, width: 420, height: VIEWPORT.height });
 
-	// Waypoint list with drag handles.
-	await clipShot(page, "editing-routes", { x: 0, y: 465, width: 380, height: 310 });
+	// Waypoint list (endpoints, numbered waypoints, distances along the route).
+	await clipShot(page, "editing-routes", { x: 56, y: 510, width: 364, height: 320 });
 
 	// Share modal.
-	await clickButton(page, "Share route");
+	await clickButton(page, "Share route", "share-2");
 	await sleep(2500);
 	await fullShot(page, "share-modal");
 	await page.keyboard.press("Escape");
 	await sleep(1000);
 
 	// Routing preferences modal.
-	await clickButton(page, "Routing preferences");
+	await clickButton(page, "Routing preferences", "sliders");
 	await sleep(2000);
 	await fullShot(page, "routing-preferences");
 	await page.keyboard.press("Escape");
 	await sleep(1000);
 
 	// Import modal.
-	await clickButton(page, "Import GPX");
+	await clickButton(page, "Import GPX", "upload");
 	await sleep(2000);
 	await fullShot(page, "import-route");
 	await page.keyboard.press("Escape");
 	await sleep(1000);
 
-	// Map style switcher.
+	// Map style switcher. Escape does not dismiss the popover; use its
+	// Close button.
 	await clickButton(page, "Map style");
 	await sleep(1500);
 	await fullShot(page, "map-styles");
-	await page.keyboard.press("Escape");
+	await clickButton(page, "Close");
 	await sleep(1000);
 
 	// Settings panel (language and defaults).

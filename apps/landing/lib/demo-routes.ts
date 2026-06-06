@@ -59,11 +59,14 @@ export const SHARING_ROUTES: DemoRoute[] = [
 	{
 		slug: "sunday-slow-walk",
 		profile: "walking",
+		// Anchored on the walking network around the Oude Schelde so the
+		// Directions result is a clean loop instead of out-and-back spurs.
 		waypoints: [
-			[4.2422, 51.0973], // Bornem castle
-			[4.2255, 51.1014], // Oude Schelde
-			[4.2326, 51.0901], // Marselaer
-			[4.2422, 51.0973],
+			[4.2421, 51.0975], // Bornem castle
+			[4.2303, 51.1036], // Oude Schelde, north bank
+			[4.2201, 51.0999], // Weert
+			[4.2306, 51.0938], // Marselaer
+			[4.2421, 51.0975],
 		],
 	},
 ];
@@ -81,16 +84,17 @@ export const FOREST_WALK: DemoRoute = {
 	],
 };
 
-// RouteGen "generated loop" preview.
+// RouteGen "generated loop" preview. East-bank villages only (the old route
+// pointed at the Baasrode ferry, which the cycling profile detours around).
 export const ROUTEGEN_LOOP: DemoRoute = {
 	slug: "routegen-loop",
 	profile: "cycling",
 	waypoints: [
-		[4.2069, 51.0566],
-		[4.1693, 51.0796],
-		[4.1989, 51.0921],
-		[4.2445, 51.0851],
-		[4.2069, 51.0566],
+		[4.2068, 51.0568], // Sint-Amands
+		[4.2374, 51.0866], // Branst
+		[4.2606, 51.0637], // Oppuurs
+		[4.2429, 51.0443], // Malderen
+		[4.2068, 51.0568],
 	],
 };
 

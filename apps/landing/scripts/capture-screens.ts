@@ -152,6 +152,9 @@ async function captureAppShots(): Promise<void> {
 	}
 
 	const { chromium } = await import("playwright");
+	// Icon buttons expose their label via aria-label (styled tooltips, no
+	// native title attribute).
+	const byLabel = (label: string) => `[aria-label="${label}"], [title="${label}"]`;
 	const browser = await chromium.launch();
 	try {
 		const ctx = await browser.newContext({
@@ -194,7 +197,7 @@ async function captureAppShots(): Promise<void> {
 
 		// Styles grid: crop the live map per style/theme. Dark is shot on the
 		// default streets style right after light, before any style switches.
-		await page.locator('[title="Collapse panel"]').click();
+		await page.locator(byLabel("Collapse panel")).click();
 		const tile = async (file: string) => {
 			await page.waitForTimeout(12_000); // style/theme swap + tile fetch
 			await page.screenshot({ path: resolve(PREVIEWS_DIR, file), clip: MAP_TILE_CLIP });
@@ -204,10 +207,10 @@ async function captureAppShots(): Promise<void> {
 		// setting; a switch right after a theme/style reload can get swallowed.
 		const pickStyle = async (label: string, key: string) => {
 			for (let attempt = 0; attempt < 3; attempt++) {
-				await page.locator('[title="Map style"]').click();
+				await page.locator(byLabel("Map style")).click();
 				await page.getByRole("button", { name: label }).first().click();
 				await page.waitForTimeout(800);
-				await page.locator('[title="Close"]').first().click();
+				await page.locator(byLabel("Close")).first().click();
 				const applied = await page.evaluate(
 					(k) => (localStorage.getItem("routess.redesign.settings") ?? "").includes(`"mapStyle":"${k}"`),
 					key,
@@ -221,14 +224,19 @@ async function captureAppShots(): Promise<void> {
 		// The app's default style is outdoors, so shoot that first, then the
 		// dark theme on it, then switch to the others.
 		await tile("style-outdoors.png");
-		await page.locator('[title="Toggle theme"]').click();
+		await page.locator(byLabel("Toggle theme")).click();
 		await tile("style-dark.png");
-		await page.locator('[title="Toggle theme"]').click();
+		await page.locator(byLabel("Toggle theme")).click();
 		await page.waitForTimeout(3_000);
 		await pickStyle("Streets", "streets");
 		await tile("style-streets.png");
 		await pickStyle("Satellite", "satellite");
 		await tile("style-satellite.png");
+
+		// The collapsed state persists, so re-expand the plan panel via the
+		// rail toggle before the next capture.
+		await page.locator(byLabel("Plan")).first().click();
+		await page.waitForTimeout(1_000);
 
 		// The surface section shows the plan panel of a forest walk, where the
 		// breakdown actually has paved/gravel/path variety. Share links don't
