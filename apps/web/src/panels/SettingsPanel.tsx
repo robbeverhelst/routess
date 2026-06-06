@@ -1,5 +1,6 @@
 import type { RouteVisibility } from "@routess/core";
 import { type ComponentType, useEffect, useState } from "react";
+import { usePwaInstall } from "@/hooks/usePwaInstall";
 import { useUserProfile } from "@/lib/api-queries";
 import { emitAppEvent } from "@/lib/app-events";
 import { type SupportedLanguage, t, tIn } from "@/lib/i18n";
@@ -300,6 +301,8 @@ const ACCENT_OPTIONS: { key: RedesignAccent; labelKey: string; swatch: string }[
 
 export function SettingsPanel() {
 	const [section, setSection] = useState<SettingsSectionKey | null>(null);
+	const [showIosInstallSteps, setShowIosInstallSteps] = useState(false);
+	const install = usePwaInstall();
 	const { data: profile } = useUserProfile();
 	const pushToast = useToastStore((s) => s.push);
 	const { accent, setAccent, theme, setTheme, activityType, setActivityType, language, setLanguage } = useUiStore();
@@ -420,6 +423,40 @@ export function SettingsPanel() {
 						/>
 					))}
 				</SettingsSection>
+				{install.availability === "promptable" || install.availability === "ios-manual" ? (
+					<SettingsSection>
+						<SettingsNavRow
+							icon={I.download}
+							label={t("settings.install.title")}
+							sub={t("settings.install.sub")}
+							onClick={() => {
+								if (install.availability === "promptable") {
+									void install.promptInstall();
+								} else {
+									setShowIosInstallSteps((v) => !v);
+								}
+							}}
+						/>
+						{install.availability === "ios-manual" && showIosInstallSteps ? (
+							<SettingsBlock>
+								<ol
+									style={{
+										margin: 0,
+										paddingLeft: 18,
+										fontSize: 13,
+										color: RDS_COLORS.fgMuted,
+										display: "grid",
+										gap: 6,
+									}}
+								>
+									<li>{t("settings.install.ios.step1")}</li>
+									<li>{t("settings.install.ios.step2")}</li>
+									<li>{t("settings.install.ios.step3")}</li>
+								</ol>
+							</SettingsBlock>
+						) : null}
+					</SettingsSection>
+				) : null}
 				<SettingsSection>
 					<SettingsNavRow icon={I.help} label={t("settings.help.title")} sub={t("settings.help.sub")} href={DOCS_URL} />
 				</SettingsSection>

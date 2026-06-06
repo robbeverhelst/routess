@@ -380,12 +380,6 @@ class ServiceWorkerManager {
 // Create singleton instance
 export const serviceWorkerManager = new ServiceWorkerManager();
 
-// Auto-register service worker when module loads (in production)
-if (import.meta.env.PROD) {
-	serviceWorkerManager.register().catch((error) => {
-		Logger.error("[SW Manager] Auto-registration failed:", error);
-	});
-}
-
-// Export for manual registration in development
+// Registration happens explicitly in initPwa() (lib/pwa.ts), called from
+// main.tsx, so it no longer depends on which modules happen to import this.
 export default serviceWorkerManager;

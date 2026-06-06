@@ -4,6 +4,7 @@ import { useMapWithRoutingState } from "@/components/hooks/useMapWithRoutingStat
 import { LibraryRoutePreview } from "@/components/map/LibraryRoutePreview";
 import { MapCanvas } from "@/components/map/MapCanvas";
 import { MapShortcutBindings } from "@/components/map/MapShortcutBindings";
+import { PwaLaunchBindings } from "@/components/map/PwaLaunchBindings";
 import { MapInteractionProvider } from "@/components/providers/MapInteractionProvider";
 import { UserLocationProvider, useUserLocation } from "@/components/providers/UserLocationProvider";
 import { confirmDiscardIfDirty } from "@/features/routing/confirmDiscardIfDirty";
@@ -232,6 +233,7 @@ const MapWithRoutingContent: React.FC<MapboxMapProps> = ({
 	return (
 		<RouteDraftEditorProvider editor={editor}>
 			<UserLocationProvider mapRef={mapRef} hasRoute={hasRoute} isMapReady={mapRef.current !== null}>
+				{editor ? <PwaLaunchBindings /> : null}
 				<LibraryRoutePreview mapRef={mapRef} />
 				<MapConfigurationContent
 					mapRef={mapRef}

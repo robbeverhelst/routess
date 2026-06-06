@@ -1,4 +1,6 @@
 // Routess PWA Service Worker
+// Built by vite-plugin-pwa (injectManifest): the build injects the hashed
+// asset list into self.__WB_MANIFEST so offline cold start has every chunk.
 // Version is injected at container startup.
 const CACHE_VERSION = "routess-__VITE_APP_VERSION__";
 const CACHE_NAMES = {
@@ -6,20 +8,23 @@ const CACHE_NAMES = {
 	API_CACHE: `${CACHE_VERSION}-api-cache`,
 	MAP_ASSETS: `${CACHE_VERSION}-map-assets`,
 	RUNTIME: `${CACHE_VERSION}-runtime`,
+	// Deliberately not version-keyed: offline routes are user data and must
+	// survive deploys (the activate cleanup keeps every name in CACHE_NAMES).
+	ROUTES: "routess-routes-v1",
 };
+
+// Build-time precache manifest injected by vite-plugin-pwa: [{url, revision}]
+const PRECACHE_MANIFEST = self.__WB_MANIFEST || [];
 
 // App Shell - Critical files that should always be cached
 const APP_SHELL_FILES = [
 	"/",
-	"/index.html",
 	"/manifest.json",
-	"/logo.png",
 	// Icons
 	"/icons/icon-192x192.png",
 	"/icons/icon-512x512.png",
 	"/icons/icon-192x192-maskable.png",
 	"/icons/icon-512x512-maskable.png",
-	// Will be populated with actual build assets during install
 ];
 
 // API endpoints to cache
@@ -29,7 +34,6 @@ const API_CACHE_PATTERNS = [
 	/^https:\/\/api\.mapbox\.com\/directions/,
 	/^https:\/\/api\.mapbox\.com\/matching/,
 	/^https:\/\/api\.mapbox\.com\/optimized-trips/,
-	// Add your backend API patterns here if you have any
 ];
 
 // Map assets to cache
@@ -41,15 +45,6 @@ const MAP_ASSET_PATTERNS = [
 	// Map tiles (we'll cache these with special handling)
 	/^https:\/\/[a-z]\.tiles\.mapbox\.com/,
 ];
-
-// Cache strategies
-const _CACHE_STRATEGIES = {
-	APP_SHELL: "cache-first",
-	API: "network-first-with-cache-fallback",
-	MAP_ASSETS: "cache-first-with-network-fallback",
-	MAP_TILES: "stale-while-revalidate",
-	RUNTIME: "network-first",
-};
 
 // Cache expiration times (in milliseconds)
 const CACHE_EXPIRATION = {
@@ -65,27 +60,41 @@ const MAX_CACHE_ENTRIES = {
 	MAP_ASSETS: 200,
 	MAP_TILES: 500,
 	RUNTIME: 50,
+	ROUTES: 200,
 };
 
 const ROUTE_CACHE_PREFIX = "/__routess_route_cache__/";
+const SHARED_FILE_CACHE_KEY = "/__routess_shared_file__";
+const SHARE_TARGET_PATH = "/share-target";
 
-// Install event - Cache app shell
+// Runtime-substituted at container startup; caching it cache-first would pin
+// users to the env vars of a previous deploy. Handled network-first instead.
+const RUNTIME_CONFIG_PATH = "/env-config.js";
+
+// Install event - Cache app shell + build assets
 self.addEventListener("install", (event) => {
 	event.waitUntil(
 		(async () => {
 			try {
-				// Cache app shell
 				const appShellCache = await caches.open(CACHE_NAMES.APP_SHELL);
-				await appShellCache.addAll(APP_SHELL_FILES);
+				const precacheUrls = new Set(APP_SHELL_FILES);
+				for (const entry of PRECACHE_MANIFEST) {
+					precacheUrls.add(new URL(entry.url, self.location.origin).pathname);
+				}
+				await appShellCache.addAll([...precacheUrls]);
 
 				// Initialize other caches
 				await caches.open(CACHE_NAMES.API_CACHE);
 				await caches.open(CACHE_NAMES.MAP_ASSETS);
 				await caches.open(CACHE_NAMES.RUNTIME);
+				await caches.open(CACHE_NAMES.ROUTES);
 
-				// Skip waiting to activate immediately
-				self.skipWaiting();
-			} catch (_error) {}
+				// No skipWaiting here: the new worker waits until the user confirms
+				// the update toast (SKIP_WAITING message) or every tab is closed, so
+				// a deploy never yanks the page out from under someone mid-edit.
+			} catch (_error) {
+				// Install best-effort: a failed precache must not block the worker.
+			}
 		})(),
 	);
 });
@@ -109,7 +118,9 @@ self.addEventListener("activate", (event) => {
 
 				// Take control of all clients
 				await self.clients.claim();
-			} catch (_error) {}
+			} catch (_error) {
+				// Cache cleanup is best-effort; stale caches get retried next activate.
+			}
 		})(),
 	);
 });
@@ -118,6 +129,12 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
 	const { request } = event;
 	const url = new URL(request.url);
+
+	// Web Share Target: stash the shared file, then bounce to the app.
+	if (request.method === "POST" && url.origin === self.location.origin && url.pathname === SHARE_TARGET_PATH) {
+		event.respondWith(handleShareTarget(event));
+		return;
+	}
 
 	// Skip non-GET requests
 	if (request.method !== "GET") {
@@ -132,15 +149,44 @@ self.addEventListener("fetch", (event) => {
 	event.respondWith(handleRequest(request));
 });
 
+async function handleShareTarget(event) {
+	try {
+		const formData = await event.request.formData();
+		const file = formData.get("gpx");
+		if (file && typeof file !== "string") {
+			const cache = await caches.open(CACHE_NAMES.RUNTIME);
+			await cache.put(
+				SHARED_FILE_CACHE_KEY,
+				new Response(file, {
+					headers: {
+						"content-type": "application/gpx+xml",
+						"x-routess-file-name": encodeURIComponent(file.name || "shared.gpx"),
+						date: new Date().toUTCString(),
+					},
+				}),
+			);
+		}
+	} catch (_error) {
+		// Still redirect into the app; the import flow reports the missing file.
+	}
+	return Response.redirect("/?action=shared-file", 303);
+}
+
 // Main request handler with different strategies
 async function handleRequest(request) {
-	const _url = new URL(request.url);
+	const url = new URL(request.url);
 
 	try {
 		// Navigation / HTML - Network First so a fresh deploy is picked up immediately.
 		// Cache-first here would pin users to a stale index.html that references
 		// old hashed JS bundles, requiring a manual cache clear to ever upgrade.
 		if (isNavigationRequest(request)) {
+			return await networkFirstForNavigation(request, CACHE_NAMES.APP_SHELL);
+		}
+
+		// Runtime config - Network First, but always usable from cache when
+		// offline (no expiry) so an offline cold start still gets its config.
+		if (url.origin === self.location.origin && url.pathname === RUNTIME_CONFIG_PATH) {
 			return await networkFirstForNavigation(request, CACHE_NAMES.APP_SHELL);
 		}
 
@@ -188,13 +234,20 @@ function isNavigationRequest(request) {
 
 function isAppShellRequest(request) {
 	const url = new URL(request.url);
+	if (url.origin !== self.location.origin) {
+		return false;
+	}
+	// Never cache-first the runtime config or the worker itself.
+	if (url.pathname === RUNTIME_CONFIG_PATH || url.pathname === "/sw.js") {
+		return false;
+	}
 	return (
-		url.origin === self.location.origin &&
-		(url.pathname.endsWith(".css") ||
-			url.pathname.endsWith(".js") ||
-			url.pathname.startsWith("/icons/") ||
-			url.pathname === "/manifest.json" ||
-			url.pathname === "/logo.png")
+		url.pathname.endsWith(".css") ||
+		url.pathname.endsWith(".js") ||
+		url.pathname.endsWith(".woff2") ||
+		url.pathname.startsWith("/icons/") ||
+		url.pathname.startsWith("/splash/") ||
+		url.pathname === "/manifest.json"
 	);
 }
 
@@ -317,7 +370,9 @@ async function staleWhileRevalidate(request, cacheName) {
 			}
 			return networkResponse;
 		})
-		.catch((_error) => {});
+		.catch((_error) => {
+			// Background revalidation failure is fine; the cached copy stands.
+		});
 
 	// Return cached version immediately if available
 	if (cachedResponse) {
@@ -330,6 +385,9 @@ async function staleWhileRevalidate(request, cacheName) {
 
 // Cache management utilities
 async function isCacheEntryValid(response, cacheName) {
+	// Offline routes never expire; the FIFO cap is the only limit.
+	if (getCacheType(cacheName) === "ROUTES") return true;
+
 	const dateHeader = response.headers.get("date");
 	if (!dateHeader) return true; // No date header, assume valid
 
@@ -345,6 +403,7 @@ async function isCacheEntryValid(response, cacheName) {
 function getCacheType(cacheName) {
 	if (cacheName.includes("api-cache")) return "API_CACHE";
 	if (cacheName.includes("map-assets")) return "MAP_ASSETS";
+	if (cacheName.includes("routes")) return "ROUTES";
 	if (cacheName.includes("runtime")) return "RUNTIME";
 	return "RUNTIME";
 }
@@ -455,7 +514,7 @@ async function precacheRoute(routeData) {
 	}
 
 	const cacheKey = getRouteCacheKey(routeData);
-	const cache = await caches.open(CACHE_NAMES.RUNTIME);
+	const cache = await caches.open(CACHE_NAMES.ROUTES);
 	await cache.put(
 		cacheKey,
 		new Response(
@@ -471,7 +530,7 @@ async function precacheRoute(routeData) {
 			},
 		),
 	);
-	await cleanupCache(CACHE_NAMES.RUNTIME);
+	await cleanupCache(CACHE_NAMES.ROUTES);
 }
 
 function getRouteCacheKey(routeData) {

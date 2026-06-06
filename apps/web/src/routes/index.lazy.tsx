@@ -1,6 +1,7 @@
 import { createLazyFileRoute } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { AppShell } from "@/AppShell";
+import { consumeSharedGpxFile } from "@/lib/pwa";
 import { Route as IndexRoute } from "./index";
 
 export const Route = createLazyFileRoute("/")({
@@ -25,6 +26,11 @@ function Index() {
 						break;
 					case "import":
 						window.dispatchEvent(new CustomEvent("pwa-shortcut", { detail: { action: "import" } }));
+						break;
+					case "shared-file":
+						// Web Share Target: the service worker stashed the shared GPX
+						// and redirected here; hand it to the import flow.
+						void consumeSharedGpxFile();
 						break;
 				}
 
