@@ -16,9 +16,12 @@ interface Params {
 async function resolveRoute(slugId: string): Promise<{ route: PublicRoute; canonicalSlugId: string } | null> {
 	const parsed = parseRouteSlugId(slugId);
 	if (!parsed) return null;
-	const route = await fetchPublicRoute(parsed.id);
+	const route = await fetchPublicRoute(parsed.id ?? parsed.token);
 	if (!route) return null;
-	return { route, canonicalSlugId: buildRouteSlugId(route.name, route.id) };
+	// Public routes get the canonical id URL; unlisted keep the unguessable
+	// token so the link cannot be derived from the sequential id.
+	const canonicalRef = route.visibility === "public" ? route.id : route.shareToken;
+	return { route, canonicalSlugId: buildRouteSlugId(route.name, canonicalRef) };
 }
 
 function summary(dict: Dict, route: PublicRoute): string {

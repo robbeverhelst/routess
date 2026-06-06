@@ -107,6 +107,9 @@ api:
     port: "3000"
     dbPort: "5432"
     dbName: routess
+    # Interactive API docs stay on in production: the API surface is public
+    # anyway (open-source repo + published OpenAPI spec), so hiding the UI
+    # buys nothing. Set to "false" to trim the swagger-ui JS surface.
     swaggerEnabled: "true"
     swaggerPath: "/api"
     # From address for transactional email. Must be a verified Resend sender.

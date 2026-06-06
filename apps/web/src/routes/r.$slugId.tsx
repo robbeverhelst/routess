@@ -18,5 +18,5 @@ function PublicRoutePage() {
 	const { slugId } = Route.useParams();
 	const parsed = parseRouteSlugId(slugId);
 	if (!parsed) throw notFound();
-	return <PublicRouteScreen slug={parsed.slug} routeId={parsed.id} />;
+	return <PublicRouteScreen slug={parsed.slug} routeRef={parsed.token ?? parsed.id} />;
 }

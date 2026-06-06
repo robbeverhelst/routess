@@ -52,7 +52,12 @@ export class AuthService {
 			throw error;
 		}
 
-		const { googleId, email, name, picture } = identity;
+		const { googleId, name, picture } = identity;
+		// Normalize to lowercase everywhere: User.email is unique, and the
+		// email auth flow keys its lookups (and UserAuthMethod.providerId) on
+		// the lowercased address. A mixed-case Google email would otherwise
+		// create a parallel account / break later password setup.
+		const email = identity.email.toLowerCase().trim();
 		const desiredRole = this.resolveDesiredRole(email);
 
 		// Look up by Google identity first (provider+providerId is the canonical

@@ -1,6 +1,6 @@
 {
 	"$schema": "https://docs.renovatebot.com/renovate-schema.json",
-	"extends": ["config:recommended", "group:allNonMajor", ":automergeMinor"],
+	"extends": ["config:recommended", "group:allNonMajor", ":automergeMinor", "helpers:pinGitHubActionDigests"],
 	"schedule": ["every weekday"],
 	"lockFileMaintenance": {
 		"enabled": true,

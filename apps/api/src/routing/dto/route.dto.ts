@@ -103,7 +103,7 @@ export class RouteSnappedLocationDto {
 	original_index?: number;
 }
 
-export class RouteResponseDto {
+export class RoutingRouteResponseDto {
 	@ApiProperty({ type: [RouteLegDto] })
 	legs!: RouteLegDto[];
 

@@ -34,6 +34,18 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 			return payload;
 		}
 
+		// Express middleware errors (body-parser etc.) are not HttpExceptions but
+		// carry a 4xx statusCode, e.g. PayloadTooLargeError -> 413. Surface those
+		// as the client error they are instead of a misleading 500.
+		const statusCode = (exception as { statusCode?: unknown } | null)?.statusCode;
+		if (typeof statusCode === "number" && statusCode >= 400 && statusCode < 500) {
+			return {
+				statusCode,
+				code: inferCodeFromStatus(statusCode),
+				message: exception instanceof Error ? exception.message : "Request rejected",
+			};
+		}
+
 		return {
 			statusCode: 500,
 			code: "INTERNAL",

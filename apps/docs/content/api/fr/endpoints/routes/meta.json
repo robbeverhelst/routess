@@ -4,8 +4,10 @@
 	"pages": [
 		"get-routes",
 		"post-routes",
+		"get-routes-public",
 		"get-routes-by-user-userid",
-		"get-routes-id",
+		"get-routes-ref-gpx",
+		"get-routes-ref",
 		"patch-routes-id",
 		"delete-routes-id"
 	]

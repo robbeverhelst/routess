@@ -1,5 +1,6 @@
-import { Entity, Index, ManyToOne, PrimaryKey, Property, type Ref } from "@mikro-orm/core";
+import { Entity, Index, ManyToOne, type Opt, PrimaryKey, Property, type Ref } from "@mikro-orm/core";
 import type { Provenance, RouteActivity, RouteVisibility, RoutingPreferences, Waypoint } from "@routess/core";
+import { generateShareToken } from "../common/share-token";
 import { BaseEntity } from "./base.entity";
 import { User } from "./user.entity";
 
@@ -60,6 +61,12 @@ export class Route extends BaseEntity {
 	// How this Route came to exist. Immutable after creation. See CONTEXT.md.
 	@Property({ type: "string", default: "valhalla" })
 	provenance: Provenance = "valhalla";
+
+	// Unguessable handle for share links (32 hex chars). Unlisted routes are
+	// only reachable anonymously through this token; numeric ids would be
+	// enumerable, which defeats the "only people with the link" tier.
+	@Property({ type: "string", unique: true })
+	shareToken: string & Opt = generateShareToken();
 
 	@ManyToOne(() => User)
 	user!: Ref<User>;

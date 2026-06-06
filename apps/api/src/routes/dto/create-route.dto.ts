@@ -103,6 +103,7 @@ class WaypointDto {
 	})
 	@IsOptional()
 	@IsString()
+	@MaxLength(200)
 	name?: string;
 
 	@ApiProperty({
@@ -112,6 +113,7 @@ class WaypointDto {
 	})
 	@IsOptional()
 	@IsString()
+	@MaxLength(40)
 	timestamp?: string;
 }
 
@@ -123,6 +125,7 @@ export class CreateRouteDto {
 	})
 	@IsString()
 	@IsNotEmpty()
+	@MaxLength(200)
 	name!: string;
 
 	@ApiProperty({
@@ -132,6 +135,7 @@ export class CreateRouteDto {
 	})
 	@IsOptional()
 	@IsString()
+	@MaxLength(5000)
 	description?: string;
 
 	@ApiProperty({
@@ -246,6 +250,7 @@ export class CreateRouteDto {
 	})
 	@IsOptional()
 	@IsString()
+	@MaxLength(500)
 	startAddress?: string;
 
 	@ApiProperty({
@@ -255,6 +260,7 @@ export class CreateRouteDto {
 	})
 	@IsOptional()
 	@IsString()
+	@MaxLength(500)
 	endAddress?: string;
 
 	@ApiPropertyOptional({

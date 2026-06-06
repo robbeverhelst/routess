@@ -8,7 +8,7 @@ export async function GET(_request: Request, ctx: { params: Promise<{ slugId: st
 	const { slugId } = await ctx.params;
 	const parsed = parseRouteSlugId(slugId);
 	if (!parsed) return new Response("Not found", { status: 404 });
-	const route = await fetchPublicRoute(parsed.id);
+	const route = await fetchPublicRoute(parsed.id ?? parsed.token);
 	const points = route?.geometry?.length ? route.geometry : (route?.waypoints ?? []).map((w) => w.coord);
 	if (!route || points.length === 0) return new Response("Not found", { status: 404 });
 	const token = process.env.MAPBOX_PUBLIC_TOKEN;

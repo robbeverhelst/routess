@@ -61,10 +61,11 @@ export class RoutesService {
 		return { items: routes.map((route) => this.toResponseDto(route)), total };
 	}
 
-	// findOne: returns the Route if the viewer is the owner, OR if the route's
-	// visibility is 'public' or 'unlisted'. Private routes 404 to non-owners (we
-	// avoid 403 to prevent leaking existence). Anonymous viewers (viewerId=null)
-	// are treated as non-owners.
+	// findOne (by numeric id): owners see their route regardless of visibility;
+	// non-owners only see 'public'. Unlisted routes are NOT served by id — ids
+	// are sequential and enumerable, which would defeat the "only people with
+	// the link" tier; unlisted access goes through findOneByShareToken instead.
+	// Everything else 404s (never 403, to avoid leaking existence).
 	async findOne(id: number, viewerId: number | null): Promise<RouteResponseDto> {
 		const route = await this.routeRepository.findOne({ id }, { populate: ["user"] });
 		if (!route) {
@@ -72,8 +73,19 @@ export class RoutesService {
 		}
 		const ownerId = (route.user as unknown as User).id;
 		const isOwner = viewerId !== null && ownerId === viewerId;
-		if (!isOwner && route.visibility === "private") {
+		if (!isOwner && route.visibility !== "public") {
 			throw new NotFoundException(`Route with ID ${id} not found`);
+		}
+		return this.toResponseDto(route);
+	}
+
+	// Share-link lookup: serves public and unlisted routes to anyone holding
+	// the unguessable token. Private routes 404 even with the token (revoking
+	// a share is as simple as flipping the route back to private).
+	async findOneByShareToken(shareToken: string): Promise<RouteResponseDto> {
+		const route = await this.routeRepository.findOne({ shareToken }, { populate: ["user"] });
+		if (!route || route.visibility === "private") {
+			throw new NotFoundException("Route not found");
 		}
 		return this.toResponseDto(route);
 	}
@@ -127,6 +139,8 @@ export class RoutesService {
 		this.events.emit(ROUTE_DELETED, { userId } satisfies RouteDeletedEvent);
 	}
 
+	// Same visibility semantics as findOne: ids serve owners and public routes;
+	// unlisted GPX downloads go through the share token.
 	async findForGpx(id: number, viewerId: number | null): Promise<Route> {
 		const route = await this.routeRepository.findOne({ id });
 		if (!route) {
@@ -134,8 +148,16 @@ export class RoutesService {
 		}
 		const ownerId = (route.user as unknown as { id: number }).id;
 		const isOwner = viewerId !== null && ownerId === viewerId;
-		if (!isOwner && route.visibility === "private") {
+		if (!isOwner && route.visibility !== "public") {
 			throw new NotFoundException(`Route with ID ${id} not found`);
+		}
+		return route;
+	}
+
+	async findForGpxByShareToken(shareToken: string): Promise<Route> {
+		const route = await this.routeRepository.findOne({ shareToken });
+		if (!route || route.visibility === "private") {
+			throw new NotFoundException("Route not found");
 		}
 		return route;
 	}

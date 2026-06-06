@@ -46,13 +46,19 @@ FROM nginx:alpine
 
 COPY --from=builder /app/apps/web/dist/ /usr/share/nginx/html/
 COPY --from=builder /app/apps/web/nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=builder /app/apps/web/security-headers.conf /etc/nginx/snippets/security-headers.conf
 COPY --from=builder /app/apps/web/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh \
     && sed -i '/^user[[:space:]]\+/d' /etc/nginx/nginx.conf \
     && mkdir -p /etc/nginx/snippets \
-    && chown 101:101 /entrypoint.sh /etc/nginx/snippets \
+    && touch /etc/nginx/snippets/csp.conf \
+    && chown 101:101 /entrypoint.sh /etc/nginx/snippets /etc/nginx/snippets/csp.conf \
     && chown -R 101:101 /usr/share/nginx/html
 
 EXPOSE 8080
+
+# Non-root by default so a plain `docker run` matches the Helm chart's
+# runAsUser: 101 instead of silently starting the nginx master as root.
+USER 101
 
 ENTRYPOINT ["/entrypoint.sh"]

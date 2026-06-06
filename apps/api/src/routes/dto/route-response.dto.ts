@@ -8,7 +8,7 @@ import {
 	type RouteVisibility,
 } from "@routess/core";
 import { RoutingPreferencesDto } from "../../common/routing-preferences.dto";
-import { UserResponseDto } from "../../users/dto/user-response.dto";
+import { PublicUserDto } from "../../users/dto/user-response.dto";
 
 class WaypointResponseDto {
 	@ApiProperty({
@@ -99,9 +99,16 @@ export class RouteResponseDto {
 	provenance!: Provenance;
 
 	@ApiProperty({
-		type: UserResponseDto,
+		description:
+			"Unguessable 32-hex handle for share links. Unlisted routes are only reachable anonymously via this token.",
+		example: "9f86d081884c7d659a2feaa0c55ad015",
 	})
-	user!: UserResponseDto;
+	shareToken!: string;
+
+	@ApiProperty({
+		type: PublicUserDto,
+	})
+	user!: PublicUserDto;
 
 	@ApiProperty()
 	createdAt!: string;

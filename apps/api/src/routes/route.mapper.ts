@@ -1,21 +1,12 @@
 import { wrap } from "@mikro-orm/core";
 import type { Route } from "../entities/route.entity";
 import type { User } from "../entities/user.entity";
-import { toUserResponseDto } from "../users/user.mapper";
+import { toPublicUserDto } from "../users/user.mapper";
 import type { RouteResponseDto } from "./dto/route-response.dto";
 
-type SerializableUser = Pick<
-	User,
-	| "id"
-	| "email"
-	| "name"
-	| "avatar"
-	| "isEmailVerified"
-	| "role"
-	| "preferences"
-	| "deletionStatus"
-	| "deletionRequestedAt"
->;
+// Routes can be served to non-owners (public/unlisted), so the embedded
+// owner is the PII-free public shape.
+type SerializableUser = Pick<User, "id" | "name" | "avatar">;
 
 export function toRouteResponseDto(route: Route, analyticsSalt: string): RouteResponseDto {
 	const serializedUser = wrap(route.user).toJSON() as SerializableUser;
@@ -36,7 +27,8 @@ export function toRouteResponseDto(route: Route, analyticsSalt: string): RouteRe
 		endAddress: route.endAddress,
 		routingPreferences: route.routingPreferences ?? null,
 		provenance: route.provenance,
-		user: toUserResponseDto(serializedUser, analyticsSalt),
+		shareToken: route.shareToken,
+		user: toPublicUserDto(serializedUser, analyticsSalt),
 		createdAt: route.createdAt.toISOString(),
 		updatedAt: route.updatedAt.toISOString(),
 	};

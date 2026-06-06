@@ -1,5 +1,5 @@
 import type { Logger } from "@routess/core";
-import { LocalStorageAuthState } from "./adapters/auth";
+import { InMemoryAuthState } from "./adapters/auth";
 import { FetchHttpClient } from "./adapters/http";
 import { ApiClient } from "./services";
 import type { AuthStateManager, ErrorHandler, HttpClient } from "./types";
@@ -20,7 +20,9 @@ const defaultErrorHandler: ErrorHandler = {
 
 const defaultHttpClient = (): HttpClient => new FetchHttpClient({ credentials: "include" });
 
-const defaultAuthStateManager = (): AuthStateManager => new LocalStorageAuthState();
+// In-memory by default: the httpOnly session cookie carries auth across
+// reloads in browsers; persisting the Bearer JWT would expose it to XSS.
+const defaultAuthStateManager = (): AuthStateManager => new InMemoryAuthState();
 
 // Single entry point for the web client. The previous "platform" branch
 // for mobile was a one-adapter seam (no second concrete adapter ever shipped);

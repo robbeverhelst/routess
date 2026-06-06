@@ -1,7 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { ROUTE_VISIBILITIES, type RouteVisibility } from "@routess/core";
 import { RouteResponseDto } from "../../routes/dto/route-response.dto";
-import { UserResponseDto } from "../../users/dto/user-response.dto";
+import { PublicUserDto } from "../../users/dto/user-response.dto";
 
 export class CollectionResponseDto {
 	@ApiProperty()
@@ -25,8 +25,15 @@ export class CollectionResponseDto {
 	@ApiProperty({ description: "Number of routes in the collection (after visibility filtering)" })
 	routeCount!: number;
 
-	@ApiProperty({ type: UserResponseDto })
-	user!: UserResponseDto;
+	@ApiProperty({
+		description:
+			"Unguessable 32-hex handle for share links. Unlisted collections are only reachable anonymously via this token.",
+		example: "9f86d081884c7d659a2feaa0c55ad015",
+	})
+	shareToken!: string;
+
+	@ApiProperty({ type: PublicUserDto })
+	user!: PublicUserDto;
 
 	@ApiProperty()
 	createdAt!: string;

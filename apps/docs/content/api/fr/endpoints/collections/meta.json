@@ -4,7 +4,7 @@
 	"pages": [
 		"get-collections",
 		"post-collections",
-		"get-collections-id",
+		"get-collections-ref",
 		"patch-collections-id",
 		"delete-collections-id",
 		"put-collections-id-routes"

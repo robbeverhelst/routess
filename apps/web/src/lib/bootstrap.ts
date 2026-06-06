@@ -7,13 +7,26 @@ import { checkVersionChange, getStoredVersionInfo } from "@/lib/version";
 // release and poison a fresh client (wrong "current" location from a cached
 // fix, zoomToRoute fitting to a degenerate bounds, etc).
 //
-// Auth keys ("access_token", "user") are deliberately NOT purged: the session
-// cookie survives a deploy, so wiping them only forces a needless re-login.
+// The "user" auth key is deliberately NOT purged: the session cookie
+// survives a deploy, so wiping it only forces a needless re-login.
 // Stale user shape is handled by refreshStoredUser() instead.
 //
 // Zustand-persisted stores ("routess.*", "routess-redesign-ui", "maps-settings")
 // have their own version + migrate and are deliberately excluded.
 const VERSION_BUMPED_PURGE_KEYS = ["lastKnownLocation", "mapWaypoints"] as const;
+
+// Older builds persisted the Bearer JWT in localStorage. Auth is cookie-only
+// now, so any leftover token is a live credential sitting where XSS or
+// third-party scripts can read it. Always remove it.
+const LEGACY_ACCESS_TOKEN_KEY = "access_token";
+
+function purgeLegacyAccessToken(): void {
+	try {
+		localStorage.removeItem(LEGACY_ACCESS_TOKEN_KEY);
+	} catch (error) {
+		Logger.warn("[bootstrap] Failed to remove legacy access token:", error);
+	}
+}
 
 function purgeStaleAdHocKeys(): void {
 	for (const key of VERSION_BUMPED_PURGE_KEYS) {
@@ -41,6 +54,8 @@ async function refreshStoredUser(): Promise<void> {
 }
 
 export function runBootstrap(): void {
+	purgeLegacyAccessToken();
+
 	const previousInfo = getStoredVersionInfo();
 	const versionChanged = checkVersionChange();
 

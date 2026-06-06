@@ -22,7 +22,7 @@ export function useAuthState() {
 
 		// Listen for storage changes (including from other tabs)
 		const handleStorageChange = (event: StorageEvent) => {
-			if (event.key === "access_token" || event.key === "user") {
+			if (event.key === "user") {
 				updateAuthState();
 			}
 		};

@@ -267,7 +267,7 @@
 		},
 		"/auth/signup-email": {
 			"post": {
-				"description": "Step 1 of email+password signup. Validates the password (length 12-128, HIBP breach check) and emails a verification link. The User row is NOT created until the verification link is clicked. Rejected with 409 if an account with this email already exists.",
+				"description": "Step 1 of email+password signup. Validates the password (length 12-128, HIBP breach check) and emails a verification link. The User row is NOT created until the verification link is clicked. Always returns 200 regardless of whether the email is already registered (no enumeration); existing accounts get a 'you already have an account' email instead of a verification link.",
 				"operationId": "AuthController_signupEmail",
 				"parameters": [],
 				"requestBody": {
@@ -282,13 +282,10 @@
 				},
 				"responses": {
 					"200": {
-						"description": "Verification email sent"
+						"description": "Request accepted (always 200, even if the email is already registered)"
 					},
 					"400": {
 						"description": "Invalid password (too short, too long, or breached)"
-					},
-					"409": {
-						"description": "Email already in use"
 					}
 				},
 				"summary": "Email + password signup (request)",
@@ -754,6 +751,54 @@
 				"tags": ["routes"]
 			}
 		},
+		"/routes/public": {
+			"get": {
+				"description": "Returns public Routes that clear the Indexable quality gate (see CONTEXT.md), newest-updated first. Anonymous; feeds the landing sitemap and discovery surfaces. Total count in X-Total-Count.",
+				"operationId": "RoutesController_findIndexablePublic",
+				"parameters": [
+					{
+						"name": "limit",
+						"required": false,
+						"in": "query",
+						"description": "Page size",
+						"schema": {
+							"minimum": 1,
+							"maximum": 200,
+							"default": 100,
+							"type": "number"
+						}
+					},
+					{
+						"name": "offset",
+						"required": false,
+						"in": "query",
+						"description": "Number of routes to skip",
+						"schema": {
+							"minimum": 0,
+							"default": 0,
+							"type": "number"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"$ref": "#/components/schemas/PublicRouteSummaryDto"
+									}
+								}
+							}
+						}
+					}
+				},
+				"summary": "List indexable public routes",
+				"tags": ["routes"]
+			}
+		},
 		"/routes/by-user/{userId}": {
 			"get": {
 				"description": "Returns the public Routes owned by the given user. Excludes private and unlisted routes.",
@@ -788,18 +833,45 @@
 				"tags": ["routes"]
 			}
 		},
-		"/routes/{id}": {
+		"/routes/{ref}/gpx": {
 			"get": {
-				"description": "Returns the route. Owners see it regardless of visibility; non-owners (including anonymous viewers) only see public and unlisted routes. Private routes return 404 to non-owners. PATs hit this through the cookie-or-bearer JWT path; PAT-as-Bearer is not yet supported here (use GET /routes to list and filter).",
+				"description": "Returns the route as a GPX 1.1 document with a routess-namespaced extension carrying per-waypoint Type. `ref` is a numeric route ID (owner: any visibility; non-owners: public only) or a 32-hex share token (public and unlisted). Private routes return 404 to non-owners. Unlisted responses carry X-Robots-Tag: noindex.",
+				"operationId": "RoutesController_downloadGpx",
+				"parameters": [
+					{
+						"name": "ref",
+						"required": true,
+						"in": "path",
+						"description": "Route ID or 32-hex share token",
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "GPX document"
+					},
+					"404": {
+						"description": "Route not found or not viewable"
+					}
+				},
+				"summary": "Download route as GPX",
+				"tags": ["routes"]
+			}
+		},
+		"/routes/{ref}": {
+			"get": {
+				"description": "Returns the route. `ref` is either a numeric route ID (owners see any visibility; non-owners only public, so sequential IDs can't be walked to discover unlisted routes) or a 32-hex share token (serves public and unlisted to anyone with the link). Private routes return 404 to non-owners. PATs hit this through the cookie-or-bearer JWT path; PAT-as-Bearer is not yet supported here (use GET /routes to list and filter).",
 				"operationId": "RoutesController_findOne",
 				"parameters": [
 					{
-						"name": "id",
+						"name": "ref",
 						"required": true,
 						"in": "path",
-						"description": "Route ID",
+						"description": "Route ID or 32-hex share token",
 						"schema": {
-							"type": "number"
+							"type": "string"
 						}
 					}
 				],
@@ -818,9 +890,11 @@
 						"description": "Route not found"
 					}
 				},
-				"summary": "Get route by ID",
+				"summary": "Get route by ID or share token",
 				"tags": ["routes"]
-			},
+			}
+		},
+		"/routes/{id}": {
 			"patch": {
 				"description": "Updates a specific route for the authenticated user.",
 				"operationId": "RoutesController_update",
@@ -1025,18 +1099,18 @@
 				"tags": ["collections"]
 			}
 		},
-		"/collections/{id}": {
+		"/collections/{ref}": {
 			"get": {
-				"description": "Owners see the collection regardless of visibility. Non-owners (including anonymous viewers) only see public and unlisted collections, and private routes inside them are omitted. Private collections return 404 to non-owners.",
+				"description": "`ref` is a numeric collection ID (owners: any visibility; non-owners: public only, so sequential IDs can't be walked to discover unlisted collections) or a 32-hex share token (public and unlisted). Private routes inside are omitted for non-owners. Private collections return 404 to non-owners.",
 				"operationId": "CollectionsController_findOne",
 				"parameters": [
 					{
-						"name": "id",
+						"name": "ref",
 						"required": true,
 						"in": "path",
-						"description": "Collection ID",
+						"description": "Collection ID or 32-hex share token",
 						"schema": {
-							"type": "number"
+							"type": "string"
 						}
 					}
 				],
@@ -1055,9 +1129,11 @@
 						"description": "Collection not found"
 					}
 				},
-				"summary": "Get collection by ID",
+				"summary": "Get collection by ID or share token",
 				"tags": ["collections"]
-			},
+			}
+		},
+		"/collections/{id}": {
 			"patch": {
 				"operationId": "CollectionsController_update",
 				"parameters": [
@@ -1297,7 +1373,7 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"$ref": "#/components/schemas/RouteResponseDto"
+									"$ref": "#/components/schemas/RoutingRouteResponseDto"
 								}
 							}
 						}
@@ -1641,7 +1717,7 @@
 		},
 		"/metrics": {
 			"get": {
-				"description": "Operational metrics in Prometheus text format. Intended for in-cluster scraping; returns 503 when the exporter is disabled.",
+				"description": "Operational metrics in Prometheus text format. In-cluster scraping only: requests that arrive through the public ingress/proxy chain (detected via X-Forwarded-* headers) get a 404. Returns 503 when the exporter is disabled.",
 				"operationId": "MetricsController_getMetrics",
 				"parameters": [],
 				"responses": {
@@ -2415,7 +2491,8 @@
 					},
 					"avatar": {
 						"type": "string",
-						"example": "https://example.com/avatar.jpg"
+						"example": "https://example.com/avatar.jpg",
+						"description": "Avatar image URL. Must be https: clients render it, so no other schemes are accepted."
 					},
 					"preferences": {
 						"$ref": "#/components/schemas/UpdateUserPreferencesDto"
@@ -2821,8 +2898,8 @@
 						"default": "private"
 					},
 					"tags": {
-						"description": "Free-form tags for the route",
-						"example": ["hilly", "scenic"],
+						"description": "Free-form tags for the route. Each tag is lowercase alphanumeric plus '-', 1 to 24 characters, must start with a letter or digit. Max 10 tags per route. Values are normalised server-side (lowercased, whitespace collapsed to hyphens).",
+						"example": ["hilly", "scenic", "weekend-loop"],
 						"type": "array",
 						"items": {
 							"type": "string"
@@ -2930,23 +3007,150 @@
 				},
 				"required": ["coord", "type"]
 			},
+			"PublicUserDto": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "number",
+						"example": 1
+					},
+					"name": {
+						"type": "string",
+						"example": "Jane Doe"
+					},
+					"avatar": {
+						"type": "string",
+						"example": "https://example.com/avatar.jpg"
+					},
+					"idHash": {
+						"type": "string",
+						"example": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+						"description": "Pseudonymous user identifier for client-side ProductEvent tracking. See ADR-0020."
+					}
+				},
+				"required": ["id", "name", "idHash"]
+			},
 			"RouteResponseDto": {
 				"type": "object",
 				"properties": {
-					"legs": {
+					"id": {
+						"type": "number"
+					},
+					"name": {
+						"type": "string"
+					},
+					"description": {
+						"type": "string"
+					},
+					"activity": {
+						"type": "string",
+						"enum": ["run", "cycle", "walk"]
+					},
+					"visibility": {
+						"type": "string",
+						"enum": ["private", "unlisted", "public"]
+					},
+					"tags": {
 						"type": "array",
 						"items": {
-							"$ref": "#/components/schemas/RouteLegDto"
+							"type": "string"
 						}
 					},
-					"locations": {
+					"favourite": {
+						"type": "boolean",
+						"description": "Whether the owner marked this route as a favourite"
+					},
+					"waypoints": {
 						"type": "array",
 						"items": {
-							"$ref": "#/components/schemas/RouteSnappedLocationDto"
+							"$ref": "#/components/schemas/WaypointResponseDto"
 						}
+					},
+					"geometry": {
+						"description": "Routed polyline as an array of [lng, lat] coordinate pairs",
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					},
+					"distance": {
+						"type": "number",
+						"description": "Distance in meters"
+					},
+					"duration": {
+						"type": "number",
+						"description": "Duration in seconds"
+					},
+					"elevationGain": {
+						"type": "number",
+						"description": "Elevation gain in meters"
+					},
+					"startAddress": {
+						"type": "string"
+					},
+					"endAddress": {
+						"type": "string"
+					},
+					"routingPreferences": {
+						"description": "Inputs that produced this route's geometry. Null for legacy / GPX-imported routes.",
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/RoutingPreferencesDto"
+							}
+						]
+					},
+					"provenance": {
+						"type": "string",
+						"description": "How this route was produced.",
+						"enum": ["valhalla", "mapbox-legacy", "gpx-import", "generation"]
+					},
+					"shareToken": {
+						"type": "string",
+						"description": "Unguessable 32-hex handle for share links. Unlisted routes are only reachable anonymously via this token.",
+						"example": "9f86d081884c7d659a2feaa0c55ad015"
+					},
+					"user": {
+						"$ref": "#/components/schemas/PublicUserDto"
+					},
+					"createdAt": {
+						"type": "string"
+					},
+					"updatedAt": {
+						"type": "string"
 					}
 				},
-				"required": ["legs", "locations"]
+				"required": [
+					"id",
+					"name",
+					"visibility",
+					"tags",
+					"favourite",
+					"waypoints",
+					"provenance",
+					"shareToken",
+					"user",
+					"createdAt",
+					"updatedAt"
+				]
+			},
+			"PublicRouteSummaryDto": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "number"
+					},
+					"name": {
+						"type": "string"
+					},
+					"distance": {
+						"type": "number",
+						"description": "Distance in meters"
+					},
+					"updatedAt": {
+						"type": "string"
+					}
+				},
+				"required": ["id", "name", "updatedAt"]
 			},
 			"UpdateRouteDto": {
 				"type": "object",
@@ -2974,8 +3178,8 @@
 						"default": "private"
 					},
 					"tags": {
-						"description": "Free-form tags for the route",
-						"example": ["hilly", "scenic"],
+						"description": "Free-form tags for the route. Each tag is lowercase alphanumeric plus '-', 1 to 24 characters, must start with a letter or digit. Max 10 tags per route. Values are normalised server-side (lowercased, whitespace collapsed to hyphens).",
+						"example": ["hilly", "scenic", "weekend-loop"],
 						"type": "array",
 						"items": {
 							"type": "string"
@@ -3076,8 +3280,13 @@
 						"type": "number",
 						"description": "Number of routes in the collection (after visibility filtering)"
 					},
+					"shareToken": {
+						"type": "string",
+						"description": "Unguessable 32-hex handle for share links. Unlisted collections are only reachable anonymously via this token.",
+						"example": "9f86d081884c7d659a2feaa0c55ad015"
+					},
 					"user": {
-						"$ref": "#/components/schemas/UserResponseDto"
+						"$ref": "#/components/schemas/PublicUserDto"
 					},
 					"createdAt": {
 						"type": "string"
@@ -3086,7 +3295,17 @@
 						"type": "string"
 					}
 				},
-				"required": ["id", "name", "visibility", "routeIds", "routeCount", "user", "createdAt", "updatedAt"]
+				"required": [
+					"id",
+					"name",
+					"visibility",
+					"routeIds",
+					"routeCount",
+					"shareToken",
+					"user",
+					"createdAt",
+					"updatedAt"
+				]
 			},
 			"CreateCollectionDto": {
 				"type": "object",
@@ -3139,8 +3358,13 @@
 						"type": "number",
 						"description": "Number of routes in the collection (after visibility filtering)"
 					},
+					"shareToken": {
+						"type": "string",
+						"description": "Unguessable 32-hex handle for share links. Unlisted collections are only reachable anonymously via this token.",
+						"example": "9f86d081884c7d659a2feaa0c55ad015"
+					},
 					"user": {
-						"$ref": "#/components/schemas/UserResponseDto"
+						"$ref": "#/components/schemas/PublicUserDto"
 					},
 					"createdAt": {
 						"type": "string"
@@ -3156,7 +3380,18 @@
 						}
 					}
 				},
-				"required": ["id", "name", "visibility", "routeIds", "routeCount", "user", "createdAt", "updatedAt", "routes"]
+				"required": [
+					"id",
+					"name",
+					"visibility",
+					"routeIds",
+					"routeCount",
+					"shareToken",
+					"user",
+					"createdAt",
+					"updatedAt",
+					"routes"
+				]
 			},
 			"UpdateCollectionDto": {
 				"type": "object",
@@ -3364,6 +3599,24 @@
 					}
 				},
 				"required": ["lat", "lon"]
+			},
+			"RoutingRouteResponseDto": {
+				"type": "object",
+				"properties": {
+					"legs": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/RouteLegDto"
+						}
+					},
+					"locations": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/RouteSnappedLocationDto"
+						}
+					}
+				},
+				"required": ["legs", "locations"]
 			}
 		}
 	}

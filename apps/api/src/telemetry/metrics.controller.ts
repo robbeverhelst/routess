@@ -9,10 +9,20 @@ export class MetricsController {
 	@ApiOperation({
 		summary: "Prometheus metrics",
 		description:
-			"Operational metrics in Prometheus text format. Intended for in-cluster scraping; returns 503 when the exporter is disabled.",
+			"Operational metrics in Prometheus text format. In-cluster scraping only: requests that arrive through the public ingress/proxy chain (detected via X-Forwarded-* headers) get a 404. Returns 503 when the exporter is disabled.",
 	})
 	@Get()
 	getMetrics(@Req() req: Request, @Res() res: Response) {
+		// In-cluster scrapers (ServiceMonitor, compose, curl against the pod)
+		// hit this port directly; anything that traversed the public
+		// ingress/proxy chain carries X-Forwarded-* headers. Metrics expose
+		// internal business counters (signups, login outcomes, active users),
+		// so proxied requests 404 as if the route doesn't exist.
+		if (req.headers["x-forwarded-for"] || req.headers["x-forwarded-host"]) {
+			res.status(404).send();
+			return;
+		}
+
 		const exporter = getPrometheusExporter();
 		if (!exporter) {
 			res.status(503).type("text/plain").send("# metrics disabled\n");

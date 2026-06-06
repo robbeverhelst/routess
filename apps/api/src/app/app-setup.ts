@@ -1,7 +1,8 @@
 import type { INestApplication } from "@nestjs/common";
 import { ValidationPipe, VersioningType } from "@nestjs/common";
+import type { NestExpressApplication } from "@nestjs/platform-express";
 import { DocumentBuilder, type OpenAPIObject, SwaggerModule } from "@nestjs/swagger";
-import type { Request, Response } from "express";
+import type { NextFunction, Request, Response } from "express";
 import helmet from "helmet";
 import { GlobalExceptionFilter } from "../common/filters/global-exception.filter";
 import type { AppConfig } from "../config/app-config";
@@ -11,6 +12,11 @@ import { getAppConfig } from "../config/app-config";
 const compression = require("compression");
 
 export function configureApplication(app: INestApplication, config: AppConfig = getAppConfig()): void {
+	// Explicit JSON body cap instead of the implicit express default (100kb),
+	// sized so a maximal route (MAX_GEOMETRY_POINTS coordinate pairs plus
+	// waypoints) fits; every other endpoint's payload is far smaller.
+	(app as NestExpressApplication).useBodyParser("json", { limit: "512kb" });
+
 	app.use(
 		compression({
 			filter: (req: Request, res: Response) => {
@@ -52,6 +58,23 @@ export function configureApplication(app: INestApplication, config: AppConfig = 
 	);
 
 	const allowedOrigins = new Set(config.app.frontendUrls);
+
+	// CSRF defense for cookie sessions: CORS only hides responses, it does not
+	// stop a cross-site page from *sending* a credentialed mutation. Browsers
+	// attach Origin to all cross-site (and modern same-site) non-GET requests,
+	// so an untrusted Origin on an unsafe method is rejected outright.
+	// Non-browser clients (CLI, PATs) send no Origin and pass through; they
+	// authenticate with Bearer tokens, which a cross-site page cannot attach.
+	const safeMethods = new Set(["GET", "HEAD", "OPTIONS"]);
+	app.use((req: Request, res: Response, next: NextFunction) => {
+		const origin = req.headers.origin;
+		if (safeMethods.has(req.method) || !origin || allowedOrigins.has(origin)) {
+			next();
+			return;
+		}
+
+		res.status(403).json({ statusCode: 403, code: "FORBIDDEN_ORIGIN", message: "Origin not allowed" });
+	});
 
 	app.enableCors({
 		origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {

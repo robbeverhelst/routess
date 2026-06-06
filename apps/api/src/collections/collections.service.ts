@@ -8,7 +8,7 @@ import { CollectionRoute } from "../entities/collection-route.entity";
 import { Route } from "../entities/route.entity";
 import type { User } from "../entities/user.entity";
 import { toRouteResponseDto } from "../routes/route.mapper";
-import { toUserResponseDto } from "../users/user.mapper";
+import { toPublicUserDto } from "../users/user.mapper";
 import type { CollectionDetailResponseDto, CollectionResponseDto } from "./dto/collection-response.dto";
 import type { CreateCollectionDto } from "./dto/create-collection.dto";
 import type { SetCollectionRoutesDto } from "./dto/set-collection-routes.dto";
@@ -46,7 +46,8 @@ export class CollectionsService {
 			visibility: collection.visibility,
 			routeIds: routes.map((r) => r.id),
 			routeCount: routes.length,
-			user: toUserResponseDto(owner, this.config.analytics.salt),
+			shareToken: collection.shareToken,
+			user: toPublicUserDto(owner, this.config.analytics.salt),
 			createdAt: collection.createdAt.toISOString(),
 			updatedAt: collection.updatedAt.toISOString(),
 		};
@@ -80,8 +81,10 @@ export class CollectionsService {
 		return this.toResponseDto(collection, true);
 	}
 
-	// Same visibility semantics as routes: private collections 404 to
-	// non-owners rather than 403, to avoid leaking existence.
+	// Same visibility semantics as routes: ids serve owners and public
+	// collections only (unlisted would be enumerable via sequential ids);
+	// unlisted access goes through findOneByShareToken. 404, never 403, to
+	// avoid leaking existence.
 	async findOne(id: number, viewerId: number | null): Promise<CollectionDetailResponseDto> {
 		const collection = await this.collectionRepository.findOne(
 			{ id },
@@ -91,9 +94,23 @@ export class CollectionsService {
 			throw new NotFoundException(`Collection with ID ${id} not found`);
 		}
 		const isOwner = viewerId !== null && collection.user.id === viewerId;
-		if (!isOwner && collection.visibility === "private") {
+		if (!isOwner && collection.visibility !== "public") {
 			throw new NotFoundException(`Collection with ID ${id} not found`);
 		}
+		return this.toDetailResponseDto(collection, isOwner);
+	}
+
+	// Share-link lookup: serves public and unlisted collections to anyone
+	// holding the unguessable token; private 404s even with the token.
+	async findOneByShareToken(shareToken: string, viewerId: number | null): Promise<CollectionDetailResponseDto> {
+		const collection = await this.collectionRepository.findOne(
+			{ shareToken },
+			{ populate: ["user", "routes", "routes.route", "routes.route.user"] },
+		);
+		if (!collection || collection.visibility === "private") {
+			throw new NotFoundException("Collection not found");
+		}
+		const isOwner = viewerId !== null && collection.user.id === viewerId;
 		return this.toDetailResponseDto(collection, isOwner);
 	}
 

@@ -109,6 +109,52 @@ EOF
         ;;
 esac
 
+# Content-Security-Policy, Report-Only for now: violations show in browser
+# consoles without breaking anything. Flip the header name to
+# Content-Security-Policy once prod shows no violations. Origins derive from
+# runtime env so the policy follows the deployment.
+#
+# 'unsafe-inline' in script-src covers the two small inline scripts in
+# index.html (umami loader, theme flash guard); hash or externalize them
+# before enforcing to get real XSS protection from script-src.
+CSP_CONF="/etc/nginx/snippets/csp.conf"
+
+origin_of() {
+    case "$1" in
+        http://*|https://*)
+            _proto="${1%%://*}"
+            _rest="${1#*://}"
+            _host="${_rest%%/*}"
+            printf '%s://%s' "$_proto" "$_host"
+            ;;
+        *) printf '' ;;
+    esac
+}
+
+API_ORIGIN=$(origin_of "${VITE_API_URL:-}")
+UMAMI_ORIGIN=""
+case "${VITE_UMAMI_URL:-}" in
+    __VITE_*|"") ;;
+    *) UMAMI_ORIGIN=$(origin_of "${VITE_UMAMI_URL}") ;;
+esac
+
+SCRIPT_SRC="'self' 'unsafe-inline' https://accounts.google.com${UMAMI_ORIGIN:+ $UMAMI_ORIGIN}"
+# img-src allows any https host: user avatars are arbitrary https URLs.
+IMG_SRC="'self' data: blob: https:"
+STYLE_SRC="'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com"
+FONT_SRC="'self' https://fonts.gstatic.com"
+CONNECT_SRC="'self' https://api.mapbox.com https://events.mapbox.com https://accounts.google.com${API_ORIGIN:+ $API_ORIGIN}${UMAMI_ORIGIN:+ $UMAMI_ORIGIN}"
+# Mapbox GL runs its workers from blob: URLs.
+WORKER_SRC="'self' blob:"
+FRAME_SRC="https://accounts.google.com"
+
+CSP="default-src 'self'; script-src ${SCRIPT_SRC}; style-src ${STYLE_SRC}; font-src ${FONT_SRC}; img-src ${IMG_SRC}; connect-src ${CONNECT_SRC}; worker-src ${WORKER_SRC}; frame-src ${FRAME_SRC}; object-src 'none'; base-uri 'self'; manifest-src 'self'"
+
+cat > "$CSP_CONF" <<EOF
+add_header Content-Security-Policy-Report-Only "${CSP}" always;
+EOF
+echo "CSP (Report-Only): ${CSP}"
+
 # Start nginx
 echo "Starting nginx..."
 exec nginx -g "daemon off;"

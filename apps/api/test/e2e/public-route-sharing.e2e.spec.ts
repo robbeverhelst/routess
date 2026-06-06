@@ -83,11 +83,27 @@ describe("Public route sharing E2E", () => {
 		const unlisted = await createRoute(accessToken, { visibility: "unlisted" });
 		const pub = await createRoute(accessToken, { visibility: "public" });
 
-		const unlistedRes = await supertest(app.getHttpServer()).get(`/api/v1/routes/${unlisted.id}/gpx`).expect(200);
+		// Unlisted GPX is anonymous-only via the share token; numeric id 404s.
+		await supertest(app.getHttpServer()).get(`/api/v1/routes/${unlisted.id}/gpx`).expect(404);
+		const unlistedRes = await supertest(app.getHttpServer())
+			.get(`/api/v1/routes/${unlisted.shareToken}/gpx`)
+			.expect(200);
 		expect(unlistedRes.headers["x-robots-tag"]).toBe("noindex");
 
 		const pubRes = await supertest(app.getHttpServer()).get(`/api/v1/routes/${pub.id}/gpx`).expect(200);
 		expect(pubRes.headers["x-robots-tag"]).toBeUndefined();
+	});
+
+	it("serves an unlisted route to anonymous viewers via the share token, and the slug round-trips", async () => {
+		const { accessToken } = await createTestUserWithAuth(app, { email: "t@example.com", googleId: "g-t" });
+		const unlisted = await createRoute(accessToken, { visibility: "unlisted" });
+		expect(unlisted.shareToken).toMatch(/^[0-9a-f]{32}$/);
+
+		const anon = await supertest(app.getHttpServer()).get(`/api/v1/routes/${unlisted.shareToken}`).expect(200);
+		expect(anon.body.id).toBe(unlisted.id);
+
+		const slugId = buildRouteSlugId(anon.body.name, unlisted.shareToken);
+		expect(parseRouteSlugId(slugId)).toEqual({ slug: "sunday-loop", token: unlisted.shareToken });
 	});
 
 	it("404s a private route and its GPX to anonymous viewers", async () => {

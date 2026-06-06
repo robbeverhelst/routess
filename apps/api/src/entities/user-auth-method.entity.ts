@@ -1,4 +1,4 @@
-import { Entity, Index, ManyToOne, PrimaryKey, Property, type Ref, Unique } from "@mikro-orm/core";
+import { Entity, Index, ManyToOne, type Opt, PrimaryKey, Property, type Ref, Unique } from "@mikro-orm/core";
 import { BaseEntity } from "./base.entity";
 import { User } from "./user.entity";
 
@@ -37,4 +37,15 @@ export class UserAuthMethod extends BaseEntity {
 
 	@Property({ type: "timestamp", nullable: true })
 	lastUsedAt?: Date;
+
+	// Per-account brute-force defense (the per-IP throttle alone is bypassable
+	// with enough IPs). Consecutive failed password attempts; reset on success.
+	@Property({ type: "integer", default: 0 })
+	failedLoginAttempts: number & Opt = 0;
+
+	// While set and in the future, password logins are rejected with the
+	// generic invalid-credentials error (no oracle for "this account exists
+	// and is locked").
+	@Property({ type: "timestamp", nullable: true })
+	lockedUntil?: Date | null;
 }

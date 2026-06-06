@@ -18,6 +18,9 @@ export interface PublicRoute {
 	duration?: number;
 	elevationGain?: number;
 	updatedAt: string;
+	// Unguessable handle for share links; unlisted routes are only reachable
+	// anonymously via this token (numeric ids are public-only).
+	shareToken: string;
 }
 
 export interface PublicRouteSummary {
@@ -27,8 +30,9 @@ export interface PublicRouteSummary {
 	updatedAt: string;
 }
 
-export async function fetchPublicRoute(id: number): Promise<PublicRoute | null> {
-	const res = await fetch(`${API_URL}/api/v1/routes/${id}`, { next: { revalidate: 300 } });
+// `ref` is a numeric route id (public routes) or a 32-hex share token (unlisted).
+export async function fetchPublicRoute(ref: number | string): Promise<PublicRoute | null> {
+	const res = await fetch(`${API_URL}/api/v1/routes/${ref}`, { next: { revalidate: 300 } });
 	if (res.status === 404) return null;
 	if (!res.ok) throw new Error(`Route fetch failed with ${res.status}`);
 	return (await res.json()) as PublicRoute;

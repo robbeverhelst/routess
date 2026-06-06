@@ -49,6 +49,13 @@ function StatBlock({ label, value, unit }: { label: string; value: string; unit?
 	);
 }
 
+// Public routes use the canonical slug-id URL (stable, SEO-friendly);
+// unlisted routes use the unguessable share token so the link can't be
+// derived from the sequential id.
+function routeShareRef(route: ApiRoute): number | string {
+	return route.visibility === "public" ? route.id : route.shareToken;
+}
+
 function PublicRouteHero({ route, expectedSlug }: { route: ApiRoute; expectedSlug: string }) {
 	const t = useT();
 	const { formatDistanceParts, formatElevationParts } = useUnits();
@@ -60,10 +67,10 @@ function PublicRouteHero({ route, expectedSlug }: { route: ApiRoute; expectedSlu
 	useEffect(() => {
 		if (typeof window === "undefined") return;
 		if (canonicalSlug !== expectedSlug) {
-			const target = `/r/${canonicalSlug}-${route.id}${window.location.search}${window.location.hash}`;
+			const target = `/r/${canonicalSlug}-${routeShareRef(route)}${window.location.search}${window.location.hash}`;
 			window.history.replaceState({}, "", target);
 		}
-	}, [canonicalSlug, expectedSlug, route.id]);
+	}, [canonicalSlug, expectedSlug, route]);
 
 	const previewPoints = useMemo<[number, number][]>(() => {
 		if (route.geometry && route.geometry.length >= 2) return route.geometry;
@@ -139,12 +146,12 @@ function PublicRouteHero({ route, expectedSlug }: { route: ApiRoute; expectedSlu
 				<Btn
 					variant="primary"
 					onClick={() => {
-						window.location.href = `/?route=${route.id}`;
+						window.location.href = `/?route=${routeShareRef(route)}`;
 					}}
 				>
 					<I.play size={14} /> {t("public.openInRoutess")}
 				</Btn>
-				<a href={apiService.routeGpxUrl(route.id)} style={{ textDecoration: "none" }}>
+				<a href={apiService.routeGpxUrl(routeShareRef(route))} style={{ textDecoration: "none" }}>
 					<Btn>
 						<I.download size={14} /> {t("public.downloadGpx")}
 					</Btn>
@@ -175,15 +182,15 @@ function PublicRouteHero({ route, expectedSlug }: { route: ApiRoute; expectedSlu
 	);
 }
 
-export function PublicRouteScreen({ slug, routeId }: { slug: string; routeId: number }) {
+export function PublicRouteScreen({ slug, routeRef }: { slug: string; routeRef: number | string }) {
 	const t = useT();
-	const { data: route, isLoading, isError } = useRoute(routeId);
+	const { data: route, isLoading, isError } = useRoute(routeRef);
 
 	useEffect(() => {
 		if (!route) return;
 		Logger.debug("[PublicRouteScreen] viewing", { id: route.id, visibility: route.visibility });
 		const canonicalSlug = toRouteSlug(route.name);
-		const canonicalUrl = `${window.location.origin}/r/${canonicalSlug}-${route.id}`;
+		const canonicalUrl = `${window.location.origin}/r/${canonicalSlug}-${routeShareRef(route)}`;
 		const distanceKm = route.distance ? `${(route.distance / 1000).toFixed(1)} km` : null;
 		const titleParts = [route.name, distanceKm, "routess"].filter(Boolean);
 		document.title = titleParts.join(" · ");
