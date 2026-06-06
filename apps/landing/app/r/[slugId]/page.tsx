@@ -112,9 +112,16 @@ export default async function PublicRoutePage({ params }: { params: Promise<Para
 							<p className="eyebrow" style={{ marginBottom: 8 }}>
 								{copy.eyebrow}
 							</p>
-							<h1 className="display" style={{ fontSize: "clamp(34px, 4.5vw, 56px)", margin: "0 0 18px" }}>
+							<h1 className="display" style={{ fontSize: "clamp(34px, 4.5vw, 56px)", margin: "0 0 8px" }}>
 								{route.name}
 							</h1>
+							{route.user?.handle ? (
+								<p style={{ margin: "0 0 18px" }}>
+									<a href={`/u/${route.user.handle}`} className="mono" style={{ fontSize: 14 }}>
+										{copy.byAuthor.replace("{name}", route.user.name)}
+									</a>
+								</p>
+							) : null}
 							<div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 24 }}>
 								{stats.map((stat) => (
 									<span key={stat.label} className="chip">

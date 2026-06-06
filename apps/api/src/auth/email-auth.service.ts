@@ -15,6 +15,7 @@ import {
 	USER_REGISTERED,
 	type UserRegisteredEvent,
 } from "../telemetry/domain-events";
+import { generateUniqueHandle } from "../users/handle.util";
 import { toUserResponseDto } from "../users/user.mapper";
 import type { AuthResponseDto } from "./dto";
 import { PasswordService } from "./password.service";
@@ -139,6 +140,10 @@ export class EmailAuthService {
 		const user = this.userRepository.create({
 			email: claimed.email,
 			name: localPart,
+			// The default name is the email local-part, so handle generation
+			// always falls back to a random handle here (emails never leak
+			// into public URLs).
+			handle: await generateUniqueHandle(this.em, localPart, claimed.email),
 			isEmailVerified: true,
 			role: desiredRole ?? "user",
 			deletionStatus: "active",

@@ -106,7 +106,15 @@ _Avoid_: like, star, bookmark.
 
 **User**:
 An authenticated person who owns Routes. Authentication is via Google OAuth. Carries a `role` of either `user` or `admin`.
-_Avoid_: account, profile (no separate Profile entity exists in the domain).
+_Avoid_: account. A User is not a **Profile**: the User is the private auth identity (email, sessions, role); the Profile is its public projection.
+
+**Profile**:
+The public, viewable projection of a User: **Handle**, display name, avatar, public Routes, and derived stats. Every User has exactly one Profile; it is not a separable entity a User creates or deletes independently. What a Profile exposes is governed by RouteVisibility — a Profile never reveals `private` or `unlisted` Routes. Stats (public Route count, total Distance, total ElevationGain, follower/following counts) are computed over `public` Routes only: nothing a stranger couldn't derive from the visible list. Follower *counts* are public; follower *lists* are visible to the owner only. A Profile has a public page at `/u/{handle}` following the same dual-surface pattern as route pages (ADR 0025): canonical server-rendered page on the landing host, interactive twin on the app origin.
+_Avoid_: account, user page, creator page. Never use "profile" for the User's own settings area or for routing profiles (see flagged ambiguities).
+
+**Handle**:
+A unique, URL-safe identifier for a Profile (e.g. `/u/robbe`). Matches `[a-z0-9][a-z0-9-]{2,29}` (3 to 30 characters, lowercase alphanumeric plus hyphen, must start with a letter or digit). Auto-generated at signup (and backfilled for existing Users) by slugifying the display name, with a numeric suffix on collision; **never derived from email** (emails are PII, Handles are public) — fallback is `user-<short-random>`. Changeable in settings: old URLs plainly 404 (no redirects, no handle history) and a freed Handle returns to the pool. A reserved-words list (`admin`, `routess`, `api`, `settings`, public path segments, …) can never be claimed. User IDs never appear in public URLs.
+_Avoid_: username (that suggests a login credential — login stays email-based), slug, alias.
 
 **Admin**:
 A User with `role = 'admin'`, authorised to view aggregate user/route data and perform destructive actions (revoke session, soft-delete user) via the admin API. Admin status is reconciled from the `ADMIN_EMAILS` env var on every login; the env var is the source of truth, the DB column is a cache.
@@ -124,6 +132,25 @@ _Avoid_: token, login, device.
 A long-lived bearer credential a User mints for non-browser clients (the `routess` CLI, AI agents, scripts). Carries one of two scopes: `read` (list/get Routes, export GPX, get profile) or `write` (`read` plus metadata-only mutations on own Routes and own preferences). Presented as `Authorization: Bearer routess_pat_<random>`. Never valid against `/api/v1/admin/*` and cannot delete the User account regardless of the owner's role. Subject to a separate per-token rate-limit bucket so a runaway agent does not block the User's interactive session. Stored hashed with argon2id; the plaintext is shown to the User exactly once at creation.
 _Avoid_: API key, access token, bearer token (the term is **PAT** when discussing the domain shape; "Bearer token" is the HTTP transport detail).
 
+## Social
+
+**Follow**:
+An asymmetric subscription from a User to another User's **Profile**. No approval step; the followed party is notified but cannot pre-approve. A Follow grants *no access*: it only determines what fills the follower's feed and notifications. **RouteVisibility remains the only access-control concept in the domain** — a follower sees exactly what any stranger with the same URLs would see. Deliberate person-to-person sharing of non-public Routes is the inbox's job, never the graph's.
+_Avoid_: friend, connection, subscribe (in user-facing copy the verb is "follow").
+
+**RouteShare**:
+A deliberate, person-to-person delivery of a Route from a sender User to a recipient User, landing in the recipient's inbox. Records sender, recipient, the Route, an optional message, and read state. A RouteShare can only carry an `unlisted` or `public` Route; sharing a `private` Route prompts the owner to make it `unlisted` first. It never grants access by itself — **RouteVisibility stays the only access-control concept**, so flipping the Route back to `private` instantly 404s it for the recipient too. The inbox entry is a live reference, not a copy; a separate "save a copy" action clones the Route into the recipient's library as a Route they own. The copy keeps the original's **Provenance** (provenance describes how the geometry was made, not how it arrived) and records lineage via `copiedFrom` (source Route and User).
+Receiving a RouteShare notifies the recipient: one transactional email (rate-limited per sender→recipient pair, user-level opt-out) plus an in-app unread badge. A new Follow surfaces in-app only; Feed publishes never notify — the Feed is the notification surface.
+_Avoid_: share (bare noun — too overloaded with share-URL/share link), send, forward.
+
+**Feed**:
+A derived view, not an entity: the `public` Routes of the Profiles a User Follows, ordered by **PublishedAt** descending. Computed per read (one query over the follows join); nothing is stored per follower, so a Route flipped back to `private` vanishes from every Feed instantly. v1 has exactly one event type — a followed Profile published a public Route. RouteShares never appear in the Feed; they land in the inbox.
+_Avoid_: timeline, stream, FeedItem (there is no stored item).
+
+**PublishedAt** (of a Route):
+Timestamp set the *first* time a Route transitions to `public`, never bumped afterward. Re-publishing a previously-public Route restores it to Feeds at its original position rather than the top, so visibility-toggling cannot spam followers.
+_Avoid_: createdAt (a Route is usually born `private`; creation and publication are different moments).
+
 ## Relationships
 
 - A **Route** has one or more **Waypoints** in an ordered list.
@@ -135,6 +162,10 @@ _Avoid_: API key, access token, bearer token (the term is **PAT** when discussin
 - A **Route** has zero or more **Tags**; Tags are flat (no hierarchy, no folder grouping).
 - A **User** owns zero or more **Routes**, accessed through their **RouteLibrary**.
 - A **User** owns zero or more **Collections**; each **Collection** holds an ordered set of that User's **Routes** (many-to-many, order is per-Collection).
+- A **User** has exactly one **Profile**, addressed by a unique **Handle**; the Profile only ever exposes `public` Routes.
+- A **User** **Follows** zero or more **Profiles** (asymmetric, no approval); a Follow never grants access beyond what **RouteVisibility** allows.
+- A **RouteShare** delivers exactly one (`unlisted` | `public`) **Route** from one **User** to another; it grants no access of its own.
+- A copied **Route** keeps its source's **Provenance** and records lineage via `copiedFrom`.
 - A **Collection** has exactly one **RouteVisibility**; non-owners viewing a shared Collection never see its `private` Routes.
 - A **User** holds **RoutingPreferences defaults** keyed by **Activity** (`cycle`, `run`, `walk`); these are *copied* onto a new **RouteDraft** at creation, never read again for that draft.
 - A **Route** has its own **RoutingPreferences** (which produced its RoutePath) and a **Provenance** (how it was made). Both are immutable inputs to the Route; `Provenance` never changes after creation.
@@ -158,7 +189,7 @@ _Avoid_: API key, access token, bearer token (the term is **PAT** when discussin
 - **"Direct" naming** appears in code as `directFlag`, `isDirect`, `type: "direct"`. In conversation and new code, say **Type = direct**.
 - **"Snap"** is implementation jargon for "find the nearest road and adjust the Waypoint to lie on it." Use it for engineering conversation, not for user-facing copy or domain modelling.
 - **"Loop"** is a **RouteType** value, not a synonym for "cycle" or "ride". A Route's RouteType is either `a-to-b` or `loop`.
-- **"Account" / "Profile"** are not Routess concepts. The domain only has **User**.
+- **"Account"** is not a Routess concept. **Profile** _is_ one (since social v1): the public projection of a User. Use "Profile" only in that sense — never for the settings area, never for routing profiles.
 - **"Pin" in marketing copy**: the avoid-list above governs engineering, in-app UI, and domain conversation. Marketing copy on the public landing page may use "pin" as a verb-phrase ("pin it", "drop pins") because in that register it's a universally-understood action verb, not a name for the **Waypoint** entity. The carve-out is verb-only: copy must still not refer to a Waypoint as a "pin" (noun). If "the API returns pins" or "the user has 5 pins saved" appears anywhere, that's a leak — fix it.
 - **"Surface"** is overloaded: **SurfaceType** is a routing *preference* (3 values, an input), **SurfaceBucket** is a per-segment *classification* (4 values, an observation on the resulting RoutePath). Don't conflate them; in conversation, name the specific term.
 - **"Profile" / "routing profile" / "routing mode"**: the legacy `routingPreferencesStore.profile` field (`fast | scenic | safe | flat`) is being retired with the Valhalla migration (#137). These are not domain terms and should not appear in new code or user-facing copy. The replacement is **RoutingPreferences** (a structured object), not a single enum. "Mode" remains on the avoid list (it collides with Waypoint **Type**).
@@ -169,6 +200,7 @@ _Avoid_: API key, access token, bearer token (the term is **PAT** when discussin
 
 **Indexable** (of a Route):
 A derived property: a `public` Route is Indexable when it clears the quality gate (has a real name, meets a minimum length, and carries a description or tags). Only Indexable Routes appear in sitemaps and are eligible for search-engine indexing; public Routes below the bar still render but carry `noindex`. `unlisted` Routes are never Indexable regardless of quality (the URL is the capability). The gate may loosen over time; tightening after indexing is costly, so it starts strict.
+The property extends to **Profiles**: a Profile is Indexable when it has at least 3 Indexable Routes; below that its page renders but carries `noindex` and stays out of sitemaps (thin-content rule, same spirit as the RegionalHub threshold).
 _Avoid_: published, listed, searchable.
 
 **RegionalHub**:

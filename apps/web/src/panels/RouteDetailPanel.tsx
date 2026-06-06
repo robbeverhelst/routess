@@ -22,6 +22,7 @@ import { EditableLabel } from "../components/EditableLabel";
 import { I, type IconKey } from "../components/icons";
 import { Btn, IconBtn, RDS_COLORS, SecTitle } from "../components/primitives";
 import { RouteProfileChart } from "../components/RouteProfileChart";
+import { ShareRouteDialog } from "./social/ShareRouteDialog";
 
 const ACTIVITY_LABEL: Record<RouteActivity, { labelKey: string; icon: IconKey }> = {
 	cycle: { labelKey: "sport.cycle", icon: "bike" },
@@ -234,6 +235,8 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 		elevationGeometry,
 		String(route.id),
 	);
+
+	const [shareToUserOpen, setShareToUserOpen] = useState(false);
 
 	// Surface breakdown isn't persisted with saved routes, so fetch it on view
 	// from the stored geometry. Falls back silently if Valhalla is unavailable.
@@ -762,6 +765,9 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 				<Btn onClick={dispatchShare} title={t("route.share")}>
 					<I.share size={14} />
 				</Btn>
+				<Btn onClick={() => setShareToUserOpen(true)} title={t("social.share.title")}>
+					<I.mail size={14} />
+				</Btn>
 				<Btn onClick={dispatchExport} title={t("route.downloadGpx")}>
 					<I.download size={14} />
 				</Btn>
@@ -773,6 +779,7 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 					<I.trash size={14} />
 				</Btn>
 			</div>
+			{shareToUserOpen && <ShareRouteDialog route={route} onClose={() => setShareToUserOpen(false)} />}
 		</div>
 	);
 }

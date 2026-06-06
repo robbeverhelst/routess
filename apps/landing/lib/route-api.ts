@@ -21,6 +21,7 @@ export interface PublicRoute {
 	// Unguessable handle for share links; unlisted routes are only reachable
 	// anonymously via this token (numeric ids are public-only).
 	shareToken: string;
+	user?: { name: string; handle: string };
 }
 
 export interface PublicRouteSummary {

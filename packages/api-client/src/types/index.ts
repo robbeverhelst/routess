@@ -34,10 +34,12 @@ export type ApiUserRole = "user" | "admin";
 export type ApiUserDeletionStatus = "active" | "pending_hard_delete";
 
 // Owner shape embedded in routes/collections, which other users (including
-// anonymous visitors on public/unlisted pages) can see. Deliberately PII-free.
+// anonymous visitors on public/unlisted pages) can see. Deliberately PII-free;
+// the Handle is public by design (the Profile's address, CONTEXT.md).
 export interface ApiPublicUser {
 	id: number;
 	name: string;
+	handle: string;
 	avatar?: string;
 	// Pseudonymous user identifier for ProductEvent tracking. See ADR-0020.
 	idHash: string;
@@ -47,6 +49,8 @@ export interface ApiUser {
 	id: number;
 	email: string;
 	name: string;
+	// Public address of the user's Profile (CONTEXT.md "Handle").
+	handle: string;
 	avatar?: string;
 	isEmailVerified: boolean;
 	role: ApiUserRole;
@@ -334,8 +338,81 @@ export interface UpdateCollectionRequest {
 
 export interface UpdateCurrentUserRequest {
 	name?: string;
+	handle?: string;
 	avatar?: string;
 	preferences?: Partial<ApiUserPreferences>;
+}
+
+// ========== Social (issue #245, ADR 0027) ==========
+// Profiles are the public projection of a User; Follows grant no access;
+// RouteShares only carry unlisted/public routes and are live references.
+
+export interface ApiProfileSummary {
+	handle: string;
+	name: string;
+	avatar?: string | null;
+}
+
+export interface ApiProfileStats {
+	publicRoutes: number;
+	totalDistance: number;
+	totalElevationGain: number;
+	followers: number;
+	following: number;
+}
+
+export interface ApiProfileRoute {
+	id: number;
+	// Canonical /r/{slugId} path segment: id form for public routes,
+	// share-token form for unlisted ones (ids are not served to non-owners).
+	slugId: string;
+	name: string;
+	activity?: RouteActivity | null;
+	distance?: number | null;
+	duration?: number | null;
+	elevationGain?: number | null;
+	publishedAt?: string | null;
+	tags: string[];
+}
+
+export interface ApiProfile extends ApiProfileSummary {
+	stats: ApiProfileStats;
+	// null when viewing anonymously.
+	isFollowing: boolean | null;
+	// Clears the Indexable gate (>= 3 Indexable routes); drives noindex.
+	isIndexable: boolean;
+	routes: ApiProfileRoute[];
+}
+
+export interface ApiFeedItem extends ApiProfileRoute {
+	author: ApiProfileSummary;
+}
+
+export interface ApiFeedPage {
+	items: ApiFeedItem[];
+	total: number;
+}
+
+export interface ApiFollows {
+	following: ApiProfileSummary[];
+	followers: ApiProfileSummary[];
+}
+
+export interface ApiRouteShare {
+	id: number;
+	sender: ApiProfileSummary;
+	message?: string | null;
+	// null + unavailable=true when the route was deleted or flipped private.
+	route?: ApiProfileRoute | null;
+	unavailable: boolean;
+	readAt?: string | null;
+	createdAt: string;
+}
+
+export interface SendRouteShareRequest {
+	routeId: number;
+	recipientHandle: string;
+	message?: string;
 }
 
 // HTTP Client Interface
