@@ -16,6 +16,7 @@ export const useElevationGain = () => useRoutingStore((s) => s.elevationGain);
 export const useElevationLoss = () => useRoutingStore((s) => s.elevationLoss);
 export const useElevationProfile = () => useRoutingStore((s) => s.elevationProfile);
 export const useIsComputingElevation = () => useRoutingStore((s) => s.isComputingElevation);
+export const useIsComputingRoute = () => useRoutingStore((s) => s.isComputingRoute);
 export const useIsMapLocked = () => useRoutingStore((s) => s.isMapLocked);
 export const useCanUndo = () => useRoutingStore((s) => s.canUndo);
 export const useCanRedo = () => useRoutingStore((s) => s.canRedo);

@@ -370,6 +370,11 @@ export class ApiClient {
 		await this.request<void>(`/social/shares/${id}/read`, { method: "POST" });
 	}
 
+	// Recipient-only: removes the inbox entry, leaves the route untouched.
+	async dismissShare(id: number): Promise<void> {
+		await this.request<void>(`/social/shares/${id}`, { method: "DELETE" });
+	}
+
 	// Clones the shared route into the caller's library (keeps provenance,
 	// records copiedFrom lineage, starts private).
 	async copySharedRoute(id: number): Promise<ApiRoute> {

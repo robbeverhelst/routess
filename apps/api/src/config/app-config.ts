@@ -14,6 +14,9 @@ export interface AppConfig {
 		isTest: boolean;
 		frontendUrl: string;
 		frontendUrls: string[];
+		// Canonical public-site origin (the landing host, ADR 0025). Serves
+		// /r/{slugId}/og.png, which emails embed as the route preview image.
+		publicSiteUrl: string;
 	};
 	auth: {
 		jwtSecret: string;
@@ -196,6 +199,7 @@ export function getAppConfig(): AppConfig {
 			isTest,
 			frontendUrl: allowedFrontendUrls[0],
 			frontendUrls: allowedFrontendUrls,
+			publicSiteUrl: (process.env.PUBLIC_SITE_URL || allowedFrontendUrls[0]).replace(/\/+$/, ""),
 		},
 		auth: {
 			jwtSecret,

@@ -140,6 +140,20 @@ export class SocialController {
 	}
 
 	@ApiOperation({
+		summary: "Dismiss a share from your inbox",
+		description: "Recipient-only. Removes the inbox entry; the route itself is untouched.",
+	})
+	@ApiParam({ name: "id", type: "number" })
+	@ApiResponse({ status: 204, description: "Dismissed" })
+	@ApiResponse({ status: 404, description: "Share not found" })
+	@ThrottleModerate()
+	@HttpCode(204)
+	@Delete("shares/:id")
+	async dismiss(@Param("id", ParseIntPipe) id: number, @CurrentUser() user: AuthenticatedUser): Promise<void> {
+		await this.socialService.dismissShare(id, user.id);
+	}
+
+	@ApiOperation({
 		summary: "Save a copy of a shared route to your library",
 		description: "The copy keeps the original's Provenance and records copiedFrom lineage. It starts private.",
 	})

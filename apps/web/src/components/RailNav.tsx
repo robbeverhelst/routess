@@ -1,7 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useAuthStatus, useShareUnreadCount } from "@/lib/api-queries";
 import { useT } from "@/lib/i18n";
-import { useModalsStore } from "@/stores/modalsStore";
 import { type RedesignContext, useUiStore } from "@/stores/uiStore";
 import { I } from "./icons";
 import { IconBtn, RDS_COLORS } from "./primitives";
@@ -11,7 +10,9 @@ import { UserAvatar } from "./UserAvatar";
 const NAV: { key: RedesignContext; icon: React.ComponentType<{ size?: number }>; labelKey: string }[] = [
 	{ key: "plan", icon: I.route, labelKey: "nav.plan" },
 	{ key: "library", icon: I.library, labelKey: "nav.library" },
-	{ key: "discover", icon: I.explore, labelKey: "nav.discover" },
+	// Discover is hidden until the feature ships; a top-level tab must not
+	// open a "coming soon" stub.
+	// { key: "discover", icon: I.explore, labelKey: "nav.discover" },
 	{ key: "social", icon: I.social, labelKey: "nav.social" },
 	{ key: "settings", icon: I.settings, labelKey: "nav.settings" },
 ];
@@ -19,9 +20,6 @@ const NAV: { key: RedesignContext; icon: React.ComponentType<{ size?: number }>;
 export function RailNav() {
 	const t = useT();
 	const { context, setContext, theme, toggleTheme, panelCollapsed, togglePanel, setPanelCollapsed } = useUiStore();
-	const openOverlay = useModalsStore((s) => s.openOverlay);
-	const overlay = useModalsStore((s) => s.overlay);
-	const closeOverlay = useModalsStore((s) => s.closeOverlay);
 	const { data: auth } = useAuthStatus();
 	const isAdmin = auth?.user?.role === "admin";
 	const { data: unreadShares = 0 } = useShareUnreadCount();
@@ -165,13 +163,8 @@ export function RailNav() {
 					</Link>
 				</Tooltip>
 			)}
-			<IconBtn
-				title={t("rail.notifications")}
-				pressed={overlay === "notifications"}
-				onClick={() => (overlay === "notifications" ? closeOverlay() : openOverlay("notifications"))}
-			>
-				<I.bell size={18} />
-			</IconBtn>
+			{/* Notification bell hidden until the NotificationCenter ships; a
+			    persistent affordance must not open a "coming soon" stub. */}
 			<IconBtn title={t("appshell.toggleTheme")} onClick={toggleTheme}>
 				{theme === "dark" ? <I.sun size={18} /> : <I.moon size={18} />}
 			</IconBtn>

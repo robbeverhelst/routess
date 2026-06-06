@@ -53,13 +53,17 @@ function UserRow({
 export function FollowingTab({ onOpenProfile }: { onOpenProfile: (handle: string) => void }) {
 	const t = useT();
 	const [query, setQuery] = useState("");
-	const { data: results = [] } = useUserSearch(query);
+	const { data: results = [], isFetching: searchFetching } = useUserSearch(query);
 	const { data: follows, isLoading } = useFollows();
 	const follow = useFollowUser();
 	const unfollow = useUnfollowUser();
 
 	const followingHandles = new Set((follows?.following ?? []).map((p) => p.handle));
 	const searching = query.trim().length >= 2;
+	// Per-row pending: one mutation instance serves every row, so key the
+	// disabled state to the handle in flight instead of freezing all rows.
+	const followPending = (handle: string) => follow.isPending && follow.variables?.handle === handle;
+	const unfollowPending = (handle: string) => unfollow.isPending && unfollow.variables === handle;
 
 	return (
 		<div
@@ -89,7 +93,12 @@ export function FollowingTab({ onOpenProfile }: { onOpenProfile: (handle: string
 			{searching && (
 				<div>
 					<SecTitle>{t("social.search.results")}</SecTitle>
-					{results.length === 0 && (
+					{searchFetching && results.length === 0 && (
+						<div style={{ fontSize: 13, color: RDS_COLORS.fgSubtle, padding: "10px 0" }}>
+							{t("social.search.searching")}
+						</div>
+					)}
+					{!searchFetching && results.length === 0 && (
 						<div style={{ fontSize: 13, color: RDS_COLORS.fgSubtle, padding: "10px 0" }}>
 							{t("social.search.noResults")}
 						</div>
@@ -101,13 +110,17 @@ export function FollowingTab({ onOpenProfile }: { onOpenProfile: (handle: string
 							onOpenProfile={onOpenProfile}
 							action={
 								followingHandles.has(user.handle) ? (
-									<Btn variant="ghost" disabled={unfollow.isPending} onClick={() => unfollow.mutate(user.handle)}>
+									<Btn
+										variant="ghost"
+										disabled={unfollowPending(user.handle)}
+										onClick={() => unfollow.mutate(user.handle)}
+									>
 										{t("social.unfollow")}
 									</Btn>
 								) : (
 									<Btn
 										variant="primary"
-										disabled={follow.isPending}
+										disabled={followPending(user.handle)}
 										onClick={() => follow.mutate({ handle: user.handle, source: "search" })}
 									>
 										{t("social.follow")}
@@ -137,7 +150,11 @@ export function FollowingTab({ onOpenProfile }: { onOpenProfile: (handle: string
 								{...user}
 								onOpenProfile={onOpenProfile}
 								action={
-									<Btn variant="ghost" disabled={unfollow.isPending} onClick={() => unfollow.mutate(user.handle)}>
+									<Btn
+										variant="ghost"
+										disabled={unfollowPending(user.handle)}
+										onClick={() => unfollow.mutate(user.handle)}
+									>
 										{t("social.unfollow")}
 									</Btn>
 								}
@@ -156,7 +173,7 @@ export function FollowingTab({ onOpenProfile }: { onOpenProfile: (handle: string
 										followingHandles.has(user.handle) ? undefined : (
 											<Btn
 												variant="ghost"
-												disabled={follow.isPending}
+												disabled={followPending(user.handle)}
 												onClick={() => follow.mutate({ handle: user.handle, source: "search" })}
 											>
 												{t("social.followBack")}

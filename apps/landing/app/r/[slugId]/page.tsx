@@ -4,6 +4,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import Script from "next/script";
 import { type Dict, getDict } from "@/lib/content";
 import { APP_HOST, HTML_LANG, type Locale, SELF_HOST, SISTER_HOST } from "@/lib/i18n";
+import { serializeJsonLd } from "@/lib/json-ld";
 import { getLocale } from "@/lib/locale";
 import { fetchPublicRoute, PUBLIC_API_URL, type PublicRoute } from "@/lib/route-api";
 import { Footer } from "../../components/Footer";
@@ -174,7 +175,7 @@ export default async function PublicRoutePage({ params }: { params: Promise<Para
 				id="ld-route"
 				type="application/ld+json"
 				// biome-ignore lint/security/noDangerouslySetInnerHtml: serialized JSON-LD
-				dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd(route, canonicalSlugId, locale)) }}
+				dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd(route, canonicalSlugId, locale)) }}
 			/>
 		</>
 	);

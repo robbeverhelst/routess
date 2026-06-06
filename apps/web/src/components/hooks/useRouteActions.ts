@@ -4,6 +4,7 @@ import type { PopupInfo as MapPopupInfo } from "@/features/routing/managers/MapI
 import type { RouteDraftEditor } from "@/features/routing/RouteDraftEditor";
 import { getCurrentRoutePath } from "@/features/routing/services/RouteCalculationService";
 import { zoomToRoute } from "@/features/routing/utils/RoutingUtils";
+import { t } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
 import { useToastStore } from "@/stores/toastStore";
 
@@ -104,17 +105,17 @@ export const useRouteActions = ({
 		if (!editor) return;
 		const result = editor.buildShareUrl();
 		if (!result.success || !result.url) {
-			pushToast({ kind: "danger", title: result.message ?? "Could not generate shareable link." });
+			pushToast({ kind: "danger", title: result.message ?? t("share.linkFailed") });
 			return;
 		}
 		navigator.clipboard
 			.writeText(result.url)
 			.then(() => {
-				pushToast({ kind: "success", title: "Link copied to clipboard!" });
+				pushToast({ kind: "success", title: t("share.copied") });
 			})
 			.catch((err) => {
 				Logger.error("[useRouteActions] Failed to copy share link:", err);
-				pushToast({ kind: "danger", title: "Failed to copy link. Please try again." });
+				pushToast({ kind: "danger", title: t("share.copyFailed") });
 			});
 	}, [editor, pushToast]);
 

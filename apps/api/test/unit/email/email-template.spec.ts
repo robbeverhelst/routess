@@ -56,6 +56,32 @@ describe("EmailService templates", () => {
 		expect(msg.text).toContain("https://routess.com/auth/reset-password?token=xyz");
 	});
 
+	it("renders the route share email with the map preview image when given", async () => {
+		const { service, sent } = makeService();
+		await service.sendRouteShareEmail("bob@example.com", {
+			senderName: "Alice",
+			routeName: "Sunday loop",
+			url: "https://app.routess.com/r/sunday-loop-42",
+			imageUrl: "https://routess.com/r/sunday-loop-42/og.png",
+		});
+		expect(sent).toHaveLength(1);
+		const msg = sent[0];
+		expect(msg.subject).toBe("Alice shared a route with you on routess");
+		expect(msg.html).toContain('src="https://routess.com/r/sunday-loop-42/og.png"');
+		expect(msg.html).toContain('alt="Sunday loop"');
+		expect(msg.html).toContain("https://app.routess.com/r/sunday-loop-42");
+	});
+
+	it("renders the route share email without an image block when no imageUrl is given", async () => {
+		const { service, sent } = makeService();
+		await service.sendRouteShareEmail("bob@example.com", {
+			senderName: "Alice",
+			routeName: "Sunday loop",
+			url: "https://app.routess.com/r/sunday-loop-42",
+		});
+		expect(sent[0].html).not.toContain("<img");
+	});
+
 	it("escapes HTML-special characters in user-supplied URLs", async () => {
 		const { service, sent } = makeService();
 		// A pathological URL with characters that, if not escaped, could break

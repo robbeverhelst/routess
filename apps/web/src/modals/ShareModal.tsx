@@ -1,4 +1,4 @@
-import { buildRouteSlugId } from "@routess/core";
+import { buildRouteSlugId, formatDuration } from "@routess/core";
 import { type CSSProperties, type ReactNode, useEffect, useMemo, useState } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { trackEvent } from "@/lib/analytics/track";
@@ -7,6 +7,7 @@ import { emitAppEvent } from "@/lib/app-events";
 import { t } from "@/lib/i18n";
 import { getRuntimeConfig } from "@/lib/runtime-config";
 import { serializeAndCompress } from "@/lib/shareUtils";
+import { formatDistance, type UnitSystem } from "@/lib/units";
 import { buildMapboxStaticPreviewUrl } from "@/lib/utils/mapboxStaticPreview";
 import { buildRouteShareCard } from "@/lib/utils/routeShareCard";
 import { useMapViewStore } from "@/stores/mapViewStore";
@@ -97,9 +98,10 @@ export function ShareModal() {
 	const waypoints = useWaypoints();
 	const routePath = useRoutePath();
 	const isMapLocked = useIsMapLocked();
-	const distance = useRouteDistance();
-	const duration = useRouteDuration();
-	const elevationGain = useElevationGain();
+	const storeDistance = useRouteDistance();
+	const storeDuration = useRouteDuration();
+	const storeElevationGain = useElevationGain();
+	const unitSystem = useRedesignSettingsStore((s) => s.units) as UnitSystem;
 	const pushToast = useToastStore((s) => s.push);
 
 	const mapStyle = useRedesignSettingsStore((s) => s.mapStyle);
@@ -114,10 +116,29 @@ export function ShareModal() {
 	}, []);
 
 	const mode = useRoutingStore((s) => s.mode);
-	const savedRouteId = mode.kind === "editing" ? mode.routeId : null;
+	// Library cards share a specific saved route (sharingRouteId) without
+	// loading it into the planner; otherwise share whatever is being edited.
+	const sharingRouteId = useModalsStore((s) => s.sharingRouteId);
+	const savedRouteId = sharingRouteId ?? (mode.kind === "editing" ? mode.routeId : null);
 	const { data: savedRoute } = useRoute(savedRouteId ?? 0);
+	const sharingRoute = sharingRouteId !== null && savedRoute?.id === sharingRouteId ? savedRoute : null;
 	const savedVisibility = savedRouteId && savedRoute?.id === savedRouteId ? savedRoute.visibility : null;
 	const canShareCanonical = savedRouteId !== null && (savedVisibility === "public" || savedVisibility === "unlisted");
+
+	const effectiveWaypoints = sharingRoute ? sharingRoute.waypoints : waypoints;
+	// Metrics come from the shared route record in route mode, the live
+	// draft otherwise.
+	const distance = sharingRoute
+		? sharingRoute.distance != null
+			? formatDistance(sharingRoute.distance / 1000, unitSystem)
+			: ""
+		: storeDistance;
+	const duration = sharingRoute
+		? sharingRoute.duration != null
+			? formatDuration(sharingRoute.duration / 60)
+			: ""
+		: storeDuration;
+	const elevationGain = sharingRoute ? (sharingRoute.elevationGain ?? undefined) : storeElevationGain;
 
 	const url = useMemo(() => {
 		if (canShareCanonical && savedRouteId !== null && savedRoute) {
@@ -129,19 +150,23 @@ export function ShareModal() {
 			return `${base}/r/${buildRouteSlugId(savedRoute.name, ref)}`;
 		}
 		try {
-			const encoded = serializeAndCompress(waypoints, isMapLocked);
+			const encoded = serializeAndCompress(effectiveWaypoints, sharingRoute ? false : isMapLocked);
 			if (!encoded) return window.location.origin;
 			return `${window.location.origin}?route=${encoded}`;
 		} catch {
 			return window.location.origin;
 		}
-	}, [waypoints, isMapLocked, canShareCanonical, savedRouteId, savedRoute]);
+	}, [effectiveWaypoints, isMapLocked, canShareCanonical, savedRouteId, savedRoute, sharingRoute]);
 
-	const hasRoute = waypoints.length > 0;
+	const hasRoute = effectiveWaypoints.length > 0;
 	const previewPoints = useMemo<Coordinate[]>(() => {
+		if (sharingRoute) {
+			if (sharingRoute.geometry && sharingRoute.geometry.length >= 2) return sharingRoute.geometry as Coordinate[];
+			return sharingRoute.waypoints.map((waypoint) => waypoint.coord as Coordinate);
+		}
 		if (routePath.length >= 2) return routePath as Coordinate[];
 		return waypoints.map((waypoint) => waypoint.coord as Coordinate);
-	}, [routePath, waypoints]);
+	}, [routePath, waypoints, sharingRoute]);
 	const staticMapUrl = useMemo(
 		() => buildMapboxStaticPreviewUrl(previewPoints, { width: PREVIEW_WIDTH, height: PREVIEW_HEIGHT, mapStyle }),
 		[previewPoints, mapStyle],
@@ -171,7 +196,7 @@ export function ShareModal() {
 			trackEvent({
 				name: "route_share_link_copied",
 				properties: {
-					route_was_saved: useRoutingStore.getState().mode.kind === "editing",
+					route_was_saved: sharingRoute !== null || useRoutingStore.getState().mode.kind === "editing",
 					url_length_bucket: urlLengthBucket,
 				},
 			});
@@ -247,8 +272,10 @@ export function ShareModal() {
 	const makeCard = () =>
 		buildRouteShareCard({
 			points: previewPoints,
-			waypoints,
-			surfaceSegments: surfaceBreakdown?.segments ?? [],
+			waypoints: effectiveWaypoints,
+			// Surface breakdown tracks the planner draft; it does not apply
+			// to a library route shared without loading it.
+			surfaceSegments: sharingRoute ? [] : (surfaceBreakdown?.segments ?? []),
 			mapStyle,
 			lightPreset,
 			activityIconUrl,
@@ -419,7 +446,7 @@ export function ShareModal() {
 						>
 							<span>{distance || "—"}</span>
 							<span>·</span>
-							<span>{t("share.waypointsCount", { count: String(waypoints.length) })}</span>
+							<span>{t("share.waypointsCount", { count: String(effectiveWaypoints.length) })}</span>
 						</div>
 					</div>
 				</div>
@@ -461,6 +488,21 @@ export function ShareModal() {
 							{copied ? t("common.copied") : t("common.copy")}
 						</Btn>
 					</div>
+					{savedRouteId === null && hasRoute && (
+						<div
+							style={{
+								fontSize: 11.5,
+								color: RDS_COLORS.fgSubtle,
+								lineHeight: 1.5,
+								padding: "8px 10px",
+								borderRadius: 8,
+								background: `color-mix(in oklch, ${RDS_COLORS.warn} 8%, transparent)`,
+								border: `1px solid color-mix(in oklch, ${RDS_COLORS.warn} 25%, transparent)`,
+							}}
+						>
+							{t("share.unsavedHint")}
+						</div>
+					)}
 					{savedRouteId !== null && savedVisibility === "private" && (
 						<div
 							style={{

@@ -30,6 +30,8 @@ interface TemplateArgs {
 	preheader: string;
 	heading: string;
 	intro: string;
+	// Optional preview image (route map) rendered between intro and button.
+	image?: { url: string; alt: string };
 	buttonLabel: string;
 	url: string;
 	fallbackLabel: string;
@@ -63,6 +65,15 @@ ${escapeHtml(args.heading)}
 ${escapeHtml(args.intro)}
 </p>
 </td></tr>
+${
+	args.image
+		? `<tr><td style="padding:0 32px 24px;">
+<a href="${escapeAttr(args.url)}" style="display:block;">
+<img src="${escapeAttr(args.image.url)}" alt="${escapeAttr(args.image.alt)}" width="536" style="display:block;width:100%;max-width:536px;height:auto;border:1px solid ${BORDER};border-radius:8px;" />
+</a>
+</td></tr>`
+		: ""
+}
 <tr><td style="padding:8px 32px 24px;">
 <table role="presentation" cellpadding="0" cellspacing="0" border="0">
 <tr><td style="border-radius:8px;background:${BUTTON_BG};">
@@ -235,7 +246,7 @@ ${footerNote}`;
 
 	async sendRouteShareEmail(
 		to: string,
-		args: { senderName: string; routeName: string; message?: string; url: string },
+		args: { senderName: string; routeName: string; message?: string; url: string; imageUrl?: string },
 	): Promise<void> {
 		const subject = `${args.senderName} shared a route with you on routess`;
 		const heading = `${args.senderName} shared a route with you`;
@@ -258,6 +269,7 @@ ${footerNote}`;
 			preheader: intro,
 			heading,
 			intro,
+			image: args.imageUrl ? { url: args.imageUrl, alt: args.routeName } : undefined,
 			buttonLabel,
 			url: args.url,
 			fallbackLabel,

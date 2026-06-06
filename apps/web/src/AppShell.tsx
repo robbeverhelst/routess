@@ -529,13 +529,48 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 			<RouteChip distance={distance || "—"} time={duration || "—"} elevation={elevation} />
 		) : null;
 
+	// A banner, not a blocking overlay: the app works offline (service worker,
+	// cached tiles), so going offline must not wall off the canvas.
 	const Offline =
 		!online && !offlineDismissed ? (
-			<ErrorScreen
-				kind="offline"
-				onAction={() => setOfflineDismissed(true)}
-				onFallback={() => setOfflineDismissed(true)}
-			/>
+			<div
+				style={{
+					position: "absolute",
+					top: "calc(env(safe-area-inset-top, 0px) + 8px)",
+					left: "50%",
+					transform: "translateX(-50%)",
+					zIndex: 300,
+					display: "flex",
+					alignItems: "center",
+					gap: 10,
+					padding: "8px 12px",
+					borderRadius: 10,
+					background: RDS_COLORS.bgPanel,
+					border: `1px solid ${RDS_COLORS.border}`,
+					boxShadow: "0 4px 16px rgba(0,0,0,0.18)",
+					fontSize: 12.5,
+					color: RDS_COLORS.fg,
+					maxWidth: "calc(100vw - 24px)",
+				}}
+			>
+				<I.wifiOff size={14} />
+				<span>{t("error.offline.title")}</span>
+				<button
+					type="button"
+					onClick={() => setOfflineDismissed(true)}
+					aria-label={t("error.offline.continue")}
+					style={{
+						background: "transparent",
+						border: 0,
+						color: RDS_COLORS.fgMuted,
+						cursor: "pointer",
+						display: "inline-flex",
+						padding: 2,
+					}}
+				>
+					<I.close size={13} />
+				</button>
+			</div>
 		) : null;
 
 	const AuthOverlay =

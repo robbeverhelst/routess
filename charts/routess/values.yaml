@@ -114,6 +114,9 @@ api:
     swaggerPath: "/api"
     # From address for transactional email. Must be a verified Resend sender.
     emailFrom: "routess <noreply@routess.app>"
+    # Canonical public-site origin (landing host). Emails embed
+    # {publicSiteUrl}/r/{slugId}/og.png as the route preview image.
+    publicSiteUrl: "https://routess.com"
     # Base URL of a Valhalla routing service for surface breakdowns. Leave
     # empty to disable the trace-attributes proxy (the web app falls back
     # gracefully and just skips surface strips). Set to any reachable URL,

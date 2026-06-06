@@ -5,6 +5,7 @@ import { articlePath, findArticle, SECTION_PATHS, sectionFromPath } from "@/lib/
 import type { Article } from "@/lib/articles/types";
 import { getDict } from "@/lib/content";
 import { HTML_LANG, type Locale, SELF_HOST, SISTER_HOST } from "@/lib/i18n";
+import { serializeJsonLd } from "@/lib/json-ld";
 import { getLocale } from "@/lib/locale";
 import { ArticleBlocks, RichTextSpan } from "../../components/ArticleBlocks";
 import { Footer } from "../../components/Footer";
@@ -135,7 +136,7 @@ export default async function ArticlePage({ params }: { params: Promise<Params> 
 				id="ld-article"
 				type="application/ld+json"
 				// biome-ignore lint/security/noDangerouslySetInnerHtml: serialized JSON-LD
-				dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd(article, locale, sectionLabel)) }}
+				dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd(article, locale, sectionLabel)) }}
 			/>
 		</>
 	);

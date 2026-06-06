@@ -9,6 +9,7 @@ import { readMapPalette, subscribeMapPalette } from "@/features/routing/managers
 import { createRouteDraftEditor, type RouteDraftEditor } from "@/features/routing/RouteDraftEditor";
 import { getCurrentRoutePath } from "@/features/routing/services/RouteCalculationService";
 import { zoomToRoute } from "@/features/routing/utils/RoutingUtils";
+import { t } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
 import { useToastStore } from "@/stores/toastStore";
 
@@ -79,7 +80,7 @@ export const useMapInitialization = ({
 				Logger.info("[useMapInitialization] Found shared route data, attempting to load...");
 				const result = await editor.loadFromShareLink(encodedRoute);
 				if (!result.success) {
-					pushToast({ kind: "danger", title: result.message || "Failed to load shared route." });
+					pushToast({ kind: "danger", title: result.message || t("share.loadFailed") });
 				} else {
 					if (urlParams.get("route")) {
 						window.history.replaceState({}, document.title, window.location.pathname);

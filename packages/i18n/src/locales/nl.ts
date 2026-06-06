@@ -1268,6 +1268,33 @@ export const nl: Record<string, string> = {
 	"share.privateHint":
 		"Deze opgeslagen route is privé, dus alleen jij kunt de canonieke link openen. De URL hierboven bevat de routepunten in de link zelf. Zet de route op niet-vermeld of openbaar om een vast adres te delen.",
 	"share.canonicalHint": "Iedereen met deze link kan de route bekijken. Wijzigingen in zichtbaarheid gaan meteen in.",
+	// UX polish round (June 2026)
+	"common.undo": "Ongedaan maken",
+	"map.notReady": "De kaart is nog niet klaar, probeer het zo opnieuw.",
+	"plan.calculating": "Route berekenen...",
+	"plan.cleared": "Route gewist.",
+	"plan.discardConfirm": "Je hebt niet-opgeslagen wijzigingen die worden vervangen door de geladen route. Doorgaan?",
+	"share.linkFailed": "Kon geen deelbare link maken.",
+	"share.loadFailed": "Gedeelde route laden mislukt.",
+	"share.exportFailed": "GPX exporteren mislukt.",
+	"share.unsavedHint":
+		"Deze route is nog niet opgeslagen, dus de link bevat de hele route en wordt erg lang. Sla de route eerst op voor een korte, vaste link met voorvertoning.",
+	"import.noContent": "Geen bestandsinhoud ontvangen voor import.",
+	"import.failed": "GPX-bestand importeren mislukt.",
+	"route.shareLinkShort": "Link",
+	"save.signInHint": "Een route opslaan vereist een account.",
+	"save.signInShort": "Log in om op te slaan",
+	"social.share.sendShort": "Versturen",
+	"social.share.suggestions": "Mensen die je volgt",
+	"social.share.nowUnlisted":
+		"Deze route is nu niet-vermeld: iedereen met de link kan hem bekijken. Je kunt dit aanpassen in de route-instellingen.",
+	"social.search.searching": "Zoeken...",
+	"social.inbox.dismiss": "Verwijderen",
+	"social.inbox.copiedToast": "Kopie opgeslagen in je bibliotheek.",
+	"social.inbox.viewInLibrary": "Bekijk in bibliotheek",
+	"social.profile.signInToFollow": "Log in om dit profiel te volgen",
+	"plan.makeRouted": "Volg wegen naar dit routepunt",
+	"plan.makeDirect": "Teken een rechte lijn naar dit routepunt",
 
 	"settings.install.title": "App installeren",
 	"settings.install.sub": "Zet routess op je beginscherm",

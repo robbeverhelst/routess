@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { applySavedRoute } from "@/features/routing/applySavedRoute";
 import { isDraftDirty } from "@/features/routing/draftDirty";
 import { useSurfaceBreakdown } from "@/features/routing/services/useSurfaceBreakdown";
+import { useIsAuthenticated } from "@/hooks/useAuthState";
 import { useViewport } from "@/hooks/useViewport";
 import { useSaveRoute, useUpdateRoute } from "@/lib/api-queries";
 import { emitAppEvent, onAppEvent } from "@/lib/app-events";
@@ -22,6 +23,7 @@ import {
 	useElevationProfile,
 	useHasRoute,
 	useIsComputingElevation,
+	useIsComputingRoute,
 	useRemoveWaypoint,
 	useRouteDistance,
 	useRoutePath,
@@ -31,6 +33,7 @@ import {
 	useSetMode,
 	useSetWaypointName,
 	useSetWaypoints,
+	useSetWaypointType,
 	useWaypoints,
 } from "@/stores/routingStore";
 import { useToastStore } from "@/stores/toastStore";
@@ -87,7 +90,16 @@ export function PlanPanel() {
 	const removeWaypoint = useRemoveWaypoint();
 	const setWaypoints = useSetWaypoints();
 	const setWaypointName = useSetWaypointName();
+	const setWaypointType = useSetWaypointType();
 	const saveSnapshot = useSaveSnapshot();
+
+	// Routed/direct is a first-class user choice (CONTEXT.md "Type"); the
+	// list row exposes it instead of hiding it behind the map long-press.
+	const handleToggleWaypointType = (i: number, current: "routed" | "direct") => {
+		saveSnapshot();
+		setWaypointType(i, current === "direct" ? "routed" : "direct");
+		if (waypoints.length >= 2) emitAppEvent("routess:recalculate-route");
+	};
 	const [draggingIdx, setDraggingIdx] = useState<number | null>(null);
 	const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
 	const hoveredWaypointIndex = useWaypointHoverStore((s) => s.hoveredWaypointIndex);
@@ -149,11 +161,13 @@ export function PlanPanel() {
 	const openModal = useModalsStore((s) => s.openModal);
 	const openSearch = useModalsStore((s) => s.openSearch);
 	const pushToast = useToastStore((s) => s.push);
+	const isAuthenticated = useIsAuthenticated();
 	const distanceMeters = useDistanceMeters();
 	const durationSeconds = useDurationSeconds();
 	const elevationGain = useElevationGain();
 	const draftRoutingPreferences = useDraftRoutingPreferences();
 	const isComputingElevation = useIsComputingElevation();
+	const isComputingRoute = useIsComputingRoute();
 	const { formatElevationParts, units } = useUnits();
 	const saveRoute = useSaveRoute();
 	const updateRoute = useUpdateRoute();
@@ -168,7 +182,14 @@ export function PlanPanel() {
 	const editingBaseline = mode.kind === "editing" ? mode.baseline : null;
 
 	const handleClear = () => {
+		// Snapshot first so the destructive full clear is one undo away.
+		saveSnapshot();
 		clearWaypoints();
+		pushToast({
+			kind: "info",
+			title: t("plan.cleared"),
+			action: { label: t("common.undo"), onClick: () => emitAppEvent("routess:undo") },
+		});
 	};
 
 	const handleUnload = () => {
@@ -490,81 +511,102 @@ export function PlanPanel() {
 					/>
 				</div>
 
-				{!isMobile &&
-					(isLoop && startWp ? (
+				{/* Endpoint editors, reverse, and back-to-start render on mobile
+				    too: without them touch users had no panel affordance to
+				    close a loop or reverse. */}
+				{isLoop && startWp ? (
+					<div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+						<EndpointButton
+							dotColor={RDS_COLORS.success}
+							label={t("plan.loopFrom", { name: startLabel })}
+							title={t("plan.moveLoop")}
+							onClick={() => openSearch("replace-loop")}
+						/>
+						<IconBtn
+							title={t("plan.reverseRoute")}
+							onClick={handleReverse}
+							style={{ width: 28, height: 28, flexShrink: 0 }}
+						>
+							<I.swapVert size={15} />
+						</IconBtn>
+					</div>
+				) : (
+					<>
 						<div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-							<EndpointButton
-								dotColor={RDS_COLORS.success}
-								label={t("plan.loopFrom", { name: startLabel })}
-								title={t("plan.moveLoop")}
-								onClick={() => openSearch("replace-loop")}
-							/>
+							<div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
+								<EndpointButton
+									dotColor={RDS_COLORS.success}
+									label={startLabel}
+									muted={!startWp}
+									title={startWp ? t("plan.changeStart") : t("plan.addStart")}
+									onClick={() => openSearch("replace-start")}
+								/>
+								<EndpointButton
+									dotColor={RDS_COLORS.danger}
+									label={endLabel}
+									muted={!hasEnd}
+									title={hasEnd ? t("plan.changeEnd") : t("plan.addEnd")}
+									onClick={() => openSearch("replace-end")}
+								/>
+							</div>
 							<IconBtn
 								title={t("plan.reverseRoute")}
 								onClick={handleReverse}
+								disabled={waypoints.length < 2}
 								style={{ width: 28, height: 28, flexShrink: 0 }}
 							>
 								<I.swapVert size={15} />
 							</IconBtn>
 						</div>
-					) : (
-						<>
-							<div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-								<div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
-									<EndpointButton
-										dotColor={RDS_COLORS.success}
-										label={startLabel}
-										muted={!startWp}
-										title={startWp ? t("plan.changeStart") : t("plan.addStart")}
-										onClick={() => openSearch("replace-start")}
-									/>
-									<EndpointButton
-										dotColor={RDS_COLORS.danger}
-										label={endLabel}
-										muted={!hasEnd}
-										title={hasEnd ? t("plan.changeEnd") : t("plan.addEnd")}
-										onClick={() => openSearch("replace-end")}
-									/>
-								</div>
-								<IconBtn
-									title={t("plan.reverseRoute")}
-									onClick={handleReverse}
-									disabled={waypoints.length < 2}
-									style={{ width: 28, height: 28, flexShrink: 0 }}
-								>
-									<I.swapVert size={15} />
-								</IconBtn>
-							</div>
-							{waypoints.length >= 2 && (
-								<button
-									type="button"
-									onClick={handleBackToStart}
-									style={{
-										display: "inline-flex",
-										alignItems: "center",
-										justifyContent: "center",
-										gap: 6,
-										marginTop: 6,
-										height: 28,
-										padding: "0 10px",
-										borderRadius: 8,
-										border: `1px dashed ${RDS_COLORS.borderStrong}`,
-										background: "transparent",
-										color: RDS_COLORS.fgMuted,
-										fontSize: 12,
-										width: "100%",
-										cursor: "pointer",
-									}}
-								>
-									<I.cornerDownLeft size={13} /> {t("plan.backToStart")}
-								</button>
-							)}
-						</>
-					))}
+						{waypoints.length >= 2 && (
+							<button
+								type="button"
+								onClick={handleBackToStart}
+								style={{
+									display: "inline-flex",
+									alignItems: "center",
+									justifyContent: "center",
+									gap: 6,
+									marginTop: 6,
+									height: 28,
+									padding: "0 10px",
+									borderRadius: 8,
+									border: `1px dashed ${RDS_COLORS.borderStrong}`,
+									background: "transparent",
+									color: RDS_COLORS.fgMuted,
+									fontSize: 12,
+									width: "100%",
+									cursor: "pointer",
+								}}
+							>
+								<I.cornerDownLeft size={13} /> {t("plan.backToStart")}
+							</button>
+						)}
+					</>
+				)}
 			</div>
 
 			{/* Stats */}
-			<div style={{ padding: "14px 20px", borderBottom: `1px solid ${RDS_COLORS.border}` }}>
+			<div style={{ padding: "14px 20px", borderBottom: `1px solid ${RDS_COLORS.border}`, position: "relative" }}>
+				{isComputingRoute && (
+					<div
+						style={{
+							position: "absolute",
+							top: 4,
+							right: 20,
+							display: "inline-flex",
+							alignItems: "center",
+							gap: 6,
+							fontSize: 11,
+							color: RDS_COLORS.fgSubtle,
+						}}
+					>
+						<span style={{ display: "inline-flex", animation: "rds-spin 0.8s linear infinite" }}>
+							<I.refresh size={11} />
+						</span>
+						{t("plan.calculating")}
+					</div>
+				)}
 				<div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(72px, 1fr))", gap: 8 }}>
 					{stats.map((s) => (
 						<div key={s.label} style={{ minWidth: 0 }}>
@@ -777,6 +819,13 @@ export function PlanPanel() {
 											<I.grip size={14} />
 										</IconBtn>
 										<IconBtn
+											title={isDirect ? t("plan.makeRouted") : t("plan.makeDirect")}
+											onClick={() => handleToggleWaypointType(i, w.type)}
+											style={{ color: isDirect ? RDS_COLORS.warn : RDS_COLORS.fgSubtle }}
+										>
+											<I.zap size={14} />
+										</IconBtn>
+										<IconBtn
 											title={t("plan.removeWaypoint")}
 											onClick={() => handleRemoveWaypoint(i)}
 											style={{ color: RDS_COLORS.fgSubtle }}
@@ -790,32 +839,34 @@ export function PlanPanel() {
 					</div>
 				)}
 
-				{!isMobile && (
-					<button
-						type="button"
-						onClick={() => openModal("search")}
-						style={{
-							display: "inline-flex",
-							alignItems: "center",
-							gap: 8,
-							marginTop: 10,
-							height: 32,
-							padding: "0 10px",
-							borderRadius: 8,
-							border: `1px dashed ${RDS_COLORS.borderStrong}`,
-							background: "transparent",
-							color: RDS_COLORS.fgMuted,
-							fontSize: 12.5,
-							width: "100%",
-							cursor: "pointer",
-						}}
-					>
-						<I.plus size={14} /> {t("plan.addWaypoint")}
-						<span style={{ flex: 1 }} />
-						<Kbd>⌘</Kbd>
-						<Kbd>K</Kbd>
-					</button>
-				)}
+				<button
+					type="button"
+					onClick={() => openModal("search")}
+					style={{
+						display: "inline-flex",
+						alignItems: "center",
+						gap: 8,
+						marginTop: 10,
+						height: 32,
+						padding: "0 10px",
+						borderRadius: 8,
+						border: `1px dashed ${RDS_COLORS.borderStrong}`,
+						background: "transparent",
+						color: RDS_COLORS.fgMuted,
+						fontSize: 12.5,
+						width: "100%",
+						cursor: "pointer",
+					}}
+				>
+					<I.plus size={14} /> {t("plan.addWaypoint")}
+					{!isMobile && (
+						<>
+							<span style={{ flex: 1 }} />
+							<Kbd>⌘</Kbd>
+							<Kbd>K</Kbd>
+						</>
+					)}
+				</button>
 			</div>
 
 			{/* Footer */}
@@ -833,8 +884,16 @@ export function PlanPanel() {
 					style={{ flex: 1, minWidth: 0, padding: "0 10px" }}
 					disabled={mode.kind === "editing" ? !isDirty || waypoints.length < 2 || updateRoute.isPending : !hasRoute}
 					onClick={handleSaveClick}
+					// No surprise sign-in wall at the end of the flow: tell
+					// anonymous users up front that saving needs an account.
+					title={isAuthenticated ? undefined : t("save.signInHint")}
 				>
-					<I.save size={14} /> {mode.kind === "editing" && updateRoute.isPending ? t("save.saving") : t("common.save")}
+					<I.save size={14} />{" "}
+					{mode.kind === "editing" && updateRoute.isPending
+						? t("save.saving")
+						: isAuthenticated
+							? t("common.save")
+							: t("save.signInShort")}
 				</Btn>
 				{mode.kind === "editing" && (
 					<Btn

@@ -1,6 +1,8 @@
 import type { ApiRouteShare } from "@routess/api-client";
-import { useCopySharedRoute, useMarkShareRead, useShareInbox } from "@/lib/api-queries";
+import { useCopySharedRoute, useDismissShare, useMarkShareRead, useShareInbox } from "@/lib/api-queries";
 import { useT } from "@/lib/i18n";
+import { useToastStore } from "@/stores/toastStore";
+import { useUiStore } from "@/stores/uiStore";
 import { I } from "../../components/icons";
 import { Btn, RDS_COLORS } from "../../components/primitives";
 import { Tooltip } from "../../components/Tooltip";
@@ -11,7 +13,24 @@ function ShareCard({ share, onOpenProfile }: { share: ApiRouteShare; onOpenProfi
 	const t = useT();
 	const markRead = useMarkShareRead();
 	const copy = useCopySharedRoute();
+	const dismiss = useDismissShare();
+	const pushToast = useToastStore((s) => s.push);
+	const setContext = useUiStore((s) => s.setContext);
 	const unread = !share.readAt;
+
+	const saveCopy = () => {
+		copy.mutate(share.id, {
+			onSuccess: (newRoute) => {
+				pushToast({
+					kind: "success",
+					title: t("social.inbox.copiedToast"),
+					body: newRoute.name,
+					action: { label: t("social.inbox.viewInLibrary"), onClick: () => setContext("library") },
+				});
+			},
+		});
+		if (unread) markRead.mutate(share.id);
+	};
 
 	const header = (
 		<div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -82,6 +101,16 @@ function ShareCard({ share, onOpenProfile }: { share: ApiRouteShare; onOpenProfi
 				<div style={{ fontSize: 13, color: RDS_COLORS.fgSubtle, fontStyle: "italic" }}>
 					{t("social.inbox.unavailable")}
 				</div>
+				<div style={{ display: "flex", gap: 8 }}>
+					{unread && (
+						<Btn variant="ghost" onClick={() => markRead.mutate(share.id)}>
+							<I.check size={13} /> {t("social.inbox.markRead")}
+						</Btn>
+					)}
+					<Btn variant="ghost" disabled={dismiss.isPending} onClick={() => dismiss.mutate(share.id)}>
+						<I.close size={13} /> {t("social.inbox.dismiss")}
+					</Btn>
+				</div>
 			</div>
 		);
 	}
@@ -97,14 +126,7 @@ function ShareCard({ share, onOpenProfile }: { share: ApiRouteShare; onOpenProfi
 			}
 			footer={
 				<div style={{ display: "flex", gap: 8 }}>
-					<Btn
-						variant="ghost"
-						disabled={copy.isPending}
-						onClick={() => {
-							copy.mutate(share.id);
-							if (unread) markRead.mutate(share.id);
-						}}
-					>
+					<Btn variant="ghost" disabled={copy.isPending || copy.isSuccess} onClick={saveCopy}>
 						<I.copy size={13} /> {copy.isSuccess ? t("social.inbox.copied") : t("social.inbox.saveCopy")}
 					</Btn>
 					{unread && (
@@ -112,6 +134,9 @@ function ShareCard({ share, onOpenProfile }: { share: ApiRouteShare; onOpenProfi
 							<I.check size={13} /> {t("social.inbox.markRead")}
 						</Btn>
 					)}
+					<Btn variant="ghost" disabled={dismiss.isPending} onClick={() => dismiss.mutate(share.id)}>
+						<I.close size={13} /> {t("social.inbox.dismiss")}
+					</Btn>
 				</div>
 			}
 		/>

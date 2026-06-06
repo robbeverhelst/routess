@@ -7,6 +7,7 @@ import { SessionService } from "../auth/session.service";
 import { Route } from "../entities/route.entity";
 import { User } from "../entities/user.entity";
 import type { UpdateCurrentUserDto } from "./dto/update-current-user.dto";
+import { isHandleUniqueViolation } from "./handle.util";
 
 // Days of grace between self-initiated deletion and the hard-delete cron.
 // Per ADR 0017. If you change this, update the ADR + UI copy + tests.
@@ -61,7 +62,16 @@ export class UsersService {
 			user.preferences = mergeUserPreferences(user.preferences, updateUserDto.preferences);
 		}
 
-		await this.em.persist(user).flush();
+		try {
+			await this.em.persist(user).flush();
+		} catch (error) {
+			// Lost the handle race to a concurrent claim; same 409 as the
+			// up-front taken check.
+			if (isHandleUniqueViolation(error)) {
+				throw new ConflictException("This handle is already taken");
+			}
+			throw error;
+		}
 		return user;
 	}
 

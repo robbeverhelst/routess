@@ -1,5 +1,5 @@
 import { useIsAuthenticated } from "@/hooks/useAuthState";
-import { useFollowUser, usePublicProfile, useUnfollowUser } from "@/lib/api-queries";
+import { useAuthStatus, useFollowUser, usePublicProfile, useUnfollowUser } from "@/lib/api-queries";
 import { useT } from "@/lib/i18n";
 import { useUnits } from "@/lib/units";
 import { I } from "../../components/icons";
@@ -31,6 +31,7 @@ export function ProfileView({
 }) {
 	const t = useT();
 	const isAuthenticated = useIsAuthenticated();
+	const { data: auth } = useAuthStatus();
 	const { data: profile, isLoading, isError } = usePublicProfile(handle);
 	const follow = useFollowUser();
 	const unfollow = useUnfollowUser();
@@ -47,6 +48,7 @@ export function ProfileView({
 
 	const distance = formatDistanceParts(profile.stats.totalDistance / 1000);
 	const busy = follow.isPending || unfollow.isPending;
+	const isOwnProfile = auth?.user?.handle === profile.handle;
 
 	return (
 		<div style={{ display: "flex", flexDirection: "column", height: "100%", overflowY: "auto" }}>
@@ -79,7 +81,7 @@ export function ProfileView({
 							@{profile.handle}
 						</div>
 					</div>
-					{isAuthenticated && profile.isFollowing !== null && (
+					{isAuthenticated && !isOwnProfile && profile.isFollowing !== null && (
 						<Btn
 							variant={profile.isFollowing ? "ghost" : "primary"}
 							disabled={busy}
@@ -90,6 +92,19 @@ export function ProfileView({
 							}
 						>
 							{profile.isFollowing ? t("social.unfollow") : t("social.follow")}
+						</Btn>
+					)}
+					{!isAuthenticated && (
+						// Anonymous visitors get the affordance too; it routes
+						// through sign-in instead of dead-ending.
+						<Btn
+							variant="primary"
+							title={t("social.profile.signInToFollow")}
+							onClick={() => {
+								window.location.href = "/";
+							}}
+						>
+							{t("social.follow")}
 						</Btn>
 					)}
 				</div>
