@@ -35,6 +35,11 @@ const TOUCH_HIT_PADDING = 12;
 // Ignore taps right after a pinch so a sloppy two-finger gesture never adds a
 // waypoint via the click Mapbox synthesizes for the last finger.
 const GESTURE_COOLDOWN_MS = 300;
+// Browsers fire compatibility mouse events (mousedown/mouseup/click) right
+// after a tap's touchend. Ignore mouse input this soon after touch so the
+// mouse drag path can't hijack a tap; otherwise its startDrag dismisses the
+// delete popup the tap just opened.
+const TOUCH_MOUSE_SUPPRESS_MS = 700;
 
 // Mapbox doesn't auto-wrap event.lngLat — panning the world east a few
 // times yields lng > 180, which the Directions API rejects with 422.
@@ -67,6 +72,7 @@ interface InteractionState {
 	dragMode: DragMode | null;
 	touchSession: TouchSession | null;
 	lastMultiTouchAt: number;
+	lastTouchAt: number;
 	hoveredRouteFeatureId: string | number | undefined;
 	suppressNextClick: boolean;
 }
@@ -80,6 +86,7 @@ const createInitialState = (): InteractionState => ({
 	dragMode: null,
 	touchSession: null,
 	lastMultiTouchAt: 0,
+	lastTouchAt: 0,
 	hoveredRouteFeatureId: undefined,
 	suppressNextClick: false,
 });
@@ -447,6 +454,9 @@ export const initializeMapInteractions = (
 
 	const handleMouseDown = async (event: MapMouseEvent) => {
 		if (isMapLockedRef.current || event.originalEvent.button !== 0) return;
+		// Compatibility mouse event synthesized from a recent touch: the
+		// touch handlers already resolved this gesture.
+		if (Date.now() - state.lastTouchAt < TOUCH_MOUSE_SUPPRESS_MS) return;
 
 		state.suppressNextClick = false;
 
@@ -466,6 +476,7 @@ export const initializeMapInteractions = (
 
 	const handleTouchStart = (event: MapTouchEvent) => {
 		if (isMapLockedRef.current) return;
+		state.lastTouchAt = Date.now();
 
 		if (event.points.length !== 1) {
 			state.lastMultiTouchAt = Date.now();
@@ -512,6 +523,7 @@ export const initializeMapInteractions = (
 
 	const handleTouchMove = (event: MapTouchEvent) => {
 		if (isMapLockedRef.current) return;
+		state.lastTouchAt = Date.now();
 
 		if (event.points.length !== 1) {
 			state.lastMultiTouchAt = Date.now();
@@ -543,6 +555,7 @@ export const initializeMapInteractions = (
 	};
 
 	const handleTouchEnd = async () => {
+		state.lastTouchAt = Date.now();
 		const session = state.touchSession;
 		clearTouchSession();
 
@@ -561,6 +574,7 @@ export const initializeMapInteractions = (
 	};
 
 	const handleTouchCancel = () => {
+		state.lastTouchAt = Date.now();
 		clearTouchSession();
 		if (state.isDragging) {
 			void cancelDrag();
