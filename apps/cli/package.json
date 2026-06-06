@@ -22,7 +22,7 @@
 	"dependencies": {},
 	"devDependencies": {
 		"@routess/core": "workspace:*",
-		"@types/node": "^22.0.0",
+		"@types/node": "^25.0.0",
 		"commander": "^13.1.0",
 		"typescript": "~6.0.0"
 	},
