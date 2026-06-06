@@ -1,8 +1,10 @@
+import type { Waypoint } from "@routess/core";
 import { useEffect, useRef, useState } from "react";
 import { emitAppEvent } from "@/lib/app-events";
 import { type SupportedLanguage, t } from "@/lib/i18n";
 import { getRuntimeConfig } from "@/lib/runtime-config";
 import { useModalsStore } from "@/stores/modalsStore";
+import { useRoutingStore } from "@/stores/routingStore";
 import { useUiStore } from "@/stores/uiStore";
 import { EmptySearch } from "../components/EmptyStates";
 import { I } from "../components/icons";
@@ -89,9 +91,33 @@ export function SearchModal() {
 		};
 	}, [query]);
 
+	const searchIntent = useModalsStore((s) => s.searchIntent);
+
 	const handleSelect = (r: Suggestion) => {
 		if (!r.coords) return;
 		const [lng, lat] = r.coords;
+		if (searchIntent !== "fly") {
+			const { waypoints, setWaypoints, saveSnapshot } = useRoutingStore.getState();
+			const wp: Waypoint = { coord: [lng, lat], type: "routed", name: r.name };
+			const next = waypoints.slice();
+			if (searchIntent === "replace-start") {
+				if (next.length === 0) next.push(wp);
+				else next[0] = wp;
+			} else if (searchIntent === "replace-end") {
+				if (next.length < 2) next.push(wp);
+				else next[next.length - 1] = wp;
+			} else {
+				// replace-loop: move the shared anchor of a loop route
+				if (next.length === 0) next.push(wp);
+				else {
+					next[0] = wp;
+					if (next.length > 1) next[next.length - 1] = { ...wp };
+				}
+			}
+			saveSnapshot();
+			setWaypoints(next);
+			emitAppEvent("routess:recalculate-route");
+		}
 		emitAppEvent("routess:fly-to", { coordinates: [lng, lat], zoom: 14 });
 		close();
 	};

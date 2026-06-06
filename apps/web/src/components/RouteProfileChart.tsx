@@ -10,12 +10,14 @@ const CURVE_H = 56;
 const STRIP_H = 8;
 const STRIP_GAP = 6;
 const CURVE_PAD_Y = 3;
-const Y_AXIS_W = 22;
-const Y_AXIS_GAP = 4;
-// Below this much real elevation variation, the curve is plotted into a
-// fixed-size visual window centred on the data. Keeps flat routes from
-// looking like rollercoasters while still letting hilly routes scale up.
-const MIN_VISUAL_RANGE_M = 30;
+const INNER_PAD_X = 10;
+// Scale floors for the curve's vertical window. The grade floor keeps the
+// on-screen steepness roughly proportional to real effort: a window is never
+// smaller than 0.25% average grade over the route, so flat routes read as
+// gently flat instead of being auto-scaled into mountains. The absolute floor
+// stops sub-meter sampling noise from dominating short dead-flat routes.
+const MIN_VISUAL_RANGE_M = 4;
+const MIN_VISUAL_GRADE = 0.0025;
 const CONTAINER_PAD_TOP = 12;
 
 const BUCKET_ORDER: SurfaceBucket[] = ["paved", "compacted", "unpaved", "path"];
@@ -40,6 +42,9 @@ interface CurveSummary {
 	minMeters: number;
 	maxMeters: number;
 	totalMeters: number;
+	// Pixel y (in curve space) for any elevation, so gridlines and the hover
+	// dot share the exact transform the curve was plotted with.
+	yFor: (elevationMeters: number) => number;
 }
 
 const summarizeProfile = (profile: ElevationProfilePoint[]): CurveSummary | null => {
@@ -54,20 +59,24 @@ const summarizeProfile = (profile: ElevationProfilePoint[]): CurveSummary | null
 		if (p.elevationMeters > maxE) maxE = p.elevationMeters;
 	}
 	const actualRange = maxE - minE;
-	const visualRange = Math.max(actualRange, MIN_VISUAL_RANGE_M);
-	const displayMin = (minE + maxE) / 2 - visualRange / 2;
+	// Headroom above (1.3) and a small offset below (8%) keep the curve and its
+	// gridline labels inside the window, anchored to the data minimum.
+	const visualRange = Math.max(actualRange * 1.3, MIN_VISUAL_RANGE_M, total * MIN_VISUAL_GRADE);
+	const displayMin = minE - visualRange * 0.08;
 	const innerH = CURVE_H - CURVE_PAD_Y * 2;
+
+	const yFor = (e: number) => CURVE_PAD_Y + innerH - ((e - displayMin) / visualRange) * innerH;
 
 	let line = "";
 	for (let i = 0; i < profile.length; i++) {
 		const p = profile[i];
 		const x = (p.distanceMeters / total) * CHART_W;
-		const y = CURVE_PAD_Y + innerH - ((p.elevationMeters - displayMin) / visualRange) * innerH;
+		const y = yFor(p.elevationMeters);
 		line += i === 0 ? `M${x.toFixed(2)} ${y.toFixed(2)}` : ` L${x.toFixed(2)} ${y.toFixed(2)}`;
 	}
 	const area = `${line} L${CHART_W} ${CURVE_H} L0 ${CURVE_H} Z`;
 
-	return { line, area, minMeters: minE, maxMeters: maxE, totalMeters: total };
+	return { line, area, minMeters: minE, maxMeters: maxE, totalMeters: total, yFor };
 };
 
 const findElevationAt = (profile: ElevationProfilePoint[], distanceMeters: number): number | null => {
@@ -108,6 +117,28 @@ const computeBucketShares = (breakdown: SurfaceBreakdown | null): BucketShare[] 
 	})).filter((s) => s.pct > 0);
 };
 
+// Elevation value pinned to its height on the curve: max sits above that
+// height, min below, so the two can never collide on flat routes.
+function GridLabel({ y, label, labelPos }: { y: number; label: string; labelPos: "above" | "below" }) {
+	return (
+		<span
+			style={{
+				position: "absolute",
+				left: 0,
+				top: labelPos === "above" ? y - 12 : y + 3,
+				fontSize: 10,
+				lineHeight: 1,
+				color: RDS_COLORS.fgSubtle,
+				fontVariantNumeric: "tabular-nums",
+				pointerEvents: "none",
+				zIndex: 1,
+			}}
+		>
+			{label}
+		</span>
+	);
+}
+
 interface RouteProfileChartProps {
 	profile: ElevationProfilePoint[] | null | undefined;
 	breakdown: SurfaceBreakdown | null;
@@ -144,9 +175,9 @@ export function RouteProfileChart({
 			const target = containerRef.current;
 			if (!target) return;
 			const rect = target.getBoundingClientRect();
-			// Padding mirrors the container padding: left = Y_AXIS_W + Y_AXIS_GAP, right = 8.
-			const innerLeft = rect.left + Y_AXIS_W + Y_AXIS_GAP;
-			const innerWidth = Math.max(1, rect.width - Y_AXIS_W - Y_AXIS_GAP - 8);
+			// Mirrors the container's horizontal padding.
+			const innerLeft = rect.left + INNER_PAD_X;
+			const innerWidth = Math.max(1, rect.width - INNER_PAD_X * 2);
 			const ratio = Math.max(0, Math.min(1, (e.clientX - innerLeft) / innerWidth));
 			setHover(ratio * totalMeters);
 		},
@@ -207,14 +238,12 @@ export function RouteProfileChart({
 			});
 	}, [breakdown, hasSurface, summary, totalMeters]);
 
-	const axisLabelStyle: CSSProperties = {
-		position: "absolute",
-		fontSize: 10,
-		lineHeight: 1,
-		color: RDS_COLORS.fgSubtle,
-		fontVariantNumeric: "tabular-nums",
-		pointerEvents: "none",
-	};
+	const guidelineLeft = hoverIndicator
+		? `calc(${INNER_PAD_X}px + (100% - ${INNER_PAD_X * 2}px) * ${hoverIndicator.ratio})`
+		: undefined;
+
+	const hoverDotY =
+		hoverIndicator && hoverIndicator.elevation != null && summary ? summary.yFor(hoverIndicator.elevation) : null;
 
 	return (
 		<div style={{ marginTop: 14, ...style }}>
@@ -229,14 +258,30 @@ export function RouteProfileChart({
 					position: "relative",
 					background: RDS_COLORS.bgInput,
 					borderRadius: 8,
-					padding: `${CONTAINER_PAD_TOP}px 8px 16px ${Y_AXIS_W + Y_AXIS_GAP}px`,
+					padding: `${CONTAINER_PAD_TOP}px ${INNER_PAD_X}px 12px`,
 					opacity: dim ? 0.6 : 1,
 					touchAction: "none",
 					cursor: hasProfile ? "crosshair" : "default",
 				}}
 			>
-				{/* Elevation curve */}
+				{/* Elevation curve with min/max labels on the data extremes */}
 				<div style={{ position: "relative", height: CURVE_H }}>
+					{summary && (
+						<>
+							<GridLabel
+								y={summary.yFor(summary.maxMeters)}
+								label={formatElevation(summary.maxMeters)}
+								labelPos="above"
+							/>
+							{summary.maxMeters !== summary.minMeters && (
+								<GridLabel
+									y={summary.yFor(summary.minMeters)}
+									label={formatElevation(summary.minMeters)}
+									labelPos="below"
+								/>
+							)}
+						</>
+					)}
 					<svg
 						viewBox={`0 0 ${CHART_W} ${CURVE_H}`}
 						preserveAspectRatio="none"
@@ -252,7 +297,13 @@ export function RouteProfileChart({
 						{summary ? (
 							<>
 								<path d={summary.area} fill={`url(#${gradientId})`} />
-								<path d={summary.line} stroke="var(--rds-accent)" strokeWidth="1.4" fill="none" />
+								<path
+									d={summary.line}
+									stroke="var(--rds-accent)"
+									strokeWidth="1.5"
+									fill="none"
+									vectorEffect="non-scaling-stroke"
+								/>
 							</>
 						) : (
 							<line
@@ -269,100 +320,110 @@ export function RouteProfileChart({
 					</svg>
 				</div>
 
-				{/* Surface strip */}
+				{/* Surface strip, flush with the curve's edges */}
 				<div
 					style={{
 						position: "relative",
 						height: STRIP_H,
 						marginTop: STRIP_GAP,
-						borderRadius: 999,
+						borderRadius: 4,
 						overflow: "hidden",
 						background: hasSurface ? "transparent" : RDS_COLORS.borderStrong,
-						border: `1px solid ${RDS_COLORS.border}`,
 						opacity: surfaceLoading && !hasSurface ? 0.6 : 1,
 					}}
 				>
 					{stripBands}
 				</div>
 
-				{/* Hover guideline */}
+				{/* Crosshair: guideline through curve + strip, dot riding the curve */}
 				{hoverIndicator && (
 					<div
 						style={{
 							position: "absolute",
 							top: CONTAINER_PAD_TOP,
-							left: `calc(${Y_AXIS_W + Y_AXIS_GAP}px + (100% - ${Y_AXIS_W + Y_AXIS_GAP + 8}px) * ${hoverIndicator.ratio})`,
+							left: guidelineLeft,
 							width: 1,
 							height: CURVE_H + STRIP_GAP + STRIP_H,
 							background: RDS_COLORS.accent,
-							opacity: 0.6,
+							opacity: 0.5,
 							pointerEvents: "none",
 						}}
 					/>
 				)}
-
-				{/* Y-axis: max pinned to top of curve area, min pinned to bottom. The
-				    curve uses a clamped visual range, so on flat routes the line sits
-				    in the middle while the labels still mark the data extremes. */}
-				<span style={{ ...axisLabelStyle, left: 2, top: CONTAINER_PAD_TOP, textAlign: "right", width: Y_AXIS_W }}>
-					{summary ? formatElevation(summary.maxMeters) : ""}
-				</span>
-				<span
-					style={{
-						...axisLabelStyle,
-						left: 2,
-						top: CONTAINER_PAD_TOP + CURVE_H - 10,
-						textAlign: "right",
-						width: Y_AXIS_W,
-					}}
-				>
-					{summary ? formatElevation(summary.minMeters) : ""}
-				</span>
-
-				{/* X-axis: 0 at start, total distance at end. */}
-				<span style={{ ...axisLabelStyle, left: Y_AXIS_W + Y_AXIS_GAP, bottom: 2 }}>{summary ? "0" : ""}</span>
-				<span style={{ ...axisLabelStyle, right: 8, bottom: 2 }}>
-					{summary ? formatDistance(summary.totalMeters / 1000) : ""}
-				</span>
+				{hoverIndicator && hoverDotY != null && (
+					<div
+						style={{
+							position: "absolute",
+							top: CONTAINER_PAD_TOP + hoverDotY - 3.5,
+							left: guidelineLeft,
+							width: 7,
+							height: 7,
+							borderRadius: 999,
+							background: RDS_COLORS.accent,
+							border: `1.5px solid ${RDS_COLORS.bgPanel}`,
+							transform: "translateX(-50%)",
+							pointerEvents: "none",
+							zIndex: 2,
+						}}
+					/>
+				)}
 			</div>
 
-			{/* Tooltip */}
-			{hoverIndicator && (
+			{/* Readout: always rendered at fixed height so hover never reflows.
+			    Idle shows the distance range; hover shows values at the cursor. */}
+			{summary && (
 				<div
 					style={{
-						marginTop: 8,
+						marginTop: 6,
 						display: "flex",
 						alignItems: "center",
-						gap: 10,
-						fontSize: 11.5,
+						gap: 8,
+						fontSize: 11,
 						color: RDS_COLORS.fgMuted,
-						minHeight: 16,
+						height: 16,
+						padding: `0 ${INNER_PAD_X}px`,
 					}}
 				>
-					<span className="rds-mono">{formatDistance(hoverIndicator.distanceMeters / 1000)}</span>
-					{hoverIndicator.elevation != null && (
+					{hoverIndicator ? (
 						<>
-							<span style={{ color: RDS_COLORS.fgSubtle }}>·</span>
-							<span className="rds-mono">{formatElevation(hoverIndicator.elevation)}</span>
+							<span className="rds-mono">{formatDistance(hoverIndicator.distanceMeters / 1000)}</span>
+							{hoverIndicator.elevation != null && (
+								<>
+									<span style={{ color: RDS_COLORS.fgSubtle }} aria-hidden="true">
+										·
+									</span>
+									<span className="rds-mono">{formatElevation(hoverIndicator.elevation)}</span>
+								</>
+							)}
+							{hoverIndicator.surface && (
+								<>
+									<span style={{ color: RDS_COLORS.fgSubtle }} aria-hidden="true">
+										·
+									</span>
+									<span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+										<span
+											style={{
+												width: 7,
+												height: 7,
+												borderRadius: 999,
+												background: BUCKET_COLOR[hoverIndicator.surface],
+												flexShrink: 0,
+											}}
+										/>
+										{BUCKET_LABEL[hoverIndicator.surface]}
+									</span>
+								</>
+							)}
 						</>
+					) : (
+						<span className="rds-mono" style={{ color: RDS_COLORS.fgSubtle }}>
+							0
+						</span>
 					)}
-					{hoverIndicator.surface && (
-						<>
-							<span style={{ color: RDS_COLORS.fgSubtle }}>·</span>
-							<span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-								<span
-									style={{
-										width: 8,
-										height: 8,
-										borderRadius: 999,
-										background: BUCKET_COLOR[hoverIndicator.surface],
-										flexShrink: 0,
-									}}
-								/>
-								{BUCKET_LABEL[hoverIndicator.surface]}
-							</span>
-						</>
-					)}
+					<span style={{ flex: 1 }} />
+					<span className="rds-mono" style={{ color: RDS_COLORS.fgSubtle }}>
+						{formatDistance(summary.totalMeters / 1000)}
+					</span>
 				</div>
 			)}
 
@@ -379,9 +440,12 @@ export function RouteProfileChart({
 						)}
 					</div>
 					{hasSurface ? (
-						<div style={{ display: "flex", flexWrap: "wrap", gap: "6px 12px" }}>
+						<div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "4px 10px" }}>
 							{shares.map((s) => (
-								<div key={s.bucket} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+								<div
+									key={s.bucket}
+									style={{ display: "inline-flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}
+								>
 									<span
 										style={{
 											width: 8,
@@ -391,7 +455,7 @@ export function RouteProfileChart({
 											flexShrink: 0,
 										}}
 									/>
-									<span style={{ fontSize: 11.5, color: RDS_COLORS.fgMuted }}>
+									<span style={{ fontSize: 11, color: RDS_COLORS.fgMuted }}>
 										{BUCKET_LABEL[s.bucket]} <span className="rds-mono">{Math.round(s.pct)}%</span>
 									</span>
 								</div>
