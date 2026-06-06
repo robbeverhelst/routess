@@ -1,6 +1,7 @@
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { type ReactNode, useEffect, useState } from "react";
 import { Drawer } from "vaul";
+import { t } from "@/lib/i18n";
 import { MOBILE_DRAWER_SNAPS, useMobileDrawerStore } from "../stores/mobileDrawerStore";
 import { I } from "./icons";
 import { IconBtn, RDS_COLORS } from "./primitives";
@@ -112,7 +113,7 @@ export function MobilePanelDrawer({ title, open, onClose, children, headerSlot }
 					>
 						{headerSlot ?? <span style={{ fontSize: 16, fontWeight: 600, letterSpacing: -0.2 }}>{title}</span>}
 						<div style={{ flex: 1 }} />
-						<IconBtn title="Close" onClick={onClose}>
+						<IconBtn title={t("common.close")} onClick={onClose}>
 							<I.close size={16} />
 						</IconBtn>
 					</header>

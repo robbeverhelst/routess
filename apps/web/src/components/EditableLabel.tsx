@@ -1,5 +1,7 @@
 import { type CSSProperties, type KeyboardEvent, useEffect, useRef, useState } from "react";
+import { t } from "@/lib/i18n";
 import { RDS_COLORS } from "./primitives";
+import { Tooltip } from "./Tooltip";
 
 interface EditableLabelProps {
 	value: string | undefined;
@@ -86,28 +88,29 @@ export function EditableLabel({
 	const display = value ?? placeholder;
 	const isPlaceholder = !value;
 	return (
-		<button
-			type="button"
-			disabled={disabled}
-			onClick={(e) => {
-				e.stopPropagation();
-				if (!disabled) setEditing(true);
-			}}
-			title={disabled ? undefined : "Click to rename"}
-			style={{
-				background: "transparent",
-				border: 0,
-				padding: 0,
-				margin: 0,
-				cursor: disabled ? "default" : "text",
-				textAlign: "left",
-				font: "inherit",
-				color: isPlaceholder ? RDS_COLORS.fgMuted : RDS_COLORS.fg,
-				...(isPlaceholder ? hintStyle : null),
-				...style,
-			}}
-		>
-			{display}
-		</button>
+		<Tooltip label={disabled ? undefined : t("common.clickToRename")}>
+			<button
+				type="button"
+				disabled={disabled}
+				onClick={(e) => {
+					e.stopPropagation();
+					if (!disabled) setEditing(true);
+				}}
+				style={{
+					background: "transparent",
+					border: 0,
+					padding: 0,
+					margin: 0,
+					cursor: disabled ? "default" : "text",
+					textAlign: "left",
+					font: "inherit",
+					color: isPlaceholder ? RDS_COLORS.fgMuted : RDS_COLORS.fg,
+					...(isPlaceholder ? hintStyle : null),
+					...style,
+				}}
+			>
+				{display}
+			</button>
+		</Tooltip>
 	);
 }

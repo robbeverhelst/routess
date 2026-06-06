@@ -6,6 +6,7 @@ import { useToastStore } from "@/stores/toastStore";
 import { I } from "../components/icons";
 import { ModalShell } from "../components/ModalShell";
 import { Btn, RDS_COLORS, SecTitle } from "../components/primitives";
+import { Tooltip } from "../components/Tooltip";
 
 const DIRECTIONS = [
 	{ key: "any", labelKey: "loop.dir.any", icon: I.compass },
@@ -123,21 +124,23 @@ export function LoopModal() {
 						/>
 						<span style={{ fontSize: 13 }}>{startLabel}</span>
 						<div style={{ flex: 1 }} />
-						<button
-							type="button"
-							title={t("loop.useCurrent")}
-							onClick={handleUseCurrentLocation}
-							disabled={locationStatus === "locating"}
-							style={{
-								background: "transparent",
-								border: 0,
-								color: RDS_COLORS.fgMuted,
-								cursor: locationStatus === "locating" ? "wait" : "pointer",
-								display: "inline-flex",
-							}}
-						>
-							<I.target size={14} />
-						</button>
+						<Tooltip label={t("loop.useCurrent")}>
+							<button
+								type="button"
+								aria-label={t("loop.useCurrent")}
+								onClick={handleUseCurrentLocation}
+								disabled={locationStatus === "locating"}
+								style={{
+									background: "transparent",
+									border: 0,
+									color: RDS_COLORS.fgMuted,
+									cursor: locationStatus === "locating" ? "wait" : "pointer",
+									display: "inline-flex",
+								}}
+							>
+								<I.target size={14} />
+							</button>
+						</Tooltip>
 					</div>
 				</div>
 
