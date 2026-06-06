@@ -2,7 +2,7 @@ import type { Coordinate, RouteActivity, RouteBaseline, Waypoint, WaypointType }
 import { calculatePathDistance, estimateWalkingDuration } from "@routess/core";
 import type { GeoJSONSource, Map as MapboxMap } from "mapbox-gl";
 import { trackEvent } from "@/lib/analytics/track";
-import type { ApiRoute } from "@/lib/api";
+import { type ApiRoute, apiService } from "@/lib/api";
 import { Logger } from "@/lib/logger";
 import { decompressAndParse, serializeAndCompress } from "@/lib/shareUtils";
 import { validateCoordinate } from "@/lib/utils/route-validation";
@@ -322,7 +322,31 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 		return recompute();
 	};
 
+	// ?route= carries either a route ref (numeric id or 32-hex share token,
+	// from the public route page's "Open in routess") or the legacy
+	// compressed-waypoints payload (ShareModal links). A ref payload can never
+	// look like compressed data and vice versa, so dispatch on shape.
+	const ROUTE_REF_PATTERN = /^(\d+|[0-9a-f]{32})$/;
+
+	const loadFromRouteRef = async (ref: string): Promise<EditResult> => {
+		let route: ApiRoute;
+		try {
+			route = await apiService.getRoute(ref);
+		} catch (error) {
+			Logger.warn("[RouteDraftEditor] Failed to fetch shared route", error);
+			return fail("This route is no longer available.");
+		}
+		// A visitor's draft, not an editing session: the route belongs to
+		// someone else, so it loads unbound and saves as a new route.
+		useRoutingStore.getState().setActivity(route.activity);
+		return loadWaypoints(route.waypoints, {
+			exactRoutePath: route.geometry && route.geometry.length >= 2 ? route.geometry : undefined,
+			saveSnapshot: true,
+		});
+	};
+
 	const loadFromShareLink = async (encoded: string): Promise<EditResult> => {
+		if (ROUTE_REF_PATTERN.test(encoded)) return loadFromRouteRef(encoded);
 		const parsed = decompressAndParse(encoded);
 		if (!parsed || !routeHasValidShape(parsed.waypoints)) {
 			return fail("Failed to read shared route data. The link may be invalid or corrupted.");

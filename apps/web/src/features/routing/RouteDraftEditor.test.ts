@@ -3,11 +3,17 @@ import { emptyHistory, type Waypoint } from "@routess/core";
 import type { Map as MapboxMap } from "mapbox-gl";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { sampleAndComputeMock, getDirectionsMock, fetchMock } = vi.hoisted(() => ({
+const { sampleAndComputeMock, getDirectionsMock, fetchMock, getRouteMock } = vi.hoisted(() => ({
 	sampleAndComputeMock: vi.fn(async () => ({ gainMeters: 0, lossMeters: 0, profile: [] })),
 	getDirectionsMock: vi.fn(),
 	fetchMock: vi.fn(),
+	getRouteMock: vi.fn(),
 }));
+
+vi.mock("@/lib/api", async (importOriginal) => {
+	const original = await importOriginal<typeof import("@/lib/api")>();
+	return { ...original, apiService: { ...original.apiService, getRoute: getRouteMock } };
+});
 
 vi.mock("./services/elevation", () => ({
 	getDefaultElevationService: () => ({
@@ -19,6 +25,7 @@ vi.mock("@/lib/utils/mapbox-api", () => ({
 	getDirections: getDirectionsMock,
 }));
 
+import { serializeAndCompress } from "@/lib/shareUtils";
 import { useRoutingStore } from "@/stores/routingStore";
 import { createRouteDraftEditor } from "./RouteDraftEditor";
 
@@ -158,5 +165,80 @@ describe("RouteDraftEditor — undo behavior", () => {
 		await flushMicrotasks();
 
 		expect(useRoutingStore.getState().waypoints[0].coord).toEqual([0, 0]);
+	});
+
+	// Regression: ?route= carries either the legacy compressed-waypoints
+	// payload (ShareModal) or a route ref (id / share token) from the public
+	// route page's "Open in routess". Refs used to be fed into the payload
+	// parser and always failed with "link may be invalid".
+	describe("loadFromShareLink", () => {
+		const apiRoute = (overrides: Record<string, unknown> = {}) => ({
+			id: 123,
+			name: "Test route",
+			activity: "cycle",
+			visibility: "public",
+			tags: [],
+			description: null,
+			waypoints: [wp([0, 0], "direct"), wp([0.01, 0], "direct")],
+			geometry: [
+				[0, 0],
+				[0.005, 0],
+				[0.01, 0],
+			],
+			...overrides,
+		});
+
+		it("loads a numeric id ref via the API as an unsaved draft", async () => {
+			getRouteMock.mockResolvedValue(apiRoute());
+			const editor = createRouteDraftEditor({ map: mapStub, accessToken });
+
+			const result = await editor.loadFromShareLink("123");
+			await flushMicrotasks();
+
+			expect(result.success).toBe(true);
+			expect(getRouteMock).toHaveBeenCalledWith("123");
+			expect(useRoutingStore.getState().waypoints.length).toBe(2);
+			expect(useRoutingStore.getState().mode.kind).toBe("unsaved");
+		});
+
+		it("loads a 32-hex share token ref via the API", async () => {
+			const token = "0123456789abcdef0123456789abcdef";
+			getRouteMock.mockResolvedValue(apiRoute({ visibility: "unlisted" }));
+			const editor = createRouteDraftEditor({ map: mapStub, accessToken });
+
+			const result = await editor.loadFromShareLink(token);
+			await flushMicrotasks();
+
+			expect(result.success).toBe(true);
+			expect(getRouteMock).toHaveBeenCalledWith(token);
+			expect(useRoutingStore.getState().waypoints.length).toBe(2);
+		});
+
+		it("fails cleanly when the referenced route is gone", async () => {
+			getRouteMock.mockRejectedValue(new Error("404"));
+			const editor = createRouteDraftEditor({ map: mapStub, accessToken });
+
+			const result = await editor.loadFromShareLink("999");
+
+			expect(result.success).toBe(false);
+			expect(result.message).toMatch(/no longer available/i);
+		});
+
+		it("still decodes legacy compressed payloads", async () => {
+			const encoded = serializeAndCompress([wp([0, 0], "direct"), wp([0.01, 0], "direct")], false);
+			if (!encoded) throw new Error("failed to build payload");
+			stubDirectionsOk([
+				[0, 0],
+				[0.01, 0],
+			]);
+			const editor = createRouteDraftEditor({ map: mapStub, accessToken });
+
+			const result = await editor.loadFromShareLink(encoded);
+			await flushMicrotasks();
+
+			expect(result.success).toBe(true);
+			expect(getRouteMock).not.toHaveBeenCalled();
+			expect(useRoutingStore.getState().waypoints.length).toBe(2);
+		});
 	});
 });
