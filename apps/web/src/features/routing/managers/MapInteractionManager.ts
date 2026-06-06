@@ -14,6 +14,7 @@ import {
 import type { RouteDraftEditor } from "@/features/routing/RouteDraftEditor";
 import { Logger } from "@/lib/logger";
 import { useRoutingStore } from "@/stores/routingStore";
+import { useWaypointDragStore } from "@/stores/waypointDragStore";
 import { useWaypointHoverStore } from "@/stores/waypointHoverStore";
 import type { Coordinate } from "@/types/map";
 
@@ -172,6 +173,7 @@ export const initializeMapInteractions = (
 		state.dragWasInserted = false;
 		state.dragMode = null;
 		updateDragLinesLayer(map, []);
+		useWaypointDragStore.getState().endTouchDrag();
 		mapCanvas.style.cursor = "";
 		map.dragPan.enable();
 		map.touchZoomRotate.enable();
@@ -271,10 +273,30 @@ export const initializeMapInteractions = (
 			map.touchZoomRotate.disable();
 			// Visual lift: the marker grows so the grab is acknowledged.
 			setLiftedWaypoint(map, null, index);
+			// Shows the drop-to-delete trash zone overlay.
+			useWaypointDragStore.getState().startTouchDrag();
 		}
 		mapCanvas.style.cursor = "grabbing";
 		clearRouteHover();
 		setPopup(null);
+	};
+
+	// Tracks whether the dragged finger is over the trash drop zone (rect is
+	// registered in client coords by the WaypointDragTrash overlay).
+	const updateTrashHover = (point: PointerPoint) => {
+		const dragStore = useWaypointDragStore.getState();
+		const rect = dragStore.trashRect;
+		if (!rect) {
+			if (dragStore.isOverTrash) dragStore.setOverTrash(false);
+			return;
+		}
+		const canvasRect = mapCanvas.getBoundingClientRect();
+		const clientX = canvasRect.left + point.x;
+		const clientY = canvasRect.top + point.y;
+		const over = clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
+		if (over !== dragStore.isOverTrash) {
+			dragStore.setOverTrash(over);
+		}
 	};
 
 	const renderDragPreview = (nextCoord: Coordinate) => {
@@ -291,6 +313,20 @@ export const initializeMapInteractions = (
 	const commitDrag = async () => {
 		if (!state.isDragging || state.draggedWaypointIndex === -1 || !state.currentLngLat) {
 			resetDragState();
+			return;
+		}
+
+		// Dropped on the trash zone: delete instead of moving. For a waypoint
+		// inserted for this drag, reverting the insert is the deletion.
+		if (state.dragMode === "touch" && useWaypointDragStore.getState().isOverTrash) {
+			const wasInserted = state.dragWasInserted;
+			const waypointIndex = state.draggedWaypointIndex;
+			resetDragState();
+			if (wasInserted) {
+				await editor.undo();
+			} else {
+				await editor.removeWaypoint(waypointIndex);
+			}
 			return;
 		}
 
@@ -537,6 +573,7 @@ export const initializeMapInteractions = (
 		if (state.isDragging) {
 			event.preventDefault();
 			renderDragPreview(wrappedLngLat(event.lngLat));
+			updateTrashHover(event.points[0]);
 			return;
 		}
 
