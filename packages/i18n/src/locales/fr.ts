@@ -350,4 +350,14 @@ export const fr: Record<string, string> = {
 		"Cet itinéraire enregistré est privé, vous seul pouvez donc ouvrir le lien canonique. L'URL ci-dessus contient les points de l'itinéraire dans le lien lui-même. Passez l'itinéraire en non répertorié ou public pour partager une adresse stable.",
 	"share.canonicalHint":
 		"Toute personne disposant de ce lien peut voir l'itinéraire. Les changements de visibilité prennent effet immédiatement.",
+
+	"settings.install.title": "Installer l'application",
+	"settings.install.sub": "Ajoutez routess à votre écran d'accueil",
+	"settings.install.ios.step1": "Touchez le bouton Partager dans Safari",
+	"settings.install.ios.step2": "Choisissez « Sur l'écran d'accueil »",
+	"settings.install.ios.step3": "Touchez Ajouter",
+
+	"pwa.update.title": "Mise à jour disponible",
+	"pwa.update.body": "Une nouvelle version de routess est prête.",
+	"pwa.update.reload": "Recharger",
 };

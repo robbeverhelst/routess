@@ -1268,4 +1268,14 @@ export const nl: Record<string, string> = {
 	"share.privateHint":
 		"Deze opgeslagen route is privé, dus alleen jij kunt de canonieke link openen. De URL hierboven bevat de routepunten in de link zelf. Zet de route op niet-vermeld of openbaar om een vast adres te delen.",
 	"share.canonicalHint": "Iedereen met deze link kan de route bekijken. Wijzigingen in zichtbaarheid gaan meteen in.",
+
+	"settings.install.title": "App installeren",
+	"settings.install.sub": "Zet routess op je beginscherm",
+	"settings.install.ios.step1": "Tik op de deelknop in Safari",
+	"settings.install.ios.step2": 'Kies "Zet op beginscherm"',
+	"settings.install.ios.step3": "Tik op Voeg toe",
+
+	"pwa.update.title": "Update beschikbaar",
+	"pwa.update.body": "Er staat een nieuwe versie van routess klaar.",
+	"pwa.update.reload": "Herladen",
 };

@@ -1256,4 +1256,14 @@ export const en: Record<string, string> = {
 	"routing.ferries.label": "Avoid ferries",
 	"routing.ferries.hint": "Skip routes that cross water by ferry",
 	"route.provenance.mapboxLegacy": "Originally planned with a previous routing engine",
+
+	"settings.install.title": "Install app",
+	"settings.install.sub": "Add routess to your home screen",
+	"settings.install.ios.step1": "Tap the Share button in Safari",
+	"settings.install.ios.step2": 'Choose "Add to Home Screen"',
+	"settings.install.ios.step3": "Tap Add",
+
+	"pwa.update.title": "Update available",
+	"pwa.update.body": "A new version of routess is ready.",
+	"pwa.update.reload": "Reload",
 };
