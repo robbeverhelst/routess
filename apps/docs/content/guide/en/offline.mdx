@@ -7,6 +7,10 @@ routess is a progressive web app (PWA): you can install it from the browser and 
 
 ## Install it
 
+The easiest way is from inside routess: open **Settings** and use **Install app**. On most browsers that triggers the install prompt directly; on iOS it walks you through Safari's **Share → Add to Home Screen** steps.
+
+Installing from the browser itself also works:
+
 - **Chrome / Edge (desktop and Android)**: open the browser menu and choose **Install app** (or **Add to Home screen**).
 - **Safari (iOS)**: tap **Share**, then **Add to Home Screen**.
 
@@ -20,8 +24,8 @@ After your first visit, routess caches:
 - map tiles, styles, and fonts you've already viewed
 - recent route calculations and location searches
 
-Areas you've planned in before stay browsable. Anything new (unvisited map areas, fresh route calculations, saving to your library) needs a connection and syncs once you're back online.
+Areas you've planned in before stay browsable, and routes you've opened stay available offline across app updates. Anything new (unvisited map areas, fresh route calculations, saving to your library) needs a connection; if a save can't reach the server, routess tells you rather than pretending it worked.
 
 ## Updates
 
-The app updates itself in the background. When a new version is ready it's applied on the next reload; if something looks stale, reload the page once.
+The app updates itself in the background. When a new version is ready, a toast offers **Reload**; the update applies when you confirm or on the next fresh start, never mid-edit.

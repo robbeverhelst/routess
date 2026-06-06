@@ -21,10 +21,17 @@ Panels open as a sheet over the map. Drag it up for the full panel (waypoints, e
 
 ![The plan panel opened as a bottom sheet](/guide/mobile-drawer.jpg)
 
-## Gestures
+## Editing gestures
 
-- **Tap** the map to add a waypoint
-- **Long-press** a waypoint to remove it
-- **Drag** with one finger to pan, **pinch** to zoom, **two-finger twist** to rotate
+Route editing on touch screens has its own gesture grammar, built so the map never grabs a waypoint you didn't mean to touch:
+
+- **Tap empty map**: add a waypoint
+- **Tap a waypoint**: open its popup, with delete
+- **Long-press a waypoint**: lift it (the marker grows), then drag it to a new spot
+- **Long-press the route line**: insert a new waypoint there and drag it right away
+- **Long-press empty map**: add a direct (straight-line) waypoint
+- **Drag a lifted waypoint to the trash zone** at the bottom of the map to delete it
+
+Moving your finger immediately always pans the map; **pinch** zooms and a **two-finger twist** rotates. To reorder waypoints in the plan sheet, press and hold a row's grip handle, then drag.
 
 For using routess out on the trail with a flaky connection, see [Offline & installing the app](/en/guide/offline).
