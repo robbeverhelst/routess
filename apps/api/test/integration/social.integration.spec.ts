@@ -232,6 +232,39 @@ describe("Social Integration Tests", () => {
 			expect(unread2.body.unread).toBe(0);
 		});
 
+		it("dismisses a share for the recipient only", async () => {
+			const route = makeRoute(bob, "Dismiss Me", "unlisted");
+			await orm.em.persistAndFlush([route]);
+
+			const share = await api()
+				.post("/api/v1/social/shares")
+				.set("Authorization", `Bearer ${bobToken}`)
+				.send({ routeId: route.id, recipientHandle: "alice" })
+				.expect(201);
+
+			// The sender cannot dismiss the recipient's inbox entry.
+			await api()
+				.delete(`/api/v1/social/shares/${share.body.id}`)
+				.set("Authorization", `Bearer ${bobToken}`)
+				.expect(404);
+
+			await api()
+				.delete(`/api/v1/social/shares/${share.body.id}`)
+				.set("Authorization", `Bearer ${aliceToken}`)
+				.expect(204);
+
+			const inbox = await api()
+				.get("/api/v1/social/shares/inbox")
+				.set("Authorization", `Bearer ${aliceToken}`)
+				.expect(200);
+			expect(inbox.body).toHaveLength(0);
+			const unread = await api()
+				.get("/api/v1/social/shares/unread-count")
+				.set("Authorization", `Bearer ${aliceToken}`)
+				.expect(200);
+			expect(unread.body.unread).toBe(0);
+		});
+
 		it("rejects sharing your own private route with a coded 409", async () => {
 			const route = makeRoute(bob, "Secret", "private");
 			await orm.em.persistAndFlush([route]);

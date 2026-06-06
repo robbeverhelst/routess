@@ -56,6 +56,9 @@ export interface RouteState {
 	elevationProfile?: ElevationProfilePoint[];
 	isComputingElevation: boolean;
 
+	// True while a routing request for the current edit is in flight.
+	isComputingRoute: boolean;
+
 	isMapLocked: boolean;
 
 	// RouteDraft binding state (see RouteDraftMode). Persisted across reloads
@@ -96,6 +99,7 @@ export interface RouteActions {
 	setElevation: (data: { gainMeters: number; lossMeters: number; profile: ElevationProfilePoint[] }) => void;
 	clearElevation: () => void;
 	setIsComputingElevation: (computing: boolean) => void;
+	setIsComputingRoute: (computing: boolean) => void;
 
 	setIsMapLocked: (isLocked: boolean) => void;
 
@@ -126,6 +130,7 @@ const initialState: RouteState = {
 	elevationLoss: undefined,
 	elevationProfile: undefined,
 	isComputingElevation: false,
+	isComputingRoute: false,
 	isMapLocked: false,
 	mode: { kind: "unsaved" },
 	activity: undefined,
@@ -366,6 +371,10 @@ export function createRoutingStore(logger: Logger) {
 
 				setIsComputingElevation: (computing) => {
 					set({ isComputingElevation: computing });
+				},
+
+				setIsComputingRoute: (computing) => {
+					set({ isComputingRoute: computing });
 				},
 
 				// === MAP CONFIG ===

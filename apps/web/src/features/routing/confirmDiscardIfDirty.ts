@@ -1,4 +1,5 @@
 import type { RouteActivity, RouteDraftMode, Waypoint } from "@routess/core";
+import { t } from "@/lib/i18n";
 import { isDraftDirty } from "./draftDirty";
 
 // Guards a destructive load (replacing the current draft with a different
@@ -14,6 +15,6 @@ export function confirmDiscardIfDirty(
 	const hasUnsavedFresh = mode.kind === "unsaved" && waypoints.length > 0;
 	const hasUnsavedEdits = mode.kind === "editing" && isDraftDirty({ mode, activity, waypoints });
 	if (!hasUnsavedFresh && !hasUnsavedEdits) return true;
-	const text = message ?? "You have unsaved changes that will be replaced by the loaded route. Continue?";
+	const text = message ?? t("plan.discardConfirm");
 	return window.confirm(text);
 }

@@ -218,7 +218,7 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 	const saveRoute = useSaveRoute();
 	const updateRoute = useUpdateRoute();
 	const openDelete = useModalsStore((s) => s.openDelete);
-	const openModal = useModalsStore((s) => s.openModal);
+	const openShareModal = useModalsStore((s) => s.openShare);
 	const pushToast = useToastStore((s) => s.push);
 	const toggleFavourite = useToggleFavourite();
 	const setContext = useUiStore((s) => s.setContext);
@@ -324,11 +324,9 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 	};
 
 	const dispatchShare = () => {
-		// ShareModal reads from the routing store; load the saved route there
-		// first so the share URL encodes this route's waypoints rather than
-		// whatever was last on the map.
-		emitAppEvent("routess:load-route", routeToLoadDetail(route));
-		openModal("share");
+		// Share this route directly; loading it into the planner first would
+		// clobber whatever draft the user is working on.
+		openShareModal(route.id);
 	};
 
 	const dispatchFavorite = () => {
@@ -762,11 +760,13 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 				<Btn variant="primary" style={{ flex: 1 }} onClick={dispatchLoadRoute}>
 					<I.route size={13} /> {t("route.editRoute")}
 				</Btn>
+				{/* Two share actions with different meanings: label both so they
+				    are tellable apart without hovering. */}
 				<Btn onClick={dispatchShare} title={t("route.share")}>
-					<I.share size={14} />
+					<I.share size={14} /> {t("route.shareLinkShort")}
 				</Btn>
 				<Btn onClick={() => setShareToUserOpen(true)} title={t("social.share.title")}>
-					<I.mail size={14} />
+					<I.mail size={14} /> {t("social.share.sendShort")}
 				</Btn>
 				<Btn onClick={dispatchExport} title={t("route.downloadGpx")}>
 					<I.download size={14} />

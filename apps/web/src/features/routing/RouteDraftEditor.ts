@@ -101,11 +101,17 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 	const reportError = (message: string) => onError?.(message);
 
 	const recompute = async (): Promise<EditResult> => {
-		const result = await getRouteFromService(map, accessToken);
-		if (result.success && result.waypointsSnapped && result.snappedWaypoints) {
-			setWaypoints(result.snappedWaypoints);
+		const store = useRoutingStore.getState();
+		store.setIsComputingRoute(true);
+		try {
+			const result = await getRouteFromService(map, accessToken);
+			if (result.success && result.waypointsSnapped && result.snappedWaypoints) {
+				setWaypoints(result.snappedWaypoints);
+			}
+			return result.success ? ok() : fail(result.error ?? "Failed to calculate route.");
+		} finally {
+			store.setIsComputingRoute(false);
 		}
-		return result.success ? ok() : fail(result.error ?? "Failed to calculate route.");
 	};
 
 	const addWaypoint = async (coord: Coordinate, type: WaypointType = "routed"): Promise<EditResult> => {

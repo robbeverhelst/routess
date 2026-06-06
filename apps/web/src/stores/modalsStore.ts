@@ -21,6 +21,8 @@ interface ModalsState {
 	modal: RedesignModal;
 	overlay: RedesignOverlay;
 	deletingRouteId: number | null;
+	// Share a specific saved route without loading it into the planner.
+	sharingRouteId: number | null;
 	searchIntent: SearchIntent;
 
 	openModal: (m: Exclude<RedesignModal, null>) => void;
@@ -28,6 +30,7 @@ interface ModalsState {
 	openOverlay: (o: Exclude<RedesignOverlay, null>) => void;
 	closeOverlay: () => void;
 	openDelete: (routeId: number) => void;
+	openShare: (routeId: number) => void;
 	openSearch: (intent: SearchIntent) => void;
 }
 
@@ -35,12 +38,14 @@ export const useModalsStore = create<ModalsState>()((set) => ({
 	modal: null,
 	overlay: null,
 	deletingRouteId: null,
+	sharingRouteId: null,
 	searchIntent: "fly",
 
-	openModal: (m) => set({ modal: m, searchIntent: "fly" }),
-	closeModal: () => set({ modal: null, deletingRouteId: null, searchIntent: "fly" }),
+	openModal: (m) => set({ modal: m, sharingRouteId: null, searchIntent: "fly" }),
+	closeModal: () => set({ modal: null, deletingRouteId: null, sharingRouteId: null, searchIntent: "fly" }),
 	openOverlay: (o) => set({ overlay: o }),
 	closeOverlay: () => set({ overlay: null }),
 	openDelete: (routeId) => set({ modal: "confirm-delete", deletingRouteId: routeId }),
+	openShare: (routeId) => set({ modal: "share", sharingRouteId: routeId }),
 	openSearch: (intent) => set({ modal: "search", searchIntent: intent }),
 }));

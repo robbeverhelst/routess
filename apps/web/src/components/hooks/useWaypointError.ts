@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useToastStore } from "@/stores/toastStore";
 
 const WAYPOINT_ERROR_TIMEOUT = 5000; // 5 seconds
 
@@ -33,9 +34,20 @@ export const useWaypointError = () => {
 		};
 	}, []);
 
-	// Waypoint error handler
+	const lastToast = useRef<{ message: string; at: number } | null>(null);
+
+	// Waypoint error handler. Errors also surface as a toast: nothing else
+	// renders this state, and a silently rolled-back waypoint is invisible.
 	const handleWaypointError = useCallback((message: string | null) => {
 		setWaypointError(message);
+		if (message) {
+			const now = Date.now();
+			const last = lastToast.current;
+			if (!last || last.message !== message || now - last.at > 4000) {
+				lastToast.current = { message, at: now };
+				useToastStore.getState().push({ kind: "warn", title: message });
+			}
+		}
 
 		if (waypointErrorTimeout.current) {
 			clearTimeout(waypointErrorTimeout.current);

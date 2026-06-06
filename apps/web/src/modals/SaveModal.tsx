@@ -48,6 +48,7 @@ export function SaveModal() {
 	const draftRoutingPreferences = useDraftRoutingPreferences();
 	const { activityType, setActivityType } = useUiStore();
 	const selectedSports = useRedesignSettingsStore((s) => s.selectedSports);
+	const defaultRouteVisibility = useRedesignSettingsStore((s) => s.defaultRouteVisibility);
 	const saveRoute = useSaveRoute();
 	const pushToast = useToastStore((s) => s.push);
 	const isAuthenticated = useIsAuthenticated();
@@ -65,7 +66,8 @@ export function SaveModal() {
 	}, [selectedSports, activityType, setActivityType]);
 
 	const [name, setName] = useState("");
-	const [visibility, setVisibility] = useState<RouteVisibility>("private");
+	// Seed from the user's "default route visibility" setting.
+	const [visibility, setVisibility] = useState<RouteVisibility>(defaultRouteVisibility);
 	const [tags, setTags] = useState<string[]>([]);
 	const [tagDraft, setTagDraft] = useState("");
 

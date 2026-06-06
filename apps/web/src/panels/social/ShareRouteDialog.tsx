@@ -1,7 +1,7 @@
 import type { ApiProfileSummary } from "@routess/api-client";
 import { useState } from "react";
 import type { ApiRoute } from "@/lib/api";
-import { useSendRouteShare, useUpdateRoute, useUserSearch } from "@/lib/api-queries";
+import { useFollows, useSendRouteShare, useUpdateRoute, useUserSearch } from "@/lib/api-queries";
 import { useT } from "@/lib/i18n";
 import { I } from "../../components/icons";
 import { ModalShell } from "../../components/ModalShell";
@@ -17,12 +17,17 @@ export function ShareRouteDialog({ route, onClose }: { route: ApiRoute; onClose:
 	const [recipient, setRecipient] = useState<ApiProfileSummary | null>(null);
 	const [message, setMessage] = useState("");
 	const [sent, setSent] = useState(false);
-	const { data: results = [] } = useUserSearch(query);
+	const { data: results = [], isFetching: searchFetching } = useUserSearch(query);
+	const { data: follows } = useFollows();
 	const sendShare = useSendRouteShare();
 	const updateRoute = useUpdateRoute();
 
 	const isPrivate = route.visibility === "private";
 	const busy = sendShare.isPending || updateRoute.isPending;
+	const searching = query.trim().length >= 2;
+	// Default suggestions: the people you follow, so a recipient is one tap
+	// away instead of retyped every time.
+	const suggestions = searching ? results : (follows?.following ?? []).slice(0, 6);
 
 	const send = async () => {
 		if (!recipient) return;
@@ -51,6 +56,20 @@ export function ShareRouteDialog({ route, onClose }: { route: ApiRoute; onClose:
 						<div style={{ fontSize: 14, fontWeight: 600 }}>
 							{t("social.share.sent", { name: recipient?.name ?? "" })}
 						</div>
+						{isPrivate && (
+							<div
+								style={{
+									fontSize: 12.5,
+									lineHeight: 1.5,
+									color: RDS_COLORS.fgMuted,
+									background: RDS_COLORS.accentSoft,
+									borderRadius: 8,
+									padding: "8px 10px",
+								}}
+							>
+								{t("social.share.nowUnlisted")}
+							</div>
+						)}
 						<Btn variant="primary" onClick={onClose}>
 							{t("common.done")}
 						</Btn>
@@ -114,7 +133,22 @@ export function ShareRouteDialog({ route, onClose }: { route: ApiRoute; onClose:
 										}}
 									/>
 								</div>
-								{results.map((user) => (
+								{!searching && suggestions.length > 0 && (
+									<div style={{ fontSize: 11, color: RDS_COLORS.fgSubtle, padding: "2px 2px 0" }}>
+										{t("social.share.suggestions")}
+									</div>
+								)}
+								{searching && searchFetching && suggestions.length === 0 && (
+									<div style={{ fontSize: 12.5, color: RDS_COLORS.fgSubtle, padding: "6px 2px" }}>
+										{t("social.search.searching")}
+									</div>
+								)}
+								{searching && !searchFetching && suggestions.length === 0 && (
+									<div style={{ fontSize: 12.5, color: RDS_COLORS.fgSubtle, padding: "6px 2px" }}>
+										{t("social.search.noResults")}
+									</div>
+								)}
+								{suggestions.map((user) => (
 									<button
 										key={user.handle}
 										type="button"

@@ -74,7 +74,7 @@ export function MapToolbar(props: MapToolbarProps) {
 						pressed={props.isLocked}
 						style={btnStyle}
 					>
-						<I.lock size={18} />
+						{props.isLocked ? <I.lock size={18} /> : <I.unlock size={18} />}
 					</IconBtn>
 					<IconBtn
 						title={t("toolbar.focusRoute")}
@@ -158,7 +158,7 @@ export function MapToolbar(props: MapToolbarProps) {
 					onClick={props.onLock}
 					pressed={props.isLocked}
 				>
-					<I.lock size={16} />
+					{props.isLocked ? <I.lock size={16} /> : <I.unlock size={16} />}
 				</IconBtn>
 				<IconBtn title={t("toolbar.focusRoute")} onClick={props.onFocusRoute} disabled={!props.hasRoute}>
 					<I.maximize size={16} />

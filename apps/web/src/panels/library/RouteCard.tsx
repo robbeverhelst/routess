@@ -11,7 +11,7 @@ import {
 } from "@/lib/api-queries";
 import { emitAppEvent, routeToLoadDetail } from "@/lib/app-events";
 import { useT } from "@/lib/i18n";
-import { useUnits } from "@/lib/units";
+import { formatDurationClockParts, useUnits } from "@/lib/units";
 import { useModalsStore } from "@/stores/modalsStore";
 import { useToastStore } from "@/stores/toastStore";
 import { useUiStore } from "@/stores/uiStore";
@@ -25,18 +25,14 @@ const STRIP_HEIGHT = 96;
 
 const ACTIVITY_ICON: Record<RouteActivity, IconKey> = { cycle: "bike", run: "run", walk: "walk" };
 
+// No hover means no way to reveal a hover-only menu; keep it visible on touch.
+const NO_HOVER = typeof window !== "undefined" && window.matchMedia("(hover: none)").matches;
+
 const VISIBILITY_META: Record<RouteVisibility, { icon: IconKey; titleKey: string }> = {
 	private: { icon: "lock", titleKey: "library.visibility.private" },
 	unlisted: { icon: "share", titleKey: "library.visibility.unlisted" },
 	public: { icon: "globe", titleKey: "library.visibility.public" },
 };
-
-function formatDuration(seconds: number): string {
-	const totalMinutes = Math.round(seconds / 60);
-	const h = Math.floor(totalMinutes / 60);
-	const m = totalMinutes % 60;
-	return h > 0 ? `${h}h${String(m).padStart(2, "0")}` : `${m}min`;
-}
 
 function StatItem({ icon, label, title }: { icon: IconKey; label: string; title?: string }) {
 	const Icon = I[icon];
@@ -200,13 +196,15 @@ export function RouteCard({
 	const setCollectionRoutes = useSetCollectionRoutes();
 	const { data: collections = [] } = useCollections();
 	const openDelete = useModalsStore((s) => s.openDelete);
-	const openModal = useModalsStore((s) => s.openModal);
+	const openShareModal = useModalsStore((s) => s.openShare);
 	const pushToast = useToastStore((s) => s.push);
 	const setContext = useUiStore((s) => s.setContext);
 
 	const dist = route.distance ? formatDistance(route.distance / 1000) : null;
 	const elevParts = route.elevationGain ? formatElevationParts(route.elevationGain) : null;
-	const duration = route.duration ? formatDuration(route.duration) : null;
+	// Same clock format as the plan panel; cards must not invent their own.
+	const durationParts = route.duration ? formatDurationClockParts(route.duration) : null;
+	const duration = durationParts ? `${durationParts.value}${durationParts.unit}` : null;
 	const date = new Date(route.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 	const visibilityMeta = VISIBILITY_META[route.visibility ?? "private"];
 	const activityIcon: IconKey = route.activity ? ACTIVITY_ICON[route.activity] : "route";
@@ -269,10 +267,9 @@ export function RouteCard({
 
 	const share = () => {
 		closeMenu();
-		// ShareModal reads from the routing store; load the saved route there
-		// first so the share URL encodes this route's waypoints.
-		emitAppEvent("routess:load-route", routeToLoadDetail(route));
-		openModal("share");
+		// Share this route directly; loading it into the planner first would
+		// clobber whatever draft the user is working on.
+		openShareModal(route.id);
 	};
 
 	const exportGpx = () => {
@@ -357,9 +354,9 @@ export function RouteCard({
 					</div>
 					<div
 						style={{
-							opacity: hover || selected || menuOpen ? 1 : 0,
+							opacity: NO_HOVER || hover || selected || menuOpen ? 1 : 0,
 							transition: "opacity 120ms",
-							pointerEvents: hover || selected || menuOpen ? "auto" : "none",
+							pointerEvents: NO_HOVER || hover || selected || menuOpen ? "auto" : "none",
 							background: "color-mix(in oklch, var(--rds-bg-panel) 80%, transparent)",
 							borderRadius: 8,
 							backdropFilter: "blur(4px)",
@@ -372,9 +369,9 @@ export function RouteCard({
 					<div
 						style={{
 							position: "relative",
-							opacity: hover || selected || menuOpen ? 1 : 0,
+							opacity: NO_HOVER || hover || selected || menuOpen ? 1 : 0,
 							transition: "opacity 120ms",
-							pointerEvents: hover || selected || menuOpen ? "auto" : "none",
+							pointerEvents: NO_HOVER || hover || selected || menuOpen ? "auto" : "none",
 							background: "color-mix(in oklch, var(--rds-bg-panel) 80%, transparent)",
 							borderRadius: 8,
 							backdropFilter: "blur(4px)",

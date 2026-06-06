@@ -12,7 +12,7 @@ import type { RouteDraftEditor } from "@/features/routing/RouteDraftEditor";
 import { RouteDraftEditorProvider } from "@/features/routing/RouteDraftEditorProvider";
 import { type AppEventMap, onAppEvent } from "@/lib/app-events";
 import { ErrorBoundary } from "@/lib/errors";
-import type { SupportedLanguage } from "@/lib/i18n";
+import { type SupportedLanguage, t } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
 import { getRuntimeConfig } from "@/lib/runtime-config";
 import { useRoutingStore } from "@/stores/routingStore";
@@ -167,12 +167,12 @@ const MapWithRoutingContent: React.FC<MapboxMapProps> = ({
 		};
 		const onExportGpx = () => {
 			if (!editor) {
-				pushToast({ kind: "warn", title: "Map is not ready yet, try again in a moment." });
+				pushToast({ kind: "warn", title: t("map.notReady") });
 				return;
 			}
 			const result = editor.exportGpx();
 			if (!result.success) {
-				pushToast({ kind: "danger", title: result.message ?? "Failed to export GPX." });
+				pushToast({ kind: "danger", title: result.message ?? t("share.exportFailed") });
 			}
 		};
 		const onReroute = () => {
@@ -183,16 +183,16 @@ const MapWithRoutingContent: React.FC<MapboxMapProps> = ({
 		};
 		const onImportGpx = (detail: { gpxString?: string; fileName?: string }) => {
 			if (!detail?.gpxString) {
-				pushToast({ kind: "danger", title: "No file content received for import." });
+				pushToast({ kind: "danger", title: t("import.noContent") });
 				return;
 			}
 			if (!editor) {
-				pushToast({ kind: "warn", title: "Map is not ready yet, try again in a moment." });
+				pushToast({ kind: "warn", title: t("map.notReady") });
 				return;
 			}
 			void editor.loadFromGpx(detail.gpxString).then((result) => {
 				if (!result.success) {
-					handleImportError(result.message ?? "Failed to import GPX file.");
+					handleImportError(result.message ?? t("import.failed"));
 				}
 			});
 		};

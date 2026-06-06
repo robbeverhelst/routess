@@ -621,7 +621,7 @@ export const en: Record<string, string> = {
 
 	// Social (issue #245)
 	"social.gate.title": "Follow friends and share routes",
-	"social.gate.body": "Sign in to follow other riders, see their new public routes, and receive routes in your inbox.",
+	"social.gate.body": "Sign in to follow others, see their new public routes, and receive routes in your inbox.",
 	"social.loading": "Loading…",
 	"social.tab.feed": "Feed",
 	"social.tab.inbox": "Inbox",
@@ -1252,4 +1252,31 @@ export const en: Record<string, string> = {
 	"routing.ferries.label": "Avoid ferries",
 	"routing.ferries.hint": "Skip routes that cross water by ferry",
 	"route.provenance.mapboxLegacy": "Originally planned with a previous routing engine",
+	// UX polish round (June 2026)
+	"common.undo": "Undo",
+	"map.notReady": "Map is not ready yet, try again in a moment.",
+	"plan.calculating": "Calculating route...",
+	"plan.cleared": "Route cleared.",
+	"plan.discardConfirm": "You have unsaved changes that will be replaced by the loaded route. Continue?",
+	"share.linkFailed": "Could not generate a shareable link.",
+	"share.loadFailed": "Failed to load shared route.",
+	"share.exportFailed": "Failed to export GPX.",
+	"share.unsavedHint":
+		"This route isn't saved yet, so the link encodes the whole route and gets very long. Save it first to get a short, stable link with a preview.",
+	"import.noContent": "No file content received for import.",
+	"import.failed": "Failed to import GPX file.",
+	"route.shareLinkShort": "Link",
+	"save.signInHint": "Saving a route requires an account.",
+	"save.signInShort": "Sign in to save",
+	"social.share.sendShort": "Send",
+	"social.share.suggestions": "People you follow",
+	"social.share.nowUnlisted":
+		"This route is now unlisted: anyone with the link can view it. You can change this in the route settings.",
+	"social.search.searching": "Searching...",
+	"social.inbox.dismiss": "Dismiss",
+	"social.inbox.copiedToast": "Saved a copy to your library.",
+	"social.inbox.viewInLibrary": "View in library",
+	"social.profile.signInToFollow": "Sign in to follow this profile",
+	"plan.makeRouted": "Follow roads to this waypoint",
+	"plan.makeDirect": "Draw a straight line to this waypoint",
 };

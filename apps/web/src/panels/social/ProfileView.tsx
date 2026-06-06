@@ -94,6 +94,19 @@ export function ProfileView({
 							{profile.isFollowing ? t("social.unfollow") : t("social.follow")}
 						</Btn>
 					)}
+					{!isAuthenticated && (
+						// Anonymous visitors get the affordance too; it routes
+						// through sign-in instead of dead-ending.
+						<Btn
+							variant="primary"
+							title={t("social.profile.signInToFollow")}
+							onClick={() => {
+								window.location.href = "/";
+							}}
+						>
+							{t("social.follow")}
+						</Btn>
+					)}
 				</div>
 				<div
 					style={{

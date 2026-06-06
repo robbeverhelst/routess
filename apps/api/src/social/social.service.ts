@@ -190,6 +190,16 @@ export class SocialService {
 		}
 	}
 
+	// Dismiss: the recipient removes the inbox entry. The share row goes away
+	// entirely; the Route itself is untouched.
+	async dismissShare(shareId: number, userId: number): Promise<void> {
+		const share = await this.shareRepository.findOne({ id: shareId, recipient: userId });
+		if (!share) {
+			throw new NotFoundException(`Share with ID ${shareId} not found`);
+		}
+		await this.em.removeAndFlush(share);
+	}
+
 	// "Save a copy": clones the shared Route into the recipient's library. The
 	// copy keeps the original's Provenance (it describes how the geometry was
 	// made, not how it arrived) and records lineage via copiedFrom*.

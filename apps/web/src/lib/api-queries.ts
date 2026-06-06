@@ -437,6 +437,17 @@ export function useMarkShareRead() {
 	});
 }
 
+export function useDismissShare() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (id: number) => apiService.dismissShare(id),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: queryKeys.social.inbox() });
+			queryClient.invalidateQueries({ queryKey: queryKeys.social.unread() });
+		},
+	});
+}
+
 export function useCopySharedRoute() {
 	const queryClient = useQueryClient();
 	return useMutation({
