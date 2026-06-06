@@ -13,6 +13,7 @@ export const ROUTE_SURFACE_SOURCE_ID = "route-surface";
 export const WAYPOINTS_SOURCE_ID = "points";
 export const WAYPOINTS_LAYER_ID = "points";
 export const WAYPOINTS_CORE_LAYER_ID = "points-core";
+export const WAYPOINT_LABELS_LAYER_ID = "waypoint-labels";
 export const USER_LOCATION_SOURCE_ID = "user-location-point";
 export const USER_LOCATION_HALO_LAYER_ID = "user-location-halo";
 export const USER_LOCATION_HEADING_LAYER_ID = "user-location-heading";
@@ -275,6 +276,32 @@ export const initializeSourcesAndLayers = (map: MapboxMap, palette?: MapPalette)
 				"circle-color": p.waypointStroke,
 			},
 		});
+		// Name labels above the marker; only features carrying a name render one.
+		map.addLayer({
+			id: WAYPOINT_LABELS_LAYER_ID,
+			type: "symbol",
+			source: WAYPOINTS_SOURCE_ID,
+			filter: ["has", "name"],
+			layout: {
+				"text-field": ["get", "name"],
+				"text-font": ["Open Sans Semibold", "Arial Unicode MS Bold"],
+				"text-size": 11.5,
+				"text-letter-spacing": 0.02,
+				"text-anchor": "bottom",
+				"text-offset": [0, -1.1],
+				"text-max-width": 12,
+				"text-allow-overlap": false,
+				"text-ignore-placement": false,
+				"text-padding": 4,
+				"symbol-placement": "point",
+			},
+			paint: {
+				"text-color": p.kmText,
+				"text-halo-color": p.kmHalo,
+				"text-halo-width": 2,
+				"text-halo-blur": 0.5,
+			},
+		});
 	}
 
 	if (!map.getSource(USER_LOCATION_SOURCE_ID)) {
@@ -491,6 +518,10 @@ export const applyMapPalette = (map: MapboxMap, palette: MapPalette): void => {
 		if (map.getLayer(WAYPOINTS_CORE_LAYER_ID)) {
 			map.setPaintProperty(WAYPOINTS_CORE_LAYER_ID, "circle-color", palette.waypointStroke);
 		}
+		if (map.getLayer(WAYPOINT_LABELS_LAYER_ID)) {
+			map.setPaintProperty(WAYPOINT_LABELS_LAYER_ID, "text-color", palette.kmText);
+			map.setPaintProperty(WAYPOINT_LABELS_LAYER_ID, "text-halo-color", palette.kmHalo);
+		}
 		if (map.getLayer(USER_LOCATION_HALO_LAYER_ID)) {
 			map.setPaintProperty(USER_LOCATION_HALO_LAYER_ID, "circle-color", palette.userLocation);
 		}
@@ -551,7 +582,7 @@ export const updateWaypointsLayer = (map: MapboxMap, waypoints: Waypoint[], isMa
 		return {
 			type: "Feature" as const,
 			id: waypointFeatureIdFromIndex(originalIndex),
-			properties: { pointType, waypointIndex: originalIndex },
+			properties: { pointType, waypointIndex: originalIndex, ...(wp.name ? { name: wp.name } : {}) },
 			geometry: { type: "Point" as const, coordinates: wp.coord },
 		};
 	});
