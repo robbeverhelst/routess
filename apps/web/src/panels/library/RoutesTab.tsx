@@ -6,6 +6,7 @@ import { useUnits } from "@/lib/units";
 import { useLibraryStore } from "@/stores/libraryStore";
 import { I, type IconKey } from "../../components/icons";
 import { Btn, RDS_COLORS } from "../../components/primitives";
+import { Tooltip } from "../../components/Tooltip";
 import { DropMenu, MenuDivider, MenuItem } from "./DropMenu";
 import { RouteCard } from "./RouteCard";
 
@@ -50,27 +51,28 @@ function Chip({
 	title?: string;
 }) {
 	return (
-		<button
-			type="button"
-			onClick={onClick}
-			title={title}
-			style={{
-				display: "inline-flex",
-				alignItems: "center",
-				gap: 5,
-				height: 28,
-				padding: "0 10px",
-				borderRadius: 999,
-				border: `1px solid ${on ? RDS_COLORS.borderStrong : RDS_COLORS.border}`,
-				background: on ? RDS_COLORS.bgActive : "transparent",
-				color: on ? RDS_COLORS.fg : RDS_COLORS.fgMuted,
-				fontSize: 12,
-				cursor: "pointer",
-				whiteSpace: "nowrap",
-			}}
-		>
-			{children}
-		</button>
+		<Tooltip label={title}>
+			<button
+				type="button"
+				onClick={onClick}
+				style={{
+					display: "inline-flex",
+					alignItems: "center",
+					gap: 5,
+					height: 28,
+					padding: "0 10px",
+					borderRadius: 999,
+					border: `1px solid ${on ? RDS_COLORS.borderStrong : RDS_COLORS.border}`,
+					background: on ? RDS_COLORS.bgActive : "transparent",
+					color: on ? RDS_COLORS.fg : RDS_COLORS.fgMuted,
+					fontSize: 12,
+					cursor: "pointer",
+					whiteSpace: "nowrap",
+				}}
+			>
+				{children}
+			</button>
+		</Tooltip>
 	);
 }
 

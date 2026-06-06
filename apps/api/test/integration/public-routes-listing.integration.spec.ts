@@ -28,7 +28,7 @@ async function createRoute(app: INestApplication, userId: number, seed: SeedRout
 			description: seed.description,
 			tags: seed.tags ?? [],
 		});
-		await orm.em.persistAndFlush(route);
+		await orm.em.persist(route).flush();
 		return route.id;
 	});
 }

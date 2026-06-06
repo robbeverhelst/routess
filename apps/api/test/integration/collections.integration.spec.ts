@@ -55,7 +55,7 @@ describe("Collections Integration Tests", () => {
 		publicRoute = makeRoute(testUser, "Public Route", "public");
 		unlistedRoute = makeRoute(testUser, "Unlisted Route", "unlisted");
 		otherUsersRoute = makeRoute(otherUser, "Other's Route", "public");
-		await orm.em.persistAndFlush([testUser, otherUser, privateRoute, publicRoute, unlistedRoute, otherUsersRoute]);
+		await orm.em.persist([testUser, otherUser, privateRoute, publicRoute, unlistedRoute, otherUsersRoute]).flush();
 
 		authToken = await generateTestJWT(testUser.id, testUser.email, app);
 		otherAuthToken = await generateTestJWT(otherUser.id, otherUser.email, app);

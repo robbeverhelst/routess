@@ -290,7 +290,7 @@ export class AdminService {
 		const route = await this.routes.findOne({ id });
 		if (!route) throw new NotFoundException(`Route ${id} not found`);
 		route.deletedAt = new Date();
-		await this.em.persistAndFlush(route);
+		await this.em.persist(route).flush();
 		this.statsCache.invalidate();
 	}
 
@@ -303,7 +303,7 @@ export class AdminService {
 		await this.em
 			.getConnection()
 			.execute(`update "route" set "deleted_at" = ? where "user_id" = ? and "deleted_at" is null`, [now, userId]);
-		await this.em.persistAndFlush(user);
+		await this.em.persist(user).flush();
 		await this.sessionService.invalidateUserSessions(userId, "admin_revoked");
 		this.statsCache.invalidate();
 	}

@@ -115,7 +115,7 @@ describe("Email Auth Integration Tests", () => {
 					role: "user",
 					deletionStatus: "active",
 				});
-				await orm.em.persistAndFlush(user);
+				await orm.em.persist(user).flush();
 			});
 
 			// Same status as a fresh signup so the endpoint can't be used to
@@ -287,7 +287,7 @@ describe("Email Auth Integration Tests", () => {
 				const orm = app.get(MikroORM);
 				const method = await orm.em.findOneOrFail(UserAuthMethod, { provider: "email", providerId: email });
 				method.failedLoginAttempts = 9;
-				await orm.em.persistAndFlush(method);
+				await orm.em.persist(method).flush();
 			});
 
 			// The 10th failure trips the lock.
@@ -310,7 +310,7 @@ describe("Email Auth Integration Tests", () => {
 				const method = await orm.em.findOneOrFail(UserAuthMethod, { provider: "email", providerId: email });
 				expect(method.lockedUntil).toBeTruthy();
 				method.lockedUntil = new Date(Date.now() - 1000);
-				await orm.em.persistAndFlush(method);
+				await orm.em.persist(method).flush();
 			});
 
 			await supertest(app.getHttpServer())
@@ -380,13 +380,13 @@ describe("Email Auth Integration Tests", () => {
 					role: "user",
 					deletionStatus: "active",
 				});
-				await orm.em.persistAndFlush(user);
+				await orm.em.persist(user).flush();
 				const method = orm.em.create(UserAuthMethod, {
 					user: user.id,
 					provider: "google",
 					providerId: "google-123",
 				});
-				await orm.em.persistAndFlush(method);
+				await orm.em.persist(method).flush();
 			});
 
 			await supertest(app.getHttpServer()).post("/api/v1/auth/request-password-reset").send({ email }).expect(200);
@@ -522,13 +522,13 @@ describe("Email Auth Integration Tests", () => {
 					role: "user",
 					deletionStatus: "active",
 				});
-				await orm.em.persistAndFlush(u);
+				await orm.em.persist(u).flush();
 				const method = orm.em.create(UserAuthMethod, {
 					user: u.id,
 					provider: "google",
 					providerId: "google-xyz",
 				});
-				await orm.em.persistAndFlush(method);
+				await orm.em.persist(method).flush();
 				userId = u.id;
 			});
 			const sessionService = app.get<typeof import("src/auth/session.service").SessionService>(

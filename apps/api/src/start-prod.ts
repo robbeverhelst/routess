@@ -14,7 +14,7 @@ async function startProductionApp() {
 
 	try {
 		await connection.execute("select pg_advisory_lock(?)", [MIGRATION_LOCK_ID]);
-		await orm.getMigrator().up();
+		await orm.migrator.up();
 	} finally {
 		await connection.execute("select pg_advisory_unlock(?)", [MIGRATION_LOCK_ID]).catch(() => undefined);
 		await orm.close(true);

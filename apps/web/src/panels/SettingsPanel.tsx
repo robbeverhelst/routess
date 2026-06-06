@@ -29,6 +29,7 @@ import {
 	SettingsSection,
 	TextInput,
 } from "../components/settings";
+import { Tooltip } from "../components/Tooltip";
 import { ApiTokensSection } from "./ApiTokensSection";
 
 type SettingsSectionKey = "sports" | "mapDisplay" | "privacy" | "advanced";
@@ -149,7 +150,7 @@ function SpeedRow({
 						variant="ghost"
 						onClick={onReset}
 						disabled={isDefault}
-						title={isDefault ? "Already at default" : "Reset to default"}
+						title={isDefault ? t("settings.pace.alreadyDefault") : t("settings.pace.resetDefault")}
 					>
 						<I.refresh size={12} />
 					</Btn>
@@ -521,58 +522,69 @@ export function SettingsPanel() {
 												border: `1px solid ${on ? RDS_COLORS.accent : RDS_COLORS.border}`,
 											}}
 										>
-											<button
-												type="button"
-												onClick={() => handleToggleSport(s.key)}
-												aria-pressed={on}
-												title={
+											<Tooltip
+												label={
 													on
 														? t("settings.sports.removeAria", { sport: sportLabel })
 														: t("settings.sports.addAria", { sport: sportLabel })
 												}
-												style={{
-													display: "inline-flex",
-													alignItems: "center",
-													gap: 7,
-													padding: "6px 10px",
-													borderRadius: 999,
-													background: "transparent",
-													border: 0,
-													color: on ? RDS_COLORS.accent : RDS_COLORS.fgMuted,
-													fontSize: 12.5,
-													fontWeight: 600,
-													cursor: "pointer",
-												}}
 											>
-												<Icon size={12} />
-												{sportLabel}
-											</button>
-											<button
-												type="button"
-												onClick={() => handleSetDefault(s.key)}
-												aria-pressed={isDefault}
-												title={
+												<button
+													type="button"
+													onClick={() => handleToggleSport(s.key)}
+													aria-pressed={on}
+													style={{
+														display: "inline-flex",
+														alignItems: "center",
+														gap: 7,
+														padding: "6px 10px",
+														borderRadius: 999,
+														background: "transparent",
+														border: 0,
+														color: on ? RDS_COLORS.accent : RDS_COLORS.fgMuted,
+														fontSize: 12.5,
+														fontWeight: 600,
+														cursor: "pointer",
+													}}
+												>
+													<Icon size={12} />
+													{sportLabel}
+												</button>
+											</Tooltip>
+											<Tooltip
+												label={
 													isDefault
 														? t("settings.sports.defaultTitle")
 														: t("settings.sports.makeDefault", { sport: sportLabel })
 												}
-												style={{
-													width: 26,
-													height: 26,
-													padding: 0,
-													borderRadius: 999,
-													background: isDefault ? RDS_COLORS.accent : RDS_COLORS.bgPanel,
-													color: isDefault ? RDS_COLORS.accentFg : on ? RDS_COLORS.accent : RDS_COLORS.fgSubtle,
-													border: isDefault ? "none" : `1px solid ${on ? RDS_COLORS.accent : RDS_COLORS.border}`,
-													display: "inline-flex",
-													alignItems: "center",
-													justifyContent: "center",
-													cursor: isDefault ? "default" : "pointer",
-													boxShadow: isDefault ? "0 0 0 1px rgba(255,255,255,0.24) inset" : "none",
-												}}
 											>
-												<I.check size={12} />
-											</button>
+												<button
+													type="button"
+													onClick={() => handleSetDefault(s.key)}
+													aria-pressed={isDefault}
+													aria-label={
+														isDefault
+															? t("settings.sports.defaultTitle")
+															: t("settings.sports.makeDefault", { sport: sportLabel })
+													}
+													style={{
+														width: 26,
+														height: 26,
+														padding: 0,
+														borderRadius: 999,
+														background: isDefault ? RDS_COLORS.accent : RDS_COLORS.bgPanel,
+														color: isDefault ? RDS_COLORS.accentFg : on ? RDS_COLORS.accent : RDS_COLORS.fgSubtle,
+														border: isDefault ? "none" : `1px solid ${on ? RDS_COLORS.accent : RDS_COLORS.border}`,
+														display: "inline-flex",
+														alignItems: "center",
+														justifyContent: "center",
+														cursor: isDefault ? "default" : "pointer",
+														boxShadow: isDefault ? "0 0 0 1px rgba(255,255,255,0.24) inset" : "none",
+													}}
+												>
+													<I.check size={12} />
+												</button>
+											</Tooltip>
 										</div>
 									);
 								})}
@@ -695,22 +707,23 @@ export function SettingsPanel() {
 									{ACCENT_OPTIONS.map((a) => {
 										const on = accent === a.key;
 										return (
-											<button
-												key={a.key}
-												type="button"
-												onClick={() => setAccent(a.key)}
-												title={t(a.labelKey)}
-												aria-pressed={on}
-												style={{
-													width: 22,
-													height: 22,
-													borderRadius: 999,
-													background: a.swatch,
-													border: on ? `2px solid ${RDS_COLORS.fg}` : `2px solid ${RDS_COLORS.border}`,
-													cursor: "pointer",
-													padding: 0,
-												}}
-											/>
+											<Tooltip key={a.key} label={t(a.labelKey)}>
+												<button
+													type="button"
+													onClick={() => setAccent(a.key)}
+													aria-label={t(a.labelKey)}
+													aria-pressed={on}
+													style={{
+														width: 22,
+														height: 22,
+														borderRadius: 999,
+														background: a.swatch,
+														border: on ? `2px solid ${RDS_COLORS.fg}` : `2px solid ${RDS_COLORS.border}`,
+														cursor: "pointer",
+														padding: 0,
+													}}
+												/>
+											</Tooltip>
 										);
 									})}
 								</div>

@@ -14,6 +14,7 @@ import {
 import type { RouteDraftEditor } from "@/features/routing/RouteDraftEditor";
 import { Logger } from "@/lib/logger";
 import { useRoutingStore } from "@/stores/routingStore";
+import { useWaypointDragStore } from "@/stores/waypointDragStore";
 import { useWaypointHoverStore } from "@/stores/waypointHoverStore";
 import type { Coordinate } from "@/types/map";
 
@@ -35,6 +36,11 @@ const TOUCH_HIT_PADDING = 12;
 // Ignore taps right after a pinch so a sloppy two-finger gesture never adds a
 // waypoint via the click Mapbox synthesizes for the last finger.
 const GESTURE_COOLDOWN_MS = 300;
+// Browsers fire compatibility mouse events (mousedown/mouseup/click) right
+// after a tap's touchend. Ignore mouse input this soon after touch so the
+// mouse drag path can't hijack a tap; otherwise its startDrag dismisses the
+// delete popup the tap just opened.
+const TOUCH_MOUSE_SUPPRESS_MS = 700;
 
 // Mapbox doesn't auto-wrap event.lngLat — panning the world east a few
 // times yields lng > 180, which the Directions API rejects with 422.
@@ -67,6 +73,7 @@ interface InteractionState {
 	dragMode: DragMode | null;
 	touchSession: TouchSession | null;
 	lastMultiTouchAt: number;
+	lastTouchAt: number;
 	hoveredRouteFeatureId: string | number | undefined;
 	suppressNextClick: boolean;
 }
@@ -80,6 +87,7 @@ const createInitialState = (): InteractionState => ({
 	dragMode: null,
 	touchSession: null,
 	lastMultiTouchAt: 0,
+	lastTouchAt: 0,
 	hoveredRouteFeatureId: undefined,
 	suppressNextClick: false,
 });
@@ -165,6 +173,7 @@ export const initializeMapInteractions = (
 		state.dragWasInserted = false;
 		state.dragMode = null;
 		updateDragLinesLayer(map, []);
+		useWaypointDragStore.getState().endTouchDrag();
 		mapCanvas.style.cursor = "";
 		map.dragPan.enable();
 		map.touchZoomRotate.enable();
@@ -264,10 +273,30 @@ export const initializeMapInteractions = (
 			map.touchZoomRotate.disable();
 			// Visual lift: the marker grows so the grab is acknowledged.
 			setLiftedWaypoint(map, null, index);
+			// Shows the drop-to-delete trash zone overlay.
+			useWaypointDragStore.getState().startTouchDrag();
 		}
 		mapCanvas.style.cursor = "grabbing";
 		clearRouteHover();
 		setPopup(null);
+	};
+
+	// Tracks whether the dragged finger is over the trash drop zone (rect is
+	// registered in client coords by the WaypointDragTrash overlay).
+	const updateTrashHover = (point: PointerPoint) => {
+		const dragStore = useWaypointDragStore.getState();
+		const rect = dragStore.trashRect;
+		if (!rect) {
+			if (dragStore.isOverTrash) dragStore.setOverTrash(false);
+			return;
+		}
+		const canvasRect = mapCanvas.getBoundingClientRect();
+		const clientX = canvasRect.left + point.x;
+		const clientY = canvasRect.top + point.y;
+		const over = clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
+		if (over !== dragStore.isOverTrash) {
+			dragStore.setOverTrash(over);
+		}
 	};
 
 	const renderDragPreview = (nextCoord: Coordinate) => {
@@ -284,6 +313,20 @@ export const initializeMapInteractions = (
 	const commitDrag = async () => {
 		if (!state.isDragging || state.draggedWaypointIndex === -1 || !state.currentLngLat) {
 			resetDragState();
+			return;
+		}
+
+		// Dropped on the trash zone: delete instead of moving. For a waypoint
+		// inserted for this drag, reverting the insert is the deletion.
+		if (state.dragMode === "touch" && useWaypointDragStore.getState().isOverTrash) {
+			const wasInserted = state.dragWasInserted;
+			const waypointIndex = state.draggedWaypointIndex;
+			resetDragState();
+			if (wasInserted) {
+				await editor.undo();
+			} else {
+				await editor.removeWaypoint(waypointIndex);
+			}
 			return;
 		}
 
@@ -447,6 +490,9 @@ export const initializeMapInteractions = (
 
 	const handleMouseDown = async (event: MapMouseEvent) => {
 		if (isMapLockedRef.current || event.originalEvent.button !== 0) return;
+		// Compatibility mouse event synthesized from a recent touch: the
+		// touch handlers already resolved this gesture.
+		if (Date.now() - state.lastTouchAt < TOUCH_MOUSE_SUPPRESS_MS) return;
 
 		state.suppressNextClick = false;
 
@@ -466,6 +512,7 @@ export const initializeMapInteractions = (
 
 	const handleTouchStart = (event: MapTouchEvent) => {
 		if (isMapLockedRef.current) return;
+		state.lastTouchAt = Date.now();
 
 		if (event.points.length !== 1) {
 			state.lastMultiTouchAt = Date.now();
@@ -512,6 +559,7 @@ export const initializeMapInteractions = (
 
 	const handleTouchMove = (event: MapTouchEvent) => {
 		if (isMapLockedRef.current) return;
+		state.lastTouchAt = Date.now();
 
 		if (event.points.length !== 1) {
 			state.lastMultiTouchAt = Date.now();
@@ -525,6 +573,7 @@ export const initializeMapInteractions = (
 		if (state.isDragging) {
 			event.preventDefault();
 			renderDragPreview(wrappedLngLat(event.lngLat));
+			updateTrashHover(event.points[0]);
 			return;
 		}
 
@@ -543,6 +592,7 @@ export const initializeMapInteractions = (
 	};
 
 	const handleTouchEnd = async () => {
+		state.lastTouchAt = Date.now();
 		const session = state.touchSession;
 		clearTouchSession();
 
@@ -561,6 +611,7 @@ export const initializeMapInteractions = (
 	};
 
 	const handleTouchCancel = () => {
+		state.lastTouchAt = Date.now();
 		clearTouchSession();
 		if (state.isDragging) {
 			void cancelDrag();

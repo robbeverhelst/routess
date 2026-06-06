@@ -10,6 +10,7 @@ import { useMapViewBindings } from "@/components/hooks/useMapViewBindings";
 import { useMapViewPersistence } from "@/components/hooks/useMapViewPersistence";
 import { MapPopup, type PopupInfo as MapPopupInfo } from "@/components/map/MapPopup";
 import { SunPositionIndicator } from "@/components/map/SunPositionIndicator";
+import { WaypointDragTrash } from "@/components/map/WaypointDragTrash";
 import { useUserLocation } from "@/components/providers/UserLocationProvider";
 import { NodesOverlay } from "@/features/overlays/NodesOverlay";
 import { useServiceWorker } from "@/hooks/useServiceWorker";
@@ -628,6 +629,8 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
 					)}
 					<NodesOverlay />
 				</MapGL>
+
+				<WaypointDragTrash />
 
 				{!isMapLoaded && (
 					<MapLoadingShell isSatellite={isSatelliteStyle} theme={mapTheme} showSpinner={!loadTimedOut} />

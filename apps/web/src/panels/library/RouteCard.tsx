@@ -17,6 +17,7 @@ import { useToastStore } from "@/stores/toastStore";
 import { useUiStore } from "@/stores/uiStore";
 import { I, type IconKey } from "../../components/icons";
 import { IconBtn, RDS_COLORS } from "../../components/primitives";
+import { Tooltip } from "../../components/Tooltip";
 import { DropMenu, MenuDivider, MenuItem } from "./DropMenu";
 import { RouteThumb } from "./RouteThumb";
 
@@ -41,10 +42,12 @@ function formatDuration(seconds: number): string {
 function StatItem({ icon, label, title }: { icon: IconKey; label: string; title?: string }) {
 	const Icon = I[icon];
 	return (
-		<span style={{ display: "inline-flex", alignItems: "center", gap: 4, flexShrink: 0 }} title={title}>
-			<Icon size={12} style={{ opacity: 0.8 }} />
-			{label}
-		</span>
+		<Tooltip label={title}>
+			<span style={{ display: "inline-flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+				<Icon size={12} style={{ opacity: 0.8 }} />
+				{label}
+			</span>
+		</Tooltip>
 	);
 }
 
@@ -125,21 +128,23 @@ function TagsEditor({ route, onDone }: { route: ApiRoute; onDone: () => void }) 
 					}}
 				>
 					#{tag}
-					<button
-						type="button"
-						aria-label={t("library.tags.remove", { tag })}
-						onClick={() => commit(tags.filter((x) => x !== tag))}
-						style={{
-							display: "inline-flex",
-							background: "transparent",
-							border: 0,
-							color: "inherit",
-							cursor: "pointer",
-							padding: 0,
-						}}
-					>
-						<I.close size={11} />
-					</button>
+					<Tooltip label={t("library.tags.remove", { tag })}>
+						<button
+							type="button"
+							aria-label={t("library.tags.remove", { tag })}
+							onClick={() => commit(tags.filter((x) => x !== tag))}
+							style={{
+								display: "inline-flex",
+								background: "transparent",
+								border: 0,
+								color: "inherit",
+								cursor: "pointer",
+								padding: 0,
+							}}
+						>
+							<I.close size={11} />
+						</button>
+					</Tooltip>
 				</span>
 			))}
 			<input

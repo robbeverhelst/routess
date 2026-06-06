@@ -41,14 +41,20 @@ import { I } from "../components/icons";
 import { Btn, IconBtn, Kbd, RDS_COLORS, SecTitle } from "../components/primitives";
 import { RouteProfileChart } from "../components/RouteProfileChart";
 import { SurfaceMismatchBadge } from "../components/SurfaceMismatchBadge";
+import { Tooltip } from "../components/Tooltip";
 
 // Start and end this close together (km) read as a loop, not two endpoints.
 const LOOP_THRESHOLD_KM = 0.08;
 
-const ACTIVITIES: { key: RedesignActivity; icon: React.ComponentType<{ size?: number }>; labelKey: string }[] = [
-	{ key: "run", icon: I.run, labelKey: "sport.short.run" },
-	{ key: "cycle", icon: I.bike, labelKey: "sport.short.cycle" },
-	{ key: "walk", icon: I.walk, labelKey: "sport.short.walk" },
+const ACTIVITIES: {
+	key: RedesignActivity;
+	icon: React.ComponentType<{ size?: number }>;
+	labelKey: string;
+	titleKey: string;
+}[] = [
+	{ key: "run", icon: I.run, labelKey: "sport.short.run", titleKey: "sport.run" },
+	{ key: "cycle", icon: I.bike, labelKey: "sport.short.cycle", titleKey: "sport.cycle" },
+	{ key: "walk", icon: I.walk, labelKey: "sport.short.walk", titleKey: "sport.walk" },
 ];
 
 function PlanRouteProfileChart() {
@@ -446,32 +452,33 @@ export function PlanPanel() {
 							const Icon = a.icon;
 							const on = activityType === a.key;
 							return (
-								<button
-									key={a.key}
-									type="button"
-									aria-pressed={on}
-									onClick={() => handleActivityChange(a.key)}
-									style={{
-										display: "inline-flex",
-										alignItems: "center",
-										justifyContent: "center",
-										gap: 6,
-										flex: 1,
-										height: 28,
-										padding: "0 8px",
-										borderRadius: 999,
-										border: 0,
-										background: on ? RDS_COLORS.bgPanel : "transparent",
-										boxShadow: on ? "0 1px 2px rgba(15, 23, 42, 0.12)" : "none",
-										color: on ? RDS_COLORS.accent : RDS_COLORS.fgMuted,
-										fontSize: 12.5,
-										fontWeight: on ? 600 : 500,
-										cursor: "pointer",
-										transition: "background 120ms, color 120ms",
-									}}
-								>
-									<Icon size={14} /> {t(a.labelKey)}
-								</button>
+								<Tooltip key={a.key} label={t(a.titleKey)}>
+									<button
+										type="button"
+										aria-pressed={on}
+										onClick={() => handleActivityChange(a.key)}
+										style={{
+											display: "inline-flex",
+											alignItems: "center",
+											justifyContent: "center",
+											gap: 6,
+											flex: 1,
+											height: 28,
+											padding: "0 8px",
+											borderRadius: 999,
+											border: 0,
+											background: on ? RDS_COLORS.bgPanel : "transparent",
+											boxShadow: on ? "0 1px 2px rgba(15, 23, 42, 0.12)" : "none",
+											color: on ? RDS_COLORS.accent : RDS_COLORS.fgMuted,
+											fontSize: 12.5,
+											fontWeight: on ? 600 : 500,
+											cursor: "pointer",
+											transition: "background 120ms, color 120ms",
+										}}
+									>
+										<Icon size={14} /> {t(a.labelKey)}
+									</button>
+								</Tooltip>
 							);
 						})}
 					</div>
@@ -884,47 +891,48 @@ function EndpointButton({
 	muted?: boolean;
 }) {
 	return (
-		<button
-			type="button"
-			title={title}
-			onClick={onClick}
-			style={{
-				display: "flex",
-				alignItems: "center",
-				gap: 8,
-				background: RDS_COLORS.bgInput,
-				border: `1px solid ${RDS_COLORS.border}`,
-				borderRadius: 8,
-				height: 36,
-				padding: "0 10px",
-				minWidth: 0,
-				width: "100%",
-				cursor: "pointer",
-				textAlign: "left",
-				font: "inherit",
-				color: muted ? RDS_COLORS.fgSubtle : RDS_COLORS.fg,
-				transition: "background 120ms, border-color 120ms",
-			}}
-			onMouseEnter={(e) => {
-				e.currentTarget.style.background = RDS_COLORS.bgHover;
-			}}
-			onMouseLeave={(e) => {
-				e.currentTarget.style.background = RDS_COLORS.bgInput;
-			}}
-		>
-			<span style={{ width: 8, height: 8, borderRadius: 999, background: dotColor, flexShrink: 0 }} />
-			<span
+		<Tooltip label={title}>
+			<button
+				type="button"
+				onClick={onClick}
 				style={{
-					flex: 1,
-					fontSize: 13,
-					overflow: "hidden",
-					textOverflow: "ellipsis",
-					whiteSpace: "nowrap",
+					display: "flex",
+					alignItems: "center",
+					gap: 8,
+					background: RDS_COLORS.bgInput,
+					border: `1px solid ${RDS_COLORS.border}`,
+					borderRadius: 8,
+					height: 36,
+					padding: "0 10px",
+					minWidth: 0,
+					width: "100%",
+					cursor: "pointer",
+					textAlign: "left",
+					font: "inherit",
+					color: muted ? RDS_COLORS.fgSubtle : RDS_COLORS.fg,
+					transition: "background 120ms, border-color 120ms",
+				}}
+				onMouseEnter={(e) => {
+					e.currentTarget.style.background = RDS_COLORS.bgHover;
+				}}
+				onMouseLeave={(e) => {
+					e.currentTarget.style.background = RDS_COLORS.bgInput;
 				}}
 			>
-				{label}
-			</span>
-		</button>
+				<span style={{ width: 8, height: 8, borderRadius: 999, background: dotColor, flexShrink: 0 }} />
+				<span
+					style={{
+						flex: 1,
+						fontSize: 13,
+						overflow: "hidden",
+						textOverflow: "ellipsis",
+						whiteSpace: "nowrap",
+					}}
+				>
+					{label}
+				</span>
+			</button>
+		</Tooltip>
 	);
 }
 
@@ -940,38 +948,39 @@ function FeatureBtn({
 	onClick: () => void;
 }) {
 	return (
-		<button
-			type="button"
-			title={title}
-			onClick={onClick}
-			style={{
-				display: "inline-flex",
-				alignItems: "center",
-				justifyContent: "center",
-				gap: 6,
-				flexShrink: 0,
-				height: 32,
-				padding: "0 10px",
-				borderRadius: 999,
-				border: `1px solid ${RDS_COLORS.border}`,
-				background: "transparent",
-				color: RDS_COLORS.fgMuted,
-				fontSize: 12.5,
-				fontWeight: 500,
-				cursor: "pointer",
-				transition: "background 120ms, color 120ms",
-			}}
-			onMouseEnter={(e) => {
-				e.currentTarget.style.background = RDS_COLORS.bgHover;
-				e.currentTarget.style.color = RDS_COLORS.fg;
-			}}
-			onMouseLeave={(e) => {
-				e.currentTarget.style.background = "transparent";
-				e.currentTarget.style.color = RDS_COLORS.fgMuted;
-			}}
-		>
-			{icon} {label}
-		</button>
+		<Tooltip label={title}>
+			<button
+				type="button"
+				onClick={onClick}
+				style={{
+					display: "inline-flex",
+					alignItems: "center",
+					justifyContent: "center",
+					gap: 6,
+					flexShrink: 0,
+					height: 32,
+					padding: "0 10px",
+					borderRadius: 999,
+					border: `1px solid ${RDS_COLORS.border}`,
+					background: "transparent",
+					color: RDS_COLORS.fgMuted,
+					fontSize: 12.5,
+					fontWeight: 500,
+					cursor: "pointer",
+					transition: "background 120ms, color 120ms",
+				}}
+				onMouseEnter={(e) => {
+					e.currentTarget.style.background = RDS_COLORS.bgHover;
+					e.currentTarget.style.color = RDS_COLORS.fg;
+				}}
+				onMouseLeave={(e) => {
+					e.currentTarget.style.background = "transparent";
+					e.currentTarget.style.color = RDS_COLORS.fgMuted;
+				}}
+			>
+				{icon} {label}
+			</button>
+		</Tooltip>
 	);
 }
 

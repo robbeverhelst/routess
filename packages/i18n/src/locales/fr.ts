@@ -306,6 +306,8 @@ export const fr: Record<string, string> = {
 	// Redesign pace settings
 	"settings.pace.title": "Allure",
 	"settings.pace.subtitle": "Utilisé pour estimer les temps d'itinéraire",
+	"settings.pace.resetDefault": "Réinitialiser la valeur par défaut",
+	"settings.pace.alreadyDefault": "Déjà à la valeur par défaut",
 	"welcome.steps.pace.title": "Votre allure moyenne",
 	"welcome.steps.pace.subtitle": "Ajustez la vitesse typique pour chaque sport choisi.",
 	"welcome.steps.pace.help":

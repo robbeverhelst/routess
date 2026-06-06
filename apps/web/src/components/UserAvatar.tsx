@@ -2,6 +2,7 @@ import { useAuthStatus } from "@/lib/api-queries";
 import { emitAppEvent } from "@/lib/app-events";
 import { I } from "./icons";
 import { RDS_COLORS } from "./primitives";
+import { Tooltip } from "./Tooltip";
 
 interface UserAvatarProps {
 	size?: number;
@@ -53,91 +54,94 @@ export function UserAvatar({ size = 30, onClick, title, compact = false }: UserA
 	if (!isAuthenticated) {
 		if (compact) {
 			return (
+				<Tooltip label={title ?? "Sign in"}>
+					<button
+						type="button"
+						onClick={handleClick}
+						aria-label="Sign in"
+						style={{
+							width: size,
+							height: size,
+							borderRadius: 999,
+							border: `1px solid ${RDS_COLORS.accent}`,
+							background: RDS_COLORS.accentSoft,
+							color: RDS_COLORS.accent,
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+							cursor: "pointer",
+							padding: 0,
+						}}
+					>
+						<I.user size={Math.round(size * 0.5)} />
+					</button>
+				</Tooltip>
+			);
+		}
+		return (
+			<Tooltip label={title}>
 				<button
 					type="button"
 					onClick={handleClick}
-					title={title ?? "Sign in"}
-					aria-label="Sign in"
 					style={{
-						width: size,
 						height: size,
+						padding: `0 ${Math.max(10, Math.round(size * 0.4))}px`,
 						borderRadius: 999,
 						border: `1px solid ${RDS_COLORS.accent}`,
 						background: RDS_COLORS.accentSoft,
 						color: RDS_COLORS.accent,
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "center",
+						fontSize,
+						fontWeight: 600,
 						cursor: "pointer",
-						padding: 0,
+						display: "inline-flex",
+						alignItems: "center",
+						gap: 6,
 					}}
 				>
-					<I.user size={Math.round(size * 0.5)} />
+					<I.user size={Math.round(size * 0.45)} />
+					Sign in
 				</button>
-			);
-		}
-		return (
-			<button
-				type="button"
-				onClick={handleClick}
-				title={title ?? "Sign in"}
-				style={{
-					height: size,
-					padding: `0 ${Math.max(10, Math.round(size * 0.4))}px`,
-					borderRadius: 999,
-					border: `1px solid ${RDS_COLORS.accent}`,
-					background: RDS_COLORS.accentSoft,
-					color: RDS_COLORS.accent,
-					fontSize,
-					fontWeight: 600,
-					cursor: "pointer",
-					display: "inline-flex",
-					alignItems: "center",
-					gap: 6,
-				}}
-			>
-				<I.user size={Math.round(size * 0.45)} />
-				Sign in
-			</button>
+			</Tooltip>
 		);
 	}
 
 	const initials = getInitials(user?.name, user?.email);
 
 	return (
-		<button
-			type="button"
-			onClick={handleClick}
-			title={title ?? user?.name ?? user?.email ?? "Account"}
-			aria-label={user?.name ?? user?.email ?? "Account"}
-			style={{
-				width: size,
-				height: size,
-				borderRadius: 999,
-				background: user?.avatar
-					? "transparent"
-					: `linear-gradient(135deg, ${RDS_COLORS.accent}, oklch(0.65 0.15 200))`,
-				color: "white",
-				border: 0,
-				padding: 0,
-				display: "flex",
-				alignItems: "center",
-				justifyContent: "center",
-				fontSize,
-				fontWeight: 600,
-				cursor: "pointer",
-				overflow: "hidden",
-			}}
-		>
-			{user?.avatar ? (
-				<img
-					src={user.avatar}
-					alt={user.name ?? "avatar"}
-					style={{ width: "100%", height: "100%", objectFit: "cover" }}
-				/>
-			) : (
-				initials
-			)}
-		</button>
+		<Tooltip label={title ?? user?.name ?? user?.email ?? "Account"}>
+			<button
+				type="button"
+				onClick={handleClick}
+				aria-label={user?.name ?? user?.email ?? "Account"}
+				style={{
+					width: size,
+					height: size,
+					borderRadius: 999,
+					background: user?.avatar
+						? "transparent"
+						: `linear-gradient(135deg, ${RDS_COLORS.accent}, oklch(0.65 0.15 200))`,
+					color: "white",
+					border: 0,
+					padding: 0,
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "center",
+					fontSize,
+					fontWeight: 600,
+					cursor: "pointer",
+					overflow: "hidden",
+				}}
+			>
+				{user?.avatar ? (
+					<img
+						src={user.avatar}
+						alt={user.name ?? "avatar"}
+						style={{ width: "100%", height: "100%", objectFit: "cover" }}
+					/>
+				) : (
+					initials
+				)}
+			</button>
+		</Tooltip>
 	);
 }

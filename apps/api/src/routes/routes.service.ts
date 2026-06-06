@@ -50,7 +50,7 @@ export class RoutesService {
 		if (route.visibility === "public") {
 			route.publishedAt = new Date();
 		}
-		await this.em.persistAndFlush(route);
+		await this.em.persist(route).flush();
 		await this.em.populate(route, ["user"]);
 		this.events.emit(ROUTE_CREATED, { userId } satisfies RouteCreatedEvent);
 		return this.toResponseDto(route);
@@ -135,7 +135,7 @@ export class RoutesService {
 		if (route.visibility === "public" && !route.publishedAt) {
 			route.publishedAt = new Date();
 		}
-		await this.em.persistAndFlush(route);
+		await this.em.persist(route).flush();
 		await this.em.populate(route, ["user"]);
 		return this.toResponseDto(route);
 	}
@@ -143,7 +143,7 @@ export class RoutesService {
 	async remove(id: number, userId: number): Promise<void> {
 		const route = await this.findOwnedRouteOrFail(id, userId);
 		route.deletedAt = new Date();
-		await this.em.persistAndFlush(route);
+		await this.em.persist(route).flush();
 		this.events.emit(ROUTE_DELETED, { userId } satisfies RouteDeletedEvent);
 	}
 
@@ -175,7 +175,7 @@ export class RoutesService {
 		if (!route) {
 			throw new NotFoundException(`Route with ID ${id} not found`);
 		}
-		await this.em.removeAndFlush(route);
+		await this.em.remove(route).flush();
 	}
 
 	private async findOwnedRouteOrFail(id: number, userId: number): Promise<Route> {

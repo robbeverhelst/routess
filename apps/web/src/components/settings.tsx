@@ -10,6 +10,7 @@ import {
 } from "react";
 import { I } from "./icons";
 import { IconBtn, RDS_COLORS, SecTitle } from "./primitives";
+import { Tooltip } from "./Tooltip";
 
 // Shared settings primitives. All settings UI (SettingsPanel, AccountScreen,
 // ApiTokensSection) must compose these instead of hand-rolling rows/cards.
@@ -192,7 +193,7 @@ export function SettingsDetailHeader({ title, backLabel, onBack }: SettingsDetai
 interface SegmentedProps {
 	value: string;
 	onChange: (v: string) => void;
-	options: { value: string; label: string }[];
+	options: { value: string; label: string; title?: string }[];
 }
 
 export function Segmented({ value, onChange, options }: SegmentedProps) {
@@ -201,24 +202,25 @@ export function Segmented({ value, onChange, options }: SegmentedProps) {
 			{options.map((o) => {
 				const on = value === o.value;
 				return (
-					<button
-						key={o.value}
-						type="button"
-						onClick={() => onChange(o.value)}
-						aria-pressed={on}
-						style={{
-							padding: "6px 12px",
-							borderRadius: 4,
-							background: on ? RDS_COLORS.bgPanel : "transparent",
-							border: 0,
-							fontSize: 12,
-							fontWeight: 500,
-							color: on ? RDS_COLORS.fg : RDS_COLORS.fgMuted,
-							cursor: "pointer",
-						}}
-					>
-						{o.label}
-					</button>
+					<Tooltip key={o.value} label={o.title}>
+						<button
+							type="button"
+							onClick={() => onChange(o.value)}
+							aria-pressed={on}
+							style={{
+								padding: "6px 12px",
+								borderRadius: 4,
+								background: on ? RDS_COLORS.bgPanel : "transparent",
+								border: 0,
+								fontSize: 12,
+								fontWeight: 500,
+								color: on ? RDS_COLORS.fg : RDS_COLORS.fgMuted,
+								cursor: "pointer",
+							}}
+						>
+							{o.label}
+						</button>
+					</Tooltip>
 				);
 			})}
 		</div>

@@ -301,6 +301,8 @@ export const de: Record<string, string> = {
 	// Redesign pace settings
 	"settings.pace.title": "Tempo",
 	"settings.pace.subtitle": "Wird zur Schätzung von Routenzeiten verwendet",
+	"settings.pace.resetDefault": "Auf Standard zurücksetzen",
+	"settings.pace.alreadyDefault": "Bereits Standardwert",
 	"welcome.steps.pace.title": "Ihr durchschnittliches Tempo",
 	"welcome.steps.pace.subtitle": "Passen Sie die typische Geschwindigkeit für jede gewählte Sportart an.",
 	"welcome.steps.pace.help": "Wir verwenden dies, um Routendauern auf direkten Segmenten und offline zu schätzen.",
