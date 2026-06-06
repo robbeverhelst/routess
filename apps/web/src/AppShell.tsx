@@ -472,7 +472,7 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 			}}
 		>
 			<span style={{ fontSize: 15, fontWeight: 600, letterSpacing: -0.2 }}>{screenTitle(context, language)}</span>
-			{context === "plan" && (
+			{context === "plan" && hasRoute && (
 				<Badge variant="accent" dot>
 					{t("drawer.activeRoute")}
 				</Badge>
@@ -519,7 +519,13 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 		/>
 	);
 
-	const Chip = hasRoute ? <RouteChip distance={distance || "—"} time={duration || "—"} elevation={elevation} /> : null;
+	// The plan panel shows the same stats; only float the chip when they are
+	// not already visible (panel collapsed or another context active).
+	const planPanelVisible = !isMobile && !panelCollapsed && context === "plan";
+	const Chip =
+		hasRoute && !planPanelVisible ? (
+			<RouteChip distance={distance || "—"} time={duration || "—"} elevation={elevation} />
+		) : null;
 
 	const Offline =
 		!online && !offlineDismissed ? (

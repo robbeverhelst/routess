@@ -13,6 +13,7 @@ export const ROUTE_SURFACE_SOURCE_ID = "route-surface";
 export const WAYPOINTS_SOURCE_ID = "points";
 export const WAYPOINTS_LAYER_ID = "points";
 export const WAYPOINTS_CORE_LAYER_ID = "points-core";
+export const WAYPOINTS_NUMBERS_LAYER_ID = "points-numbers";
 export const WAYPOINT_LABELS_LAYER_ID = "waypoint-labels";
 export const USER_LOCATION_SOURCE_ID = "user-location-point";
 export const USER_LOCATION_HALO_LAYER_ID = "user-location-halo";
@@ -304,6 +305,27 @@ export const initializeSourcesAndLayers = (map: MapboxMap, palette?: MapPalette)
 		});
 	}
 
+	// Index numbers on via markers so they correspond to the plan panel list.
+	if (map.getSource(WAYPOINTS_SOURCE_ID) && !map.getLayer(WAYPOINTS_NUMBERS_LAYER_ID)) {
+		map.addLayer({
+			id: WAYPOINTS_NUMBERS_LAYER_ID,
+			type: "symbol",
+			source: WAYPOINTS_SOURCE_ID,
+			filter: ["!=", ["get", "label"], ""],
+			minzoom: 11,
+			layout: {
+				"text-field": ["get", "label"],
+				"text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
+				"text-size": ["interpolate", ["linear"], ["zoom"], 11, 7.5, 14, 9.5, 16, 11.5],
+				"text-allow-overlap": true,
+				"text-ignore-placement": true,
+			},
+			paint: {
+				"text-color": p.waypointStroke,
+			},
+		});
+	}
+
 	if (!map.getSource(USER_LOCATION_SOURCE_ID)) {
 		map.addSource(USER_LOCATION_SOURCE_ID, {
 			type: "geojson",
@@ -518,6 +540,9 @@ export const applyMapPalette = (map: MapboxMap, palette: MapPalette): void => {
 		if (map.getLayer(WAYPOINTS_CORE_LAYER_ID)) {
 			map.setPaintProperty(WAYPOINTS_CORE_LAYER_ID, "circle-color", palette.waypointStroke);
 		}
+		if (map.getLayer(WAYPOINTS_NUMBERS_LAYER_ID)) {
+			map.setPaintProperty(WAYPOINTS_NUMBERS_LAYER_ID, "text-color", palette.waypointStroke);
+		}
 		if (map.getLayer(WAYPOINT_LABELS_LAYER_ID)) {
 			map.setPaintProperty(WAYPOINT_LABELS_LAYER_ID, "text-color", palette.kmText);
 			map.setPaintProperty(WAYPOINT_LABELS_LAYER_ID, "text-halo-color", palette.kmHalo);
@@ -579,10 +604,14 @@ export const updateWaypointsLayer = (map: MapboxMap, waypoints: Waypoint[], isMa
 		else if (index === arr.length - 1) pointType = "end";
 		else pointType = "intermediate";
 
+		// Vias carry their list index so the numbers layer can render it.
+		const isVia = arr.length > 1 && index > 0 && index < arr.length - 1;
+		const label = isVia ? String(originalIndex) : "";
+
 		return {
 			type: "Feature" as const,
 			id: waypointFeatureIdFromIndex(originalIndex),
-			properties: { pointType, waypointIndex: originalIndex, ...(wp.name ? { name: wp.name } : {}) },
+			properties: { pointType, waypointIndex: originalIndex, label, ...(wp.name ? { name: wp.name } : {}) },
 			geometry: { type: "Point" as const, coordinates: wp.coord },
 		};
 	});

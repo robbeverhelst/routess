@@ -1,4 +1,4 @@
-import { calculatePathDistance } from "@routess/core";
+import { calculatePathDistance, haversineDistance } from "@routess/core";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { applySavedRoute } from "@/features/routing/applySavedRoute";
 import { isDraftDirty } from "@/features/routing/draftDirty";
@@ -7,7 +7,8 @@ import { useViewport } from "@/hooks/useViewport";
 import { useSaveRoute, useUpdateRoute } from "@/lib/api-queries";
 import { emitAppEvent, onAppEvent } from "@/lib/app-events";
 import { useT } from "@/lib/i18n";
-import { formatSpeedParts, useUnits } from "@/lib/units";
+import { usePlaceName } from "@/lib/reverseGeocode";
+import { formatDurationClockParts, formatPaceParts, formatSpeedParts, useUnits } from "@/lib/units";
 import { useModalsStore } from "@/stores/modalsStore";
 import { getSpeedForActivity, useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 import {
@@ -23,7 +24,6 @@ import {
 	useIsComputingElevation,
 	useRemoveWaypoint,
 	useRouteDistance,
-	useRouteDuration,
 	useRoutePath,
 	useSaveSnapshot,
 	useSetActivity,
@@ -42,17 +42,8 @@ import { Btn, IconBtn, Kbd, RDS_COLORS, SecTitle } from "../components/primitive
 import { RouteProfileChart } from "../components/RouteProfileChart";
 import { SurfaceMismatchBadge } from "../components/SurfaceMismatchBadge";
 
-// Parses durations produced by @routess/core formatDuration: "X min", "X h", or "X.X h"
-// (with optional " (estimated)" / " (offline)" suffix). Returns minutes or null.
-function parseDurationToMinutes(s: string): number | null {
-	if (!s) return null;
-	const cleaned = s.replace(/\s*\([^)]+\)\s*/g, "").trim();
-	const m = cleaned.match(/^(-?\d+(?:\.\d+)?)\s*(min|h)$/i);
-	if (!m) return null;
-	const value = Number.parseFloat(m[1]);
-	if (!Number.isFinite(value)) return null;
-	return m[2].toLowerCase() === "h" ? value * 60 : value;
-}
+// Start and end this close together (km) read as a loop, not two endpoints.
+const LOOP_THRESHOLD_KM = 0.08;
 
 const ACTIVITIES: { key: RedesignActivity; icon: React.ComponentType<{ size?: number }>; labelKey: string }[] = [
 	{ key: "run", icon: I.run, labelKey: "sport.short.run" },
@@ -85,7 +76,6 @@ export function PlanPanel() {
 	const waypoints = useWaypoints();
 	const routePath = useRoutePath();
 	const distance = useRouteDistance();
-	const duration = useRouteDuration();
 	const hasRoute = useHasRoute();
 	const clearWaypoints = useClearWaypoints();
 	const removeWaypoint = useRemoveWaypoint();
@@ -119,6 +109,7 @@ export function PlanPanel() {
 	const setGlobalActivity = useUiStore((s) => s.setActivityType);
 	const activityType: RedesignActivity = draftActivity ?? globalActivity;
 	const openModal = useModalsStore((s) => s.openModal);
+	const openSearch = useModalsStore((s) => s.openSearch);
 	const pushToast = useToastStore((s) => s.push);
 	const distanceMeters = useDistanceMeters();
 	const durationSeconds = useDurationSeconds();
@@ -272,17 +263,34 @@ export function PlanPanel() {
 	handleSaveClickRef.current = handleSaveClick;
 	useEffect(() => onAppEvent("routess:save-draft", () => handleSaveClickRef.current()), []);
 
-	const paceParts = useMemo(() => {
-		if (hasRoute && routePath.length >= 2) {
+	const speedKmh = useMemo(() => {
+		if (hasRoute && routePath.length >= 2 && durationSeconds && durationSeconds > 0) {
 			const distanceKm = calculatePathDistance(routePath);
-			const durationMinutes = parseDurationToMinutes(duration);
-			if (distanceKm > 0 && durationMinutes && durationMinutes > 0) {
-				return formatSpeedParts((distanceKm / durationMinutes) * 60, units);
-			}
+			if (distanceKm > 0) return distanceKm / (durationSeconds / 3600);
 		}
 		const configured = getSpeedForActivity(activityType, sportSpeeds);
-		return configured > 0 ? formatSpeedParts(configured, units) : null;
-	}, [hasRoute, routePath, duration, units, sportSpeeds, activityType]);
+		return configured > 0 ? configured : null;
+	}, [hasRoute, routePath, durationSeconds, sportSpeeds, activityType]);
+
+	// Cyclists think in speed; runners and walkers think in pace.
+	const tempoStat = (() => {
+		if (activityType === "cycle") {
+			const parts = speedKmh != null ? formatSpeedParts(speedKmh, units) : null;
+			return {
+				label: t("plan.speed"),
+				val: parts?.value ?? "—",
+				unit: parts?.unit ?? (units === "mi" ? "mph" : "km/h"),
+			};
+		}
+		const parts = speedKmh != null ? formatPaceParts(speedKmh, units) : null;
+		return {
+			label: t("plan.pace"),
+			val: parts?.value ?? "—",
+			unit: parts?.unit ?? (units === "mi" ? "/mi" : "/km"),
+		};
+	})();
+
+	const timeParts = durationSeconds != null ? formatDurationClockParts(durationSeconds) : null;
 
 	const stats = [
 		{
@@ -290,17 +298,63 @@ export function PlanPanel() {
 			val: distance ? distance.split(" ")[0] : "—",
 			unit: distance ? distance.split(" ")[1] || "km" : units === "mi" ? "mi" : "km",
 		},
-		{ label: t("plan.time"), val: duration || "—", unit: "" },
+		{ label: t("plan.time"), val: timeParts?.value ?? "—", unit: timeParts?.unit ?? "" },
 		{ label: t("plan.elev"), val: elevationVal, unit: elevationUnit },
-		{
-			label: t("plan.pace"),
-			val: paceParts?.value ?? "—",
-			unit: paceParts?.unit ?? (units === "mi" ? "mph" : "km/h"),
-		},
+		tempoStat,
 	];
 
 	const startWp = waypoints[0];
 	const endWp = waypoints[waypoints.length - 1];
+	const hasEnd = endWp != null && waypoints.length > 1;
+	const isLoop =
+		waypoints.length > 2 &&
+		startWp != null &&
+		endWp != null &&
+		haversineDistance(startWp.coord, endWp.coord) < LOOP_THRESHOLD_KM;
+	const startName = usePlaceName(startWp ? startWp.coord : null);
+	const endName = usePlaceName(hasEnd ? endWp.coord : null);
+	const startLabel = startWp ? (startWp.name ?? startName ?? formatCoord(startWp.coord)) : t("plan.addStart");
+	const endLabel = hasEnd ? (endWp.name ?? endName ?? formatCoord(endWp.coord)) : t("plan.addEnd");
+
+	const handleReverse = () => {
+		if (waypoints.length < 2) return;
+		saveSnapshot();
+		setWaypoints(waypoints.slice().reverse());
+		emitAppEvent("routess:recalculate-route");
+	};
+
+	// Close the loop manually: route from the current end back to the start.
+	const handleBackToStart = () => {
+		if (!startWp || waypoints.length < 2 || isLoop) return;
+		saveSnapshot();
+		setWaypoints([...waypoints, { coord: [startWp.coord[0], startWp.coord[1]], type: "routed" }]);
+		emitAppEvent("routess:recalculate-route");
+	};
+
+	// Distance from the start to each waypoint, measured along the computed
+	// route (waypoints are ordered, so the scan start advances monotonically).
+	const waypointDistancesKm = useMemo(() => {
+		if (routePath.length < 2 || waypoints.length === 0) return null;
+		const cum = new Array<number>(routePath.length);
+		cum[0] = 0;
+		for (let i = 1; i < routePath.length; i++) {
+			cum[i] = cum[i - 1] + haversineDistance(routePath[i - 1], routePath[i]);
+		}
+		let from = 0;
+		return waypoints.map((w) => {
+			let best = Number.POSITIVE_INFINITY;
+			let bestIdx = from;
+			for (let i = from; i < routePath.length; i++) {
+				const d = haversineDistance(w.coord, routePath[i]);
+				if (d < best) {
+					best = d;
+					bestIdx = i;
+				}
+			}
+			from = bestIdx;
+			return cum[bestIdx];
+		});
+	}, [waypoints, routePath]);
 
 	return (
 		<div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
@@ -343,86 +397,131 @@ export function PlanPanel() {
 				}}
 			>
 				<div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-					{availableActivities.map((a) => {
-						const Icon = a.icon;
-						const on = activityType === a.key;
-						return (
-							<button
-								key={a.key}
-								type="button"
-								onClick={() => handleActivityChange(a.key)}
-								style={{
-									display: "inline-flex",
-									alignItems: "center",
-									gap: 6,
-									height: 32,
-									padding: "0 12px",
-									borderRadius: 999,
-									border: `1px solid ${on ? RDS_COLORS.accent : RDS_COLORS.border}`,
-									background: on ? RDS_COLORS.accentSoft : RDS_COLORS.bgInput,
-									color: on ? RDS_COLORS.accent : RDS_COLORS.fgMuted,
-									fontSize: 12.5,
-									fontWeight: 500,
-									cursor: "pointer",
-								}}
-							>
-								<Icon size={14} /> {t(a.labelKey)}
-							</button>
-						);
-					})}
-					<div style={{ flex: 1 }} />
-					<IconBtn title={t("plan.routingPrefs")} onClick={() => openModal("routing")}>
-						<I.sliders size={16} />
-					</IconBtn>
-					<IconBtn title={t("plan.generateLoop")} onClick={() => openModal("loop")}>
-						<I.compass size={16} />
-					</IconBtn>
+					<div
+						style={{
+							display: "flex",
+							alignItems: "center",
+							gap: 2,
+							padding: 2,
+							flex: 1,
+							minWidth: 0,
+							borderRadius: 999,
+							border: `1px solid ${RDS_COLORS.border}`,
+							background: RDS_COLORS.bgInput,
+						}}
+					>
+						{availableActivities.map((a) => {
+							const Icon = a.icon;
+							const on = activityType === a.key;
+							return (
+								<button
+									key={a.key}
+									type="button"
+									aria-pressed={on}
+									onClick={() => handleActivityChange(a.key)}
+									style={{
+										display: "inline-flex",
+										alignItems: "center",
+										justifyContent: "center",
+										gap: 6,
+										flex: 1,
+										height: 28,
+										padding: "0 8px",
+										borderRadius: 999,
+										border: 0,
+										background: on ? RDS_COLORS.bgPanel : "transparent",
+										boxShadow: on ? "0 1px 2px rgba(15, 23, 42, 0.12)" : "none",
+										color: on ? RDS_COLORS.accent : RDS_COLORS.fgMuted,
+										fontSize: 12.5,
+										fontWeight: on ? 600 : 500,
+										cursor: "pointer",
+										transition: "background 120ms, color 120ms",
+									}}
+								>
+									<Icon size={14} /> {t(a.labelKey)}
+								</button>
+							);
+						})}
+					</div>
+					<FeatureBtn
+						icon={<I.sliders size={14} />}
+						label={t("plan.options")}
+						title={t("plan.routingPrefs")}
+						onClick={() => openModal("routing")}
+					/>
 				</div>
 
-				{!isMobile && (
-					<>
-						<div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 6 }}>
-							<EndpointInput
+				{!isMobile &&
+					(isLoop && startWp ? (
+						<div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+							<EndpointButton
 								dotColor={RDS_COLORS.success}
-								label={startWp ? formatCoord(startWp.coord) : t("plan.addStart")}
+								label={t("plan.loopFrom", { name: startLabel })}
+								title={t("plan.moveLoop")}
+								onClick={() => openSearch("replace-loop")}
 							/>
-							<EndpointInput
-								dotColor={RDS_COLORS.danger}
-								label={endWp && waypoints.length > 1 ? formatCoord(endWp.coord) : t("plan.addEnd")}
-							/>
+							<IconBtn
+								title={t("plan.reverseRoute")}
+								onClick={handleReverse}
+								style={{ width: 28, height: 28, flexShrink: 0 }}
+							>
+								<I.swapVert size={15} />
+							</IconBtn>
 						</div>
-
-						<button
-							type="button"
-							onClick={() => openModal("search")}
-							style={{
-								display: "inline-flex",
-								alignItems: "center",
-								gap: 8,
-								marginTop: 8,
-								height: 32,
-								padding: "0 10px",
-								borderRadius: 8,
-								border: `1px dashed ${RDS_COLORS.borderStrong}`,
-								background: "transparent",
-								color: RDS_COLORS.fgMuted,
-								fontSize: 12.5,
-								width: "100%",
-								cursor: "pointer",
-							}}
-						>
-							<I.plus size={14} /> {t("plan.addWaypoint")}
-							<span style={{ flex: 1 }} />
-							<Kbd>⌘</Kbd>
-							<Kbd>K</Kbd>
-						</button>
-					</>
-				)}
-			</div>
-
-			{/* Elevation + surface */}
-			<div data-vaul-no-drag style={{ padding: "0 20px 14px", borderBottom: `1px solid ${RDS_COLORS.border}` }}>
-				<PlanRouteProfileChart />
+					) : (
+						<>
+							<div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+								<div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
+									<EndpointButton
+										dotColor={RDS_COLORS.success}
+										label={startLabel}
+										muted={!startWp}
+										title={startWp ? t("plan.changeStart") : t("plan.addStart")}
+										onClick={() => openSearch("replace-start")}
+									/>
+									<EndpointButton
+										dotColor={RDS_COLORS.danger}
+										label={endLabel}
+										muted={!hasEnd}
+										title={hasEnd ? t("plan.changeEnd") : t("plan.addEnd")}
+										onClick={() => openSearch("replace-end")}
+									/>
+								</div>
+								<IconBtn
+									title={t("plan.reverseRoute")}
+									onClick={handleReverse}
+									disabled={waypoints.length < 2}
+									style={{ width: 28, height: 28, flexShrink: 0 }}
+								>
+									<I.swapVert size={15} />
+								</IconBtn>
+							</div>
+							{waypoints.length >= 2 && (
+								<button
+									type="button"
+									onClick={handleBackToStart}
+									style={{
+										display: "inline-flex",
+										alignItems: "center",
+										justifyContent: "center",
+										gap: 6,
+										marginTop: 6,
+										height: 28,
+										padding: "0 10px",
+										borderRadius: 8,
+										border: `1px dashed ${RDS_COLORS.borderStrong}`,
+										background: "transparent",
+										color: RDS_COLORS.fgMuted,
+										fontSize: 12,
+										width: "100%",
+										cursor: "pointer",
+									}}
+								>
+									<I.cornerDownLeft size={13} /> {t("plan.backToStart")}
+								</button>
+							)}
+						</>
+					))}
 			</div>
 
 			{/* Stats */}
@@ -452,23 +551,56 @@ export function PlanPanel() {
 				</div>
 			</div>
 
+			{/* Elevation + surface */}
+			<div data-vaul-no-drag style={{ padding: "0 20px 14px", borderBottom: `1px solid ${RDS_COLORS.border}` }}>
+				<PlanRouteProfileChart />
+			</div>
+
 			{/* Waypoints list */}
 			<div style={{ padding: "14px 20px", overflow: "auto", flex: 1, minHeight: 0 }}>
 				<SecTitle style={{ marginBottom: 10 }}>
 					{t("plan.waypointsCount", { count: String(waypoints.length) })}
 				</SecTitle>
 				{waypoints.length === 0 ? (
-					<div
-						style={{
-							padding: "24px 12px",
-							textAlign: "center",
-							fontSize: 13,
-							color: RDS_COLORS.fgSubtle,
-							lineHeight: 1.55,
-						}}
-					>
-						{t("plan.tapMapToAdd")} <Kbd>⌘</Kbd>
-						<Kbd>K</Kbd>.
+					<div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+						<div
+							style={{
+								display: "flex",
+								flexDirection: "column",
+								alignItems: "center",
+								gap: 10,
+								padding: "22px 16px",
+								borderRadius: 12,
+								border: `1px solid ${RDS_COLORS.border}`,
+								background: RDS_COLORS.bgInput,
+								textAlign: "center",
+							}}
+						>
+							<div
+								style={{
+									width: 34,
+									height: 34,
+									borderRadius: 999,
+									background: RDS_COLORS.accentSoft,
+									color: RDS_COLORS.accent,
+									display: "flex",
+									alignItems: "center",
+									justifyContent: "center",
+								}}
+							>
+								<I.refresh size={16} />
+							</div>
+							<div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+								<div style={{ fontSize: 13.5, fontWeight: 600 }}>{t("plan.loopHeroTitle")}</div>
+								<div style={{ fontSize: 12, color: RDS_COLORS.fgMuted, lineHeight: 1.5 }}>{t("plan.loopHeroBody")}</div>
+							</div>
+							<Btn variant="primary" onClick={() => openModal("loop")} style={{ height: 32, fontSize: 12.5 }}>
+								<I.refresh size={13} /> {t("plan.generateLoop")}
+							</Btn>
+						</div>
+						<div style={{ textAlign: "center", fontSize: 12, color: RDS_COLORS.fgSubtle, lineHeight: 1.55 }}>
+							{t("plan.orTapMap")} <Kbd>⌘</Kbd> <Kbd>K</Kbd>
+						</div>
 					</div>
 				) : (
 					<div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -492,6 +624,8 @@ export function PlanPanel() {
 							const isDragTarget = dragOverIdx === i && draggingIdx !== null && draggingIdx !== i;
 							const isHovered = hoveredWaypointIndex === i;
 							const rowBackground = isDragTarget ? RDS_COLORS.bgHover : isHovered ? RDS_COLORS.bgHover : "transparent";
+							const isNumbered = !isStart && !isEnd;
+							const showActions = isMobile || isHovered || isDragging;
 							return (
 								// biome-ignore lint/a11y/noStaticElementInteractions: drag-drop row is a non-interactive container; the grip button inside is the keyboard-actionable control
 								<div
@@ -499,6 +633,10 @@ export function PlanPanel() {
 									key={`${w.coord[0]}-${w.coord[1]}-${i}`}
 									onMouseEnter={() => setWaypointHover(i)}
 									onMouseLeave={() => {
+										if (hoveredWaypointIndex === i) clearWaypointHover();
+									}}
+									onFocusCapture={() => setWaypointHover(i)}
+									onBlurCapture={() => {
 										if (hoveredWaypointIndex === i) clearWaypointHover();
 									}}
 									onDragOver={(e) => {
@@ -536,18 +674,42 @@ export function PlanPanel() {
 											flexDirection: "column",
 											alignItems: "center",
 											width: 16,
+											alignSelf: "stretch",
 										}}
 									>
-										<div
-											style={{
-												width: 10,
-												height: 10,
-												borderRadius: 999,
-												background: dot,
-												border: `2px solid ${RDS_COLORS.bgPanel}`,
-												boxShadow: `0 0 0 1.5px ${dot}`,
-											}}
-										/>
+										{isNumbered ? (
+											// Number matches the marker drawn on the map for this waypoint.
+											<div
+												style={{
+													width: 16,
+													height: 16,
+													borderRadius: 999,
+													background: dot,
+													color: RDS_COLORS.accentFg,
+													fontSize: 9,
+													fontWeight: 700,
+													display: "flex",
+													alignItems: "center",
+													justifyContent: "center",
+													flexShrink: 0,
+												}}
+											>
+												{i}
+											</div>
+										) : (
+											<div
+												style={{
+													width: 10,
+													height: 10,
+													borderRadius: 999,
+													background: dot,
+													border: `2px solid ${RDS_COLORS.bgPanel}`,
+													boxShadow: `0 0 0 1.5px ${dot}`,
+													flexShrink: 0,
+													marginTop: 3,
+												}}
+											/>
+										)}
 										{!isEnd && (
 											<div
 												style={{
@@ -567,11 +729,17 @@ export function PlanPanel() {
 											onSave={(next) => setWaypointName(i, next)}
 											style={{ fontSize: 13, fontWeight: 500 }}
 										/>
-										<div className="rds-mono" style={{ fontSize: 11, color: RDS_COLORS.fgSubtle, marginTop: 2 }}>
-											{formatCoord(w.coord)}
-										</div>
+										<WaypointPlace coord={w.coord} distanceKm={i > 0 ? (waypointDistancesKm?.[i] ?? null) : null} />
 									</div>
-									<div style={{ display: "flex", alignItems: "center", gap: 2 }}>
+									<div
+										style={{
+											display: "flex",
+											alignItems: "center",
+											gap: 2,
+											opacity: showActions ? 1 : 0,
+											transition: "opacity 120ms",
+										}}
+									>
 										<IconBtn
 											title={t("plan.dragToReorder")}
 											draggable
@@ -599,6 +767,33 @@ export function PlanPanel() {
 							);
 						})}
 					</div>
+				)}
+
+				{!isMobile && (
+					<button
+						type="button"
+						onClick={() => openModal("search")}
+						style={{
+							display: "inline-flex",
+							alignItems: "center",
+							gap: 8,
+							marginTop: 10,
+							height: 32,
+							padding: "0 10px",
+							borderRadius: 8,
+							border: `1px dashed ${RDS_COLORS.borderStrong}`,
+							background: "transparent",
+							color: RDS_COLORS.fgMuted,
+							fontSize: 12.5,
+							width: "100%",
+							cursor: "pointer",
+						}}
+					>
+						<I.plus size={14} /> {t("plan.addWaypoint")}
+						<span style={{ flex: 1 }} />
+						<Kbd>⌘</Kbd>
+						<Kbd>K</Kbd>
+					</button>
 				)}
 			</div>
 
@@ -644,14 +839,15 @@ export function PlanPanel() {
 					onClick={() => openModal("import")}
 					style={{ padding: "0 10px" }}
 				>
-					<I.download size={14} />
+					<I.upload size={14} />
 				</Btn>
+				<div style={{ width: 1, alignSelf: "stretch", margin: "6px 2px", background: RDS_COLORS.border }} />
 				<Btn
 					title={t("plan.clear")}
 					variant="ghost"
 					onClick={handleClear}
 					disabled={waypoints.length === 0}
-					style={{ padding: "0 10px" }}
+					style={{ padding: "0 10px", color: RDS_COLORS.danger }}
 				>
 					<I.trash size={14} />
 				</Btn>
@@ -660,9 +856,24 @@ export function PlanPanel() {
 	);
 }
 
-function EndpointInput({ dotColor, label }: { dotColor: string; label: string }) {
+function EndpointButton({
+	dotColor,
+	label,
+	title,
+	onClick,
+	muted,
+}: {
+	dotColor: string;
+	label: string;
+	title: string;
+	onClick: () => void;
+	muted?: boolean;
+}) {
 	return (
-		<div
+		<button
+			type="button"
+			title={title}
+			onClick={onClick}
 			style={{
 				display: "flex",
 				alignItems: "center",
@@ -673,13 +884,25 @@ function EndpointInput({ dotColor, label }: { dotColor: string; label: string })
 				height: 36,
 				padding: "0 10px",
 				minWidth: 0,
+				width: "100%",
+				cursor: "pointer",
+				textAlign: "left",
+				font: "inherit",
+				color: muted ? RDS_COLORS.fgSubtle : RDS_COLORS.fg,
+				transition: "background 120ms, border-color 120ms",
+			}}
+			onMouseEnter={(e) => {
+				e.currentTarget.style.background = RDS_COLORS.bgHover;
+			}}
+			onMouseLeave={(e) => {
+				e.currentTarget.style.background = RDS_COLORS.bgInput;
 			}}
 		>
-			<div style={{ width: 8, height: 8, borderRadius: 999, background: dotColor, flexShrink: 0 }} />
+			<span style={{ width: 8, height: 8, borderRadius: 999, background: dotColor, flexShrink: 0 }} />
 			<span
 				style={{
+					flex: 1,
 					fontSize: 13,
-					color: RDS_COLORS.fg,
 					overflow: "hidden",
 					textOverflow: "ellipsis",
 					whiteSpace: "nowrap",
@@ -687,6 +910,85 @@ function EndpointInput({ dotColor, label }: { dotColor: string; label: string })
 			>
 				{label}
 			</span>
+		</button>
+	);
+}
+
+function FeatureBtn({
+	icon,
+	label,
+	title,
+	onClick,
+}: {
+	icon: React.ReactNode;
+	label: string;
+	title: string;
+	onClick: () => void;
+}) {
+	return (
+		<button
+			type="button"
+			title={title}
+			onClick={onClick}
+			style={{
+				display: "inline-flex",
+				alignItems: "center",
+				justifyContent: "center",
+				gap: 6,
+				flexShrink: 0,
+				height: 32,
+				padding: "0 10px",
+				borderRadius: 999,
+				border: `1px solid ${RDS_COLORS.border}`,
+				background: "transparent",
+				color: RDS_COLORS.fgMuted,
+				fontSize: 12.5,
+				fontWeight: 500,
+				cursor: "pointer",
+				transition: "background 120ms, color 120ms",
+			}}
+			onMouseEnter={(e) => {
+				e.currentTarget.style.background = RDS_COLORS.bgHover;
+				e.currentTarget.style.color = RDS_COLORS.fg;
+			}}
+			onMouseLeave={(e) => {
+				e.currentTarget.style.background = "transparent";
+				e.currentTarget.style.color = RDS_COLORS.fgMuted;
+			}}
+		>
+			{icon} {label}
+		</button>
+	);
+}
+
+// Subline for a waypoint row: reverse-geocoded place name (coords while it
+// resolves) plus the distance from the start measured along the route.
+function WaypointPlace({ coord, distanceKm }: { coord: [number, number]; distanceKm: number | null }) {
+	const name = usePlaceName(coord);
+	const { formatDistance } = useUnits();
+	return (
+		<div
+			style={{
+				display: "flex",
+				alignItems: "center",
+				gap: 6,
+				fontSize: 11,
+				color: RDS_COLORS.fgSubtle,
+				marginTop: 2,
+				minWidth: 0,
+			}}
+		>
+			<span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+				{name ?? <span className="rds-mono">{formatCoord(coord)}</span>}
+			</span>
+			{distanceKm != null && (
+				<>
+					<span aria-hidden="true">·</span>
+					<span className="rds-mono" style={{ flexShrink: 0 }}>
+						{formatDistance(distanceKm)}
+					</span>
+				</>
+			)}
 		</div>
 	);
 }

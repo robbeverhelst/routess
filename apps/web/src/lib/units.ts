@@ -41,6 +41,28 @@ export function formatSpeed(speedKmh: number, units: UnitSystem): string {
 	return `${value} ${unit}`;
 }
 
+// "11:28" + "/km" — pace from a speed. Returns null for nonsense speeds.
+export function formatPaceParts(speedKmh: number, units: UnitSystem): DistanceParts | null {
+	if (!Number.isFinite(speedKmh) || speedKmh <= 0) return null;
+	const distPerHour = units === "mi" ? speedKmh / KM_PER_MILE : speedKmh;
+	const secondsPerUnit = Math.round(3600 / distPerHour);
+	if (!Number.isFinite(secondsPerUnit) || secondsPerUnit > 6000) return null;
+	const m = Math.floor(secondsPerUnit / 60);
+	const s = secondsPerUnit % 60;
+	return { value: `${m}:${String(s).padStart(2, "0")}`, unit: units === "mi" ? "/mi" : "/km" };
+}
+
+// "47" + "min" under an hour, "1:06" + "h" above.
+export function formatDurationClockParts(durationSeconds: number): DistanceParts {
+	const totalMinutes = Math.round(durationSeconds / 60);
+	if (totalMinutes < 60) {
+		return { value: String(totalMinutes), unit: "min" };
+	}
+	const h = Math.floor(totalMinutes / 60);
+	const m = totalMinutes % 60;
+	return { value: `${h}:${String(m).padStart(2, "0")}`, unit: "h" };
+}
+
 export function formatElevationParts(elevationM: number, units: UnitSystem): DistanceParts {
 	if (units === "mi") {
 		return { value: Math.round(elevationM * FT_PER_M).toString(), unit: "ft" };
