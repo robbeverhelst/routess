@@ -952,6 +952,7 @@ function FeatureBtn({
 			<button
 				type="button"
 				onClick={onClick}
+				aria-label={title}
 				style={{
 					display: "inline-flex",
 					alignItems: "center",

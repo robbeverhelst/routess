@@ -146,6 +146,7 @@ export function Btn({ children, onClick, variant = "default", style, disabled, t
 			<button
 				type={type}
 				onClick={onClick}
+				aria-label={title}
 				disabled={disabled}
 				style={{ ...base, ...variants[variant], ...style }}
 				onMouseEnter={(e) => {
