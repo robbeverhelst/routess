@@ -1,3 +1,4 @@
+import { t } from "@/lib/i18n";
 import { type ToastKind, useToastStore } from "@/stores/toastStore";
 import { I } from "../components/icons";
 import { Btn, IconBtn, RDS_COLORS } from "../components/primitives";
@@ -46,12 +47,12 @@ export function ToastStack() {
 				pointerEvents: "none",
 			}}
 		>
-			{toasts.map((t) => {
-				const Icon = ICONS[t.kind];
-				const c = COLORS[t.kind];
+			{toasts.map((toast) => {
+				const Icon = ICONS[toast.kind];
+				const c = COLORS[toast.kind];
 				return (
 					<div
-						key={t.id}
+						key={toast.id}
 						style={{
 							display: "flex",
 							alignItems: "flex-start",
@@ -82,8 +83,8 @@ export function ToastStack() {
 							<Icon size={14} />
 						</div>
 						<div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
-							<div style={{ fontSize: 13, fontWeight: 600 }}>{t.title}</div>
-							{t.body && (
+							<div style={{ fontSize: 13, fontWeight: 600 }}>{toast.title}</div>
+							{toast.body && (
 								<div
 									style={{
 										fontSize: 11.5,
@@ -94,23 +95,23 @@ export function ToastStack() {
 										whiteSpace: "nowrap",
 									}}
 								>
-									{t.body}
+									{toast.body}
 								</div>
 							)}
 						</div>
-						{t.action && (
+						{toast.action && (
 							<Btn
 								variant="ghost"
 								onClick={() => {
-									t.action?.onClick();
-									dismiss(t.id);
+									toast.action?.onClick();
+									dismiss(toast.id);
 								}}
 								style={{ height: 26, padding: "0 8px", fontSize: 11.5, color: c.fg, fontWeight: 600 }}
 							>
-								{t.action.label}
+								{toast.action.label}
 							</Btn>
 						)}
-						<IconBtn title="Dismiss" onClick={() => dismiss(t.id)} style={{ width: 24, height: 24 }}>
+						<IconBtn title={t("common.close")} onClick={() => dismiss(toast.id)} style={{ width: 24, height: 24 }}>
 							<I.close size={12} />
 						</IconBtn>
 					</div>

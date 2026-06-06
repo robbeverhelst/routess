@@ -6,6 +6,8 @@ import { createContext, useCallback, useContext, useEffect, useRef } from "react
 import { updateLineToRouteLayer, updateUserLocationLayer } from "@/features/routing/managers/MapLayerManager";
 import { useDeviceHeading } from "@/hooks/useDeviceHeading";
 import { useEnhancedLocation } from "@/hooks/useEnhancedLocation";
+import { useViewport } from "@/hooks/useViewport";
+import { useWakeLock } from "@/hooks/useWakeLock";
 import { Logger } from "@/lib/logger";
 import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 import { useIsMapLocked, useRoutePath } from "@/stores/routingStore";
@@ -114,6 +116,12 @@ export const UserLocationProvider: React.FC<UserLocationProviderProps> = ({
 	useEffect(() => {
 		headingRef.current = effectiveHeading;
 	}, [effectiveHeading]);
+
+	// Keep the screen awake while following a route on a phone: tracking is
+	// active and the user is on a mobile viewport. Desktop planning sessions
+	// keep normal screen-sleep behavior.
+	const { isMobile } = useViewport();
+	useWakeLock(isLocationTracking && isMobile);
 
 	// Auto-start tracking when user has a route
 	useEffect(() => {

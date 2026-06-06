@@ -3,6 +3,7 @@ import { sentryVitePlugin } from "@sentry/vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
 import { TanStackRouterVite } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
+import { VitePWA } from "vite-plugin-pwa";
 import { defineConfig } from "vitest/config";
 
 // Sentry source-map upload only runs when SENTRY_AUTH_TOKEN is provided
@@ -34,6 +35,26 @@ export default defineConfig({
 		}),
 		react(),
 		tailwindcss(),
+		// injectManifest only: the build injects the hashed asset list into
+		// src/sw.js (self.__WB_MANIFEST) so offline cold start has every chunk.
+		// Manifest and registration stay hand-rolled (public/manifest.json,
+		// lib/serviceWorker.ts).
+		VitePWA({
+			strategies: "injectManifest",
+			srcDir: "src",
+			filename: "sw.js",
+			injectRegister: false,
+			manifest: false,
+			injectManifest: {
+				globPatterns: ["**/*.{js,css,html,woff2}"],
+				// env-config.js is runtime-substituted per container start and the
+				// worker must never serve itself from cache.
+				globIgnores: ["env-config.js", "sw.js", "**/*.map"],
+				// mapbox-gl chunk exceeds the 2MB default
+				maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+			},
+			devOptions: { enabled: false },
+		}),
 		...sentryPlugins,
 	],
 	envDir: path.resolve(__dirname, "../../"),

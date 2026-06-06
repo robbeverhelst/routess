@@ -66,7 +66,7 @@ export class SessionService {
 			ipAddress: context?.ipAddress,
 		});
 
-		await this.em.persistAndFlush(session);
+		await this.em.persist(session).flush();
 		this.events.emit(SESSION_ACTIVITY_CHANGED);
 
 		return this.jwtService.sign({ sub: userId, email: user.email, jti });
@@ -83,7 +83,7 @@ export class SessionService {
 			const lastActivityAt = session.lastActivity?.getTime() ?? 0;
 			if (now.getTime() - lastActivityAt >= LAST_ACTIVITY_UPDATE_INTERVAL_MS) {
 				session.lastActivity = now;
-				await this.em.persistAndFlush(session);
+				await this.em.persist(session).flush();
 			}
 		}
 
@@ -104,7 +104,7 @@ export class SessionService {
 		const lastActivityAt = session.lastActivity?.getTime() ?? 0;
 		if (now.getTime() - lastActivityAt >= LAST_ACTIVITY_UPDATE_INTERVAL_MS) {
 			session.lastActivity = now;
-			await this.em.persistAndFlush(session);
+			await this.em.persist(session).flush();
 		}
 
 		// Populated Ref behaves as the entity at runtime; cast through unknown
@@ -118,7 +118,7 @@ export class SessionService {
 		const session = await this.sessionRepository.findOne({ jti });
 		if (session) {
 			session.deletedAt = new Date();
-			await this.em.persistAndFlush(session);
+			await this.em.persist(session).flush();
 			this.events.emit(SESSION_ACTIVITY_CHANGED);
 			this.emitRevoked(reason, 1);
 		}

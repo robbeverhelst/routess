@@ -1,6 +1,7 @@
 import * as Sentry from "@sentry/react";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 
+import { TooltipProvider } from "./components/Tooltip";
 // Import the generated route tree
 import { routeTree } from "./routeTree.gen";
 
@@ -19,7 +20,11 @@ declare module "@tanstack/react-router" {
 }
 
 function App() {
-	return <RouterProvider router={router} />;
+	return (
+		<TooltipProvider>
+			<RouterProvider router={router} />
+		</TooltipProvider>
+	);
 }
 
 export default App;

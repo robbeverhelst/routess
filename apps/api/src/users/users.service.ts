@@ -63,7 +63,7 @@ export class UsersService {
 		}
 
 		try {
-			await this.em.persistAndFlush(user);
+			await this.em.persist(user).flush();
 		} catch (error) {
 			// Lost the handle race to a concurrent claim; same 409 as the
 			// up-front taken check.
@@ -92,7 +92,7 @@ export class UsersService {
 			route.deletedAt = now;
 		}
 
-		await this.em.persistAndFlush(user);
+		await this.em.persist(user).flush();
 		await this.em.flush();
 		await this.sessionService.invalidateUserSessions(id);
 	}
@@ -111,7 +111,7 @@ export class UsersService {
 		user.deletedAt = undefined;
 		user.deletionStatus = "active";
 		user.deletionRequestedAt = undefined;
-		await this.em.persistAndFlush(user);
+		await this.em.persist(user).flush();
 		await this.em.getConnection().execute(`update "route" set "deleted_at" = null where "user_id" = ?`, [id]);
 		return user;
 	}

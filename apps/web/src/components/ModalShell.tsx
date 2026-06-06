@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect } from "react";
+import { t } from "@/lib/i18n";
 import { I } from "./icons";
 import { IconBtn, RDS_COLORS } from "./primitives";
 
@@ -85,7 +86,7 @@ export function ModalShell({ title, sub, children, footer, width = 480, onClose,
 						</div>
 						{sub && <div style={{ fontSize: 12, color: RDS_COLORS.fgSubtle, marginTop: 3 }}>{sub}</div>}
 					</div>
-					<IconBtn title="Close" onClick={onClose}>
+					<IconBtn title={t("common.close")} onClick={onClose}>
 						<I.close size={14} />
 					</IconBtn>
 				</div>

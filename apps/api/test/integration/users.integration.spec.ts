@@ -28,7 +28,7 @@ describe("Users Integration Tests", () => {
 			isEmailVerified: true,
 		});
 
-		await orm.em.persistAndFlush(testUser);
+		await orm.em.persist(testUser).flush();
 		authToken = await generateTestJWT(testUser.id, testUser.email, app);
 		orm.em.clear();
 	});
@@ -71,7 +71,7 @@ describe("Users Integration Tests", () => {
 				distance: 3000,
 			});
 
-			await orm.em.persistAndFlush([route1, route2]);
+			await orm.em.persist([route1, route2]).flush();
 
 			const response = await supertest(app.getHttpServer())
 				.get("/api/v1/users/me")
@@ -127,7 +127,7 @@ describe("Users Integration Tests", () => {
 				waypoints: [{ coord: [13.405, 52.52], type: "routed" }],
 				distance: 5000,
 			});
-			await orm.em.persistAndFlush(route);
+			await orm.em.persist(route).flush();
 
 			await supertest(app.getHttpServer())
 				.delete("/api/v1/users/me")

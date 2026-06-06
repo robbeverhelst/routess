@@ -76,7 +76,7 @@ export class CollectionsService {
 			visibility: dto.visibility ?? "private",
 			user: userId,
 		});
-		await this.em.persistAndFlush(collection);
+		await this.em.persist(collection).flush();
 		await this.em.populate(collection, ["user"]);
 		return this.toResponseDto(collection, true);
 	}
@@ -117,14 +117,14 @@ export class CollectionsService {
 	async update(id: number, dto: UpdateCollectionDto, userId: number): Promise<CollectionResponseDto> {
 		const collection = await this.findOwnedOrFail(id, userId);
 		this.collectionRepository.assign(collection, dto);
-		await this.em.persistAndFlush(collection);
+		await this.em.persist(collection).flush();
 		return this.toResponseDto(collection, true);
 	}
 
 	async remove(id: number, userId: number): Promise<void> {
 		const collection = await this.findOwnedOrFail(id, userId);
 		collection.deletedAt = new Date();
-		await this.em.persistAndFlush(collection);
+		await this.em.persist(collection).flush();
 	}
 
 	// Replaces the full membership; the array order defines positions. All
@@ -155,7 +155,7 @@ export class CollectionsService {
 				collection.routes.add(this.em.create(CollectionRoute, { collection, route: routeId, position: index }));
 			}
 		});
-		await this.em.persistAndFlush(collection);
+		await this.em.persist(collection).flush();
 		await this.em.populate(collection, ["routes.route.user"]);
 		return this.toDetailResponseDto(collection, true);
 	}

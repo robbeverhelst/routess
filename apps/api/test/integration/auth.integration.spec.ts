@@ -94,7 +94,7 @@ describe("Auth Integration Tests", () => {
 					googleId: "google-existing-123",
 					avatar: "https://example.com/existing.jpg",
 				});
-				await orm.em.persistAndFlush(existingUser);
+				await orm.em.persist(existingUser).flush();
 				existingUserId = existingUser.id;
 			});
 

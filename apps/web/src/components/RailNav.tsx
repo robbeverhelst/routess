@@ -4,6 +4,7 @@ import { useT } from "@/lib/i18n";
 import { type RedesignContext, useUiStore } from "@/stores/uiStore";
 import { I } from "./icons";
 import { IconBtn, RDS_COLORS } from "./primitives";
+import { Tooltip } from "./Tooltip";
 import { UserAvatar } from "./UserAvatar";
 
 const NAV: { key: RedesignContext; icon: React.ComponentType<{ size?: number }>; labelKey: string }[] = [
@@ -58,102 +59,109 @@ export function RailNav() {
 				const Icon = n.icon;
 				const open = on && !panelCollapsed;
 				return (
-					<button
+					<Tooltip
 						key={n.key}
-						type="button"
-						onClick={() => {
-							if (on) {
-								// Clicking the active context toggles the panel.
-								togglePanel();
-							} else {
-								// Switching context always expands the panel.
-								setContext(n.key);
-								setPanelCollapsed(false);
-							}
-						}}
-						title={on ? t("rail.togglePanel", { label: t(n.labelKey) }) : t(n.labelKey)}
-						style={{
-							width: 36,
-							height: 36,
-							borderRadius: 8,
-							background: open ? RDS_COLORS.accentSoft : on ? RDS_COLORS.bgActive : "transparent",
-							color: open ? RDS_COLORS.accent : on ? RDS_COLORS.fg : RDS_COLORS.fgMuted,
-							border: 0,
-							position: "relative",
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "center",
-							cursor: "pointer",
-							transition: "background var(--rds-panel-anim), color var(--rds-panel-anim)",
-						}}
+						label={on ? t("rail.togglePanel", { label: t(n.labelKey) }) : t(n.labelKey)}
+						side="right"
 					>
-						<div
-							style={{
-								position: "absolute",
-								left: -10,
-								top: 8,
-								bottom: 8,
-								width: 2.5,
-								borderRadius: 999,
-								background: RDS_COLORS.accent,
-								opacity: open ? 1 : 0,
-								transform: open ? "scaleY(1)" : "scaleY(0.4)",
-								transformOrigin: "center",
-								transition: "opacity var(--rds-panel-anim), transform var(--rds-panel-anim)",
-								pointerEvents: "none",
+						<button
+							type="button"
+							aria-label={t(n.labelKey)}
+							onClick={() => {
+								if (on) {
+									// Clicking the active context toggles the panel.
+									togglePanel();
+								} else {
+									// Switching context always expands the panel.
+									setContext(n.key);
+									setPanelCollapsed(false);
+								}
 							}}
-						/>
-						<Icon size={18} />
-						{n.key === "social" && unreadShares > 0 && (
-							<span
+							style={{
+								width: 36,
+								height: 36,
+								borderRadius: 8,
+								background: open ? RDS_COLORS.accentSoft : on ? RDS_COLORS.bgActive : "transparent",
+								color: open ? RDS_COLORS.accent : on ? RDS_COLORS.fg : RDS_COLORS.fgMuted,
+								border: 0,
+								position: "relative",
+								display: "flex",
+								alignItems: "center",
+								justifyContent: "center",
+								cursor: "pointer",
+								transition: "background var(--rds-panel-anim), color var(--rds-panel-anim)",
+							}}
+						>
+							<div
 								style={{
 									position: "absolute",
-									top: 4,
-									right: 4,
-									width: 8,
-									height: 8,
+									left: -10,
+									top: 8,
+									bottom: 8,
+									width: 2.5,
 									borderRadius: 999,
 									background: RDS_COLORS.accent,
+									opacity: open ? 1 : 0,
+									transform: open ? "scaleY(1)" : "scaleY(0.4)",
+									transformOrigin: "center",
+									transition: "opacity var(--rds-panel-anim), transform var(--rds-panel-anim)",
 									pointerEvents: "none",
 								}}
 							/>
-						)}
-					</button>
+							<Icon size={18} />
+							{n.key === "social" && unreadShares > 0 && (
+								<span
+									style={{
+										position: "absolute",
+										top: 4,
+										right: 4,
+										width: 8,
+										height: 8,
+										borderRadius: 999,
+										background: RDS_COLORS.accent,
+										pointerEvents: "none",
+									}}
+								/>
+							)}
+						</button>
+					</Tooltip>
 				);
 			})}
 			<div style={{ flex: 1 }} />
 			{isAdmin && (
-				<Link
-					to="/admin"
-					title="Admin"
-					style={{
-						display: "inline-flex",
-						alignItems: "center",
-						justifyContent: "center",
-						width: 32,
-						height: 32,
-						borderRadius: "var(--rds-radius-sm)",
-						color: RDS_COLORS.fgMuted,
-						textDecoration: "none",
-						transition: "background 120ms, color 120ms",
-					}}
-					activeProps={{
-						style: {
-							background: RDS_COLORS.accentSoft,
-							color: RDS_COLORS.accent,
-						},
-					}}
-					onMouseEnter={(e) => {
-						e.currentTarget.style.background = RDS_COLORS.bgHover;
-						e.currentTarget.style.color = RDS_COLORS.fg;
-					}}
-					onMouseLeave={(e) => {
-						e.currentTarget.style.background = "transparent";
-						e.currentTarget.style.color = RDS_COLORS.fgMuted;
-					}}
-				>
-					<I.shield size={18} />
-				</Link>
+				<Tooltip label="Admin" side="right">
+					<Link
+						to="/admin"
+						aria-label="Admin"
+						style={{
+							display: "inline-flex",
+							alignItems: "center",
+							justifyContent: "center",
+							width: 32,
+							height: 32,
+							borderRadius: "var(--rds-radius-sm)",
+							color: RDS_COLORS.fgMuted,
+							textDecoration: "none",
+							transition: "background 120ms, color 120ms",
+						}}
+						activeProps={{
+							style: {
+								background: RDS_COLORS.accentSoft,
+								color: RDS_COLORS.accent,
+							},
+						}}
+						onMouseEnter={(e) => {
+							e.currentTarget.style.background = RDS_COLORS.bgHover;
+							e.currentTarget.style.color = RDS_COLORS.fg;
+						}}
+						onMouseLeave={(e) => {
+							e.currentTarget.style.background = "transparent";
+							e.currentTarget.style.color = RDS_COLORS.fgMuted;
+						}}
+					>
+						<I.shield size={18} />
+					</Link>
+				</Tooltip>
 			)}
 			{/* Notification bell hidden until the NotificationCenter ships; a
 			    persistent affordance must not open a "coming soon" stub. */}

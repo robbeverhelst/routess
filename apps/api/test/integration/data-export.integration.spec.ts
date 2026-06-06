@@ -43,7 +43,7 @@ describe("Data Export Integration Tests", () => {
 				visibility: "private",
 				tags: ["hilly"],
 			});
-			await orm.em.persistAndFlush(route);
+			await orm.em.persist(route).flush();
 		});
 
 		const response = await supertest(app.getHttpServer())

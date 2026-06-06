@@ -3,6 +3,7 @@ import { type ReactNode, useCallback, useEffect, useRef, useState } from "react"
 import MapWithRouting from "@/components/MapWithRouting";
 import { useRouteSurfaceSync } from "@/features/routing/services/useSurfaceBreakdown";
 import { useRouteDraftRehydration } from "@/features/routing/useRouteDraftRehydration";
+import { usePwaUpdateToast } from "@/hooks/usePwaUpdateToast";
 import { apiService } from "@/lib/api";
 import { useAuthStatus } from "@/lib/api-queries";
 import { emitAppEvent, onAppEvent } from "@/lib/app-events";
@@ -182,6 +183,7 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 
 	useRouteSurfaceSync();
 	useRouteDraftRehydration();
+	usePwaUpdateToast();
 
 	const queryClient = useQueryClient();
 	const { isMobile } = useViewport();

@@ -1,5 +1,5 @@
-import type { Options } from "@mikro-orm/core";
-import { PostgreSqlDriver } from "@mikro-orm/postgresql";
+import { ReflectMetadataProvider } from "@mikro-orm/decorators/legacy";
+import { defineConfig } from "@mikro-orm/postgresql";
 import { getAppConfig } from "./config/app-config";
 import { Collection } from "./entities/collection.entity";
 import { CollectionRoute } from "./entities/collection-route.entity";
@@ -15,8 +15,8 @@ import { MikroOrmMetricsLogger } from "./telemetry/mikro-orm-metrics.logger";
 
 const appConfig = getAppConfig();
 
-const config: Options = {
-	driver: PostgreSqlDriver,
+const config = defineConfig({
+	metadataProvider: ReflectMetadataProvider,
 	host: appConfig.database.host,
 	port: appConfig.database.port,
 	user: appConfig.database.user,
@@ -44,7 +44,6 @@ const config: Options = {
 	debug: appConfig.database.debug,
 	loggerFactory: (options) => new MikroOrmMetricsLogger(options),
 	allowGlobalContext: appConfig.app.isTest,
-	connect: process.env.OPENAPI_GENERATE !== "true",
-};
+});
 
 export default config;

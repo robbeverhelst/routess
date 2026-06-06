@@ -301,6 +301,8 @@ export const de: Record<string, string> = {
 	// Redesign pace settings
 	"settings.pace.title": "Tempo",
 	"settings.pace.subtitle": "Wird zur Schätzung von Routenzeiten verwendet",
+	"settings.pace.resetDefault": "Auf Standard zurücksetzen",
+	"settings.pace.alreadyDefault": "Bereits Standardwert",
 	"welcome.steps.pace.title": "Ihr durchschnittliches Tempo",
 	"welcome.steps.pace.subtitle": "Passen Sie die typische Geschwindigkeit für jede gewählte Sportart an.",
 	"welcome.steps.pace.help": "Wir verwenden dies, um Routendauern auf direkten Segmenten und offline zu schätzen.",
@@ -342,4 +344,14 @@ export const de: Record<string, string> = {
 		"Diese gespeicherte Route ist privat, daher kannst nur du den kanonischen Link öffnen. Die URL oben enthält die Wegpunkte der Route im Link selbst. Stelle die Route auf ungelistet oder öffentlich, um eine feste Adresse zu teilen.",
 	"share.canonicalHint":
 		"Jeder mit diesem Link kann die Route ansehen. Änderungen der Sichtbarkeit werden sofort wirksam.",
+
+	"settings.install.title": "App installieren",
+	"settings.install.sub": "routess zum Startbildschirm hinzufügen",
+	"settings.install.ios.step1": "Tippe in Safari auf die Teilen-Taste",
+	"settings.install.ios.step2": 'Wähle "Zum Home-Bildschirm"',
+	"settings.install.ios.step3": "Tippe auf Hinzufügen",
+
+	"pwa.update.title": "Update verfügbar",
+	"pwa.update.body": "Eine neue Version von routess ist bereit.",
+	"pwa.update.reload": "Neu laden",
 };

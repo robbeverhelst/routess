@@ -41,7 +41,7 @@ describe("Social Integration Tests", () => {
 		alice = orm.em.create(User, { email: "alice@example.com", name: "Alice Anders", handle: "alice" });
 		bob = orm.em.create(User, { email: "bob@example.com", name: "Bob Brouwer", handle: "bob" });
 		carol = orm.em.create(User, { email: "carol@example.com", name: "Carol Claes", handle: "carol" });
-		await orm.em.persistAndFlush([alice, bob, carol]);
+		await orm.em.persist([alice, bob, carol]).flush();
 		aliceToken = await generateTestJWT(alice.id, alice.email, app);
 		bobToken = await generateTestJWT(bob.id, bob.email, app);
 	});
@@ -55,19 +55,21 @@ describe("Social Integration Tests", () => {
 	describe("handle generation", () => {
 		it("assigns a random fallback handle when none is provided", async () => {
 			const user = orm.em.create(User, { email: "nohandle@example.com", name: "No Handle" });
-			await orm.em.persistAndFlush(user);
+			await orm.em.persist(user).flush();
 			expect(user.handle).toMatch(/^user-[0-9a-f]{8}$/);
 		});
 	});
 
 	describe("GET /profiles/:handle", () => {
 		it("returns the public projection with stats over public routes only", async () => {
-			await orm.em.persistAndFlush([
-				makeRoute(bob, "Public 1", "public"),
-				makeRoute(bob, "Public 2", "public"),
-				makeRoute(bob, "Hidden", "private"),
-				makeRoute(bob, "Unlisted", "unlisted"),
-			]);
+			await orm.em
+				.persist([
+					makeRoute(bob, "Public 1", "public"),
+					makeRoute(bob, "Public 2", "public"),
+					makeRoute(bob, "Hidden", "private"),
+					makeRoute(bob, "Unlisted", "unlisted"),
+				])
+				.flush();
 
 			const res = await api().get("/api/v1/profiles/bob").expect(200);
 			expect(res.body.handle).toBe("bob");
@@ -116,13 +118,15 @@ describe("Social Integration Tests", () => {
 		it("returns public routes of followed profiles, newest published first", async () => {
 			const older = makeRoute(bob, "Older", "public", new Date("2026-05-01T10:00:00Z"));
 			const newer = makeRoute(bob, "Newer", "public", new Date("2026-06-01T10:00:00Z"));
-			await orm.em.persistAndFlush([
-				older,
-				newer,
-				makeRoute(bob, "Private", "private"),
-				makeRoute(bob, "Unlisted", "unlisted"),
-				makeRoute(carol, "Carols", "public"),
-			]);
+			await orm.em
+				.persist([
+					older,
+					newer,
+					makeRoute(bob, "Private", "private"),
+					makeRoute(bob, "Unlisted", "unlisted"),
+					makeRoute(carol, "Carols", "public"),
+				])
+				.flush();
 
 			const res = await api().get("/api/v1/social/feed").set("Authorization", `Bearer ${aliceToken}`).expect(200);
 			expect(res.body).toHaveLength(0); // follows nobody yet
@@ -136,7 +140,7 @@ describe("Social Integration Tests", () => {
 
 		it("drops routes flipped back to private, instantly", async () => {
 			const route = makeRoute(bob, "Now you see me", "public");
-			await orm.em.persistAndFlush([route]);
+			await orm.em.persist([route]).flush();
 			await api().post("/api/v1/social/follows/bob").set("Authorization", `Bearer ${aliceToken}`).expect(204);
 
 			let res = await api().get("/api/v1/social/feed").set("Authorization", `Bearer ${aliceToken}`).expect(200);
@@ -154,7 +158,7 @@ describe("Social Integration Tests", () => {
 
 		it("does not bump publishedAt on re-publish", async () => {
 			const route = makeRoute(bob, "Republished", "public", new Date("2026-01-01T10:00:00Z"));
-			await orm.em.persistAndFlush([route]);
+			await orm.em.persist([route]).flush();
 
 			await api()
 				.patch(`/api/v1/routes/${route.id}`)
@@ -175,7 +179,7 @@ describe("Social Integration Tests", () => {
 
 		it("stamps publishedAt on the first transition to public", async () => {
 			const route = makeRoute(bob, "Fresh", "private");
-			await orm.em.persistAndFlush([route]);
+			await orm.em.persist([route]).flush();
 			expect(route.publishedAt).toBeUndefined();
 
 			await api()
@@ -194,7 +198,7 @@ describe("Social Integration Tests", () => {
 	describe("route shares", () => {
 		it("shares an unlisted route and surfaces it in the inbox", async () => {
 			const route = makeRoute(bob, "Sunday Gravel", "unlisted");
-			await orm.em.persistAndFlush([route]);
+			await orm.em.persist([route]).flush();
 
 			const share = await api()
 				.post("/api/v1/social/shares")
@@ -234,7 +238,7 @@ describe("Social Integration Tests", () => {
 
 		it("dismisses a share for the recipient only", async () => {
 			const route = makeRoute(bob, "Dismiss Me", "unlisted");
-			await orm.em.persistAndFlush([route]);
+			await orm.em.persist([route]).flush();
 
 			const share = await api()
 				.post("/api/v1/social/shares")
@@ -267,7 +271,7 @@ describe("Social Integration Tests", () => {
 
 		it("rejects sharing your own private route with a coded 409", async () => {
 			const route = makeRoute(bob, "Secret", "private");
-			await orm.em.persistAndFlush([route]);
+			await orm.em.persist([route]).flush();
 			const res = await api()
 				.post("/api/v1/social/shares")
 				.set("Authorization", `Bearer ${bobToken}`)
@@ -279,7 +283,7 @@ describe("Social Integration Tests", () => {
 
 		it("404s when sharing someone else's private route (no existence leak)", async () => {
 			const route = makeRoute(bob, "Secret", "private");
-			await orm.em.persistAndFlush([route]);
+			await orm.em.persist([route]).flush();
 			await api()
 				.post("/api/v1/social/shares")
 				.set("Authorization", `Bearer ${aliceToken}`)
@@ -289,7 +293,7 @@ describe("Social Integration Tests", () => {
 
 		it("rejects sharing with yourself", async () => {
 			const route = makeRoute(bob, "Loop", "public");
-			await orm.em.persistAndFlush([route]);
+			await orm.em.persist([route]).flush();
 			await api()
 				.post("/api/v1/social/shares")
 				.set("Authorization", `Bearer ${bobToken}`)
@@ -299,7 +303,7 @@ describe("Social Integration Tests", () => {
 
 		it("shows shares of routes flipped back to private as unavailable (live reference)", async () => {
 			const route = makeRoute(bob, "Ephemeral", "public");
-			await orm.em.persistAndFlush([route]);
+			await orm.em.persist([route]).flush();
 			await api()
 				.post("/api/v1/social/shares")
 				.set("Authorization", `Bearer ${bobToken}`)
@@ -324,7 +328,7 @@ describe("Social Integration Tests", () => {
 		it("saves a copy with lineage, kept provenance, and private visibility", async () => {
 			const route = makeRoute(bob, "Copy me", "public");
 			route.provenance = "gpx-import";
-			await orm.em.persistAndFlush([route]);
+			await orm.em.persist([route]).flush();
 			const share = await api()
 				.post("/api/v1/social/shares")
 				.set("Authorization", `Bearer ${bobToken}`)
@@ -348,7 +352,7 @@ describe("Social Integration Tests", () => {
 
 		it("refuses to copy an unavailable share", async () => {
 			const route = makeRoute(bob, "Gone", "public");
-			await orm.em.persistAndFlush([route]);
+			await orm.em.persist([route]).flush();
 			const share = await api()
 				.post("/api/v1/social/shares")
 				.set("Authorization", `Bearer ${bobToken}`)
@@ -368,7 +372,7 @@ describe("Social Integration Tests", () => {
 		it("rate-limits share emails per sender-recipient pair", async () => {
 			const route = makeRoute(bob, "Emailed", "public");
 			const route2 = makeRoute(bob, "Emailed 2", "public");
-			await orm.em.persistAndFlush([route, route2]);
+			await orm.em.persist([route, route2]).flush();
 			const first = await api()
 				.post("/api/v1/social/shares")
 				.set("Authorization", `Bearer ${bobToken}`)

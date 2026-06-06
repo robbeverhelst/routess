@@ -5,6 +5,7 @@ import { useToastStore } from "@/stores/toastStore";
 import { useUiStore } from "@/stores/uiStore";
 import { I } from "../../components/icons";
 import { Btn, RDS_COLORS } from "../../components/primitives";
+import { Tooltip } from "../../components/Tooltip";
 import { Avatar } from "./Avatar";
 import { SocialRouteCard } from "./RouteCard";
 
@@ -33,34 +34,35 @@ function ShareCard({ share, onOpenProfile }: { share: ApiRouteShare; onOpenProfi
 
 	const header = (
 		<div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-			<button
-				type="button"
-				onClick={() => onOpenProfile(share.sender.handle)}
-				style={{
-					display: "flex",
-					alignItems: "center",
-					gap: 8,
-					background: "transparent",
-					border: 0,
-					padding: 0,
-					cursor: "pointer",
-					color: RDS_COLORS.fgMuted,
-					textAlign: "left",
-					flex: 1,
-					minWidth: 0,
-				}}
-			>
-				<Avatar name={share.sender.name} avatar={share.sender.avatar} size={24} />
-				<span style={{ fontSize: 12 }}>
-					<span style={{ fontWeight: 600, color: RDS_COLORS.fg }}>{share.sender.name}</span>{" "}
-					{t("social.inbox.sharedWithYou")} · {new Date(share.createdAt).toLocaleDateString()}
-				</span>
-			</button>
+			<Tooltip label={t("social.viewProfile")}>
+				<button
+					type="button"
+					onClick={() => onOpenProfile(share.sender.handle)}
+					style={{
+						display: "flex",
+						alignItems: "center",
+						gap: 8,
+						background: "transparent",
+						border: 0,
+						padding: 0,
+						cursor: "pointer",
+						color: RDS_COLORS.fgMuted,
+						textAlign: "left",
+						flex: 1,
+						minWidth: 0,
+					}}
+				>
+					<Avatar name={share.sender.name} avatar={share.sender.avatar} size={24} />
+					<span style={{ fontSize: 12 }}>
+						<span style={{ fontWeight: 600, color: RDS_COLORS.fg }}>{share.sender.name}</span>{" "}
+						{t("social.inbox.sharedWithYou")} · {new Date(share.createdAt).toLocaleDateString()}
+					</span>
+				</button>
+			</Tooltip>
 			{unread && (
-				<span
-					title={t("social.inbox.unread")}
-					style={{ width: 8, height: 8, borderRadius: 999, background: RDS_COLORS.accent, flexShrink: 0 }}
-				/>
+				<Tooltip label={t("social.inbox.unread")}>
+					<span style={{ width: 8, height: 8, borderRadius: 999, background: RDS_COLORS.accent, flexShrink: 0 }} />
+				</Tooltip>
 			)}
 		</div>
 	);

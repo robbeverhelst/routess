@@ -1,4 +1,5 @@
-import { Entity, Index, ManyToOne, type Opt, PrimaryKey, Property, type Ref } from "@mikro-orm/core";
+import { type Opt, type Ref } from "@mikro-orm/core";
+import { Entity, Index, ManyToOne, PrimaryKey, Property } from "@mikro-orm/decorators/legacy";
 import type { Provenance, RouteActivity, RouteVisibility, RoutingPreferences, Waypoint } from "@routess/core";
 import { generateShareToken } from "../common/share-token";
 import { BaseEntity } from "./base.entity";

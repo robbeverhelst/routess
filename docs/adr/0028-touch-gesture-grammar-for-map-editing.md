@@ -17,6 +17,7 @@ Touch interactions on the planning map get a dedicated grammar: tap a waypoint f
 - Negative: touch and mouse paths in `MapInteractionManager` diverge and must be reasoned about separately.
 - Negative: drag on touch is discoverable only by holding; mitigated by the visual lift on long-press.
 - Follow-up: plan panel reorder moves from HTML5 drag-and-drop (dead on mobile browsers) to pointer-event drag on the grip handle, one code path for mouse and touch.
+- Follow-up (added): while a waypoint is lifted by touch, a trash drop zone appears at the bottom of the map; dropping it there deletes. One continuous gesture for the fast path, with the tap popup remaining the discoverable path.
 
 ## References
 

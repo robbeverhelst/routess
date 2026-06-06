@@ -1,12 +1,17 @@
 {
+	"id": "/",
 	"name": "routess - Route Planning & Navigation",
 	"short_name": "routess",
 	"description": "Plan cycling and walking routes with waypoints, import/export GPX files, and navigate offline",
 	"start_url": "/",
 	"scope": "/",
 	"display": "standalone",
+	"display_override": ["standalone", "minimal-ui"],
+	"launch_handler": {
+		"client_mode": ["navigate-existing", "auto"]
+	},
 	"orientation": "any",
-	"theme_color": "#000000",
+	"theme_color": "#ffffff",
 	"background_color": "#ffffff",
 	"lang": "en",
 	"dir": "ltr",
@@ -130,6 +135,30 @@
 			"label": "Mobile route navigation"
 		}
 	],
+	"file_handlers": [
+		{
+			"action": "/",
+			"accept": {
+				"application/gpx+xml": [".gpx"]
+			}
+		}
+	],
+	"share_target": {
+		"action": "/share-target",
+		"method": "POST",
+		"enctype": "multipart/form-data",
+		"params": {
+			"title": "title",
+			"text": "text",
+			"url": "url",
+			"files": [
+				{
+					"name": "gpx",
+					"accept": ["application/gpx+xml", ".gpx"]
+				}
+			]
+		}
+	},
 	"prefer_related_applications": false,
 	"edge_side_panel": {
 		"preferred_width": 400
