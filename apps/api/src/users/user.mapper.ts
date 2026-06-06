@@ -8,6 +8,7 @@ type SerializableUser = Pick<
 	| "id"
 	| "email"
 	| "name"
+	| "handle"
 	| "avatar"
 	| "isEmailVerified"
 	| "role"
@@ -22,10 +23,15 @@ function hashUserId(salt: string, userId: number): string {
 
 // Owner shape embedded in route/collection responses, which other users (and
 // anonymous visitors on public/unlisted pages) can see. Never add PII here.
-export function toPublicUserDto(user: Pick<User, "id" | "name" | "avatar">, analyticsSalt: string): PublicUserDto {
+// The Handle is deliberately public: it is the Profile's address (CONTEXT.md).
+export function toPublicUserDto(
+	user: Pick<User, "id" | "name" | "handle" | "avatar">,
+	analyticsSalt: string,
+): PublicUserDto {
 	return {
 		id: user.id,
 		name: user.name,
+		handle: user.handle,
 		avatar: user.avatar,
 		idHash: hashUserId(analyticsSalt, user.id),
 	};
@@ -40,6 +46,7 @@ export function toUserResponseDto(user: SerializableUser, analyticsSalt: string,
 		id: user.id,
 		email: user.email,
 		name: user.name,
+		handle: user.handle,
 		avatar: user.avatar,
 		isEmailVerified: user.isEmailVerified,
 		role: user.role,

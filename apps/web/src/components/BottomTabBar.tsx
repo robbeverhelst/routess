@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { useShareUnreadCount } from "@/lib/api-queries";
 import { useT } from "@/lib/i18n";
 import { type RedesignContext, useUiStore } from "@/stores/uiStore";
 import { I } from "./icons";
@@ -21,6 +22,7 @@ const NAV: NavItem[] = [
 export function BottomTabBar() {
 	const t = useT();
 	const { context, setContext, panelCollapsed, togglePanel, setPanelCollapsed } = useUiStore();
+	const { data: unreadShares = 0 } = useShareUnreadCount();
 
 	return (
 		<nav
@@ -52,6 +54,7 @@ export function BottomTabBar() {
 						icon={n.icon}
 						label={t(n.labelKey)}
 						active={isActive}
+						showDot={n.key === "social" && unreadShares > 0}
 						onClick={() => {
 							if (context === n.key) {
 								togglePanel();
@@ -72,9 +75,10 @@ interface TabButtonProps {
 	label: string;
 	active: boolean;
 	onClick: () => void;
+	showDot?: boolean;
 }
 
-function TabButton({ icon: Icon, label, active, onClick }: TabButtonProps) {
+function TabButton({ icon: Icon, label, active, onClick, showDot }: TabButtonProps) {
 	const baseStyle: CSSProperties = {
 		flex: 1,
 		display: "flex",
@@ -103,6 +107,7 @@ function TabButton({ icon: Icon, label, active, onClick }: TabButtonProps) {
 			<span
 				className="rds-tab-pill"
 				style={{
+					position: "relative",
 					display: "inline-flex",
 					alignItems: "center",
 					justifyContent: "center",
@@ -115,6 +120,20 @@ function TabButton({ icon: Icon, label, active, onClick }: TabButtonProps) {
 				}}
 			>
 				<Icon size={20} />
+				{showDot && (
+					<span
+						style={{
+							position: "absolute",
+							top: 2,
+							right: 8,
+							width: 8,
+							height: 8,
+							borderRadius: 999,
+							background: RDS_COLORS.accent,
+							pointerEvents: "none",
+						}}
+					/>
+				)}
 			</span>
 			<span
 				style={{

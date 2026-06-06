@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { ARTICLES, articlePath, SECTION_PATHS } from "@/lib/articles";
 import type { ArticleSection } from "@/lib/articles/types";
 import { HTML_LANG, localeFromHost, SELF_HOST } from "@/lib/i18n";
+import { fetchIndexableProfiles } from "@/lib/profile-api";
 import { fetchIndexablePublicRoutes } from "@/lib/route-api";
 
 const LAST_MODIFIED = "2026-06-02";
@@ -47,6 +48,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 		};
 	});
 
+	// Indexable Profiles (>= 3 Indexable routes; the API applies the gate).
+	const profileEntries = (await fetchIndexableProfiles()).map((profile) => {
+		const path = `/u/${profile.handle}`;
+		return {
+			url: `${base}${path}`,
+			lastModified: profile.updatedAt,
+			changeFrequency: "monthly" as const,
+			priority: 0.5,
+			alternates: localizedAlternates(path, path),
+		};
+	});
+
 	const articleEntries = ARTICLES.map((article) => ({
 		url: `${base}${articlePath(article, locale)}`,
 		lastModified: article.dateModified,
@@ -80,5 +93,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 		...sectionEntries,
 		...articleEntries,
 		...routeEntries,
+		...profileEntries,
 	];
 }

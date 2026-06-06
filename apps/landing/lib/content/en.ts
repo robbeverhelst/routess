@@ -248,6 +248,15 @@ export const en: Dict = {
 		mapAlt: "Map of the route",
 		summaryTemplate:
 			"A {distance} {activity} with {elevation} m of climbing. View it, edit it, and export the GPX free with routess.",
+		byAuthor: "by {name}",
+	},
+	profilePage: {
+		eyebrow: "routess profile",
+		stats: { routes: "Public routes", distance: "Total distance", elevation: "Elevation gain", followers: "Followers" },
+		routesTitle: "Public routes",
+		followInApp: "Follow on routess",
+		planYourOwn: "Plan your own route",
+		summaryTemplate: "{name} shares {count} public routes on routess, covering {distance} in total.",
 	},
 	meta: {
 		landing: {

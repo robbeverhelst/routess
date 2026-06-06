@@ -15,6 +15,7 @@ import {
 	type UserRegisteredEvent,
 	type UserUndeletedEvent,
 } from "../telemetry/domain-events";
+import { generateUniqueHandle } from "../users/handle.util";
 import { toUserResponseDto } from "../users/user.mapper";
 import type { AuthResponseDto, GoogleAuthDto } from "./dto";
 import { GOOGLE_IDENTITY_VERIFIER, type GoogleIdentity, type GoogleIdentityVerifier } from "./google-identity-verifier";
@@ -77,6 +78,7 @@ export class AuthService {
 			user = this.userRepository.create({
 				email,
 				name: name || email,
+				handle: await generateUniqueHandle(this.entityManager, name || "", email),
 				avatar: picture,
 				isEmailVerified: true,
 				role: desiredRole ?? "user",

@@ -34,6 +34,7 @@ export interface UserPreferences {
 	overlays: UserPreferenceOverlays;
 	defaultRouteVisibility: RouteVisibility;
 	routingDefaults: RoutingDefaults;
+	emailOnRouteShare: boolean;
 }
 
 export interface UserPreferencesUpdate
@@ -75,6 +76,7 @@ export const DEFAULT_USER_PREFERENCES: UserPreferences = {
 	},
 	defaultRouteVisibility: "private",
 	routingDefaults: normalizeRoutingDefaults(null),
+	emailOnRouteShare: true,
 };
 
 export function isActivity(value: unknown): value is UserPreferenceActivity {
@@ -179,6 +181,10 @@ export function normalizeUserPreferences(input?: Partial<UserPreferences> | null
 			? input.defaultRouteVisibility
 			: DEFAULT_USER_PREFERENCES.defaultRouteVisibility,
 		routingDefaults: normalizeRoutingDefaults(input?.routingDefaults),
+		emailOnRouteShare:
+			typeof input?.emailOnRouteShare === "boolean"
+				? input.emailOnRouteShare
+				: DEFAULT_USER_PREFERENCES.emailOnRouteShare,
 	};
 }
 

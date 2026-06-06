@@ -233,6 +233,39 @@ ${footerNote}`;
 		await this.send({ to, subject, text, html });
 	}
 
+	async sendRouteShareEmail(
+		to: string,
+		args: { senderName: string; routeName: string; message?: string; url: string },
+	): Promise<void> {
+		const subject = `${args.senderName} shared a route with you on routess`;
+		const heading = `${args.senderName} shared a route with you`;
+		const intro = args.message
+			? `"${args.routeName}" landed in your routess inbox with a note: "${args.message}"`
+			: `"${args.routeName}" landed in your routess inbox.`;
+		const buttonLabel = "View route";
+		const fallbackLabel = "If the button above doesn't work, paste this link into your browser:";
+		const footerNote =
+			"You receive this because someone shared a route with your routess account. You can turn these emails off in Settings.";
+
+		const text = `${heading}
+
+${intro}
+
+${args.url}
+
+${footerNote}`;
+		const html = renderHtml({
+			preheader: intro,
+			heading,
+			intro,
+			buttonLabel,
+			url: args.url,
+			fallbackLabel,
+			footerNote,
+		});
+		await this.send({ to, subject, text, html });
+	}
+
 	private async send(args: SendArgs): Promise<void> {
 		if (!this.resend) {
 			this.logger.log(`[email:console] to=${args.to} subject="${args.subject}"\n${args.text}`);

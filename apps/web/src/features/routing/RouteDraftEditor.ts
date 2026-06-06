@@ -398,10 +398,11 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 				distance_m: Math.round(trackDistanceKm * 1000),
 				had_names: hadNames,
 				source: "file_upload",
+				target: "draft",
 			},
 		});
 
-		if (parsed.trackPoints && parsed.trackPoints.length >= 2) {
+		if (parsed.trackPoints && parsed.trackPoints.length >= 2 && !parsed.waypointsDerivedFromTrack) {
 			const waypoints: Waypoint[] = parsed.waypoints.map((wp) => ({
 				coord: wp.coord,
 				type: wp.type ?? "routed",

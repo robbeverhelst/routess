@@ -135,6 +135,15 @@ export interface Dict {
 		about: string;
 		mapAlt: string;
 		summaryTemplate: string;
+		byAuthor: string;
+	};
+	profilePage: {
+		eyebrow: string;
+		stats: { routes: string; distance: string; elevation: string; followers: string };
+		routesTitle: string;
+		followInApp: string;
+		planYourOwn: string;
+		summaryTemplate: string;
 	};
 	meta: {
 		landing: { title: string; description: string };

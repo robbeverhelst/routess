@@ -255,6 +255,15 @@ export const nl: Dict = {
 		mapAlt: "Kaart van de route",
 		summaryTemplate:
 			"Een {activity} van {distance} met {elevation} hoogtemeters. Bekijk, bewerk en exporteer de GPX gratis met routess.",
+		byAuthor: "door {name}",
+	},
+	profilePage: {
+		eyebrow: "routess-profiel",
+		stats: { routes: "Publieke routes", distance: "Totale afstand", elevation: "Hoogtemeters", followers: "Volgers" },
+		routesTitle: "Publieke routes",
+		followInApp: "Volg op routess",
+		planYourOwn: "Plan je eigen route",
+		summaryTemplate: "{name} deelt {count} publieke routes op routess, samen goed voor {distance}.",
 	},
 	meta: {
 		landing: {

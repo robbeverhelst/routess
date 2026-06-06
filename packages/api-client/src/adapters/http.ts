@@ -80,7 +80,13 @@ export class FetchHttpClient implements HttpClient {
 				responseHeaders[key.toLowerCase()] = value;
 			});
 
-			return { data: await response.json(), headers: responseHeaders };
+			// 204s and other empty bodies (e.g. follow/unfollow, mark-read)
+			// must not explode in json() — callers type these as void.
+			if (response.status === 204) {
+				return { data: undefined as T, headers: responseHeaders };
+			}
+			const text = await response.text();
+			return { data: (text ? JSON.parse(text) : undefined) as T, headers: responseHeaders };
 		} finally {
 			if (timeoutId) clearTimeout(timeoutId);
 		}

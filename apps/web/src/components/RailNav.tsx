@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { useAuthStatus } from "@/lib/api-queries";
+import { useAuthStatus, useShareUnreadCount } from "@/lib/api-queries";
 import { useT } from "@/lib/i18n";
 import { useModalsStore } from "@/stores/modalsStore";
 import { type RedesignContext, useUiStore } from "@/stores/uiStore";
@@ -23,6 +23,7 @@ export function RailNav() {
 	const closeOverlay = useModalsStore((s) => s.closeOverlay);
 	const { data: auth } = useAuthStatus();
 	const isAdmin = auth?.user?.role === "admin";
+	const { data: unreadShares = 0 } = useShareUnreadCount();
 
 	return (
 		<div
@@ -105,6 +106,20 @@ export function RailNav() {
 							}}
 						/>
 						<Icon size={18} />
+						{n.key === "social" && unreadShares > 0 && (
+							<span
+								style={{
+									position: "absolute",
+									top: 4,
+									right: 4,
+									width: 8,
+									height: 8,
+									borderRadius: 999,
+									background: RDS_COLORS.accent,
+									pointerEvents: "none",
+								}}
+							/>
+						)}
 					</button>
 				);
 			})}
