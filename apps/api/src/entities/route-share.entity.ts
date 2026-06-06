@@ -1,4 +1,5 @@
-import { Entity, Index, ManyToOne, PrimaryKey, Property, type Ref } from "@mikro-orm/core";
+import { type Ref } from "@mikro-orm/core";
+import { Entity, Index, ManyToOne, PrimaryKey, Property } from "@mikro-orm/decorators/legacy";
 import { BaseEntity } from "./base.entity";
 import { Route } from "./route.entity";
 import { User } from "./user.entity";

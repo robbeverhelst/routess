@@ -66,7 +66,7 @@ export class SocialService {
 		if (existing) return;
 		try {
 			const follow = this.followRepository.create({ follower: followerId, followee: target.id });
-			await this.em.persistAndFlush(follow);
+			await this.em.persist(follow).flush();
 		} catch (error) {
 			if (error instanceof UniqueConstraintViolationException) return;
 			throw error;
@@ -77,7 +77,7 @@ export class SocialService {
 		const target = await this.findUserByHandle(handle);
 		const existing = await this.followRepository.findOne({ follower: followerId, followee: target.id });
 		if (!existing) return;
-		await this.em.removeAndFlush(existing);
+		await this.em.remove(existing).flush();
 	}
 
 	// Owner-only lists; the public only ever sees counts on the Profile.
@@ -149,7 +149,7 @@ export class SocialService {
 			route: route.id,
 			message: message || undefined,
 		});
-		await this.em.persistAndFlush(share);
+		await this.em.persist(share).flush();
 		await this.maybeSendShareEmail(share, sender, recipient, route);
 
 		return this.toShareDto(share, sender, route);
@@ -184,7 +184,7 @@ export class SocialService {
 		}
 		if (!share.readAt) {
 			share.readAt = new Date();
-			await this.em.persistAndFlush(share);
+			await this.em.persist(share).flush();
 		}
 	}
 
@@ -222,7 +222,7 @@ export class SocialService {
 			copiedFromUserId: source.user.id,
 			user: userId,
 		});
-		await this.em.persistAndFlush(copy);
+		await this.em.persist(copy).flush();
 		await this.em.populate(copy, ["user"]);
 		return toRouteResponseDto(copy, this.config.analytics.salt);
 	}
@@ -280,7 +280,7 @@ export class SocialService {
 				url,
 			});
 			share.emailedAt = new Date();
-			await this.em.persistAndFlush(share);
+			await this.em.persist(share).flush();
 		} catch (error) {
 			this.logger.error("Failed to send route share email", error);
 		}

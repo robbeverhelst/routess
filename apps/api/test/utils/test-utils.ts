@@ -41,8 +41,7 @@ export async function createTestApp(options: TestAppOptions = {}): Promise<INest
 export async function clearDatabase(app: INestApplication) {
 	const orm = app.get(MikroORM);
 	await RequestContext.create(orm.em, async () => {
-		const generator = orm.getSchemaGenerator();
-		await generator.refreshDatabase();
+		await orm.schema.refresh();
 	});
 	// Rate-limit buckets are in-memory and would otherwise accumulate across
 	// tests within one app instance, making test outcomes order-dependent.
@@ -89,7 +88,7 @@ export async function createTestUserWithAuth(
 		const userRepo = orm.em.getRepository(User);
 
 		user = userRepo.create(defaultUserData);
-		await orm.em.persistAndFlush(user);
+		await orm.em.persist(user).flush();
 
 		accessToken = await generateTestJWT(user.id, user.email, app);
 	});

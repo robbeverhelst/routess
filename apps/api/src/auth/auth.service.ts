@@ -84,7 +84,7 @@ export class AuthService {
 				role: desiredRole ?? "user",
 				deletionStatus: "active",
 			});
-			await this.entityManager.persistAndFlush(user);
+			await this.entityManager.persist(user).flush();
 			await this.upsertGoogleAuthMethod(user, googleId);
 			this.events.emit(USER_REGISTERED, { source: "google" } satisfies UserRegisteredEvent);
 		} else {
@@ -119,7 +119,7 @@ export class AuthService {
 				mutated = true;
 			}
 			if (mutated) {
-				await this.entityManager.persistAndFlush(user);
+				await this.entityManager.persist(user).flush();
 			}
 			await this.upsertGoogleAuthMethod(user, googleId);
 		}
@@ -147,7 +147,7 @@ export class AuthService {
 		const existing = await this.authMethodRepository.findOne({ provider: "google", providerId: googleId });
 		if (existing) {
 			existing.lastUsedAt = new Date();
-			await this.entityManager.persistAndFlush(existing);
+			await this.entityManager.persist(existing).flush();
 			return;
 		}
 		const method = this.authMethodRepository.create({
@@ -156,7 +156,7 @@ export class AuthService {
 			providerId: googleId,
 			lastUsedAt: new Date(),
 		});
-		await this.entityManager.persistAndFlush(method);
+		await this.entityManager.persist(method).flush();
 	}
 
 	// Returns the role this user should have based on ADMIN_EMAILS, or null if

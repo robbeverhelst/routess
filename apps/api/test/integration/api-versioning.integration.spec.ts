@@ -27,7 +27,7 @@ describe("API Versioning Integration", () => {
 					avatar: "https://example.com/versioning.jpg",
 					isEmailVerified: true,
 				});
-				await orm.em.persistAndFlush(user);
+				await orm.em.persist(user).flush();
 			}
 
 			// Generate JWT directly without going through auth flow

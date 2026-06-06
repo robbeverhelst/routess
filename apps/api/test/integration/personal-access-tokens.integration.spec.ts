@@ -51,7 +51,7 @@ describe("Personal Access Tokens Integration Tests", () => {
 			avatar: "https://example.com/admin.jpg",
 			role: "admin",
 		});
-		await orm.em.persistAndFlush([user, adminUser]);
+		await orm.em.persist([user, adminUser]).flush();
 
 		cookieJwt = await generateTestJWT(user.id, user.email, app);
 		adminCookieJwt = await generateTestJWT(adminUser.id, adminUser.email, app);
@@ -181,7 +181,7 @@ describe("Personal Access Tokens Integration Tests", () => {
 					{ coord: [4.36, 50.86], type: "routed" as const },
 				],
 			});
-			await orm.em.persistAndFlush(route);
+			await orm.em.persist(route).flush();
 
 			await supertest(app.getHttpServer())
 				.get("/api/v1/routes")
@@ -212,7 +212,7 @@ describe("Personal Access Tokens Integration Tests", () => {
 					{ coord: [4.36, 50.86], type: "routed" as const },
 				],
 			});
-			await orm.em.persistAndFlush(route);
+			await orm.em.persist(route).flush();
 
 			const res = await supertest(app.getHttpServer())
 				.patch(`/api/v1/routes/${route.id}`)
@@ -256,7 +256,7 @@ describe("Personal Access Tokens Integration Tests", () => {
 					{ coord: [4.36, 50.86], type: "routed" as const },
 				],
 			});
-			await orm.em.persistAndFlush(route);
+			await orm.em.persist(route).flush();
 
 			const res = await supertest(app.getHttpServer())
 				.delete(`/api/v1/routes/${route.id}`)
@@ -278,7 +278,7 @@ describe("Personal Access Tokens Integration Tests", () => {
 					{ coord: [4.36, 50.86], type: "routed" as const },
 				],
 			});
-			await orm.em.persistAndFlush(route);
+			await orm.em.persist(route).flush();
 
 			await supertest(app.getHttpServer())
 				.delete(`/api/v1/routes/${route.id}`)
@@ -298,7 +298,7 @@ describe("Personal Access Tokens Integration Tests", () => {
 					{ coord: [4.36, 50.86], type: "routed" as const },
 				],
 			});
-			await orm.em.persistAndFlush(route);
+			await orm.em.persist(route).flush();
 
 			await supertest(app.getHttpServer())
 				.patch(`/api/v1/routes/${route.id}`)
@@ -325,7 +325,7 @@ describe("Personal Access Tokens Integration Tests", () => {
 					{ coord: [4.36, 50.86], type: "routed" as const },
 				],
 			});
-			await orm.em.persistAndFlush(route);
+			await orm.em.persist(route).flush();
 
 			await supertest(app.getHttpServer())
 				.patch(`/api/v1/routes/${route.id}`)
@@ -343,7 +343,7 @@ describe("Personal Access Tokens Integration Tests", () => {
 					{ coord: [4.36, 50.86], type: "routed" as const },
 				],
 			});
-			await orm.em.persistAndFlush(route);
+			await orm.em.persist(route).flush();
 
 			await supertest(app.getHttpServer())
 				.delete(`/api/v1/routes/${route.id}`)
