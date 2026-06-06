@@ -1,5 +1,6 @@
-import { EntityRepository } from "@mikro-orm/core";
+import { EntityRepository, RequestContext } from "@mikro-orm/core";
 import { InjectRepository } from "@mikro-orm/nestjs";
+import { EntityManager } from "@mikro-orm/postgresql";
 import { Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
 import type { Counter, Histogram, UpDownCounter } from "@opentelemetry/api";
 import { Route } from "../entities/route.entity";
@@ -18,6 +19,7 @@ export class MetricsService implements OnModuleInit, OnModuleDestroy, Metrics {
 		private readonly routeRepository: EntityRepository<Route>,
 		@InjectRepository(User)
 		private readonly userRepository: EntityRepository<User>,
+		private readonly em: EntityManager,
 	) {}
 
 	// HTTP metrics
@@ -111,17 +113,21 @@ export class MetricsService implements OnModuleInit, OnModuleDestroy, Metrics {
 
 	private async initializeBusinessMetrics() {
 		try {
-			const totalRoutes = await this.routeRepository.count({});
-			this.routesCreated.add(totalRoutes);
+			// Runs outside an HTTP request, so it needs its own context; the
+			// global EntityManager is disallowed outside tests.
+			await RequestContext.create(this.em, async () => {
+				const totalRoutes = await this.routeRepository.count({});
+				this.routesCreated.add(totalRoutes);
 
-			const totalUsers = await this.userRepository.count({}, { filters: { softDelete: false } });
-			this.userRegistrations.add(totalUsers);
+				const totalUsers = await this.userRepository.count({}, { filters: { softDelete: false } });
+				this.userRegistrations.add(totalUsers);
 
-			const deletedRoutes = await this.routeRepository.count(
-				{ deletedAt: { $ne: null } },
-				{ filters: { softDelete: false } },
-			);
-			this.routesDeleted.add(deletedRoutes);
+				const deletedRoutes = await this.routeRepository.count(
+					{ deletedAt: { $ne: null } },
+					{ filters: { softDelete: false } },
+				);
+				this.routesDeleted.add(deletedRoutes);
+			});
 
 			this.setActiveUsers(0);
 		} catch (_error) {
