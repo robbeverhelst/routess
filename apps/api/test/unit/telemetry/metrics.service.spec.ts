@@ -1,4 +1,5 @@
 import { getRepositoryToken } from "@mikro-orm/nestjs";
+import { EntityManager } from "@mikro-orm/postgresql";
 import { Test, type TestingModule } from "@nestjs/testing";
 import { Route } from "../../../src/entities/route.entity";
 import { User } from "../../../src/entities/user.entity";
@@ -53,6 +54,10 @@ describe("MetricsService", () => {
 				{
 					provide: getRepositoryToken(User),
 					useValue: mockUserRepository,
+				},
+				{
+					provide: EntityManager,
+					useValue: { fork: () => ({}) },
 				},
 				{
 					provide: "OTEL_METER",

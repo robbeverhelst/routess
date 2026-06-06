@@ -179,6 +179,17 @@ export const initializeMapInteractions = (
 		map.touchZoomRotate.enable();
 	};
 
+	// DOM overlays (the popup is a Marker inside Mapbox's canvas container)
+	// bubble their pointer events into the map's handlers, and React's
+	// delegated stopPropagation runs too late to stop that. Events whose
+	// real target isn't the canvas belong to the overlay: without this
+	// guard, a tap on the popup's delete button is read as "tap with popup
+	// open", which dismisses the popup before its click can fire.
+	const isOverlayEvent = (event: MapMouseEvent | MapTouchEvent): boolean => {
+		const target = event.originalEvent?.target;
+		return target instanceof Node && target !== mapCanvas;
+	};
+
 	const getEventPoint = (event: MapMouseEvent | MapTouchEvent): PointerPoint | null => {
 		if ("point" in event) {
 			return event.point;
@@ -441,7 +452,7 @@ export const initializeMapInteractions = (
 	};
 
 	const handleMapClick = async (event: MapMouseEvent) => {
-		if (isMapLockedRef.current) return;
+		if (isMapLockedRef.current || isOverlayEvent(event)) return;
 
 		if (state.suppressNextClick) {
 			state.suppressNextClick = false;
@@ -473,7 +484,7 @@ export const initializeMapInteractions = (
 	};
 
 	const handleContextMenu = (event: MapMouseEvent | MapTouchEvent) => {
-		if (isMapLockedRef.current) return;
+		if (isMapLockedRef.current || isOverlayEvent(event)) return;
 		// Android fires contextmenu on long-press; the touch session owns
 		// that gesture, so only honor contextmenu for real right-clicks.
 		if (state.touchSession || state.isDragging) return;
@@ -489,7 +500,7 @@ export const initializeMapInteractions = (
 	};
 
 	const handleMouseDown = async (event: MapMouseEvent) => {
-		if (isMapLockedRef.current || event.originalEvent.button !== 0) return;
+		if (isMapLockedRef.current || event.originalEvent.button !== 0 || isOverlayEvent(event)) return;
 		// Compatibility mouse event synthesized from a recent touch: the
 		// touch handlers already resolved this gesture.
 		if (Date.now() - state.lastTouchAt < TOUCH_MOUSE_SUPPRESS_MS) return;
@@ -513,6 +524,9 @@ export const initializeMapInteractions = (
 	const handleTouchStart = (event: MapTouchEvent) => {
 		if (isMapLockedRef.current) return;
 		state.lastTouchAt = Date.now();
+		// A touch starting on the popup is the popup's gesture; creating a
+		// session here would dismiss it on touchend before its button fires.
+		if (isOverlayEvent(event)) return;
 
 		if (event.points.length !== 1) {
 			state.lastMultiTouchAt = Date.now();
