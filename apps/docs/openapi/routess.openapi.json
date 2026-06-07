@@ -753,8 +753,8 @@
 		},
 		"/routes/public": {
 			"get": {
-				"description": "Returns public Routes that clear the Indexable quality gate (see CONTEXT.md), newest-updated first. Anonymous; feeds the landing sitemap and discovery surfaces. Total count in X-Total-Count.",
-				"operationId": "RoutesController_findIndexablePublic",
+				"description": "Anonymous public route listing behind two gates. gate=indexable (default): Routes clearing the Indexable quality gate (see CONTEXT.md), newest-updated first; feeds the landing sitemap. gate=public: every public Route, newest-published first with downsampled geometry; the in-app Discover surface. Filterable by bbox (viewport overlap), activity, placeCity, and distance bounds. Total count in X-Total-Count.",
+				"operationId": "RoutesController_findPublic",
 				"parameters": [
 					{
 						"name": "limit",
@@ -778,6 +778,63 @@
 							"default": 0,
 							"type": "number"
 						}
+					},
+					{
+						"name": "gate",
+						"required": false,
+						"in": "query",
+						"description": "Eligibility gate: 'indexable' (SEO surfaces, default) or 'public' (in-app Discover).",
+						"schema": {
+							"default": "indexable",
+							"type": "string",
+							"enum": ["indexable", "public"]
+						}
+					},
+					{
+						"name": "bbox",
+						"required": false,
+						"in": "query",
+						"description": "Viewport filter as 'minLng,minLat,maxLng,maxLat'. Matches routes whose bounding box overlaps it (ADR 0029).",
+						"schema": {
+							"example": "3.6,50.9,3.8,51.1",
+							"type": "string"
+						}
+					},
+					{
+						"name": "activity",
+						"required": false,
+						"in": "query",
+						"schema": {
+							"type": "string",
+							"enum": ["run", "cycle", "walk"]
+						}
+					},
+					{
+						"name": "placeCity",
+						"required": false,
+						"in": "query",
+						"description": "Filter by derived Place city (case-insensitive exact match).",
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"name": "minDistance",
+						"required": false,
+						"in": "query",
+						"description": "Minimum route distance in meters.",
+						"schema": {
+							"type": "number"
+						}
+					},
+					{
+						"name": "maxDistance",
+						"required": false,
+						"in": "query",
+						"description": "Maximum route distance in meters.",
+						"schema": {
+							"type": "number"
+						}
 					}
 				],
 				"responses": {
@@ -795,7 +852,7 @@
 						}
 					}
 				},
-				"summary": "List indexable public routes",
+				"summary": "List public routes",
 				"tags": ["routes"]
 			}
 		},
@@ -1313,6 +1370,413 @@
 				],
 				"summary": "Set collection routes",
 				"tags": ["collections"]
+			}
+		},
+		"/profiles": {
+			"get": {
+				"description": "Profiles with at least 3 Indexable routes (CONTEXT.md 'Indexable'). Anonymous; feeds the landing sitemap.",
+				"operationId": "ProfilesController_findIndexable",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"description": "Indexable profiles with handle and last update"
+					}
+				},
+				"summary": "List Indexable Profiles",
+				"tags": ["profiles"]
+			}
+		},
+		"/profiles/{handle}": {
+			"get": {
+				"description": "The public projection of a User (CONTEXT.md 'Profile'): handle, display name, avatar, stats over public Routes only, and the public route list. Anonymous viewers get isFollowing = null.",
+				"operationId": "ProfilesController_findOne",
+				"parameters": [
+					{
+						"name": "handle",
+						"required": true,
+						"in": "path",
+						"description": "Profile handle",
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ProfileResponseDto"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Profile not found"
+					}
+				},
+				"summary": "Get a public Profile by handle",
+				"tags": ["profiles"]
+			}
+		},
+		"/social/follows/{handle}": {
+			"post": {
+				"description": "Asymmetric, no approval, grants no access (ADR 0027). Idempotent.",
+				"operationId": "SocialController_follow",
+				"parameters": [
+					{
+						"name": "handle",
+						"required": true,
+						"in": "path",
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "Following"
+					},
+					"404": {
+						"description": "Profile not found"
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Follow a profile",
+				"tags": ["social"]
+			},
+			"delete": {
+				"description": "Idempotent.",
+				"operationId": "SocialController_unfollow",
+				"parameters": [
+					{
+						"name": "handle",
+						"required": true,
+						"in": "path",
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "No longer following"
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Unfollow a profile",
+				"tags": ["social"]
+			}
+		},
+		"/social/follows": {
+			"get": {
+				"description": "Owner-only: follower lists are never public, only counts on the Profile are.",
+				"operationId": "SocialController_follows",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"description": "",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/FollowsResponseDto"
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "List who you follow and who follows you",
+				"tags": ["social"]
+			}
+		},
+		"/social/feed": {
+			"get": {
+				"description": "Public Routes of the Profiles you follow, ordered by publishedAt desc. A derived view: routes flipped back to private vanish instantly. Total in X-Total-Count.",
+				"operationId": "SocialController_feed",
+				"parameters": [
+					{
+						"name": "limit",
+						"required": false,
+						"in": "query",
+						"schema": {
+							"type": "number"
+						}
+					},
+					{
+						"name": "offset",
+						"required": false,
+						"in": "query",
+						"schema": {
+							"type": "number"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"$ref": "#/components/schemas/FeedItemDto"
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Your feed",
+				"tags": ["social"]
+			}
+		},
+		"/social/shares": {
+			"post": {
+				"description": "Only unlisted/public Routes are shareable (ADR 0027). Sharing your own private Route returns a coded 409 so clients can offer to unlist it first.",
+				"operationId": "SocialController_share",
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/CreateRouteShareDto"
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/RouteShareResponseDto"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Route or recipient not found"
+					},
+					"409": {
+						"description": "Route is private"
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Share a route with another user",
+				"tags": ["social"]
+			}
+		},
+		"/social/shares/inbox": {
+			"get": {
+				"description": "Live references: a route deleted or flipped back to private shows as unavailable.",
+				"operationId": "SocialController_inbox",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"description": "",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"$ref": "#/components/schemas/RouteShareResponseDto"
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Your shared-routes inbox",
+				"tags": ["social"]
+			}
+		},
+		"/social/shares/unread-count": {
+			"get": {
+				"operationId": "SocialController_unreadCount",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"description": "",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ShareUnreadCountDto"
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Unread share count (inbox badge)",
+				"tags": ["social"]
+			}
+		},
+		"/social/shares/{id}/read": {
+			"post": {
+				"operationId": "SocialController_markRead",
+				"parameters": [
+					{
+						"name": "id",
+						"required": true,
+						"in": "path",
+						"schema": {
+							"type": "number"
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "Marked read"
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Mark a share as read",
+				"tags": ["social"]
+			}
+		},
+		"/social/shares/{id}": {
+			"delete": {
+				"description": "Recipient-only. Removes the inbox entry; the route itself is untouched.",
+				"operationId": "SocialController_dismiss",
+				"parameters": [
+					{
+						"name": "id",
+						"required": true,
+						"in": "path",
+						"schema": {
+							"type": "number"
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "Dismissed"
+					},
+					"404": {
+						"description": "Share not found"
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Dismiss a share from your inbox",
+				"tags": ["social"]
+			}
+		},
+		"/social/shares/{id}/copy": {
+			"post": {
+				"description": "The copy keeps the original's Provenance and records copiedFrom lineage. It starts private.",
+				"operationId": "SocialController_copy",
+				"parameters": [
+					{
+						"name": "id",
+						"required": true,
+						"in": "path",
+						"schema": {
+							"type": "number"
+						}
+					}
+				],
+				"responses": {
+					"201": {
+						"description": "",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/RouteResponseDto"
+								}
+							}
+						}
+					},
+					"409": {
+						"description": "Route no longer available"
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Save a copy of a shared route to your library",
+				"tags": ["social"]
+			}
+		},
+		"/social/users/search": {
+			"get": {
+				"description": "Prefix match on handle and display name. Returns at most 10 results; excludes yourself.",
+				"operationId": "SocialController_search",
+				"parameters": [
+					{
+						"name": "q",
+						"required": true,
+						"in": "query",
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"$ref": "#/components/schemas/ProfileSummaryDto"
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Search users to follow or share with",
+				"tags": ["social"]
 			}
 		},
 		"/routing/trace-attributes": {
@@ -2298,6 +2762,11 @@
 						"type": "string",
 						"example": "Jane Doe"
 					},
+					"handle": {
+						"type": "string",
+						"example": "jane-doe",
+						"description": "Public address of the user's Profile (see CONTEXT.md 'Handle')."
+					},
 					"avatar": {
 						"type": "string",
 						"example": "https://example.com/avatar.jpg"
@@ -2350,6 +2819,7 @@
 					"id",
 					"email",
 					"name",
+					"handle",
 					"isEmailVerified",
 					"role",
 					"idHash",
@@ -2489,6 +2959,11 @@
 						"type": "string",
 						"example": "Jane Doe"
 					},
+					"handle": {
+						"type": "string",
+						"example": "jane-doe",
+						"description": "New Handle for the user's Profile. Lowercase alphanumeric plus hyphen, 3-30 chars. Old profile URLs 404 after a change; the freed handle returns to the pool."
+					},
 					"avatar": {
 						"type": "string",
 						"example": "https://example.com/avatar.jpg",
@@ -2542,6 +3017,11 @@
 						"type": "string",
 						"example": "Jane Doe"
 					},
+					"handle": {
+						"type": "string",
+						"example": "jane-doe",
+						"description": "Public address of the user's Profile (see CONTEXT.md 'Handle')."
+					},
 					"avatar": {
 						"type": "string",
 						"example": "https://example.com/avatar.jpg"
@@ -2587,7 +3067,17 @@
 						"description": "Whether the user has an active email/password credential. Drives password-change UI affordances."
 					}
 				},
-				"required": ["id", "email", "name", "isEmailVerified", "role", "idHash", "deletionStatus", "hasPassword"]
+				"required": [
+					"id",
+					"email",
+					"name",
+					"handle",
+					"isEmailVerified",
+					"role",
+					"idHash",
+					"deletionStatus",
+					"hasPassword"
+				]
 			},
 			"AuthResponseDto": {
 				"type": "object",
@@ -3018,6 +3508,11 @@
 						"type": "string",
 						"example": "Jane Doe"
 					},
+					"handle": {
+						"type": "string",
+						"example": "jane-doe",
+						"description": "Public address of the owner's Profile (CONTEXT.md 'Handle'). Deliberately public, not PII."
+					},
 					"avatar": {
 						"type": "string",
 						"example": "https://example.com/avatar.jpg"
@@ -3028,7 +3523,7 @@
 						"description": "Pseudonymous user identifier for client-side ProductEvent tracking. See ADR-0020."
 					}
 				},
-				"required": ["id", "name", "idHash"]
+				"required": ["id", "name", "handle", "idHash"]
 			},
 			"RouteResponseDto": {
 				"type": "object",
@@ -3091,6 +3586,18 @@
 					"endAddress": {
 						"type": "string"
 					},
+					"placeCity": {
+						"type": "string",
+						"description": "Derived Place city (CONTEXT.md 'Place'). Server-derived, never user-edited."
+					},
+					"placeRegion": {
+						"type": "string",
+						"description": "Derived Place region."
+					},
+					"placeCountryCode": {
+						"type": "string",
+						"description": "Derived Place ISO 3166-1 alpha-2 country code."
+					},
 					"routingPreferences": {
 						"description": "Inputs that produced this route's geometry. Null for legacy / GPX-imported routes.",
 						"allOf": [
@@ -3148,6 +3655,50 @@
 					},
 					"updatedAt": {
 						"type": "string"
+					},
+					"slugId": {
+						"type": "string",
+						"description": "Slug-id path segment of the public route page, e.g. 'sunday-loop-42'."
+					},
+					"activity": {
+						"type": "string",
+						"enum": ["run", "cycle", "walk"]
+					},
+					"elevationGain": {
+						"type": "number",
+						"description": "Elevation gain in meters"
+					},
+					"tags": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					},
+					"publishedAt": {
+						"type": "string",
+						"description": "First transition to public (CONTEXT.md 'PublishedAt')."
+					},
+					"placeCity": {
+						"type": "string",
+						"description": "Derived Place city (CONTEXT.md 'Place')."
+					},
+					"placeRegion": {
+						"type": "string",
+						"description": "Derived Place region."
+					},
+					"placeCountryCode": {
+						"type": "string",
+						"description": "Derived Place ISO 3166-1 alpha-2 country code."
+					},
+					"geometry": {
+						"description": "Downsampled RoutePath as [lng, lat] pairs, suitable for thumbnails and map previews.",
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					},
+					"user": {
+						"$ref": "#/components/schemas/PublicUserDto"
 					}
 				},
 				"required": ["id", "name", "updatedAt"]
@@ -3429,6 +3980,283 @@
 					}
 				},
 				"required": ["routeIds"]
+			},
+			"ProfileStatsDto": {
+				"type": "object",
+				"properties": {
+					"publicRoutes": {
+						"type": "number",
+						"example": 12
+					},
+					"totalDistance": {
+						"type": "number",
+						"example": 423500,
+						"description": "Total distance of public routes in meters"
+					},
+					"totalElevationGain": {
+						"type": "number",
+						"example": 5210,
+						"description": "Total elevation gain of public routes in meters"
+					},
+					"followers": {
+						"type": "number",
+						"example": 3
+					},
+					"following": {
+						"type": "number",
+						"example": 8
+					}
+				},
+				"required": ["publicRoutes", "totalDistance", "totalElevationGain", "followers", "following"]
+			},
+			"ProfileRouteDto": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "number",
+						"example": 42
+					},
+					"slugId": {
+						"type": "string",
+						"example": "gravel-loop-around-ghent-42",
+						"description": "Canonical /r/{slugId} path segment. Public routes use the id form; unlisted ones the share-token form (ids are not served to non-owners)."
+					},
+					"name": {
+						"type": "string",
+						"example": "Gravel loop around Ghent"
+					},
+					"activity": {
+						"type": "object",
+						"example": "Cycling",
+						"nullable": true
+					},
+					"distance": {
+						"type": "number",
+						"example": 42350,
+						"nullable": true
+					},
+					"duration": {
+						"type": "number",
+						"example": 5400,
+						"nullable": true
+					},
+					"elevationGain": {
+						"type": "number",
+						"example": 320,
+						"nullable": true
+					},
+					"publishedAt": {
+						"type": "string",
+						"example": "2026-06-01T10:00:00.000Z",
+						"nullable": true
+					},
+					"tags": {
+						"example": ["gravel", "ardennes"],
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					}
+				},
+				"required": ["id", "slugId", "name", "tags"]
+			},
+			"ProfileResponseDto": {
+				"type": "object",
+				"properties": {
+					"handle": {
+						"type": "string",
+						"example": "jane-doe"
+					},
+					"name": {
+						"type": "string",
+						"example": "Jane Doe"
+					},
+					"avatar": {
+						"type": "string",
+						"example": "https://example.com/avatar.jpg",
+						"nullable": true
+					},
+					"stats": {
+						"$ref": "#/components/schemas/ProfileStatsDto"
+					},
+					"isFollowing": {
+						"type": "boolean",
+						"nullable": true,
+						"example": true,
+						"description": "Whether the authenticated viewer follows this profile; null for anonymous viewers."
+					},
+					"isIndexable": {
+						"type": "boolean",
+						"example": true,
+						"description": "Whether this profile clears the Indexable gate (>= 3 Indexable routes). Drives noindex on the landing page."
+					},
+					"routes": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/ProfileRouteDto"
+						}
+					}
+				},
+				"required": ["handle", "name", "stats", "isFollowing", "isIndexable", "routes"]
+			},
+			"ProfileSummaryDto": {
+				"type": "object",
+				"properties": {
+					"handle": {
+						"type": "string",
+						"example": "jane-doe"
+					},
+					"name": {
+						"type": "string",
+						"example": "Jane Doe"
+					},
+					"avatar": {
+						"type": "string",
+						"example": "https://example.com/avatar.jpg",
+						"nullable": true
+					}
+				},
+				"required": ["handle", "name"]
+			},
+			"FollowsResponseDto": {
+				"type": "object",
+				"properties": {
+					"following": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/ProfileSummaryDto"
+						}
+					},
+					"followers": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/ProfileSummaryDto"
+						}
+					}
+				},
+				"required": ["following", "followers"]
+			},
+			"FeedItemDto": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "number",
+						"example": 42
+					},
+					"slugId": {
+						"type": "string",
+						"example": "gravel-loop-around-ghent-42",
+						"description": "Canonical /r/{slugId} path segment. Public routes use the id form; unlisted ones the share-token form (ids are not served to non-owners)."
+					},
+					"name": {
+						"type": "string",
+						"example": "Gravel loop around Ghent"
+					},
+					"activity": {
+						"type": "object",
+						"example": "Cycling",
+						"nullable": true
+					},
+					"distance": {
+						"type": "number",
+						"example": 42350,
+						"nullable": true
+					},
+					"duration": {
+						"type": "number",
+						"example": 5400,
+						"nullable": true
+					},
+					"elevationGain": {
+						"type": "number",
+						"example": 320,
+						"nullable": true
+					},
+					"publishedAt": {
+						"type": "string",
+						"example": "2026-06-01T10:00:00.000Z",
+						"nullable": true
+					},
+					"tags": {
+						"example": ["gravel", "ardennes"],
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					},
+					"author": {
+						"$ref": "#/components/schemas/ProfileSummaryDto"
+					}
+				},
+				"required": ["id", "slugId", "name", "tags", "author"]
+			},
+			"CreateRouteShareDto": {
+				"type": "object",
+				"properties": {
+					"routeId": {
+						"type": "number",
+						"example": 42
+					},
+					"recipientHandle": {
+						"type": "string",
+						"example": "jane-doe"
+					},
+					"message": {
+						"type": "string",
+						"example": "Route for Sunday's ride!"
+					}
+				},
+				"required": ["routeId", "recipientHandle"]
+			},
+			"RouteShareResponseDto": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "number",
+						"example": 7
+					},
+					"sender": {
+						"$ref": "#/components/schemas/ProfileSummaryDto"
+					},
+					"message": {
+						"type": "string",
+						"example": "Route for Sunday's ride!",
+						"nullable": true
+					},
+					"route": {
+						"nullable": true,
+						"type": "object",
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/ProfileRouteDto"
+							}
+						]
+					},
+					"unavailable": {
+						"type": "boolean",
+						"example": false
+					},
+					"readAt": {
+						"type": "string",
+						"example": "2026-06-05T10:00:00.000Z",
+						"nullable": true
+					},
+					"createdAt": {
+						"type": "string",
+						"example": "2026-06-05T09:00:00.000Z"
+					}
+				},
+				"required": ["id", "sender", "unavailable", "createdAt"]
+			},
+			"ShareUnreadCountDto": {
+				"type": "object",
+				"properties": {
+					"unread": {
+						"type": "number",
+						"example": 2
+					}
+				},
+				"required": ["unread"]
 			},
 			"TraceShapePointDto": {
 				"type": "object",

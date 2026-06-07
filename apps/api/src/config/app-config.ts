@@ -74,6 +74,14 @@ export interface AppConfig {
 		// directly (it lives on a cluster-internal Service).
 		valhallaUrl: string;
 	};
+	geocoding: {
+		// Mapbox public token for server-side reverse geocoding (Place
+		// derivation, CONTEXT.md "Place"). The token is URL-restricted, so
+		// requests must carry the referer below. Empty token disables
+		// derivation; Places stay null until the backfill runs with one set.
+		mapboxToken: string;
+		referer: string;
+	};
 }
 
 const DEFAULTS = {
@@ -246,6 +254,10 @@ export function getAppConfig(): AppConfig {
 		},
 		routing: {
 			valhallaUrl: (process.env.VALHALLA_URL ?? "").replace(/\/+$/, ""),
+		},
+		geocoding: {
+			mapboxToken: process.env.MAPBOX_PUBLIC_TOKEN ?? "",
+			referer: process.env.GEOCODING_REFERER || "https://routess.com",
 		},
 	};
 }

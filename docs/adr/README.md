@@ -19,6 +19,7 @@ Use the [template](0000-template.md) when adding a new one. Number sequentially 
 - [0011 — Route API module stays shallow until invariants exist](0011-route-api-module-stays-shallow.md)
 - [0012 — Soft-delete enforced by a global MikroORM filter](0012-soft-delete-via-mikro-orm-filter.md)
 - [0018 — Route updates are last-write-wins (deferred optimistic concurrency)](0018-route-update-last-write-wins.md)
+- [0029 — Discovery geo queries use persisted bbox columns, not PostGIS](0029-bbox-columns-not-postgis-for-discovery.md)
 
 ### Routing & domain
 - [0007 — Single canonical Waypoint type](0007-single-canonical-waypoint-type.md)

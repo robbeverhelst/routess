@@ -129,6 +129,14 @@ spec:
             - name: VALHALLA_URL
               value: {{ . | quote }}
             {{- end }}
+            {{- with .Values.api.env.mapboxPublicToken }}
+            - name: MAPBOX_PUBLIC_TOKEN
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.api.env.geocodingReferer }}
+            - name: GEOCODING_REFERER
+              value: {{ . | quote }}
+            {{- end }}
             - name: RESEND_API_KEY
               valueFrom:
                 secretKeyRef:

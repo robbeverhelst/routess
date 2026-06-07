@@ -124,6 +124,12 @@ api:
     # `http://valhalla.valhalla.svc.cluster.local:8002`, an ingress, or a
     # Tailscale hostname.
     valhallaUrl: ""
+    # Mapbox public token for server-side reverse geocoding (Place derivation,
+    # CONTEXT.md "Place"). Public pk token, URL-restricted; the API sends the
+    # referer below with each request. Leave empty to disable derivation
+    # (Places stay null until the backfill runs with a token).
+    mapboxPublicToken: ""
+    geocodingReferer: "https://routess.com"
   # Email allowlist for admin role. Source of truth for User.role; reconciled at
   # login via AuthService. Empty list disables reconciliation entirely (existing
   # roles are preserved). See ADR-0015.

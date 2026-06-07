@@ -84,7 +84,7 @@ export class ProfilesService {
 	}
 
 	// Indexable Profiles for the landing sitemap: same in-memory gate strategy
-	// as RoutesService.findIndexablePublic, grouped per owner.
+	// as RoutesService.findPublicListing (gate=indexable), grouped per owner.
 	async findIndexable(): Promise<Array<{ handle: string; updatedAt: string }>> {
 		const candidates = await this.routeRepository.find(
 			{ visibility: "public", distance: { $gte: INDEXABLE_MIN_DISTANCE_METERS } },

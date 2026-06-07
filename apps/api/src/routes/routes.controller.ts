@@ -28,6 +28,7 @@ import { isShareToken } from "../common/share-token";
 import { CreateRouteDto } from "./dto/create-route.dto";
 import { ListRoutesQueryDto, ROUTES_PAGE_LIMIT_DEFAULT } from "./dto/list-routes-query.dto";
 import { PublicRouteSummaryDto } from "./dto/public-route-summary.dto";
+import { PublicRoutesQueryDto } from "./dto/public-routes-query.dto";
 import { RouteResponseDto } from "./dto/route-response.dto";
 import { UpdateRouteDto } from "./dto/update-route.dto";
 import { buildRouteGpx } from "./gpx";
@@ -90,18 +91,19 @@ export class RoutesController {
 	// otherwise NestJS would match "public" against ":id" and ParseIntPipe
 	// would 400 before this handler was reached.
 	@ApiOperation({
-		summary: "List indexable public routes",
+		summary: "List public routes",
 		description:
-			"Returns public Routes that clear the Indexable quality gate (see CONTEXT.md), newest-updated first. Anonymous; feeds the landing sitemap and discovery surfaces. Total count in X-Total-Count.",
+			"Anonymous public route listing behind two gates. gate=indexable (default): Routes clearing the Indexable quality gate (see CONTEXT.md), newest-updated first; feeds the landing sitemap. gate=public: every public Route, newest-published first with downsampled geometry; the in-app Discover surface. Filterable by bbox (viewport overlap), activity, placeCity, and distance bounds. Total count in X-Total-Count.",
 	})
 	@ApiResponse({ status: 200, type: PublicRouteSummaryDto, isArray: true })
 	@ThrottleModerate()
 	@Get("public")
-	async findIndexablePublic(
-		@Query() query: ListRoutesQueryDto,
+	async findPublic(
+		@Query() query: PublicRoutesQueryDto,
 		@Res({ passthrough: true }) res: Response,
 	): Promise<PublicRouteSummaryDto[]> {
-		const { items, total } = await this.routesService.findIndexablePublic(
+		const { items, total } = await this.routesService.findPublicListing(
+			query,
 			query.limit ?? ROUTES_PAGE_LIMIT_DEFAULT,
 			query.offset ?? 0,
 		);

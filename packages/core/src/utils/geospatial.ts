@@ -135,6 +135,55 @@ export const closestPointOnSegment = (p: Coordinate, v: Coordinate, w: Coordinat
 };
 
 /**
+ * Bounding box of a path in degrees. The shape persisted on a Route for
+ * viewport-overlap discovery queries (ADR 0029).
+ */
+export interface BoundingBox {
+	minLat: number;
+	maxLat: number;
+	minLng: number;
+	maxLng: number;
+}
+
+/**
+ * Computes the bounding box of a coordinate path.
+ *
+ * @param coordinates - Array of [longitude, latitude] pairs
+ * @returns The bounding box, or null for an empty path
+ */
+export const routeBoundingBox = (coordinates: Coordinate[]): BoundingBox | null => {
+	let box: BoundingBox | null = null;
+	for (const coord of coordinates) {
+		if (!isValidCoordinate(coord)) continue;
+		const [lng, lat] = coord;
+		if (!box) {
+			box = { minLat: lat, maxLat: lat, minLng: lng, maxLng: lng };
+		} else {
+			if (lat < box.minLat) box.minLat = lat;
+			if (lat > box.maxLat) box.maxLat = lat;
+			if (lng < box.minLng) box.minLng = lng;
+			if (lng > box.maxLng) box.maxLng = lng;
+		}
+	}
+	return box;
+};
+
+/**
+ * Downsamples a path to at most maxPoints coordinates, always keeping the
+ * first and last point. Even-stride sampling: good enough for thumbnails and
+ * map previews, not a topological simplification.
+ */
+export const downsampleCoordinates = (coordinates: Coordinate[], maxPoints: number): Coordinate[] => {
+	if (maxPoints < 2 || coordinates.length <= maxPoints) return coordinates;
+	const result: Coordinate[] = [];
+	const step = (coordinates.length - 1) / (maxPoints - 1);
+	for (let i = 0; i < maxPoints; i++) {
+		result.push(coordinates[Math.round(i * step)]);
+	}
+	return result;
+};
+
+/**
  * Calculates the bearing between two coordinates
  *
  * @param coord1 - Start coordinate [longitude, latitude]
