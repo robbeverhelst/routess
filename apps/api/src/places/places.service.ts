@@ -3,7 +3,9 @@ import { Inject, Injectable, Logger } from "@nestjs/common";
 import { routeBoundingBox } from "@routess/core";
 import type { AppConfig } from "../config/app-config";
 import { APP_CONFIG } from "../config/config.module";
+import { GeocodeCache } from "../entities/geocode-cache.entity";
 import { Route } from "../entities/route.entity";
+import { MetricsService } from "../telemetry/metrics.service";
 
 export interface DerivedPlace {
 	city: string;
@@ -28,16 +30,50 @@ export class PlacesService {
 		private readonly em: EntityManager,
 		@Inject(APP_CONFIG)
 		private readonly config: AppConfig,
+		private readonly metrics: MetricsService,
 	) {}
 
 	get enabled(): boolean {
 		return this.config.geocoding.mapboxToken.length > 0;
 	}
 
-	// Mapbox geocoding v5: the 'place' feature is the city; region and country
-	// come from its context. The token is URL-restricted, hence the Referer.
+	// Geocode results for a ~100m grid cell never change, so they live in a
+	// durable Postgres cache rather than a TTL store (ADR 0031). The cell key
+	// rounds to 3 decimals (~110m latitude).
+	private geocodeCacheKey([lng, lat]: [number, number]): string {
+		return `${lat.toFixed(3)},${lng.toFixed(3)}`;
+	}
+
 	async reverseGeocodePlace(start: [number, number]): Promise<DerivedPlace | null> {
 		if (!this.enabled) return null;
+
+		const key = this.geocodeCacheKey(start);
+		const em = this.em.fork();
+		try {
+			const cached = await em.findOne(GeocodeCache, { key });
+			this.metrics.recordCacheEvent("geocode", cached ? "hit" : "miss");
+			if (cached) {
+				return { city: cached.city, region: cached.region, countryCode: cached.countryCode };
+			}
+		} catch (error) {
+			this.logger.warn(`Geocode cache lookup failed: ${error instanceof Error ? error.message : String(error)}`);
+		}
+
+		const place = await this.reverseGeocodeFromMapbox(start);
+		if (place) {
+			try {
+				// Parallel derivations can race on the same cell; first write wins.
+				await em.upsert(GeocodeCache, { key, ...place, createdAt: new Date() });
+			} catch (error) {
+				this.logger.warn(`Geocode cache write failed: ${error instanceof Error ? error.message : String(error)}`);
+			}
+		}
+		return place;
+	}
+
+	// Mapbox geocoding v5: the 'place' feature is the city; region and country
+	// come from its context. The token is URL-restricted, hence the Referer.
+	private async reverseGeocodeFromMapbox(start: [number, number]): Promise<DerivedPlace | null> {
 		const [lng, lat] = start;
 		const url =
 			`https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json` +
@@ -49,6 +85,7 @@ export class PlacesService {
 				headers: { Referer: this.config.geocoding.referer },
 				signal: controller.signal,
 			});
+			this.metrics.recordProviderCall("mapbox", "/geocoding/v5", "places", res.ok ? "success" : "error");
 			if (!res.ok) {
 				this.logger.warn(`Reverse geocode failed with status ${res.status}`);
 				return null;
@@ -64,6 +101,7 @@ export class PlacesService {
 				.slice(0, 2);
 			return { city, region, countryCode };
 		} catch (error) {
+			this.metrics.recordProviderCall("mapbox", "/geocoding/v5", "places", "error");
 			this.logger.warn(`Reverse geocode error: ${error instanceof Error ? error.message : String(error)}`);
 			return null;
 		} finally {

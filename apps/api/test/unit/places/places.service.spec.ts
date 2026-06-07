@@ -2,12 +2,25 @@ import { afterEach, describe, expect, it } from "bun:test";
 import type { EntityManager } from "@mikro-orm/core";
 import type { AppConfig } from "src/config/app-config";
 import { PlacesService } from "src/places/places.service";
+import type { MetricsService } from "src/telemetry/metrics.service";
 
 const originalFetch = globalThis.fetch;
 
+// Geocode cache always misses here (findOne -> null), so every call falls
+// through to Mapbox, which is what these tests exercise. upsert is a no-op.
 function makeService(token = "pk.test"): PlacesService {
 	const config = { geocoding: { mapboxToken: token, referer: "https://routess.com" } } as AppConfig;
-	return new PlacesService({} as EntityManager, config);
+	const em = {
+		fork: () => ({
+			findOne: async () => null,
+			upsert: async () => undefined,
+		}),
+	} as unknown as EntityManager;
+	const metrics = {
+		recordCacheEvent: () => undefined,
+		recordProviderCall: () => undefined,
+	} as unknown as MetricsService;
+	return new PlacesService(em, config, metrics);
 }
 
 function stubFetch(handler: (url: string, init?: RequestInit) => Response | Promise<Response>): void {

@@ -133,6 +133,9 @@ api:
     # (Places stay null until the backfill runs with a token).
     mapboxPublicToken: ""
     geocodingReferer: "https://routess.com"
+    # Per-User daily cap on RouteGeneration attempts (each fans out into many
+    # paid Valhalla calls). Empty uses the API default (50); "0" disables.
+    generationQuotaPerDay: ""
   # Email allowlist for admin role. Source of truth for User.role; reconciled at
   # login via AuthService. Empty list disables reconciliation entirely (existing
   # roles are preserved). See ADR-0015.
@@ -207,6 +210,43 @@ api:
     enabled: true
     minAvailable: 1
     # maxUnavailable: 1
+
+redis:
+  # Single-instance, cache-only Redis (ADR 0031): shared provider-response
+  # caches, throttler storage, and daily quota counters. No persistence and no
+  # HA on purpose; losing it only costs warm caches. Disable to fall back to
+  # per-pod in-memory caching (halved hit rates, per-pod throttle buckets).
+  enabled: true
+  image:
+    repository: redis
+    tag: 7-alpine
+    pullPolicy: IfNotPresent
+  # Eviction keeps the instance bounded; every entry is reconstructible.
+  maxmemory: 128mb
+  maxmemoryPolicy: allkeys-lru
+  service:
+    port: 6379
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 100m
+      memory: 192Mi
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 999
+    runAsGroup: 999
+    seccompProfile:
+      type: RuntimeDefault
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    runAsNonRoot: true
+    runAsUser: 999
+    runAsGroup: 999
+    capabilities:
+      drop: [ALL]
+    readOnlyRootFilesystem: true
 
 landing:
   replicaCount: 2

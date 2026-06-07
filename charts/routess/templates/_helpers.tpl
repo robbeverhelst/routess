@@ -122,6 +122,23 @@ Docs service account name
 {{- end }}
 
 {{/*
+Redis labels
+*/}}
+{{- define "routess.redis.labels" -}}
+{{ include "routess.labels" . }}
+{{ include "routess.redis.selectorLabels" . }}
+{{- end }}
+
+{{/*
+Redis selector labels
+*/}}
+{{- define "routess.redis.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "routess.name" . }}-redis
+app.kubernetes.io/instance: {{ .Release.Name }}
+app.kubernetes.io/component: redis
+{{- end }}
+
+{{/*
 Frontend URLs from web ingress hosts (these are the origins allowed by the API CORS policy)
 */}}
 {{- define "routess.frontendUrls" -}}

@@ -1,6 +1,13 @@
 import { type Opt, type Ref } from "@mikro-orm/core";
 import { Entity, Index, ManyToOne, PrimaryKey, Property } from "@mikro-orm/decorators/legacy";
-import type { Provenance, RouteActivity, RouteVisibility, RoutingPreferences, Waypoint } from "@routess/core";
+import type {
+	Provenance,
+	RouteActivity,
+	RouteVisibility,
+	RoutingPreferences,
+	SurfaceComposition,
+	Waypoint,
+} from "@routess/core";
 import { generateShareToken } from "../common/share-token";
 import { BaseEntity } from "./base.entity";
 import { User } from "./user.entity";
@@ -85,6 +92,12 @@ export class Route extends BaseEntity {
 	// routes that have no recorded inputs. See CONTEXT.md "RoutingPreferences".
 	@Property({ type: "json", nullable: true })
 	routingPreferences?: RoutingPreferences | null;
+
+	// SurfaceBuckets along the RoutePath, derived once at save (async,
+	// fail-open, like Place) so viewing a Route makes zero provider calls.
+	// Cleared whenever the geometry changes. See ADR 0031.
+	@Property({ type: "json", nullable: true })
+	surfaceComposition?: SurfaceComposition | null;
 
 	// How this Route came to exist. Immutable after creation. See CONTEXT.md.
 	@Property({ type: "string", default: "valhalla" })

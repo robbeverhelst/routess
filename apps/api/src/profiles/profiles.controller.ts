@@ -1,4 +1,4 @@
-import { Controller, Get, Param, UseGuards } from "@nestjs/common";
+import { Controller, Get, Header, Param, UseGuards } from "@nestjs/common";
 import { ApiOperation, ApiParam, ApiResponse, ApiTags } from "@nestjs/swagger";
 import type { AuthenticatedUser } from "../auth/authenticated-user";
 import { OptionalCurrentUser } from "../auth/decorators/current-user.decorator";
@@ -19,6 +19,8 @@ export class ProfilesController {
 	})
 	@ApiResponse({ status: 200, description: "Indexable profiles with handle and last update" })
 	@ThrottlePublic()
+	// Viewer-invariant; edge-cacheable within VisibilityPropagation (ADR 0031).
+	@Header("Cache-Control", "public, max-age=30, s-maxage=60")
 	@Get()
 	findIndexable(): Promise<Array<{ handle: string; updatedAt: string }>> {
 		return this.profilesService.findIndexable();

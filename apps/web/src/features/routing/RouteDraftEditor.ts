@@ -109,7 +109,7 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 		const store = useRoutingStore.getState();
 		store.setIsComputingRoute(true);
 		try {
-			const result = await getRouteFromService(map, accessToken);
+			const result = await getRouteFromService(map);
 			if (result.success && result.waypointsSnapped && result.snappedWaypoints) {
 				setWaypoints(result.snappedWaypoints);
 			}
@@ -331,7 +331,7 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 
 		// Stored geometry skips the Valhalla recompute, which is what normally
 		// kicks off elevation sampling. Sample the exact path directly.
-		computeElevationInBackground(exactRoutePath, accessToken);
+		computeElevationInBackground(exactRoutePath);
 	};
 
 	const loadWaypoints = async (waypoints: Waypoint[], options: LoadOptions = {}): Promise<EditResult> => {

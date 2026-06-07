@@ -53,9 +53,13 @@ Who can view a Route. One of `private`, `unlisted`, or `public`.
 - `private`: owner-only; non-owners get 404.
 - `unlisted`: viewable by anyone with the URL; never appears in listings, search, or feeds; not indexable.
 - `public`: viewable by anyone with the URL _and_ eligible for future discovery surfaces (listings, search, feeds).
-The URL is the capability: changing visibility takes immediate effect for everyone, there is no separable share-token to rotate.
+The URL is the capability: changing visibility takes immediate effect at the API origin, there is no separable share-token to rotate. Cached public surfaces may lag a restriction within the **VisibilityPropagation** bound.
 A `public` or `unlisted` Route has a public route page at `/r/{slug}-{id}`. The canonical shareable URL lives on the landing host (`routess.com`/`routess.be`), server-rendered for link previews and search; the same path on the app origin is the interactive in-app view. Both surfaces share the URL contract and slug logic verbatim. See ADR 0025.
 _Avoid_: privacy, sharing, share level, access level.
+
+**VisibilityPropagation**:
+The bounded window (at most 60 seconds) during which a cached public surface (edge-cached Discover responses, server-rendered public route and profile pages) may still serve a Route whose **RouteVisibility** was just restricted. The API origin is always authoritative: it reflects a visibility change immediately, only read-through caches lag. No cache over visibility-governed data may hold a response longer than this bound. Authenticated per-User views (Feed, Notifications, inbox) are never cached and keep instant semantics.
+_Avoid_: eventual consistency (too vague), cache delay, staleness window.
 
 **Tag**:
 A short free-form lowercase keyword attached to a Route, used to organise and filter the RouteLibrary. Each Tag matches `[a-z0-9][a-z0-9-]{0,23}` (1 to 24 characters, lowercase alphanumeric plus hyphen, must start with a letter or digit). A Route has zero to 10 Tags. Tags are owned per Route and never shared as standalone entities. Surfaced in the library filter row and in the route detail meta editor.
@@ -232,7 +236,7 @@ The locality a Route belongs to: city, region, and country code (e.g. "Gent, Oos
 _Avoid_: location, area, geotag. "City" and "region" name the components, not the concept.
 
 **Discover**:
-The in-app browsing surface over `public` Routes: all public Routes whose bounding box intersects the current map viewport, newest **PublishedAt** first, filterable by activity and distance band. Eligibility is `public`, full stop — **Indexable governs search engines only** and never hides a public Route from Discover. Anonymous-accessible. Like the **Feed**, it is a derived view: nothing is stored per viewer, so a Route flipped back to `private` vanishes instantly.
+The in-app browsing surface over `public` Routes: all public Routes whose bounding box intersects the current map viewport, newest **PublishedAt** first, filterable by activity and distance band. Eligibility is `public`, full stop — **Indexable governs search engines only** and never hides a public Route from Discover. Anonymous-accessible. Like the **Feed**, it is a derived view: nothing is stored per viewer, so a Route flipped back to `private` vanishes from the origin instantly; an edge-cached Discover response lags within the **VisibilityPropagation** bound.
 _Avoid_: explore, browse, search, marketplace, "nearby routes" (the viewport, not the user's position, is the query).
 
 ## Product analytics

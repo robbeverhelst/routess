@@ -4,6 +4,7 @@ import type {
 	RouteActivity,
 	RouteVisibility,
 	RoutingPreferences,
+	SurfaceComposition,
 	UserPreferenceActivity,
 	UserPreferenceMapStyle,
 	UserPreferenceOverlayKey,
@@ -257,6 +258,9 @@ export interface ApiRoute {
 	placeRegion?: string;
 	placeCountryCode?: string;
 	routingPreferences?: RoutingPreferences | null;
+	// SurfaceBuckets along the RoutePath, derived server-side at save
+	// (ADR 0031). Null while derivation is pending.
+	surfaceComposition?: SurfaceComposition | null;
 	provenance: Provenance;
 	// Unguessable 32-hex handle for share links. Unlisted routes are only
 	// reachable anonymously via this token (numeric ids are public-only).

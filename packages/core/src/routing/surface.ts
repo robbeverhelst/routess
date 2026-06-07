@@ -54,3 +54,74 @@ export const SURFACE_MISMATCH_THRESHOLD = 0.05;
 export function isSurfaceMismatch(metersByBucket: Record<SurfaceBucket, number>, pref: SurfaceType): boolean {
 	return surfaceMismatchFraction(metersByBucket, pref) > SURFACE_MISMATCH_THRESHOLD;
 }
+
+// Surface composition persisted on a saved Route (ADR 0031): the result of
+// classifying the RoutePath's edges once, so viewing a route never re-calls
+// the provider. Segments index into the matched shape polyline instead of
+// embedding coordinates, keeping the stored JSON small.
+export interface SurfaceCompositionSegment {
+	surface: SurfaceBucket;
+	begin: number;
+	end: number;
+	distanceStartMeters: number;
+	distanceEndMeters: number;
+}
+
+export interface SurfaceComposition {
+	meters: Record<SurfaceBucket, number>;
+	total: number;
+	// Valhalla's matched shape (polyline6); segment indices refer to it.
+	shape?: string;
+	segments: SurfaceCompositionSegment[];
+}
+
+export interface ValhallaSurfaceEdge {
+	surface?: string;
+	length?: number;
+	begin_shape_index?: number;
+	end_shape_index?: number;
+}
+
+// Pure builder shared by the web's live breakdown and the API's save-time
+// derivation, so both classify identically.
+export function surfaceCompositionFromEdges(edges: ValhallaSurfaceEdge[], shape?: string): SurfaceComposition | null {
+	const meters: Record<SurfaceBucket, number> = { paved: 0, compacted: 0, unpaved: 0, path: 0 };
+	let total = 0;
+	for (const edge of edges) {
+		if (typeof edge.length !== "number") continue;
+		const lengthMeters = edge.length * 1000;
+		meters[bucketFromValhallaSurface(edge.surface)] += lengthMeters;
+		total += lengthMeters;
+	}
+	if (total <= 0) return null;
+
+	const segments: SurfaceCompositionSegment[] = [];
+	let current: SurfaceCompositionSegment | null = null;
+	let cumulativeMeters = 0;
+	for (const edge of edges) {
+		const begin = edge.begin_shape_index;
+		const end = edge.end_shape_index;
+		if (typeof begin !== "number" || typeof end !== "number" || end <= begin) continue;
+		const bucket = bucketFromValhallaSurface(edge.surface);
+		const edgeMeters = typeof edge.length === "number" ? edge.length * 1000 : 0;
+		const edgeStart = cumulativeMeters;
+		cumulativeMeters += edgeMeters;
+
+		if (current && current.surface === bucket && begin <= current.end) {
+			current.end = Math.max(current.end, end);
+			current.distanceEndMeters = cumulativeMeters;
+		} else {
+			if (current) segments.push(current);
+			current = {
+				surface: bucket,
+				begin,
+				end,
+				distanceStartMeters: edgeStart,
+				distanceEndMeters: cumulativeMeters,
+			};
+		}
+	}
+	if (current) segments.push(current);
+
+	return { meters, total, shape, segments };
+}

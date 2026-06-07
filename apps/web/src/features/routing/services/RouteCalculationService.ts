@@ -23,8 +23,8 @@ const samePath = (a: Coordinate[], b: Coordinate[]): boolean => {
 
 // Also used when a route loads with stored geometry (no Valhalla recompute),
 // so the elevation profile still gets sampled for the exact path.
-export const computeElevationInBackground = (routePath: Coordinate[], accessToken: string): void => {
-	if (!accessToken || routePath.length < 2) {
+export const computeElevationInBackground = (routePath: Coordinate[]): void => {
+	if (routePath.length < 2) {
 		useRoutingStore.getState().clearElevation();
 		useRoutingStore.getState().setIsComputingElevation(false);
 		return;
@@ -40,7 +40,7 @@ export const computeElevationInBackground = (routePath: Coordinate[], accessToke
 	// compares against routePath in the store, not waypoints — waypoints
 	// can mutate via snap-writeback after computeRoute returns without
 	// invalidating the elevation result we computed for this exact path.
-	getDefaultElevationService(accessToken)
+	getDefaultElevationService()
 		.sampleAndCompute(routePath, { signal: controller.signal })
 		.then((result) => {
 			if (controller.signal.aborted) return;
@@ -114,7 +114,7 @@ export interface RouteResult {
 	failedSegment?: { from: number; to: number };
 }
 
-export const getRoute = async (map: MapboxMap, accessToken: string): Promise<RouteResult> => {
+export const getRoute = async (map: MapboxMap): Promise<RouteResult> => {
 	if (!map) {
 		Logger.warn("[RCS/getRoute] Map is not available. Aborting.");
 		return { success: false, waypointsSnapped: false };
@@ -180,7 +180,7 @@ export const getRoute = async (map: MapboxMap, accessToken: string): Promise<Rou
 		useRoutingStore.getState().clearElevation();
 		useRoutingStore.getState().setIsComputingElevation(false);
 	} else {
-		computeElevationInBackground(outcome.routePath, accessToken);
+		computeElevationInBackground(outcome.routePath);
 	}
 
 	if (!outcome.offline && "serviceWorker" in navigator) {

@@ -1,8 +1,10 @@
 import { HttpException, HttpStatus, Inject, Injectable, Logger, ServiceUnavailableException } from "@nestjs/common";
 import { valhallaCostingFromPreferences } from "@routess/core";
+import { CacheService } from "../cache/cache.service";
 import type { AppConfig } from "../config/app-config";
 import { APP_CONFIG } from "../config/config.module";
 import { MetricsService } from "../telemetry/metrics.service";
+import type { HeightRequestDto, HeightResponseDto } from "./dto/height.dto";
 import type { RouteLegDto, RouteRequestDto, RouteSnappedLocationDto, RoutingRouteResponseDto } from "./dto/route.dto";
 import type {
 	TraceAttributesEdgeDto,
@@ -37,6 +39,15 @@ interface ValhallaRouteResponse {
 
 const VALHALLA_TIMEOUT_MS = 8000;
 
+// trace_attributes is a pure function of (shape, costing): same geometry
+// always classifies the same until the OSM tiles refresh. /route is less
+// cacheable (waypoint combos are near-unique) but a shorter TTL still dedupes
+// generation-pipeline repeats and recalcs of saved routes. Terrain heights
+// effectively never change. See ADR 0031.
+const TRACE_CACHE_TTL_S = 30 * 24 * 60 * 60;
+const ROUTE_CACHE_TTL_S = 7 * 24 * 60 * 60;
+const HEIGHT_CACHE_TTL_S = 30 * 24 * 60 * 60;
+
 // The routing endpoints are reachable without auth (planning works before
 // sign-in), so per-IP throttling alone can be sidestepped with enough IPs.
 // This cap bounds the total concurrent upstream work one API replica can
@@ -52,31 +63,60 @@ export class RoutingService {
 		@Inject(APP_CONFIG)
 		private readonly config: AppConfig,
 		private readonly metrics: MetricsService,
+		private readonly cache: CacheService,
 	) {}
 
 	async traceAttributes(request: TraceAttributesRequestDto): Promise<TraceAttributesResponseDto> {
-		const data = await this.callValhalla<ValhallaTraceAttributesResponse>("/trace_attributes", {
-			shape: request.shape,
-			shape_match: "map_snap",
-			costing: request.costing,
-			filters: {
-				attributes: ["edge.surface", "edge.length", "edge.begin_shape_index", "edge.end_shape_index", "shape"],
-				action: "include",
-			},
-		});
+		const cacheKey = this.cache.hashKey({ shape: request.shape, costing: request.costing });
+		return this.cache.getOrSet("valhalla-trace", cacheKey, TRACE_CACHE_TTL_S, async () => {
+			const data = await this.callValhalla<ValhallaTraceAttributesResponse>("/trace_attributes", {
+				shape: request.shape,
+				shape_match: "map_snap",
+				costing: request.costing,
+				filters: {
+					attributes: ["edge.surface", "edge.length", "edge.begin_shape_index", "edge.end_shape_index", "shape"],
+					action: "include",
+				},
+			});
 
-		return {
-			edges: data.edges ?? [],
-			shape: data.shape,
-		};
+			return {
+				edges: data.edges ?? [],
+				shape: data.shape,
+			};
+		});
+	}
+
+	// Batched elevation sampling via Valhalla /height (ADR 0031): replaces the
+	// browser's per-tile Mapbox queries so the cache is shared across users.
+	async height(request: HeightRequestDto): Promise<HeightResponseDto> {
+		const cacheKey = this.cache.hashKey(request.shape);
+		return this.cache.getOrSet("valhalla-height", cacheKey, HEIGHT_CACHE_TTL_S, async () => {
+			const data = await this.callValhalla<{ height?: (number | null)[] }>(
+				"/height",
+				{ shape: request.shape },
+				"elevation",
+			);
+			return { heights: data.height ?? [] };
+		});
 	}
 
 	async route(request: RouteRequestDto): Promise<RoutingRouteResponseDto> {
 		const costing = valhallaCostingFromPreferences(request.activity, request.preferences, {
 			walkingSpeedKmh: request.walkingSpeedKmh,
 		});
+		const locations = request.locations.map((l) => ({ lat: l.lat, lon: l.lon }));
+		const cacheKey = this.cache.hashKey({ locations, costing });
+		return this.cache.getOrSet("valhalla-route", cacheKey, ROUTE_CACHE_TTL_S, () =>
+			this.computeRoute(locations, costing),
+		);
+	}
+
+	private async computeRoute(
+		locations: { lat: number; lon: number }[],
+		costing: ReturnType<typeof valhallaCostingFromPreferences>,
+	): Promise<RoutingRouteResponseDto> {
 		const data = await this.callValhalla<ValhallaRouteResponse>("/route", {
-			locations: request.locations.map((l) => ({ lat: l.lat, lon: l.lon })),
+			locations,
 			costing: costing.costing,
 			costing_options: costing.costing_options,
 			directions_options: { units: "kilometers" },
@@ -98,7 +138,7 @@ export class RoutingService {
 				},
 			}));
 
-		const locations: RouteSnappedLocationDto[] = (data.trip.locations ?? [])
+		const snappedLocations: RouteSnappedLocationDto[] = (data.trip.locations ?? [])
 			.filter((loc): loc is Required<Pick<ValhallaTripLocation, "lat" | "lon">> & ValhallaTripLocation => {
 				return typeof loc.lat === "number" && typeof loc.lon === "number";
 			})
@@ -108,12 +148,12 @@ export class RoutingService {
 				original_index: loc.original_index,
 			}));
 
-		return { legs, locations };
+		return { legs, locations: snappedLocations };
 	}
 
 	// Public so GenerationModule can drive its candidate fan through the same
 	// concurrency cap and timeout instead of opening a second path to Valhalla.
-	async callValhalla<T>(path: string, body: unknown): Promise<T> {
+	async callValhalla<T>(path: string, body: unknown, feature = "routing"): Promise<T> {
 		const baseUrl = this.config.routing.valhallaUrl;
 		if (!baseUrl) {
 			throw new ServiceUnavailableException("Valhalla routing is not configured");
@@ -139,6 +179,7 @@ export class RoutingService {
 		} catch (err) {
 			const error = err as Error;
 			this.metrics.recordExternalRequest("valhalla", "error", Date.now() - start);
+			this.metrics.recordProviderCall("valhalla", path, feature, "error");
 			this.logger.warn(`Valhalla request failed: ${error.message}`);
 			throw new ServiceUnavailableException("Valhalla request failed");
 		} finally {
@@ -147,6 +188,7 @@ export class RoutingService {
 		}
 
 		this.metrics.recordExternalRequest("valhalla", response.ok ? "success" : "error", Date.now() - start);
+		this.metrics.recordProviderCall("valhalla", path, feature, response.ok ? "success" : "error");
 
 		if (!response.ok) {
 			this.logger.warn(`Valhalla returned ${response.status} for ${path}`);

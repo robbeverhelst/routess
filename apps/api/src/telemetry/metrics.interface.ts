@@ -24,4 +24,6 @@ export interface Metrics {
 	recordLoginAttempt(provider: AuthProvider, result: AuthLoginResult): void;
 	recordSessionRevoked(reason: SessionRevocationReason, count: number): void;
 	recordExternalRequest(provider: string, status: "success" | "error", duration: number): void;
+	recordProviderCall(provider: string, endpoint: string, feature: string, outcome: "success" | "error"): void;
+	recordCacheEvent(cache: string, result: "hit" | "miss"): void;
 }

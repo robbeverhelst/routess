@@ -10,12 +10,15 @@ import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { AuthModule } from "./auth/auth.module";
 import { AuthAwareThrottlerGuard } from "./auth/guards/auth-aware-throttler.guard";
+import { CacheModule } from "./cache/cache.module";
+import { RedisThrottlerStorage } from "./cache/redis-throttler.storage";
 import { CollectionsModule } from "./collections/collections.module";
 import type { AppConfig } from "./config/app-config";
 import { APP_CONFIG, ConfigModule } from "./config/config.module";
 import { GenerationModule } from "./generation/generation.module";
 import { HealthModule } from "./health/health.module";
 import config from "./mikro-orm.config";
+import { OverlaysModule } from "./overlays/overlays.module";
 import { ProfilesModule } from "./profiles/profiles.module";
 import { RoutesModule } from "./routes/routes.module";
 import { RoutingModule } from "./routing/routing.module";
@@ -72,16 +75,22 @@ import { UsersModule } from "./users/users.module";
 			}),
 		}),
 		ThrottlerModule.forRootAsync({
-			imports: [ConfigModule],
-			inject: [APP_CONFIG],
-			useFactory: (appConfig: AppConfig) => [
-				{
-					name: "global",
-					ttl: 60000,
-					limit: appConfig.app.isTest ? 1000 : 300,
-				},
-			],
+			imports: [ConfigModule, CacheModule],
+			inject: [APP_CONFIG, RedisThrottlerStorage],
+			// Redis-backed storage shares limits across replicas (ADR 0031);
+			// without it each pod counted separately and limits were ~2x.
+			useFactory: (appConfig: AppConfig, storage: RedisThrottlerStorage) => ({
+				storage,
+				throttlers: [
+					{
+						name: "global",
+						ttl: 60000,
+						limit: appConfig.app.isTest ? 1000 : 300,
+					},
+				],
+			}),
 		}),
+		CacheModule,
 		UsersModule,
 		AuthModule,
 		RoutesModule,
@@ -89,6 +98,7 @@ import { UsersModule } from "./users/users.module";
 		ProfilesModule,
 		SocialModule,
 		RoutingModule,
+		OverlaysModule,
 		GenerationModule,
 		HealthModule,
 		TelemetryModule,
