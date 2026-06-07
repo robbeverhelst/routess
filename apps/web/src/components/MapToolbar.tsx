@@ -135,6 +135,9 @@ export function MapToolbar(props: MapToolbarProps) {
 			}}
 		>
 			<Group>
+				<IconBtn title={t("loop.title")} onClick={props.onGenerateLoop}>
+					<I.compass size={16} />
+				</IconBtn>
 				<IconBtn title={t("toolbar.searchLocation")} onClick={props.onSearch}>
 					<I.search size={16} />
 				</IconBtn>
