@@ -48,7 +48,7 @@ export default async function HomePage(props: { params: Promise<{ lang: string }
 				<Lane href={`/${lang}/api-reference`} lane={copy.api} />
 			</section>
 
-			<footer className="docs-home__footer">
+			<footer className="docs-home__credit">
 				made by{" "}
 				<a href="https://robbeverhelst.com" target="_blank" rel="noreferrer">
 					robbeverhelst
