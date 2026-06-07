@@ -36,15 +36,61 @@ routess auth logout       # delete the on-disk token
 
 ## Commands
 
+Voeg `--json` toe aan elk command voor machineleesbare output. Fouten in `--json`-modus geven een `DomainErrorPayload` op stderr die de foutvorm van de API spiegelt, zodat agents direct op `code` kunnen vertakken.
+
+### Routes
+
 ```sh
-routess routes list
+routess routes list --limit 20 --offset 0   # your routes, newest first
+routess routes public                       # indexable public routes (no auth needed)
 routess routes get <id>
-routess routes update <id> --name "New name"
+routess routes gpx <ref> -o ride.gpx        # download GPX; <ref> is an id or a 32-hex share token
+routess routes create --from route.json     # CreateRoute JSON payload; "-" reads stdin
+routess routes import ride.gpx --name "Sunday loop" --activity cycling
+routess routes update <id> --name "New name" --description "..." --tags gravel,hilly
 routess routes update <id> --visibility public --confirm
+routess routes favourite <id>               # and unfavourite
 routess routes delete <id> --confirm
 ```
 
-Voeg `--json` toe aan elk command voor machineleesbare output. Fouten in `--json`-modus geven een `DomainErrorPayload` op stderr die de foutvorm van de API spiegelt, zodat agents direct op `code` kunnen vertakken.
+`list` en `public` tonen `showing X of Y` op basis van de `X-Total-Count`-header en accepteren `--limit` / `--offset`. `import` neemt dezelfde `--activity`-ids als de API (`cycling`, `running`, `hiking`, ...) en gebruikt standaard een privéroute; een lege waarde voor `--description` of `--tags` wist het veld.
+
+### Collections
+
+```sh
+routess collections list
+routess collections get <ref>
+routess collections create --name "Alps 2026" --visibility unlisted
+routess collections update <id> --name "New name"
+routess collections set-routes <id> --routes id1,id2,id3
+routess collections delete <id> --confirm
+```
+
+`set-routes` vervangt de volledige geordende inhoud (een lege waarde maakt de collectie leeg). Een collectie verwijderen behoudt de routes die erin zitten.
+
+### Loop generation
+
+```sh
+routess generate --start 50.8467,4.3525 --activity cycling --distance 40
+routess generate ... --heading n --surface gravel --gpx-dir ./candidates
+routess generate ... --save 2 --name "Generated loop"
+```
+
+Genereren vereist geen authenticatie en toont tot drie gescoorde kandidaten met richting, afstand, duur, overlap en de mix van ondergrond. `--gpx-dir` schrijft elke kandidaat weg als `candidate-<n>.gpx`; `--save [n]` slaat kandidaat `n` (standaard 1) op als privéroute in de bibliotheek, wat een write-token vereist. `--exclude-bearings` genereert opnieuw met verse vormen, naar het voorbeeld van "Andere lussen tonen" in de webapp.
+
+### Tokens and account export
+
+```sh
+routess tokens list                # metadata only, plaintext is never shown
+routess tokens revoke <id>
+routess export -o my-data.zip     # routess-export.json plus one GPX per route
+```
+
+Het token waarmee de CLI momenteel is geauthenticeerd intrekken sluit je buiten, dus dat vereist `--confirm`.
+
+### Confirm gates
+
+Destructieve of naar buiten gerichte operaties vereisen een expliciete `--confirm`: routes of collecties verwijderen, een zichtbaarheid op `public` zetten, en het actieve token intrekken. Zonder die flag eindigt de CLI met code 9 (preconditie vereist).
 
 ## Exit codes
 
@@ -67,6 +113,8 @@ De CLI gebruikt een stabiele taxonomie van exit codes die aansluit op de domeinf
 
 ## Scopes
 
-PAT's dragen een van twee scopes: `read` (GET-endpoints) of `write` (muterende endpoints: PATCH, DELETE). De CLI geeft een `FORBIDDEN` (exit code 6) wanneer je een route probeert te muteren met een alleen-lezen PAT; maak een token met write-scope aan in de webapp en authenticeer opnieuw.
+PAT's dragen een van twee scopes: `read` (GET-endpoints, inclusief de account-export) of `write` (muterende endpoints: POST, PATCH, DELETE). De CLI geeft een `FORBIDDEN` (exit code 6) wanneer je een route probeert te muteren met een alleen-lezen PAT; maak een token met write-scope aan in de webapp en authenticeer opnieuw.
+
+Openbare oppervlakken werken zonder enig token: `routes public`, `routes gpx` / `collections get` op openbare of share-token-refs, en `generate` (zonder `--save`).
 
 Zie de [API-referentie](../../api) voor de volledige lijst met endpoints en de scope-vereisten per endpoint.
