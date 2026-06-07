@@ -83,6 +83,12 @@ export interface RouteDraftEditor {
 const ok = (): EditResult => ({ success: true });
 const fail = (message: string): EditResult => ({ success: false, message });
 
+const creationSourceFromProvenance = (provenance: ApiRoute["provenance"]): "manual" | "generated" | "imported" => {
+	if (provenance === "generation") return "generated";
+	if (provenance === "gpx-import") return "imported";
+	return "manual";
+};
+
 const getWaypoints = (): Waypoint[] => useRoutingStore.getState().waypoints;
 const setWaypoints = (waypoints: Waypoint[]) => useRoutingStore.getState().setWaypoints(waypoints);
 const saveSnapshot = () => useRoutingStore.getState().saveSnapshot();
@@ -372,9 +378,10 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 		const store = useRoutingStore.getState();
 		store.setMode({ kind: "editing", routeId: route.id, name: route.name, baseline });
 		store.setActivity(route.activity);
-		// RouteDraft does not yet store the creation_source of saved routes;
-		// revisit when the saved-route schema carries that field.
-		trackEvent({ name: "route_loaded_into_editor", properties: { creation_source: "unknown" } });
+		trackEvent({
+			name: "route_loaded_into_editor",
+			properties: { creation_source: creationSourceFromProvenance(route.provenance) },
+		});
 		return loadWaypoints(route.waypoints, {
 			exactRoutePath: route.geometry,
 			saveSnapshot: true,
@@ -431,6 +438,8 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 				target: "draft",
 			},
 		});
+
+		useRoutingStore.getState().setCreationSource("imported");
 
 		if (parsed.trackPoints && parsed.trackPoints.length >= 2 && !parsed.waypointsDerivedFromTrack) {
 			const waypoints: Waypoint[] = parsed.waypoints.map((wp) => ({

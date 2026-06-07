@@ -42,6 +42,10 @@ export type RouteDraftMode =
 	| { kind: "unsaved" }
 	| { kind: "editing"; routeId: number; name: string; baseline: RouteBaseline };
 
+// How the current draft came to exist. Feeds the saved Route's Provenance
+// and the route_created ProductEvent's creation_source.
+export type DraftCreationSource = "manual" | "generated" | "imported";
+
 export interface RouteState {
 	waypoints: Waypoint[];
 	routePath: Coordinate[];
@@ -74,6 +78,9 @@ export interface RouteState {
 	// per-Activity defaults when the draft starts; on save persists with the
 	// Route. Null only for legacy / GPX-imported routes (see ADR-0023).
 	routingPreferences: RoutingPreferences | null;
+
+	// How this draft was born; resets to "manual" when the draft is cleared.
+	creationSource: DraftCreationSource;
 
 	history: HistoryStacks<Waypoint[]>;
 	canUndo: boolean;
@@ -108,6 +115,7 @@ export interface RouteActions {
 	setBaseline: (baseline: RouteBaseline) => void;
 	setActivity: (activity: RouteActivity | undefined) => void;
 	setRoutingPreferences: (prefs: RoutingPreferences | null) => void;
+	setCreationSource: (source: DraftCreationSource) => void;
 
 	saveSnapshot: () => void;
 	undo: () => void;
@@ -135,6 +143,7 @@ const initialState: RouteState = {
 	mode: { kind: "unsaved" },
 	activity: undefined,
 	routingPreferences: null,
+	creationSource: "manual",
 	history: emptyHistory<Waypoint[]>(),
 	canUndo: false,
 	canRedo: false,
@@ -264,6 +273,7 @@ export function createRoutingStore(logger: Logger) {
 			mode: state.mode,
 			activity: state.activity,
 			routingPreferences: state.routingPreferences,
+			creationSource: state.creationSource,
 			history: state.history,
 			canUndo: state.canUndo,
 			canRedo: state.canRedo,
@@ -327,6 +337,7 @@ export function createRoutingStore(logger: Logger) {
 						elevationProfile: undefined,
 						isComputingElevation: false,
 						mode: { kind: "unsaved" },
+						creationSource: "manual",
 					});
 				},
 
@@ -409,6 +420,10 @@ export function createRoutingStore(logger: Logger) {
 
 				setRoutingPreferences: (prefs) => {
 					set({ routingPreferences: prefs });
+				},
+
+				setCreationSource: (creationSource) => {
+					set({ creationSource });
 				},
 
 				// === HISTORY ===

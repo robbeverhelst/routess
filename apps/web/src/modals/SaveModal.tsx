@@ -9,6 +9,7 @@ import { useModalsStore } from "@/stores/modalsStore";
 import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 import {
 	useDistanceMeters,
+	useDraftCreationSource,
 	useDraftRoutingPreferences,
 	useDurationSeconds,
 	useElevationGain,
@@ -46,6 +47,7 @@ export function SaveModal() {
 	const durationSeconds = useDurationSeconds();
 	const elevationGain = useElevationGain();
 	const draftRoutingPreferences = useDraftRoutingPreferences();
+	const creationSource = useDraftCreationSource();
 	const { activityType, setActivityType } = useUiStore();
 	const selectedSports = useRedesignSettingsStore((s) => s.selectedSports);
 	const defaultRouteVisibility = useRedesignSettingsStore((s) => s.defaultRouteVisibility);
@@ -92,6 +94,10 @@ export function SaveModal() {
 				duration: durationSeconds ?? undefined,
 				elevationGain: elevationGain != null ? Math.round(elevationGain) : 0,
 				...(draftRoutingPreferences ? { routingPreferences: draftRoutingPreferences } : {}),
+				// A draft born from a confirmed GenerationCandidate saves with
+				// Provenance "generation" (immutable, per ADR-0023/0029).
+				...(creationSource === "generated" ? { provenance: "generation" as const } : {}),
+				creationSource,
 			},
 			{
 				onSuccess: (created) => {

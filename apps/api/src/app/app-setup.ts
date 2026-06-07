@@ -140,6 +140,7 @@ export function createOpenApiDocument(app: INestApplication, config: AppConfig =
 			.addTag("routes", "Route management")
 			.addTag("collections", "Curated, ordered, shareable sets of routes")
 			.addTag("routing", "Routing engine (Valhalla) proxy endpoints")
+			.addTag("generation", "Route generation (scored loop candidates, ADR-0029)")
 			.addTag("users", "User profile management")
 			.addTag("sessions", "Active session management")
 			.addTag("admin", "Admin dashboard endpoints (admin role, session cookie only)")
