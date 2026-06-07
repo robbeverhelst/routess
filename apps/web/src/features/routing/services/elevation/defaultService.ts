@@ -1,14 +1,17 @@
 import { ElevationService } from "./ElevationService";
-import { ValhallaHeightElevationProvider } from "./ValhallaHeightElevationProvider";
+import { MapboxTerrainRgbElevationProvider } from "./MapboxTerrainRgbElevationProvider";
 
 let cachedService: ElevationService | null = null;
+let cachedToken: string | null = null;
 
-// Single shared ElevationService. Sharing it across surfaces (route
-// planning, saved-route detail) lets the in-memory result cache hit between
-// views; the API's Redis cache dedupes across users (ADR 0031).
-export const getDefaultElevationService = (): ElevationService => {
-	if (!cachedService) {
-		cachedService = new ElevationService(new ValhallaHeightElevationProvider());
+// Single shared ElevationService keyed by access token. Sharing it across
+// surfaces (route planning, saved-route detail) lets the underlying tile
+// cache hit between views — opening a saved route that overlaps the area
+// the user just routed through reuses already-fetched terrain tiles.
+export const getDefaultElevationService = (accessToken: string): ElevationService => {
+	if (!cachedService || cachedToken !== accessToken) {
+		cachedService = new ElevationService(new MapboxTerrainRgbElevationProvider({ accessToken }));
+		cachedToken = accessToken;
 	}
 	return cachedService;
 };

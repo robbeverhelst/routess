@@ -4,7 +4,6 @@ import { CacheService } from "../cache/cache.service";
 import type { AppConfig } from "../config/app-config";
 import { APP_CONFIG } from "../config/config.module";
 import { MetricsService } from "../telemetry/metrics.service";
-import type { HeightRequestDto, HeightResponseDto } from "./dto/height.dto";
 import type { RouteLegDto, RouteRequestDto, RouteSnappedLocationDto, RoutingRouteResponseDto } from "./dto/route.dto";
 import type {
 	TraceAttributesEdgeDto,
@@ -42,11 +41,9 @@ const VALHALLA_TIMEOUT_MS = 8000;
 // trace_attributes is a pure function of (shape, costing): same geometry
 // always classifies the same until the OSM tiles refresh. /route is less
 // cacheable (waypoint combos are near-unique) but a shorter TTL still dedupes
-// generation-pipeline repeats and recalcs of saved routes. Terrain heights
-// effectively never change. See ADR 0031.
+// generation-pipeline repeats and recalcs of saved routes. See ADR 0031.
 const TRACE_CACHE_TTL_S = 30 * 24 * 60 * 60;
 const ROUTE_CACHE_TTL_S = 7 * 24 * 60 * 60;
-const HEIGHT_CACHE_TTL_S = 30 * 24 * 60 * 60;
 
 // The routing endpoints are reachable without auth (planning works before
 // sign-in), so per-IP throttling alone can be sidestepped with enough IPs.
@@ -83,20 +80,6 @@ export class RoutingService {
 				edges: data.edges ?? [],
 				shape: data.shape,
 			};
-		});
-	}
-
-	// Batched elevation sampling via Valhalla /height (ADR 0031): replaces the
-	// browser's per-tile Mapbox queries so the cache is shared across users.
-	async height(request: HeightRequestDto): Promise<HeightResponseDto> {
-		const cacheKey = this.cache.hashKey(request.shape);
-		return this.cache.getOrSet("valhalla-height", cacheKey, HEIGHT_CACHE_TTL_S, async () => {
-			const data = await this.callValhalla<{ height?: (number | null)[] }>(
-				"/height",
-				{ shape: request.shape },
-				"elevation",
-			);
-			return { heights: data.height ?? [] };
 		});
 	}
 

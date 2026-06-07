@@ -177,7 +177,11 @@ async function fetchNodeNetworkFromOverpass(
 }
 
 export const NODE_OVERLAY_MIN_ZOOM = 9;
-export const NODE_OVERLAY_MAX_BBOX_DEG = 1.5;
+// Aligned with the API's grid-cell cap (ADR 0031): the proxy serves up to 36
+// cells of 0.1deg, i.e. ~0.6deg per axis. Requesting a larger viewport would
+// just 400, so the client waits for zoom-in (the overlay is styled from
+// zoom 11 anyway) instead of firing a doomed fetch.
+export const NODE_OVERLAY_MAX_BBOX_DEG = 0.6;
 
 export function bboxArea(bbox: NodeNetworkBbox): number {
 	return Math.max(0, bbox.north - bbox.south) * Math.max(0, bbox.east - bbox.west);

@@ -54,22 +54,4 @@ describe("RoutingService caching", () => {
 
 		expect(fetchCalls()).toBe(2);
 	});
-
-	it("serves a repeated height request from cache (one Valhalla call)", async () => {
-		const { service, fetchCalls } = makeService();
-		stubFetch({ height: [10, 20, 30] });
-		const req = {
-			shape: [
-				{ lat: 1, lon: 2 },
-				{ lat: 3, lon: 4 },
-			],
-		};
-
-		const first = await service.height(req);
-		const second = await service.height(req);
-
-		expect(first).toEqual({ heights: [10, 20, 30] });
-		expect(second).toEqual(first);
-		expect(fetchCalls()).toBe(1);
-	});
 });

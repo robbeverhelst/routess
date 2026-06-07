@@ -1,7 +1,6 @@
 import { Body, Controller, HttpCode, HttpStatus, Post } from "@nestjs/common";
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { ThrottleModerate } from "../common/decorators/throttle.decorator";
-import { HeightRequestDto, HeightResponseDto } from "./dto/height.dto";
 import { RouteRequestDto, RoutingRouteResponseDto } from "./dto/route.dto";
 import { TraceAttributesRequestDto, TraceAttributesResponseDto } from "./dto/trace-attributes.dto";
 import { RoutingService } from "./routing.service";
@@ -25,22 +24,6 @@ export class RoutingController {
 	@Post("trace-attributes")
 	traceAttributes(@Body() body: TraceAttributesRequestDto): Promise<TraceAttributesResponseDto> {
 		return this.routingService.traceAttributes(body);
-	}
-
-	@ApiOperation({
-		summary: "Sample elevation along a shape",
-		description:
-			"Forwards the shape to Valhalla `/height` and returns one elevation per point. Replaces browser-side Mapbox terrain queries so responses are cached server-side and shared across users (ADR 0031).",
-	})
-	@ApiBody({ type: HeightRequestDto })
-	@ApiResponse({ status: 200, description: "Elevations per input point", type: HeightResponseDto })
-	@ApiResponse({ status: 502, description: "Valhalla returned an error" })
-	@ApiResponse({ status: 503, description: "Valhalla is not configured or unreachable" })
-	@ThrottleModerate()
-	@HttpCode(HttpStatus.OK)
-	@Post("height")
-	height(@Body() body: HeightRequestDto): Promise<HeightResponseDto> {
-		return this.routingService.height(body);
 	}
 
 	@ApiOperation({

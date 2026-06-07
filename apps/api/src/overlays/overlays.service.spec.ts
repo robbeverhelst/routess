@@ -37,8 +37,8 @@ describe("OverlaysService grid-cell caching", () => {
 	it("fetches a cold cell once then serves it from cache", async () => {
 		const service = makeService();
 		stubFetch();
-		// A small bbox fully inside one 0.5deg cell.
-		const bbox = { south: 51.1, west: 4.1, north: 51.2, east: 4.2 };
+		// A small bbox fully inside one 0.1deg cell ([4.1,4.2] x [51.1,51.2]).
+		const bbox = { south: 51.11, west: 4.11, north: 51.14, east: 4.14 };
 
 		const first = await service.nodeNetwork(bbox);
 		const second = await service.nodeNetwork(bbox);
@@ -51,12 +51,12 @@ describe("OverlaysService grid-cell caching", () => {
 	it("fetches once per distinct cell and reuses them across overlapping viewports", async () => {
 		const service = makeService();
 		stubFetch();
-		// Spans two cells on the x axis (4.1 -> cell 8, 4.6 -> cell 9).
-		await service.nodeNetwork({ south: 51.1, west: 4.1, north: 51.2, east: 4.6 });
+		// Spans two 0.1deg cells on the x axis: 4.11 -> cell 41, 4.24 -> cell 42.
+		await service.nodeNetwork({ south: 51.11, west: 4.11, north: 51.14, east: 4.24 });
 		expect(calls).toBe(2);
 
 		// A viewport inside one of the already-fetched cells: no new fetch.
-		await service.nodeNetwork({ south: 51.1, west: 4.6, north: 51.2, east: 4.7 });
+		await service.nodeNetwork({ south: 51.12, west: 4.12, north: 51.15, east: 4.13 });
 		expect(calls).toBe(2);
 	});
 
@@ -64,7 +64,7 @@ describe("OverlaysService grid-cell caching", () => {
 		const service = makeService();
 		stubFetch();
 		// Two cells, both stubbed to return node id 1 → must appear once.
-		const result = await service.nodeNetwork({ south: 51.1, west: 4.1, north: 51.2, east: 4.6 });
+		const result = await service.nodeNetwork({ south: 51.11, west: 4.11, north: 51.14, east: 4.24 });
 		expect(result.features.filter((f) => f.id === "n1").length).toBe(1);
 	});
 

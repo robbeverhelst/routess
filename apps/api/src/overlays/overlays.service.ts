@@ -16,11 +16,16 @@ const OVERPASS_TIMEOUT_MS = 25_000;
 
 // Requests are quantized to fixed grid cells so every viewport over the same
 // area shares cache entries (raw bboxes almost never align across users).
-// 0.5 deg keeps the worst-case fan-out per viewport at ~a dozen cells under
-// the web overlay's 1.5 sq-deg area cap. Node networks change slowly; 14d
-// matches the TTL the web client already used.
-const CELL_SIZE_DEG = 0.5;
-const MAX_CELLS_PER_REQUEST = 16;
+// Cells are small (0.1 deg) on purpose: in dense node-network regions
+// (Belgium/NL) a 0.5 deg cell is ~9MB and ~16s from Overpass, which both
+// overflows a small Redis and makes a tiny viewport pay for a huge area.
+// 0.1 deg cells are ~hundreds of KB each. The cap matches the zoom levels
+// where the overlay is actually styled (>= 11); larger viewports are
+// rejected so the client waits for zoom-in rather than fanning out into
+// dozens of Overpass calls. Node networks change slowly; 14d TTL.
+const CELL_SIZE_DEG = 0.1;
+const MAX_CELLS_PER_REQUEST = 36;
+const MAX_OVERPASS_CONCURRENCY = 4;
 const CELL_CACHE_TTL_S = 14 * 24 * 60 * 60;
 
 @Injectable()
@@ -35,7 +40,12 @@ export class OverlaysService {
 
 	async nodeNetwork(bbox: NodeNetworkBbox): Promise<NodeFeatureCollection> {
 		const cells = this.cellsCovering(bbox);
-		const featureLists = await Promise.all(cells.map((cell) => this.cellFeatures(cell)));
+		// Bound fan-out so a cold viewport doesn't fire dozens of parallel
+		// Overpass requests (which the public endpoints rate-limit). Warm cells
+		// resolve from Redis instantly; only cold ones actually hit Overpass.
+		const featureLists = await this.mapWithConcurrency(cells, MAX_OVERPASS_CONCURRENCY, (cell) =>
+			this.cellFeatures(cell),
+		);
 
 		// Cells overlap at borders (Overpass returns geometries crossing the
 		// bbox), so dedupe by feature id.
@@ -52,11 +62,30 @@ export class OverlaysService {
 		return { type: "FeatureCollection", features };
 	}
 
+	private async mapWithConcurrency<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+		const results: R[] = new Array(items.length);
+		let next = 0;
+		const worker = async () => {
+			while (next < items.length) {
+				const i = next++;
+				results[i] = await fn(items[i]);
+			}
+		};
+		await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+		return results;
+	}
+
+	// Float-safe cell index: 4.0 / 0.1 is 39.9999… in IEEE-754, which would
+	// floor to the wrong cell. The epsilon nudges exact boundaries up.
+	private cellIndex(coord: number): number {
+		return Math.floor(coord / CELL_SIZE_DEG + 1e-9);
+	}
+
 	private cellsCovering(bbox: NodeNetworkBbox): { x: number; y: number }[] {
-		const minX = Math.floor(bbox.west / CELL_SIZE_DEG);
-		const maxX = Math.floor(bbox.east / CELL_SIZE_DEG);
-		const minY = Math.floor(bbox.south / CELL_SIZE_DEG);
-		const maxY = Math.floor(bbox.north / CELL_SIZE_DEG);
+		const minX = this.cellIndex(bbox.west);
+		const maxX = this.cellIndex(bbox.east);
+		const minY = this.cellIndex(bbox.south);
+		const maxY = this.cellIndex(bbox.north);
 		const cells: { x: number; y: number }[] = [];
 		for (let x = minX; x <= maxX; x++) {
 			for (let y = minY; y <= maxY; y++) {

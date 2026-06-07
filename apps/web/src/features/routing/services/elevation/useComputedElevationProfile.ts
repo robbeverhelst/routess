@@ -1,6 +1,7 @@
 import type { Coordinate, ElevationProfilePoint } from "@routess/core";
 import { useEffect, useState } from "react";
 import { Logger } from "@/lib/logger";
+import { getRuntimeConfig } from "@/lib/runtime-config";
 import { getDefaultElevationService } from "./defaultService";
 
 interface ComputedProfile {
@@ -26,12 +27,18 @@ export function useComputedElevationProfile(geometry: Coordinate[] | null | unde
 			setLoading(false);
 			return;
 		}
+		const accessToken = getRuntimeConfig("VITE_MAPBOX_ACCESS_TOKEN");
+		if (!accessToken) {
+			setProfile(null);
+			setLoading(false);
+			return;
+		}
 
 		const controller = new AbortController();
 		setLoading(true);
 		setProfile(null);
 
-		getDefaultElevationService()
+		getDefaultElevationService(accessToken)
 			.sampleAndCompute(geometry, { signal: controller.signal })
 			.then((result) => {
 				if (controller.signal.aborted) return;

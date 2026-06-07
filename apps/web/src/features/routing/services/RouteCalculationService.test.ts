@@ -84,7 +84,7 @@ describe("RouteCalculationService.getRoute — elevation lifecycle", () => {
 		});
 		sampleAndComputeMock.mockReturnValue(samplePromise);
 
-		const result = await getRoute(mapStub);
+		const result = await getRoute(mapStub, "test-token");
 		expect(result.success).toBe(true);
 		expect(result.waypointsSnapped).toBe(true);
 		expect(result.snappedWaypoints).toBeDefined();
@@ -127,7 +127,7 @@ describe("RouteCalculationService.getRoute — elevation lifecycle", () => {
 		});
 		sampleAndComputeMock.mockReturnValue(samplePromise);
 
-		await getRoute(mapStub);
+		await getRoute(mapStub, "test-token");
 
 		// A new, completely different routePath replaces the one elevation is
 		// sampling. The result should be treated as stale.
@@ -158,7 +158,7 @@ describe("RouteCalculationService.getRoute — elevation lifecycle", () => {
 		});
 		sampleAndComputeMock.mockReturnValue(new Promise(() => {}));
 
-		await getRoute(mapStub);
+		await getRoute(mapStub, "test-token");
 
 		const after = useRoutingStore.getState();
 		expect(after.routingPreferences).not.toBeNull();
