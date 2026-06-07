@@ -402,6 +402,18 @@ samp {
 	text-decoration: none;
 }
 
+.docs-home__footer {
+	margin-top: 2.4rem;
+	font-size: 0.85rem;
+	color: color-mix(in oklab, var(--color-fd-foreground) 55%, transparent);
+}
+
+.docs-home__footer a {
+	color: inherit;
+	text-decoration: underline;
+	text-underline-offset: 2px;
+}
+
 .docs-home__lane-kicker {
 	display: inline-block;
 	margin-bottom: 0.8rem;

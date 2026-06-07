@@ -113,6 +113,7 @@ export interface Dict {
 		colMore: { title: string; items: ReadonlyArray<{ label: string; href: string }> };
 		copyright: string;
 		madeWith: string;
+		madeBy: { label: string; href: string };
 	};
 	dev: {
 		hero: {

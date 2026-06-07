@@ -194,6 +194,7 @@ export const nl: Dict = {
 		},
 		copyright: "© 2026 routess · MIT-licentie",
 		madeWith: "gemaakt met kaarttegels & koffie · België",
+		madeBy: { label: "gemaakt door robbeverhelst", href: "https://robbeverhelst.com" },
 	},
 	dev: {
 		hero: {
