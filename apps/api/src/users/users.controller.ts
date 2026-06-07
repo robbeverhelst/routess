@@ -106,7 +106,9 @@ export class UsersController {
 	@ApiProduces("application/zip")
 	@ApiResponse({ status: 200, description: "ZIP archive" })
 	@ApiResponse({ status: 400, description: "Account exceeds the export size cap" })
+	@ApiBearerAuth("PAT-auth")
 	@ThrottleStrict()
+	@RequireScope("read")
 	@Get("me/export")
 	async export(@CurrentUser() currentUser: AuthenticatedUser, @Res() res: Response): Promise<void> {
 		const { filename, bytes } = await this.dataExport.buildExportZip(currentUser.id);
