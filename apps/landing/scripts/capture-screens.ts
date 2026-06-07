@@ -136,7 +136,7 @@ async function downloadStaticPreview(shot: StaticShot, token: string): Promise<v
 		overlays.push(`pin-s+${START_COLOR}(${fmt(startLng)},${fmt(startLat)})`);
 		overlays.push(`pin-s+${END_COLOR}(${fmt(endLng)},${fmt(endLat)})`);
 	}
-	const url = `https://api.mapbox.com/styles/v1/${shot.style ?? STATIC_STYLE}/static/${overlays.join(",")}/auto/${shot.width}x${shot.height}@2x?access_token=${token}&padding=40&logo=false&attribution=false`;
+	const url = `https://api.mapbox.com/styles/v1/${shot.style ?? STATIC_STYLE}/static/${overlays.join(",")}/auto/${shot.width}x${shot.height}@2x?access_token=${token}&padding=60&logo=false&attribution=false`;
 	const res = await fetch(url, { headers: MAPBOX_HEADERS });
 	if (!res.ok) throw new Error(`static ${shot.file}: HTTP ${res.status} ${await res.text()}`);
 	writeFileSync(resolve(PREVIEWS_DIR, shot.file), new Uint8Array(await res.arrayBuffer()));
@@ -187,6 +187,9 @@ async function captureAppShots(): Promise<void> {
 				)
 				.catch(() => log(`WARN: elevation/surface did not settle for ${route.slug}, capturing anyway`));
 			await page.evaluate(() => document.fonts?.ready);
+			// The fit-to-route framing is tight; step one zoom level out so the
+			// route has breathing room in the shot.
+			await page.locator(byLabel("Zoom out")).first().click();
 			// Let map tiles, terrain and the route line settle.
 			await page.waitForTimeout(8_000);
 		};
@@ -274,6 +277,7 @@ async function captureAppShots(): Promise<void> {
 		await mobilePage.waitForFunction(() => /\d+(\.\d+)?\s?km/.test(document.body.textContent ?? ""), undefined, {
 			timeout: 60_000,
 		});
+		await mobilePage.locator(byLabel("Zoom out")).first().click();
 		await mobilePage.waitForTimeout(8_000);
 		await mobilePage.screenshot({ path: resolve(PUBLIC_DIR, "app-mobile.png") });
 		log("wrote app-mobile.png");

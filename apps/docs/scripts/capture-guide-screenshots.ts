@@ -167,6 +167,13 @@ async function enterPlanner(page: Page) {
 	await skipSignIn(page);
 }
 
+// The app frames cities and routes fairly tight; step one zoom level out so
+// shots have breathing room instead of an awkward close crop.
+async function zoomOutForFraming(page: Page) {
+	await clickButton(page, "Zoom out");
+	await sleep(3000);
+}
+
 async function searchGhent(page: Page) {
 	await clickButton(page, "Search location");
 	await sleep(1200);
@@ -194,6 +201,7 @@ async function main() {
 	await fullShot(page, "search");
 	await page.keyboard.press("Enter");
 	await sleep(6000);
+	await zoomOutForFraming(page);
 	await fullShot(page, "planner-empty");
 
 	// Map toolbar (search, undo/redo, style, lock, zoom).
@@ -211,6 +219,7 @@ async function main() {
 	await sleep(16_000);
 	await clickButton(page, "Focus on route");
 	await sleep(8000);
+	await zoomOutForFraming(page);
 	await fullShot(page, "route-overview");
 
 	// Sidebar with stats, elevation, and surface chart (56px rail + 360px panel).
@@ -269,6 +278,7 @@ async function main() {
 	// The rail titles the active panel "X (toggle panel)"; Plan is inactive here.
 	await clickButton(page, "Plan");
 	await sleep(2500);
+	await zoomOutForFraming(page);
 	await fullShot(page, "route-after-refresh");
 	await ctx.close();
 
@@ -285,6 +295,7 @@ async function main() {
 	await sleep(8000);
 	await clickButton(geoPage, "Center on me");
 	await sleep(8000);
+	await zoomOutForFraming(geoPage);
 	await fullShot(geoPage, "your-location");
 	await geoCtx.close();
 
@@ -302,6 +313,7 @@ async function main() {
 	await sleep(4000);
 	if (await waitForWelcome(mobilePage, 15_000)) await skipSignInMobile(mobilePage);
 	await sleep(16_000);
+	await zoomOutForFraming(mobilePage);
 	await fullShot(mobilePage, "mobile-planner");
 
 	// Open the plan sheet via the bottom tab bar.
