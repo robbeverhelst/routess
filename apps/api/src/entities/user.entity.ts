@@ -52,4 +52,9 @@ export class User extends BaseEntity {
 
 	@Property({ type: "timestamp", nullable: true })
 	deletionRequestedAt?: Date;
+
+	// Bell-badge watermark (CONTEXT.md "NotificationsSeenAt"): Notification
+	// items newer than this are unseen. Distinct from RouteShare.readAt.
+	@Property({ type: "timestamp", nullable: true })
+	notificationsSeenAt?: Date;
 }

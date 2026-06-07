@@ -160,6 +160,14 @@ _Avoid_: timeline, stream, FeedItem (there is no stored item).
 Timestamp set the *first* time a Route transitions to `public`, never bumped afterward. Re-publishing a previously-public Route restores it to Feeds at its original position rather than the top, so visibility-toggling cannot spam followers.
 _Avoid_: createdAt (a Route is usually born `private`; creation and publication are different moments).
 
+**Notification**:
+A derived view, not an entity (same pattern as Feed and Discover): the union of social events that happened to a User, ordered by createdAt descending. v1 has exactly two item kinds: a new **Follow** of the User's Profile, and a **RouteShare** the User received. Nothing is stored per notification, so an unfollow or a dismissed RouteShare removes its item instantly. A Notification is a pointer, never an action surface: a follow item leads to the follower's Profile, a RouteShare item leads to the inbox, where read state and actions (save copy, mark read, dismiss) live. Re-following after an unfollow re-notifies; accepted for v1, the blast radius is one person's badge, unlike the Feed-wide spam PublishedAt guards against.
+_Avoid_: alert, activity item, inbox item (the inbox is the RouteShare surface, not the notification surface).
+
+**NotificationsSeenAt** (of a User):
+A single timestamp watermark on the User. Notification items newer than it are "unseen" and count toward the bell badge; opening the NotificationCenter bumps the watermark to now. **Seen** is bell-level (the User observed that something happened) and is distinct from **read**, which is inbox-level per RouteShare (`readAt`); bumping the watermark never touches `readAt`.
+_Avoid_: lastRead, readAt (taken by RouteShare).
+
 ## Relationships
 
 - A **Route** has one or more **Waypoints** in an ordered list.
@@ -181,6 +189,7 @@ _Avoid_: createdAt (a Route is usually born `private`; creation and publication 
 - A **RouteDraft** is an in-progress **Route** held in `routingStore`. Its mode is either `unsaved` (will become a new Route on save) or `editing(routeId)` (bound to a saved Route, will PATCH it on save).
 - An **Admin** is a **User** with elevated access; admin status is derived from the `ADMIN_EMAILS` env var at login time, not granted in-app.
 - A **Route** has at most one **Place** (city + region + country), derived from its **RoutePath** start, never user-edited. **Discover** and **RegionalHub** query Routes through it.
+- A **User** has one **NotificationsSeenAt** watermark; their **Notification** list is derived per read from Follows of them and RouteShares to them, never stored.
 
 ## Example dialogue
 
@@ -204,6 +213,7 @@ _Avoid_: createdAt (a Route is usually born `private`; creation and publication 
 - **"Surface"** is overloaded: **SurfaceType** is a routing *preference* (3 values, an input), **SurfaceBucket** is a per-segment *classification* (4 values, an observation on the resulting RoutePath). Don't conflate them; in conversation, name the specific term.
 - **"Profile" / "routing profile" / "routing mode"**: the legacy `routingPreferencesStore.profile` field (`fast | scenic | safe | flat`) is being retired with the Valhalla migration (#137). These are not domain terms and should not appear in new code or user-facing copy. The replacement is **RoutingPreferences** (a structured object), not a single enum. "Mode" remains on the avoid list (it collides with Waypoint **Type**).
 - **"Profile" in provider terms** (e.g. Mapbox's `cycling` / `walking` / `driving` profile, or Valhalla's `bicycle` / `pedestrian` costing) is an *implementation detail* derived from **Activity**, not a domain concept the user picks directly.
+- **"Seen" vs "read"**: two unrelated states that sound alike. *Seen* belongs to the **NotificationsSeenAt** watermark (bell badge, all-or-nothing, bumped on opening the NotificationCenter). *Read* belongs to an individual **RouteShare** (`readAt`, toggled per item in the inbox). Marking notifications seen never marks shares read, and vice versa. Don't introduce a per-notification read state; there are no stored notifications to put it on.
 - **"Metric" / "analytics"** are overloaded across four distinct uses. The **Metrics** section above defines _route metrics_, properties of a Route (Distance, Duration, ElevationGain). Separately the API exposes _operational metrics_ (HTTP request rate, route-generation latency, event loop lag) via Prometheus at `/metrics`. _ProductEvents_ are behavioural events (a user did X at moment T) sent to self-hosted Umami; they are the raw stream from which funnels and retention are derived. The admin API surfaces _business analytics_ (signup counts, top creators, retention) computed from Postgres aggregate queries, **not** from Umami — Postgres is authoritative for per-entity KPIs. In ambiguous conversations, qualify: **route metric**, **operational metric**, **ProductEvent**, or **business analytic**.
 
 ## Public discovery

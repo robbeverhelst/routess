@@ -16,10 +16,12 @@ import type { RouteResponseDto } from "../routes/dto/route-response.dto";
 import { toRouteResponseDto } from "../routes/route.mapper";
 import type { FeedItemDto } from "./dto/feed-item.dto";
 import type { FollowsResponseDto } from "./dto/follows-response.dto";
+import type { NotificationItemDto, NotificationsResponseDto } from "./dto/notification-response.dto";
 import type { RouteShareResponseDto } from "./dto/route-share-response.dto";
 
 const INBOX_LIMIT = 100;
 const SEARCH_LIMIT = 10;
+const NOTIFICATIONS_LIMIT = 50;
 // One share email per sender→recipient pair per hour; further shares land
 // silently in the inbox (CONTEXT.md "RouteShare").
 const SHARE_EMAIL_RATE_WINDOW_MS = 60 * 60 * 1000;
@@ -244,6 +246,66 @@ export class SocialService {
 		await this.em.persist(copy).flush();
 		await this.em.populate(copy, ["user"]);
 		return toRouteResponseDto(copy, this.config.analytics.salt);
+	}
+
+	// The Notification list is a derived view (CONTEXT.md "Notification"):
+	// follows of you and shares to you, merged newest-first. Route names are
+	// live references, re-checked per read like the inbox.
+	async notifications(userId: number): Promise<NotificationsResponseDto> {
+		const user = await this.userRepository.findOneOrFail({ id: userId });
+		const [follows, shares] = await Promise.all([
+			this.followRepository.find(
+				{ followee: userId },
+				{ populate: ["follower"], orderBy: { createdAt: "DESC" }, limit: NOTIFICATIONS_LIMIT },
+			),
+			this.shareRepository.find(
+				{ recipient: userId },
+				{ populate: ["sender"], orderBy: { createdAt: "DESC" }, limit: NOTIFICATIONS_LIMIT },
+			),
+		]);
+		const routeIds = [...new Set(shares.map((s) => s.route.id))];
+		const routes = routeIds.length
+			? await this.routeRepository.find({ id: { $in: routeIds }, visibility: { $ne: "private" } })
+			: [];
+		const nameById = new Map(routes.map((r) => [r.id, r.name]));
+		const items: NotificationItemDto[] = [
+			...follows.map((f) => ({
+				type: "follow" as const,
+				actor: toProfileSummary(f.follower as unknown as User),
+				createdAt: f.createdAt.toISOString(),
+			})),
+			...shares.map((s) => ({
+				type: "route_share" as const,
+				actor: toProfileSummary(s.sender as unknown as User),
+				shareId: s.id,
+				routeName: nameById.get(s.route.id) ?? null,
+				createdAt: s.createdAt.toISOString(),
+			})),
+		]
+			.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+			.slice(0, NOTIFICATIONS_LIMIT);
+		return {
+			items,
+			seenAt: user.notificationsSeenAt ? user.notificationsSeenAt.toISOString() : null,
+		};
+	}
+
+	async unseenNotificationCount(userId: number): Promise<number> {
+		const user = await this.userRepository.findOneOrFail({ id: userId });
+		const since = user.notificationsSeenAt;
+		const [follows, shares] = await Promise.all([
+			this.followRepository.count({ followee: userId, ...(since ? { createdAt: { $gt: since } } : {}) }),
+			this.shareRepository.count({ recipient: userId, ...(since ? { createdAt: { $gt: since } } : {}) }),
+		]);
+		return follows + shares;
+	}
+
+	// Bumps the watermark; never touches RouteShare.readAt (seen is bell-level,
+	// read is inbox-level).
+	async markNotificationsSeen(userId: number): Promise<void> {
+		const user = await this.userRepository.findOneOrFail({ id: userId });
+		user.notificationsSeenAt = new Date();
+		await this.em.persist(user).flush();
 	}
 
 	// Minimal discovery surface: prefix match on handle and name.

@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
-import { useAuthStatus, useShareUnreadCount } from "@/lib/api-queries";
+import { useAuthStatus, useNotificationUnseenCount, useShareUnreadCount } from "@/lib/api-queries";
 import { useT } from "@/lib/i18n";
+import { useModalsStore } from "@/stores/modalsStore";
 import { type RedesignContext, useUiStore } from "@/stores/uiStore";
 import { I } from "./icons";
 import { IconBtn, RDS_COLORS } from "./primitives";
@@ -21,6 +22,11 @@ export function RailNav() {
 	const { data: auth } = useAuthStatus();
 	const isAdmin = auth?.user?.role === "admin";
 	const { data: unreadShares = 0 } = useShareUnreadCount();
+	const { data: unseen = 0 } = useNotificationUnseenCount();
+	const overlay = useModalsStore((s) => s.overlay);
+	const openOverlay = useModalsStore((s) => s.openOverlay);
+	const closeOverlay = useModalsStore((s) => s.closeOverlay);
+	const bellActive = overlay === "notifications";
 
 	return (
 		<div
@@ -161,8 +167,40 @@ export function RailNav() {
 					</Link>
 				</Tooltip>
 			)}
-			{/* Notification bell hidden until the NotificationCenter ships; a
-			    persistent affordance must not open a "coming soon" stub. */}
+			{auth?.user && (
+				<div style={{ position: "relative" }}>
+					<IconBtn
+						title={t("rail.notifications")}
+						pressed={bellActive}
+						onClick={() => (bellActive ? closeOverlay() : openOverlay("notifications"))}
+					>
+						<I.bell size={18} />
+					</IconBtn>
+					{unseen > 0 && (
+						<span
+							style={{
+								position: "absolute",
+								top: -3,
+								right: -3,
+								minWidth: 15,
+								height: 15,
+								padding: "0 3px",
+								borderRadius: 999,
+								background: RDS_COLORS.accent,
+								color: RDS_COLORS.accentFg,
+								fontSize: 9.5,
+								fontWeight: 600,
+								display: "inline-flex",
+								alignItems: "center",
+								justifyContent: "center",
+								pointerEvents: "none",
+							}}
+						>
+							{unseen > 9 ? "9+" : unseen}
+						</span>
+					)}
+				</div>
+			)}
 			<IconBtn title={t("appshell.toggleTheme")} onClick={toggleTheme}>
 				{theme === "dark" ? <I.sun size={18} /> : <I.moon size={18} />}
 			</IconBtn>

@@ -23,6 +23,7 @@ import { RouteResponseDto } from "../routes/dto/route-response.dto";
 import { CreateRouteShareDto } from "./dto/create-route-share.dto";
 import { FeedItemDto } from "./dto/feed-item.dto";
 import { FollowsResponseDto } from "./dto/follows-response.dto";
+import { NotificationsResponseDto, NotificationUnseenCountDto } from "./dto/notification-response.dto";
 import { RouteShareResponseDto, ShareUnreadCountDto } from "./dto/route-share-response.dto";
 import { SocialService } from "./social.service";
 
@@ -164,6 +165,39 @@ export class SocialController {
 	@Post("shares/:id/copy")
 	copy(@Param("id", ParseIntPipe) id: number, @CurrentUser() user: AuthenticatedUser): Promise<RouteResponseDto> {
 		return this.socialService.copyShare(id, user.id);
+	}
+
+	@ApiOperation({
+		summary: "Your notifications",
+		description:
+			"Derived view (CONTEXT.md 'Notification'): new follows of you and route shares sent to you, newest first. Nothing is stored per item; seenAt is the bell watermark as it was before this read.",
+	})
+	@ApiResponse({ status: 200, type: NotificationsResponseDto })
+	@ThrottleModerate()
+	@Get("notifications")
+	notifications(@CurrentUser() user: AuthenticatedUser): Promise<NotificationsResponseDto> {
+		return this.socialService.notifications(user.id);
+	}
+
+	@ApiOperation({ summary: "Unseen notification count (bell badge)" })
+	@ApiResponse({ status: 200, type: NotificationUnseenCountDto })
+	@ThrottleModerate()
+	@Get("notifications/unseen-count")
+	async unseenNotifications(@CurrentUser() user: AuthenticatedUser): Promise<NotificationUnseenCountDto> {
+		return { unseen: await this.socialService.unseenNotificationCount(user.id) };
+	}
+
+	@ApiOperation({
+		summary: "Mark all notifications seen",
+		description:
+			"Bumps the NotificationsSeenAt watermark. Never touches RouteShare.readAt: seen is bell-level, read is inbox-level.",
+	})
+	@ApiResponse({ status: 204, description: "Watermark bumped" })
+	@ThrottleModerate()
+	@HttpCode(204)
+	@Post("notifications/seen")
+	async markNotificationsSeen(@CurrentUser() user: AuthenticatedUser): Promise<void> {
+		await this.socialService.markNotificationsSeen(user.id);
 	}
 
 	@ApiOperation({

@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useIsAuthenticated } from "@/hooks/useAuthState";
 import { useShareUnreadCount } from "@/lib/api-queries";
 import { useT } from "@/lib/i18n";
+import { useModalsStore } from "@/stores/modalsStore";
 import { I } from "../components/icons";
 import { RDS_COLORS, SecTitle } from "../components/primitives";
 import { SignInGate } from "../components/SignInGate";
@@ -31,6 +32,21 @@ function SocialPanelInner() {
 	const [tab, setTab] = useState<SocialTab>("feed");
 	const [openedProfile, setOpenedProfile] = useState<string | null>(null);
 	const { data: unread = 0 } = useShareUnreadCount();
+	const socialRequest = useModalsStore((s) => s.socialRequest);
+	const clearSocialRequest = useModalsStore((s) => s.clearSocialRequest);
+
+	// One-shot deep link (e.g. a notification pointing at the inbox or a
+	// follower's profile).
+	useEffect(() => {
+		if (!socialRequest) return;
+		if ("profile" in socialRequest) {
+			setOpenedProfile(socialRequest.profile);
+		} else {
+			setTab(socialRequest.tab);
+			setOpenedProfile(null);
+		}
+		clearSocialRequest();
+	}, [socialRequest, clearSocialRequest]);
 
 	if (openedProfile) {
 		return (

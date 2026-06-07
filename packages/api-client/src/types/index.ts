@@ -457,6 +457,23 @@ export interface SendRouteShareRequest {
 	message?: string;
 }
 
+// A derived notification item: a follow of you or a route share sent to you.
+// Nothing is stored per item server-side; see CONTEXT.md "Notification".
+export interface ApiNotification {
+	type: "follow" | "route_share";
+	actor: ApiProfileSummary;
+	shareId?: number;
+	// Live reference; null when the route is deleted or private again.
+	routeName?: string | null;
+	createdAt: string;
+}
+
+export interface ApiNotifications {
+	items: ApiNotification[];
+	// NotificationsSeenAt watermark before this read; items newer are unseen.
+	seenAt?: string | null;
+}
+
 // HTTP Client Interface
 export interface HttpClient {
 	get<T>(url: string, options?: RequestOptions): Promise<T>;
