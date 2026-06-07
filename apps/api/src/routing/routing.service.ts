@@ -109,7 +109,9 @@ export class RoutingService {
 		return { legs, locations };
 	}
 
-	private async callValhalla<T>(path: string, body: unknown): Promise<T> {
+	// Public so GenerationModule can drive its candidate fan through the same
+	// concurrency cap and timeout instead of opening a second path to Valhalla.
+	async callValhalla<T>(path: string, body: unknown): Promise<T> {
 		const baseUrl = this.config.routing.valhallaUrl;
 		if (!baseUrl) {
 			throw new ServiceUnavailableException("Valhalla routing is not configured");

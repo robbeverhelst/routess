@@ -1,0 +1,5 @@
+{
+	"title": "Generation",
+	"description": "Route generation (scored loop candidates, ADR-0029)",
+	"pages": ["post-generation"]
+}

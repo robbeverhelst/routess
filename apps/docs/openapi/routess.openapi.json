@@ -1315,6 +1315,413 @@
 				"tags": ["collections"]
 			}
 		},
+		"/profiles": {
+			"get": {
+				"description": "Profiles with at least 3 Indexable routes (CONTEXT.md 'Indexable'). Anonymous; feeds the landing sitemap.",
+				"operationId": "ProfilesController_findIndexable",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"description": "Indexable profiles with handle and last update"
+					}
+				},
+				"summary": "List Indexable Profiles",
+				"tags": ["profiles"]
+			}
+		},
+		"/profiles/{handle}": {
+			"get": {
+				"description": "The public projection of a User (CONTEXT.md 'Profile'): handle, display name, avatar, stats over public Routes only, and the public route list. Anonymous viewers get isFollowing = null.",
+				"operationId": "ProfilesController_findOne",
+				"parameters": [
+					{
+						"name": "handle",
+						"required": true,
+						"in": "path",
+						"description": "Profile handle",
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ProfileResponseDto"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Profile not found"
+					}
+				},
+				"summary": "Get a public Profile by handle",
+				"tags": ["profiles"]
+			}
+		},
+		"/social/follows/{handle}": {
+			"post": {
+				"description": "Asymmetric, no approval, grants no access (ADR 0027). Idempotent.",
+				"operationId": "SocialController_follow",
+				"parameters": [
+					{
+						"name": "handle",
+						"required": true,
+						"in": "path",
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "Following"
+					},
+					"404": {
+						"description": "Profile not found"
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Follow a profile",
+				"tags": ["social"]
+			},
+			"delete": {
+				"description": "Idempotent.",
+				"operationId": "SocialController_unfollow",
+				"parameters": [
+					{
+						"name": "handle",
+						"required": true,
+						"in": "path",
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "No longer following"
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Unfollow a profile",
+				"tags": ["social"]
+			}
+		},
+		"/social/follows": {
+			"get": {
+				"description": "Owner-only: follower lists are never public, only counts on the Profile are.",
+				"operationId": "SocialController_follows",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"description": "",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/FollowsResponseDto"
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "List who you follow and who follows you",
+				"tags": ["social"]
+			}
+		},
+		"/social/feed": {
+			"get": {
+				"description": "Public Routes of the Profiles you follow, ordered by publishedAt desc. A derived view: routes flipped back to private vanish instantly. Total in X-Total-Count.",
+				"operationId": "SocialController_feed",
+				"parameters": [
+					{
+						"name": "limit",
+						"required": false,
+						"in": "query",
+						"schema": {
+							"type": "number"
+						}
+					},
+					{
+						"name": "offset",
+						"required": false,
+						"in": "query",
+						"schema": {
+							"type": "number"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"$ref": "#/components/schemas/FeedItemDto"
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Your feed",
+				"tags": ["social"]
+			}
+		},
+		"/social/shares": {
+			"post": {
+				"description": "Only unlisted/public Routes are shareable (ADR 0027). Sharing your own private Route returns a coded 409 so clients can offer to unlist it first.",
+				"operationId": "SocialController_share",
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/CreateRouteShareDto"
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/RouteShareResponseDto"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Route or recipient not found"
+					},
+					"409": {
+						"description": "Route is private"
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Share a route with another user",
+				"tags": ["social"]
+			}
+		},
+		"/social/shares/inbox": {
+			"get": {
+				"description": "Live references: a route deleted or flipped back to private shows as unavailable.",
+				"operationId": "SocialController_inbox",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"description": "",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"$ref": "#/components/schemas/RouteShareResponseDto"
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Your shared-routes inbox",
+				"tags": ["social"]
+			}
+		},
+		"/social/shares/unread-count": {
+			"get": {
+				"operationId": "SocialController_unreadCount",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"description": "",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ShareUnreadCountDto"
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Unread share count (inbox badge)",
+				"tags": ["social"]
+			}
+		},
+		"/social/shares/{id}/read": {
+			"post": {
+				"operationId": "SocialController_markRead",
+				"parameters": [
+					{
+						"name": "id",
+						"required": true,
+						"in": "path",
+						"schema": {
+							"type": "number"
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "Marked read"
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Mark a share as read",
+				"tags": ["social"]
+			}
+		},
+		"/social/shares/{id}": {
+			"delete": {
+				"description": "Recipient-only. Removes the inbox entry; the route itself is untouched.",
+				"operationId": "SocialController_dismiss",
+				"parameters": [
+					{
+						"name": "id",
+						"required": true,
+						"in": "path",
+						"schema": {
+							"type": "number"
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "Dismissed"
+					},
+					"404": {
+						"description": "Share not found"
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Dismiss a share from your inbox",
+				"tags": ["social"]
+			}
+		},
+		"/social/shares/{id}/copy": {
+			"post": {
+				"description": "The copy keeps the original's Provenance and records copiedFrom lineage. It starts private.",
+				"operationId": "SocialController_copy",
+				"parameters": [
+					{
+						"name": "id",
+						"required": true,
+						"in": "path",
+						"schema": {
+							"type": "number"
+						}
+					}
+				],
+				"responses": {
+					"201": {
+						"description": "",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/RouteResponseDto"
+								}
+							}
+						}
+					},
+					"409": {
+						"description": "Route no longer available"
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Save a copy of a shared route to your library",
+				"tags": ["social"]
+			}
+		},
+		"/social/users/search": {
+			"get": {
+				"description": "Prefix match on handle and display name. Returns at most 10 results; excludes yourself.",
+				"operationId": "SocialController_search",
+				"parameters": [
+					{
+						"name": "q",
+						"required": true,
+						"in": "query",
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"$ref": "#/components/schemas/ProfileSummaryDto"
+									}
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Search users to follow or share with",
+				"tags": ["social"]
+			}
+		},
 		"/routing/trace-attributes": {
 			"post": {
 				"description": "Forwards the shape to the self-hosted Valhalla `trace_attributes` endpoint and returns per-edge surface data. Used by the web app to render surface composition for a Route.",
@@ -1387,6 +1794,40 @@
 				},
 				"summary": "Compute a route through ordered locations with structured preferences",
 				"tags": ["routing"]
+			}
+		},
+		"/generation": {
+			"post": {
+				"description": "Runs the RouteGeneration pipeline (ADR-0029): a fan of candidate loops around the start point, snap-validated, routed through Valhalla, scored on Overlap/distance/surface/shape, and reduced to up to 3 diverse candidates. A response with an empty candidate list carries a structured failure code that drives retry suggestions. Each request fans out into ~10-25 Valhalla calls, hence the strict per-IP throttle.",
+				"operationId": "GenerationController_generate",
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/GenerateRequestDto"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Scored candidates or a structured failure",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/GenerateResponseDto"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Valhalla is not configured or unreachable"
+					}
+				},
+				"summary": "Generate loop route candidates from high-level parameters",
+				"tags": ["generation"]
 			}
 		},
 		"/health": {
@@ -2057,6 +2498,10 @@
 			"description": "Routing engine (Valhalla) proxy endpoints"
 		},
 		{
+			"name": "generation",
+			"description": "Route generation (scored loop candidates, ADR-0029)"
+		},
+		{
 			"name": "users",
 			"description": "User profile management"
 		},
@@ -2298,6 +2743,11 @@
 						"type": "string",
 						"example": "Jane Doe"
 					},
+					"handle": {
+						"type": "string",
+						"example": "jane-doe",
+						"description": "Public address of the user's Profile (see CONTEXT.md 'Handle')."
+					},
 					"avatar": {
 						"type": "string",
 						"example": "https://example.com/avatar.jpg"
@@ -2350,6 +2800,7 @@
 					"id",
 					"email",
 					"name",
+					"handle",
 					"isEmailVerified",
 					"role",
 					"idHash",
@@ -2489,6 +2940,11 @@
 						"type": "string",
 						"example": "Jane Doe"
 					},
+					"handle": {
+						"type": "string",
+						"example": "jane-doe",
+						"description": "New Handle for the user's Profile. Lowercase alphanumeric plus hyphen, 3-30 chars. Old profile URLs 404 after a change; the freed handle returns to the pool."
+					},
 					"avatar": {
 						"type": "string",
 						"example": "https://example.com/avatar.jpg",
@@ -2542,6 +2998,11 @@
 						"type": "string",
 						"example": "Jane Doe"
 					},
+					"handle": {
+						"type": "string",
+						"example": "jane-doe",
+						"description": "Public address of the user's Profile (see CONTEXT.md 'Handle')."
+					},
 					"avatar": {
 						"type": "string",
 						"example": "https://example.com/avatar.jpg"
@@ -2587,7 +3048,17 @@
 						"description": "Whether the user has an active email/password credential. Drives password-change UI affordances."
 					}
 				},
-				"required": ["id", "email", "name", "isEmailVerified", "role", "idHash", "deletionStatus", "hasPassword"]
+				"required": [
+					"id",
+					"email",
+					"name",
+					"handle",
+					"isEmailVerified",
+					"role",
+					"idHash",
+					"deletionStatus",
+					"hasPassword"
+				]
 			},
 			"AuthResponseDto": {
 				"type": "object",
@@ -3018,6 +3489,11 @@
 						"type": "string",
 						"example": "Jane Doe"
 					},
+					"handle": {
+						"type": "string",
+						"example": "jane-doe",
+						"description": "Public address of the owner's Profile (CONTEXT.md 'Handle'). Deliberately public, not PII."
+					},
 					"avatar": {
 						"type": "string",
 						"example": "https://example.com/avatar.jpg"
@@ -3028,7 +3504,7 @@
 						"description": "Pseudonymous user identifier for client-side ProductEvent tracking. See ADR-0020."
 					}
 				},
-				"required": ["id", "name", "idHash"]
+				"required": ["id", "name", "handle", "idHash"]
 			},
 			"RouteResponseDto": {
 				"type": "object",
@@ -3430,6 +3906,283 @@
 				},
 				"required": ["routeIds"]
 			},
+			"ProfileStatsDto": {
+				"type": "object",
+				"properties": {
+					"publicRoutes": {
+						"type": "number",
+						"example": 12
+					},
+					"totalDistance": {
+						"type": "number",
+						"example": 423500,
+						"description": "Total distance of public routes in meters"
+					},
+					"totalElevationGain": {
+						"type": "number",
+						"example": 5210,
+						"description": "Total elevation gain of public routes in meters"
+					},
+					"followers": {
+						"type": "number",
+						"example": 3
+					},
+					"following": {
+						"type": "number",
+						"example": 8
+					}
+				},
+				"required": ["publicRoutes", "totalDistance", "totalElevationGain", "followers", "following"]
+			},
+			"ProfileRouteDto": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "number",
+						"example": 42
+					},
+					"slugId": {
+						"type": "string",
+						"example": "gravel-loop-around-ghent-42",
+						"description": "Canonical /r/{slugId} path segment. Public routes use the id form; unlisted ones the share-token form (ids are not served to non-owners)."
+					},
+					"name": {
+						"type": "string",
+						"example": "Gravel loop around Ghent"
+					},
+					"activity": {
+						"type": "object",
+						"example": "Cycling",
+						"nullable": true
+					},
+					"distance": {
+						"type": "number",
+						"example": 42350,
+						"nullable": true
+					},
+					"duration": {
+						"type": "number",
+						"example": 5400,
+						"nullable": true
+					},
+					"elevationGain": {
+						"type": "number",
+						"example": 320,
+						"nullable": true
+					},
+					"publishedAt": {
+						"type": "string",
+						"example": "2026-06-01T10:00:00.000Z",
+						"nullable": true
+					},
+					"tags": {
+						"example": ["gravel", "ardennes"],
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					}
+				},
+				"required": ["id", "slugId", "name", "tags"]
+			},
+			"ProfileResponseDto": {
+				"type": "object",
+				"properties": {
+					"handle": {
+						"type": "string",
+						"example": "jane-doe"
+					},
+					"name": {
+						"type": "string",
+						"example": "Jane Doe"
+					},
+					"avatar": {
+						"type": "string",
+						"example": "https://example.com/avatar.jpg",
+						"nullable": true
+					},
+					"stats": {
+						"$ref": "#/components/schemas/ProfileStatsDto"
+					},
+					"isFollowing": {
+						"type": "boolean",
+						"nullable": true,
+						"example": true,
+						"description": "Whether the authenticated viewer follows this profile; null for anonymous viewers."
+					},
+					"isIndexable": {
+						"type": "boolean",
+						"example": true,
+						"description": "Whether this profile clears the Indexable gate (>= 3 Indexable routes). Drives noindex on the landing page."
+					},
+					"routes": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/ProfileRouteDto"
+						}
+					}
+				},
+				"required": ["handle", "name", "stats", "isFollowing", "isIndexable", "routes"]
+			},
+			"ProfileSummaryDto": {
+				"type": "object",
+				"properties": {
+					"handle": {
+						"type": "string",
+						"example": "jane-doe"
+					},
+					"name": {
+						"type": "string",
+						"example": "Jane Doe"
+					},
+					"avatar": {
+						"type": "string",
+						"example": "https://example.com/avatar.jpg",
+						"nullable": true
+					}
+				},
+				"required": ["handle", "name"]
+			},
+			"FollowsResponseDto": {
+				"type": "object",
+				"properties": {
+					"following": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/ProfileSummaryDto"
+						}
+					},
+					"followers": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/ProfileSummaryDto"
+						}
+					}
+				},
+				"required": ["following", "followers"]
+			},
+			"FeedItemDto": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "number",
+						"example": 42
+					},
+					"slugId": {
+						"type": "string",
+						"example": "gravel-loop-around-ghent-42",
+						"description": "Canonical /r/{slugId} path segment. Public routes use the id form; unlisted ones the share-token form (ids are not served to non-owners)."
+					},
+					"name": {
+						"type": "string",
+						"example": "Gravel loop around Ghent"
+					},
+					"activity": {
+						"type": "object",
+						"example": "Cycling",
+						"nullable": true
+					},
+					"distance": {
+						"type": "number",
+						"example": 42350,
+						"nullable": true
+					},
+					"duration": {
+						"type": "number",
+						"example": 5400,
+						"nullable": true
+					},
+					"elevationGain": {
+						"type": "number",
+						"example": 320,
+						"nullable": true
+					},
+					"publishedAt": {
+						"type": "string",
+						"example": "2026-06-01T10:00:00.000Z",
+						"nullable": true
+					},
+					"tags": {
+						"example": ["gravel", "ardennes"],
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					},
+					"author": {
+						"$ref": "#/components/schemas/ProfileSummaryDto"
+					}
+				},
+				"required": ["id", "slugId", "name", "tags", "author"]
+			},
+			"CreateRouteShareDto": {
+				"type": "object",
+				"properties": {
+					"routeId": {
+						"type": "number",
+						"example": 42
+					},
+					"recipientHandle": {
+						"type": "string",
+						"example": "jane-doe"
+					},
+					"message": {
+						"type": "string",
+						"example": "Route for Sunday's ride!"
+					}
+				},
+				"required": ["routeId", "recipientHandle"]
+			},
+			"RouteShareResponseDto": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "number",
+						"example": 7
+					},
+					"sender": {
+						"$ref": "#/components/schemas/ProfileSummaryDto"
+					},
+					"message": {
+						"type": "string",
+						"example": "Route for Sunday's ride!",
+						"nullable": true
+					},
+					"route": {
+						"nullable": true,
+						"type": "object",
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/ProfileRouteDto"
+							}
+						]
+					},
+					"unavailable": {
+						"type": "boolean",
+						"example": false
+					},
+					"readAt": {
+						"type": "string",
+						"example": "2026-06-05T10:00:00.000Z",
+						"nullable": true
+					},
+					"createdAt": {
+						"type": "string",
+						"example": "2026-06-05T09:00:00.000Z"
+					}
+				},
+				"required": ["id", "sender", "unavailable", "createdAt"]
+			},
+			"ShareUnreadCountDto": {
+				"type": "object",
+				"properties": {
+					"unread": {
+						"type": "number",
+						"example": 2
+					}
+				},
+				"required": ["unread"]
+			},
 			"TraceShapePointDto": {
 				"type": "object",
 				"properties": {
@@ -3617,6 +4370,152 @@
 					}
 				},
 				"required": ["legs", "locations"]
+			},
+			"GenerateRequestDto": {
+				"type": "object",
+				"properties": {
+					"start": {
+						"description": "Loop start point; the generated route begins and ends here.",
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/RouteLocationDto"
+							}
+						]
+					},
+					"activity": {
+						"type": "string",
+						"enum": ["run", "cycle", "walk"],
+						"example": "cycle"
+					},
+					"targetDistanceKm": {
+						"type": "number",
+						"description": "Target loop distance in kilometers.",
+						"minimum": 1,
+						"maximum": 200,
+						"example": 40
+					},
+					"heading": {
+						"type": "string",
+						"description": "Compass arc the loop should extend toward. A soft preference, never a hard guarantee.",
+						"enum": ["any", "north", "east", "south", "west"],
+						"example": "any"
+					},
+					"preferences": {
+						"$ref": "#/components/schemas/RoutingPreferencesDto"
+					},
+					"excludeBearings": {
+						"description": "Fan bearings already shown to the user; regenerate passes them to get fresh shapes.",
+						"maxItems": 16,
+						"type": "array",
+						"items": {
+							"type": "number"
+						}
+					}
+				},
+				"required": ["start", "activity", "targetDistanceKm", "heading", "preferences"]
+			},
+			"GenerationCandidateDto": {
+				"type": "object",
+				"properties": {
+					"bearingDeg": {
+						"type": "number",
+						"description": "Fan bearing that produced this candidate, in degrees."
+					},
+					"viaPoints": {
+						"description": "Snapped via points in loop order (excluding the start). Confirming the candidate turns start + vias + start into the draft's Waypoints.",
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/RouteLocationDto"
+						}
+					},
+					"shape": {
+						"type": "string",
+						"description": "Polyline6-encoded RoutePath of the full loop."
+					},
+					"distanceKm": {
+						"type": "number",
+						"description": "Routed distance in kilometers."
+					},
+					"durationSeconds": {
+						"type": "number",
+						"description": "Routed duration in seconds."
+					},
+					"overlapPct": {
+						"type": "number",
+						"description": "Overlap: % of distance traversing the same way more than once (0..100)."
+					},
+					"score": {
+						"type": "number",
+						"description": "Weighted candidate score, 0..1, higher is better."
+					},
+					"lowQuality": {
+						"type": "boolean",
+						"description": "True when the candidate is shown with a quality badge (elevated Overlap)."
+					},
+					"surfaceMetersByBucket": {
+						"type": "object",
+						"description": "Surface composition of the loop in meters per SurfaceBucket.",
+						"example": {
+							"paved": 32000,
+							"compacted": 4500,
+							"unpaved": 2500,
+							"path": 1000
+						}
+					}
+				},
+				"required": [
+					"bearingDeg",
+					"viaPoints",
+					"shape",
+					"distanceKm",
+					"durationSeconds",
+					"overlapPct",
+					"score",
+					"lowQuality",
+					"surfaceMetersByBucket"
+				]
+			},
+			"GenerationFailureDto": {
+				"type": "object",
+				"properties": {
+					"code": {
+						"type": "string",
+						"enum": [
+							"invalid_input",
+							"start_not_routable",
+							"no_candidates_routable",
+							"all_candidates_low_quality",
+							"all_bearings_excluded",
+							"provider_unavailable"
+						]
+					},
+					"bestOverlapPct": {
+						"type": "number",
+						"description": "Best Overlap % among rejected candidates; explains an all_candidates_low_quality failure."
+					}
+				},
+				"required": ["code"]
+			},
+			"GenerateResponseDto": {
+				"type": "object",
+				"properties": {
+					"candidates": {
+						"description": "Up to 3 diverse GenerationCandidates, best score first. Empty when generation failed.",
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/GenerationCandidateDto"
+						}
+					},
+					"failure": {
+						"description": "Set when no usable candidate could be produced; the code drives retry suggestions in the UI.",
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/GenerationFailureDto"
+							}
+						]
+					}
+				},
+				"required": ["candidates"]
 			}
 		}
 	}

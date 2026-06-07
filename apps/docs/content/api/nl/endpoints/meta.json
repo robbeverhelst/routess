@@ -1,3 +1,15 @@
 {
-	"pages": ["app", "users", "auth", "sessions", "routes", "collections", "routing", "health", "metrics", "admin"]
+	"pages": [
+		"app",
+		"users",
+		"auth",
+		"sessions",
+		"routes",
+		"collections",
+		"routing",
+		"generation",
+		"health",
+		"metrics",
+		"admin"
+	]
 }

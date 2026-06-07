@@ -513,6 +513,7 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 			onLock={() => setIsLocked(!isLocked)}
 			onSearch={() => openModal("search")}
 			onLocate={() => emitAppEvent("routess:locate")}
+			onGenerateLoop={() => openModal("loop")}
 			onLayers={() => (overlay === "layers" ? closeOverlay() : openOverlay("layers"))}
 			onFocusRoute={() => emitAppEvent("routess:focus-route")}
 			onZoomIn={() => emitAppEvent("routess:zoom-in")}

@@ -8,8 +8,10 @@ import {
 	type AuthSessionRevokedEvent,
 	ROUTE_CREATED,
 	ROUTE_DELETED,
+	ROUTE_GENERATION_COMPLETED,
 	type RouteCreatedEvent,
 	type RouteDeletedEvent,
+	type RouteGenerationCompletedEvent,
 	SESSION_ACTIVITY_CHANGED,
 	USER_REGISTERED,
 	USER_UNDELETED,
@@ -32,6 +34,11 @@ export class MetricsListener {
 	@OnEvent(ROUTE_DELETED)
 	onRouteDeleted(_event: RouteDeletedEvent) {
 		this.metrics.recordRouteDeleted();
+	}
+
+	@OnEvent(ROUTE_GENERATION_COMPLETED)
+	onRouteGenerationCompleted(event: RouteGenerationCompletedEvent) {
+		this.metrics.recordRouteGeneration(event);
 	}
 
 	@OnEvent(USER_REGISTERED)
