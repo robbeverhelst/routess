@@ -21,7 +21,6 @@ import {
 	getRoute as getRouteFromService,
 	setCurrentRoutePath,
 } from "./services/RouteCalculationService";
-import { checkNearRoad } from "./utils/RoutingUtils";
 
 // The deep RouteDraft editor module: the single seam over the routingStore for
 // every RouteDraft mutation. Construction captures the Mapbox map, access
@@ -203,14 +202,14 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 
 		const mappedIndex = ensureEditableShape()[index];
 		const oldCoord = getWaypoints()[mappedIndex].coord;
-		let target = coord;
 
-		const check = await checkNearRoad(coord, accessToken);
-		if (check.isValid && check.snappedCoords) target = check.snappedCoords;
-
+		// Apply the raw coord immediately so the marker lands without waiting
+		// on the network; the recompute below snaps it onto the road via the
+		// returned leg shapes (a Mapbox pre-check here doubled the latency of
+		// every move for the same end state).
 		// Snapshot pre-mutation state so a single undo press reverts the move.
 		saveSnapshot();
-		setWaypoints(setWaypointCoord(getWaypoints(), mappedIndex, target));
+		setWaypoints(setWaypointCoord(getWaypoints(), mappedIndex, coord));
 		const result = await recompute();
 
 		if (result.success) return ok();
