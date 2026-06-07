@@ -8,6 +8,7 @@ export interface ValhallaBicycleOptions {
 	use_roads: number;
 	use_tracks: number;
 	avoid_bad_surfaces: number;
+	bicycle_type?: "Mountain";
 }
 
 export interface ValhallaPedestrianOptions {
@@ -39,7 +40,7 @@ export function valhallaCostingModelForActivity(activity: RouteActivity): Valhal
 const SURFACE_USE_TRACKS_BIKE: Record<SurfaceType, number> = {
 	paved: 0.0,
 	mixed: 0.3,
-	unpaved: 0.8,
+	unpaved: 1.0,
 };
 
 const SURFACE_AVOID_BAD_BIKE: Record<SurfaceType, number> = {
@@ -60,14 +61,18 @@ export function valhallaCostingFromPreferences(
 	options?: { walkingSpeedKmh?: number },
 ): ValhallaCostingRequest {
 	if (activity === "cycle") {
-		// Valhalla defaults bicycle_type to Hybrid when omitted; that's fine for
-		// our small vocabulary which doesn't model bike type.
+		// Valhalla defaults bicycle_type to Hybrid when omitted; fine for paved
+		// and mixed. For unpaved we send Mountain: it raises Valhalla's internal
+		// speeds on dirt/gravel/path, the only mechanism that makes unpaved edges
+		// genuinely competitive in cost (use_tracks and avoid_bad_surfaces only
+		// stop penalising them, they can never reward).
 		const bicycle: ValhallaBicycleOptions = {
 			use_ferry: prefs.avoidFerries ? 0.0 : 0.5,
 			use_roads: prefs.avoidHighways ? 0.2 : 0.5,
 			use_tracks: SURFACE_USE_TRACKS_BIKE[prefs.surfacePreference],
 			avoid_bad_surfaces: SURFACE_AVOID_BAD_BIKE[prefs.surfacePreference],
 		};
+		if (prefs.surfacePreference === "unpaved") bicycle.bicycle_type = "Mountain";
 		return {
 			costing: "bicycle",
 			costing_options: { bicycle },

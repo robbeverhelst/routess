@@ -11,6 +11,10 @@ import { useUiStore } from "@/stores/uiStore";
 import { I } from "../components/icons";
 import { Btn, RDS_COLORS } from "../components/primitives";
 
+// Truncate a button label so a long translation clips with an ellipsis rather
+// than forcing the flex button past the modal edge on narrow screens.
+const ELLIPSIS: React.CSSProperties = { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" };
+
 const BUCKET_COLOR: Record<SurfaceBucket, string> = {
 	paved: "oklch(0.45 0.02 240)",
 	compacted: "oklch(0.72 0.07 75)",
@@ -311,14 +315,22 @@ export function GenerationOverlay() {
 				<div style={{ display: "flex", gap: 8, alignItems: "center" }}>
 					{isMobile ? (
 						<>
-							<Btn onClick={dismiss} style={{ width: 40, justifyContent: "center", padding: 0 }}>
+							<Btn onClick={dismiss} style={{ width: 40, flexShrink: 0, justifyContent: "center", padding: 0 }}>
 								<I.close size={14} />
 							</Btn>
-							<Btn onClick={regenerate} style={{ flex: 1, justifyContent: "center" }}>
-								<I.refresh size={13} /> {t("loop.regenerate")}
+							{/* flex:1 + minWidth:0 lets the labels shrink/ellipsis instead of
+							    pushing the buttons past the panel edge on narrow screens. */}
+							<Btn onClick={regenerate} style={{ flex: 1, minWidth: 0, justifyContent: "center", padding: "0 10px" }}>
+								<I.refresh size={13} />
+								<span style={ELLIPSIS}>{t("loop.regenerate")}</span>
 							</Btn>
-							<Btn variant="primary" onClick={() => void confirm()} style={{ flex: 1, justifyContent: "center" }}>
-								<I.check size={13} /> {t("loop.useRoute")}
+							<Btn
+								variant="primary"
+								onClick={() => void confirm()}
+								style={{ flex: 1, minWidth: 0, justifyContent: "center", padding: "0 10px" }}
+							>
+								<I.check size={13} />
+								<span style={ELLIPSIS}>{t("loop.useRoute")}</span>
 							</Btn>
 						</>
 					) : (

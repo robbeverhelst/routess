@@ -31,6 +31,9 @@ export function bucketSurfaceType(bucket: SurfaceBucket): SurfaceType {
 
 export function bucketMatchesPreference(bucket: SurfaceBucket, pref: SurfaceType): boolean {
 	if (pref === "mixed") return true;
+	// Compacted gravel is the canonical unpaved riding surface even though it
+	// renders as its own bucket; only tarmac violates the unpaved preference.
+	if (pref === "unpaved") return bucket !== "paved";
 	return BUCKET_TO_TYPE[bucket] === pref;
 }
 
