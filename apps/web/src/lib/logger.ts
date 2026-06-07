@@ -94,8 +94,11 @@ function reportToSentry(level: LogLevel, messages: unknown[]): void {
 	const joined = messages.map(stringifyForSentry).join(" ");
 
 	if (error) {
+		// API client errors carry the X-Request-ID the server logged.
+		const requestId = (error as { requestId?: string }).requestId;
 		Sentry.captureException(error, {
 			level: sentryLevel,
+			tags: requestId ? { api_request_id: requestId } : undefined,
 			extra: { logMessage: joined },
 		});
 	} else {

@@ -2,6 +2,7 @@ import { HttpException, HttpStatus, Inject, Injectable, Logger, ServiceUnavailab
 import { valhallaCostingFromPreferences } from "@routess/core";
 import type { AppConfig } from "../config/app-config";
 import { APP_CONFIG } from "../config/config.module";
+import { MetricsService } from "../telemetry/metrics.service";
 import type { RouteLegDto, RouteRequestDto, RouteSnappedLocationDto, RoutingRouteResponseDto } from "./dto/route.dto";
 import type {
 	TraceAttributesEdgeDto,
@@ -50,6 +51,7 @@ export class RoutingService {
 	constructor(
 		@Inject(APP_CONFIG)
 		private readonly config: AppConfig,
+		private readonly metrics: MetricsService,
 	) {}
 
 	async traceAttributes(request: TraceAttributesRequestDto): Promise<TraceAttributesResponseDto> {
@@ -123,6 +125,7 @@ export class RoutingService {
 		this.inFlightValhallaCalls++;
 		const controller = new AbortController();
 		const timeout = setTimeout(() => controller.abort(), VALHALLA_TIMEOUT_MS);
+		const start = Date.now();
 		let response: Response;
 		try {
 			response = await fetch(`${baseUrl}${path}`, {
@@ -133,12 +136,15 @@ export class RoutingService {
 			});
 		} catch (err) {
 			const error = err as Error;
+			this.metrics.recordExternalRequest("valhalla", "error", Date.now() - start);
 			this.logger.warn(`Valhalla request failed: ${error.message}`);
 			throw new ServiceUnavailableException("Valhalla request failed");
 		} finally {
 			clearTimeout(timeout);
 			this.inFlightValhallaCalls--;
 		}
+
+		this.metrics.recordExternalRequest("valhalla", response.ok ? "success" : "error", Date.now() - start);
 
 		if (!response.ok) {
 			this.logger.warn(`Valhalla returned ${response.status} for ${path}`);

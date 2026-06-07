@@ -57,6 +57,7 @@
 		"@opentelemetry/exporter-prometheus": "^0.218.0",
 		"@opentelemetry/exporter-trace-otlp-http": "^0.218.0",
 		"@opentelemetry/instrumentation-runtime-node": "^0.31.0",
+		"@opentelemetry/resources": "^2.0.1",
 		"@opentelemetry/sdk-metrics": "^2.0.1",
 		"@opentelemetry/sdk-node": "^0.218.0",
 		"@routess/core": "workspace:*",
