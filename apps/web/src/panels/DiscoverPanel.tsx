@@ -24,6 +24,8 @@ const ACTIVITY_CHIPS: { key: "all" | RouteActivity; icon?: IconKey; labelKey: st
 
 const countBucket = (n: number): string => (n === 0 ? "0" : n < 10 ? "1-9" : n < 50 ? "10-49" : "50+");
 
+const BETA_NOTICE_DISMISSED_KEY = "routess.discover-beta-notice-dismissed";
+
 function Chip({
 	on,
 	onClick,
@@ -74,6 +76,9 @@ export function DiscoverPanel() {
 	const [activity, setActivity] = useState<"all" | RouteActivity>(defaultActivity);
 	const [distanceBand, setDistanceBand] = useState<DistanceBand>("any");
 	const [bandOpen, setBandOpen] = useState(false);
+	const [noticeDismissed, setNoticeDismissed] = useState(
+		() => localStorage.getItem(BETA_NOTICE_DISMISSED_KEY) === "true",
+	);
 
 	const viewportBbox = useDiscoverStore((s) => s.viewportBbox);
 	const hoveredRouteId = useDiscoverStore((s) => s.hoveredRouteId);
@@ -122,7 +127,60 @@ export function DiscoverPanel() {
 	return (
 		<div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
 			<div style={{ padding: "16px 20px 0" }}>
-				<SecTitle>{t("nav.discover")}</SecTitle>
+				<div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+					<SecTitle>{t("nav.discover")}</SecTitle>
+					<span
+						style={{
+							padding: "1px 7px",
+							borderRadius: 999,
+							background: RDS_COLORS.accentSoft,
+							color: RDS_COLORS.accent,
+							fontSize: 10,
+							fontWeight: 700,
+							letterSpacing: 0.6,
+							textTransform: "uppercase",
+						}}
+					>
+						{t("discover.beta")}
+					</span>
+				</div>
+				{!noticeDismissed && (
+					<div
+						style={{
+							display: "flex",
+							alignItems: "flex-start",
+							gap: 8,
+							marginTop: 10,
+							padding: "8px 10px",
+							borderRadius: 10,
+							background: RDS_COLORS.accentSoft,
+							color: RDS_COLORS.fgMuted,
+							fontSize: 12,
+							lineHeight: 1.45,
+						}}
+					>
+						<span style={{ flex: 1 }}>{t("discover.notice")}</span>
+						<button
+							type="button"
+							aria-label={t("discover.notice.dismiss")}
+							onClick={() => {
+								localStorage.setItem(BETA_NOTICE_DISMISSED_KEY, "true");
+								setNoticeDismissed(true);
+							}}
+							style={{
+								background: "transparent",
+								border: 0,
+								padding: 2,
+								cursor: "pointer",
+								color: RDS_COLORS.fgSubtle,
+								display: "inline-flex",
+								flexShrink: 0,
+							}}
+						>
+							<I.close size={13} />
+						</button>
+					</div>
+				)}
 				<div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", margin: "10px 0 12px" }}>
 					{ACTIVITY_CHIPS.map((chip) => {
 						const Icon = chip.icon ? I[chip.icon] : null;

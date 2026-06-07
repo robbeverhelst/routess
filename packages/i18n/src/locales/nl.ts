@@ -644,6 +644,10 @@ export const nl: Record<string, string> = {
 	"social.share.unlistAndSend": "Maak verborgen & verstuur",
 
 	// Discover
+	"discover.beta": "Beta",
+	"discover.notice":
+		"Ontdekken is gloednieuw en de verzameling publieke routes groeit nog. Publiceer je eigen routes om jouw streek op de kaart te zetten.",
+	"discover.notice.dismiss": "Sluiten",
 	"discover.loading": "Routes zoeken…",
 	"discover.inView": "in beeld",
 	"discover.empty.title": "Nog geen publieke routes hier",

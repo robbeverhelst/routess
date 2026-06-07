@@ -667,6 +667,10 @@ export const en: Record<string, string> = {
 	"social.share.unlistAndSend": "Make unlisted & send",
 
 	// Discover
+	"discover.beta": "Beta",
+	"discover.notice":
+		"Discover is brand new and the public route collection is still growing. Publish your own routes to put your area on the map.",
+	"discover.notice.dismiss": "Dismiss",
 	"discover.loading": "Finding routes…",
 	"discover.inView": "in view",
 	"discover.empty.title": "No public routes here yet",
