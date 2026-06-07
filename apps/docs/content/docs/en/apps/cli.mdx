@@ -36,15 +36,61 @@ routess auth logout       # delete the on-disk token
 
 ## Commands
 
+Add `--json` to any command for machine-readable output. Errors in `--json` mode emit a `DomainErrorPayload` on stderr that mirrors the API's error shape, so agents can branch on `code` directly.
+
+### Routes
+
 ```sh
-routess routes list
+routess routes list --limit 20 --offset 0   # your routes, newest first
+routess routes public                       # indexable public routes (no auth needed)
 routess routes get <id>
-routess routes update <id> --name "New name"
+routess routes gpx <ref> -o ride.gpx        # download GPX; <ref> is an id or a 32-hex share token
+routess routes create --from route.json     # CreateRoute JSON payload; "-" reads stdin
+routess routes import ride.gpx --name "Sunday loop" --activity cycling
+routess routes update <id> --name "New name" --description "..." --tags gravel,hilly
 routess routes update <id> --visibility public --confirm
+routess routes favourite <id>               # and unfavourite
 routess routes delete <id> --confirm
 ```
 
-Add `--json` to any command for machine-readable output. Errors in `--json` mode emit a `DomainErrorPayload` on stderr that mirrors the API's error shape, so agents can branch on `code` directly.
+`list` and `public` print `showing X of Y` from the `X-Total-Count` header and accept `--limit` / `--offset`. `import` takes the same `--activity` ids as the API (`cycling`, `running`, `hiking`, ...) and defaults to a private route; an empty `--description` or `--tags` value clears the field.
+
+### Collections
+
+```sh
+routess collections list
+routess collections get <ref>
+routess collections create --name "Alps 2026" --visibility unlisted
+routess collections update <id> --name "New name"
+routess collections set-routes <id> --routes id1,id2,id3
+routess collections delete <id> --confirm
+```
+
+`set-routes` replaces the full ordered membership (an empty value empties the collection). Deleting a collection keeps the routes inside it.
+
+### Loop generation
+
+```sh
+routess generate --start 50.8467,4.3525 --activity cycling --distance 40
+routess generate ... --heading n --surface gravel --gpx-dir ./candidates
+routess generate ... --save 2 --name "Generated loop"
+```
+
+Generation needs no auth and prints up to three scored candidates with bearing, distance, duration, overlap, and surface mix. `--gpx-dir` writes each candidate as `candidate-<n>.gpx`; `--save [n]` stores candidate `n` (default 1) as a private route in the library, which needs a write token. `--exclude-bearings` regenerates fresh shapes, mirroring the web app's "Show different loops".
+
+### Tokens and account export
+
+```sh
+routess tokens list                # metadata only, plaintext is never shown
+routess tokens revoke <id>
+routess export -o my-data.zip     # routess-export.json plus one GPX per route
+```
+
+Revoking the token the CLI is currently authenticated with locks you out, so it requires `--confirm`.
+
+### Confirm gates
+
+Destructive or outward-facing operations require an explicit `--confirm`: deleting routes or collections, setting any visibility to `public`, and revoking the active token. Without it the CLI exits with code 9 (precondition required).
 
 ## Exit codes
 
@@ -67,6 +113,8 @@ The CLI uses a stable exit-code taxonomy aligned with the API's domain error cod
 
 ## Scopes
 
-PATs carry one of two scopes: `read` (GET endpoints) or `write` (mutating endpoints: PATCH, DELETE). The CLI surfaces a `FORBIDDEN` (exit code 6) when you try to mutate a route with a read-only PAT; mint a write-scoped token in the web app and re-authenticate.
+PATs carry one of two scopes: `read` (GET endpoints, including the account export) or `write` (mutating endpoints: POST, PATCH, DELETE). The CLI surfaces a `FORBIDDEN` (exit code 6) when you try to mutate a route with a read-only PAT; mint a write-scoped token in the web app and re-authenticate.
+
+Public surfaces work without any token: `routes public`, `routes gpx` / `collections get` on public or share-token refs, and `generate` (without `--save`).
 
 See the [API reference](../../api) for the full endpoint list and per-endpoint scope requirements.
