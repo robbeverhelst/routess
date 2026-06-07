@@ -127,18 +127,13 @@ export function Nav({ dict, locale, dev = false }: NavProps) {
 								</a>
 							</>
 						) : (
-							<>
-								<a className="btn btn-ghost" href="/developers" style={{ height: 40, padding: "0 16px", fontSize: 14 }}>
-									{dict.nav.forDevelopers}
-								</a>
-								<a
-									className="btn btn-primary"
-									href={`https://${APP_HOST}/`}
-									style={{ height: 40, padding: "0 18px", fontSize: 14 }}
-								>
-									{dict.nav.planRoute} <ArrowIcon />
-								</a>
-							</>
+							<a
+								className="btn btn-primary"
+								href={`https://${APP_HOST}/`}
+								style={{ height: 40, padding: "0 18px", fontSize: 14 }}
+							>
+								{dict.nav.planRoute} <ArrowIcon />
+							</a>
 						)}
 					</div>
 				</div>
