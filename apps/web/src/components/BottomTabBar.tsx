@@ -14,9 +14,7 @@ interface NavItem {
 const NAV: NavItem[] = [
 	{ key: "plan", icon: I.route, labelKey: "nav.plan" },
 	{ key: "library", icon: I.library, labelKey: "nav.library" },
-	// Discover is hidden until the feature ships; a top-level tab must not
-	// open a "coming soon" stub.
-	// { key: "discover", icon: I.explore, labelKey: "nav.discover" },
+	{ key: "discover", icon: I.explore, labelKey: "nav.discover" },
 	{ key: "social", icon: I.social, labelKey: "nav.social" },
 	{ key: "settings", icon: I.settings, labelKey: "nav.settings" },
 ];

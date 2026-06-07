@@ -251,6 +251,11 @@ export interface ApiRoute {
 	elevationGain?: number;
 	startAddress?: string;
 	endAddress?: string;
+	// Derived Place (CONTEXT.md): server-derived from the RoutePath start,
+	// never user-edited.
+	placeCity?: string;
+	placeRegion?: string;
+	placeCountryCode?: string;
 	routingPreferences?: RoutingPreferences | null;
 	provenance: Provenance;
 	// Unguessable 32-hex handle for share links. Unlisted routes are only
@@ -391,6 +396,43 @@ export interface ApiFeedItem extends ApiProfileRoute {
 export interface ApiFeedPage {
 	items: ApiFeedItem[];
 	total: number;
+}
+
+// Item of GET /routes/public?gate=public — the in-app Discover surface
+// (CONTEXT.md "Discover"). Always the id slug form: the listing only ever
+// serves public routes.
+export interface ApiDiscoverRoute {
+	id: number;
+	slugId: string;
+	name: string;
+	activity?: RouteActivity | null;
+	distance?: number | null;
+	elevationGain?: number | null;
+	tags?: string[];
+	publishedAt?: string | null;
+	placeCity?: string | null;
+	placeRegion?: string | null;
+	placeCountryCode?: string | null;
+	// Downsampled RoutePath as [lng, lat] pairs for thumbs and map previews.
+	geometry?: [number, number][];
+	user?: ApiPublicUser;
+	updatedAt: string;
+}
+
+export interface ApiDiscoverPage {
+	items: ApiDiscoverRoute[];
+	total: number;
+}
+
+export interface DiscoverRoutesParams {
+	// Viewport as 'minLng,minLat,maxLng,maxLat' (matches by bbox overlap).
+	bbox?: string;
+	activity?: RouteActivity;
+	placeCity?: string;
+	minDistance?: number;
+	maxDistance?: number;
+	limit?: number;
+	offset?: number;
 }
 
 export interface ApiFollows {

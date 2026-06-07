@@ -643,10 +643,17 @@ export const nl: Record<string, string> = {
 	"social.share.send": "Verstuur route",
 	"social.share.unlistAndSend": "Maak verborgen & verstuur",
 
-	// Stub panels (Discover, Activity)
-	"stub.discover.title": "Ontdek routes in de buurt",
-	"stub.discover.body":
-		"Lokale routerangschikking, populaire bestemmingen en samengestelde keuzes komen met de discovery-backend.",
+	// Discover
+	"discover.loading": "Routes zoeken…",
+	"discover.inView": "in beeld",
+	"discover.empty.title": "Nog geen publieke routes hier",
+	"discover.empty.body":
+		"Versleep de kaart of zoom uit om rond te kijken. Publieke routes van de community verschijnen hier.",
+	"discover.empty.publishCta": "Publiceer een van je routes",
+	"discover.empty.anonBody":
+		"Versleep de kaart of zoom uit om rond te kijken, of meld je aan om hier je eigen routes te publiceren.",
+
+	// Stub panels (Activity)
 	"stub.activity.title": "Je activiteitenfeed",
 	"stub.activity.body": "Je opgenomen sessies, afstandstrends en tempo-overzichten komen met de activiteitenbackend.",
 	"stub.activity.label": "Activiteit",

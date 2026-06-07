@@ -11,6 +11,8 @@ import type {
 	ApiClientConfig,
 	ApiCollection,
 	ApiCollectionDetail,
+	ApiDiscoverPage,
+	ApiDiscoverRoute,
 	ApiFeedItem,
 	ApiFeedPage,
 	ApiFollows,
@@ -26,6 +28,7 @@ import type {
 	CreateCollectionRequest,
 	CreatePersonalAccessTokenRequest,
 	CreateRouteRequest,
+	DiscoverRoutesParams,
 	SendRouteShareRequest,
 	UpdateCollectionRequest,
 	UpdateCurrentUserRequest,
@@ -338,6 +341,25 @@ export class ApiClient {
 
 	async getFollows(): Promise<ApiFollows> {
 		return this.request<ApiFollows>("/social/follows");
+	}
+
+	// In-app Discover surface: all public routes, viewport-filterable,
+	// newest-published first. Anonymous-friendly (no auth required).
+	async getDiscoverRoutes(params: DiscoverRoutesParams = {}): Promise<ApiDiscoverPage> {
+		const query = new URLSearchParams({ gate: "public" });
+		if (params.bbox) query.set("bbox", params.bbox);
+		if (params.activity) query.set("activity", params.activity);
+		if (params.placeCity) query.set("placeCity", params.placeCity);
+		if (params.minDistance !== undefined) query.set("minDistance", String(params.minDistance));
+		if (params.maxDistance !== undefined) query.set("maxDistance", String(params.maxDistance));
+		if (params.limit !== undefined) query.set("limit", String(params.limit));
+		if (params.offset !== undefined) query.set("offset", String(params.offset));
+		const { data, headers } = await this.request<{ data: ApiDiscoverRoute[]; headers: Record<string, string> }>(
+			`/routes/public?${query.toString()}`,
+			{ method: "GET_WITH_HEADERS" },
+		);
+		const total = Number.parseInt(headers["x-total-count"] ?? "", 10);
+		return { items: data, total: Number.isNaN(total) ? data.length : total };
 	}
 
 	async getFeed(params: { limit?: number; offset?: number } = {}): Promise<ApiFeedPage> {

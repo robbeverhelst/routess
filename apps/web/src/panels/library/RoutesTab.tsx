@@ -11,7 +11,7 @@ import { DropMenu, MenuDivider, MenuItem } from "./DropMenu";
 import { RouteCard } from "./RouteCard";
 
 export type RouteSort = "recent" | "name" | "distance" | "elevation";
-type DistanceBand = "any" | "short" | "medium" | "long" | "epic";
+export type DistanceBand = "any" | "short" | "medium" | "long" | "epic";
 
 const SORT_LABEL_KEY: Record<RouteSort, string> = {
 	recent: "library.sort.recent",
@@ -28,8 +28,8 @@ const ACTIVITY_CHIPS: { key: "all" | RouteActivity; icon?: IconKey; labelKey: st
 ];
 
 // Bands in meters. Labels render via formatDistance so units follow the
-// user's preference.
-const DISTANCE_BANDS: { key: DistanceBand; min: number; max: number }[] = [
+// user's preference. Shared with the Discover panel's distance filter.
+export const DISTANCE_BANDS: { key: DistanceBand; min: number; max: number }[] = [
 	{ key: "any", min: 0, max: Number.POSITIVE_INFINITY },
 	{ key: "short", min: 0, max: 25_000 },
 	{ key: "medium", min: 25_000, max: 50_000 },

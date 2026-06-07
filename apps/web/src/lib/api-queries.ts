@@ -1,6 +1,7 @@
 import type {
 	ApiCollection,
 	ApiCollectionDetail,
+	ApiDiscoverPage,
 	ApiFeedPage,
 	ApiFollows,
 	ApiPersonalAccessToken,
@@ -13,7 +14,7 @@ import type {
 	SendRouteShareRequest,
 	UpdateCollectionRequest,
 } from "@routess/api-client";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRoutingStore } from "@/stores/routingStore";
 import type { CreationSource } from "./analytics/events";
 import { trackEvent } from "./analytics/track";
@@ -323,6 +324,27 @@ export function usePublicProfile(handle: string | null) {
 		queryFn: () => apiService.getPublicProfile(handle as string),
 		enabled: handle != null && handle.length > 0,
 		staleTime: 60 * 1000,
+	});
+}
+
+/**
+ * Discover surface: public routes overlapping the given viewport bbox.
+ * Anonymous-friendly; previous results stay visible while the map moves.
+ */
+export function useDiscoverRoutes(params: {
+	bbox: string | null;
+	activity?: "cycle" | "run" | "walk";
+	minDistance?: number;
+	maxDistance?: number;
+}) {
+	const { bbox, activity, minDistance, maxDistance } = params;
+	return useQuery<ApiDiscoverPage>({
+		queryKey: queryKeys.routes.discover({ bbox: bbox ?? undefined, activity, minDistance, maxDistance }),
+		queryFn: () =>
+			apiService.getDiscoverRoutes({ bbox: bbox ?? undefined, activity, minDistance, maxDistance, limit: 50 }),
+		enabled: bbox !== null,
+		staleTime: 30 * 1000,
+		placeholderData: keepPreviousData,
 	});
 }
 
