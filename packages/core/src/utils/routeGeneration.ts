@@ -136,10 +136,11 @@ export const DENSIFY_THRESHOLDS: SmartWaypointThresholds = {
 	maxWaypoints: 8,
 };
 
-// The routing API rejects requests with more than 25 locations
-// (MAX_ROUTE_LOCATIONS in the route DTO); a densified draft must stay
-// routable in a single recalculation call.
-export const DENSIFY_MAX_TOTAL_WAYPOINTS = 25;
+// The routing API caps a request at 25 locations (MAX_ROUTE_LOCATIONS in the
+// route DTO). Densify stays well under it so recalculations fit one call AND
+// the user keeps headroom to add waypoints by hand before the client has to
+// chunk requests.
+export const DENSIFY_MAX_TOTAL_WAYPOINTS = 20;
 
 function nearestPathIndex(point: Coordinate, path: Coordinate[], from: number): number {
 	let best = from;
