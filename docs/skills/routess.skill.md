@@ -8,7 +8,7 @@ This file targets a generic LLM context. The OpenClaw wrapper at `docs/skills/op
 
 Routess is a route-planning product for cyclists, runners, and hikers. A user places **Waypoints** on a map; the system snaps them to roads (or leaves them as straight-line **direct** segments) and produces a **RoutePath** with **Distance**, **Duration**, and **ElevationGain** metrics. Routes can be hand-drawn, AI-generated, imported from GPX, saved to a personal library, and exported.
 
-You can read a user's library, edit metadata on saved Routes, and (in a future release) plan brand-new Routes through the API. This skill covers the read + metadata-write surface that exists today. Route *creation* and the live planning flow are tracked separately in issue #170.
+You can read a user's library, edit metadata on saved Routes, organise them into Collections, export GPX, import GPX files as new Routes, generate loop Routes from high-level parameters, and download the full account export. The interactive planning flow (place search, draft editing, recalculation) remains web-only; see "Planning" below.
 
 ## Vocabulary
 
@@ -30,8 +30,8 @@ The complete glossary lives in `CONTEXT.md`. If a user introduces a term that co
 
 The user mints a Personal Access Token in the Routess web app: **Settings → API Tokens → Create**. The plaintext is shown exactly once. Two scopes:
 
-- **`read`** — list and inspect routes, GPX export (when available), read profile.
-- **`write`** — `read` plus metadata-only mutations on owned routes (`PATCH` name/activity/visibility, `DELETE`) and on user preferences.
+- **`read`** — list and inspect routes and collections, GPX export, account export, read profile, list PATs.
+- **`write`** — `read` plus route creation (`POST /routes`, including GPX import and saving generated loops), metadata mutations on owned routes (`PATCH` name/activity/visibility/tags/favourite, `DELETE`), collection management, PAT revocation, and user preferences.
 
 A PAT is **never** valid against `/api/v1/admin/*` or `DELETE /api/v1/users/me`, regardless of the owning user's role. PATs cannot mint other PATs; minting is cookie-only.
 
@@ -94,16 +94,62 @@ routess routes delete 17 --confirm
 routess routes update 42 --visibility public --confirm
 ```
 
+### Export and import GPX
+
+```
+routess routes gpx 42 -o sunday-loop.gpx        # route id, owner sees any visibility
+routess routes gpx 9f86d081884c7d659a2feaa0c55ad015   # share token, no auth needed
+routess routes import ./ride.gpx --activity cycle
+```
+
+### Organise routes into collections
+
+```
+routess collections list
+routess collections create --name "Alps 2026" --description "Summer trip"
+routess collections set-routes 3 --routes 12,7,31    # full ordered membership
+routess collections get 3
+```
+
+### Generate a loop route
+
+Generation is anonymous (no token needed); saving the result needs a `write` token.
+
+```
+routess generate --start 50.8467,4.3525 --activity cycle --distance 40 --heading north
+routess generate --start 50.8467,4.3525 --activity run --distance 10 --save 1 --name "Morning loop"
+routess --json generate --start 50.8467,4.3525 --activity walk --distance 5
+```
+
+A response with zero candidates exits 1 and carries a structured failure code (`start_not_routable`, `all_candidates_low_quality`, …) that suggests what to vary on retry.
+
+### Favourites and tags
+
+```
+routess routes favourite 42
+routess routes update 42 --tags "gravel,long"
+```
+
+### Credential hygiene and account backup
+
+```
+routess tokens list
+routess tokens revoke 7                      # another token
+routess tokens revoke 3 --confirm           # the token you are using now (locks you out)
+routess export -o backup.zip                 # full account dump: JSON + one GPX per route
+```
+
 ## Guardrails
 
 These are the operations that **require explicit user confirmation in your conversation** before you call them:
 
-1. `DELETE` on any route. The API soft-deletes (admin can recover within retention), but the user does not see the recovered route until restored.
-2. `PATCH` that sets `visibility: public`. The URL becomes potentially indexable and archivable externally.
-3. Bulk operations (more than 5 mutations in one chain). Even when each individual op is benign, the volume can surprise the user.
-4. Anything you cannot describe in one sentence to the user.
+1. `DELETE` on any route or collection. The API soft-deletes (admin can recover within retention), but the user does not see the recovered route until restored.
+2. `PATCH` or `POST` that sets `visibility: public`. The URL becomes potentially indexable and archivable externally.
+3. Revoking the PAT that authenticates your own session (`tokens revoke` on the active token): it locks you out immediately.
+4. Bulk operations (more than 5 mutations in one chain). Even when each individual op is benign, the volume can surprise the user.
+5. Anything you cannot describe in one sentence to the user.
 
-The API enforces (1) and (2) at the protocol level: a PAT call against either without `X-Routess-Confirm: true` returns **428 PRECONDITION_REQUIRED** with an `impact` description in `details`. Surface that `impact` verbatim to the user before retrying with the header.
+The API enforces (1), (2), and (3) at the protocol level: a PAT call against any of them without `X-Routess-Confirm: true` returns **428 PRECONDITION_REQUIRED** with an `impact` description in `details`. Surface that `impact` verbatim to the user before retrying with the header.
 
 Cookie-authenticated requests bypass the confirmation header — only PAT callers see the gate. This is intentional: the web UI expresses confirmation through its own dialogs.
 
@@ -147,11 +193,15 @@ Stable across versions:
 | 10 | Network failure |
 | 11 | `INTERNAL` |
 
-## Planning is coming
+## Planning
 
-Today this skill covers reading routes and editing metadata. The planning flow — search for a place, build a draft, add or move waypoints, recalculate distance/elevation/surface, save as a new Route — lives in issue [#170](https://github.com/robbeverhelst/routess/issues/170) and is not yet available. When it lands, this skill will gain a "Planning" section with the `places search → draft add-waypoint → draft recalc → draft save` sequence.
+Route *creation* is now available to `write`-scoped PATs in three forms:
 
-Until then, an agent that wants a new route in the user's library must ask the user to create it through the web UI.
+1. **GPX import** — `routess routes import <file.gpx>` parses waypoints and track geometry and saves a private Route.
+2. **Loop generation** — `routess generate … --save` turns a scored GenerationCandidate into a saved Route (provenance `generation`).
+3. **Raw payload** — `routess routes create --from payload.json` posts a full CreateRoute body for callers that compute their own Waypoints and geometry.
+
+The interactive planning flow — search for a place, build a draft, add or move waypoints, recalculate distance/elevation/surface incrementally — remains web-only. An agent that needs that flow must ask the user to use the web UI; everything else in issue [#170](https://github.com/robbeverhelst/routess/issues/170) has landed.
 
 ## Links
 

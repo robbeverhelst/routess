@@ -1,7 +1,8 @@
 import type { Command } from "commander";
 import { request } from "../client";
 import { clearToken, configFileLocation, loadConfig, requireToken, saveToken } from "../config";
-import { CliError, EXIT_CODES, type RunOptions, renderResult } from "../output";
+import { CliError, EXIT_CODES, renderResult } from "../output";
+import { runWithProgram } from "../run";
 
 interface AuthOptions {
 	token?: string;
@@ -81,19 +82,4 @@ export function registerAuthCommands(program: Command): void {
 				renderResult(runOptions, me, (data) => `${data.email}  (id=${data.id}, name=${data.name})`);
 			});
 		});
-}
-
-// runCommand from index.ts is not imported directly here to avoid a circular
-// import; instead this helper resolves the global flags off the root program
-// passed in via registerAuthCommands.
-async function runWithProgram(program: Command, action: (options: RunOptions) => Promise<void>): Promise<void> {
-	const opts = program.opts<{ json?: boolean }>();
-	const runOptions: RunOptions = { json: Boolean(opts.json) };
-	try {
-		await action(runOptions);
-	} catch (error) {
-		const { renderError } = await import("../output");
-		const code = renderError(runOptions, error);
-		process.exit(code);
-	}
 }
