@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { destinationPoint } from "../generation/fan";
 import type { Coordinate, Waypoint } from "../types";
 import { haversineDistance } from "./geospatial";
-import { densifyWaypointsAlongPath } from "./routeGeneration";
+import { DENSIFY_MAX_TOTAL_WAYPOINTS, densifyWaypointsAlongPath } from "./routeGeneration";
 
 const GHENT: Coordinate = [3.7174, 51.0543];
 
@@ -94,5 +94,35 @@ describe("densifyWaypointsAlongPath", () => {
 		const wp: Waypoint = { coord: GHENT, type: "routed" };
 		expect(densifyWaypointsAlongPath([wp], loop()).insertedCount).toBe(0);
 		expect(densifyWaypointsAlongPath([wp, wp], []).insertedCount).toBe(0);
+	});
+
+	it("never exceeds the routing API location cap, even on huge loops", () => {
+		// ~100km loop: naive 2km spacing would want ~50 waypoints.
+		const path = loop(16);
+		const sparse = generatedWaypoints(path);
+		const { waypoints } = densifyWaypointsAlongPath(sparse, path);
+		expect(waypoints.length).toBeLessThanOrEqual(DENSIFY_MAX_TOTAL_WAYPOINTS);
+		expect(waypoints.length).toBeGreaterThan(sparse.length);
+		// Originals survive thinning.
+		for (const original of sparse) {
+			expect(waypoints.some((wp) => wp.coord === original.coord)).toBe(true);
+		}
+		// Thinning stays roughly even: no neighbour gap above ~3x the mean.
+		const gaps: number[] = [];
+		for (let i = 1; i < waypoints.length; i++) {
+			gaps.push(haversineDistance(waypoints[i - 1].coord, waypoints[i].coord));
+		}
+		const mean = gaps.reduce((a, b) => a + b, 0) / gaps.length;
+		expect(Math.max(...gaps)).toBeLessThan(mean * 3.5);
+	});
+
+	it("inserts nothing when the draft already has 25+ waypoints", () => {
+		const path = loop();
+		const step = Math.floor(path.length / 26);
+		const many: Waypoint[] = Array.from({ length: 26 }, (_, i) => ({
+			coord: path[Math.min(i * step, path.length - 1)],
+			type: "routed" as const,
+		}));
+		expect(densifyWaypointsAlongPath(many, path).insertedCount).toBe(0);
 	});
 });

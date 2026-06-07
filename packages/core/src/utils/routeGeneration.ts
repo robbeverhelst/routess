@@ -136,6 +136,11 @@ export const DENSIFY_THRESHOLDS: SmartWaypointThresholds = {
 	maxWaypoints: 8,
 };
 
+// The routing API rejects requests with more than 25 locations
+// (MAX_ROUTE_LOCATIONS in the route DTO); a densified draft must stay
+// routable in a single recalculation call.
+export const DENSIFY_MAX_TOTAL_WAYPOINTS = 25;
+
 function nearestPathIndex(point: Coordinate, path: Coordinate[], from: number): number {
 	let best = from;
 	let bestKm = Infinity;
@@ -184,10 +189,6 @@ export function densifyWaypointsAlongPath(
 	// the stale geometry.
 	const ON_PATH_TOLERANCE_KM = 0.1;
 
-	const result: Waypoint[] = [];
-	const indexMap: number[] = [];
-	let insertedCount = 0;
-
 	// Guard insertions against EVERY existing waypoint, not just the segment
 	// endpoints: after an edit drags a waypoint off the old path, anchoring
 	// degrades and a segment's sub-path can sweep past other waypoints —
@@ -195,11 +196,10 @@ export function densifyWaypointsAlongPath(
 	const tooCloseToExisting = (coord: Coordinate): boolean =>
 		waypoints.some((wp) => haversineDistance(coord, wp.coord) < thresholds.minDistanceBetweenWaypointsKm);
 
-	for (let i = 0; i < waypoints.length; i++) {
-		indexMap.push(result.length);
-		result.push(waypoints[i]);
-		if (i === waypoints.length - 1) break;
-
+	// Collect candidate insertions per segment first, so the global budget
+	// (the routing API's location cap) can be enforced before committing.
+	const insertionsPerSegment: Coordinate[][] = waypoints.map(() => []);
+	for (let i = 0; i < waypoints.length - 1; i++) {
 		// Per-waypoint Type describes the segment ARRIVING at it: skip
 		// densifying segments that end in a `direct` waypoint.
 		if (waypoints[i + 1].type === "direct") continue;
@@ -210,8 +210,30 @@ export function densifyWaypointsAlongPath(
 
 		// Interior smart points only; the originals bound the segment.
 		const smart = selectSmartWaypoints(subPath, thresholds).slice(1, -1);
-		for (const coord of smart) {
-			if (tooCloseToExisting(coord)) continue;
+		insertionsPerSegment[i] = smart.filter((coord) => !tooCloseToExisting(coord));
+	}
+
+	// Stay routable in one call: thin segments evenly until the total fits
+	// the budget, the densest segment giving up points first.
+	const budget = Math.max(0, DENSIFY_MAX_TOTAL_WAYPOINTS - waypoints.length);
+	let totalInsertions = insertionsPerSegment.reduce((sum, list) => sum + list.length, 0);
+	while (totalInsertions > budget) {
+		const largest = insertionsPerSegment.reduce((a, b) => (b.length > a.length ? b : a));
+		if (largest.length === 0) break;
+		const thinned = largest.filter((_, idx) => idx % 2 === 0);
+		const next = thinned.length < largest.length ? thinned : largest.slice(0, -1);
+		totalInsertions -= largest.length - next.length;
+		largest.splice(0, largest.length, ...next);
+	}
+
+	const result: Waypoint[] = [];
+	const indexMap: number[] = [];
+	let insertedCount = 0;
+	for (let i = 0; i < waypoints.length; i++) {
+		indexMap.push(result.length);
+		result.push(waypoints[i]);
+		for (const coord of insertionsPerSegment[i]) {
+			if (insertedCount >= budget) break;
 			result.push({ coord, type: "routed" });
 			insertedCount++;
 		}
