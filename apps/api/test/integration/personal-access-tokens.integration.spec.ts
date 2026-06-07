@@ -138,6 +138,19 @@ describe("Personal Access Tokens Integration Tests", () => {
 			expect(res.body).toHaveLength(1);
 			expect(res.body[0].label).toBe("mine");
 		});
+
+		it("read PAT may list tokens", async () => {
+			const { token } = await mintPat(app, cookieJwt, { label: "lister", scope: "read" });
+
+			const res = await supertest(app.getHttpServer())
+				.get("/api/v1/auth/tokens")
+				.set("Authorization", `Bearer ${token}`)
+				.expect(200);
+
+			expect(res.body).toHaveLength(1);
+			expect(res.body[0].label).toBe("lister");
+			expect(res.body[0]).not.toHaveProperty("token");
+		});
 	});
 
 	describe("DELETE /v1/auth/tokens/:id (revoke)", () => {
@@ -166,6 +179,50 @@ describe("Personal Access Tokens Integration Tests", () => {
 				.delete(`/api/v1/auth/tokens/${id}`)
 				.set("Authorization", `Bearer ${cookieJwt}`)
 				.expect(200);
+		});
+
+		it("write PAT may revoke another token without confirmation", async () => {
+			const { token: writeToken } = await mintPat(app, cookieJwt, { label: "manager", scope: "write" });
+			const { id: victimId, token: victimToken } = await mintPat(app, cookieJwt, { label: "stale", scope: "read" });
+
+			await supertest(app.getHttpServer())
+				.delete(`/api/v1/auth/tokens/${victimId}`)
+				.set("Authorization", `Bearer ${writeToken}`)
+				.expect(200);
+
+			await supertest(app.getHttpServer())
+				.get("/api/v1/routes")
+				.set("Authorization", `Bearer ${victimToken}`)
+				.expect(401);
+		});
+
+		it("read PAT may not revoke tokens", async () => {
+			const { token: readToken } = await mintPat(app, cookieJwt, { label: "read-only", scope: "read" });
+			const { id } = await mintPat(app, cookieJwt, { label: "other", scope: "read" });
+
+			await supertest(app.getHttpServer())
+				.delete(`/api/v1/auth/tokens/${id}`)
+				.set("Authorization", `Bearer ${readToken}`)
+				.expect(403);
+		});
+
+		it("PAT self-revocation requires X-Routess-Confirm", async () => {
+			const { id, token } = await mintPat(app, cookieJwt, { label: "self", scope: "write" });
+
+			const res = await supertest(app.getHttpServer())
+				.delete(`/api/v1/auth/tokens/${id}`)
+				.set("Authorization", `Bearer ${token}`)
+				.expect(428);
+			expect(res.body.code).toBe("PRECONDITION_REQUIRED");
+			expect(res.body.details?.impact).toContain(`${id}`);
+
+			await supertest(app.getHttpServer())
+				.delete(`/api/v1/auth/tokens/${id}`)
+				.set("Authorization", `Bearer ${token}`)
+				.set("X-Routess-Confirm", "true")
+				.expect(200);
+
+			await supertest(app.getHttpServer()).get("/api/v1/routes").set("Authorization", `Bearer ${token}`).expect(401);
 		});
 	});
 
@@ -223,13 +280,28 @@ describe("Personal Access Tokens Integration Tests", () => {
 			expect(res.body.name).toBe("after");
 		});
 
-		it("rejects POST /routes from a PAT even with write scope (#170 follow-up)", async () => {
+		it("write PAT may POST /routes (#170)", async () => {
 			const { token } = await mintPat(app, cookieJwt, { label: "write", scope: "write" });
 
-			// POST /routes is cookie-only (JwtAuthGuard, not UnifiedAuthGuard),
-			// so a PAT bearer fails the JWT strategy and we get 401 rather than
-			// a scope-related 403. Either status communicates "PAT cannot create
-			// routes," which is the contract that matters for #170's deferral.
+			const res = await supertest(app.getHttpServer())
+				.post("/api/v1/routes")
+				.set("Authorization", `Bearer ${token}`)
+				.send({
+					name: "from agent",
+					waypoints: [
+						{ coord: [4.35, 50.85], type: "routed" },
+						{ coord: [4.36, 50.86], type: "routed" },
+					],
+				})
+				.expect(201);
+
+			expect(res.body.name).toBe("from agent");
+			expect(res.body.visibility).toBe("private");
+		});
+
+		it("read PAT may not POST /routes", async () => {
+			const { token } = await mintPat(app, cookieJwt, { label: "read-only", scope: "read" });
+
 			await supertest(app.getHttpServer())
 				.post("/api/v1/routes")
 				.set("Authorization", `Bearer ${token}`)
@@ -240,7 +312,59 @@ describe("Personal Access Tokens Integration Tests", () => {
 						{ coord: [4.36, 50.86], type: "routed" },
 					],
 				})
-				.expect(401);
+				.expect(403);
+		});
+	});
+
+	describe("Optional-auth ref endpoints (PAT-as-Bearer)", () => {
+		it("read PAT may fetch its owner's private route by id, and its GPX", async () => {
+			const { token } = await mintPat(app, cookieJwt, { label: "read-only", scope: "read" });
+
+			const route = orm.em.create(Route, {
+				name: "private-detail",
+				user: user.id,
+				visibility: "private",
+				waypoints: [
+					{ coord: [4.35, 50.85], type: "routed" as const },
+					{ coord: [4.36, 50.86], type: "routed" as const },
+				],
+			});
+			await orm.em.persist(route).flush();
+
+			// Anonymous and PAT-less callers cannot see the private route.
+			await supertest(app.getHttpServer()).get(`/api/v1/routes/${route.id}`).expect(404);
+
+			const res = await supertest(app.getHttpServer())
+				.get(`/api/v1/routes/${route.id}`)
+				.set("Authorization", `Bearer ${token}`)
+				.expect(200);
+			expect(res.body.name).toBe("private-detail");
+
+			const gpx = await supertest(app.getHttpServer())
+				.get(`/api/v1/routes/${route.id}/gpx`)
+				.set("Authorization", `Bearer ${token}`)
+				.expect(200);
+			expect(gpx.headers["content-type"]).toContain("gpx");
+		});
+
+		it("PAT of another user cannot fetch the private route", async () => {
+			const { token: strangerToken } = await mintPat(app, adminCookieJwt, { label: "stranger", scope: "write" });
+
+			const route = orm.em.create(Route, {
+				name: "still-private",
+				user: user.id,
+				visibility: "private",
+				waypoints: [
+					{ coord: [4.35, 50.85], type: "routed" as const },
+					{ coord: [4.36, 50.86], type: "routed" as const },
+				],
+			});
+			await orm.em.persist(route).flush();
+
+			await supertest(app.getHttpServer())
+				.get(`/api/v1/routes/${route.id}`)
+				.set("Authorization", `Bearer ${strangerToken}`)
+				.expect(404);
 		});
 	});
 
@@ -312,6 +436,33 @@ describe("Personal Access Tokens Integration Tests", () => {
 				.set("X-Routess-Confirm", "true")
 				.send({ visibility: "public" })
 				.expect(200);
+		});
+
+		it("POST /routes with visibility=public requires confirm", async () => {
+			const { token } = await mintPat(app, cookieJwt, { label: "write", scope: "write" });
+
+			const body = {
+				name: "public from birth",
+				visibility: "public",
+				waypoints: [
+					{ coord: [4.35, 50.85], type: "routed" },
+					{ coord: [4.36, 50.86], type: "routed" },
+				],
+			};
+
+			const res = await supertest(app.getHttpServer())
+				.post("/api/v1/routes")
+				.set("Authorization", `Bearer ${token}`)
+				.send(body)
+				.expect(428);
+			expect(res.body.code).toBe("PRECONDITION_REQUIRED");
+
+			await supertest(app.getHttpServer())
+				.post("/api/v1/routes")
+				.set("Authorization", `Bearer ${token}`)
+				.set("X-Routess-Confirm", "true")
+				.send(body)
+				.expect(201);
 		});
 
 		it("PATCH that does not change visibility to public is not gated", async () => {

@@ -196,6 +196,9 @@
 				"security": [
 					{
 						"JWT-auth": []
+					},
+					{
+						"PAT-auth": []
 					}
 				],
 				"summary": "Export account data as ZIP",
@@ -543,7 +546,7 @@
 		},
 		"/auth/tokens": {
 			"post": {
-				"description": "Creates a new PAT for the authenticated user. Returns the plaintext exactly once; it is hashed at rest and cannot be retrieved again. Tokens authenticate non-browser clients (CLI, AI agents, scripts) via `Authorization: Bearer routess_pat_…`. PATs are blocked from `/v1/admin/*` and from `DELETE /v1/users/me` regardless of the owner's role.",
+				"description": "Creates a new PAT for the authenticated user. Returns the plaintext exactly once; it is hashed at rest and cannot be retrieved again. Tokens authenticate non-browser clients (CLI, AI agents, scripts) via `Authorization: Bearer routess_pat_…`. Minting is cookie-only: PATs cannot mint other PATs. PATs are blocked from `/v1/admin/*` and from `DELETE /v1/users/me` regardless of the owner's role.",
 				"operationId": "PersonalAccessTokensController_create",
 				"parameters": [],
 				"requestBody": {
@@ -580,7 +583,7 @@
 				"tags": ["auth"]
 			},
 			"get": {
-				"description": "Lists the authenticated user's active (non-revoked) PATs. Plaintext is never returned; only metadata.",
+				"description": "Lists the authenticated user's active (non-revoked) PATs. Plaintext is never returned; only metadata. PAT callers need `read` scope.",
 				"operationId": "PersonalAccessTokensController_list",
 				"parameters": [],
 				"responses": {
@@ -603,6 +606,9 @@
 				},
 				"security": [
 					{
+						"PAT-auth": []
+					},
+					{
 						"JWT-auth": []
 					}
 				],
@@ -612,7 +618,7 @@
 		},
 		"/auth/tokens/{id}": {
 			"delete": {
-				"description": "Revokes the token with the given ID. Idempotent: revoking an already-revoked token succeeds.",
+				"description": "Revokes the token with the given ID. Idempotent: revoking an already-revoked token succeeds. PAT callers need `write` scope; revoking the token that authenticates the request itself additionally requires X-Routess-Confirm: true, since it locks the caller out.",
 				"operationId": "PersonalAccessTokensController_revoke",
 				"parameters": [
 					{
@@ -622,6 +628,15 @@
 						"description": "Token ID",
 						"schema": {
 							"type": "number"
+						}
+					},
+					{
+						"name": "X-Routess-Confirm",
+						"in": "header",
+						"description": "Required as `true` when a PAT revokes itself. Cookie sessions ignore this header.",
+						"required": false,
+						"schema": {
+							"type": "string"
 						}
 					}
 				],
@@ -641,9 +656,15 @@
 					},
 					"404": {
 						"description": "Token not found"
+					},
+					"428": {
+						"description": "PAT-authenticated self-revocation without `X-Routess-Confirm: true`. Surface the `impact` field to the user and retry with the header set."
 					}
 				},
 				"security": [
+					{
+						"PAT-auth": []
+					},
 					{
 						"JWT-auth": []
 					}
@@ -654,9 +675,19 @@
 		},
 		"/routes": {
 			"post": {
-				"description": "Creates a new route for the authenticated user. PATs are blocked; route creation lands with #170.",
+				"description": "Creates a new route for the authenticated user. PAT callers need `write` scope (#170) and must set X-Routess-Confirm: true when creating with `visibility: public`, mirroring the PATCH gate.",
 				"operationId": "RoutesController_create",
-				"parameters": [],
+				"parameters": [
+					{
+						"name": "X-Routess-Confirm",
+						"in": "header",
+						"description": "Set to `true` when a PAT call creates a route with `visibility: public`. Cookie sessions ignore this header.",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -683,9 +714,15 @@
 					},
 					"401": {
 						"description": "Unauthorized"
+					},
+					"428": {
+						"description": "PAT-authenticated create with `visibility: public` without `X-Routess-Confirm: true`. Surface the `impact` field to the user and retry with the header set."
 					}
 				},
 				"security": [
+					{
+						"PAT-auth": []
+					},
 					{
 						"JWT-auth": []
 					}
@@ -835,7 +872,7 @@
 		},
 		"/routes/{ref}/gpx": {
 			"get": {
-				"description": "Returns the route as a GPX 1.1 document with a routess-namespaced extension carrying per-waypoint Type. `ref` is a numeric route ID (owner: any visibility; non-owners: public only) or a 32-hex share token (public and unlisted). Private routes return 404 to non-owners. Unlisted responses carry X-Robots-Tag: noindex.",
+				"description": "Returns the route as a GPX 1.1 document with a routess-namespaced extension carrying per-waypoint Type. `ref` is a numeric route ID (owner: any visibility; non-owners: public only) or a 32-hex share token (public and unlisted). Private routes return 404 to non-owners. Owners authenticate with a cookie session or any PAT. Unlisted responses carry X-Robots-Tag: noindex.",
 				"operationId": "RoutesController_downloadGpx",
 				"parameters": [
 					{
@@ -862,7 +899,7 @@
 		},
 		"/routes/{ref}": {
 			"get": {
-				"description": "Returns the route. `ref` is either a numeric route ID (owners see any visibility; non-owners only public, so sequential IDs can't be walked to discover unlisted routes) or a 32-hex share token (serves public and unlisted to anyone with the link). Private routes return 404 to non-owners. PATs hit this through the cookie-or-bearer JWT path; PAT-as-Bearer is not yet supported here (use GET /routes to list and filter).",
+				"description": "Returns the route. `ref` is either a numeric route ID (owners see any visibility; non-owners only public, so sequential IDs can't be walked to discover unlisted routes) or a 32-hex share token (serves public and unlisted to anyone with the link). Private routes return 404 to non-owners. Owners authenticate with a cookie session or any PAT.",
 				"operationId": "RoutesController_findOne",
 				"parameters": [
 					{
@@ -1101,7 +1138,7 @@
 		},
 		"/collections/{ref}": {
 			"get": {
-				"description": "`ref` is a numeric collection ID (owners: any visibility; non-owners: public only, so sequential IDs can't be walked to discover unlisted collections) or a 32-hex share token (public and unlisted). Private routes inside are omitted for non-owners. Private collections return 404 to non-owners.",
+				"description": "`ref` is a numeric collection ID (owners: any visibility; non-owners: public only, so sequential IDs can't be walked to discover unlisted collections) or a 32-hex share token (public and unlisted). Private routes inside are omitted for non-owners. Private collections return 404 to non-owners. Owners authenticate with a cookie session or any PAT.",
 				"operationId": "CollectionsController_findOne",
 				"parameters": [
 					{

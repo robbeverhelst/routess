@@ -81,6 +81,23 @@ describe("Data Export Integration Tests", () => {
 		expect(gpxText).toContain('lon="4.4"');
 	});
 
+	it("is reachable with a read PAT (ADR-0022: read covers export)", async () => {
+		const { accessToken } = await createTestUserWithAuth(app, { email: "alice@example.com" });
+		const minted = await supertest(app.getHttpServer())
+			.post("/api/v1/auth/tokens")
+			.set("Authorization", `Bearer ${accessToken}`)
+			.send({ label: "backup", scope: "read" })
+			.expect(201);
+
+		const response = await supertest(app.getHttpServer())
+			.get("/api/v1/users/me/export")
+			.set("Authorization", `Bearer ${minted.body.token}`)
+			.responseType("blob")
+			.expect(200);
+
+		expect(response.headers["content-type"]).toContain("application/zip");
+	});
+
 	it("returns an empty routes array (still a valid ZIP) for accounts with no routes", async () => {
 		const { accessToken } = await createTestUserWithAuth(app, { email: "alice@example.com" });
 		const response = await supertest(app.getHttpServer())

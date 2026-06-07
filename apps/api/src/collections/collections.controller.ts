@@ -17,7 +17,7 @@ import { CurrentUser, OptionalCurrentUser } from "../auth/decorators/current-use
 import { RequireConfirmation } from "../auth/decorators/require-confirmation.decorator";
 import { RequireScope } from "../auth/decorators/require-scope.decorator";
 import { ConfirmationGuard } from "../auth/guards/confirmation.guard";
-import { OptionalJwtAuthGuard } from "../auth/guards/optional-jwt-auth.guard";
+import { OptionalUnifiedAuthGuard } from "../auth/guards/optional-unified-auth.guard";
 import { ScopeGuard } from "../auth/guards/scope.guard";
 import { UnifiedAuthGuard } from "../auth/guards/unified-auth.guard";
 import { ThrottleModerate, ThrottleStrict } from "../common/decorators/throttle.decorator";
@@ -64,11 +64,11 @@ export class CollectionsController {
 		return this.collectionsService.create(dto, user.id);
 	}
 
-	@UseGuards(OptionalJwtAuthGuard)
+	@UseGuards(OptionalUnifiedAuthGuard)
 	@ApiOperation({
 		summary: "Get collection by ID or share token",
 		description:
-			"`ref` is a numeric collection ID (owners: any visibility; non-owners: public only, so sequential IDs can't be walked to discover unlisted collections) or a 32-hex share token (public and unlisted). Private routes inside are omitted for non-owners. Private collections return 404 to non-owners.",
+			"`ref` is a numeric collection ID (owners: any visibility; non-owners: public only, so sequential IDs can't be walked to discover unlisted collections) or a 32-hex share token (public and unlisted). Private routes inside are omitted for non-owners. Private collections return 404 to non-owners. Owners authenticate with a cookie session or any PAT.",
 	})
 	@ApiParam({ name: "ref", description: "Collection ID or 32-hex share token", type: "string" })
 	@ApiResponse({ status: 200, type: CollectionDetailResponseDto })
