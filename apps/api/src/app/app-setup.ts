@@ -88,7 +88,7 @@ export function configureApplication(app: INestApplication, config: AppConfig = 
 		credentials: true,
 		methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
 		allowedHeaders: ["Content-Type", "Authorization", "X-Request-ID", "X-Routess-Confirm"],
-		exposedHeaders: ["X-Total-Count"],
+		exposedHeaders: ["X-Total-Count", "X-Request-ID"],
 	});
 
 	if (!config.docs.enabled) {
@@ -140,6 +140,7 @@ export function createOpenApiDocument(app: INestApplication, config: AppConfig =
 			.addTag("routes", "Route management")
 			.addTag("collections", "Curated, ordered, shareable sets of routes")
 			.addTag("routing", "Routing engine (Valhalla) proxy endpoints")
+			.addTag("generation", "Route generation (scored loop candidates, ADR-0029)")
 			.addTag("users", "User profile management")
 			.addTag("sessions", "Active session management")
 			.addTag("admin", "Admin dashboard endpoints (admin role, session cookie only)")

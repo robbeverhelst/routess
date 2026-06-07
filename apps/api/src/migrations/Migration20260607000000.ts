@@ -1,6 +1,6 @@
 import { Migration } from "@mikro-orm/migrations";
 
-// Discovery (ADR 0029) + Place attribution (#233):
+// Discovery (ADR 0030) + Place attribution (#233):
 // - route bbox as four plain float columns, backfilled here from geometry.
 // - place_city/place_region/place_country_code derived by reverse geocoding;
 //   backfilled by the idempotent backfill script, not here (external calls

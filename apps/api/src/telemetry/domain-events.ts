@@ -1,5 +1,6 @@
 export const ROUTE_CREATED = "route.created";
 export const ROUTE_DELETED = "route.deleted";
+export const ROUTE_GENERATION_COMPLETED = "route.generation.completed";
 export const USER_REGISTERED = "user.registered";
 export const USER_UNDELETED = "user.undeleted";
 export const SESSION_ACTIVITY_CHANGED = "session.activity-changed";
@@ -12,6 +13,19 @@ export interface RouteCreatedEvent {
 
 export interface RouteDeletedEvent {
 	userId: number;
+}
+
+export type RouteGenerationOutcome = "succeeded" | "failed";
+
+export interface RouteGenerationCompletedEvent {
+	outcome: RouteGenerationOutcome;
+	activity: string;
+	durationMs: number;
+	valhallaCalls: number;
+	candidateCount: number;
+	/** On success: the winning candidate's Overlap. On quality failure: the best rejected Overlap. */
+	bestOverlapPct?: number;
+	failureCode?: string;
 }
 
 export interface UserRegisteredEvent {

@@ -39,7 +39,7 @@ export class RoutesService {
 		return toRouteResponseDto(route, this.config.analytics.salt);
 	}
 
-	// Recomputes the persisted bbox (ADR 0029) from the route's geometry,
+	// Recomputes the persisted bbox (ADR 0030) from the route's geometry,
 	// falling back to waypoint coords for direct-only routes.
 	private applyBbox(route: Route): void {
 		const coords = route.geometry?.length ? route.geometry : route.waypoints.map((w) => w.coord);
@@ -136,7 +136,7 @@ export class RoutesService {
 			};
 		}
 		if (query.bbox) {
-			// Viewport overlap on the persisted bbox columns (ADR 0029).
+			// Viewport overlap on the persisted bbox columns (ADR 0030).
 			const view = parseBbox(query.bbox);
 			where.bboxMinLat = { $lte: view.maxLat };
 			where.bboxMaxLat = { $gte: view.minLat };

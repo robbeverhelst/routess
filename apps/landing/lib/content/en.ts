@@ -6,7 +6,6 @@ export const en: Dict = {
 		features: "Features",
 		community: "Community",
 		pricing: "Pricing",
-		forDevelopers: "For developers",
 		planRoute: "Plan a route",
 		home: "Home",
 		docs: "Docs",

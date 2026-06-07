@@ -1,3 +1,4 @@
+import { ApiHttpError, generateRequestId } from "@routess/api-client";
 import type { Coordinate, RouteActivity, RoutingPreferences, Waypoint } from "@routess/core";
 import { estimateDuration, haversineDistance } from "@routess/core";
 import { Logger } from "@/lib/logger";
@@ -9,6 +10,10 @@ import { getRuntimeConfig } from "@/lib/runtime-config";
 // directly (see ADR-0021, mirrored from the trace-attributes proxy).
 const API_BASE_URL = getRuntimeConfig("VITE_API_URL") ?? "";
 const ROUTE_URL = `${API_BASE_URL.replace(/\/+$/, "")}/api/v1/routing/route`;
+
+// The routing proxy rejects requests with more locations (MAX_ROUTE_LOCATIONS
+// in the API DTO). Larger waypoint lists are routed in stitched chunks.
+const MAX_LOCATIONS_PER_REQUEST = 25;
 
 export interface ComputeRouteOptions {
 	snap?: boolean;
@@ -106,11 +111,17 @@ async function callApiRoute(
 		walkingSpeedKmh: options.walkingSpeedKmh,
 	};
 
+	// Same correlation scheme as the api-client: the id lands on the API's
+	// logs/traces, and the warn below carries it into GlitchTip.
+	const requestId = generateRequestId();
+
 	let response: Response;
 	try {
 		response = await fetch(ROUTE_URL, {
 			method: "POST",
-			headers: { "Content-Type": "application/json" },
+			headers: requestId
+				? { "Content-Type": "application/json", "X-Request-ID": requestId }
+				: { "Content-Type": "application/json" },
 			body: JSON.stringify(body),
 			signal: options.signal,
 			credentials: "include",
@@ -122,11 +133,12 @@ async function callApiRoute(
 
 	if (!response.ok) {
 		const text = await response.text().catch(() => "");
-		return {
-			ok: false,
-			kind: "routing",
-			error: `routing API ${response.status}${text ? `: ${text}` : ""}`,
-		};
+		const error = `routing API ${response.status}${text ? `: ${text}` : ""}`;
+		Logger.warn(
+			"[ValhallaClient] Routing request failed:",
+			new ApiHttpError(error, response.status, response.headers.get("x-request-id") ?? requestId),
+		);
+		return { ok: false, kind: "routing", error };
 	}
 
 	const data = (await response.json()) as ApiRouteResponse;
@@ -300,46 +312,67 @@ export async function computeRoute(
 		return computeMixedRoute(waypoints, activity, prefs, options);
 	}
 
-	// all-routed: single API call. Routing failures (API replied 4xx/5xx, or
-	// returned no path) bubble up as errors per ADR-0014, matching the mixed
-	// behaviour. Only transport failures (browser couldn't reach the API at
-	// all) fall back to a direct line so the UI still has something to render
-	// while offline.
+	// all-routed: one API call per chunk of at most MAX_LOCATIONS_PER_REQUEST
+	// waypoints (the routing proxy rejects larger location lists; densified
+	// generated drafts and hand-built routes can both exceed it). Chunks share
+	// their boundary waypoint and are stitched back together. Routing failures
+	// (API replied 4xx/5xx, or returned no path) bubble up as errors per
+	// ADR-0014, matching the mixed behaviour. Only transport failures (browser
+	// couldn't reach the API at all) fall back to a direct line so the UI
+	// still has something to render while offline.
 	try {
-		const result = await callApiRoute(
-			waypoints.map((wp) => wp.coord),
-			activity,
-			prefs,
-			options,
-		);
-		if (!result.ok) {
-			if (result.kind === "routing") {
+		const routePath: Coordinate[] = [];
+		const allSnapped: Waypoint[] = [];
+		let distanceKm = 0;
+		let durationMinutes = 0;
+		let anySnapChanged = false;
+
+		for (let start = 0; start < waypoints.length - 1; start += MAX_LOCATIONS_PER_REQUEST - 1) {
+			const chunk = waypoints.slice(start, start + MAX_LOCATIONS_PER_REQUEST);
+			const result = await callApiRoute(
+				chunk.map((wp) => wp.coord),
+				activity,
+				prefs,
+				options,
+			);
+			if (!result.ok) {
+				if (result.kind === "routing") {
+					return {
+						ok: false,
+						error: result.error,
+						failedSegment: { from: start, to: start + chunk.length - 1 },
+					};
+				}
+				Logger.warn("[ValhallaClient] Transport failure, falling back to direct routes:", result.error);
+				const direct = buildAllDirect(waypoints);
 				return {
-					ok: false,
-					error: result.error,
-					failedSegment: { from: 0, to: waypoints.length - 1 },
+					ok: true,
+					routePath: direct.routePath,
+					distanceKm: direct.distanceKm,
+					durationMinutes: estimateDuration(direct.distanceKm, speedKmh),
+					offline: true,
 				};
 			}
-			Logger.warn("[ValhallaClient] Transport failure, falling back to direct routes:", result.error);
-			const { routePath, distanceKm } = buildAllDirect(waypoints);
-			return {
-				ok: true,
-				routePath,
-				distanceKm,
-				durationMinutes: estimateDuration(distanceKm, speedKmh),
-				offline: true,
-			};
-		}
 
-		const { path, legShapes, distanceKm, durationMinutes } = combineLegs(result.data.legs);
-		const snapped = options.snap !== false ? snappedFromLegShapes(waypoints, legShapes) : undefined;
+			const combined = combineLegs(result.data.legs);
+			distanceKm += combined.distanceKm;
+			durationMinutes += combined.durationMinutes;
+			if (routePath.length === 0) routePath.push(...combined.path);
+			else routePath.push(...combined.path.slice(1));
+
+			const snapped = options.snap !== false ? snappedFromLegShapes(chunk, combined.legShapes) : undefined;
+			if (snapped) anySnapChanged = true;
+			const chunkWaypoints = snapped ?? chunk.map((wp) => ({ ...wp }));
+			// The boundary waypoint is shared with the next chunk; keep one copy.
+			allSnapped.push(...(allSnapped.length === 0 ? chunkWaypoints : chunkWaypoints.slice(1)));
+		}
 
 		return {
 			ok: true,
-			routePath: path,
+			routePath,
 			distanceKm,
 			durationMinutes,
-			snappedWaypoints: snapped,
+			snappedWaypoints: anySnapChanged ? allSnapped : undefined,
 		};
 	} catch (err) {
 		if ((err as Error).name === "AbortError") throw err;

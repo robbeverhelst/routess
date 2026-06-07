@@ -31,7 +31,7 @@ Per-event property tables below list only the *event-specific* properties on top
 **Allowed** (in addition to the common context above):
 - Counts and bounded measurements: `waypoint_count`, `distance_m`, `tag_count`, `step_number`, …
 - Categorical results: `result`, `failure_reason`, `provider`, `creation_source`, …
-- Bounded enums: `activity`, `privacy`, `route_type`, `surface_type`, `loop_direction`
+- Bounded enums: `activity`, `privacy`, `route_type`, `surface_type`, `heading`
 - Bucketed numerics: `url_length_bucket`, `duration_ms_bucket`, `target_distance_m_bucket`, …
 - Booleans: `is_first_route`, `had_names`, `route_was_saved`, …
 
@@ -67,7 +67,7 @@ Umami captures these automatically from the request. Do not duplicate them as ev
 | `route_deleted` | API `DELETE /routes/:id` returns 2xx | — |
 | `route_loaded_into_editor` | Saved route opened into the editor | `creation_source: "manual" \| "generated" \| "imported" \| "unknown"` |
 
-`creation_source` on `route_created` currently always reports `"manual"` because RouteDraft does not yet track its origin (GPX-imported drafts and manually placed drafts look identical at save time). The same applies to `route_loaded_into_editor`, which reports `"unknown"`. Both will be refined when route generation lands (#136) and the draft schema gains an origin field.
+`creation_source` on `route_created` reads the RouteDraft's `creationSource` field (#136): `"generated"` for drafts born from a confirmed GenerationCandidate, `"imported"` for GPX-imported drafts, `"manual"` otherwise. `route_loaded_into_editor` derives it from the saved Route's Provenance (`generation` → `generated`, `gpx-import` → `imported`, else `manual`).
 
 ## Import / export / share
 
@@ -84,7 +84,7 @@ Umami captures these automatically from the request. Do not duplicate them as ev
 
 | Event | When | Properties |
 |---|---|---|
-| `route_generation_started` | User submits the generation form | `activity`, `route_type`, `target_distance_m_bucket`, `surface_type`, `loop_direction?` |
+| `route_generation_started` | User submits the generation form | `activity`, `route_type`, `target_distance_m_bucket`, `surface_type`, `heading` |
 | `route_generation_succeeded` | Candidate(s) returned | `activity`, `route_type`, `candidate_count`, `duration_ms_bucket`, `delta_from_target_pct_bucket` |
 | `route_generation_failed` | Generation failed | `activity`, `route_type`, `failure_reason: "no_route_found" \| "timeout" \| "provider_error" \| "invalid_input"` |
 

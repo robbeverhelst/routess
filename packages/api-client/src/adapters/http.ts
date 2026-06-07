@@ -1,6 +1,17 @@
 import { errorFromResponse } from "../errors";
 import type { HttpClient, RequestOptions } from "../types";
 
+// Client-generated request id, echoed back by the API and stamped on its
+// logs/traces, so a browser error can be joined to the server side.
+// crypto.randomUUID exists in browsers, React Native (polyfilled), and Bun;
+// when absent the API generates one instead and we read it off the response.
+// Exported for callers that fetch the API outside this client (e.g. the web
+// app's routing services) so their requests correlate the same way.
+export const generateRequestId = (): string | undefined => {
+	const c = globalThis.crypto;
+	return c && typeof c.randomUUID === "function" ? c.randomUUID() : undefined;
+};
+
 interface FetchHttpClientOptions {
 	defaultTimeoutMs?: number;
 	credentials?: "omit" | "same-origin" | "include";
@@ -62,17 +73,19 @@ export class FetchHttpClient implements HttpClient {
 		const controller = new AbortController();
 		const timeoutId = effectiveTimeout ? setTimeout(() => controller.abort(), effectiveTimeout) : undefined;
 
+		const requestId = generateRequestId();
+
 		try {
 			const response = await fetch(url, {
 				method,
-				headers,
+				headers: requestId ? { "X-Request-ID": requestId, ...headers } : headers,
 				body: body !== undefined ? JSON.stringify(body) : undefined,
 				signal: controller.signal,
 				credentials: this.credentials,
 			});
 
 			if (!response.ok) {
-				throw await errorFromResponse(response);
+				throw await errorFromResponse(response, response.headers.get("x-request-id") ?? requestId);
 			}
 
 			const responseHeaders: Record<string, string> = {};

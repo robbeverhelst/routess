@@ -33,7 +33,7 @@ export class PublicRoutesQueryDto extends ListRoutesQueryDto {
 
 	@ApiPropertyOptional({
 		description:
-			"Viewport filter as 'minLng,minLat,maxLng,maxLat'. Matches routes whose bounding box overlaps it (ADR 0029).",
+			"Viewport filter as 'minLng,minLat,maxLng,maxLat'. Matches routes whose bounding box overlaps it (ADR 0030).",
 		example: "3.6,50.9,3.8,51.1",
 	})
 	@IsOptional()

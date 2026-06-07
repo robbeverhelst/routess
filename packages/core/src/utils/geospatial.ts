@@ -136,7 +136,7 @@ export const closestPointOnSegment = (p: Coordinate, v: Coordinate, w: Coordinat
 
 /**
  * Bounding box of a path in degrees. The shape persisted on a Route for
- * viewport-overlap discovery queries (ADR 0029).
+ * viewport-overlap discovery queries (ADR 0030).
  */
 export interface BoundingBox {
 	minLat: number;

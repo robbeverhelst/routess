@@ -196,6 +196,9 @@
 				"security": [
 					{
 						"JWT-auth": []
+					},
+					{
+						"PAT-auth": []
 					}
 				],
 				"summary": "Export account data as ZIP",
@@ -543,7 +546,7 @@
 		},
 		"/auth/tokens": {
 			"post": {
-				"description": "Creates a new PAT for the authenticated user. Returns the plaintext exactly once; it is hashed at rest and cannot be retrieved again. Tokens authenticate non-browser clients (CLI, AI agents, scripts) via `Authorization: Bearer routess_pat_…`. PATs are blocked from `/v1/admin/*` and from `DELETE /v1/users/me` regardless of the owner's role.",
+				"description": "Creates a new PAT for the authenticated user. Returns the plaintext exactly once; it is hashed at rest and cannot be retrieved again. Tokens authenticate non-browser clients (CLI, AI agents, scripts) via `Authorization: Bearer routess_pat_…`. Minting is cookie-only: PATs cannot mint other PATs. PATs are blocked from `/v1/admin/*` and from `DELETE /v1/users/me` regardless of the owner's role.",
 				"operationId": "PersonalAccessTokensController_create",
 				"parameters": [],
 				"requestBody": {
@@ -580,7 +583,7 @@
 				"tags": ["auth"]
 			},
 			"get": {
-				"description": "Lists the authenticated user's active (non-revoked) PATs. Plaintext is never returned; only metadata.",
+				"description": "Lists the authenticated user's active (non-revoked) PATs. Plaintext is never returned; only metadata. PAT callers need `read` scope.",
 				"operationId": "PersonalAccessTokensController_list",
 				"parameters": [],
 				"responses": {
@@ -603,6 +606,9 @@
 				},
 				"security": [
 					{
+						"PAT-auth": []
+					},
+					{
 						"JWT-auth": []
 					}
 				],
@@ -612,7 +618,7 @@
 		},
 		"/auth/tokens/{id}": {
 			"delete": {
-				"description": "Revokes the token with the given ID. Idempotent: revoking an already-revoked token succeeds.",
+				"description": "Revokes the token with the given ID. Idempotent: revoking an already-revoked token succeeds. PAT callers need `write` scope; revoking the token that authenticates the request itself additionally requires X-Routess-Confirm: true, since it locks the caller out.",
 				"operationId": "PersonalAccessTokensController_revoke",
 				"parameters": [
 					{
@@ -622,6 +628,15 @@
 						"description": "Token ID",
 						"schema": {
 							"type": "number"
+						}
+					},
+					{
+						"name": "X-Routess-Confirm",
+						"in": "header",
+						"description": "Required as `true` when a PAT revokes itself. Cookie sessions ignore this header.",
+						"required": false,
+						"schema": {
+							"type": "string"
 						}
 					}
 				],
@@ -641,9 +656,15 @@
 					},
 					"404": {
 						"description": "Token not found"
+					},
+					"428": {
+						"description": "PAT-authenticated self-revocation without `X-Routess-Confirm: true`. Surface the `impact` field to the user and retry with the header set."
 					}
 				},
 				"security": [
+					{
+						"PAT-auth": []
+					},
 					{
 						"JWT-auth": []
 					}
@@ -654,9 +675,19 @@
 		},
 		"/routes": {
 			"post": {
-				"description": "Creates a new route for the authenticated user. PATs are blocked; route creation lands with #170.",
+				"description": "Creates a new route for the authenticated user. PAT callers need `write` scope (#170) and must set X-Routess-Confirm: true when creating with `visibility: public`, mirroring the PATCH gate.",
 				"operationId": "RoutesController_create",
-				"parameters": [],
+				"parameters": [
+					{
+						"name": "X-Routess-Confirm",
+						"in": "header",
+						"description": "Set to `true` when a PAT call creates a route with `visibility: public`. Cookie sessions ignore this header.",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -683,9 +714,15 @@
 					},
 					"401": {
 						"description": "Unauthorized"
+					},
+					"428": {
+						"description": "PAT-authenticated create with `visibility: public` without `X-Routess-Confirm: true`. Surface the `impact` field to the user and retry with the header set."
 					}
 				},
 				"security": [
+					{
+						"PAT-auth": []
+					},
 					{
 						"JWT-auth": []
 					}
@@ -892,7 +929,7 @@
 		},
 		"/routes/{ref}/gpx": {
 			"get": {
-				"description": "Returns the route as a GPX 1.1 document with a routess-namespaced extension carrying per-waypoint Type. `ref` is a numeric route ID (owner: any visibility; non-owners: public only) or a 32-hex share token (public and unlisted). Private routes return 404 to non-owners. Unlisted responses carry X-Robots-Tag: noindex.",
+				"description": "Returns the route as a GPX 1.1 document with a routess-namespaced extension carrying per-waypoint Type. `ref` is a numeric route ID (owner: any visibility; non-owners: public only) or a 32-hex share token (public and unlisted). Private routes return 404 to non-owners. Owners authenticate with a cookie session or any PAT. Unlisted responses carry X-Robots-Tag: noindex.",
 				"operationId": "RoutesController_downloadGpx",
 				"parameters": [
 					{
@@ -919,7 +956,7 @@
 		},
 		"/routes/{ref}": {
 			"get": {
-				"description": "Returns the route. `ref` is either a numeric route ID (owners see any visibility; non-owners only public, so sequential IDs can't be walked to discover unlisted routes) or a 32-hex share token (serves public and unlisted to anyone with the link). Private routes return 404 to non-owners. PATs hit this through the cookie-or-bearer JWT path; PAT-as-Bearer is not yet supported here (use GET /routes to list and filter).",
+				"description": "Returns the route. `ref` is either a numeric route ID (owners see any visibility; non-owners only public, so sequential IDs can't be walked to discover unlisted routes) or a 32-hex share token (serves public and unlisted to anyone with the link). Private routes return 404 to non-owners. Owners authenticate with a cookie session or any PAT.",
 				"operationId": "RoutesController_findOne",
 				"parameters": [
 					{
@@ -1158,7 +1195,7 @@
 		},
 		"/collections/{ref}": {
 			"get": {
-				"description": "`ref` is a numeric collection ID (owners: any visibility; non-owners: public only, so sequential IDs can't be walked to discover unlisted collections) or a 32-hex share token (public and unlisted). Private routes inside are omitted for non-owners. Private collections return 404 to non-owners.",
+				"description": "`ref` is a numeric collection ID (owners: any visibility; non-owners: public only, so sequential IDs can't be walked to discover unlisted collections) or a 32-hex share token (public and unlisted). Private routes inside are omitted for non-owners. Private collections return 404 to non-owners. Owners authenticate with a cookie session or any PAT.",
 				"operationId": "CollectionsController_findOne",
 				"parameters": [
 					{
@@ -1853,6 +1890,40 @@
 				"tags": ["routing"]
 			}
 		},
+		"/generation": {
+			"post": {
+				"description": "Runs the RouteGeneration pipeline (ADR-0029): a fan of candidate loops around the start point, snap-validated, routed through Valhalla, scored on Overlap/distance/surface/shape, and reduced to up to 3 diverse candidates. A response with an empty candidate list carries a structured failure code that drives retry suggestions. Each request fans out into ~10-25 Valhalla calls, hence the strict per-IP throttle.",
+				"operationId": "GenerationController_generate",
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/GenerateRequestDto"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Scored candidates or a structured failure",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/GenerateResponseDto"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Valhalla is not configured or unreachable"
+					}
+				},
+				"summary": "Generate loop route candidates from high-level parameters",
+				"tags": ["generation"]
+			}
+		},
 		"/health": {
 			"get": {
 				"description": "Pings the database and reports aggregate health. Same checks as /health/ready.",
@@ -2519,6 +2590,10 @@
 		{
 			"name": "routing",
 			"description": "Routing engine (Valhalla) proxy endpoints"
+		},
+		{
+			"name": "generation",
+			"description": "Route generation (scored loop candidates, ADR-0029)"
 		},
 		{
 			"name": "users",
@@ -4445,6 +4520,152 @@
 					}
 				},
 				"required": ["legs", "locations"]
+			},
+			"GenerateRequestDto": {
+				"type": "object",
+				"properties": {
+					"start": {
+						"description": "Loop start point; the generated route begins and ends here.",
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/RouteLocationDto"
+							}
+						]
+					},
+					"activity": {
+						"type": "string",
+						"enum": ["run", "cycle", "walk"],
+						"example": "cycle"
+					},
+					"targetDistanceKm": {
+						"type": "number",
+						"description": "Target loop distance in kilometers.",
+						"minimum": 1,
+						"maximum": 200,
+						"example": 40
+					},
+					"heading": {
+						"type": "string",
+						"description": "Compass arc the loop should extend toward. A soft preference, never a hard guarantee.",
+						"enum": ["any", "north", "east", "south", "west"],
+						"example": "any"
+					},
+					"preferences": {
+						"$ref": "#/components/schemas/RoutingPreferencesDto"
+					},
+					"excludeBearings": {
+						"description": "Fan bearings already shown to the user; regenerate passes them to get fresh shapes.",
+						"maxItems": 16,
+						"type": "array",
+						"items": {
+							"type": "number"
+						}
+					}
+				},
+				"required": ["start", "activity", "targetDistanceKm", "heading", "preferences"]
+			},
+			"GenerationCandidateDto": {
+				"type": "object",
+				"properties": {
+					"bearingDeg": {
+						"type": "number",
+						"description": "Fan bearing that produced this candidate, in degrees."
+					},
+					"viaPoints": {
+						"description": "Snapped via points in loop order (excluding the start). Confirming the candidate turns start + vias + start into the draft's Waypoints.",
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/RouteLocationDto"
+						}
+					},
+					"shape": {
+						"type": "string",
+						"description": "Polyline6-encoded RoutePath of the full loop."
+					},
+					"distanceKm": {
+						"type": "number",
+						"description": "Routed distance in kilometers."
+					},
+					"durationSeconds": {
+						"type": "number",
+						"description": "Routed duration in seconds."
+					},
+					"overlapPct": {
+						"type": "number",
+						"description": "Overlap: % of distance traversing the same way more than once (0..100)."
+					},
+					"score": {
+						"type": "number",
+						"description": "Weighted candidate score, 0..1, higher is better."
+					},
+					"lowQuality": {
+						"type": "boolean",
+						"description": "True when the candidate is shown with a quality badge (elevated Overlap)."
+					},
+					"surfaceMetersByBucket": {
+						"type": "object",
+						"description": "Surface composition of the loop in meters per SurfaceBucket.",
+						"example": {
+							"paved": 32000,
+							"compacted": 4500,
+							"unpaved": 2500,
+							"path": 1000
+						}
+					}
+				},
+				"required": [
+					"bearingDeg",
+					"viaPoints",
+					"shape",
+					"distanceKm",
+					"durationSeconds",
+					"overlapPct",
+					"score",
+					"lowQuality",
+					"surfaceMetersByBucket"
+				]
+			},
+			"GenerationFailureDto": {
+				"type": "object",
+				"properties": {
+					"code": {
+						"type": "string",
+						"enum": [
+							"invalid_input",
+							"start_not_routable",
+							"no_candidates_routable",
+							"all_candidates_low_quality",
+							"all_bearings_excluded",
+							"provider_unavailable"
+						]
+					},
+					"bestOverlapPct": {
+						"type": "number",
+						"description": "Best Overlap % among rejected candidates; explains an all_candidates_low_quality failure."
+					}
+				},
+				"required": ["code"]
+			},
+			"GenerateResponseDto": {
+				"type": "object",
+				"properties": {
+					"candidates": {
+						"description": "Up to 3 diverse GenerationCandidates, best score first. Empty when generation failed.",
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/GenerationCandidateDto"
+						}
+					},
+					"failure": {
+						"description": "Set when no usable candidate could be produced; the code drives retry suggestions in the UI.",
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/GenerationFailureDto"
+							}
+						]
+					}
+				},
+				"required": ["candidates"]
 			}
 		}
 	}

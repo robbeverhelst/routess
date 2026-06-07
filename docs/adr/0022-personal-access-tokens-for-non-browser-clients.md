@@ -15,3 +15,12 @@ HMAC-SHA-256 with a server-side pepper is the storage primitive — not argon2id
 - **Fine-grained scopes (`routes:read`, `routes:write`, `places:read`, `user:read`, `user:write`)** — rejected as premature; the two-scope model expresses every distinction current callers actually need, and the migration path to finer scopes (add new scope strings, treat older `read`/`write` as supersets) is cheap.
 - **OAuth device-code flow or local-callback flow for CLI login** — deferred: both require web routes, polling endpoints, and a threat-modeling pass. Copy-paste from the Settings page is the strict subset of work needed regardless of which flow we eventually ship.
 - **OS keychain storage in the CLI** — rejected: breaks in containers, in SSH sessions on locked keychains, and on Linux desktops without a keyring daemon. Plain `~/.config/routess/auth.json` at mode `0600` with `ROUTESS_TOKEN` env-var override matches the `gh`/`aws`/`kubectl`/`docker` convention.
+
+## Status update (2026-06-07)
+
+The deferred pieces above have landed, in line with the original intent:
+
+- `POST /v1/routes` now accepts `write`-scoped PATs (issue #170). Creating a route with `visibility: public` is gated behind `X-Routess-Confirm: true` per ADR-0023, mirroring the PATCH gate.
+- `GET /v1/auth/tokens` accepts `read`-scoped PATs and `DELETE /v1/auth/tokens/:id` accepts `write`-scoped PATs, so the CLI can manage credential hygiene. Self-revocation (revoking the token authenticating the request) requires `X-Routess-Confirm: true` — the gate ADR-0023 specified up front. Minting remains cookie-only: a PAT can never mint another PAT.
+- `GET /v1/users/me/export` accepts `read`-scoped PATs, matching the "read covers list/get/export" scope definition above.
+- The optional-auth ref endpoints (`GET /v1/routes/:ref`, `GET /v1/routes/:ref/gpx`, `GET /v1/collections/:ref`) resolve PAT bearers as the owning user, so owners can fetch their private resources headlessly.

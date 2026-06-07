@@ -22,8 +22,16 @@ The ordered sequence of geographic coordinates the system computes by stitching 
 _Avoid_: line, geometry, polyline, track.
 
 **RouteGeneration**:
-Algorithmic creation of a Route from high-level parameters (RouteType, SurfaceType, LoopDirection, target distance) instead of hand-placed waypoints.
+Algorithmic creation of a Route from high-level parameters (RouteType, SurfaceType, Heading, target distance) instead of hand-placed waypoints. Runs as a staged pipeline (anchors → candidates → routing → scoring → selection) on the server and returns up to 3 diverse **GenerationCandidates**; confirming one yields a RouteDraft with Provenance `generation`. v1 generates loops only. See ADR 0029.
 _Avoid_: AI route, auto route, suggested route.
+
+**GenerationCandidate**:
+One scored loop produced by a RouteGeneration attempt: geometry, via points, Distance, ElevationGain, surface composition, and score components (**Overlap**, distance match, surface fit, shape compactness). Candidates shown to the user are mutually diverse (near-identical shapes are deduped, the issue's "duplicate avoidance"). Mediocre candidates are shown with their flaw labeled; unusable ones are dropped behind a quality floor. A GenerationCandidate is not a Route: it becomes one only after the user confirms and saves it.
+_Avoid_: suggestion, alternative, option, variant.
+
+**Overlap** (of a GenerationCandidate):
+The fraction of a candidate's Distance that traverses the same underlying way more than once (measured via duplicated Valhalla `way_id`s, length-weighted). The primary quality signal: a pure out-and-back has ~100% Overlap, a clean loop near 0%. Drives the heaviest scoring weight and the quality floor.
+_Avoid_: out-and-back ratio, repetition, backtracking (in code; UI copy may say "repeated roads").
 
 **RouteType**:
 Either `a-to-b` (start ≠ end) or `loop` (start = end). A property of a generated or saved Route.
@@ -36,8 +44,9 @@ _Avoid_: terrain, surface preference.
 Per-segment *classification* (an observation): `paved`, `compacted`, `unpaved`, or `path`. The result of analysing the actual RoutePath's edges (via Valhalla `trace_attributes`). Used to render surface composition along the route. Distinct from **SurfaceType** (which is what the user asked for, not what the route turned out to be).
 _Avoid_: surface, surface kind.
 
-**LoopDirection**:
-For loop routes, either `clockwise` or `counter-clockwise`.
+**Heading**:
+For RouteGeneration, the compass arc the loop should extend toward: `any`, `north`, `east`, `south`, or `west`. Constrains which bearings candidate generation tries; a soft preference, never a hard guarantee. Replaces the retired `LoopDirection` (`clockwise`/`counter-clockwise`), which was never implemented and described traversal order, not loop placement.
+_Avoid_: direction (too overloaded), LoopDirection, orientation.
 
 **RouteVisibility**:
 Who can view a Route. One of `private`, `unlisted`, or `public`.
@@ -157,7 +166,7 @@ _Avoid_: createdAt (a Route is usually born `private`; creation and publication 
 - Each **Waypoint** (after the first) has a **Type** describing how its segment connects to the previous one.
 - A **Route** has exactly one **RoutePath**, computed from its **Waypoints** and their **Types**.
 - A **Route** has computed **Distance**, **Duration**, and **ElevationGain** metrics derived from its **RoutePath**.
-- A **RouteGeneration** produces a **Route** from **RouteType** + **SurfaceType** + **LoopDirection** + target distance, without manual Waypoint placement.
+- A **RouteGeneration** produces up to 3 **GenerationCandidates** from **RouteType** + **SurfaceType** + **Heading** + target distance, without manual Waypoint placement; confirming one creates a **RouteDraft** whose **Waypoints** are the candidate's via points (so recalculation reproduces the same RoutePath).
 - A **Route** has exactly one **RouteVisibility** (`private` | `unlisted` | `public`), defaulting from the owning User's preference.
 - A **Route** has zero or more **Tags**; Tags are flat (no hierarchy, no folder grouping).
 - A **User** owns zero or more **Routes**, accessed through their **RouteLibrary**.

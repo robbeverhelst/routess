@@ -19,7 +19,7 @@ Use the [template](0000-template.md) when adding a new one. Number sequentially 
 - [0011 — Route API module stays shallow until invariants exist](0011-route-api-module-stays-shallow.md)
 - [0012 — Soft-delete enforced by a global MikroORM filter](0012-soft-delete-via-mikro-orm-filter.md)
 - [0018 — Route updates are last-write-wins (deferred optimistic concurrency)](0018-route-update-last-write-wins.md)
-- [0029 — Discovery geo queries use persisted bbox columns, not PostGIS](0029-bbox-columns-not-postgis-for-discovery.md)
+- [0030 — Discovery geo queries use persisted bbox columns, not PostGIS](0030-bbox-columns-not-postgis-for-discovery.md)
 
 ### Routing & domain
 - [0007 — Single canonical Waypoint type](0007-single-canonical-waypoint-type.md)
@@ -28,6 +28,7 @@ Use the [template](0000-template.md) when adding a new one. Number sequentially 
 - [0014 — Uniform Waypoint snap policy, no silent Type downgrade](0014-uniform-waypoint-snap-policy.md)
 - [0017 — RouteDraft `unsaved | editing` mode lifecycle](0017-routedraft-mode-lifecycle.md)
 - [0021 — Shared routing logic, dual-credential execution](0021-shared-routing-logic-dual-credential-execution.md)
+- [0029 — Route generation is a scored candidate pipeline](0029-route-generation-as-scored-candidate-pipeline.md)
 
 ### Frontend state
 - [0002 — Zustand for RouteDraft state](0002-zustand-for-routedraft-state.md)

@@ -198,7 +198,9 @@ export function getAppConfig(): AppConfig {
 	return {
 		app: {
 			name: DEFAULTS.appName,
-			version: process.env.VITE_APP_VERSION || "dev",
+			// APP_VERSION is the canonical runtime injection (Helm); VITE_APP_VERSION
+			// kept for the selfhost compose file, which shares one tag variable.
+			version: process.env.APP_VERSION || process.env.VITE_APP_VERSION || "dev",
 			description: DEFAULTS.appDescription,
 			port: parseInteger(process.env.PORT, DEFAULTS.appPort),
 			nodeEnv,

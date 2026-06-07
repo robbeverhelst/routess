@@ -23,6 +23,7 @@ export const useCanRedo = () => useRoutingStore((s) => s.canRedo);
 export const useDraftMode = () => useRoutingStore((s) => s.mode);
 export const useDraftActivity = () => useRoutingStore((s) => s.activity);
 export const useDraftRoutingPreferences = () => useRoutingStore((s) => s.routingPreferences);
+export const useDraftCreationSource = () => useRoutingStore((s) => s.creationSource);
 export const useSetRoutingPreferences = () => useRoutingStore((s) => s.setRoutingPreferences);
 
 // Display-formatted selectors derived from canonical numeric state. Consumers

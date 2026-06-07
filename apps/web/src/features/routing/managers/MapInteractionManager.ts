@@ -1,5 +1,6 @@
 import type { Map as MapboxMap, MapLayerMouseEvent, MapMouseEvent, MapTouchEvent, PointLike } from "mapbox-gl";
 import type { Dispatch, SetStateAction } from "react";
+import { consumeMapPick } from "@/features/map/mapPick";
 // Dispatch/SetStateAction kept for setPopup which is still a React setter.
 import {
 	animateWaypointSpawn,
@@ -463,6 +464,10 @@ export const initializeMapInteractions = (
 			Logger.info("[MapInteractionManager] Click event default prevented, likely due to drag. Ignoring.");
 			return;
 		}
+
+		// A pending one-shot pick (e.g. "choose the loop start") wins over the
+		// normal add-waypoint grammar.
+		if (consumeMapPick([event.lngLat.lng, event.lngLat.lat])) return;
 
 		const features = map.queryRenderedFeatures(event.point, {
 			layers: [WAYPOINTS_LAYER_ID, ROUTE_LAYER_ID, TEMP_DRAG_LINES_LAYER_ID, ROUTE_HOVER_LAYER_ID],

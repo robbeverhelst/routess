@@ -51,7 +51,7 @@ export class Route extends BaseEntity {
 	elevationGain?: number;
 
 	// Bounding box of the RoutePath, recomputed on every save with geometry.
-	// Plain float columns instead of PostGIS by design; see ADR 0029.
+	// Plain float columns instead of PostGIS by design; see ADR 0030.
 	@Property({ type: "float", nullable: true })
 	bboxMinLat?: number;
 

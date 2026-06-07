@@ -27,7 +27,7 @@ async function createRoute(app: INestApplication, userId: number, seed: SeedRout
 			{ coord: [4.4, 51.2], type: "routed" },
 			{ coord: [4.41, 51.21], type: "routed" },
 		];
-		// Mirror the service: persist the bbox the geometry implies (ADR 0029).
+		// Mirror the service: persist the bbox the geometry implies (ADR 0030).
 		const box = routeBoundingBox(seed.geometry ?? waypoints.map((w) => w.coord));
 		const route = orm.em.create(Route, {
 			name: seed.name,

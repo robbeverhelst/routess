@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { MikroOrmModule } from "@mikro-orm/nestjs";
 import { type MiddlewareConsumer, Module, type NestModule } from "@nestjs/common";
 import { APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
@@ -12,6 +13,7 @@ import { AuthAwareThrottlerGuard } from "./auth/guards/auth-aware-throttler.guar
 import { CollectionsModule } from "./collections/collections.module";
 import type { AppConfig } from "./config/app-config";
 import { APP_CONFIG, ConfigModule } from "./config/config.module";
+import { GenerationModule } from "./generation/generation.module";
 import { HealthModule } from "./health/health.module";
 import config from "./mikro-orm.config";
 import { ProfilesModule } from "./profiles/profiles.module";
@@ -19,7 +21,7 @@ import { RoutesModule } from "./routes/routes.module";
 import { RoutingModule } from "./routing/routing.module";
 import { SocialModule } from "./social/social.module";
 import { MetricsInterceptor } from "./telemetry/metrics.interceptor";
-import { RequestIdMiddleware } from "./telemetry/request-id.middleware";
+import { RequestIdMiddleware, requestIdFromHeaders } from "./telemetry/request-id.middleware";
 import { TelemetryModule } from "./telemetry/telemetry.module";
 import { TracingInterceptor } from "./telemetry/tracing.interceptor";
 import { UsersModule } from "./users/users.module";
@@ -35,6 +37,13 @@ import { UsersModule } from "./users/users.module";
 			useFactory: (appConfig: AppConfig) => ({
 				pinoHttp: {
 					level: process.env.LOG_LEVEL || (appConfig.app.isTest ? "silent" : "info"),
+					// Assign the request id before any log binding is created, so every
+					// line of a request (including completion) carries one consistent id.
+					// RequestIdMiddleware reuses it and echoes it as X-Request-ID.
+					genReqId: (req) => requestIdFromHeaders(req.headers) ?? randomUUID(),
+					// Every log line carries the app version so Grafana/Loki can answer
+					// "which release is affected".
+					mixin: () => ({ version: appConfig.app.version }),
 					// The req serializer below already strips bodies/headers down to
 					// id/method/url; this list is defense-in-depth in case the
 					// serializer is ever widened.
@@ -80,6 +89,7 @@ import { UsersModule } from "./users/users.module";
 		ProfilesModule,
 		SocialModule,
 		RoutingModule,
+		GenerationModule,
 		HealthModule,
 		TelemetryModule,
 		AdminModule,

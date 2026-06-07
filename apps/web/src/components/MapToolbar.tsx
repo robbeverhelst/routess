@@ -11,6 +11,7 @@ interface MapToolbarProps {
 	onRemoveRoute?: () => void;
 	onSearch?: () => void;
 	onLocate?: () => void;
+	onGenerateLoop?: () => void;
 	onLayers?: () => void;
 	onLock?: () => void;
 	onFocusRoute?: () => void;
@@ -62,6 +63,9 @@ export function MapToolbar(props: MapToolbarProps) {
 				}}
 			>
 				<Group vertical>
+					<IconBtn title={t("loop.title")} onClick={props.onGenerateLoop} style={btnStyle}>
+						<I.compass size={18} />
+					</IconBtn>
 					<IconBtn title={t("toolbar.centerOnMe")} onClick={props.onLocate} style={btnStyle}>
 						<I.target size={18} />
 					</IconBtn>

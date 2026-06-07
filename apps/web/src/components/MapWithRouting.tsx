@@ -2,12 +2,15 @@ import { useEffect } from "react";
 import { useLocalStorageInit } from "@/components/hooks/useLocalStorageInit";
 import { useMapWithRoutingState } from "@/components/hooks/useMapWithRoutingState";
 import { DiscoverMapBindings } from "@/components/map/DiscoverMapBindings";
+import { GenerationPreview } from "@/components/map/GenerationPreview";
 import { LibraryRoutePreview } from "@/components/map/LibraryRoutePreview";
 import { MapCanvas } from "@/components/map/MapCanvas";
 import { MapShortcutBindings } from "@/components/map/MapShortcutBindings";
 import { PwaLaunchBindings } from "@/components/map/PwaLaunchBindings";
 import { MapInteractionProvider } from "@/components/providers/MapInteractionProvider";
 import { UserLocationProvider, useUserLocation } from "@/components/providers/UserLocationProvider";
+import { startGeneration } from "@/features/generation/generationService";
+import { cancelMapPick, requestMapPick } from "@/features/map/mapPick";
 import { confirmDiscardIfDirty } from "@/features/routing/confirmDiscardIfDirty";
 import type { PopupInfo as MapPopupInfo } from "@/features/routing/managers/MapInteractionManager";
 import type { RouteDraftEditor } from "@/features/routing/RouteDraftEditor";
@@ -17,6 +20,9 @@ import { ErrorBoundary } from "@/lib/errors";
 import { type SupportedLanguage, t } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
 import { getRuntimeConfig } from "@/lib/runtime-config";
+import { GenerationOverlay } from "@/overlays/GenerationOverlay";
+import { useLoopPreferencesStore } from "@/stores/loopPreferencesStore";
+import { useModalsStore } from "@/stores/modalsStore";
 import { useRoutingStore } from "@/stores/routingStore";
 import { useToastStore } from "@/stores/toastStore";
 
@@ -183,6 +189,41 @@ const MapWithRoutingContent: React.FC<MapboxMapProps> = ({
 		const onRecalculate = () => {
 			void handleRecalculateRoute();
 		};
+		const onGenerateLoop = (detail: AppEventMap["routess:generate-loop"]) => {
+			const center = mapRef.current?.getCenter();
+			const start = detail?.start ?? (center ? ([center.lng, center.lat] as [number, number]) : undefined);
+			if (!start) {
+				pushToast({ kind: "warn", title: t("map.notReady") });
+				return;
+			}
+			void startGeneration(start);
+		};
+		const onPickLoopStart = () => {
+			const map = mapRef.current;
+			if (!map) {
+				pushToast({ kind: "warn", title: t("map.notReady") });
+				return;
+			}
+			const canvas = map.getCanvas();
+			canvas.style.cursor = "crosshair";
+			pushToast({ kind: "info", title: t("loop.pickStartHint") });
+
+			const finish = () => {
+				canvas.style.cursor = "";
+				window.removeEventListener("keydown", onEscape);
+				useModalsStore.getState().openModal("loop");
+			};
+			const onEscape = (e: KeyboardEvent) => {
+				if (e.key !== "Escape") return;
+				cancelMapPick();
+				finish();
+			};
+			window.addEventListener("keydown", onEscape);
+			requestMapPick((coord) => {
+				useLoopPreferencesStore.getState().setStart({ kind: "point", coord: [coord[0], coord[1]], source: "picked" });
+				finish();
+			});
+		};
 		const onImportGpx = (detail: { gpxString?: string; fileName?: string }) => {
 			if (!detail?.gpxString) {
 				pushToast({ kind: "danger", title: t("import.noContent") });
@@ -211,6 +252,8 @@ const MapWithRoutingContent: React.FC<MapboxMapProps> = ({
 			onAppEvent("routess:import-gpx", onImportGpx),
 			onAppEvent("routess:reroute", onReroute),
 			onAppEvent("routess:recalculate-route", onRecalculate),
+			onAppEvent("routess:generate-loop", onGenerateLoop),
+			onAppEvent("routess:pick-loop-start", onPickLoopStart),
 		];
 		return () => {
 			for (const unsubscribe of unsubscribers) {
@@ -237,6 +280,7 @@ const MapWithRoutingContent: React.FC<MapboxMapProps> = ({
 				{editor ? <PwaLaunchBindings /> : null}
 				<LibraryRoutePreview mapRef={mapRef} />
 				<DiscoverMapBindings mapRef={mapRef} />
+				<GenerationPreview mapRef={mapRef} />
 				<MapConfigurationContent
 					mapRef={mapRef}
 					hasRoute={hasRoute}
@@ -280,6 +324,7 @@ const MapConfigurationContent: React.FC<MapConfigurationContentProps> = (props) 
 		<>
 			<MapShortcutBindings onImportError={props.onImportError} />
 			<div className="w-full h-full relative">
+				<GenerationOverlay />
 				<MapCanvas
 					mapRef={props.mapRef}
 					mapboxToken={MAPBOX_TOKEN}

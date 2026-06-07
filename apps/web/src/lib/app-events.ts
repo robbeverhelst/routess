@@ -41,6 +41,13 @@ export interface AppEventMap {
 				tags?: string[];
 				description?: string;
 		  };
+	// Kicks off RouteGeneration (#136). `start` is the loop start point; when
+	// omitted the handler (in MapWithRouting, where the map lives) falls back
+	// to the current map center.
+	"routess:generate-loop": { start?: [number, number] } | undefined;
+	// Enters one-shot pick mode: the next map click becomes the loop start
+	// and the loop modal reopens. Handled in MapWithRouting (cursor + map).
+	"routess:pick-loop-start": NoDetail;
 	"routess:set-map-style": { styleKey: RedesignMapStyle };
 	"routess:set-pois": { visible: boolean };
 	"routess:open-account": NoDetail;

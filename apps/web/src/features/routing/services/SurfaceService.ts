@@ -1,3 +1,4 @@
+import { ApiHttpError, generateRequestId } from "@routess/api-client";
 import type { Coordinate, RouteActivity } from "@routess/core";
 import { valhallaCostingModelForActivity } from "@routess/core";
 import { Logger } from "@/lib/logger";
@@ -60,11 +61,17 @@ export async function fetchSurfaceBreakdown(
 
 	const body = { shape, costing: valhallaCostingModelForActivity(activity) };
 
+	// Same correlation scheme as the api-client: the id lands on the API's
+	// logs/traces, and the warn below carries it into GlitchTip.
+	const requestId = generateRequestId();
+
 	let response: Response;
 	try {
 		response = await fetch(TRACE_ATTRIBUTES_URL, {
 			method: "POST",
-			headers: { "Content-Type": "application/json" },
+			headers: requestId
+				? { "Content-Type": "application/json", "X-Request-ID": requestId }
+				: { "Content-Type": "application/json" },
 			body: JSON.stringify(body),
 			signal,
 			credentials: "include",
@@ -76,7 +83,14 @@ export async function fetchSurfaceBreakdown(
 	}
 
 	if (!response.ok) {
-		Logger.warn(`[SurfaceService] trace-attributes returned ${response.status}`);
+		Logger.warn(
+			"[SurfaceService] trace-attributes failed:",
+			new ApiHttpError(
+				`trace-attributes returned ${response.status}`,
+				response.status,
+				response.headers.get("x-request-id") ?? requestId,
+			),
+		);
 		return null;
 	}
 

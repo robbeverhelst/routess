@@ -13,7 +13,7 @@ export type AuthProvider = "google" | "email";
 export type CreationSource = "manual" | "generated" | "imported";
 export type RouteType = "loop" | "a-to-b";
 export type SurfaceType = "paved" | "mixed" | "unpaved";
-export type LoopDirection = "clockwise" | "counter-clockwise";
+export type GenerationHeading = "any" | "north" | "east" | "south" | "west";
 
 export type ProductEvent =
 	// Auth / signup funnel
@@ -63,7 +63,7 @@ export type ProductEvent =
 	  }
 	| { name: "route_share_link_opened"; properties: EmptyProps }
 
-	// Route generation (feature pending, see #136)
+	// Route generation (#136)
 	| {
 			name: "route_generation_started";
 			properties: {
@@ -71,7 +71,7 @@ export type ProductEvent =
 				route_type: RouteType;
 				target_distance_m_bucket: string;
 				surface_type: SurfaceType;
-				loop_direction?: LoopDirection;
+				heading: GenerationHeading;
 			};
 	  }
 	| {

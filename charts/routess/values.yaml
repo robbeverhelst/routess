@@ -107,6 +107,9 @@ api:
     port: "3000"
     dbPort: "5432"
     dbName: routess
+    # App version stamped into logs and metrics. Empty falls back to the
+    # image tag, which CI sets to the release version.
+    appVersion: ""
     # Interactive API docs stay on in production: the API surface is public
     # anyway (open-source repo + published OpenAPI spec), so hiding the UI
     # buys nothing. Set to "false" to trim the swagger-ui JS surface.
@@ -399,6 +402,26 @@ monitoring:
     # When true, also adds prometheus.io/scrape annotations to the API Service
     # for clusters using annotation-based scrape discovery (no Operator).
     scrapeAnnotations: false
+  prometheusRule:
+    # When true, renders a PrometheusRule with alerts for the critical
+    # failure modes: API down, 5xx rate, latency, auth failures, external
+    # provider errors, and DB latency. Requires the Prometheus Operator CRDs.
+    enabled: false
+    # Extra labels to match your Prometheus Operator's ruleSelector.
+    labels: {}
+    thresholds:
+      # Alert when more than this % of requests return 5xx (5m window).
+      errorRatePercent: 5
+      # Alert when p95 request latency exceeds this (ms, 10m sustained).
+      latencyP95Ms: 1500
+      # Alert when failed logins in a 5m window exceed this count.
+      authFailuresPer5m: 10
+      # Alert when more than this % of requests to a provider fail (10m window).
+      providerErrorRatePercent: 20
+      # Alert when p95 DB query latency exceeds this (ms, 10m sustained).
+      dbLatencyP95Ms: 250
+    # Extra rule entries appended verbatim to the routess-api group.
+    additionalRules: []
   # Optional Grafana dashboard URLs surfaced in the admin UI's system panel.
   grafanaUrls:
     apiOverview: ""

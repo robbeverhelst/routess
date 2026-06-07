@@ -4,7 +4,6 @@ export interface Dict {
 		features: string;
 		community: string;
 		pricing: string;
-		forDevelopers: string;
 		planRoute: string;
 		home: string;
 		docs: string;

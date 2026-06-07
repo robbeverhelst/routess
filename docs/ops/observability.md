@@ -69,6 +69,35 @@ monitoring:
 
 For non-Operator clusters, the API Service carries `prometheus.io/scrape: "true"` annotations as a fallback for Prometheus's `kubernetes_sd_configs` annotation discovery.
 
+## Alerting
+
+The chart ships a `PrometheusRule` template (gated off by default, like the ServiceMonitor) covering the critical failure modes: API down, 5xx error rate, p95 request latency, failed-login spikes, external provider error rate, and p95 DB query latency. Thresholds are values-tunable:
+
+```yaml
+# values.yaml
+monitoring:
+  prometheusRule:
+    enabled: true
+    labels: {}        # match your Prometheus Operator's ruleSelector
+    thresholds:
+      errorRatePercent: 5
+      latencyP95Ms: 1500
+      authFailuresPer5m: 10
+      providerErrorRatePercent: 20
+      dbLatencyP95Ms: 250
+    additionalRules: []   # extra rule entries, appended verbatim
+```
+
+Route generation and payment alerts are deliberately absent: neither feature exists yet. Add them alongside the feature, with the metric.
+
+## Browser-to-API correlation
+
+The api-client generates a UUID per request and sends it as `X-Request-ID`; `RequestIdMiddleware` adopts it (after a charset/length sanity check) and stamps it on the API's logs and trace spans. Failed requests carry the id back on `ApiDomainError`/`ApiHttpError`, and the web error handler attaches it to GlitchTip events as the `api_request_id` tag. To go from a browser error to the server side, copy the tag value and search Loki for `requestId`.
+
+## Versioning
+
+Every API log line carries a `version` field, and the Prometheus `target_info` series carries `service_version` (both from `APP_VERSION`, which the chart defaults to the image tag). Browser events carry the release via the Sentry SDK's `release` tag (`VITE_APP_VERSION`). Together these answer "which release is affected".
+
 ## Tracing
 
 Distributed tracing is wired through `@opentelemetry/sdk-node` with auto-instrumentation. To enable trace export, set `telemetry.otlpEndpoint` and (optionally) `telemetry.otlpHeaders` in app config. Spans correlate to log lines via `requestId` (set by `RequestIdMiddleware`).
@@ -78,6 +107,7 @@ Distributed tracing is wired through `@opentelemetry/sdk-node` with auto-instrum
 `nestjs-pino` emits structured JSON to stdout. Log fields you can rely on:
 
 - `requestId` — generated or propagated from `X-Request-ID`
+- `version` — the running app version (`APP_VERSION`, defaults to the image tag)
 - `level` — pino levels
 - `audit: true` — admin-mutating actions; filter on this to get an audit trail without a dedicated table (see [ADR-0015](../adr/0015-admin-role-reconciled-from-env-var.md))
 

@@ -1,5 +1,23 @@
 import type { SurfaceBucket, SurfaceType } from "./types";
 
+// Valhalla edge.surface strings → SurfaceBucket. Unknown strings classify as
+// unpaved (the cautious default for a routing preference check).
+const VALHALLA_SURFACE_TO_BUCKET: Record<string, SurfaceBucket> = {
+	paved_smooth: "paved",
+	paved: "paved",
+	paved_rough: "paved",
+	compacted: "compacted",
+	dirt: "unpaved",
+	gravel: "unpaved",
+	sand: "unpaved",
+	path: "path",
+	impassable: "path",
+};
+
+export function bucketFromValhallaSurface(surface: string | undefined): SurfaceBucket {
+	return VALHALLA_SURFACE_TO_BUCKET[surface ?? ""] ?? "unpaved";
+}
+
 const BUCKET_TO_TYPE: Record<SurfaceBucket, SurfaceType> = {
 	paved: "paved",
 	compacted: "mixed",

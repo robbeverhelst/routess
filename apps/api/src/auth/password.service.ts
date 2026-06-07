@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { BadRequestException, Injectable, Logger } from "@nestjs/common";
 import * as argon2 from "argon2";
+import { MetricsService } from "../telemetry/metrics.service";
 
 const PASSWORD_MIN_LENGTH = 12;
 const PASSWORD_MAX_LENGTH = 128;
@@ -18,6 +19,8 @@ const ARGON2_OPTIONS: argon2.Options = {
 @Injectable()
 export class PasswordService {
 	private readonly logger = new Logger(PasswordService.name);
+
+	constructor(private readonly metrics: MetricsService) {}
 
 	async hash(plain: string): Promise<string> {
 		return argon2.hash(plain, ARGON2_OPTIONS);
@@ -55,11 +58,13 @@ export class PasswordService {
 		const sha1 = createHash("sha1").update(plain).digest("hex").toUpperCase();
 		const prefix = sha1.slice(0, 5);
 		const suffix = sha1.slice(5);
+		const start = Date.now();
 		try {
 			const response = await fetch(`https://api.pwnedpasswords.com/range/${prefix}`, {
 				headers: { "Add-Padding": "true" },
 				signal: AbortSignal.timeout(3000),
 			});
+			this.metrics.recordExternalRequest("hibp", response.ok ? "success" : "error", Date.now() - start);
 			if (!response.ok) {
 				this.logger.warn(`HIBP returned ${response.status}; allowing password through (fail-open)`);
 				return 0;
@@ -73,6 +78,7 @@ export class PasswordService {
 			}
 			return 0;
 		} catch (error) {
+			this.metrics.recordExternalRequest("hibp", "error", Date.now() - start);
 			this.logger.warn(`HIBP lookup failed: ${error instanceof Error ? error.message : String(error)}`);
 			return 0;
 		}

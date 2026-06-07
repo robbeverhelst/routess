@@ -57,6 +57,21 @@ describe("RequestIdMiddleware", () => {
 		expect(mockResponse.setHeader).toHaveBeenCalledWith("X-Request-ID", requestId);
 	});
 
+	it.each([
+		["contains unsafe characters", "abc\ndef-injected-line"],
+		["too short", "abc"],
+		["too long", "x".repeat(65)],
+	])("should replace a client ID that is %s", (_label, badId) => {
+		if (mockRequest.headers) {
+			mockRequest.headers["x-request-id"] = badId;
+		}
+
+		middleware.use(mockRequest as RequestWithId, mockResponse as Response, mockNext);
+
+		expect(mockRequest.id).not.toBe(badId);
+		expect(mockRequest.id).toMatch(/^[0-9a-f-]{36}$/);
+	});
+
 	it("should generate unique IDs for different requests", () => {
 		const request1 = { headers: {} } as RequestWithId;
 		const request2 = { headers: {} } as RequestWithId;

@@ -19,8 +19,8 @@ import { CurrentUser, OptionalCurrentUser } from "../auth/decorators/current-use
 import { RequireConfirmation } from "../auth/decorators/require-confirmation.decorator";
 import { RequireScope } from "../auth/decorators/require-scope.decorator";
 import { ConfirmationGuard } from "../auth/guards/confirmation.guard";
-import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { OptionalJwtAuthGuard } from "../auth/guards/optional-jwt-auth.guard";
+import { OptionalUnifiedAuthGuard } from "../auth/guards/optional-unified-auth.guard";
 import { ScopeGuard } from "../auth/guards/scope.guard";
 import { UnifiedAuthGuard } from "../auth/guards/unified-auth.guard";
 import { ThrottleModerate, ThrottleStrict } from "../common/decorators/throttle.decorator";
@@ -40,16 +40,35 @@ export class RoutesController {
 	constructor(private readonly routesService: RoutesService) {}
 
 	@ApiBearerAuth("JWT-auth")
-	@UseGuards(JwtAuthGuard)
+	@ApiBearerAuth("PAT-auth")
+	@UseGuards(UnifiedAuthGuard, ScopeGuard, ConfirmationGuard)
 	@ApiOperation({
 		summary: "Create a new route",
-		description: "Creates a new route for the authenticated user. PATs are blocked; route creation lands with #170.",
+		description:
+			"Creates a new route for the authenticated user. PAT callers need `write` scope (#170) and must set X-Routess-Confirm: true when creating with `visibility: public`, mirroring the PATCH gate.",
 	})
 	@ApiBody({ type: CreateRouteDto })
 	@ApiResponse({ status: 201, description: "Route created successfully", type: RouteResponseDto })
 	@ApiResponse({ status: 400, description: "Invalid route data" })
 	@ApiResponse({ status: 401, description: "Unauthorized" })
+	@ApiResponse({
+		status: 428,
+		description:
+			"PAT-authenticated create with `visibility: public` without `X-Routess-Confirm: true`. Surface the `impact` field to the user and retry with the header set.",
+	})
+	@ApiHeader({
+		name: "X-Routess-Confirm",
+		required: false,
+		description:
+			"Set to `true` when a PAT call creates a route with `visibility: public`. Cookie sessions ignore this header.",
+	})
 	@ThrottleModerate()
+	@RequireScope("write")
+	@RequireConfirmation((req) =>
+		(req.body as { visibility?: string } | undefined)?.visibility === "public"
+			? "Create a new route that is publicly visible from the start. Once public the URL may be archived externally; reverting to private does not unshare."
+			: null,
+	)
 	@Post()
 	create(@Body() createRouteDto: CreateRouteDto, @CurrentUser() user: AuthenticatedUser): Promise<RouteResponseDto> {
 		return this.routesService.create(createRouteDto, user.id);
@@ -124,11 +143,11 @@ export class RoutesController {
 		return this.routesService.findPublicByOwner(userId);
 	}
 
-	@UseGuards(OptionalJwtAuthGuard)
+	@UseGuards(OptionalUnifiedAuthGuard)
 	@ApiOperation({
 		summary: "Download route as GPX",
 		description:
-			"Returns the route as a GPX 1.1 document with a routess-namespaced extension carrying per-waypoint Type. `ref` is a numeric route ID (owner: any visibility; non-owners: public only) or a 32-hex share token (public and unlisted). Private routes return 404 to non-owners. Unlisted responses carry X-Robots-Tag: noindex.",
+			"Returns the route as a GPX 1.1 document with a routess-namespaced extension carrying per-waypoint Type. `ref` is a numeric route ID (owner: any visibility; non-owners: public only) or a 32-hex share token (public and unlisted). Private routes return 404 to non-owners. Owners authenticate with a cookie session or any PAT. Unlisted responses carry X-Robots-Tag: noindex.",
 	})
 	@ApiParam({ name: "ref", description: "Route ID or 32-hex share token", type: "string" })
 	@ApiResponse({ status: 200, description: "GPX document" })
@@ -158,11 +177,11 @@ export class RoutesController {
 		res.send(gpx);
 	}
 
-	@UseGuards(OptionalJwtAuthGuard)
+	@UseGuards(OptionalUnifiedAuthGuard)
 	@ApiOperation({
 		summary: "Get route by ID or share token",
 		description:
-			"Returns the route. `ref` is either a numeric route ID (owners see any visibility; non-owners only public, so sequential IDs can't be walked to discover unlisted routes) or a 32-hex share token (serves public and unlisted to anyone with the link). Private routes return 404 to non-owners. PATs hit this through the cookie-or-bearer JWT path; PAT-as-Bearer is not yet supported here (use GET /routes to list and filter).",
+			"Returns the route. `ref` is either a numeric route ID (owners see any visibility; non-owners only public, so sequential IDs can't be walked to discover unlisted routes) or a 32-hex share token (serves public and unlisted to anyone with the link). Private routes return 404 to non-owners. Owners authenticate with a cookie session or any PAT.",
 	})
 	@ApiParam({ name: "ref", description: "Route ID or 32-hex share token", type: "string" })
 	@ApiResponse({ status: 200, description: "Route retrieved successfully", type: RouteResponseDto })

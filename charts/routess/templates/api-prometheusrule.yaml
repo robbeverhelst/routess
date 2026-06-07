@@ -1,0 +1,78 @@
+{{- if .Values.monitoring.prometheusRule.enabled }}
+{{- $t := .Values.monitoring.prometheusRule.thresholds }}
+{{- $job := printf "%s-api" (include "routess.fullname" .) }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "routess.fullname" . }}-api
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "routess.api.labels" . | nindent 4 }}
+    {{- with .Values.monitoring.prometheusRule.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  groups:
+    - name: routess-api
+      rules:
+        - alert: RoutessApiDown
+          expr: max(up{job="{{ $job }}"}) == 0 or absent(up{job="{{ $job }}"})
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "routess API is down"
+            description: "No API target has been scrapeable for 5 minutes."
+        - alert: RoutessApiHighErrorRate
+          expr: |
+            sum(rate(http_request_errors_total{status_code=~"5.."}[5m]))
+              / sum(rate(http_requests_total[5m])) * 100 > {{ $t.errorRatePercent }}
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "routess API 5xx error rate above {{ $t.errorRatePercent }}%"
+            description: "{{`{{ $value | printf \"%.1f\" }}`}}% of requests returned 5xx over the last 5 minutes."
+        - alert: RoutessApiHighLatency
+          expr: |
+            histogram_quantile(0.95, sum by (le) (rate(http_request_duration_ms_bucket[5m])))
+              > {{ $t.latencyP95Ms }}
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "routess API p95 latency above {{ $t.latencyP95Ms }}ms"
+            description: "p95 request latency is {{`{{ $value | printf \"%.0f\" }}`}}ms over the last 5 minutes."
+        - alert: RoutessAuthFailureSpike
+          expr: sum(increase(auth_login_total{result!="success"}[5m])) > {{ $t.authFailuresPer5m }}
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Spike in failed logins"
+            description: "{{`{{ $value | printf \"%.0f\" }}`}} failed login attempts in the last 5 minutes."
+        - alert: RoutessExternalProviderErrors
+          expr: |
+            sum by (provider) (rate(external_request_duration_ms_count{status="error"}[10m]))
+              / sum by (provider) (rate(external_request_duration_ms_count[10m])) * 100
+              > {{ $t.providerErrorRatePercent }}
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "External provider {{`{{ $labels.provider }}`}} failing"
+            description: "{{`{{ $value | printf \"%.1f\" }}`}}% of requests to {{`{{ $labels.provider }}`}} failed over the last 10 minutes."
+        - alert: RoutessDbHighLatency
+          expr: |
+            histogram_quantile(0.95, sum by (le) (rate(db_query_duration_ms_bucket[5m])))
+              > {{ $t.dbLatencyP95Ms }}
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Database p95 query latency above {{ $t.dbLatencyP95Ms }}ms"
+            description: "p95 DB query latency is {{`{{ $value | printf \"%.0f\" }}`}}ms over the last 5 minutes."
+        {{- with .Values.monitoring.prometheusRule.additionalRules }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+{{- end }}

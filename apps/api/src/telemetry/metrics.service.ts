@@ -6,7 +6,12 @@ import type { Counter, Histogram, UpDownCounter } from "@opentelemetry/api";
 import { Route } from "../entities/route.entity";
 import { User } from "../entities/user.entity";
 import { setDbMetricsRecorder } from "./db-metrics-recorder";
-import type { AuthLoginResult, AuthProvider, SessionRevocationReason } from "./domain-events";
+import type {
+	AuthLoginResult,
+	AuthProvider,
+	RouteGenerationCompletedEvent,
+	SessionRevocationReason,
+} from "./domain-events";
 import type { Metrics } from "./metrics.interface";
 import { getMeter } from "./tracing";
 
@@ -43,6 +48,12 @@ export class MetricsService implements OnModuleInit, OnModuleDestroy, Metrics {
 
 	// External request metrics
 	private externalRequestDuration!: Histogram;
+
+	// Route generation metrics (issue #136: quality, latency, provider calls)
+	private routeGenerations!: Counter;
+	private routeGenerationDuration!: Histogram;
+	private routeGenerationValhallaCalls!: Histogram;
+	private routeGenerationOverlapPct!: Histogram;
 
 	async onModuleInit() {
 		await this.initializeMetrics();
@@ -105,6 +116,24 @@ export class MetricsService implements OnModuleInit, OnModuleDestroy, Metrics {
 		this.externalRequestDuration = this.meter.createHistogram("external_request_duration_ms", {
 			description: "Duration of outbound requests to third-party providers",
 			unit: "ms",
+		});
+
+		this.routeGenerations = this.meter.createCounter("route_generations_total", {
+			description: "Total route generation requests by outcome and failure code",
+		});
+
+		this.routeGenerationDuration = this.meter.createHistogram("route_generation_duration_ms", {
+			description: "End-to-end duration of route generation requests",
+			unit: "ms",
+		});
+
+		this.routeGenerationValhallaCalls = this.meter.createHistogram("route_generation_valhalla_calls", {
+			description: "Valhalla calls consumed per generation request",
+		});
+
+		this.routeGenerationOverlapPct = this.meter.createHistogram("route_generation_overlap_pct", {
+			description: "Best candidate Overlap percentage per generation (quality watch: lower is better)",
+			unit: "%",
 		});
 
 		// Initialize counters with historical data
@@ -187,5 +216,19 @@ export class MetricsService implements OnModuleInit, OnModuleDestroy, Metrics {
 
 	recordExternalRequest(provider: string, status: "success" | "error", duration: number) {
 		this.externalRequestDuration.record(duration, { provider, status });
+	}
+
+	recordRouteGeneration(event: RouteGenerationCompletedEvent) {
+		const labels = {
+			outcome: event.outcome,
+			activity: event.activity,
+			...(event.failureCode ? { failure_code: event.failureCode } : {}),
+		};
+		this.routeGenerations.add(1, labels);
+		this.routeGenerationDuration.record(event.durationMs, { outcome: event.outcome });
+		this.routeGenerationValhallaCalls.record(event.valhallaCalls, { outcome: event.outcome });
+		if (event.outcome === "succeeded" && typeof event.bestOverlapPct === "number") {
+			this.routeGenerationOverlapPct.record(event.bestOverlapPct);
+		}
 	}
 }
