@@ -82,6 +82,38 @@ describe("PlacesService.reverseGeocodePlace", () => {
 		expect(await makeService().reverseGeocodePlace([3.72, 51.05])).toBeNull();
 	});
 
+	it("serves a repeated lookup from the geocode cache without calling Mapbox", async () => {
+		// EM fork backed by an in-memory store so the second call hits the cache.
+		const store = new Map<string, unknown>();
+		const config = { geocoding: { mapboxToken: "pk.test", referer: "https://routess.com" } } as AppConfig;
+		const em = {
+			fork: () => ({
+				findOne: async (_entity: unknown, where: { key: string }) => store.get(where.key) ?? null,
+				upsert: async (_entity: unknown, row: { key: string }) => {
+					store.set(row.key, row);
+				},
+			}),
+		} as unknown as EntityManager;
+		const metrics = {
+			recordCacheEvent: () => undefined,
+			recordProviderCall: () => undefined,
+		} as unknown as MetricsService;
+		const service = new PlacesService(em, config, metrics);
+
+		let fetchCalls = 0;
+		stubFetch(() => {
+			fetchCalls++;
+			return new Response(JSON.stringify({ features: [{ text: "Gent", context: [] }] }));
+		});
+
+		const first = await service.reverseGeocodePlace([3.72, 51.05]);
+		const second = await service.reverseGeocodePlace([3.72, 51.05]);
+
+		expect(first).toEqual({ city: "Gent", region: undefined, countryCode: undefined });
+		expect(second).toEqual(first);
+		expect(fetchCalls).toBe(1);
+	});
+
 	it("is disabled without a token and never calls fetch", async () => {
 		let called = false;
 		stubFetch(() => {
