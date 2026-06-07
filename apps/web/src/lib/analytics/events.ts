@@ -103,6 +103,14 @@ export type ProductEvent =
 	| { name: "collection_deleted"; properties: EmptyProps }
 	| { name: "collection_share_link_copied"; properties: { visibility: RouteVisibility } }
 
+	// Discover
+	| { name: "discover_opened"; properties: EmptyProps }
+	| { name: "discover_filtered"; properties: { filter_type: "activity" | "distance" } }
+	| {
+			name: "discover_route_opened";
+			properties: { activity: RouteActivity | null; has_place: boolean; result_count_bucket: string };
+	  }
+
 	// Social (issue #245)
 	| { name: "profile_followed"; properties: { source: "profile" | "search" | "public_route" | "feed" } }
 	| { name: "profile_unfollowed"; properties: EmptyProps }

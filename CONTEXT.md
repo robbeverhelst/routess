@@ -180,6 +180,7 @@ _Avoid_: createdAt (a Route is usually born `private`; creation and publication 
 - A **Route** has its own **RoutingPreferences** (which produced its RoutePath) and a **Provenance** (how it was made). Both are immutable inputs to the Route; `Provenance` never changes after creation.
 - A **RouteDraft** is an in-progress **Route** held in `routingStore`. Its mode is either `unsaved` (will become a new Route on save) or `editing(routeId)` (bound to a saved Route, will PATCH it on save).
 - An **Admin** is a **User** with elevated access; admin status is derived from the `ADMIN_EMAILS` env var at login time, not granted in-app.
+- A **Route** has at most one **Place** (city + region + country), derived from its **RoutePath** start, never user-edited. **Discover** and **RegionalHub** query Routes through it.
 
 ## Example dialogue
 
@@ -215,6 +216,14 @@ _Avoid_: published, listed, searchable.
 **RegionalHub**:
 A curated landing page per (activity, place) pair, e.g. "fietsroutes in Gent", listing that place's Indexable Routes with local context. Lives on the landing hosts with the keyword-in-URL localized per ccTLD (`routess.be/fietsroutes/gent`, `routess.com/cycling-routes/ghent`, hreflang-paired). A RegionalHub exists only once its place has at least 5 Indexable Routes; below that threshold the page must not exist (thin-content rule).
 _Avoid_: city page, SEO page, directory.
+
+**Place** (of a Route):
+The locality a Route belongs to: city, region, and country code (e.g. "Gent, Oost-Vlaanderen, BE"), derived by reverse-geocoding the RoutePath's start coordinate when a Route is saved or its start moves. Derivation is asynchronous and fail-open: a Route can briefly exist without a Place; the idempotent backfill command fills gaps and doubles as the retry path. Stored in the local language as the geocoder returns it. Place feeds the RegionalHub query and Discover's place labels; it is never user-editable.
+_Avoid_: location, area, geotag. "City" and "region" name the components, not the concept.
+
+**Discover**:
+The in-app browsing surface over `public` Routes: all public Routes whose bounding box intersects the current map viewport, newest **PublishedAt** first, filterable by activity and distance band. Eligibility is `public`, full stop — **Indexable governs search engines only** and never hides a public Route from Discover. Anonymous-accessible. Like the **Feed**, it is a derived view: nothing is stored per viewer, so a Route flipped back to `private` vanishes instantly.
+_Avoid_: explore, browse, search, marketplace, "nearby routes" (the viewport, not the user's position, is the query).
 
 ## Product analytics
 

@@ -100,6 +100,16 @@ A generated route that gets *saved* fires `route_created` with `creation_source:
 
 `library_searched` must not fire on every keystroke — debounce at the input layer.
 
+## Discover
+
+| Event | When | Properties |
+|---|---|---|
+| `discover_opened` | Discover panel opened (nav tab or command palette) | — |
+| `discover_filtered` | Activity or distance filter applied in Discover | `filter_type` |
+| `discover_route_opened` | Discover card clicked through to the public route page | `activity`, `has_place`, `result_count_bucket` |
+
+Viewport moves deliberately do not fire events — panning is continuous, not discrete intent, and request volume already shows up in operational metrics.
+
 ## Collections
 
 | Event | When | Properties |

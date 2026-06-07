@@ -1,7 +1,9 @@
 import { wrap } from "@mikro-orm/core";
+import { buildRouteSlugId, downsampleCoordinates } from "@routess/core";
 import type { Route } from "../entities/route.entity";
 import type { User } from "../entities/user.entity";
 import { toPublicUserDto } from "../users/user.mapper";
+import type { PublicRouteSummaryDto } from "./dto/public-route-summary.dto";
 import type { RouteResponseDto } from "./dto/route-response.dto";
 
 // Routes can be served to non-owners (public/unlisted), so the embedded
@@ -26,11 +28,46 @@ export function toRouteResponseDto(route: Route, analyticsSalt: string): RouteRe
 		elevationGain: route.elevationGain,
 		startAddress: route.startAddress,
 		endAddress: route.endAddress,
+		placeCity: route.placeCity,
+		placeRegion: route.placeRegion,
+		placeCountryCode: route.placeCountryCode,
 		routingPreferences: route.routingPreferences ?? null,
 		provenance: route.provenance,
 		shareToken: route.shareToken,
 		user: toPublicUserDto(serializedUser, analyticsSalt),
 		createdAt: route.createdAt.toISOString(),
 		updatedAt: route.updatedAt.toISOString(),
+	};
+}
+
+// Cards and map previews don't need the full RoutePath; this keeps a 50-item
+// Discover page at a sane payload size.
+export const PUBLIC_SUMMARY_GEOMETRY_MAX_POINTS = 80;
+
+export function toPublicRouteSummaryDto(
+	route: Route,
+	analyticsSalt: string,
+	options: { includeGeometry: boolean },
+): PublicRouteSummaryDto {
+	const serializedUser = wrap(route.user).toJSON() as SerializableUser;
+	return {
+		id: route.id,
+		name: route.name,
+		distance: route.distance,
+		updatedAt: route.updatedAt.toISOString(),
+		// Listing only ever serves public routes, so the id form is correct.
+		slugId: buildRouteSlugId(route.name, route.id),
+		activity: route.activity,
+		elevationGain: route.elevationGain,
+		tags: route.tags,
+		publishedAt: route.publishedAt?.toISOString(),
+		placeCity: route.placeCity,
+		placeRegion: route.placeRegion,
+		placeCountryCode: route.placeCountryCode,
+		geometry:
+			options.includeGeometry && route.geometry?.length
+				? downsampleCoordinates(route.geometry, PUBLIC_SUMMARY_GEOMETRY_MAX_POINTS)
+				: undefined,
+		user: toPublicUserDto(serializedUser, analyticsSalt),
 	};
 }

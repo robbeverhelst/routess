@@ -666,9 +666,19 @@ export const en: Record<string, string> = {
 	"social.share.send": "Send route",
 	"social.share.unlistAndSend": "Make unlisted & send",
 
-	// Stub panels (Discover, Activity)
-	"stub.discover.title": "Discover routes near you",
-	"stub.discover.body": "Local route ranking, popular destinations, and curated picks land with the discovery backend.",
+	// Discover
+	"discover.beta": "Beta",
+	"discover.notice":
+		"Discover is brand new and the public route collection is still growing. Publish your own routes to put your area on the map.",
+	"discover.notice.dismiss": "Dismiss",
+	"discover.loading": "Finding routes…",
+	"discover.inView": "in view",
+	"discover.empty.title": "No public routes here yet",
+	"discover.empty.body": "Pan or zoom out to look around. Public routes from the community show up here.",
+	"discover.empty.publishCta": "Publish one of your routes",
+	"discover.empty.anonBody": "Pan or zoom out to look around, or sign in to publish your own routes here.",
+
+	// Stub panels (Activity)
 	"stub.activity.title": "Your activity feed",
 	"stub.activity.body":
 		"Your recorded sessions, distance trends, and pace summaries arrive with the activities backend.",

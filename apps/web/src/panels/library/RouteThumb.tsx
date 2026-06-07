@@ -4,13 +4,17 @@ import { buildMapboxStaticPreviewUrl } from "@/lib/utils/mapboxStaticPreview";
 import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 import { RDS_COLORS } from "../../components/primitives";
 
+// Only the fields the thumb reads, so geometry-only summaries (Discover)
+// render the same preview as full library routes.
+type ThumbRoute = Pick<ApiRoute, "id" | "geometry"> & { waypoints?: ApiRoute["waypoints"] };
+
 function MiniRouteSvg({
 	route,
 	color,
 	width,
 	height,
 }: {
-	route: ApiRoute;
+	route: ThumbRoute;
 	color: string;
 	width: number;
 	height: number;
@@ -94,7 +98,7 @@ export function RouteThumb({
 	width,
 	height,
 }: {
-	route: ApiRoute;
+	route: ThumbRoute;
 	color?: string;
 	width: number;
 	height: number;

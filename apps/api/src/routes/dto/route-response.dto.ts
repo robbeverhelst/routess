@@ -86,6 +86,15 @@ export class RouteResponseDto {
 	@ApiPropertyOptional()
 	endAddress?: string;
 
+	@ApiPropertyOptional({ description: "Derived Place city (CONTEXT.md 'Place'). Server-derived, never user-edited." })
+	placeCity?: string;
+
+	@ApiPropertyOptional({ description: "Derived Place region." })
+	placeRegion?: string;
+
+	@ApiPropertyOptional({ description: "Derived Place ISO 3166-1 alpha-2 country code." })
+	placeCountryCode?: string;
+
 	@ApiPropertyOptional({
 		description: "Inputs that produced this route's geometry. Null for legacy / GPX-imported routes.",
 		type: RoutingPreferencesDto,

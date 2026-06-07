@@ -1,12 +1,13 @@
-import { EntityManager, EntityRepository } from "@mikro-orm/core";
+import { EntityManager, EntityRepository, type FilterQuery, QueryOrder } from "@mikro-orm/core";
 import { InjectRepository } from "@mikro-orm/nestjs";
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { EventEmitter2 } from "@nestjs/event-emitter";
-import { INDEXABLE_MIN_DISTANCE_METERS, isRouteIndexable } from "@routess/core";
+import { INDEXABLE_MIN_DISTANCE_METERS, isRouteIndexable, routeBoundingBox } from "@routess/core";
 import type { AppConfig } from "../config/app-config";
 import { APP_CONFIG } from "../config/config.module";
 import { Route } from "../entities/route.entity";
 import { User } from "../entities/user.entity";
+import { PlacesService } from "../places/places.service";
 import {
 	ROUTE_CREATED,
 	ROUTE_DELETED,
@@ -15,9 +16,10 @@ import {
 } from "../telemetry/domain-events";
 import type { CreateRouteDto } from "./dto/create-route.dto";
 import type { PublicRouteSummaryDto } from "./dto/public-route-summary.dto";
+import { type PublicRoutesQueryDto, parseBbox } from "./dto/public-routes-query.dto";
 import type { RouteResponseDto } from "./dto/route-response.dto";
 import type { UpdateRouteDto } from "./dto/update-route.dto";
-import { toRouteResponseDto } from "./route.mapper";
+import { toPublicRouteSummaryDto, toRouteResponseDto } from "./route.mapper";
 
 @Injectable()
 export class RoutesService {
@@ -30,10 +32,22 @@ export class RoutesService {
 		private readonly events: EventEmitter2,
 		@Inject(APP_CONFIG)
 		private readonly config: AppConfig,
+		private readonly places: PlacesService,
 	) {}
 
 	private toResponseDto(route: Route): RouteResponseDto {
 		return toRouteResponseDto(route, this.config.analytics.salt);
+	}
+
+	// Recomputes the persisted bbox (ADR 0030) from the route's geometry,
+	// falling back to waypoint coords for direct-only routes.
+	private applyBbox(route: Route): void {
+		const coords = route.geometry?.length ? route.geometry : route.waypoints.map((w) => w.coord);
+		const box = routeBoundingBox(coords);
+		route.bboxMinLat = box?.minLat;
+		route.bboxMaxLat = box?.maxLat;
+		route.bboxMinLng = box?.minLng;
+		route.bboxMaxLng = box?.maxLng;
 	}
 
 	async create(createRouteDto: CreateRouteDto, userId: number): Promise<RouteResponseDto> {
@@ -50,9 +64,12 @@ export class RoutesService {
 		if (route.visibility === "public") {
 			route.publishedAt = new Date();
 		}
+		this.applyBbox(route);
 		await this.em.persist(route).flush();
 		await this.em.populate(route, ["user"]);
 		this.events.emit(ROUTE_CREATED, { userId } satisfies RouteCreatedEvent);
+		// Fire-and-forget: Place is async and fail-open (CONTEXT.md "Place").
+		void this.places.derivePlaceForRoute(route.id);
 		return this.toResponseDto(route);
 	}
 
@@ -93,26 +110,66 @@ export class RoutesService {
 		return this.toResponseDto(route);
 	}
 
-	// Indexable public Routes for the landing sitemap and future RegionalHubs.
-	// SQL prefilters the cheap conditions; the canonical gate (isRouteIndexable
-	// in @routess/core) decides, so landing and API can never disagree. The
-	// in-memory window is acceptable while the indexable corpus is small.
-	async findIndexablePublic(limit: number, offset: number): Promise<{ items: PublicRouteSummaryDto[]; total: number }> {
-		const candidates = await this.routeRepository.find(
-			{ visibility: "public", distance: { $gte: INDEXABLE_MIN_DISTANCE_METERS } },
-			{
-				fields: ["id", "name", "distance", "description", "tags", "visibility", "updatedAt"],
-				orderBy: { updatedAt: "DESC" },
-				limit: 5000,
-			},
-		);
+	// Public route listing behind two gates (CONTEXT.md "Discover"):
+	// - indexable: the SEO surface (landing sitemap, future RegionalHubs).
+	//   SQL prefilters the cheap conditions; the canonical gate
+	//   (isRouteIndexable in @routess/core) decides, so landing and API can
+	//   never disagree. The in-memory window is acceptable while the
+	//   indexable corpus is small.
+	// - public: the in-app Discover surface. Every public Route qualifies;
+	//   ordered by PublishedAt (the domain's discovery ordering), with
+	//   downsampled geometry for map previews.
+	async findPublicListing(
+		query: PublicRoutesQueryDto,
+		limit: number,
+		offset: number,
+	): Promise<{ items: PublicRouteSummaryDto[]; total: number }> {
+		const gate = query.gate ?? "indexable";
+		const where: FilterQuery<Route> = { visibility: "public" };
+		if (query.activity) where.activity = query.activity;
+		// Case-insensitive exact match: geocoder casing should not leak into URLs.
+		if (query.placeCity) where.placeCity = { $ilike: query.placeCity.replace(/[%_\\]/g, (c) => `\\${c}`) };
+		if (query.minDistance !== undefined || query.maxDistance !== undefined) {
+			where.distance = {
+				...(query.minDistance !== undefined ? { $gte: query.minDistance } : {}),
+				...(query.maxDistance !== undefined ? { $lte: query.maxDistance } : {}),
+			};
+		}
+		if (query.bbox) {
+			// Viewport overlap on the persisted bbox columns (ADR 0030).
+			const view = parseBbox(query.bbox);
+			where.bboxMinLat = { $lte: view.maxLat };
+			where.bboxMaxLat = { $gte: view.minLat };
+			where.bboxMinLng = { $lte: view.maxLng };
+			where.bboxMaxLng = { $gte: view.minLng };
+		}
+
+		if (gate === "public") {
+			const [routes, total] = await this.routeRepository.findAndCount(where, {
+				populate: ["user"],
+				orderBy: { publishedAt: QueryOrder.DESC_NULLS_LAST, id: "DESC" },
+				limit,
+				offset,
+			});
+			const items = routes.map((route) =>
+				toPublicRouteSummaryDto(route, this.config.analytics.salt, { includeGeometry: true }),
+			);
+			return { items, total };
+		}
+
+		where.distance = {
+			...(where.distance as object | undefined),
+			$gte: Math.max(query.minDistance ?? 0, INDEXABLE_MIN_DISTANCE_METERS),
+		};
+		const candidates = await this.routeRepository.find(where, {
+			populate: ["user"],
+			orderBy: { updatedAt: "DESC" },
+			limit: 5000,
+		});
 		const indexable = candidates.filter((route) => isRouteIndexable(route));
-		const items = indexable.slice(offset, offset + limit).map((route) => ({
-			id: route.id,
-			name: route.name,
-			distance: route.distance,
-			updatedAt: route.updatedAt instanceof Date ? route.updatedAt.toISOString() : String(route.updatedAt),
-		}));
+		const items = indexable
+			.slice(offset, offset + limit)
+			.map((route) => toPublicRouteSummaryDto(route, this.config.analytics.salt, { includeGeometry: false }));
 		return { items, total: indexable.length };
 	}
 
@@ -129,14 +186,23 @@ export class RoutesService {
 
 	async update(id: number, updateRouteDto: UpdateRouteDto, userId: number): Promise<RouteResponseDto> {
 		const route = await this.findOwnedRouteOrFail(id, userId);
+		const previousStart = (route.geometry?.[0] ?? route.waypoints[0]?.coord)?.join(",");
 		this.routeRepository.assign(route, updateRouteDto);
 		// PublishedAt: stamped on the first transition to public, never bumped
 		// afterward — re-publishing restores feed position (CONTEXT.md).
 		if (route.visibility === "public" && !route.publishedAt) {
 			route.publishedAt = new Date();
 		}
+		const geometryChanged = updateRouteDto.geometry !== undefined || updateRouteDto.waypoints !== undefined;
+		if (geometryChanged) {
+			this.applyBbox(route);
+		}
 		await this.em.persist(route).flush();
 		await this.em.populate(route, ["user"]);
+		const newStart = (route.geometry?.[0] ?? route.waypoints[0]?.coord)?.join(",");
+		if (!route.placeCity || newStart !== previousStart) {
+			void this.places.derivePlaceForRoute(route.id);
+		}
 		return this.toResponseDto(route);
 	}
 

@@ -10,9 +10,7 @@ import { UserAvatar } from "./UserAvatar";
 const NAV: { key: RedesignContext; icon: React.ComponentType<{ size?: number }>; labelKey: string }[] = [
 	{ key: "plan", icon: I.route, labelKey: "nav.plan" },
 	{ key: "library", icon: I.library, labelKey: "nav.library" },
-	// Discover is hidden until the feature ships; a top-level tab must not
-	// open a "coming soon" stub.
-	// { key: "discover", icon: I.explore, labelKey: "nav.discover" },
+	{ key: "discover", icon: I.explore, labelKey: "nav.discover" },
 	{ key: "social", icon: I.social, labelKey: "nav.social" },
 	{ key: "settings", icon: I.settings, labelKey: "nav.settings" },
 ];

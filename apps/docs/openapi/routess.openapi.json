@@ -790,8 +790,8 @@
 		},
 		"/routes/public": {
 			"get": {
-				"description": "Returns public Routes that clear the Indexable quality gate (see CONTEXT.md), newest-updated first. Anonymous; feeds the landing sitemap and discovery surfaces. Total count in X-Total-Count.",
-				"operationId": "RoutesController_findIndexablePublic",
+				"description": "Anonymous public route listing behind two gates. gate=indexable (default): Routes clearing the Indexable quality gate (see CONTEXT.md), newest-updated first; feeds the landing sitemap. gate=public: every public Route, newest-published first with downsampled geometry; the in-app Discover surface. Filterable by bbox (viewport overlap), activity, placeCity, and distance bounds. Total count in X-Total-Count.",
+				"operationId": "RoutesController_findPublic",
 				"parameters": [
 					{
 						"name": "limit",
@@ -815,6 +815,63 @@
 							"default": 0,
 							"type": "number"
 						}
+					},
+					{
+						"name": "gate",
+						"required": false,
+						"in": "query",
+						"description": "Eligibility gate: 'indexable' (SEO surfaces, default) or 'public' (in-app Discover).",
+						"schema": {
+							"default": "indexable",
+							"type": "string",
+							"enum": ["indexable", "public"]
+						}
+					},
+					{
+						"name": "bbox",
+						"required": false,
+						"in": "query",
+						"description": "Viewport filter as 'minLng,minLat,maxLng,maxLat'. Matches routes whose bounding box overlaps it (ADR 0029).",
+						"schema": {
+							"example": "3.6,50.9,3.8,51.1",
+							"type": "string"
+						}
+					},
+					{
+						"name": "activity",
+						"required": false,
+						"in": "query",
+						"schema": {
+							"type": "string",
+							"enum": ["run", "cycle", "walk"]
+						}
+					},
+					{
+						"name": "placeCity",
+						"required": false,
+						"in": "query",
+						"description": "Filter by derived Place city (case-insensitive exact match).",
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"name": "minDistance",
+						"required": false,
+						"in": "query",
+						"description": "Minimum route distance in meters.",
+						"schema": {
+							"type": "number"
+						}
+					},
+					{
+						"name": "maxDistance",
+						"required": false,
+						"in": "query",
+						"description": "Maximum route distance in meters.",
+						"schema": {
+							"type": "number"
+						}
 					}
 				],
 				"responses": {
@@ -832,7 +889,7 @@
 						}
 					}
 				},
-				"summary": "List indexable public routes",
+				"summary": "List public routes",
 				"tags": ["routes"]
 			}
 		},
@@ -3604,6 +3661,18 @@
 					"endAddress": {
 						"type": "string"
 					},
+					"placeCity": {
+						"type": "string",
+						"description": "Derived Place city (CONTEXT.md 'Place'). Server-derived, never user-edited."
+					},
+					"placeRegion": {
+						"type": "string",
+						"description": "Derived Place region."
+					},
+					"placeCountryCode": {
+						"type": "string",
+						"description": "Derived Place ISO 3166-1 alpha-2 country code."
+					},
 					"routingPreferences": {
 						"description": "Inputs that produced this route's geometry. Null for legacy / GPX-imported routes.",
 						"allOf": [
@@ -3661,6 +3730,50 @@
 					},
 					"updatedAt": {
 						"type": "string"
+					},
+					"slugId": {
+						"type": "string",
+						"description": "Slug-id path segment of the public route page, e.g. 'sunday-loop-42'."
+					},
+					"activity": {
+						"type": "string",
+						"enum": ["run", "cycle", "walk"]
+					},
+					"elevationGain": {
+						"type": "number",
+						"description": "Elevation gain in meters"
+					},
+					"tags": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					},
+					"publishedAt": {
+						"type": "string",
+						"description": "First transition to public (CONTEXT.md 'PublishedAt')."
+					},
+					"placeCity": {
+						"type": "string",
+						"description": "Derived Place city (CONTEXT.md 'Place')."
+					},
+					"placeRegion": {
+						"type": "string",
+						"description": "Derived Place region."
+					},
+					"placeCountryCode": {
+						"type": "string",
+						"description": "Derived Place ISO 3166-1 alpha-2 country code."
+					},
+					"geometry": {
+						"description": "Downsampled RoutePath as [lng, lat] pairs, suitable for thumbnails and map previews.",
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					},
+					"user": {
+						"$ref": "#/components/schemas/PublicUserDto"
 					}
 				},
 				"required": ["id", "name", "updatedAt"]

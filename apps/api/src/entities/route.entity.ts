@@ -11,6 +11,8 @@ export type { Provenance, RouteActivity, RouteVisibility, RoutingPreferences, Wa
 @Index({ properties: ["user"] })
 @Index({ properties: ["createdAt"] })
 @Index({ properties: ["user", "createdAt"] })
+@Index({ properties: ["visibility", "publishedAt"] })
+@Index({ properties: ["placeCity"] })
 export class Route extends BaseEntity {
 	@PrimaryKey()
 	id!: number;
@@ -47,6 +49,31 @@ export class Route extends BaseEntity {
 
 	@Property({ type: "float", nullable: true })
 	elevationGain?: number;
+
+	// Bounding box of the RoutePath, recomputed on every save with geometry.
+	// Plain float columns instead of PostGIS by design; see ADR 0030.
+	@Property({ type: "float", nullable: true })
+	bboxMinLat?: number;
+
+	@Property({ type: "float", nullable: true })
+	bboxMaxLat?: number;
+
+	@Property({ type: "float", nullable: true })
+	bboxMinLng?: number;
+
+	@Property({ type: "float", nullable: true })
+	bboxMaxLng?: number;
+
+	// Place: locality derived by reverse-geocoding the RoutePath start, async
+	// and fail-open (CONTEXT.md "Place"). Never user-edited, unlike startAddress.
+	@Property({ nullable: true })
+	placeCity?: string;
+
+	@Property({ nullable: true })
+	placeRegion?: string;
+
+	@Property({ nullable: true })
+	placeCountryCode?: string;
 
 	@Property({ nullable: true })
 	startAddress?: string;

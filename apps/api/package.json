@@ -32,7 +32,8 @@
 		"db:migration:create": "bun --bun mikro-orm migration:create",
 		"db:migration:up": "bun --bun mikro-orm migration:up",
 		"db:schema:create": "bun --bun mikro-orm schema:create",
-		"openapi:generate": "bun src/openapi.ts"
+		"openapi:generate": "bun src/openapi.ts",
+		"backfill:places": "bun src/scripts/backfill-places.ts"
 	},
 	"dependencies": {
 		"@mikro-orm/cli": "^7.0.0",
