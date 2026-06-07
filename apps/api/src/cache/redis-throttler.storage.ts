@@ -35,6 +35,13 @@ export class RedisThrottlerStorage implements ThrottlerStorage {
 
 	constructor(private readonly cache: CacheService) {}
 
+	// The test harness resets rate-limit buckets between tests via
+	// `throttlerStorage.storage.clear()`. When Redis is disabled (tests),
+	// buckets live in the fallback; proxy its map so that reset keeps working.
+	get storage(): Map<string, unknown> {
+		return this.fallback.storage as unknown as Map<string, unknown>;
+	}
+
 	async increment(
 		key: string,
 		ttl: number,

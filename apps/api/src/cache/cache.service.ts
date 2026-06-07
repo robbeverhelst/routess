@@ -29,7 +29,13 @@ export class CacheService implements OnModuleDestroy {
 		this.redis = config.cache.redisUrl
 			? new Redis(config.cache.redisUrl, {
 					maxRetriesPerRequest: 1,
-					enableOfflineQueue: false,
+					// Queue commands during the brief startup window before the
+					// socket connects (otherwise every early request fails open
+					// to a cache miss). commandTimeout bounds the wait so a
+					// genuinely-down Redis still degrades fast instead of hanging.
+					enableOfflineQueue: true,
+					connectTimeout: 2000,
+					commandTimeout: 1000,
 				})
 			: null;
 		this.redis?.on("error", (err: Error) => this.logger.warn(`Redis error: ${err.message}`));
