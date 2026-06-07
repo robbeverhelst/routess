@@ -5,7 +5,9 @@ import type { HttpClient, RequestOptions } from "../types";
 // logs/traces, so a browser error can be joined to the server side.
 // crypto.randomUUID exists in browsers, React Native (polyfilled), and Bun;
 // when absent the API generates one instead and we read it off the response.
-const generateRequestId = (): string | undefined => {
+// Exported for callers that fetch the API outside this client (e.g. the web
+// app's routing services) so their requests correlate the same way.
+export const generateRequestId = (): string | undefined => {
 	const c = globalThis.crypto;
 	return c && typeof c.randomUUID === "function" ? c.randomUUID() : undefined;
 };

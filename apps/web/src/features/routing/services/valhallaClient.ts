@@ -1,3 +1,4 @@
+import { ApiHttpError, generateRequestId } from "@routess/api-client";
 import type { Coordinate, RouteActivity, RoutingPreferences, Waypoint } from "@routess/core";
 import { estimateDuration, haversineDistance } from "@routess/core";
 import { Logger } from "@/lib/logger";
@@ -106,11 +107,17 @@ async function callApiRoute(
 		walkingSpeedKmh: options.walkingSpeedKmh,
 	};
 
+	// Same correlation scheme as the api-client: the id lands on the API's
+	// logs/traces, and the warn below carries it into GlitchTip.
+	const requestId = generateRequestId();
+
 	let response: Response;
 	try {
 		response = await fetch(ROUTE_URL, {
 			method: "POST",
-			headers: { "Content-Type": "application/json" },
+			headers: requestId
+				? { "Content-Type": "application/json", "X-Request-ID": requestId }
+				: { "Content-Type": "application/json" },
 			body: JSON.stringify(body),
 			signal: options.signal,
 			credentials: "include",
@@ -122,11 +129,12 @@ async function callApiRoute(
 
 	if (!response.ok) {
 		const text = await response.text().catch(() => "");
-		return {
-			ok: false,
-			kind: "routing",
-			error: `routing API ${response.status}${text ? `: ${text}` : ""}`,
-		};
+		const error = `routing API ${response.status}${text ? `: ${text}` : ""}`;
+		Logger.warn(
+			"[ValhallaClient] Routing request failed:",
+			new ApiHttpError(error, response.status, response.headers.get("x-request-id") ?? requestId),
+		);
+		return { ok: false, kind: "routing", error };
 	}
 
 	const data = (await response.json()) as ApiRouteResponse;
