@@ -9,8 +9,12 @@ export interface RequestWithId extends Request {
 @Injectable()
 export class RequestIdMiddleware implements NestMiddleware {
 	use(req: RequestWithId, res: Response, next: NextFunction) {
-		// Use existing request ID from header or generate new one
-		const requestId = (req.headers["x-request-id"] as string) || randomUUID();
+		// Use the client-supplied request ID when it looks sane (the api-client
+		// sends a UUID); otherwise generate one. The charset/length guard keeps
+		// arbitrary client input out of logs.
+		const header = req.headers["x-request-id"];
+		const candidate = typeof header === "string" ? header : undefined;
+		const requestId = candidate && /^[\w-]{8,64}$/.test(candidate) ? candidate : randomUUID();
 
 		// Attach to request object
 		req.id = requestId;

@@ -6,14 +6,31 @@ import { type DomainErrorPayload, isDomainErrorPayload } from "@routess/core";
 export class ApiDomainError extends Error {
 	readonly name = "ApiDomainError";
 
-	constructor(public readonly payload: DomainErrorPayload) {
+	constructor(
+		public readonly payload: DomainErrorPayload,
+		// Correlates with the API's X-Request-ID log field.
+		public readonly requestId?: string,
+	) {
 		super(payload.message);
 	}
 }
 
-// Build either an ApiDomainError (when the body is coded) or a plain Error
+// Thrown for non-ok responses without a coded domain payload.
+export class ApiHttpError extends Error {
+	readonly name = "ApiHttpError";
+
+	constructor(
+		message: string,
+		public readonly status: number,
+		public readonly requestId?: string,
+	) {
+		super(message);
+	}
+}
+
+// Build either an ApiDomainError (when the body is coded) or an ApiHttpError
 // describing the raw response. Caller has already determined !response.ok.
-export const errorFromResponse = async (response: Response): Promise<Error> => {
+export const errorFromResponse = async (response: Response, requestId?: string): Promise<Error> => {
 	let bodyText = "";
 	try {
 		bodyText = await response.text();
@@ -25,12 +42,16 @@ export const errorFromResponse = async (response: Response): Promise<Error> => {
 		try {
 			const parsed = JSON.parse(bodyText) as unknown;
 			if (isDomainErrorPayload(parsed)) {
-				return new ApiDomainError(parsed);
+				return new ApiDomainError(parsed, requestId);
 			}
 		} catch {
 			// not JSON — fall through to text error
 		}
 	}
 
-	return new Error(`API Error: ${response.status} ${response.statusText}${bodyText ? ` - ${bodyText}` : ""}`);
+	return new ApiHttpError(
+		`API Error: ${response.status} ${response.statusText}${bodyText ? ` - ${bodyText}` : ""}`,
+		response.status,
+		requestId,
+	);
 };

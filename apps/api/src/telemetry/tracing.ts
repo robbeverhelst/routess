@@ -3,6 +3,7 @@ import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentation
 import { PrometheusExporter } from "@opentelemetry/exporter-prometheus";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
 import { RuntimeNodeInstrumentation } from "@opentelemetry/instrumentation-runtime-node";
+import { resourceFromAttributes } from "@opentelemetry/resources";
 import { MeterProvider } from "@opentelemetry/sdk-metrics";
 import { NodeSDK } from "@opentelemetry/sdk-node";
 import type { AppConfig } from "../config/app-config";
@@ -23,7 +24,15 @@ export function initializeOpenTelemetry(config: AppConfig) {
 			})
 		: null;
 
+	// Surfaces as the Prometheus `target_info` series, so dashboards can
+	// answer "which version is affected" without a label on every metric.
+	const resource = resourceFromAttributes({
+		"service.name": "routess-api",
+		"service.version": config.app.version,
+	});
+
 	const meterProvider = new MeterProvider({
+		resource,
 		readers: prometheusExporter ? [prometheusExporter] : [],
 	});
 
@@ -34,6 +43,7 @@ export function initializeOpenTelemetry(config: AppConfig) {
 	}
 
 	sdk = new NodeSDK({
+		resource,
 		instrumentations: [
 			getNodeAutoInstrumentations({
 				"@opentelemetry/instrumentation-fs": {

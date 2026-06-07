@@ -88,7 +88,7 @@ export function configureApplication(app: INestApplication, config: AppConfig = 
 		credentials: true,
 		methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
 		allowedHeaders: ["Content-Type", "Authorization", "X-Request-ID", "X-Routess-Confirm"],
-		exposedHeaders: ["X-Total-Count"],
+		exposedHeaders: ["X-Total-Count", "X-Request-ID"],
 	});
 
 	if (!config.docs.enabled) {

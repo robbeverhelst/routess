@@ -35,6 +35,9 @@ import { UsersModule } from "./users/users.module";
 			useFactory: (appConfig: AppConfig) => ({
 				pinoHttp: {
 					level: process.env.LOG_LEVEL || (appConfig.app.isTest ? "silent" : "info"),
+					// Every log line carries the app version so Grafana/Loki can answer
+					// "which release is affected".
+					mixin: () => ({ version: appConfig.app.version }),
 					// The req serializer below already strips bodies/headers down to
 					// id/method/url; this list is defense-in-depth in case the
 					// serializer is ever widened.

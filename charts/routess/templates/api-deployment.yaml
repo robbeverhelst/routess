@@ -49,6 +49,10 @@ spec:
           env:
             - name: NODE_ENV
               value: {{ .Values.api.env.nodeEnv | quote }}
+            # Stamped into logs and the Prometheus target_info series so
+            # Grafana can segment by release. Falls back to the image tag.
+            - name: APP_VERSION
+              value: {{ .Values.api.env.appVersion | default .Values.api.image.tag | quote }}
             - name: PORT
               value: {{ .Values.api.env.port | quote }}
             - name: FRONTEND_URLS

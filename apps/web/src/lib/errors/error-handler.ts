@@ -106,12 +106,16 @@ class ErrorHandlerService {
 
 	private reportToSentry(appError: AppError): void {
 		const captureTarget = appError.originalError ?? new Error(appError.message);
+		// ApiDomainError/ApiHttpError carry the X-Request-ID the API logged,
+		// joining this browser event to the server-side log line and trace.
+		const requestId = (appError.originalError as { requestId?: string } | undefined)?.requestId;
 		Sentry.captureException(captureTarget, {
 			level: severityToSentryLevel(appError.severity),
 			tags: {
 				category: appError.category,
 				severity: appError.severity,
 				...(appError.context ? { context: appError.context } : {}),
+				...(requestId ? { api_request_id: requestId } : {}),
 			},
 			extra: {
 				app_error_id: appError.id,
