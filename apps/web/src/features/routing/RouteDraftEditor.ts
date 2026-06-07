@@ -1,5 +1,5 @@
 import type { Coordinate, RouteActivity, RouteBaseline, Waypoint, WaypointType } from "@routess/core";
-import { calculatePathDistance, estimateWalkingDuration } from "@routess/core";
+import { calculatePathDistance, densifyWaypointsAlongPath, estimateWalkingDuration } from "@routess/core";
 import type { GeoJSONSource, Map as MapboxMap } from "mapbox-gl";
 import { trackEvent } from "@/lib/analytics/track";
 import { type ApiRoute, apiService } from "@/lib/api";
@@ -120,7 +120,30 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 		}
 	};
 
+	// A generated draft's geometry carries more shape than its sparse control
+	// waypoints reproduce: recalculating from just start + vias would unravel
+	// the loop into plain shortest paths. Before the first mutating edit,
+	// densify: insert smart waypoints along the CURRENT RoutePath so every
+	// leg is short enough to recalculate faithfully and edits stay local.
+	// Runs before the edit's own snapshot (undo restores the densified,
+	// shape-faithful state) and is idempotent once segments are short.
+	// Returns the original→new index map for callers holding an index.
+	const ensureEditableShape = (): number[] => {
+		const store = useRoutingStore.getState();
+		const identity = store.waypoints.map((_, i) => i);
+		if (store.creationSource !== "generated") return identity;
+		const routePath = getCurrentRoutePath();
+		if (store.waypoints.length < 2 || routePath.length < 2) return identity;
+
+		const { waypoints, indexMap, insertedCount } = densifyWaypointsAlongPath(store.waypoints, routePath);
+		if (insertedCount === 0) return identity;
+		Logger.info(`[RouteDraftEditor] Densified generated draft: +${insertedCount} waypoints before edit`);
+		setWaypoints(waypoints);
+		return indexMap;
+	};
+
 	const addWaypoint = async (coord: Coordinate, type: WaypointType = "routed"): Promise<EditResult> => {
+		ensureEditableShape();
 		saveSnapshot();
 
 		const resolved = await resolveAddCoord(coord, type, accessToken);
@@ -160,8 +183,9 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 			return fail(message);
 		}
 
+		const mappedIndex = ensureEditableShape()[index];
 		saveSnapshot();
-		useRoutingStore.getState().removeWaypoint(index);
+		useRoutingStore.getState().removeWaypoint(mappedIndex);
 
 		if (getWaypoints().length >= 2) await recompute();
 		else clearComputedRouteUi();
@@ -177,7 +201,8 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 			return fail(message);
 		}
 
-		const oldCoord = getWaypoints()[index].coord;
+		const mappedIndex = ensureEditableShape()[index];
+		const oldCoord = getWaypoints()[mappedIndex].coord;
 		let target = coord;
 
 		const check = await checkNearRoad(coord, accessToken);
@@ -185,14 +210,14 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 
 		// Snapshot pre-mutation state so a single undo press reverts the move.
 		saveSnapshot();
-		setWaypoints(setWaypointCoord(getWaypoints(), index, target));
+		setWaypoints(setWaypointCoord(getWaypoints(), mappedIndex, target));
 		const result = await recompute();
 
 		if (result.success) return ok();
 
 		const message = result.message ?? "Failed to calculate route. Waypoint may be too far from any road or path.";
 		reportError(message);
-		setWaypoints(setWaypointCoord(getWaypoints(), index, oldCoord));
+		setWaypoints(setWaypointCoord(getWaypoints(), mappedIndex, oldCoord));
 		return fail(message);
 	};
 
@@ -200,6 +225,7 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 		coord: Coordinate,
 		options?: { skipRouteCalc?: boolean },
 	): Promise<InsertEditResult> => {
+		ensureEditableShape();
 		const current = getWaypoints();
 		if (current.length < 1) {
 			const message = "Cannot add waypoint: No existing route segment.";
@@ -244,12 +270,12 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 	};
 
 	const reverse = async (): Promise<EditResult> => {
-		const current = getWaypoints();
-		if (current.length < 2) return ok();
+		if (getWaypoints().length < 2) return ok();
 
+		ensureEditableShape();
 		// Snapshot pre-reverse state so a single undo press restores it.
 		saveSnapshot();
-		setWaypoints(reverseWaypoints(current));
+		setWaypoints(reverseWaypoints(getWaypoints()));
 		await recompute();
 		return ok();
 	};
@@ -270,6 +296,9 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 			clearComputedRouteUi();
 			return ok();
 		}
+		// Explicit recalcs (preference changes etc.) also rebuild from
+		// waypoints, so a generated draft must densify first too.
+		ensureEditableShape();
 		return recompute();
 	};
 
@@ -351,6 +380,7 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 		// A visitor's draft, not an editing session: the route belongs to
 		// someone else, so it loads unbound and saves as a new route.
 		useRoutingStore.getState().setActivity(route.activity);
+		useRoutingStore.getState().setCreationSource(creationSourceFromProvenance(route.provenance));
 		return loadWaypoints(route.waypoints, {
 			exactRoutePath: route.geometry && route.geometry.length >= 2 ? route.geometry : undefined,
 			saveSnapshot: true,
@@ -378,6 +408,9 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 		const store = useRoutingStore.getState();
 		store.setMode({ kind: "editing", routeId: route.id, name: route.name, baseline });
 		store.setActivity(route.activity);
+		// Carry the origin onto the draft: a saved generated route must
+		// densify before its first edit just like a fresh generated draft.
+		store.setCreationSource(creationSourceFromProvenance(route.provenance));
 		trackEvent({
 			name: "route_loaded_into_editor",
 			properties: { creation_source: creationSourceFromProvenance(route.provenance) },
