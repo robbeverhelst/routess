@@ -4,6 +4,7 @@ import type {
 	ApiDiscoverPage,
 	ApiFeedPage,
 	ApiFollows,
+	ApiNotifications,
 	ApiPersonalAccessToken,
 	ApiPersonalAccessTokenWithSecret,
 	ApiProfile,
@@ -390,6 +391,46 @@ export function useShareUnreadCount() {
 		enabled: hasUser,
 		staleTime: 60 * 1000,
 		refetchInterval: 5 * 60 * 1000,
+	});
+}
+
+export function useNotifications(enabled = true) {
+	const hasUser = hasStoredUser();
+	return useQuery<ApiNotifications>({
+		queryKey: queryKeys.social.notifications(),
+		queryFn: () => apiService.getNotifications(),
+		enabled: hasUser && enabled,
+		staleTime: 30 * 1000,
+	});
+}
+
+/**
+ * Unseen notification count for the bell badge. Polled lazily like the share
+ * unread count; the bell is not a real-time surface.
+ */
+export function useNotificationUnseenCount() {
+	const hasUser = hasStoredUser();
+	return useQuery<number>({
+		queryKey: queryKeys.social.unseen(),
+		queryFn: () => apiService.getNotificationUnseenCount(),
+		enabled: hasUser,
+		staleTime: 60 * 1000,
+		refetchInterval: 5 * 60 * 1000,
+	});
+}
+
+/**
+ * Bumps the NotificationsSeenAt watermark. Deliberately does not invalidate
+ * the notifications list: its cached seenAt is what highlights unseen items
+ * while the center stays open.
+ */
+export function useMarkNotificationsSeen() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: () => apiService.markNotificationsSeen(),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: queryKeys.social.unseen() });
+		},
 	});
 }
 

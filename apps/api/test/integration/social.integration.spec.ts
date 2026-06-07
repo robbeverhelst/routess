@@ -392,6 +392,118 @@ describe("Social Integration Tests", () => {
 		});
 	});
 
+	describe("notifications", () => {
+		it("derives the list from follows and shares, with the seen watermark", async () => {
+			const route = makeRoute(bob, "Shared", "public");
+			await orm.em.persist([route]).flush();
+
+			await api().post("/api/v1/social/follows/alice").set("Authorization", `Bearer ${bobToken}`).expect(204);
+			await api()
+				.post("/api/v1/social/shares")
+				.set("Authorization", `Bearer ${bobToken}`)
+				.send({ routeId: route.id, recipientHandle: "alice" })
+				.expect(201);
+
+			const unseen = await api()
+				.get("/api/v1/social/notifications/unseen-count")
+				.set("Authorization", `Bearer ${aliceToken}`)
+				.expect(200);
+			expect(unseen.body.unseen).toBe(2);
+
+			const res = await api()
+				.get("/api/v1/social/notifications")
+				.set("Authorization", `Bearer ${aliceToken}`)
+				.expect(200);
+			expect(res.body.seenAt).toBeNull();
+			expect(res.body.items).toHaveLength(2);
+			expect(res.body.items.map((i: { type: string }) => i.type).sort()).toEqual(["follow", "route_share"]);
+			const shareItem = res.body.items.find((i: { type: string }) => i.type === "route_share");
+			expect(shareItem.actor.handle).toBe("bob");
+			expect(shareItem.routeName).toBe("Shared");
+			expect(shareItem.shareId).toBeDefined();
+
+			await api().post("/api/v1/social/notifications/seen").set("Authorization", `Bearer ${aliceToken}`).expect(204);
+			const unseen2 = await api()
+				.get("/api/v1/social/notifications/unseen-count")
+				.set("Authorization", `Bearer ${aliceToken}`)
+				.expect(200);
+			expect(unseen2.body.unseen).toBe(0);
+
+			// The watermark only clears the badge; the list keeps its items.
+			const res2 = await api()
+				.get("/api/v1/social/notifications")
+				.set("Authorization", `Bearer ${aliceToken}`)
+				.expect(200);
+			expect(res2.body.items).toHaveLength(2);
+			expect(res2.body.seenAt).not.toBeNull();
+		});
+
+		it("removes items when the follow or share disappears (derived view)", async () => {
+			const route = makeRoute(bob, "Vanishing", "public");
+			await orm.em.persist([route]).flush();
+			await api().post("/api/v1/social/follows/alice").set("Authorization", `Bearer ${bobToken}`).expect(204);
+			const share = await api()
+				.post("/api/v1/social/shares")
+				.set("Authorization", `Bearer ${bobToken}`)
+				.send({ routeId: route.id, recipientHandle: "alice" })
+				.expect(201);
+
+			await api().delete("/api/v1/social/follows/alice").set("Authorization", `Bearer ${bobToken}`).expect(204);
+			await api()
+				.delete(`/api/v1/social/shares/${share.body.id}`)
+				.set("Authorization", `Bearer ${aliceToken}`)
+				.expect(204);
+
+			const res = await api()
+				.get("/api/v1/social/notifications")
+				.set("Authorization", `Bearer ${aliceToken}`)
+				.expect(200);
+			expect(res.body.items).toHaveLength(0);
+			const unseen = await api()
+				.get("/api/v1/social/notifications/unseen-count")
+				.set("Authorization", `Bearer ${aliceToken}`)
+				.expect(200);
+			expect(unseen.body.unseen).toBe(0);
+		});
+
+		it("nulls routeName for routes flipped back to private and never touches readAt", async () => {
+			const route = makeRoute(bob, "Hidden later", "public");
+			await orm.em.persist([route]).flush();
+			await api()
+				.post("/api/v1/social/shares")
+				.set("Authorization", `Bearer ${bobToken}`)
+				.send({ routeId: route.id, recipientHandle: "alice" })
+				.expect(201);
+			await api()
+				.patch(`/api/v1/routes/${route.id}`)
+				.set("Authorization", `Bearer ${bobToken}`)
+				.send({ visibility: "private" })
+				.expect(200);
+
+			const res = await api()
+				.get("/api/v1/social/notifications")
+				.set("Authorization", `Bearer ${aliceToken}`)
+				.expect(200);
+			expect(res.body.items).toHaveLength(1);
+			expect(res.body.items[0].routeName).toBeNull();
+
+			// Seen is bell-level, read is inbox-level: bumping the watermark must
+			// leave the share unread.
+			await api().post("/api/v1/social/notifications/seen").set("Authorization", `Bearer ${aliceToken}`).expect(204);
+			const unread = await api()
+				.get("/api/v1/social/shares/unread-count")
+				.set("Authorization", `Bearer ${aliceToken}`)
+				.expect(200);
+			expect(unread.body.unread).toBe(1);
+		});
+
+		it("requires authentication", async () => {
+			await api().get("/api/v1/social/notifications").expect(401);
+			await api().get("/api/v1/social/notifications/unseen-count").expect(401);
+			await api().post("/api/v1/social/notifications/seen").expect(401);
+		});
+	});
+
 	describe("GET /social/users/search", () => {
 		it("prefix-matches handle and name, excluding yourself", async () => {
 			const res = await api()

@@ -16,6 +16,7 @@ import type {
 	ApiFeedItem,
 	ApiFeedPage,
 	ApiFollows,
+	ApiNotifications,
 	ApiPersonalAccessToken,
 	ApiPersonalAccessTokenWithSecret,
 	ApiProfile,
@@ -405,6 +406,21 @@ export class ApiClient {
 
 	async searchUsers(q: string): Promise<ApiProfileSummary[]> {
 		return this.request<ApiProfileSummary[]>(`/social/users/search?q=${encodeURIComponent(q)}`);
+	}
+
+	async getNotifications(): Promise<ApiNotifications> {
+		return this.request<ApiNotifications>("/social/notifications");
+	}
+
+	async getNotificationUnseenCount(): Promise<number> {
+		const res = await this.request<{ unseen: number }>("/social/notifications/unseen-count");
+		return res.unseen;
+	}
+
+	// Bumps the NotificationsSeenAt watermark (bell badge); never marks
+	// individual shares read.
+	async markNotificationsSeen(): Promise<void> {
+		await this.request<void>("/social/notifications/seen", { method: "POST" });
 	}
 
 	// Admin methods (gated server-side by JwtAuthGuard + RolesGuard)

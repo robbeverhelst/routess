@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { useAuthStatus } from "@/lib/api-queries";
+import { useAuthStatus, useNotificationUnseenCount } from "@/lib/api-queries";
 import { useT } from "@/lib/i18n";
 import { useModalsStore } from "@/stores/modalsStore";
 import { useUiStore } from "@/stores/uiStore";
@@ -17,6 +17,7 @@ export function MobileTopBar() {
 	const alertsActive = overlay === "notifications";
 	const { data: auth } = useAuthStatus();
 	const isAdmin = auth?.user?.role === "admin";
+	const { data: unseen = 0 } = useNotificationUnseenCount();
 
 	return (
 		<header
@@ -52,13 +53,40 @@ export function MobileTopBar() {
 			<IconBtn title={t("common.search")} onClick={() => openModal("search")}>
 				<I.search size={18} />
 			</IconBtn>
-			<IconBtn
-				title={t("nav.alerts")}
-				pressed={alertsActive}
-				onClick={() => (alertsActive ? closeOverlay() : openOverlay("notifications"))}
-			>
-				<I.bell size={18} />
-			</IconBtn>
+			{auth?.user && (
+				<div style={{ position: "relative" }}>
+					<IconBtn
+						title={t("nav.alerts")}
+						pressed={alertsActive}
+						onClick={() => (alertsActive ? closeOverlay() : openOverlay("notifications"))}
+					>
+						<I.bell size={18} />
+					</IconBtn>
+					{unseen > 0 && (
+						<span
+							style={{
+								position: "absolute",
+								top: -3,
+								right: -3,
+								minWidth: 15,
+								height: 15,
+								padding: "0 3px",
+								borderRadius: 999,
+								background: RDS_COLORS.accent,
+								color: RDS_COLORS.accentFg,
+								fontSize: 9.5,
+								fontWeight: 600,
+								display: "inline-flex",
+								alignItems: "center",
+								justifyContent: "center",
+								pointerEvents: "none",
+							}}
+						>
+							{unseen > 9 ? "9+" : unseen}
+						</span>
+					)}
+				</div>
+			)}
 			<IconBtn title={t("appshell.toggleTheme")} onClick={toggleTheme}>
 				{theme === "dark" ? <I.sun size={18} /> : <I.moon size={18} />}
 			</IconBtn>

@@ -63,6 +63,8 @@ export const queryKeys = {
 		feed: () => [...queryKeys.social.all, "feed"] as const,
 		inbox: () => [...queryKeys.social.all, "inbox"] as const,
 		unread: () => [...queryKeys.social.all, "unread"] as const,
+		notifications: () => [...queryKeys.social.all, "notifications"] as const,
+		unseen: () => [...queryKeys.social.all, "unseen"] as const,
 		search: (q: string) => [...queryKeys.social.all, "search", q] as const,
 	},
 } as const;
