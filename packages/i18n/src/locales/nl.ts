@@ -351,6 +351,8 @@ export const nl: Record<string, string> = {
 	"settings.section.advancedSub": "API-tokens en experimentele functies",
 	"settings.help.title": "Hulp & documentatie",
 	"settings.help.sub": "Gidsen, tips en API-referentie",
+	"settings.about.title": "gemaakt door robbeverhelst",
+	"settings.about.sub": "robbeverhelst.com",
 	"settings.sync.saving": "Opslaan…",
 	"settings.sync.saved": "Opgeslagen",
 	"settings.sync.failed": "Instellingen opslaan is mislukt",
