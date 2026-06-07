@@ -104,6 +104,30 @@ export function planCandidateFan(
 }
 
 /**
+ * Surface wave (second-wave candidate tactic): when the fan's best candidate
+ * still misses a strict surface preference, probe the bearings adjacent to
+ * the best-fitting one. Unpaved networks cluster, so the neighbours of the
+ * gravelliest bearing are where the fan's coarse spacing most likely skipped
+ * over the good stuff.
+ */
+export const SURFACE_WAVE_BEARING_OFFSETS = [-22.5, 22.5] as const;
+
+/** Best surfaceFit below this triggers the surface wave. */
+export const SURFACE_WAVE_TRIGGER_FIT = 0.85;
+
+export function planSurfaceWave(
+	start: Coordinate,
+	bestBearingDeg: number,
+	targetDistanceKm: number,
+	usedBearings: number[] = [],
+): CandidatePlan[] {
+	const used = new Set(usedBearings.map(normalizeBearing));
+	return SURFACE_WAVE_BEARING_OFFSETS.map((offset) => normalizeBearing(bestBearingDeg + offset))
+		.filter((bearing) => !used.has(bearing))
+		.map((bearing) => planCandidate(start, bearing, targetDistanceKm));
+}
+
+/**
  * One-shot radius refinement: if a routed candidate's distance misses the
  * target badly, rescale the circle by the miss ratio and re-plan the same
  * bearing. Pure; the caller decides whether to re-route the new plan.

@@ -48,6 +48,8 @@ export interface CandidateEdge {
 	/** Travel direction at the edge ends; lets overlap detect U-turns within one way. */
 	beginHeadingDeg?: number;
 	endHeadingDeg?: number;
+	/** Where the edge sits, for surface-anchored planning. */
+	midpoint?: Coordinate;
 }
 
 /** A candidate after routing + map matching, before scoring. */

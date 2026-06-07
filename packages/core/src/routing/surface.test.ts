@@ -42,6 +42,9 @@ describe("bucketMatchesPreference", () => {
 	it("matches path bucket against unpaved pref (path counts as unpaved)", () => {
 		expect(bucketMatchesPreference("path", "unpaved")).toBe(true);
 	});
+	it("matches compacted bucket against unpaved pref (compacted gravel is unpaved riding)", () => {
+		expect(bucketMatchesPreference("compacted", "unpaved")).toBe(true);
+	});
 	it("rejects paved bucket against unpaved pref", () => {
 		expect(bucketMatchesPreference("paved", "unpaved")).toBe(false);
 	});

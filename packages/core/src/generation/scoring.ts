@@ -14,6 +14,22 @@ export const GENERATION_SCORE_WEIGHTS = {
 	shapeCompactness: 0.15,
 } as const;
 
+// A strict surface preference is the point of the request ("as much gravel as
+// possible"), so surfaceFit takes weight from the soft criteria. Overlap stays
+// heavy: an out-and-back gravel loop is still a bad loop.
+export const STRICT_SURFACE_SCORE_WEIGHTS = {
+	overlap: 0.35,
+	distanceMatch: 0.2,
+	surfaceFit: 0.35,
+	shapeCompactness: 0.1,
+} as const;
+
+export type GenerationScoreWeights = typeof GENERATION_SCORE_WEIGHTS | typeof STRICT_SURFACE_SCORE_WEIGHTS;
+
+export function generationScoreWeights(pref: SurfaceType): GenerationScoreWeights {
+	return pref === "mixed" ? GENERATION_SCORE_WEIGHTS : STRICT_SURFACE_SCORE_WEIGHTS;
+}
+
 /** Distance within ±10% of target scores 1; beyond, a gaussian falloff. */
 const DISTANCE_FREE_BAND = 0.1;
 const DISTANCE_FALLOFF_SIGMA = 0.25;
@@ -114,7 +130,7 @@ export function scoreCandidate(
 	const surfaceFit = surfaceFitScore(metersByBucket, surfacePreference);
 	const compactness = shapeCompactness(candidate.geometry);
 
-	const w = GENERATION_SCORE_WEIGHTS;
+	const w = generationScoreWeights(surfacePreference);
 	const total =
 		w.overlap * (1 - overlap) +
 		w.distanceMatch * distanceMatch +
