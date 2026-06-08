@@ -14,7 +14,6 @@ import { queryKeys } from "@/lib/query-client";
 import { useUnits } from "@/lib/units";
 import { useLibraryStore } from "@/stores/libraryStore";
 import { useModalsStore } from "@/stores/modalsStore";
-import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 import {
 	useCanRedo,
 	useCanUndo,
@@ -69,7 +68,6 @@ import { PostActivityScreen } from "./screens/PostActivityScreen";
 import { ProfileScreen } from "./screens/ProfileScreen";
 import { RecordingScreen } from "./screens/RecordingScreen";
 import { SignUpScreen } from "./screens/SignUpScreen";
-import { WelcomeScreen } from "./screens/WelcomeScreen";
 
 const SCREEN_TITLE_KEYS: Record<RedesignContext, string> = {
 	plan: "nav.plan",
@@ -124,12 +122,6 @@ function getDevScreen(): DevScreen | null {
 	return (allowed as string[]).includes(value) ? (value as DevScreen) : null;
 }
 
-function shouldForceWelcome(): boolean {
-	if (typeof window === "undefined") return false;
-	const value = new URLSearchParams(window.location.search).get("welcome");
-	return value === "1" || value === "true" || value === "force";
-}
-
 const SKIPPED_AUTH_KEY = "routess.skippedAuth";
 
 function readSkippedAuth(): boolean {
@@ -151,18 +143,7 @@ function writeSkippedAuth(value: boolean): void {
 }
 
 export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps) {
-	const {
-		context,
-		setContext,
-		theme,
-		accent,
-		panelCollapsed,
-		togglePanel,
-		welcomeCompleted,
-		completeWelcome,
-		language,
-	} = useUiStore();
-	const selectedSports = useRedesignSettingsStore((s) => s.selectedSports);
+	const { context, setContext, theme, accent, panelCollapsed, togglePanel, language } = useUiStore();
 	const { modal, overlay, openModal, openOverlay, closeOverlay } = useModalsStore();
 	const { data: auth } = useAuthStatus();
 	const online = useOnlineStatus();
@@ -197,9 +178,7 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 	}, []);
 	const [offlineDismissed, setOfflineDismissed] = useState(false);
 	const [devScreen, setDevScreen] = useState<DevScreen | null>(getDevScreen);
-	const [forceWelcome] = useState<boolean>(shouldForceWelcome);
 	const wasMobileRef = useRef<boolean | null>(null);
-	const hadStoredSportsAtStartupRef = useRef(selectedSports.length > 0);
 
 	useAccountPreferencesSync(auth);
 
@@ -347,25 +326,13 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 	}, [setContext, setSkippedAuth]);
 
 	const isAuthenticated = !!auth?.isAuthenticated;
-	const hasAccountSports = (auth?.user?.preferences?.selectedSports?.length ?? 0) > 0;
-	const hasBootstrappedWelcomeSelections = hasAccountSports || hadStoredSportsAtStartupRef.current;
 	const showLogin = !isAuthenticated && !skippedAuth && authView === "login";
 	const showSignup = !isAuthenticated && !skippedAuth && authView === "signup";
-	const showWelcome = isAuthenticated && (forceWelcome || (!welcomeCompleted && !hasBootstrappedWelcomeSelections));
 	// The map shell + chrome mount whenever the user is past the login gate.
 	// Auth screens render as overlays above this shell, so transitioning
 	// from login → app no longer tears down the layout (or the Mapbox
 	// instance behind it).
 	const showApp = isAuthenticated || skippedAuth;
-
-	useEffect(() => {
-		if (forceWelcome) {
-			return;
-		}
-		if (isAuthenticated && !welcomeCompleted && hasBootstrappedWelcomeSelections) {
-			completeWelcome();
-		}
-	}, [completeWelcome, forceWelcome, hasBootstrappedWelcomeSelections, isAuthenticated, welcomeCompleted]);
 
 	if (devScreen) {
 		const close = () => {
@@ -579,7 +546,7 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 		) : null;
 
 	const AuthOverlay =
-		showLogin || showSignup || showWelcome ? (
+		showLogin || showSignup ? (
 			<div
 				style={{
 					position: "absolute",
@@ -589,7 +556,6 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 			>
 				{showLogin && <LoginScreen onSuccess={() => setSkippedAuth(true)} />}
 				{showSignup && <SignUpScreen onSwitchToLogin={() => setAuthView("login")} />}
-				{showWelcome && <WelcomeScreen onComplete={completeWelcome} />}
 			</div>
 		) : null;
 

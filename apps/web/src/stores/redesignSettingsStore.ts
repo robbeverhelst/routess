@@ -119,8 +119,22 @@ export const DEFAULT_OVERLAYS: MapOverlays = {
 	cyclingNodes: false,
 };
 
+// Distance-unit convention by region. Only the US, Liberia and Myanmar use
+// imperial; everyone else gets metric. Drives the first-run default so a new
+// user starts in the right units without being asked.
+function detectUnitsFromLocale(): RedesignUnits {
+	if (typeof navigator === "undefined") return "km";
+	const imperialRegions = new Set(["US", "LR", "MM"]);
+	const tags = navigator.languages?.length ? navigator.languages : [navigator.language];
+	for (const tag of tags) {
+		const region = tag?.split("-")[1]?.toUpperCase();
+		if (region) return imperialRegions.has(region) ? "mi" : "km";
+	}
+	return "km";
+}
+
 export const DEFAULT_REDESIGN_SETTINGS: RedesignSettingsSnapshot = {
-	units: "km",
+	units: detectUnitsFromLocale(),
 	showPois: true,
 	terrain3d: false,
 	autoSnap: true,

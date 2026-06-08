@@ -24,7 +24,6 @@ interface UiState {
 	language: SupportedLanguage;
 	panelCollapsed: boolean;
 	favouriteRouteIds: number[];
-	welcomeCompleted: boolean;
 
 	setContext: (c: RedesignContext) => void;
 	setAccent: (a: RedesignAccent) => void;
@@ -35,12 +34,12 @@ interface UiState {
 	togglePanel: () => void;
 	setPanelCollapsed: (v: boolean) => void;
 	toggleFavourite: (routeId: number) => void;
-	completeWelcome: () => void;
 }
 
 type PersistedUiState = Partial<UiState> & {
 	context?: string;
 	loadedRoute?: unknown;
+	welcomeCompleted?: unknown;
 };
 
 export const useUiStore = create<UiState>()(
@@ -53,7 +52,6 @@ export const useUiStore = create<UiState>()(
 			language: loadLanguageFromLocalStorage(),
 			panelCollapsed: false,
 			favouriteRouteIds: [],
-			welcomeCompleted: false,
 
 			setContext: (context) => set({ context }),
 			setAccent: (accent) => set({ accent }),
@@ -72,11 +70,10 @@ export const useUiStore = create<UiState>()(
 					favouriteRouteIds: cur.includes(routeId) ? cur.filter((id) => id !== routeId) : [...cur, routeId],
 				});
 			},
-			completeWelcome: () => set({ welcomeCompleted: true }),
 		}),
 		{
 			name: "routess-redesign-ui",
-			version: 4,
+			version: 5,
 			migrate: (persistedState) => {
 				const state = (persistedState ?? {}) as PersistedUiState;
 				if (state.context === "activity") {
@@ -87,6 +84,8 @@ export const useUiStore = create<UiState>()(
 				}
 				// v4 drops loadedRoute (moved into routingStore as RouteDraftMode).
 				delete state.loadedRoute;
+				// v5 drops welcomeCompleted (welcome wizard removed).
+				delete state.welcomeCompleted;
 				return state as UiState;
 			},
 		},

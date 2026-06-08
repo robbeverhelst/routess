@@ -121,11 +121,6 @@ export type ProductEvent =
 	// Payment (feature pending, see #135)
 	| { name: "payment_started"; properties: { plan: string; interval: "monthly" | "yearly" } }
 	| { name: "payment_completed"; properties: { plan: string; interval: "monthly" | "yearly" } }
-	| { name: "payment_cancelled"; properties: { plan: string; interval: "monthly" | "yearly" } }
-
-	// Onboarding (feature pending)
-	| { name: "onboarding_step_completed"; properties: { step_number: number; step_name: string } }
-	| { name: "onboarding_skipped"; properties: { step_number: number; step_name: string } }
-	| { name: "onboarding_completed"; properties: EmptyProps };
+	| { name: "payment_cancelled"; properties: { plan: string; interval: "monthly" | "yearly" } };
 
 export type ProductEventName = ProductEvent["name"];
