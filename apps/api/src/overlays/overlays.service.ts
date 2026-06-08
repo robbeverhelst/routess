@@ -154,17 +154,18 @@ export class OverlaysService {
 				body: `data=${encodeURIComponent(query)}`,
 				signal: controller.signal,
 			});
-			this.metrics.recordExternalRequest("overpass", response.ok ? "success" : "error", Date.now() - start);
-			this.metrics.recordProviderCall("overpass", "/api/interpreter", "overlays", response.ok ? "success" : "error");
 			if (!response.ok) {
 				throw new Error(`Overpass ${response.status}`);
 			}
-			return (await response.json()) as OverpassResponse;
+			// Record success only once the body parses; a parse failure falls
+			// through to the catch and is counted as an error, never both.
+			const data = (await response.json()) as OverpassResponse;
+			this.metrics.recordExternalRequest("overpass", "success", Date.now() - start);
+			this.metrics.recordProviderCall("overpass", "/api/interpreter", "overlays", "success");
+			return data;
 		} catch (err) {
-			if ((err as Error).name === "AbortError" || !(err as Error).message.startsWith("Overpass ")) {
-				this.metrics.recordExternalRequest("overpass", "error", Date.now() - start);
-				this.metrics.recordProviderCall("overpass", "/api/interpreter", "overlays", "error");
-			}
+			this.metrics.recordExternalRequest("overpass", "error", Date.now() - start);
+			this.metrics.recordProviderCall("overpass", "/api/interpreter", "overlays", "error");
 			throw err;
 		} finally {
 			clearTimeout(timeout);

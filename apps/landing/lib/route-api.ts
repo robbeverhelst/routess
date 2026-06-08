@@ -35,7 +35,7 @@ export interface PublicRouteSummary {
 // Revalidate within the VisibilityPropagation bound (CONTEXT.md, ADR 0031):
 // a route flipped back to private must drop off the public page within 60s.
 export async function fetchPublicRoute(ref: number | string): Promise<PublicRoute | null> {
-	const res = await fetch(`${API_URL}/api/v1/routes/${ref}`, { next: { revalidate: 60 } });
+	const res = await fetch(`${API_URL}/api/v1/routes/${encodeURIComponent(String(ref))}`, { next: { revalidate: 60 } });
 	if (res.status === 404) return null;
 	if (!res.ok) throw new Error(`Route fetch failed with ${res.status}`);
 	return (await res.json()) as PublicRoute;

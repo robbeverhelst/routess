@@ -12,6 +12,17 @@ interface MemoryEntry {
 
 const MAX_MEMORY_ENTRIES = 5000;
 
+// Deterministic JSON: object keys sorted recursively, arrays left in order.
+// Used for cache-key hashing so insertion order never changes the key.
+function canonicalize(value: unknown): string {
+	if (value === null || typeof value !== "object") return JSON.stringify(value) ?? "null";
+	if (Array.isArray(value)) return `[${value.map(canonicalize).join(",")}]`;
+	const entries = Object.keys(value as Record<string, unknown>)
+		.sort()
+		.map((key) => `${JSON.stringify(key)}:${canonicalize((value as Record<string, unknown>)[key])}`);
+	return `{${entries.join(",")}}`;
+}
+
 // Shared TTL cache for provider responses and quota counters (ADR 0031).
 // Redis-backed when REDIS_URL is set (shared across replicas); per-pod
 // in-memory fallback otherwise. Fail-open: a Redis error is a miss, never a
@@ -56,8 +67,10 @@ export class CacheService implements OnModuleDestroy {
 	}
 
 	// Stable digest for cache keys built from large inputs (geometry, costing).
+	// Object keys are sorted recursively so the same logical input hashes the
+	// same regardless of property insertion order (arrays keep their order).
 	hashKey(parts: unknown): string {
-		return createHash("sha256").update(JSON.stringify(parts)).digest("hex");
+		return createHash("sha256").update(canonicalize(parts)).digest("hex");
 	}
 
 	async get<T>(cache: string, key: string): Promise<T | null> {

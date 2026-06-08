@@ -69,4 +69,14 @@ describe("CacheService (in-memory fallback)", () => {
 		expect(service.hashKey({ a: 1, b: [2, 3] })).toBe(service.hashKey({ a: 1, b: [2, 3] }));
 		expect(service.hashKey({ a: 1 })).not.toBe(service.hashKey({ a: 2 }));
 	});
+
+	it("hashes equal regardless of object key order, but respects array order", () => {
+		const { service } = makeService();
+		// Key order must not change the key (CodeRabbit finding).
+		expect(service.hashKey({ a: 1, b: 2, nested: { x: 1, y: 2 } })).toBe(
+			service.hashKey({ nested: { y: 2, x: 1 }, b: 2, a: 1 }),
+		);
+		// Array order is semantic (coordinate sequences) and must change it.
+		expect(service.hashKey([1, 2, 3])).not.toBe(service.hashKey([3, 2, 1]));
+	});
 });

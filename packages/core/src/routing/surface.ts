@@ -85,6 +85,7 @@ export interface ValhallaSurfaceEdge {
 // Pure builder shared by the web's live breakdown and the API's save-time
 // derivation, so both classify identically.
 export function surfaceCompositionFromEdges(edges: ValhallaSurfaceEdge[], shape?: string): SurfaceComposition | null {
+	if (!Array.isArray(edges) || edges.length === 0) return null;
 	const meters: Record<SurfaceBucket, number> = { paved: 0, compacted: 0, unpaved: 0, path: 0 };
 	let total = 0;
 	for (const edge of edges) {
