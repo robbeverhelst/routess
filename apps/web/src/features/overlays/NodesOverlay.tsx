@@ -3,15 +3,18 @@ import { useEffect, useState } from "react";
 import { Layer, Source, useMap } from "react-map-gl/mapbox";
 import { getRuntimeConfig } from "@/lib/runtime-config";
 import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
+import { resolveNodeTilesUrl } from "./nodeTilesUrl";
 
 // Node networks are pre-extracted from OSM into a self-hosted PMTiles file
-// (ADR 0033) and read natively by mapbox-gl as a vector source. There is no
-// fetch, bbox math, or cache here: Mapbox owns culling, caching, and LOD.
+// (ADR 0033), served as standard vector tiles via a TileJSON endpoint
+// (go-pmtiles). VITE_NODE_TILES_URL is that TileJSON URL, not the raw .pmtiles:
+// mapbox-gl's native pmtiles provider crashes under terrain. A plain vector
+// source renders like the basemap, so Mapbox owns culling, caching, and LOD.
 export type NodeNetworkKind = "hiking" | "cycling";
 
 const SOURCE_ID = "rds-nodes";
 const SOURCE_LAYER = "node_network";
-const NODE_TILES_URL = getRuntimeConfig("VITE_NODE_TILES_URL");
+const NODE_TILES_URL = resolveNodeTilesUrl(getRuntimeConfig("VITE_NODE_TILES_URL"));
 
 const HIKING_COLOR = "#dc2626";
 const CYCLING_COLOR = "#1d4ed8";

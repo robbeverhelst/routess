@@ -19,9 +19,12 @@ web:
     VITE_GOOGLE_CLIENT_ID: ""
     VITE_APP_URL: "https://app.routess.com"
     VITE_API_URL: "https://api.routess.com"
-    # Public URL of the node-network PMTiles file (ADR 0033), served from object
-    # storage. Empty disables the overlay. Must end in .pmtiles so mapbox-gl
-    # reads it via range requests. e.g. https://tiles.routess.com/nodes.pmtiles
+    # TileJSON URL of the node-network tiles (ADR 0033), served by go-pmtiles
+    # from the .pmtiles file, e.g. https://tiles.routess.com/nodes.json. Empty
+    # disables the overlay. Do NOT point this at the raw .pmtiles file:
+    # mapbox-gl's native pmtiles provider throws "a is not defined" under
+    # terrain/globe. The TileJSON's tiles[] serve standard MVT, which renders
+    # like the basemap (terrain-safe).
     VITE_NODE_TILES_URL: ""
     # Origin that serves the canonical public route page (the landing host, e.g.
     # https://routess.com). Empty falls back to the app origin. See ADR 0025.
