@@ -212,7 +212,7 @@ api:
     # maxUnavailable: 1
 
 redis:
-  # Single-instance, cache-only Redis (ADR 0031): shared provider-response
+  # Single-instance, cache-only Redis (ADR 0032): shared provider-response
   # caches, throttler storage, and daily quota counters. No persistence and no
   # HA on purpose; losing it only costs warm caches. Disable to fall back to
   # per-pod in-memory caching (halved hit rates, per-pod throttle buckets).
@@ -462,7 +462,7 @@ monitoring:
       providerErrorRatePercent: 20
       # Alert when p95 DB query latency exceeds this (ms, 10m sustained).
       dbLatencyP95Ms: 250
-      # Caching / provider-cost alerts (ADR 0031). Set any to 0 to disable
+      # Caching / provider-cost alerts (ADR 0032). Set any to 0 to disable
       # just that alert.
       # Warn when a cache's hit rate falls below this % once it has warmed
       # (evaluated only above cacheMinSampleRps to avoid noise at low traffic).

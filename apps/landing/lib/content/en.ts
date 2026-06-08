@@ -190,7 +190,7 @@ export const en: Dict = {
 			],
 		},
 		copyright: "© 2026 routess · MIT license",
-		madeWith: "made with map tiles & coffee · Belgium",
+		madeBy: { label: "made by robbeverhelst", href: "https://robbeverhelst.com" },
 	},
 	dev: {
 		hero: {

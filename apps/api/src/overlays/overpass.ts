@@ -1,5 +1,5 @@
 // Overpass node-network (knooppunten) fetching and GeoJSON transformation.
-// Moved server-side (ADR 0031) so one Overpass fetch per grid cell serves
+// Moved server-side (ADR 0032) so one Overpass fetch per grid cell serves
 // every user, instead of every browser re-pulling the same network.
 
 export type NodeNetworkKind = "hiking" | "cycling";

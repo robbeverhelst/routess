@@ -91,7 +91,7 @@ spec:
             severity: warning
           annotations:
             summary: "Cache {{`{{ $labels.cache }}`}} hit rate below {{ $t.cacheHitRatePercent }}%"
-            description: "{{`{{ $labels.cache }}`}} hit rate is {{`{{ $value | printf \"%.0f\" }}`}}% over 10m. Expected high once warm; check Redis and TTLs (ADR 0031)."
+            description: "{{`{{ $labels.cache }}`}} hit rate is {{`{{ $value | printf \"%.0f\" }}`}}% over 10m. Expected high once warm; check Redis and TTLs (ADR 0032)."
         {{- end }}
         {{- if $t.cacheMinSampleRps }}
         - alert: RoutessCacheBackendDegraded

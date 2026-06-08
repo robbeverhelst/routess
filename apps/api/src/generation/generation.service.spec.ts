@@ -281,6 +281,138 @@ describe("GenerationService", () => {
 		for (const type of observedTypes.slice(1, -1)) expect(type).toBe("through");
 	});
 
+	it("nudges vias onto the preferred surface when one is within the search radius", async () => {
+		// Each via gets two candidate edges: tarmac at the requested point and
+		// gravel 0.001° north. With an unpaved preference the gravel edge must
+		// win even though it is farther.
+		const requestedViaLats = new Set<number>();
+		fake.locateHandler = (body) =>
+			body.locations.map((loc, i) => {
+				if (i > 0) requestedViaLats.add(loc.lat);
+				const paved = {
+					correlated_lat: loc.lat,
+					correlated_lon: loc.lon,
+					distance: 5,
+					outbound_reach: 50,
+					inbound_reach: 50,
+					edge: { classification: { classification: "residential", use: "road", surface: "paved" } },
+				};
+				const gravel = {
+					correlated_lat: loc.lat + 0.001,
+					correlated_lon: loc.lon,
+					distance: 120,
+					outbound_reach: 50,
+					inbound_reach: 50,
+					edge: { classification: { classification: "unclassified", use: "track", surface: "gravel" } },
+				};
+				return { edges: i === 0 ? [paved] : [paved, gravel] };
+			});
+
+		let locateLocations: { lat: number; lon: number; radius?: number }[] = [];
+		let firstRouteLocations: { lat: number; lon: number; type?: string }[] = [];
+		const originalCall = fake.callValhalla.bind(fake);
+		fake.callValhalla = (path: string, body: unknown) => {
+			const typed = body as { locations: { lat: number; lon: number; radius?: number; type?: string }[] };
+			if (path === "/locate" && locateLocations.length === 0) locateLocations = typed.locations;
+			if (path === "/route" && firstRouteLocations.length === 0) firstRouteLocations = typed.locations;
+			return originalCall(path, body);
+		};
+
+		const response = await service.generate({
+			...REQUEST,
+			preferences: { ...REQUEST.preferences, surfacePreference: "unpaved" },
+		});
+		expect(response.failure).toBeUndefined();
+
+		// The start snaps nearest (no radius); vias search the nudge radius.
+		expect(locateLocations[0].radius).toBeUndefined();
+		for (const loc of locateLocations.slice(1)) expect(loc.radius).toBe(500);
+
+		// Every routed via sits on the gravel edge: requested lat + 0.001.
+		const vias = firstRouteLocations.filter((l) => l.type === "through");
+		expect(vias.length).toBeGreaterThan(0);
+		for (const via of vias) {
+			const cameFromGravel = [...requestedViaLats].some((lat) => Math.abs(via.lat - (lat + 0.001)) < 1e-9);
+			expect(cameFromGravel).toBe(true);
+		}
+	});
+
+	it("routes a surface-anchored candidate from traced gravel runs, without a second locate", async () => {
+		// Traces report a contiguous gravel run ~4.5km east of the start; the
+		// anchored wave must route a candidate whose via sits on that run.
+		const shapePoints: Coordinate[] = Array.from({ length: 25 }, (_, i) => destinationPoint(GHENT, 90, i * 0.5));
+		fake.traceHandler = () => ({
+			shape: encodePolyline6(shapePoints),
+			edges: Array.from({ length: 24 }, (_, i) => ({
+				way_id: 100 + i,
+				surface: i >= 8 && i <= 11 ? "gravel" : "paved",
+				length: 30 / 24,
+				begin_heading: (i * 15) % 360,
+				end_heading: (i * 15 + 10) % 360,
+				begin_shape_index: i,
+				end_shape_index: i + 1,
+			})),
+		});
+
+		const routeVias: { lat: number; lon: number }[][] = [];
+		const original = fake.routeHandler;
+		fake.routeHandler = (body) => {
+			routeVias.push(body.locations.filter((l) => l.type === "through"));
+			return original(body);
+		};
+
+		const response = await service.generate({
+			...REQUEST,
+			preferences: { ...REQUEST.preferences, surfacePreference: "unpaved" },
+		});
+		expect(response.failure).toBeUndefined();
+
+		// Anchored vias come from traced edges: already on the network, no snap pass.
+		expect(fake.calls.filter((path) => path === "/locate")).toHaveLength(1);
+
+		// The run is 5km (edges 8-11); its halfway edge midpoint is shape[9]
+		// (tolerance covers the polyline6 encode/decode round-trip).
+		const [lonMid, latMid] = shapePoints[9];
+		const anchored = routeVias.find(
+			(vias) => vias.length === 1 && Math.abs(vias[0].lat - latMid) < 1e-4 && Math.abs(vias[0].lon - lonMid) < 1e-4,
+		);
+		expect(anchored).toBeDefined();
+	});
+
+	it("runs a surface wave when a strict preference is poorly met", async () => {
+		// All-paved tracing under an unpaved preference: surfaceFit 0 triggers
+		// the wave, visible as a second /locate batch for the adjacent bearings.
+		const response = await service.generate({
+			...REQUEST,
+			preferences: { ...REQUEST.preferences, surfacePreference: "unpaved" },
+		});
+		expect(response.failure).toBeUndefined();
+		expect(fake.calls.filter((path) => path === "/locate")).toHaveLength(2);
+	});
+
+	it("skips the surface wave when the preference is already well met", async () => {
+		fake.traceHandler = () => ({
+			edges: Array.from({ length: 24 }, (_, i) => ({
+				way_id: 100 + i,
+				surface: "gravel",
+				length: 30 / 24,
+				begin_heading: (i * 15) % 360,
+				end_heading: (i * 15 + 10) % 360,
+			})),
+		});
+		const response = await service.generate({
+			...REQUEST,
+			preferences: { ...REQUEST.preferences, surfacePreference: "unpaved" },
+		});
+		expect(response.failure).toBeUndefined();
+		expect(fake.calls.filter((path) => path === "/locate")).toHaveLength(1);
+	});
+
+	it("never runs a surface wave for the mixed preference", async () => {
+		await service.generate(REQUEST);
+		expect(fake.calls.filter((path) => path === "/locate")).toHaveLength(1);
+	});
+
 	it("refines the radius once when the routed distance misses badly", async () => {
 		// First route per bearing comes back at double the target; the refined
 		// plan (smaller circle) comes back on target.

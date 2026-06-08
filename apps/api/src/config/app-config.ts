@@ -84,7 +84,7 @@ export interface AppConfig {
 	};
 	cache: {
 		// Redis URL for the shared cache, throttle storage, and quota counters
-		// (ADR 0031). Empty disables Redis; the API falls back to per-pod
+		// (ADR 0032). Empty disables Redis; the API falls back to per-pod
 		// in-memory caching, which halves hit rates across replicas but never
 		// blocks startup.
 		redisUrl: string;

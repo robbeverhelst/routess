@@ -7,7 +7,7 @@ import { RoutingService } from "../routing/routing.service";
 
 const MAX_SHAPE_POINTS = 1500;
 
-// Derives a Route's persisted surface composition (ADR 0031) through the
+// Derives a Route's persisted surface composition (ADR 0032) through the
 // cached trace_attributes path, so the editing session's calls usually make
 // this free. Fail-open like Place derivation: errors leave the column null
 // and the next geometry save retries.

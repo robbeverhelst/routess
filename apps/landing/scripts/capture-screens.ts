@@ -167,7 +167,7 @@ async function captureAppShots(): Promise<void> {
 		});
 		const page = await ctx.newPage();
 
-		const loadPlanner = async (route: DemoRoute) => {
+		const loadPlanner = async (page: import("playwright").Page, route: DemoRoute) => {
 			await page.goto(`${WEB_URL}/?route=${encodeShareRoute(route)}`, { waitUntil: "domcontentloaded" });
 			await page.waitForSelector(".mapboxgl-canvas", { timeout: 30_000 });
 			// The route chip renders real numbers once routing resolves.
@@ -194,9 +194,29 @@ async function captureAppShots(): Promise<void> {
 			await page.waitForTimeout(8_000);
 		};
 
-		await loadPlanner(SINT_AMANDS_LOOP);
-		await page.screenshot({ path: resolve(PUBLIC_DIR, "hero-screenshot.png") });
+		// Hero: shoot at a desktop-sized viewport so the fixed-width plan panel
+		// is a normal fraction of the frame (at 920px wide it squishes the UI),
+		// then downscale to the 1840×1120 asset size the hero component expects.
+		// 1426×868 matches the 23:14 aspect of that asset exactly.
+		const heroCtx = await browser.newContext({
+			viewport: { width: 1426, height: 868 },
+			deviceScaleFactor: 2,
+		});
+		await heroCtx.addInitScript(() => {
+			localStorage.setItem("routess.skippedAuth", "1");
+		});
+		const heroPage = await heroCtx.newPage();
+		await loadPlanner(heroPage, SINT_AMANDS_LOOP);
+		const heroShot = await heroPage.screenshot();
+		const sharp = (await import("sharp")).default;
+		writeFileSync(
+			resolve(PUBLIC_DIR, "hero-screenshot.png"),
+			await sharp(heroShot).resize(1840, 1120).png().toBuffer(),
+		);
+		await heroCtx.close();
 		log("wrote hero-screenshot.png");
+
+		await loadPlanner(page, SINT_AMANDS_LOOP);
 
 		// Styles grid: crop the live map per style/theme. Dark is shot on the
 		// default streets style right after light, before any style switches.
@@ -244,7 +264,7 @@ async function captureAppShots(): Promise<void> {
 		// The surface section shows the plan panel of a forest walk, where the
 		// breakdown actually has paved/gravel/path variety. Share links don't
 		// carry the activity, so switch to Walk in the UI and let it re-route.
-		await loadPlanner(FOREST_WALK);
+		await loadPlanner(page, FOREST_WALK);
 		await page.getByRole("button", { name: "Walk" }).first().click();
 		await page
 			.waitForFunction(() => !/analyzing/i.test(document.body.textContent ?? ""), undefined, { timeout: 30_000 })

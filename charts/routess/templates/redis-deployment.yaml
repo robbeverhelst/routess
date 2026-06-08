@@ -1,5 +1,5 @@
 {{- if .Values.redis.enabled }}
-# Single-instance, cache-only Redis (ADR 0031). No persistence by design:
+# Single-instance, cache-only Redis (ADR 0032). No persistence by design:
 # losing it costs warm caches and quota counters, nothing durable. The API
 # falls back to per-pod in-memory caching when it is unreachable.
 apiVersion: apps/v1

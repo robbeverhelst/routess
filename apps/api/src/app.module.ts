@@ -77,7 +77,7 @@ import { UsersModule } from "./users/users.module";
 		ThrottlerModule.forRootAsync({
 			imports: [ConfigModule, CacheModule],
 			inject: [APP_CONFIG, RedisThrottlerStorage],
-			// Redis-backed storage shares limits across replicas (ADR 0031);
+			// Redis-backed storage shares limits across replicas (ADR 0032);
 			// without it each pod counted separately and limits were ~2x.
 			useFactory: (appConfig: AppConfig, storage: RedisThrottlerStorage) => ({
 				storage,

@@ -2,22 +2,29 @@ import { Injectable, Logger } from "@nestjs/common";
 import { EventEmitter2 } from "@nestjs/event-emitter";
 import {
 	bucketFromValhallaSurface,
+	bucketMatchesPreference,
 	type CandidateEdge,
 	type CandidatePlan,
 	type Coordinate,
 	closestPointOnSegment,
+	collectSurfaceAnchors,
 	decodePolyline6,
 	encodePolyline6,
 	type GenerationFailureCode,
 	haversineDistance,
 	isLowQuality,
 	loopRadiusKm,
+	OVERLAP_WARN_LIMIT,
 	planCandidateFan,
+	planSurfaceAnchoredCandidates,
+	planSurfaceWave,
 	type RoutedCandidate,
 	refinePlanForDistance,
 	repairSpurVias,
 	type ScoredCandidate,
+	SURFACE_WAVE_TRIGGER_FIT,
 	type SurfaceBucket,
+	type SurfaceType,
 	scoreCandidate,
 	selectDiverseCandidates,
 	type ValhallaCostingRequest,
@@ -47,7 +54,7 @@ interface ValhallaLocateEdge {
 	outbound_reach?: number;
 	inbound_reach?: number;
 	edge?: {
-		classification?: { classification?: string; use?: string };
+		classification?: { classification?: string; use?: string; surface?: string };
 	};
 }
 
@@ -64,7 +71,21 @@ const BAD_EDGE_USES = new Set(["driveway", "parking_aisle", "parking", "alley", 
 // straight back out.
 const MIN_EDGE_REACH = 10;
 
-function pickViaEdge(edges: ValhallaLocateEdge[] | null | undefined): ValhallaLocateEdge | null {
+// How far around a via /locate searches for an edge on the preferred surface
+// (the surface nudge). Within the via snap allowance, which is ≥500m.
+const SURFACE_NUDGE_RADIUS_M = 500;
+
+// Surface-wave iteration: re-anchor on each new loop's fresh surface, stopping
+// when a round adds little fit. Bounded so a generation can't fan out forever.
+const MAX_WAVE_ROUNDS = 3;
+const WAVE_IMPROVEMENT_EPSILON = 0.05;
+
+// An anchored candidate steers through gravel by force, which risks spur-in-
+// and-back excursions. Reject any the app would badge as low quality: a clean
+// fan loop beats a gravelly one riddled with dead-ends. (= OVERLAP_WARN_LIMIT.)
+const WAVE_MAX_OVERLAP = OVERLAP_WARN_LIMIT;
+
+function pickViaEdge(edges: ValhallaLocateEdge[] | null | undefined, pref: SurfaceType): ValhallaLocateEdge | null {
 	const usable = (edges ?? []).filter(
 		(e) => typeof e.correlated_lat === "number" && typeof e.correlated_lon === "number",
 	);
@@ -74,7 +95,18 @@ function pickViaEdge(edges: ValhallaLocateEdge[] | null | undefined): ValhallaLo
 		const reach = Math.min(e.outbound_reach ?? 0, e.inbound_reach ?? 0);
 		return !BAD_EDGE_USES.has(use) && reach >= MIN_EDGE_REACH;
 	});
-	const pool = preferred.length > 0 ? preferred : usable;
+	let pool = preferred.length > 0 ? preferred : usable;
+	// The surface nudge: with a strict preference, a farther edge on the right
+	// surface beats the nearest one on the wrong surface; the via then drags
+	// the whole loop onto that network (Valhalla never detours for surface on
+	// its own; vias are the only lever that can).
+	if (pref !== "mixed") {
+		const matching = pool.filter((e) => {
+			const surface = e.edge?.classification?.surface;
+			return typeof surface === "string" && bucketMatchesPreference(bucketFromValhallaSurface(surface), pref);
+		});
+		if (matching.length > 0) pool = matching;
+	}
 	// Among acceptable edges, nearest to the requested point wins.
 	return pool.reduce((best, e) => ((e.distance ?? Infinity) < (best.distance ?? Infinity) ? e : best));
 }
@@ -95,9 +127,12 @@ interface ValhallaTraceEdge {
 	length?: number;
 	begin_heading?: number;
 	end_heading?: number;
+	begin_shape_index?: number;
+	end_shape_index?: number;
 }
 
 interface ValhallaTraceResponse {
+	shape?: string;
 	edges?: ValhallaTraceEdge[];
 }
 
@@ -188,7 +223,9 @@ export class GenerationService {
 		// to the correlated road position (the dead-end-spur fix).
 		let snappedPlans: CandidatePlan[];
 		try {
-			snappedPlans = await countCall(this.snapPlans(start, plans, request.targetDistanceKm, costing));
+			snappedPlans = await countCall(
+				this.snapPlans(start, plans, request.targetDistanceKm, costing, request.preferences.surfacePreference),
+			);
 		} catch (err) {
 			if (err instanceof GenerationFailure) return fail(err.failureCode);
 			throw err;
@@ -197,6 +234,8 @@ export class GenerationService {
 
 		const scored = await this.routeAndScore(snappedPlans, start, request, costing, countCall);
 		if (scored.length === 0) return fail("no_candidates_routable");
+
+		scored.push(...(await this.surfaceWave(scored, plans, start, request, costing, countCall)));
 
 		const selected = selectDiverseCandidates(scored);
 		if (selected.length === 0) {
@@ -217,10 +256,17 @@ export class GenerationService {
 		plans: CandidatePlan[],
 		targetDistanceKm: number,
 		costing: ValhallaCostingRequest,
+		surfacePreference: SurfaceType,
 	): Promise<CandidatePlan[]> {
+		// A strict surface preference widens the via search so /locate returns
+		// every edge within the nudge radius, not just the nearest; pickViaEdge
+		// then snaps onto the preferred surface when one is in range.
+		const viaRadius = surfacePreference === "mixed" ? undefined : SURFACE_NUDGE_RADIUS_M;
 		const locations = [
 			{ lat: start[1], lon: start[0] },
-			...plans.flatMap((plan) => plan.viaPoints.map(([lon, lat]) => ({ lat, lon }))),
+			...plans.flatMap((plan) =>
+				plan.viaPoints.map(([lon, lat]) => (viaRadius ? { lat, lon, radius: viaRadius } : { lat, lon })),
+			),
 		];
 
 		const results = await this.routing.callValhalla<ValhallaLocateResult[]>(
@@ -234,8 +280,8 @@ export class GenerationService {
 			"generation",
 		);
 
-		const snappedCoord = (result: ValhallaLocateResult | undefined): Coordinate | null => {
-			const edge = pickViaEdge(result?.edges);
+		const snappedCoord = (result: ValhallaLocateResult | undefined, pref: SurfaceType): Coordinate | null => {
+			const edge = pickViaEdge(result?.edges, pref);
 			if (!edge) return null;
 			return [edge.correlated_lon as number, edge.correlated_lat as number];
 		};
@@ -248,7 +294,8 @@ export class GenerationService {
 		const radius = loopRadiusKm(targetDistanceKm);
 		const maxViaSnapKm = Math.max(0.5, radius / 2);
 
-		const snappedStart = snappedCoord(results[0]);
+		// The start never surface-nudges: the user picked it deliberately.
+		const snappedStart = snappedCoord(results[0], "mixed");
 		if (!snappedStart || haversineDistance(start, snappedStart) > MAX_START_SNAP_KM) {
 			throw new GenerationFailure("start_not_routable");
 		}
@@ -259,7 +306,7 @@ export class GenerationService {
 			const vias: Coordinate[] = [];
 			let viable = true;
 			for (let i = 0; i < plan.viaPoints.length; i++) {
-				const coord = snappedCoord(results[cursor + i]);
+				const coord = snappedCoord(results[cursor + i], surfacePreference);
 				if (!coord || haversineDistance(plan.viaPoints[i], coord) > maxViaSnapKm) {
 					viable = false;
 					break;
@@ -278,6 +325,7 @@ export class GenerationService {
 		request: GenerateRequestDto,
 		costing: ValhallaCostingRequest,
 		countCall: <T>(promise: Promise<T>) => Promise<T>,
+		options: { refineDistance: boolean } = { refineDistance: true },
 	): Promise<(ScoredCandidate & { shape: string })[]> {
 		const results: (ScoredCandidate & { shape: string })[] = [];
 		const queue = [...plans];
@@ -285,7 +333,7 @@ export class GenerationService {
 		const worker = async () => {
 			for (let plan = queue.shift(); plan; plan = queue.shift()) {
 				try {
-					const candidate = await this.buildCandidate(plan, start, request, costing, countCall);
+					const candidate = await this.buildCandidate(plan, start, request, costing, countCall, options);
 					if (candidate) results.push(candidate);
 				} catch (err) {
 					// One failed candidate never sinks the generation; the fan has more.
@@ -298,19 +346,105 @@ export class GenerationService {
 		return results;
 	}
 
+	// The surface wave (second-wave candidate tactic): when a strict surface
+	// preference is still poorly met after the fan, exploit what the fan
+	// learned. Harvest the matching surface runs from existing traces and route
+	// a candidate anchored on them (the only lever that genuinely drags the
+	// loop onto that network). Then iterate: each anchored loop crosses fresh
+	// surface the fan never saw, so re-harvesting from it yields richer anchors
+	// — a loop-until-no-improvement exploitation. If no anchors ever surface,
+	// fall back to probing the bearings adjacent to the best-fitting candidate.
+	private async surfaceWave(
+		scored: (ScoredCandidate & { shape: string })[],
+		fanPlans: CandidatePlan[],
+		start: Coordinate,
+		request: GenerateRequestDto,
+		costing: ValhallaCostingRequest,
+		countCall: <T>(promise: Promise<T>) => Promise<T>,
+	): Promise<(ScoredCandidate & { shape: string })[]> {
+		const pref = request.preferences.surfacePreference;
+		if (pref === "mixed" || scored.length === 0) return [];
+		const best = scored.reduce((a, b) => (b.score.surfaceFit > a.score.surfaceFit ? b : a));
+		if (best.score.surfaceFit >= SURFACE_WAVE_TRIGGER_FIT) return [];
+
+		const produced: (ScoredCandidate & { shape: string })[] = [];
+		const pool = [...scored];
+		let bestFit = best.score.surfaceFit;
+
+		for (let round = 0; round < MAX_WAVE_ROUNDS; round++) {
+			const anchors = collectSurfaceAnchors(pool, pref, start, request.targetDistanceKm);
+			const plans = planSurfaceAnchoredCandidates(start, anchors, request.targetDistanceKm).filter(
+				(plan) => !this.bearingAlreadySeen(plan.bearingDeg, request.excludeBearings),
+			);
+			// Anchor vias are midpoints of edges already traversed: on the network
+			// by construction (no snap pass), and re-planning for distance would
+			// rebuild the geometric ring (no refinement). Plans descend by via
+			// count; take the first that routes, since many `through` points often
+			// defeat the router.
+			let routed: (ScoredCandidate & { shape: string }) | null = null;
+			for (const plan of plans) {
+				const [candidate] = await this.routeAndScore([plan], start, request, costing, countCall, {
+					refineDistance: false,
+				});
+				// Forcing the loop through gravel can spur in and back out; a
+				// candidate with too much overlap reads as dead-ends, so skip it
+				// and let the cascade's fewer-via plans try a cleaner shape.
+				if (candidate && candidate.score.overlap <= WAVE_MAX_OVERLAP) {
+					routed = candidate;
+					break;
+				}
+			}
+			if (!routed) break;
+
+			produced.push(routed);
+			pool.push(routed);
+			// Stop once a round stops meaningfully improving surface fit.
+			if (routed.score.surfaceFit <= bestFit + WAVE_IMPROVEMENT_EPSILON) break;
+			bestFit = routed.score.surfaceFit;
+		}
+		if (produced.length > 0) return produced;
+
+		// No anchors ever surfaced: probe bearings adjacent to the best fit.
+		const usedBearings = [...fanPlans.map((p) => p.bearingDeg), ...(request.excludeBearings ?? [])];
+		const wavePlans = planSurfaceWave(start, best.plan.bearingDeg, request.targetDistanceKm, usedBearings);
+		if (wavePlans.length === 0) return [];
+
+		let snapped: CandidatePlan[];
+		try {
+			snapped = await countCall(this.snapPlans(start, wavePlans, request.targetDistanceKm, costing, pref));
+		} catch {
+			// The wave is opportunistic; the fan's candidates stand on their own.
+			return [];
+		}
+		if (snapped.length === 0) return [];
+		return this.routeAndScore(snapped, start, request, costing, countCall);
+	}
+
+	/** A regenerated anchored candidate would rebuild near the same bearing; skip it. */
+	private bearingAlreadySeen(bearingDeg: number, excludeBearings: number[] | undefined): boolean {
+		const delta = (a: number, b: number) => {
+			const d = Math.abs(a - b) % 360;
+			return d > 180 ? 360 - d : d;
+		};
+		return (excludeBearings ?? []).some((seen) => delta(bearingDeg, seen) < 10);
+	}
+
 	private async buildCandidate(
 		plan: CandidatePlan,
 		start: Coordinate,
 		request: GenerateRequestDto,
 		costing: ValhallaCostingRequest,
 		countCall: <T>(promise: Promise<T>) => Promise<T>,
+		options: { refineDistance: boolean } = { refineDistance: true },
 	): Promise<(ScoredCandidate & { shape: string }) | null> {
 		let activePlan = plan;
 		let routed = await countCall(this.routeLoop(activePlan, start, costing));
 		if (!routed) return null;
 
 		// One-shot radius refinement when the routed distance misses badly.
-		const refined = refinePlanForDistance(start, activePlan, request.targetDistanceKm, routed.distanceKm);
+		const refined = options.refineDistance
+			? refinePlanForDistance(start, activePlan, request.targetDistanceKm, routed.distanceKm, plan.viaPoints.length)
+			: null;
 		if (refined) {
 			const rerouted = await countCall(this.routeLoop(refined, start, costing));
 			if (
@@ -432,12 +566,30 @@ export class GenerationService {
 				costing: costing.costing,
 				costing_options: costing.costing_options,
 				filters: {
-					attributes: ["edge.way_id", "edge.surface", "edge.length", "edge.begin_heading", "edge.end_heading"],
+					attributes: [
+						"edge.way_id",
+						"edge.surface",
+						"edge.length",
+						"edge.begin_heading",
+						"edge.end_heading",
+						"edge.begin_shape_index",
+						"edge.end_shape_index",
+						"shape",
+					],
 					action: "include",
 				},
 			},
 			"generation",
 		);
+
+		// Edge midpoints (via the matched shape) feed surface-anchored planning.
+		const matchedShape = typeof data.shape === "string" ? decodePolyline6(data.shape) : [];
+		const midpointOf = (edge: ValhallaTraceEdge): Coordinate | undefined => {
+			const begin = edge.begin_shape_index;
+			const end = edge.end_shape_index;
+			if (typeof begin !== "number" || typeof end !== "number" || begin > end) return undefined;
+			return matchedShape[Math.floor((begin + end) / 2)];
+		};
 
 		return (data.edges ?? []).map((edge) => ({
 			wayId: edge.way_id,
@@ -445,6 +597,7 @@ export class GenerationService {
 			surface: edge.surface,
 			beginHeadingDeg: edge.begin_heading,
 			endHeadingDeg: edge.end_heading,
+			midpoint: midpointOf(edge),
 		}));
 	}
 

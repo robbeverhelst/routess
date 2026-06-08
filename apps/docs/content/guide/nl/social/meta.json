@@ -1,4 +1,4 @@
 {
 	"title": "Sociaal",
-	"pages": ["profiles", "follow-and-feed", "inbox"]
+	"pages": ["profiles", "follow-and-feed", "inbox", "notifications"]
 }

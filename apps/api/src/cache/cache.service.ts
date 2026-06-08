@@ -23,7 +23,7 @@ function canonicalize(value: unknown): string {
 	return `{${entries.join(",")}}`;
 }
 
-// Shared TTL cache for provider responses and quota counters (ADR 0031).
+// Shared TTL cache for provider responses and quota counters (ADR 0032).
 // Redis-backed when REDIS_URL is set (shared across replicas); per-pod
 // in-memory fallback otherwise. Fail-open: a Redis error is a miss, never a
 // request failure.

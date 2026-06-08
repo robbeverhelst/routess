@@ -22,10 +22,18 @@ describe("valhallaCostingFromPreferences — cycle", () => {
 		expect("bicycle" in req.costing_options).toBe(true);
 	});
 
-	it("does not send a bicycle_type (Valhalla defaults it to Hybrid)", () => {
-		const req = valhallaCostingFromPreferences("cycle", DEFAULT_CYCLE_PREFERENCES);
-		const b = (req.costing_options as { bicycle: Record<string, unknown> }).bicycle;
-		expect("bicycle_type" in b).toBe(false);
+	it("does not send a bicycle_type for paved/mixed (Valhalla defaults it to Hybrid)", () => {
+		for (const surfacePreference of ["paved", "mixed"] as const) {
+			const req = valhallaCostingFromPreferences("cycle", { ...DEFAULT_CYCLE_PREFERENCES, surfacePreference });
+			const b = (req.costing_options as { bicycle: Record<string, unknown> }).bicycle;
+			expect("bicycle_type" in b).toBe(false);
+		}
+	});
+
+	it("sends bicycle_type Mountain for unpaved (makes dirt/gravel competitive in edge cost)", () => {
+		const req = valhallaCostingFromPreferences("cycle", { ...DEFAULT_CYCLE_PREFERENCES, surfacePreference: "unpaved" });
+		const b = (req.costing_options as { bicycle: { bicycle_type?: string } }).bicycle;
+		expect(b.bicycle_type).toBe("Mountain");
 	});
 
 	it("does not send use_hills (no HillPreference in vocabulary)", () => {

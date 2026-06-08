@@ -32,7 +32,7 @@ export interface PublicRouteSummary {
 }
 
 // `ref` is a numeric route id (public routes) or a 32-hex share token (unlisted).
-// Revalidate within the VisibilityPropagation bound (CONTEXT.md, ADR 0031):
+// Revalidate within the VisibilityPropagation bound (CONTEXT.md, ADR 0032):
 // a route flipped back to private must drop off the public page within 60s.
 export async function fetchPublicRoute(ref: number | string): Promise<PublicRoute | null> {
 	const res = await fetch(`${API_URL}/api/v1/routes/${encodeURIComponent(String(ref))}`, { next: { revalidate: 60 } });

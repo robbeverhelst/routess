@@ -1,6 +1,6 @@
 import { Migration } from "@mikro-orm/migrations";
 
-// Durable reverse-geocode cache (ADR 0031): Place lookups for the same ~100m
+// Durable reverse-geocode cache (ADR 0032): Place lookups for the same ~100m
 // grid cell stop hitting Mapbox entirely.
 export class Migration20260607030000 extends Migration {
 	override async up(): Promise<void> {

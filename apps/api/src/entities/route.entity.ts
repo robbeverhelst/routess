@@ -95,7 +95,7 @@ export class Route extends BaseEntity {
 
 	// SurfaceBuckets along the RoutePath, derived once at save (async,
 	// fail-open, like Place) so viewing a Route makes zero provider calls.
-	// Cleared whenever the geometry changes. See ADR 0031.
+	// Cleared whenever the geometry changes. See ADR 0032.
 	@Property({ type: "json", nullable: true })
 	surfaceComposition?: SurfaceComposition | null;
 

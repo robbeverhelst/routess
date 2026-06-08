@@ -16,7 +16,7 @@ export class GenerationController {
 		description:
 			"Runs the RouteGeneration pipeline (ADR-0029): a fan of candidate loops around the start point, snap-validated, routed through Valhalla, scored on Overlap/distance/surface/shape, and reduced to up to 3 diverse candidates. " +
 			"A response with an empty candidate list carries a structured failure code that drives retry suggestions. " +
-			"Each request fans out into ~10-25 Valhalla calls, hence the strict per-IP throttle and a per-User daily quota (ADR 0031).",
+			"Each request fans out into ~10-25 Valhalla calls, hence the strict per-IP throttle and a per-User daily quota (ADR 0032).",
 	})
 	@ApiBody({ type: GenerateRequestDto })
 	@ApiResponse({ status: 200, description: "Scored candidates or a structured failure", type: GenerateResponseDto })

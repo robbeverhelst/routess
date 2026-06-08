@@ -31,6 +31,9 @@ export function bucketSurfaceType(bucket: SurfaceBucket): SurfaceType {
 
 export function bucketMatchesPreference(bucket: SurfaceBucket, pref: SurfaceType): boolean {
 	if (pref === "mixed") return true;
+	// Compacted gravel is the canonical unpaved riding surface even though it
+	// renders as its own bucket; only tarmac violates the unpaved preference.
+	if (pref === "unpaved") return bucket !== "paved";
 	return BUCKET_TO_TYPE[bucket] === pref;
 }
 
@@ -55,7 +58,7 @@ export function isSurfaceMismatch(metersByBucket: Record<SurfaceBucket, number>,
 	return surfaceMismatchFraction(metersByBucket, pref) > SURFACE_MISMATCH_THRESHOLD;
 }
 
-// Surface composition persisted on a saved Route (ADR 0031): the result of
+// Surface composition persisted on a saved Route (ADR 0032): the result of
 // classifying the RoutePath's edges once, so viewing a route never re-calls
 // the provider. Segments index into the matched shape polyline instead of
 // embedding coordinates, keeping the stored JSON small.

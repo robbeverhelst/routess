@@ -4,7 +4,7 @@ import { usePwaInstall } from "@/hooks/usePwaInstall";
 import { useUserProfile } from "@/lib/api-queries";
 import { emitAppEvent } from "@/lib/app-events";
 import { type SupportedLanguage, t, tIn } from "@/lib/i18n";
-import { DOCS_URL } from "@/lib/links";
+import { AUTHOR_URL, DOCS_URL } from "@/lib/links";
 import { getVersionDisplay } from "@/lib/version";
 import { usePreferencesSyncStore } from "@/stores/preferencesSyncStore";
 import {
@@ -460,6 +460,12 @@ export function SettingsPanel() {
 				) : null}
 				<SettingsSection>
 					<SettingsNavRow icon={I.help} label={t("settings.help.title")} sub={t("settings.help.sub")} href={DOCS_URL} />
+					<SettingsNavRow
+						icon={I.heart}
+						label={t("settings.about.title")}
+						sub={t("settings.about.sub")}
+						href={AUTHOR_URL}
+					/>
 				</SettingsSection>
 				<div
 					style={{

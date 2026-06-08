@@ -7,7 +7,7 @@ import { APP_CONFIG } from "../config/config.module";
 
 const SECONDS_PER_DAY = 24 * 60 * 60;
 
-// Per-User daily cap on RouteGeneration (ADR 0031): each attempt fans out
+// Per-User daily cap on RouteGeneration (ADR 0032): each attempt fans out
 // into many paid Valhalla calls, which the per-minute throttle does not bound
 // over a day. Keyed by user when authenticated, IP otherwise (generation is
 // anonymous-accessible). Counter resets at UTC midnight; fail-open if Redis

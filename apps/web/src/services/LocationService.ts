@@ -11,6 +11,9 @@ export interface LocationState {
 	timestamp: number | null;
 	error: string | null;
 	isLoading: boolean;
+	// True only while a manual "locate me" request is in flight, so the locate
+	// button can show a spinner without reacting to background tracking.
+	manualLocating: boolean;
 	isTracking: boolean;
 	permissionState: "granted" | "denied" | "prompt" | "unknown";
 	lastUpdateTime: number | null;
@@ -43,6 +46,10 @@ export class LocationService {
 	private retryCount = 0;
 	private isDestroyed = false;
 	private permissionWatcher: PermissionStatus | null = null;
+	// Dedupes manual locate requests: rapid clicks on the locate button share
+	// one in-flight geolocation call instead of stacking up (each with its own
+	// timeout) and eventually erroring.
+	private inFlightLocate: Promise<LocationState> | null = null;
 
 	// Default options optimized for walking/navigation
 	private defaultOptions: LocationOptions = {
@@ -66,6 +73,7 @@ export class LocationService {
 			timestamp: null,
 			error: null,
 			isLoading: false,
+			manualLocating: false,
 			isTracking: false,
 			permissionState: "unknown",
 			lastUpdateTime: null,
@@ -174,6 +182,11 @@ export class LocationService {
 	}
 
 	public async getCurrentLocation(options?: Partial<LocationOptions>): Promise<LocationState> {
+		// Reuse an in-flight request so rapid clicks don't stack geolocation calls.
+		if (this.inFlightLocate) {
+			return this.inFlightLocate;
+		}
+
 		if (!this.isGeolocationSupported()) {
 			const currentLanguage = loadLanguageFromLocalStorage();
 			const error = t("location.error.notSupported", currentLanguage);
@@ -182,9 +195,9 @@ export class LocationService {
 		}
 
 		const opts = { ...this.currentOptions, ...options };
-		this.updateState({ isLoading: true, error: null });
+		this.updateState({ isLoading: true, manualLocating: true, error: null });
 
-		return new Promise((resolve, reject) => {
+		const request = new Promise<LocationState>((resolve, reject) => {
 			const timeoutId = setTimeout(
 				() => {
 					const error = "Location request timed out";
@@ -212,6 +225,16 @@ export class LocationService {
 				},
 			);
 		});
+
+		this.inFlightLocate = request;
+		const clear = () => {
+			this.inFlightLocate = null;
+			this.updateState({ manualLocating: false });
+		};
+		// Handle both branches here so this cleanup chain never becomes an
+		// unhandled rejection; the caller still gets `request` to await.
+		request.then(clear, clear);
+		return request;
 	}
 
 	public startTracking(options?: Partial<LocationOptions>): void {

@@ -63,7 +63,9 @@ export function Footer({ dict }: { dict: Dict }) {
 					}}
 				>
 					<span>{dict.footer.copyright}</span>
-					<span>{dict.footer.madeWith}</span>
+					<a href={dict.footer.madeBy.href} target="_blank" rel="noreferrer" style={{ color: "var(--ink-soft)" }}>
+						{dict.footer.madeBy.label}
+					</a>
 				</div>
 			</div>
 		</footer>

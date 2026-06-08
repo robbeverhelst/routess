@@ -49,7 +49,7 @@ export class MetricsService implements OnModuleInit, OnModuleDestroy, Metrics {
 	// External request metrics
 	private externalRequestDuration!: Histogram;
 
-	// Provider cost control metrics (issue #140, ADR 0031)
+	// Provider cost control metrics (issue #140, ADR 0032)
 	private providerCalls!: Counter;
 	private cacheEvents!: Counter;
 

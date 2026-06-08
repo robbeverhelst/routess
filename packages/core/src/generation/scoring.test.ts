@@ -5,7 +5,9 @@ import { destinationPoint } from "./fan";
 import {
 	distanceMatchScore,
 	GENERATION_SCORE_WEIGHTS,
+	generationScoreWeights,
 	overlapFraction,
+	STRICT_SURFACE_SCORE_WEIGHTS,
 	scoreCandidate,
 	shapeCompactness,
 	surfaceFitScore,
@@ -171,17 +173,39 @@ describe("scoreCandidate", () => {
 		],
 	};
 
-	it("weights components per GENERATION_SCORE_WEIGHTS", () => {
+	it("weights components per the preference-aware weights", () => {
 		const score = scoreCandidate(candidate, 40, "paved", meters({ paved: 40000 }));
 		expect(score.overlap).toBe(0);
 		expect(score.distanceMatch).toBe(1);
 		expect(score.surfaceFit).toBe(1);
-		const expected =
-			GENERATION_SCORE_WEIGHTS.overlap +
-			GENERATION_SCORE_WEIGHTS.distanceMatch +
-			GENERATION_SCORE_WEIGHTS.surfaceFit +
-			GENERATION_SCORE_WEIGHTS.shapeCompactness * score.shapeCompactness;
+		const w = generationScoreWeights("paved");
+		const expected = w.overlap + w.distanceMatch + w.surfaceFit + w.shapeCompactness * score.shapeCompactness;
 		expect(score.total).toBeCloseTo(expected, 10);
+	});
+
+	it("uses the default weights for mixed and the strict weights for paved/unpaved", () => {
+		expect(generationScoreWeights("mixed")).toBe(GENERATION_SCORE_WEIGHTS);
+		expect(generationScoreWeights("paved")).toBe(STRICT_SURFACE_SCORE_WEIGHTS);
+		expect(generationScoreWeights("unpaved")).toBe(STRICT_SURFACE_SCORE_WEIGHTS);
+	});
+
+	it("both weight sets sum to 1", () => {
+		for (const w of [GENERATION_SCORE_WEIGHTS, STRICT_SURFACE_SCORE_WEIGHTS]) {
+			expect(w.overlap + w.distanceMatch + w.surfaceFit + w.shapeCompactness).toBeCloseTo(1, 10);
+		}
+	});
+
+	it("ranks the gravellier loop first under an unpaved preference despite a worse shape", () => {
+		// Same loop, but the gravelly version misses the distance band slightly;
+		// the strict surfaceFit weight must still put it on top.
+		const gravelly = scoreCandidate(
+			{ ...candidate, distanceKm: 45 },
+			40,
+			"unpaved",
+			meters({ unpaved: 36000, paved: 9000 }),
+		);
+		const mostlyPaved = scoreCandidate(candidate, 40, "unpaved", meters({ unpaved: 16000, paved: 24000 }));
+		expect(gravelly.total).toBeGreaterThan(mostlyPaved.total);
 	});
 
 	it("ranks an out-and-back below a clean loop", () => {

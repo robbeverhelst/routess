@@ -242,7 +242,7 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 
 	const [shareToUserOpen, setShareToUserOpen] = useState(false);
 
-	// Saved routes carry a persisted surfaceComposition (ADR 0031); only
+	// Saved routes carry a persisted surfaceComposition (ADR 0032); only
 	// legacy rows that predate the derivation fall back to a live fetch.
 	const persistedBreakdown = useMemo(
 		() => (route.surfaceComposition ? breakdownFromComposition(route.surfaceComposition) : null),

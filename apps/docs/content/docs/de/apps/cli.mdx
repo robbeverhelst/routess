@@ -36,15 +36,61 @@ routess auth logout       # delete the on-disk token
 
 ## Befehle
 
+Hänge `--json` an einen beliebigen Befehl an, um maschinenlesbare Ausgabe zu erhalten. Fehler im `--json`-Modus geben auf stderr ein `DomainErrorPayload` aus, das das Fehlerformat der API spiegelt, sodass Agenten direkt anhand von `code` verzweigen können.
+
+### Routen
+
 ```sh
-routess routes list
+routess routes list --limit 20 --offset 0   # your routes, newest first
+routess routes public                       # indexable public routes (no auth needed)
 routess routes get <id>
-routess routes update <id> --name "New name"
+routess routes gpx <ref> -o ride.gpx        # download GPX; <ref> is an id or a 32-hex share token
+routess routes create --from route.json     # CreateRoute JSON payload; "-" reads stdin
+routess routes import ride.gpx --name "Sunday loop" --activity cycling
+routess routes update <id> --name "New name" --description "..." --tags gravel,hilly
 routess routes update <id> --visibility public --confirm
+routess routes favourite <id>               # and unfavourite
 routess routes delete <id> --confirm
 ```
 
-Hänge `--json` an einen beliebigen Befehl an, um maschinenlesbare Ausgabe zu erhalten. Fehler im `--json`-Modus geben auf stderr ein `DomainErrorPayload` aus, das das Fehlerformat der API spiegelt, sodass Agenten direkt anhand von `code` verzweigen können.
+`list` und `public` geben `showing X of Y` aus dem Header `X-Total-Count` aus und akzeptieren `--limit` / `--offset`. `import` nimmt dieselben `--activity`-IDs wie die API (`cycling`, `running`, `hiking`, ...) und erstellt standardmäßig eine private Route; ein leerer Wert für `--description` oder `--tags` leert das Feld.
+
+### Sammlungen
+
+```sh
+routess collections list
+routess collections get <ref>
+routess collections create --name "Alps 2026" --visibility unlisted
+routess collections update <id> --name "New name"
+routess collections set-routes <id> --routes id1,id2,id3
+routess collections delete <id> --confirm
+```
+
+`set-routes` ersetzt die gesamte geordnete Mitgliederliste (ein leerer Wert leert die Sammlung). Das Löschen einer Sammlung behält die Routen darin.
+
+### Rundstrecken generieren
+
+```sh
+routess generate --start 50.8467,4.3525 --activity cycling --distance 40
+routess generate ... --heading n --surface gravel --gpx-dir ./candidates
+routess generate ... --save 2 --name "Generated loop"
+```
+
+Die Generierung benötigt keine Authentifizierung und gibt bis zu drei bewertete Kandidaten mit Peilung, Distanz, Dauer, Überlappung und Untergrundmischung aus. `--gpx-dir` schreibt jeden Kandidaten als `candidate-<n>.gpx`; `--save [n]` speichert den Kandidaten `n` (Standard 1) als private Route in der Bibliothek, was ein write-Token erfordert. `--exclude-bearings` generiert frische Formen neu und spiegelt damit "Andere Rundstrecken zeigen" der Web-App.
+
+### Tokens und Kontoexport
+
+```sh
+routess tokens list                # metadata only, plaintext is never shown
+routess tokens revoke <id>
+routess export -o my-data.zip     # routess-export.json plus one GPX per route
+```
+
+Das Widerrufen des Tokens, mit dem die CLI gerade authentifiziert ist, sperrt dich aus, daher erfordert es `--confirm`.
+
+### Bestätigungs-Gates
+
+Destruktive oder nach außen gerichtete Operationen erfordern ein ausdrückliches `--confirm`: das Löschen von Routen oder Sammlungen, das Setzen einer beliebigen Sichtbarkeit auf `public` und das Widerrufen des aktiven Tokens. Ohne es beendet sich die CLI mit Code 9 (Vorbedingung erforderlich).
 
 ## Exit-Codes
 
@@ -67,6 +113,8 @@ Die CLI nutzt eine stabile Exit-Code-Taxonomie, die an den Domain-Fehlercodes de
 
 ## Scopes
 
-PATs tragen einen von zwei Scopes: `read` (GET-Endpunkte) oder `write` (mutierende Endpunkte: PATCH, DELETE). Die CLI meldet ein `FORBIDDEN` (Exit-Code 6), wenn du versuchst, eine Route mit einem read-only-PAT zu verändern; erstelle in der Web-App ein write-scoped Token und authentifiziere dich erneut.
+PATs tragen einen von zwei Scopes: `read` (GET-Endpunkte, einschließlich des Kontoexports) oder `write` (mutierende Endpunkte: POST, PATCH, DELETE). Die CLI meldet ein `FORBIDDEN` (Exit-Code 6), wenn du versuchst, eine Route mit einem read-only-PAT zu verändern; erstelle in der Web-App ein write-scoped Token und authentifiziere dich erneut.
+
+Öffentliche Oberflächen funktionieren ohne jedes Token: `routes public`, `routes gpx` / `collections get` auf öffentlichen oder Share-Token-Referenzen sowie `generate` (ohne `--save`).
 
 Die vollständige Endpunktliste und die Scope-Anforderungen pro Endpunkt findest du in der [API-Referenz](../../api).

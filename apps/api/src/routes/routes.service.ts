@@ -72,7 +72,7 @@ export class RoutesService {
 		this.events.emit(ROUTE_CREATED, { userId } satisfies RouteCreatedEvent);
 		// Fire-and-forget: Place is async and fail-open (CONTEXT.md "Place").
 		void this.places.derivePlaceForRoute(route.id);
-		// Same pattern for the persisted surface composition (ADR 0031).
+		// Same pattern for the persisted surface composition (ADR 0032).
 		void this.surfaces.deriveForRoute(route.id);
 		return this.toResponseDto(route);
 	}

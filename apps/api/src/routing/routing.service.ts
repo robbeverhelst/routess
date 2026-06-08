@@ -41,7 +41,7 @@ const VALHALLA_TIMEOUT_MS = 8000;
 // trace_attributes is a pure function of (shape, costing): same geometry
 // always classifies the same until the OSM tiles refresh. /route is less
 // cacheable (waypoint combos are near-unique) but a shorter TTL still dedupes
-// generation-pipeline repeats and recalcs of saved routes. See ADR 0031.
+// generation-pipeline repeats and recalcs of saved routes. See ADR 0032.
 const TRACE_CACHE_TTL_S = 30 * 24 * 60 * 60;
 const ROUTE_CACHE_TTL_S = 7 * 24 * 60 * 60;
 

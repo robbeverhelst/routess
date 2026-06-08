@@ -26,6 +26,12 @@ export function DropMenu({
 	const ref = useRef<HTMLDivElement | null>(null);
 	const anchorRef = useRef<HTMLSpanElement | null>(null);
 	const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+	// Theme tokens (--rds-bg-panel, etc.) are scoped to `[data-redesign]`; portal
+	// inside it so the menu isn't see-through (same pattern as Tooltip).
+	const [container, setContainer] = useState<HTMLElement | null>(null);
+	useEffect(() => {
+		setContainer(document.querySelector<HTMLElement>("[data-redesign]"));
+	}, []);
 
 	useEffect(() => {
 		if (!open) return;
@@ -108,7 +114,7 @@ export function DropMenu({
 					>
 						{children}
 					</div>,
-					document.body,
+					container ?? document.body,
 				)}
 		</>
 	);

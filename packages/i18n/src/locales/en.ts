@@ -348,6 +348,8 @@ export const en: Record<string, string> = {
 	"settings.section.advancedSub": "API tokens and experimental features",
 	"settings.help.title": "Help & docs",
 	"settings.help.sub": "Guides, tips, and API reference",
+	"settings.about.title": "made by robbeverhelst",
+	"settings.about.sub": "robbeverhelst.com",
 	"settings.sync.saving": "Saving…",
 	"settings.sync.saved": "Saved",
 	"settings.sync.failed": "Couldn't save your settings",
@@ -1199,6 +1201,8 @@ export const en: Record<string, string> = {
 	// MapToolbar
 	"toolbar.searchLocation": "Search location",
 	"toolbar.centerOnMe": "Center on me",
+	"toolbar.locateDenied": "Location access is off. Enable it in your browser settings to center on your position.",
+	"toolbar.locateUnsupported": "Location isn't available on this device.",
 	"toolbar.mapStyle": "Map style",
 	"toolbar.lock": "Lock map",
 	"toolbar.unlock": "Unlock map",

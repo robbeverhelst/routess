@@ -2,7 +2,7 @@ import { Logger } from "@/lib/logger";
 import { getRuntimeConfig } from "@/lib/runtime-config";
 
 // Node networks are served by the API, which quantizes requests to grid
-// cells cached in Redis so one Overpass fetch serves every user (ADR 0031).
+// cells cached in Redis so one Overpass fetch serves every user (ADR 0032).
 // The local memory/localStorage cache stays as a per-browser L1.
 const API_BASE_URL = getRuntimeConfig("VITE_API_URL") ?? "";
 const NODE_NETWORK_URL = `${API_BASE_URL.replace(/\/+$/, "")}/api/v1/overlays/node-network`;
@@ -177,7 +177,7 @@ async function fetchNodeNetworkFromOverpass(
 }
 
 export const NODE_OVERLAY_MIN_ZOOM = 9;
-// Aligned with the API's grid-cell cap (ADR 0031): the proxy serves up to 36
+// Aligned with the API's grid-cell cap (ADR 0032): the proxy serves up to 36
 // cells of 0.1deg, i.e. ~0.6deg per axis. Requesting a larger viewport would
 // just 400, so the client waits for zoom-in (the overlay is styled from
 // zoom 11 anyway) instead of firing a doomed fetch.

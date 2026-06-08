@@ -9,6 +9,7 @@ import {
 	normalizeBearing,
 	planCandidate,
 	planCandidateFan,
+	planSurfaceWave,
 	refinePlanForDistance,
 	VIA_POINT_COUNT,
 } from "./fan";
@@ -94,6 +95,25 @@ describe("planCandidateFan", () => {
 		const fan = planCandidateFan(GHENT, "any", 30, [0, 45, 90]);
 		expect(fan).toHaveLength(5);
 		expect(fan.map((p) => p.bearingDeg)).not.toContain(45);
+	});
+});
+
+describe("planSurfaceWave", () => {
+	it("plans the two bearings adjacent to the best-fitting one", () => {
+		const wave = planSurfaceWave(GHENT, 90, 30);
+		expect(wave.map((p) => p.bearingDeg)).toEqual([67.5, 112.5]);
+		for (const plan of wave) expect(plan.viaPoints).toHaveLength(VIA_POINT_COUNT);
+	});
+
+	it("normalizes wrapped bearings", () => {
+		const wave = planSurfaceWave(GHENT, 0, 30);
+		expect(wave.map((p) => p.bearingDeg)).toEqual([337.5, 22.5]);
+	});
+
+	it("skips bearings the fan already tried", () => {
+		const wave = planSurfaceWave(GHENT, 0, 30, [337.5]);
+		expect(wave.map((p) => p.bearingDeg)).toEqual([22.5]);
+		expect(planSurfaceWave(GHENT, 0, 30, [337.5, 22.5])).toEqual([]);
 	});
 });
 

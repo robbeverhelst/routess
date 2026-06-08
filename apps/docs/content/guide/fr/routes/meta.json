@@ -2,6 +2,7 @@
 	"title": "Itinéraires",
 	"pages": [
 		"creating-routes",
+		"generating-loops",
 		"editing-routes",
 		"routing-preferences",
 		"importing-routes",

@@ -13,7 +13,7 @@ export class OverlaysController {
 	@ApiOperation({
 		summary: "Node network (knooppunten) overlay for a bbox",
 		description:
-			"Returns hiking/cycling node-network features as GeoJSON. The API quantizes the bbox to fixed grid cells cached server-side, so one Overpass fetch per cell serves every user (ADR 0031). Anonymous-accessible; the overlay works before sign-in.",
+			"Returns hiking/cycling node-network features as GeoJSON. The API quantizes the bbox to fixed grid cells cached server-side, so one Overpass fetch per cell serves every user (ADR 0032). Anonymous-accessible; the overlay works before sign-in.",
 	})
 	@ApiResponse({ status: 200, description: "GeoJSON FeatureCollection of nodes and connections" })
 	@ApiResponse({ status: 400, description: "Bbox invalid or covering too many grid cells" })

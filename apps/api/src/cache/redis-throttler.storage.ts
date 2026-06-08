@@ -25,7 +25,7 @@ end
 return {hits, hitsPttl, 0, 0}
 `;
 
-// Throttle counters shared across replicas (ADR 0031): with per-pod
+// Throttle counters shared across replicas (ADR 0032): with per-pod
 // in-memory storage every configured limit was silently ~2x. Falls back to
 // the stock in-memory storage when Redis is disabled or unreachable, so a
 // cache outage degrades limits instead of blocking traffic.

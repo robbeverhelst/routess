@@ -259,7 +259,7 @@ export interface ApiRoute {
 	placeCountryCode?: string;
 	routingPreferences?: RoutingPreferences | null;
 	// SurfaceBuckets along the RoutePath, derived server-side at save
-	// (ADR 0031). Null while derivation is pending.
+	// (ADR 0032). Null while derivation is pending.
 	surfaceComposition?: SurfaceComposition | null;
 	provenance: Provenance;
 	// Unguessable 32-hex handle for share links. Unlisted routes are only

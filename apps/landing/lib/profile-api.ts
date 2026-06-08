@@ -29,7 +29,7 @@ export interface PublicProfile {
 	routes: PublicProfileRoute[];
 }
 
-// Revalidate within the VisibilityPropagation bound (CONTEXT.md, ADR 0031):
+// Revalidate within the VisibilityPropagation bound (CONTEXT.md, ADR 0032):
 // a Route flipped back to private must drop off the profile page within 60s.
 export async function fetchPublicProfile(handle: string): Promise<PublicProfile | null> {
 	const res = await fetch(`${API_URL}/api/v1/profiles/${encodeURIComponent(handle)}`, { next: { revalidate: 60 } });

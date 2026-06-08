@@ -104,7 +104,7 @@ export class RouteResponseDto {
 
 	@ApiPropertyOptional({
 		description:
-			"SurfaceBuckets along the RoutePath, derived server-side at save (ADR 0031). Null while derivation is pending or for routes without snapped geometry.",
+			"SurfaceBuckets along the RoutePath, derived server-side at save (ADR 0032). Null while derivation is pending or for routes without snapped geometry.",
 		type: "object",
 		additionalProperties: true,
 	})

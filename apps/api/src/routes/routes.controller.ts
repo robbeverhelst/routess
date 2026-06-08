@@ -118,7 +118,7 @@ export class RoutesController {
 	@ApiResponse({ status: 200, type: PublicRouteSummaryDto, isArray: true })
 	@ThrottleModerate()
 	// Viewer-invariant listing of public Routes: safe for edge caching within
-	// the VisibilityPropagation bound (CONTEXT.md, ADR 0031).
+	// the VisibilityPropagation bound (CONTEXT.md, ADR 0032).
 	@Header("Cache-Control", "public, max-age=15, s-maxage=30, stale-while-revalidate=30")
 	@Get("public")
 	async findPublic(
@@ -142,7 +142,7 @@ export class RoutesController {
 	@ApiParam({ name: "userId", description: "Owner user ID", type: "number" })
 	@ApiResponse({ status: 200, type: RouteResponseDto, isArray: true })
 	@ThrottleModerate()
-	// Public Routes only, identical for every viewer (ADR 0031).
+	// Public Routes only, identical for every viewer (ADR 0032).
 	@Header("Cache-Control", "public, max-age=15, s-maxage=30, stale-while-revalidate=30")
 	@Get("by-user/:userId")
 	findPublicByUser(@Param("userId", ParseIntPipe) userId: number): Promise<RouteResponseDto[]> {

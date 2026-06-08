@@ -1,6 +1,6 @@
 import { Entity, PrimaryKey, Property } from "@mikro-orm/decorators/legacy";
 
-// Durable reverse-geocode cache (ADR 0031): place names for a ~100m grid
+// Durable reverse-geocode cache (ADR 0032): place names for a ~100m grid
 // cell never change, so this lives in Postgres rather than a TTL store.
 // Keyed by the rounded "lat,lng" string (3 decimals, ~110m).
 @Entity({ tableName: "geocode_cache" })

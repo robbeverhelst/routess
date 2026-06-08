@@ -19,7 +19,7 @@ export class ProfilesController {
 	})
 	@ApiResponse({ status: 200, description: "Indexable profiles with handle and last update" })
 	@ThrottlePublic()
-	// Viewer-invariant; edge-cacheable within VisibilityPropagation (ADR 0031).
+	// Viewer-invariant; edge-cacheable within VisibilityPropagation (ADR 0032).
 	@Header("Cache-Control", "public, max-age=30, s-maxage=60")
 	@Get()
 	findIndexable(): Promise<Array<{ handle: string; updatedAt: string }>> {

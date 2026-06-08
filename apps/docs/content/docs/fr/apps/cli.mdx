@@ -36,15 +36,61 @@ routess auth logout       # delete the on-disk token
 
 ## Commandes
 
+Ajoute `--json` à n'importe quelle commande pour une sortie lisible par une machine. En mode `--json`, les erreurs émettent un `DomainErrorPayload` sur stderr qui reflète la forme d'erreur de l'API, pour que les agents puissent brancher directement sur `code`.
+
+### Itinéraires
+
 ```sh
-routess routes list
+routess routes list --limit 20 --offset 0   # tes itinéraires, les plus récents d'abord
+routess routes public                       # itinéraires publics indexables (aucune auth requise)
 routess routes get <id>
-routess routes update <id> --name "New name"
+routess routes gpx <ref> -o ride.gpx        # télécharge le GPX ; <ref> est un id ou un token de partage en 32 hex
+routess routes create --from route.json     # charge utile JSON CreateRoute ; "-" lit stdin
+routess routes import ride.gpx --name "Sunday loop" --activity cycling
+routess routes update <id> --name "New name" --description "..." --tags gravel,hilly
 routess routes update <id> --visibility public --confirm
+routess routes favourite <id>               # et unfavourite
 routess routes delete <id> --confirm
 ```
 
-Ajoute `--json` à n'importe quelle commande pour une sortie lisible par une machine. En mode `--json`, les erreurs émettent un `DomainErrorPayload` sur stderr qui reflète la forme d'erreur de l'API, pour que les agents puissent brancher directement sur `code`.
+`list` et `public` affichent `showing X of Y` à partir de l'en-tête `X-Total-Count` et acceptent `--limit` / `--offset`. `import` prend les mêmes ids `--activity` que l'API (`cycling`, `running`, `hiking`, ...) et crée par défaut un itinéraire privé ; une valeur `--description` ou `--tags` vide efface le champ.
+
+### Collections
+
+```sh
+routess collections list
+routess collections get <ref>
+routess collections create --name "Alps 2026" --visibility unlisted
+routess collections update <id> --name "New name"
+routess collections set-routes <id> --routes id1,id2,id3
+routess collections delete <id> --confirm
+```
+
+`set-routes` remplace l'intégralité de la composition ordonnée (une valeur vide vide la collection). Supprimer une collection conserve les itinéraires qu'elle contient.
+
+### Génération de boucles
+
+```sh
+routess generate --start 50.8467,4.3525 --activity cycling --distance 40
+routess generate ... --heading n --surface gravel --gpx-dir ./candidates
+routess generate ... --save 2 --name "Generated loop"
+```
+
+La génération ne nécessite aucune auth et affiche jusqu'à trois candidats notés avec le cap, la distance, la durée, le chevauchement et le mélange de revêtements. `--gpx-dir` écrit chaque candidat sous la forme `candidate-<n>.gpx` ; `--save [n]` enregistre le candidat `n` (1 par défaut) comme itinéraire privé dans la bibliothèque, ce qui nécessite un token d'écriture. `--exclude-bearings` régénère de nouvelles formes, à l'image du « Show different loops » de l'application web.
+
+### Tokens et export du compte
+
+```sh
+routess tokens list                # métadonnées uniquement, le texte en clair n'est jamais affiché
+routess tokens revoke <id>
+routess export -o my-data.zip     # routess-export.json plus un GPX par itinéraire
+```
+
+Révoquer le token avec lequel le CLI est actuellement authentifié te verrouille dehors, cela nécessite donc `--confirm`.
+
+### Confirmations requises
+
+Les opérations destructrices ou tournées vers l'extérieur nécessitent un `--confirm` explicite : supprimer des itinéraires ou des collections, passer une visibilité à `public`, et révoquer le token actif. Sans lui, le CLI se termine avec le code 9 (précondition requise).
 
 ## Codes de sortie
 
@@ -67,6 +113,8 @@ Le CLI utilise une taxonomie de codes de sortie stable, alignée sur les codes d
 
 ## Scopes
 
-Les PAT portent l'un de deux scopes : `read` (endpoints GET) ou `write` (endpoints mutants : PATCH, DELETE). Le CLI remonte un `FORBIDDEN` (code de sortie 6) quand tu essaies de muter un itinéraire avec un PAT en lecture seule ; génère un token de scope `write` dans l'application web et ré-authentifie-toi.
+Les PAT portent l'un de deux scopes : `read` (endpoints GET, y compris l'export du compte) ou `write` (endpoints mutants : POST, PATCH, DELETE). Le CLI remonte un `FORBIDDEN` (code de sortie 6) quand tu essaies de muter un itinéraire avec un PAT en lecture seule ; génère un token de scope `write` dans l'application web et ré-authentifie-toi.
+
+Les surfaces publiques fonctionnent sans aucun token : `routes public`, `routes gpx` / `collections get` sur des références publiques ou à token de partage, et `generate` (sans `--save`).
 
 Voir la [référence de l'API](../../api) pour la liste complète des endpoints et les exigences de scope par endpoint.

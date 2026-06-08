@@ -20,7 +20,7 @@ Use the [template](0000-template.md) when adding a new one. Number sequentially 
 - [0012 — Soft-delete enforced by a global MikroORM filter](0012-soft-delete-via-mikro-orm-filter.md)
 - [0018 — Route updates are last-write-wins (deferred optimistic concurrency)](0018-route-update-last-write-wins.md)
 - [0030 — Discovery geo queries use persisted bbox columns, not PostGIS](0030-bbox-columns-not-postgis-for-discovery.md)
-- [0031 — Layered caching and provider cost control](0031-layered-caching-and-provider-cost-control.md)
+- [0032 — Layered caching and provider cost control](0032-layered-caching-and-provider-cost-control.md)
 
 ### Routing & domain
 - [0007 — Single canonical Waypoint type](0007-single-canonical-waypoint-type.md)
@@ -30,6 +30,7 @@ Use the [template](0000-template.md) when adding a new one. Number sequentially 
 - [0017 — RouteDraft `unsaved | editing` mode lifecycle](0017-routedraft-mode-lifecycle.md)
 - [0021 — Shared routing logic, dual-credential execution](0021-shared-routing-logic-dual-credential-execution.md)
 - [0029 — Route generation is a scored candidate pipeline](0029-route-generation-as-scored-candidate-pipeline.md)
+- [0031 — Strict surface preferences steer candidate placement, not just costing](0031-surface-first-generation-for-strict-surface-preferences.md)
 
 ### Frontend state
 - [0002 — Zustand for RouteDraft state](0002-zustand-for-routedraft-state.md)

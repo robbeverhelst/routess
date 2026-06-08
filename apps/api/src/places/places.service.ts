@@ -38,7 +38,7 @@ export class PlacesService {
 	}
 
 	// Geocode results for a ~100m grid cell never change, so they live in a
-	// durable Postgres cache rather than a TTL store (ADR 0031). The cell key
+	// durable Postgres cache rather than a TTL store (ADR 0032). The cell key
 	// rounds to 3 decimals (~110m latitude).
 	private geocodeCacheKey([lng, lat]: [number, number]): string {
 		return `${lat.toFixed(3)},${lng.toFixed(3)}`;
