@@ -38,6 +38,7 @@ import { Badge, IconBtn, RDS_COLORS } from "./components/primitives";
 import { RailNav } from "./components/RailNav";
 import { RouteChip } from "./components/RouteChip";
 import { useAccountPreferencesSync } from "./hooks/useAccountPreferencesSync";
+import { useLocateButtonState } from "./hooks/useLocateButtonState";
 import { useOnlineStatus } from "./hooks/useOnlineStatus";
 import { useViewport } from "./hooks/useViewport";
 import { CommandPalette } from "./modals/CommandPalette";
@@ -187,6 +188,7 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 
 	const queryClient = useQueryClient();
 	const { isMobile } = useViewport();
+	const locateButton = useLocateButtonState();
 	const [authView, setAuthView] = useState<AuthView>("login");
 	const [skippedAuth, setSkippedAuthState] = useState<boolean>(readSkippedAuth);
 	const setSkippedAuth = useCallback((value: boolean) => {
@@ -513,6 +515,8 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 			onLock={() => setIsLocked(!isLocked)}
 			onSearch={() => openModal("search")}
 			onLocate={() => emitAppEvent("routess:locate")}
+			isLocating={locateButton.isLocating}
+			locateUnavailable={locateButton.unavailable}
 			onGenerateLoop={() => openModal("loop")}
 			onLayers={() => (overlay === "layers" ? closeOverlay() : openOverlay("layers"))}
 			onFocusRoute={() => emitAppEvent("routess:focus-route")}

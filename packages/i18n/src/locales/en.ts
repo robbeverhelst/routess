@@ -1201,6 +1201,8 @@ export const en: Record<string, string> = {
 	// MapToolbar
 	"toolbar.searchLocation": "Search location",
 	"toolbar.centerOnMe": "Center on me",
+	"toolbar.locateDenied": "Location access is off. Enable it in your browser settings to center on your position.",
+	"toolbar.locateUnsupported": "Location isn't available on this device.",
 	"toolbar.mapStyle": "Map style",
 	"toolbar.lock": "Lock map",
 	"toolbar.unlock": "Unlock map",
