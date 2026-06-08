@@ -269,7 +269,11 @@ nodeTiles:
   maxZoom: 14
   # Hard ceiling so a stuck download/build cannot run forever (3h).
   activeDeadlineSeconds: 10800
-  workSizeLimit: 12Gi
+  # Scratch space for the build, sized for the Benelux extract: the raw .osm.pbf
+  # is ~1.5GB and everything after osmium filtering is small, so peak is ~2-4GB.
+  # For a Europe extract (~28GB raw) raise this and the ephemeral-storage limit
+  # to ~40Gi.
+  workSizeLimit: 8Gi
   s3:
     # S3-compatible endpoint (MinIO, R2, ...), bucket, and object key the web
     # app reads. The object must be public-read with CORS allowing the web
@@ -289,11 +293,11 @@ nodeTiles:
     requests:
       cpu: 500m
       memory: 1Gi
-      ephemeral-storage: 4Gi
+      ephemeral-storage: 2Gi
     limits:
       cpu: "2"
       memory: 4Gi
-      ephemeral-storage: 12Gi
+      ephemeral-storage: 8Gi
   securityContext:
     runAsNonRoot: true
     runAsUser: 65532
