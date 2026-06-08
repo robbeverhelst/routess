@@ -17,6 +17,10 @@ interface MapToolbarProps {
 	onFocusRoute?: () => void;
 	onZoomIn?: () => void;
 	onZoomOut?: () => void;
+	// A manual locate request is in flight (shows a spinner on the button).
+	isLocating?: boolean;
+	// Reason the locate button is greyed out, or null/undefined when usable.
+	locateUnavailable?: "denied" | "unsupported" | null;
 	hasRoute?: boolean;
 	// True when there is anything to clear — at least one waypoint, even if
 	// the route polyline hasn't been computed yet (a single Start counts).
@@ -48,6 +52,28 @@ function Group({ children, vertical }: { children: ReactNode; vertical?: boolean
 export function MapToolbar(props: MapToolbarProps) {
 	const t = useT();
 	const canRemoveRoute = props.canRemoveRoute ?? props.hasRoute;
+	const locateReason =
+		props.locateUnavailable === "denied"
+			? t("toolbar.locateDenied")
+			: props.locateUnavailable === "unsupported"
+				? t("toolbar.locateUnsupported")
+				: undefined;
+	const renderLocateBtn = (size: number, style?: CSSProperties) => (
+		<IconBtn
+			title={locateReason ?? t("toolbar.centerOnMe")}
+			onClick={props.onLocate}
+			inactive={Boolean(props.locateUnavailable)}
+			style={style}
+		>
+			{props.isLocating ? (
+				<span style={{ display: "inline-flex", animation: "rds-spin 0.8s linear infinite" }}>
+					<I.refresh size={size} />
+				</span>
+			) : (
+				<I.target size={size} />
+			)}
+		</IconBtn>
+	);
 	if (props.isMobile) {
 		const btnStyle: CSSProperties = { width: 40, height: 40 };
 		return (
@@ -66,9 +92,7 @@ export function MapToolbar(props: MapToolbarProps) {
 					<IconBtn title={t("loop.title")} onClick={props.onGenerateLoop} style={btnStyle}>
 						<I.compass size={18} />
 					</IconBtn>
-					<IconBtn title={t("toolbar.centerOnMe")} onClick={props.onLocate} style={btnStyle}>
-						<I.target size={18} />
-					</IconBtn>
+					{renderLocateBtn(18, btnStyle)}
 					<IconBtn title={t("toolbar.mapStyle")} onClick={props.onLayers} style={btnStyle}>
 						<I.layers size={18} />
 					</IconBtn>
@@ -141,9 +165,7 @@ export function MapToolbar(props: MapToolbarProps) {
 				<IconBtn title={t("toolbar.searchLocation")} onClick={props.onSearch}>
 					<I.search size={16} />
 				</IconBtn>
-				<IconBtn title={t("toolbar.centerOnMe")} onClick={props.onLocate}>
-					<I.target size={16} />
-				</IconBtn>
+				{renderLocateBtn(16)}
 			</Group>
 			<Group>
 				<IconBtn title={t("toolbar.undo")} onClick={props.onUndo} disabled={!props.canUndo}>

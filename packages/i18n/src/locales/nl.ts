@@ -1183,6 +1183,9 @@ export const nl: Record<string, string> = {
 	// MapToolbar
 	"toolbar.searchLocation": "Locatie zoeken",
 	"toolbar.centerOnMe": "Centreren op mij",
+	"toolbar.locateDenied":
+		"Locatietoegang staat uit. Schakel het in je browserinstellingen in om op je positie te centreren.",
+	"toolbar.locateUnsupported": "Locatie is niet beschikbaar op dit apparaat.",
 	"toolbar.mapStyle": "Kaartstijl",
 	"toolbar.lock": "Kaart vergrendelen",
 	"toolbar.unlock": "Kaart ontgrendelen",

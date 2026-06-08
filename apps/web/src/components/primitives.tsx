@@ -30,6 +30,9 @@ interface IconBtnProps {
 	pressed?: boolean;
 	style?: CSSProperties;
 	disabled?: boolean;
+	// Greyed-out + not clickable, but still hoverable so the tooltip explaining
+	// why can show (a natively `disabled` button never fires the tooltip).
+	inactive?: boolean;
 	onPointerDown?: (e: React.PointerEvent<HTMLButtonElement>) => void;
 	onPointerMove?: (e: React.PointerEvent<HTMLButtonElement>) => void;
 	onPointerUp?: (e: React.PointerEvent<HTMLButtonElement>) => void;
@@ -43,18 +46,21 @@ export function IconBtn({
 	pressed,
 	style,
 	disabled,
+	inactive,
 	onPointerDown,
 	onPointerMove,
 	onPointerUp,
 	onPointerCancel,
 }: IconBtnProps) {
+	const blocked = disabled || inactive;
 	return (
 		<Tooltip label={title}>
 			<button
 				type="button"
-				onClick={onClick}
+				onClick={inactive ? undefined : onClick}
 				aria-label={title}
 				aria-pressed={pressed}
+				aria-disabled={blocked}
 				disabled={disabled}
 				onPointerDown={onPointerDown}
 				onPointerMove={onPointerMove}
@@ -70,19 +76,19 @@ export function IconBtn({
 					border: "1px solid transparent",
 					color: pressed ? RDS_COLORS.fg : RDS_COLORS.fgMuted,
 					transition: "background 120ms, color 120ms, border 120ms",
-					cursor: disabled ? "not-allowed" : "pointer",
-					opacity: disabled ? 0.5 : 1,
+					cursor: blocked ? "not-allowed" : "pointer",
+					opacity: blocked ? 0.5 : 1,
 					flexShrink: 0,
 					padding: 0,
 					...style,
 				}}
 				onMouseEnter={(e) => {
-					if (disabled || pressed) return;
+					if (blocked || pressed) return;
 					e.currentTarget.style.background = RDS_COLORS.bgHover;
 					e.currentTarget.style.color = RDS_COLORS.fg;
 				}}
 				onMouseLeave={(e) => {
-					if (disabled || pressed) return;
+					if (blocked || pressed) return;
 					e.currentTarget.style.background = "transparent";
 					e.currentTarget.style.color = RDS_COLORS.fgMuted;
 				}}
