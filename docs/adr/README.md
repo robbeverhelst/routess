@@ -21,6 +21,7 @@ Use the [template](0000-template.md) when adding a new one. Number sequentially 
 - [0018 — Route updates are last-write-wins (deferred optimistic concurrency)](0018-route-update-last-write-wins.md)
 - [0030 — Discovery geo queries use persisted bbox columns, not PostGIS](0030-bbox-columns-not-postgis-for-discovery.md)
 - [0032 — Layered caching and provider cost control](0032-layered-caching-and-provider-cost-control.md)
+- [0033 — Node networks as self-hosted vector tiles, not a live Overpass proxy](0033-node-network-tiles-from-self-hosted-pmtiles.md)
 
 ### Routing & domain
 - [0007 — Single canonical Waypoint type](0007-single-canonical-waypoint-type.md)

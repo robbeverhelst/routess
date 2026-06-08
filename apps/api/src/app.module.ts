@@ -18,7 +18,6 @@ import { APP_CONFIG, ConfigModule } from "./config/config.module";
 import { GenerationModule } from "./generation/generation.module";
 import { HealthModule } from "./health/health.module";
 import config from "./mikro-orm.config";
-import { OverlaysModule } from "./overlays/overlays.module";
 import { ProfilesModule } from "./profiles/profiles.module";
 import { RoutesModule } from "./routes/routes.module";
 import { RoutingModule } from "./routing/routing.module";
@@ -98,7 +97,6 @@ import { UsersModule } from "./users/users.module";
 		ProfilesModule,
 		SocialModule,
 		RoutingModule,
-		OverlaysModule,
 		GenerationModule,
 		HealthModule,
 		TelemetryModule,

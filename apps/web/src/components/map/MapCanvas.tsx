@@ -12,7 +12,7 @@ import { MapPopup, type PopupInfo as MapPopupInfo } from "@/components/map/MapPo
 import { SunPositionIndicator } from "@/components/map/SunPositionIndicator";
 import { WaypointDragTrash } from "@/components/map/WaypointDragTrash";
 import { useUserLocation } from "@/components/providers/UserLocationProvider";
-import { NodesOverlay } from "@/features/overlays/NodesOverlay";
+import { NodeNetworkAttribution, NodesOverlay } from "@/features/overlays/NodesOverlay";
 import { useServiceWorker } from "@/hooks/useServiceWorker";
 import { useErrorHandler } from "@/lib/errors";
 import { type SupportedLanguage, useT } from "@/lib/i18n";
@@ -629,6 +629,8 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
 					)}
 					<NodesOverlay />
 				</MapGL>
+
+				<NodeNetworkAttribution />
 
 				<WaypointDragTrash />
 
