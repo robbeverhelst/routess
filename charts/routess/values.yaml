@@ -219,7 +219,7 @@ redis:
   enabled: true
   image:
     repository: redis
-    tag: 7-alpine
+    tag: 8-alpine
     pullPolicy: IfNotPresent
   # Eviction keeps the instance bounded; every entry is reconstructible.
   maxmemory: 128mb
