@@ -308,12 +308,6 @@ export const fr: Record<string, string> = {
 	"settings.pace.subtitle": "Utilisé pour estimer les temps d'itinéraire",
 	"settings.pace.resetDefault": "Réinitialiser la valeur par défaut",
 	"settings.pace.alreadyDefault": "Déjà à la valeur par défaut",
-	"welcome.steps.pace.title": "Votre allure moyenne",
-	"welcome.steps.pace.subtitle": "Ajustez la vitesse typique pour chaque sport choisi.",
-	"welcome.steps.pace.help":
-		"Nous l'utilisons pour estimer les durées d'itinéraire sur les segments directs et hors ligne.",
-	"welcome.pace.average": "Allure moyenne",
-	"welcome.pace.changeLater": "Ajustez ces valeurs plus tard dans Paramètres, Allure.",
 
 	// Common translations
 	"common.cancel": "Annuler",
