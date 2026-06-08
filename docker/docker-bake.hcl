@@ -96,7 +96,7 @@ target "landing" {
 # Not a running service; the CronJob runs it on a schedule.
 target "node-tiles" {
   inherits   = ["common"]
-  dockerfile = "apps/node-tiles/Dockerfile"
+  dockerfile = "docker/Dockerfile.node-tiles"
   tags = [
     "${REGISTRY}/${OWNER}/routess-node-tiles:${VERSION}",
     "${REGISTRY}/${OWNER}/routess-node-tiles:${MINOR}",

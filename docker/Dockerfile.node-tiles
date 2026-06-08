@@ -1,7 +1,17 @@
 # Build image for the monthly node-network tile job (ADR 0033).
 # Bundles the OSM toolchain: osmium (filter), GDAL (OSM->GeoJSON), tippecanoe
 # (vector tiles), bun (transform), awscli (upload). Run via scripts/node-tiles.
-FROM ghcr.io/felt/tippecanoe:2.62.0 AS tippecanoe
+
+# tippecanoe is not packaged for Debian and has no upstream image, so build it
+# from source and copy the binaries into the runtime stage.
+FROM debian:bookworm-slim AS tippecanoe
+ARG TIPPECANOE_VERSION=2.79.0
+RUN apt-get update && apt-get install -y --no-install-recommends \
+		git build-essential libsqlite3-dev zlib1g-dev ca-certificates \
+	&& rm -rf /var/lib/apt/lists/*
+RUN git clone --depth 1 --branch "${TIPPECANOE_VERSION}" https://github.com/felt/tippecanoe.git /src \
+	&& make -C /src -j"$(nproc)" \
+	&& make -C /src install PREFIX=/usr/local
 
 FROM debian:bookworm-slim
 
@@ -10,7 +20,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 		osmium-tool gdal-bin awscli \
 	&& rm -rf /var/lib/apt/lists/*
 
-# tippecanoe is not packaged for Debian; copy the prebuilt binaries.
 COPY --from=tippecanoe /usr/local/bin/tippecanoe /usr/local/bin/tippecanoe
 COPY --from=tippecanoe /usr/local/bin/tile-join /usr/local/bin/tile-join
 
