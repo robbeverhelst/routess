@@ -24,6 +24,12 @@ We now pre-extract the data into our own vector tiles and let Mapbox consume the
 - Follow-ups: bucket CORS/IaC lives in the infra repo alongside the other edge config. If coverage expands to Europe, revisit tippecanoe zoom/feature-drop settings so the file stays small.
 - Source extract note: Geofabrik dropped the combined `benelux` extract, so Benelux is assembled from the three per-country files (`belgium`/`netherlands`/`luxembourg`), filtered and merged. The build validates each download with `osmium fileinfo` so a renamed/removed extract (which Geofabrik 302-redirects to an HTML page) fails loudly instead of silently producing empty tiles.
 
+## Amendment: serve a TileJSON, not the raw .pmtiles (terrain crash)
+
+The original plan had the client point a `vector` source straight at the `.pmtiles` URL and let mapbox-gl read it natively. That works without terrain, but mapbox-gl 3.24's native PMTiles support is an on-demand experimental plugin (`mapbox-gl-pmtiles-provider` v0.0.2), and with terrain/globe enabled it throws `a is not defined` from inside the render loop (`renderToBackBuffer`), crashing the map. The source loads fine; the crash is at render time and only with terrain on.
+
+Fix: keep building the single `.pmtiles` file, but serve it through **go-pmtiles** (`pmtiles serve --public-url …`) instead of a static file server. That exposes a standard **TileJSON** (`/nodes.json`, with `tiles[]`, zoom range, and `vector_layers` including `node_network`) plus `/{z}/{x}/{y}.mvt`. The web app points `VITE_NODE_TILES_URL` at the TileJSON, so the `vector` source renders through the same battle-tested path as the basemap and is terrain-safe. No overlay code changes; a guard warns if the URL is reconfigured back to a raw `.pmtiles`. Verified end-to-end against the production file: go-pmtiles emits a valid TileJSON (layer `node_network`, fields `kind`/`ref`/`fromRef`/`toRef`/`name`) and serves MVT tiles.
+
 ## References
 
 - Supersedes ADR-0032 #4 (Knooppunten via API proxy with grid-quantized tiles).

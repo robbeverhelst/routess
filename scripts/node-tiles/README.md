@@ -53,7 +53,15 @@ zoom/drop settings so the file stays small). A bad URL fails the build loudly
 (`osmium fileinfo` rejects Geofabrik's HTML redirect page) rather than producing
 empty tiles.
 
-## Bucket requirements
+## Serving (TileJSON, not raw .pmtiles)
 
-The object must be public-read with CORS allowing the web origin and `Range`
-requests. CORS/IaC lives in the infra repo, not this chart.
+The web app does **not** read the raw `.pmtiles` file directly: mapbox-gl's
+native pmtiles provider crashes under terrain (`a is not defined`, ADR 0033).
+Instead the file is served by **go-pmtiles** (`pmtiles serve --public-url
+https://tiles.routess.com`), which exposes a standard TileJSON at
+`/nodes.json` and MVT tiles at `/nodes/{z}/{x}/{y}.mvt`. Point
+`VITE_NODE_TILES_URL` at the TileJSON (`.../nodes.json`), not the `.pmtiles`.
+
+go-pmtiles can read the `.pmtiles` straight from the bucket, so the build's
+upload target is unchanged. CORS must allow the web origin and `Range`
+requests; CORS/serving IaC lives in the infra repo, not this chart.
