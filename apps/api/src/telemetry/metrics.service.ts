@@ -49,6 +49,10 @@ export class MetricsService implements OnModuleInit, OnModuleDestroy, Metrics {
 	// External request metrics
 	private externalRequestDuration!: Histogram;
 
+	// Provider cost control metrics (issue #140, ADR 0032)
+	private providerCalls!: Counter;
+	private cacheEvents!: Counter;
+
 	// Route generation metrics (issue #136: quality, latency, provider calls)
 	private routeGenerations!: Counter;
 	private routeGenerationDuration!: Histogram;
@@ -116,6 +120,14 @@ export class MetricsService implements OnModuleInit, OnModuleDestroy, Metrics {
 		this.externalRequestDuration = this.meter.createHistogram("external_request_duration_ms", {
 			description: "Duration of outbound requests to third-party providers",
 			unit: "ms",
+		});
+
+		this.providerCalls = this.meter.createCounter("provider_calls_total", {
+			description: "Outbound provider calls by provider, endpoint, feature, and outcome",
+		});
+
+		this.cacheEvents = this.meter.createCounter("cache_events_total", {
+			description: "Cache lookups by cache name and result (hit or miss)",
 		});
 
 		this.routeGenerations = this.meter.createCounter("route_generations_total", {
@@ -216,6 +228,14 @@ export class MetricsService implements OnModuleInit, OnModuleDestroy, Metrics {
 
 	recordExternalRequest(provider: string, status: "success" | "error", duration: number) {
 		this.externalRequestDuration.record(duration, { provider, status });
+	}
+
+	recordProviderCall(provider: string, endpoint: string, feature: string, outcome: "success" | "error") {
+		this.providerCalls.add(1, { provider, endpoint, feature, outcome });
+	}
+
+	recordCacheEvent(cache: string, result: "hit" | "miss") {
+		this.cacheEvents.add(1, { cache, result });
 	}
 
 	recordRouteGeneration(event: RouteGenerationCompletedEvent) {

@@ -141,6 +141,14 @@ spec:
             - name: GEOCODING_REFERER
               value: {{ . | quote }}
             {{- end }}
+            {{- if .Values.redis.enabled }}
+            - name: REDIS_URL
+              value: "redis://{{ include "routess.fullname" . }}-redis:{{ .Values.redis.service.port }}"
+            {{- end }}
+            {{- with .Values.api.env.generationQuotaPerDay }}
+            - name: GENERATION_QUOTA_PER_DAY
+              value: {{ . | quote }}
+            {{- end }}
             - name: RESEND_API_KEY
               valueFrom:
                 secretKeyRef:

@@ -269,12 +269,16 @@ export class GenerationService {
 			),
 		];
 
-		const results = await this.routing.callValhalla<ValhallaLocateResult[]>("/locate", {
-			locations,
-			costing: costing.costing,
-			costing_options: costing.costing_options,
-			verbose: true,
-		});
+		const results = await this.routing.callValhalla<ValhallaLocateResult[]>(
+			"/locate",
+			{
+				locations,
+				costing: costing.costing,
+				costing_options: costing.costing_options,
+				verbose: true,
+			},
+			"generation",
+		);
 
 		const snappedCoord = (result: ValhallaLocateResult | undefined, pref: SurfaceType): Coordinate | null => {
 			const edge = pickViaEdge(result?.edges, pref);
@@ -512,19 +516,23 @@ export class GenerationService {
 		start: Coordinate,
 		costing: ValhallaCostingRequest,
 	): Promise<RoutedLeg | null> {
-		const data = await this.routing.callValhalla<ValhallaRouteResponse>("/route", {
-			locations: [
-				{ lat: start[1], lon: start[0], type: "break" },
-				// `through` forbids U-turns at via points: the router must pass
-				// through and keep going, which is what makes the loop a loop.
-				...plan.viaPoints.map(([lon, lat]) => ({ lat, lon, type: "through" })),
-				{ lat: start[1], lon: start[0], type: "break" },
-			],
-			costing: costing.costing,
-			costing_options: costing.costing_options,
-			directions_options: { units: "kilometers" },
-			format: "json",
-		});
+		const data = await this.routing.callValhalla<ValhallaRouteResponse>(
+			"/route",
+			{
+				locations: [
+					{ lat: start[1], lon: start[0], type: "break" },
+					// `through` forbids U-turns at via points: the router must pass
+					// through and keep going, which is what makes the loop a loop.
+					...plan.viaPoints.map(([lon, lat]) => ({ lat, lon, type: "through" })),
+					{ lat: start[1], lon: start[0], type: "break" },
+				],
+				costing: costing.costing,
+				costing_options: costing.costing_options,
+				directions_options: { units: "kilometers" },
+				format: "json",
+			},
+			"generation",
+		);
 
 		const legs = data.trip?.legs ?? [];
 		if (data.error || legs.length === 0) return null;
@@ -550,25 +558,29 @@ export class GenerationService {
 		// The shape comes verbatim from Valhalla's own route response, but
 		// edge_walk still rejects it when costing nuances differ; walk_or_snap
 		// tries the exact walk first and falls back to map matching.
-		const data = await this.routing.callValhalla<ValhallaTraceResponse>("/trace_attributes", {
-			encoded_polyline: shape,
-			shape_match: "walk_or_snap",
-			costing: costing.costing,
-			costing_options: costing.costing_options,
-			filters: {
-				attributes: [
-					"edge.way_id",
-					"edge.surface",
-					"edge.length",
-					"edge.begin_heading",
-					"edge.end_heading",
-					"edge.begin_shape_index",
-					"edge.end_shape_index",
-					"shape",
-				],
-				action: "include",
+		const data = await this.routing.callValhalla<ValhallaTraceResponse>(
+			"/trace_attributes",
+			{
+				encoded_polyline: shape,
+				shape_match: "walk_or_snap",
+				costing: costing.costing,
+				costing_options: costing.costing_options,
+				filters: {
+					attributes: [
+						"edge.way_id",
+						"edge.surface",
+						"edge.length",
+						"edge.begin_heading",
+						"edge.end_heading",
+						"edge.begin_shape_index",
+						"edge.end_shape_index",
+						"shape",
+					],
+					action: "include",
+				},
 			},
-		});
+			"generation",
+		);
 
 		// Edge midpoints (via the matched shape) feed surface-anchored planning.
 		const matchedShape = typeof data.shape === "string" ? decodePolyline6(data.shape) : [];

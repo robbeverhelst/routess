@@ -1,8 +1,12 @@
 import { Logger } from "@/lib/logger";
+import { getRuntimeConfig } from "@/lib/runtime-config";
 
-const OVERPASS_ENDPOINT = "https://overpass-api.de/api/interpreter";
-const OVERPASS_FALLBACK = "https://overpass.kumi.systems/api/interpreter";
-const CACHE_VERSION = 3;
+// Node networks are served by the API, which quantizes requests to grid
+// cells cached in Redis so one Overpass fetch serves every user (ADR 0032).
+// The local memory/localStorage cache stays as a per-browser L1.
+const API_BASE_URL = getRuntimeConfig("VITE_API_URL") ?? "";
+const NODE_NETWORK_URL = `${API_BASE_URL.replace(/\/+$/, "")}/api/v1/overlays/node-network`;
+const CACHE_VERSION = 4;
 const CACHE_PREFIX = `routess.node-network.v${CACHE_VERSION}:`;
 const CACHE_TTL_MS = 14 * 24 * 60 * 60 * 1000;
 const MAX_MEMORY_CACHE_ENTRIES = 80;
@@ -14,37 +18,6 @@ export interface NodeNetworkBbox {
 	west: number;
 	north: number;
 	east: number;
-}
-
-interface OverpassNodeElement {
-	type: "node";
-	id: number;
-	lat: number;
-	lon: number;
-	tags?: Record<string, string>;
-}
-
-interface OverpassWayElement {
-	type: "way";
-	id: number;
-	geometry?: { lat: number; lon: number }[];
-	tags?: Record<string, string>;
-}
-
-interface OverpassRelationElement {
-	type: "relation";
-	id: number;
-	members?: {
-		type: string;
-		ref: number;
-		role?: string;
-		geometry?: { lat: number; lon: number }[];
-	}[];
-	tags?: Record<string, string>;
-}
-
-interface OverpassResponse {
-	elements: (OverpassNodeElement | OverpassWayElement | OverpassRelationElement)[];
 }
 
 export type NodeFeatureProps = {
@@ -80,48 +53,6 @@ export function clearNodeNetworkCacheForTests(): void {
 	} catch (err) {
 		Logger.debug("[OverpassNodesService] node-network cache clear skipped", err);
 	}
-}
-
-function classify(network: string | undefined): NodeNetworkKind | null {
-	if (!network) return null;
-	if (network === "rwn" || network === "lwn") return "hiking";
-	if (network === "rcn" || network === "lcn") return "cycling";
-	return null;
-}
-
-function classifyNode(tags: Record<string, string>): NodeNetworkKind | null {
-	if (tags.rwn_ref || tags.lwn_ref) return "hiking";
-	if (tags.rcn_ref || tags.lcn_ref) return "cycling";
-	return classify(tags.network);
-}
-
-function pickRef(tags: Record<string, string>): string | undefined {
-	return tags.rwn_ref ?? tags.lwn_ref ?? tags.rcn_ref ?? tags.lcn_ref ?? tags.ref;
-}
-
-function parseConnectionRef(ref: string | undefined): Pick<NodeFeatureProps, "fromRef" | "toRef"> {
-	if (!ref) return {};
-	const parts = ref
-		.split(/[-–—>/]/)
-		.map((part) => part.trim())
-		.filter(Boolean);
-	if (parts.length < 2) return {};
-	return { fromRef: parts[0], toRef: parts[parts.length - 1] };
-}
-
-function buildQuery(bbox: NodeNetworkBbox): string {
-	const { south, west, north, east } = bbox;
-	const bboxStr = `${south},${west},${north},${east}`;
-	return `[out:json][timeout:30];
-(
-  node["rwn_ref"](${bboxStr});
-  node["lwn_ref"](${bboxStr});
-  node["rcn_ref"](${bboxStr});
-  node["lcn_ref"](${bboxStr});
-  node["network:type"="node_network"]["ref"](${bboxStr});
-  relation["type"="route"]["network:type"="node_network"]["network"~"^[lr][wc]n$"](${bboxStr});
-);
-out geom;`;
 }
 
 function isCacheFresh(entry: CacheEntry, now = Date.now()): boolean {
@@ -190,23 +121,6 @@ function storeCachedEntry(key: string, data: NodeFeatureCollection): NodeFeature
 	return data;
 }
 
-async function postOverpass(
-	query: string,
-	signal: AbortSignal | undefined,
-	endpoint: string,
-): Promise<OverpassResponse> {
-	const response = await fetch(endpoint, {
-		method: "POST",
-		headers: { "Content-Type": "application/x-www-form-urlencoded" },
-		body: `data=${encodeURIComponent(query)}`,
-		signal,
-	});
-	if (!response.ok) {
-		throw new Error(`Overpass ${response.status}`);
-	}
-	return (await response.json()) as OverpassResponse;
-}
-
 export async function fetchNodeNetwork(bbox: NodeNetworkBbox, signal?: AbortSignal): Promise<NodeFeatureCollection> {
 	const cacheKey = bboxKey(bbox);
 	const cached = getCachedEntry(cacheKey);
@@ -245,70 +159,29 @@ async function fetchNodeNetworkFromOverpass(
 	bbox: NodeNetworkBbox,
 	signal?: AbortSignal,
 ): Promise<NodeFeatureCollection> {
-	const query = buildQuery(bbox);
-	let data: OverpassResponse;
-	try {
-		data = await postOverpass(query, signal, OVERPASS_ENDPOINT);
-	} catch (err) {
-		if ((err as { name?: string }).name === "AbortError") throw err;
-		Logger.warn("[OverpassNodesService] primary endpoint failed, falling back", err);
-		data = await postOverpass(query, signal, OVERPASS_FALLBACK);
+	const params = new URLSearchParams({
+		south: String(bbox.south),
+		west: String(bbox.west),
+		north: String(bbox.north),
+		east: String(bbox.east),
+	});
+	const response = await fetch(`${NODE_NETWORK_URL}?${params}`, { signal });
+	if (!response.ok) {
+		throw new Error(`node-network ${response.status}`);
 	}
-
-	const features: GeoJSON.Feature<GeoJSON.Point | GeoJSON.LineString, NodeFeatureProps>[] = [];
-
-	for (const el of data.elements) {
-		if (el.type === "node") {
-			const tags = el.tags ?? {};
-			const kind = classifyNode(tags);
-			if (!kind) continue;
-			const ref = pickRef(tags);
-			if (!ref) continue;
-			features.push({
-				type: "Feature",
-				id: `n${el.id}`,
-				geometry: { type: "Point", coordinates: [el.lon, el.lat] },
-				properties: { kind, ref, name: tags.name },
-			});
-		} else if (el.type === "way") {
-			const tags = el.tags ?? {};
-			const kind = classify(tags.network);
-			if (!kind) continue;
-			if (!el.geometry || el.geometry.length < 2) continue;
-			features.push({
-				type: "Feature",
-				id: `w${el.id}`,
-				geometry: {
-					type: "LineString",
-					coordinates: el.geometry.map((p) => [p.lon, p.lat]),
-				},
-				properties: { kind, name: tags.name },
-			});
-		} else if (el.type === "relation") {
-			const tags = el.tags ?? {};
-			const kind = classify(tags.network);
-			if (!kind) continue;
-
-			for (const [index, member] of (el.members ?? []).entries()) {
-				if (member.type !== "way" || !member.geometry || member.geometry.length < 2) continue;
-				features.push({
-					type: "Feature",
-					id: `r${el.id}-w${member.ref}-${index}`,
-					geometry: {
-						type: "LineString",
-						coordinates: member.geometry.map((p) => [p.lon, p.lat]),
-					},
-					properties: { kind, ref: tags.ref, ...parseConnectionRef(tags.ref), name: tags.name },
-				});
-			}
-		}
+	const data = (await response.json()) as NodeFeatureCollection;
+	if (data?.type !== "FeatureCollection" || !Array.isArray(data.features)) {
+		throw new Error("node-network returned an unexpected payload");
 	}
-
-	return { type: "FeatureCollection", features };
+	return data;
 }
 
 export const NODE_OVERLAY_MIN_ZOOM = 9;
-export const NODE_OVERLAY_MAX_BBOX_DEG = 1.5;
+// Aligned with the API's grid-cell cap (ADR 0032): the proxy serves up to 36
+// cells of 0.1deg, i.e. ~0.6deg per axis. Requesting a larger viewport would
+// just 400, so the client waits for zoom-in (the overlay is styled from
+// zoom 11 anyway) instead of firing a doomed fetch.
+export const NODE_OVERLAY_MAX_BBOX_DEG = 0.6;
 
 export function bboxArea(bbox: NodeNetworkBbox): number {
 	return Math.max(0, bbox.north - bbox.south) * Math.max(0, bbox.east - bbox.west);

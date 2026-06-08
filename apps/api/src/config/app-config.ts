@@ -82,6 +82,19 @@ export interface AppConfig {
 		mapboxToken: string;
 		referer: string;
 	};
+	cache: {
+		// Redis URL for the shared cache, throttle storage, and quota counters
+		// (ADR 0032). Empty disables Redis; the API falls back to per-pod
+		// in-memory caching, which halves hit rates across replicas but never
+		// blocks startup.
+		redisUrl: string;
+	};
+	quotas: {
+		// Per-User daily cap on RouteGeneration attempts. Each attempt fans out
+		// into many paid Valhalla calls, so the per-minute throttle alone does
+		// not bound daily provider spend. 0 disables the quota.
+		generationPerDay: number;
+	};
 }
 
 const DEFAULTS = {
@@ -260,6 +273,12 @@ export function getAppConfig(): AppConfig {
 		geocoding: {
 			mapboxToken: process.env.MAPBOX_PUBLIC_TOKEN ?? "",
 			referer: process.env.GEOCODING_REFERER || "https://routess.com",
+		},
+		cache: {
+			redisUrl: process.env.REDIS_URL ?? "",
+		},
+		quotas: {
+			generationPerDay: parseInteger(process.env.GENERATION_QUOTA_PER_DAY, 50),
 		},
 	};
 }

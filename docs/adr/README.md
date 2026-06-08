@@ -20,6 +20,7 @@ Use the [template](0000-template.md) when adding a new one. Number sequentially 
 - [0012 — Soft-delete enforced by a global MikroORM filter](0012-soft-delete-via-mikro-orm-filter.md)
 - [0018 — Route updates are last-write-wins (deferred optimistic concurrency)](0018-route-update-last-write-wins.md)
 - [0030 — Discovery geo queries use persisted bbox columns, not PostGIS](0030-bbox-columns-not-postgis-for-discovery.md)
+- [0032 — Layered caching and provider cost control](0032-layered-caching-and-provider-cost-control.md)
 
 ### Routing & domain
 - [0007 — Single canonical Waypoint type](0007-single-canonical-waypoint-type.md)

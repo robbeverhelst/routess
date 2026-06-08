@@ -2,12 +2,25 @@ import { afterEach, describe, expect, it } from "bun:test";
 import type { EntityManager } from "@mikro-orm/core";
 import type { AppConfig } from "src/config/app-config";
 import { PlacesService } from "src/places/places.service";
+import type { MetricsService } from "src/telemetry/metrics.service";
 
 const originalFetch = globalThis.fetch;
 
+// Geocode cache always misses here (findOne -> null), so every call falls
+// through to Mapbox, which is what these tests exercise. upsert is a no-op.
 function makeService(token = "pk.test"): PlacesService {
 	const config = { geocoding: { mapboxToken: token, referer: "https://routess.com" } } as AppConfig;
-	return new PlacesService({} as EntityManager, config);
+	const em = {
+		fork: () => ({
+			findOne: async () => null,
+			upsert: async () => undefined,
+		}),
+	} as unknown as EntityManager;
+	const metrics = {
+		recordCacheEvent: () => undefined,
+		recordProviderCall: () => undefined,
+	} as unknown as MetricsService;
+	return new PlacesService(em, config, metrics);
 }
 
 function stubFetch(handler: (url: string, init?: RequestInit) => Response | Promise<Response>): void {
@@ -67,6 +80,38 @@ describe("PlacesService.reverseGeocodePlace", () => {
 			throw new Error("ECONNREFUSED");
 		});
 		expect(await makeService().reverseGeocodePlace([3.72, 51.05])).toBeNull();
+	});
+
+	it("serves a repeated lookup from the geocode cache without calling Mapbox", async () => {
+		// EM fork backed by an in-memory store so the second call hits the cache.
+		const store = new Map<string, unknown>();
+		const config = { geocoding: { mapboxToken: "pk.test", referer: "https://routess.com" } } as AppConfig;
+		const em = {
+			fork: () => ({
+				findOne: async (_entity: unknown, where: { key: string }) => store.get(where.key) ?? null,
+				upsert: async (_entity: unknown, row: { key: string }) => {
+					store.set(row.key, row);
+				},
+			}),
+		} as unknown as EntityManager;
+		const metrics = {
+			recordCacheEvent: () => undefined,
+			recordProviderCall: () => undefined,
+		} as unknown as MetricsService;
+		const service = new PlacesService(em, config, metrics);
+
+		let fetchCalls = 0;
+		stubFetch(() => {
+			fetchCalls++;
+			return new Response(JSON.stringify({ features: [{ text: "Gent", context: [] }] }));
+		});
+
+		const first = await service.reverseGeocodePlace([3.72, 51.05]);
+		const second = await service.reverseGeocodePlace([3.72, 51.05]);
+
+		expect(first).toEqual({ city: "Gent", region: undefined, countryCode: undefined });
+		expect(second).toEqual(first);
+		expect(fetchCalls).toBe(1);
 	});
 
 	it("is disabled without a token and never calls fetch", async () => {

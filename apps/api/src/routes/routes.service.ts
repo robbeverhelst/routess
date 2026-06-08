@@ -20,6 +20,7 @@ import { type PublicRoutesQueryDto, parseBbox } from "./dto/public-routes-query.
 import type { RouteResponseDto } from "./dto/route-response.dto";
 import type { UpdateRouteDto } from "./dto/update-route.dto";
 import { toPublicRouteSummaryDto, toRouteResponseDto } from "./route.mapper";
+import { SurfaceCompositionService } from "./surface-composition.service";
 
 @Injectable()
 export class RoutesService {
@@ -33,6 +34,7 @@ export class RoutesService {
 		@Inject(APP_CONFIG)
 		private readonly config: AppConfig,
 		private readonly places: PlacesService,
+		private readonly surfaces: SurfaceCompositionService,
 	) {}
 
 	private toResponseDto(route: Route): RouteResponseDto {
@@ -70,6 +72,8 @@ export class RoutesService {
 		this.events.emit(ROUTE_CREATED, { userId } satisfies RouteCreatedEvent);
 		// Fire-and-forget: Place is async and fail-open (CONTEXT.md "Place").
 		void this.places.derivePlaceForRoute(route.id);
+		// Same pattern for the persisted surface composition (ADR 0032).
+		void this.surfaces.deriveForRoute(route.id);
 		return this.toResponseDto(route);
 	}
 
@@ -196,12 +200,18 @@ export class RoutesService {
 		const geometryChanged = updateRouteDto.geometry !== undefined || updateRouteDto.waypoints !== undefined;
 		if (geometryChanged) {
 			this.applyBbox(route);
+			// Stale composition must never render against new geometry; the
+			// async derivation below repopulates it.
+			route.surfaceComposition = null;
 		}
 		await this.em.persist(route).flush();
 		await this.em.populate(route, ["user"]);
 		const newStart = (route.geometry?.[0] ?? route.waypoints[0]?.coord)?.join(",");
 		if (!route.placeCity || newStart !== previousStart) {
 			void this.places.derivePlaceForRoute(route.id);
+		}
+		if (geometryChanged || !route.surfaceComposition) {
+			void this.surfaces.deriveForRoute(route.id);
 		}
 		return this.toResponseDto(route);
 	}

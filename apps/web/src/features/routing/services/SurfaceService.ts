@@ -1,6 +1,6 @@
 import { ApiHttpError, generateRequestId } from "@routess/api-client";
-import type { Coordinate, RouteActivity } from "@routess/core";
-import { valhallaCostingModelForActivity } from "@routess/core";
+import type { Coordinate, RouteActivity, SurfaceBucket, SurfaceComposition } from "@routess/core";
+import { decodePolyline6, surfaceCompositionFromEdges, valhallaCostingModelForActivity } from "@routess/core";
 import { Logger } from "@/lib/logger";
 import { getRuntimeConfig } from "@/lib/runtime-config";
 
@@ -11,19 +11,7 @@ const TRACE_ATTRIBUTES_URL = `${API_BASE_URL.replace(/\/+$/, "")}/api/v1/routing
 
 const MAX_SHAPE_POINTS = 1500;
 
-export type SurfaceBucket = "paved" | "compacted" | "unpaved" | "path";
-
-const SURFACE_BUCKETS: Record<string, SurfaceBucket> = {
-	paved_smooth: "paved",
-	paved: "paved",
-	paved_rough: "paved",
-	compacted: "compacted",
-	dirt: "unpaved",
-	gravel: "unpaved",
-	sand: "unpaved",
-	path: "path",
-	impassable: "path",
-};
+export type { SurfaceBucket } from "@routess/core";
 
 export interface SurfaceSegment {
 	surface: SurfaceBucket;
@@ -95,121 +83,33 @@ export async function fetchSurfaceBreakdown(
 	}
 
 	const data = (await response.json()) as ValhallaTraceAttributesResponse;
-	const edges = data.edges ?? [];
-	if (edges.length === 0) return null;
-
-	const meters: Record<SurfaceBucket, number> = { paved: 0, compacted: 0, unpaved: 0, path: 0 };
-	let total = 0;
-	for (const edge of edges) {
-		if (typeof edge.length !== "number") continue;
-		const lengthMeters = edge.length * 1000;
-		const bucket = SURFACE_BUCKETS[edge.surface ?? ""] ?? "unpaved";
-		meters[bucket] += lengthMeters;
-		total += lengthMeters;
-	}
-
-	if (total <= 0) return null;
-
-	const matchedShape = typeof data.shape === "string" ? decodePolyline6(data.shape) : null;
-	const segments = matchedShape ? buildSurfaceSegments(edges, matchedShape) : [];
-
-	return { meters, total, segments };
+	const composition = surfaceCompositionFromEdges(data.edges ?? [], data.shape);
+	return composition ? breakdownFromComposition(composition) : null;
 }
 
-// Group consecutive edges sharing the same surface bucket into one polyline segment
-// using each edge's [begin_shape_index, end_shape_index] range against the matched shape.
-// Distance ranges are summed from edge.length (km) so the strip and chart-hover lookups
-// agree with what Valhalla itself measured.
-function buildSurfaceSegments(edges: ValhallaEdge[], shape: Coordinate[]): SurfaceSegment[] {
-	if (shape.length < 2) return [];
-	const segments: SurfaceSegment[] = [];
-	let current: {
-		bucket: SurfaceBucket;
-		begin: number;
-		end: number;
-		distanceStartMeters: number;
-		distanceEndMeters: number;
-	} | null = null;
-	let cumulativeMeters = 0;
-
-	for (const edge of edges) {
-		const begin = edge.begin_shape_index;
-		const end = edge.end_shape_index;
-		if (typeof begin !== "number" || typeof end !== "number" || end <= begin) continue;
-		const bucket = SURFACE_BUCKETS[edge.surface ?? ""] ?? "unpaved";
-		const edgeMeters = typeof edge.length === "number" ? edge.length * 1000 : 0;
-		const edgeStart = cumulativeMeters;
-		const edgeEnd = cumulativeMeters + edgeMeters;
-		cumulativeMeters = edgeEnd;
-
-		if (current && current.bucket === bucket && begin <= current.end) {
-			current.end = Math.max(current.end, end);
-			current.distanceEndMeters = edgeEnd;
-		} else {
-			if (current) segments.push(sliceSegment(current, shape));
-			current = {
-				bucket,
-				begin,
-				end,
-				distanceStartMeters: edgeStart,
-				distanceEndMeters: edgeEnd,
-			};
-		}
-	}
-	if (current) segments.push(sliceSegment(current, shape));
-	return segments.filter((s) => s.coordinates.length >= 2);
-}
-
-function sliceSegment(
-	current: {
-		bucket: SurfaceBucket;
-		begin: number;
-		end: number;
-		distanceStartMeters: number;
-		distanceEndMeters: number;
-	},
-	shape: Coordinate[],
-): SurfaceSegment {
-	const lo = Math.max(0, Math.min(current.begin, shape.length - 1));
-	const hi = Math.max(0, Math.min(current.end, shape.length - 1));
-	return {
-		surface: current.bucket,
-		coordinates: shape.slice(lo, hi + 1),
-		distanceStartMeters: current.distanceStartMeters,
-		distanceEndMeters: current.distanceEndMeters,
-	};
-}
-
-// Valhalla returns shape as a polyline encoded with precision 1e6 (vs Google's 1e5).
-function decodePolyline6(encoded: string): Coordinate[] {
-	const factor = 1e6;
-	const coords: Coordinate[] = [];
-	let index = 0;
-	let lat = 0;
-	let lng = 0;
-	while (index < encoded.length) {
-		let result = 0;
-		let shift = 0;
-		let byte: number;
-		do {
-			byte = encoded.charCodeAt(index++) - 63;
-			result |= (byte & 0x1f) << shift;
-			shift += 5;
-		} while (byte >= 0x20);
-		lat += result & 1 ? ~(result >> 1) : result >> 1;
-
-		result = 0;
-		shift = 0;
-		do {
-			byte = encoded.charCodeAt(index++) - 63;
-			result |= (byte & 0x1f) << shift;
-			shift += 5;
-		} while (byte >= 0x20);
-		lng += result & 1 ? ~(result >> 1) : result >> 1;
-
-		coords.push([lng / factor, lat / factor]);
-	}
-	return coords;
+// Expands a (persisted or freshly computed) SurfaceComposition into the
+// render shape: segment indices are sliced against the decoded matched shape.
+// Shared by the live trace path and routes that carry surfaceComposition from
+// the API, so both render identically.
+export function breakdownFromComposition(composition: SurfaceComposition): SurfaceBreakdown | null {
+	if (composition.total <= 0) return null;
+	const shape = composition.shape ? decodePolyline6(composition.shape) : null;
+	const segments: SurfaceSegment[] =
+		shape && shape.length >= 2
+			? composition.segments
+					.map((segment) => {
+						const lo = Math.max(0, Math.min(segment.begin, shape.length - 1));
+						const hi = Math.max(0, Math.min(segment.end, shape.length - 1));
+						return {
+							surface: segment.surface,
+							coordinates: shape.slice(lo, hi + 1),
+							distanceStartMeters: segment.distanceStartMeters,
+							distanceEndMeters: segment.distanceEndMeters,
+						};
+					})
+					.filter((segment) => segment.coordinates.length >= 2)
+			: [];
+	return { meters: composition.meters, total: composition.total, segments };
 }
 
 function downsampleCoords(coords: Coordinate[], max: number): Coordinate[] {

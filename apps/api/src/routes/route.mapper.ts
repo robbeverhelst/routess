@@ -32,6 +32,7 @@ export function toRouteResponseDto(route: Route, analyticsSalt: string): RouteRe
 		placeRegion: route.placeRegion,
 		placeCountryCode: route.placeCountryCode,
 		routingPreferences: route.routingPreferences ?? null,
+		surfaceComposition: route.surfaceComposition ?? null,
 		provenance: route.provenance,
 		shareToken: route.shareToken,
 		user: toPublicUserDto(serializedUser, analyticsSalt),

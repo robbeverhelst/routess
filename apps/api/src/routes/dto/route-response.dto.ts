@@ -6,6 +6,7 @@ import {
 	ROUTE_VISIBILITIES,
 	type RouteActivity,
 	type RouteVisibility,
+	type SurfaceComposition,
 } from "@routess/core";
 import { RoutingPreferencesDto } from "../../common/routing-preferences.dto";
 import { PublicUserDto } from "../../users/dto/user-response.dto";
@@ -100,6 +101,14 @@ export class RouteResponseDto {
 		type: RoutingPreferencesDto,
 	})
 	routingPreferences?: RoutingPreferencesDto | null;
+
+	@ApiPropertyOptional({
+		description:
+			"SurfaceBuckets along the RoutePath, derived server-side at save (ADR 0032). Null while derivation is pending or for routes without snapped geometry.",
+		type: "object",
+		additionalProperties: true,
+	})
+	surfaceComposition?: SurfaceComposition | null;
 
 	@ApiProperty({
 		description: "How this route was produced.",

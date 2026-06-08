@@ -7,7 +7,11 @@ import {
 } from "@routess/core";
 import { type KeyboardEvent, useEffect, useMemo, useState } from "react";
 import { useComputedElevationProfile } from "@/features/routing/services/elevation";
-import { fetchSurfaceBreakdown, type SurfaceBreakdown } from "@/features/routing/services/SurfaceService";
+import {
+	breakdownFromComposition,
+	fetchSurfaceBreakdown,
+	type SurfaceBreakdown,
+} from "@/features/routing/services/SurfaceService";
 import type { ApiRoute } from "@/lib/api";
 import { useSaveRoute, useToggleFavourite, useUpdateRoute } from "@/lib/api-queries";
 import { emitAppEvent, routeToLoadDetail } from "@/lib/app-events";
@@ -238,14 +242,23 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 
 	const [shareToUserOpen, setShareToUserOpen] = useState(false);
 
-	// Surface breakdown isn't persisted with saved routes, so fetch it on view
-	// from the stored geometry. Falls back silently if Valhalla is unavailable.
+	// Saved routes carry a persisted surfaceComposition (ADR 0032); only
+	// legacy rows that predate the derivation fall back to a live fetch.
+	const persistedBreakdown = useMemo(
+		() => (route.surfaceComposition ? breakdownFromComposition(route.surfaceComposition) : null),
+		[route.surfaceComposition],
+	);
 	const [surfaceBreakdown, setSurfaceBreakdown] = useState<SurfaceBreakdown | null>(null);
 	const [surfaceLoading, setSurfaceLoading] = useState(false);
 	// Saved routes carry their own Activity; fall back to "cycle" for legacy
 	// rows that lack one, since that produces the most permissive surface match.
 	const surfaceActivity: RouteActivity = route.activity ?? "cycle";
 	useEffect(() => {
+		if (persistedBreakdown) {
+			setSurfaceBreakdown(persistedBreakdown);
+			setSurfaceLoading(false);
+			return;
+		}
 		if (elevationGeometry.length < 2) {
 			setSurfaceBreakdown(null);
 			setSurfaceLoading(false);
@@ -273,7 +286,7 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 			controller.abort();
 			window.clearTimeout(timeoutId);
 		};
-	}, [elevationGeometry, surfaceActivity]);
+	}, [persistedBreakdown, elevationGeometry, surfaceActivity]);
 
 	const tags = route.tags ?? [];
 	const [pendingPublicVisibility, setPendingPublicVisibility] = useState(false);

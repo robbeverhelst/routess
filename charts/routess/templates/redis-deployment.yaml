@@ -1,0 +1,58 @@
+{{- if .Values.redis.enabled }}
+# Single-instance, cache-only Redis (ADR 0032). No persistence by design:
+# losing it costs warm caches and quota counters, nothing durable. The API
+# falls back to per-pod in-memory caching when it is unreachable.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "routess.fullname" . }}-redis
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "routess.redis.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "routess.redis.selectorLabels" . | nindent 6 }}
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        {{- include "routess.redis.selectorLabels" . | nindent 8 }}
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        {{- toYaml .Values.redis.securityContext | nindent 8 }}
+      containers:
+        - name: redis
+          image: "{{ .Values.redis.image.repository }}:{{ .Values.redis.image.tag }}"
+          imagePullPolicy: {{ .Values.redis.image.pullPolicy }}
+          args:
+            - --maxmemory
+            - {{ .Values.redis.maxmemory | quote }}
+            - --maxmemory-policy
+            - {{ .Values.redis.maxmemoryPolicy | quote }}
+            - --save
+            - ""
+            - --appendonly
+            - "no"
+          ports:
+            - name: redis
+              containerPort: 6379
+              protocol: TCP
+          securityContext:
+            {{- toYaml .Values.redis.containerSecurityContext | nindent 12 }}
+          resources:
+            {{- toYaml .Values.redis.resources | nindent 12 }}
+          livenessProbe:
+            tcpSocket:
+              port: redis
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 2
+            periodSeconds: 5
+{{- end }}
