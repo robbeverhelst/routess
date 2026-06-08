@@ -1,0 +1,79 @@
+{{- if .Values.nodeTiles.enabled }}
+# Monthly node-network tile build (ADR 0033). Pulls a Geofabrik extract,
+# filters to node-network objects, builds nodes.pmtiles, and uploads it to the
+# object-storage bucket the web app reads. Node networks change slowly, so a
+# stale run between schedules is harmless. Trigger an ad-hoc rebuild with:
+#   kubectl -n {{ .Values.global.namespace }} create job --from=cronjob/{{ include "routess.fullname" . }}-node-tiles node-tiles-manual
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "routess.fullname" . }}-node-tiles
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "routess.nodeTiles.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.nodeTiles.schedule | quote }}
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 600
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: {{ .Values.nodeTiles.activeDeadlineSeconds }}
+      template:
+        metadata:
+          labels:
+            {{- include "routess.nodeTiles.labels" . | nindent 12 }}
+        spec:
+          restartPolicy: OnFailure
+          automountServiceAccountToken: false
+          securityContext:
+            {{- toYaml .Values.nodeTiles.securityContext | nindent 12 }}
+          containers:
+            - name: node-tiles
+              image: "{{ .Values.nodeTiles.image.repository }}:{{ .Values.nodeTiles.image.tag }}"
+              imagePullPolicy: {{ .Values.nodeTiles.image.pullPolicy }}
+              env:
+                - name: GEOFABRIK_URL
+                  value: {{ .Values.nodeTiles.geofabrikUrl | quote }}
+                - name: S3_ENDPOINT
+                  value: {{ .Values.nodeTiles.s3.endpoint | quote }}
+                - name: S3_BUCKET
+                  value: {{ .Values.nodeTiles.s3.bucket | quote }}
+                - name: OBJECT_KEY
+                  value: {{ .Values.nodeTiles.s3.objectKey | quote }}
+                - name: S3_ACL
+                  value: {{ .Values.nodeTiles.s3.acl | quote }}
+                - name: CACHE_CONTROL
+                  value: {{ .Values.nodeTiles.s3.cacheControl | quote }}
+                - name: MIN_ZOOM
+                  value: {{ .Values.nodeTiles.minZoom | quote }}
+                - name: MAX_ZOOM
+                  value: {{ .Values.nodeTiles.maxZoom | quote }}
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "routess.nodeTiles.secretName" . }}
+                      key: AWS_ACCESS_KEY_ID
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "routess.nodeTiles.secretName" . }}
+                      key: AWS_SECRET_ACCESS_KEY
+                {{- if .Values.nodeTiles.s3.region }}
+                - name: AWS_DEFAULT_REGION
+                  value: {{ .Values.nodeTiles.s3.region | quote }}
+                {{- end }}
+              securityContext:
+                {{- toYaml .Values.nodeTiles.containerSecurityContext | nindent 16 }}
+              resources:
+                {{- toYaml .Values.nodeTiles.resources | nindent 16 }}
+              volumeMounts:
+                - name: work
+                  mountPath: /tmp
+          volumes:
+            - name: work
+              emptyDir:
+                sizeLimit: {{ .Values.nodeTiles.workSizeLimit | quote }}
+{{- end }}

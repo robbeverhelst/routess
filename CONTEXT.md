@@ -80,6 +80,12 @@ _Avoid_: climb, ascent, vertical.
 **Bearing**:
 Compass direction (0 to 360°) of a Waypoint or segment. Used by GPX import for smart waypoint detection at turns.
 
+## Map overlays
+
+**NodeNetwork** (knooppuntennetwerk):
+A wayfinding system of numbered junctions connected by signed segments, used across Belgium and the Netherlands: cyclists and walkers plan by stringing together junction numbers ("42 → 7 → 13"). Routess shows it as an optional, display-only map overlay in two independent kinds, **hiking** (walking) nodes and **cycling** nodes, each toggled separately. A single junction is a **Node** carrying a `ref` (its number); a **Connection** is the segment linking two adjacent Nodes (`fromRef`, `toRef`). The source is OpenStreetMap (`rwn_ref`/`lwn_ref` walking, `rcn_ref`/`lcn_ref` cycling, `network:type=node_network`), ODbL-licensed, slowly-changing, and self-hosted as pre-built vector tiles rather than fetched live (see ADR 0033). The overlay never affects routing or a saved Route; it is purely a reference layer the user can read off the map.
+_Avoid_: knooppunt for the whole network (a knooppunt is one **Node**), junction network (too generic), POI layer (Nodes are not points of interest). Distinct from a **RoutePath**: a NodeNetwork is fixed public infrastructure, not a user's route.
+
 ## Editing & state
 
 **RouteDraft**:

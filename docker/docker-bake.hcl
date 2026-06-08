@@ -7,7 +7,7 @@ variable "OWNER"      { default = "" }
 variable "REGISTRY"   { default = "ghcr.io" }
 
 group "default" {
-  targets = ["web", "api", "docs", "landing"]
+  targets = ["web", "api", "docs", "landing", "node-tiles"]
 }
 
 target "common" {
@@ -90,4 +90,19 @@ target "landing" {
   ]
   cache-from = ["type=registry,ref=${REGISTRY}/${OWNER}/routess-landing:buildcache"]
   cache-to   = ["type=registry,ref=${REGISTRY}/${OWNER}/routess-landing:buildcache,mode=max"]
+}
+
+# OSM -> PMTiles toolchain for the monthly node-network tile job (ADR 0033).
+# Not a running service; the CronJob runs it on a schedule.
+target "node-tiles" {
+  inherits   = ["common"]
+  dockerfile = "apps/node-tiles/Dockerfile"
+  tags = [
+    "${REGISTRY}/${OWNER}/routess-node-tiles:${VERSION}",
+    "${REGISTRY}/${OWNER}/routess-node-tiles:${MINOR}",
+    "${REGISTRY}/${OWNER}/routess-node-tiles:${MAJOR}",
+    "${REGISTRY}/${OWNER}/routess-node-tiles:sha-${SHA}",
+  ]
+  cache-from = ["type=registry,ref=${REGISTRY}/${OWNER}/routess-node-tiles:buildcache"]
+  cache-to   = ["type=registry,ref=${REGISTRY}/${OWNER}/routess-node-tiles:buildcache,mode=max"]
 }

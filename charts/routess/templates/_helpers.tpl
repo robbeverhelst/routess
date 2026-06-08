@@ -177,6 +177,27 @@ Landing service account name
 {{- end }}
 
 {{/*
+Node-tiles labels (monthly OSM -> PMTiles build job, ADR 0033)
+*/}}
+{{- define "routess.nodeTiles.labels" -}}
+{{ include "routess.labels" . }}
+app.kubernetes.io/name: {{ include "routess.name" . }}-node-tiles
+app.kubernetes.io/instance: {{ .Release.Name }}
+app.kubernetes.io/component: node-tiles
+{{- end }}
+
+{{/*
+Name of the secret holding the node-tiles S3 credentials (existing or generated)
+*/}}
+{{- define "routess.nodeTiles.secretName" -}}
+{{- if .Values.nodeTiles.s3.existingSecret -}}
+{{- .Values.nodeTiles.s3.existingSecret -}}
+{{- else -}}
+{{- printf "%s-node-tiles" (include "routess.fullname" .) -}}
+{{- end -}}
+{{- end }}
+
+{{/*
 Shared Umami analytics env. Plain UMAMI_* names (landing + docs read them at
 runtime, server-side). Emits nothing when unset.
 */}}
