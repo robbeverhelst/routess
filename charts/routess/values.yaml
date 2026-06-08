@@ -263,8 +263,11 @@ nodeTiles:
     pullPolicy: IfNotPresent
   # 03:00 UTC on the 1st of each month. Node networks change slowly.
   schedule: "0 3 1 * *"
-  # Source extract. Swap to europe-latest.osm.pbf to widen coverage.
-  geofabrikUrl: "https://download.geofabrik.de/europe/benelux-latest.osm.pbf"
+  # Space-separated Geofabrik .osm.pbf extracts. Geofabrik no longer offers a
+  # combined "benelux" file, so Benelux is assembled from the three per-country
+  # extracts. Trim to a single country to shrink the build (Netherlands has the
+  # densest network, Belgium is smallest), or add europe-latest.osm.pbf to widen.
+  geofabrikUrl: "https://download.geofabrik.de/europe/belgium-latest.osm.pbf https://download.geofabrik.de/europe/netherlands-latest.osm.pbf https://download.geofabrik.de/europe/luxembourg-latest.osm.pbf"
   minZoom: 8
   maxZoom: 14
   # Hard ceiling so a stuck download/build cannot run forever (3h).

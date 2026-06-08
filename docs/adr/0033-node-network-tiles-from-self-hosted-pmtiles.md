@@ -22,6 +22,7 @@ We now pre-extract the data into our own vector tiles and let Mapbox consume the
 - Negative: new infra surface. A CronJob, an object-storage bucket (public-read + CORS allowing the web origin and `Range`), and a build image with `osmium`/`tippecanoe`. Data is as fresh as the last monthly run (acceptable; node networks change slowly).
 - Negative: we now serve OSM-derived data ourselves, so ODbL attribution must appear on the map.
 - Follow-ups: bucket CORS/IaC lives in the infra repo alongside the other edge config. If coverage expands to Europe, revisit tippecanoe zoom/feature-drop settings so the file stays small.
+- Source extract note: Geofabrik dropped the combined `benelux` extract, so Benelux is assembled from the three per-country files (`belgium`/`netherlands`/`luxembourg`), filtered and merged. The build validates each download with `osmium fileinfo` so a renamed/removed extract (which Geofabrik 302-redirects to an HTML page) fails loudly instead of silently producing empty tiles.
 
 ## References
 
