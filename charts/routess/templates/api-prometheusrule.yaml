@@ -72,6 +72,65 @@ spec:
           annotations:
             summary: "Database p95 query latency above {{ $t.dbLatencyP95Ms }}ms"
             description: "p95 DB query latency is {{`{{ $value | printf \"%.0f\" }}`}}ms over the last 5 minutes."
+        {{- if $t.cacheHitRatePercent }}
+        - alert: RoutessCacheHitRateLow
+          # Per-cache hit rate, only evaluated once a cache sees real traffic
+          # (the right-hand sample-rate clause) so cold starts stay quiet.
+          expr: |
+            (
+              sum by (cache) (rate(cache_events_total{result="hit"}[10m]))
+                / sum by (cache) (rate(cache_events_total[10m])) * 100
+                < {{ $t.cacheHitRatePercent }}
+            )
+            and
+            (
+              sum by (cache) (rate(cache_events_total[10m])) > {{ $t.cacheMinSampleRps }}
+            )
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Cache {{`{{ $labels.cache }}`}} hit rate below {{ $t.cacheHitRatePercent }}%"
+            description: "{{`{{ $labels.cache }}`}} hit rate is {{`{{ $value | printf \"%.0f\" }}`}}% over 10m. Expected high once warm; check Redis and TTLs (ADR 0031)."
+        {{- end }}
+        {{- if $t.cacheMinSampleRps }}
+        - alert: RoutessCacheBackendDegraded
+          # Cache traffic exists but zero hits across all caches: Redis is
+          # almost certainly unreachable and the API is failing open to misses
+          # (provider spend rises, quotas stop enforcing).
+          expr: |
+            sum(rate(cache_events_total{result="hit"}[5m])) == 0
+            and sum(rate(cache_events_total[5m])) > {{ $t.cacheMinSampleRps }}
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Cache backend degraded (zero hits under load)"
+            description: "No cache hits while caches are being queried. Redis is likely down; the API is failing open. Check the redis pod and REDIS_URL."
+        {{- end }}
+        {{- if $t.providerCallRatePerSec }}
+        - alert: RoutessProviderCallRateHigh
+          # provider_calls_total counts only uncached upstream calls, so a
+          # sustained high rate after warm-up means the cache is being bypassed
+          # or spend is genuinely climbing.
+          expr: sum(rate(provider_calls_total[10m])) > {{ $t.providerCallRatePerSec }}
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Provider call rate above {{ $t.providerCallRatePerSec }}/s"
+            description: "Uncached provider calls are running at {{`{{ $value | printf \"%.1f\" }}`}}/s over 10m. Caches should keep this low; check hit rates and cost."
+        {{- end }}
+        {{- if $t.quota429sPer5m }}
+        - alert: RoutessQuota429Spike
+          expr: sum(increase(http_request_errors_total{status_code="429"}[5m])) > {{ $t.quota429sPer5m }}
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Spike in 429 responses"
+            description: "{{`{{ $value | printf \"%.0f\" }}`}} rate-limit/quota rejections in 5m. Either abuse, or a quota/throttle is too tight (GENERATION_QUOTA_PER_DAY)."
+        {{- end }}
         {{- with .Values.monitoring.prometheusRule.additionalRules }}
         {{- toYaml . | nindent 8 }}
         {{- end }}

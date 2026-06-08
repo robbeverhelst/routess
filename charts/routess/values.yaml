@@ -445,7 +445,9 @@ monitoring:
   prometheusRule:
     # When true, renders a PrometheusRule with alerts for the critical
     # failure modes: API down, 5xx rate, latency, auth failures, external
-    # provider errors, and DB latency. Requires the Prometheus Operator CRDs.
+    # provider errors, DB latency, and the caching/provider-cost signals
+    # (cache hit rate, provider call spend, Redis reachability). Requires the
+    # Prometheus Operator CRDs.
     enabled: false
     # Extra labels to match your Prometheus Operator's ruleSelector.
     labels: {}
@@ -460,6 +462,19 @@ monitoring:
       providerErrorRatePercent: 20
       # Alert when p95 DB query latency exceeds this (ms, 10m sustained).
       dbLatencyP95Ms: 250
+      # Caching / provider-cost alerts (ADR 0031). Set any to 0 to disable
+      # just that alert.
+      # Warn when a cache's hit rate falls below this % once it has warmed
+      # (evaluated only above cacheMinSampleRps to avoid noise at low traffic).
+      cacheHitRatePercent: 60
+      # Minimum cache lookups/sec before the hit-rate alert is considered.
+      cacheMinSampleRps: 0.1
+      # Warn when total paid-provider calls/sec stay above this (caches should
+      # keep this low once warm). Tune to your real baseline.
+      providerCallRatePerSec: 5
+      # Warn when daily-quota 429s exceed this count in 5m (abuse or too-tight
+      # a quota).
+      quota429sPer5m: 20
     # Extra rule entries appended verbatim to the routess-api group.
     additionalRules: []
   # Optional Grafana dashboard URLs surfaced in the admin UI's system panel.
