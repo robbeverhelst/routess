@@ -43,9 +43,15 @@ kubectl -n routess create job --from=cronjob/<release>-node-tiles node-tiles-man
 
 ## Coverage
 
-Default extract is Benelux. To widen, point `nodeTiles.geofabrikUrl` (or
-`GEOFABRIK_URL`) at a larger Geofabrik file, e.g. `europe-latest.osm.pbf`, and
-revisit the tippecanoe zoom/drop settings so the file stays small.
+`GEOFABRIK_URL` (chart: `nodeTiles.geofabrikUrl`) is a **space-separated list**
+of Geofabrik `.osm.pbf` extracts; each is downloaded, validated, filtered, and
+merged. Geofabrik no longer ships a combined `benelux` file, so the default is
+the three per-country extracts (`belgium`, `netherlands`, `luxembourg`). Trim to
+one country to shrink the build (Netherlands has the densest network, Belgium is
+smallest), or add `europe-latest.osm.pbf` to widen (then revisit the tippecanoe
+zoom/drop settings so the file stays small). A bad URL fails the build loudly
+(`osmium fileinfo` rejects Geofabrik's HTML redirect page) rather than producing
+empty tiles.
 
 ## Bucket requirements
 
