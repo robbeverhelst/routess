@@ -7,7 +7,7 @@ variable "OWNER"      { default = "" }
 variable "REGISTRY"   { default = "ghcr.io" }
 
 group "default" {
-  targets = ["web", "api", "docs", "landing", "node-tiles"]
+  targets = ["web", "api", "docs", "landing"]
 }
 
 target "common" {
@@ -93,14 +93,16 @@ target "landing" {
 }
 
 # OSM -> PMTiles toolchain for the monthly node-network tile job (ADR 0033).
-# Not a running service; the CronJob runs it on a schedule.
+# Deliberately NOT in the default group: it is a heavy, rarely-changing build
+# image (compiles tippecanoe from source), and coupling it to the per-release
+# image bake means one broken target blocks every app image. It is published
+# on its own by .github/workflows/node-tiles-image.yml (manual or on changes to
+# its files), tagged latest + sha rather than tracking the app version.
 target "node-tiles" {
   inherits   = ["common"]
   dockerfile = "docker/Dockerfile.node-tiles"
   tags = [
-    "${REGISTRY}/${OWNER}/routess-node-tiles:${VERSION}",
-    "${REGISTRY}/${OWNER}/routess-node-tiles:${MINOR}",
-    "${REGISTRY}/${OWNER}/routess-node-tiles:${MAJOR}",
+    "${REGISTRY}/${OWNER}/routess-node-tiles:latest",
     "${REGISTRY}/${OWNER}/routess-node-tiles:sha-${SHA}",
   ]
   cache-from = ["type=registry,ref=${REGISTRY}/${OWNER}/routess-node-tiles:buildcache"]
