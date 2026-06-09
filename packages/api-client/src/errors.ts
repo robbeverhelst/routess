@@ -40,7 +40,7 @@ export const errorFromResponse = async (response: Response, requestId?: string):
 
 	if (bodyText) {
 		try {
-			const parsed = JSON.parse(bodyText) as unknown;
+			const parsed: unknown = JSON.parse(bodyText);
 			if (isDomainErrorPayload(parsed)) {
 				return new ApiDomainError(parsed, requestId);
 			}
