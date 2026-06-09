@@ -29,9 +29,10 @@ Use the [template](0000-template.md) when adding a new one. Number sequentially 
 - [0010 — Drop the api-client platform branch](0010-drop-api-client-platform-branch.md)
 - [0014 — Uniform Waypoint snap policy, no silent Type downgrade](0014-uniform-waypoint-snap-policy.md)
 - [0017 — RouteDraft `unsaved | editing` mode lifecycle](0017-routedraft-mode-lifecycle.md)
-- [0021 — Shared routing logic, dual-credential execution](0021-shared-routing-logic-dual-credential-execution.md)
+- [0021 — Shared routing logic, dual-credential execution](0021-shared-routing-logic-dual-credential-execution.md) (superseded by 0034)
 - [0029 — Route generation is a scored candidate pipeline](0029-route-generation-as-scored-candidate-pipeline.md)
 - [0031 — Strict surface preferences steer candidate placement, not just costing](0031-surface-first-generation-for-strict-surface-preferences.md)
+- [0034 — Centralize routing in the API; share only pure costing logic in core](0034-centralize-routing-in-the-api.md)
 
 ### Frontend state
 - [0002 — Zustand for RouteDraft state](0002-zustand-for-routedraft-state.md)
