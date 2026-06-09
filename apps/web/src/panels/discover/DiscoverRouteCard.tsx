@@ -95,6 +95,27 @@ export function DiscoverRouteCard({
 						{route.publishedAt && <span>· {new Date(route.publishedAt).toLocaleDateString()}</span>}
 					</div>
 				)}
+				{route.source && (
+					// Seeded ExternalRoute (ADR 0033): the source is the creator. The
+					// license badge satisfies the attribution obligation in the listing.
+					<div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, color: RDS_COLORS.fgSubtle }}>
+						<span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+							{route.source.name}
+						</span>
+						<span
+							style={{
+								flexShrink: 0,
+								fontSize: 10,
+								padding: "1px 5px",
+								borderRadius: 5,
+								background: RDS_COLORS.bgActive,
+								color: RDS_COLORS.fgMuted,
+							}}
+						>
+							{route.source.license}
+						</span>
+					</div>
+				)}
 			</div>
 		</a>
 	);

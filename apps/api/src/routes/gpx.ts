@@ -16,6 +16,10 @@ export function buildRouteGpx(args: {
 	description?: string;
 	waypoints: Waypoint[];
 	geometry?: [number, number][];
+	// Attribution for seeded ExternalRoutes (ADR 0033): the license obligation
+	// must travel with the exported file, not only the route page.
+	attribution?: string;
+	sourceUrl?: string;
 }): string {
 	const parts: string[] = [];
 	parts.push(`<?xml version="1.0" encoding="UTF-8"?>`);
@@ -25,6 +29,11 @@ export function buildRouteGpx(args: {
 	parts.push("  <metadata>");
 	parts.push(`    <name>${escapeXml(args.name)}</name>`);
 	if (args.description) parts.push(`    <desc>${escapeXml(args.description)}</desc>`);
+	if (args.attribution) {
+		parts.push(`    <copyright author="${escapeXml(args.attribution)}">`);
+		if (args.sourceUrl) parts.push(`      <license>${escapeXml(args.sourceUrl)}</license>`);
+		parts.push("    </copyright>");
+	}
 	parts.push(`    <time>${new Date().toISOString()}</time>`);
 	parts.push("  </metadata>");
 

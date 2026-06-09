@@ -65,6 +65,17 @@ export function useRoute(routeRef: number | string) {
 	});
 }
 
+/**
+ * Hook to fetch a seeded ExternalRoute by numeric id (the `-x{id}` page form).
+ */
+export function useExternalRoute(id: number) {
+	return useQuery({
+		queryKey: queryKeys.routes.external(id),
+		queryFn: () => apiService.getExternalRoute(id),
+		enabled: id > 0,
+	});
+}
+
 // ============================================================================
 // ROUTE MUTATIONS
 // ============================================================================

@@ -13,6 +13,7 @@ import type {
 	ApiCollectionDetail,
 	ApiDiscoverPage,
 	ApiDiscoverRoute,
+	ApiExternalRoute,
 	ApiFeedItem,
 	ApiFeedPage,
 	ApiFollows,
@@ -283,6 +284,15 @@ export class ApiClient {
 	// Same ref semantics as getRoute.
 	routeGpxUrl(ref: number | string): string {
 		return `${this.config.baseUrl}/api/v1/routes/${ref}/gpx`;
+	}
+
+	// Seeded ExternalRoute detail by numeric id (the `-x{id}` page form, ADR 0033).
+	async getExternalRoute(id: number): Promise<ApiExternalRoute> {
+		return this.request<ApiExternalRoute>(`/external-routes/${id}`);
+	}
+
+	externalRouteGpxUrl(id: number): string {
+		return `${this.config.baseUrl}/api/v1/external-routes/${id}/gpx`;
 	}
 
 	async updateRoute(id: number, route: UpdateRouteRequest): Promise<ApiRoute> {

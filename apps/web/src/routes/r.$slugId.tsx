@@ -1,5 +1,6 @@
 import { parseRouteSlugId } from "@routess/core";
 import { createFileRoute, notFound } from "@tanstack/react-router";
+import { ExternalRouteScreen } from "@/screens/ExternalRouteScreen";
 import { PublicRouteScreen } from "@/screens/PublicRouteScreen";
 
 export const Route = createFileRoute("/r/$slugId")({
@@ -18,5 +19,8 @@ function PublicRoutePage() {
 	const { slugId } = Route.useParams();
 	const parsed = parseRouteSlugId(slugId);
 	if (!parsed) throw notFound();
+	if (parsed.externalId !== undefined) {
+		return <ExternalRouteScreen slug={parsed.slug} externalId={parsed.externalId} />;
+	}
 	return <PublicRouteScreen slug={parsed.slug} routeRef={parsed.token ?? parsed.id} />;
 }

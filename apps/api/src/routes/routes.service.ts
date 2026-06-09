@@ -7,6 +7,7 @@ import type { AppConfig } from "../config/app-config";
 import { APP_CONFIG } from "../config/config.module";
 import { Route } from "../entities/route.entity";
 import { User } from "../entities/user.entity";
+import { ExternalRoutesService } from "../external-routes/external-routes.service";
 import { PlacesService } from "../places/places.service";
 import {
 	ROUTE_CREATED,
@@ -35,6 +36,7 @@ export class RoutesService {
 		private readonly config: AppConfig,
 		private readonly places: PlacesService,
 		private readonly surfaces: SurfaceCompositionService,
+		private readonly externalRoutes: ExternalRoutesService,
 	) {}
 
 	private toResponseDto(route: Route): RouteResponseDto {
@@ -129,6 +131,7 @@ export class RoutesService {
 		offset: number,
 	): Promise<{ items: PublicRouteSummaryDto[]; total: number }> {
 		const gate = query.gate ?? "indexable";
+		const view = query.bbox ? parseBbox(query.bbox) : undefined;
 		const where: FilterQuery<Route> = { visibility: "public" };
 		if (query.activity) where.activity = query.activity;
 		// Case-insensitive exact match: geocoder casing should not leak into URLs.
@@ -139,26 +142,39 @@ export class RoutesService {
 				...(query.maxDistance !== undefined ? { $lte: query.maxDistance } : {}),
 			};
 		}
-		if (query.bbox) {
+		if (view) {
 			// Viewport overlap on the persisted bbox columns (ADR 0030).
-			const view = parseBbox(query.bbox);
 			where.bboxMinLat = { $lte: view.maxLat };
 			where.bboxMaxLat = { $gte: view.minLat };
 			where.bboxMinLng = { $lte: view.maxLng };
 			where.bboxMaxLng = { $gte: view.minLng };
 		}
 
+		// The seeded ExternalRoute layer is unioned in at read time (the ODbL
+		// "Produced Work", ADR 0033). We fetch a window of `offset + limit` from
+		// each source, merge, sort, and slice, since the two tables are wholly
+		// independent and cannot be joined in SQL. Fine at our volumes.
+		const take = offset + limit;
+		const externalFilters = {
+			activity: query.activity,
+			placeCity: query.placeCity,
+			minDistance: query.minDistance,
+			maxDistance: query.maxDistance,
+			bbox: view,
+		};
+
 		if (gate === "public") {
-			const [routes, total] = await this.routeRepository.findAndCount(where, {
+			const [routes, routeTotal] = await this.routeRepository.findAndCount(where, {
 				populate: ["user"],
 				orderBy: { publishedAt: QueryOrder.DESC_NULLS_LAST, id: "DESC" },
-				limit,
-				offset,
+				limit: take,
 			});
-			const items = routes.map((route) =>
+			const routeItems = routes.map((route) =>
 				toPublicRouteSummaryDto(route, this.config.analytics.salt, { includeGeometry: true }),
 			);
-			return { items, total };
+			const external = await this.externalRoutes.findPublicMatches(externalFilters, "public", take);
+			const merged = mergeSummariesDesc(routeItems, external.items, publicSortKey).slice(offset, offset + limit);
+			return { items: merged, total: routeTotal + external.total };
 		}
 
 		where.distance = {
@@ -170,11 +186,13 @@ export class RoutesService {
 			orderBy: { updatedAt: "DESC" },
 			limit: 5000,
 		});
-		const indexable = candidates.filter((route) => isRouteIndexable(route));
-		const items = indexable
-			.slice(offset, offset + limit)
+		const indexableRoutes = candidates.filter((route) => isRouteIndexable(route));
+		const routeItems = indexableRoutes
+			.slice(0, take)
 			.map((route) => toPublicRouteSummaryDto(route, this.config.analytics.salt, { includeGeometry: false }));
-		return { items, total: indexable.length };
+		const external = await this.externalRoutes.findPublicMatches(externalFilters, "indexable", take);
+		const merged = mergeSummariesDesc(routeItems, external.items, indexableSortKey).slice(offset, offset + limit);
+		return { items: merged, total: indexableRoutes.length + external.total };
 	}
 
 	// Public-only listing for someone else's library. Excludes 'private' and
@@ -261,4 +279,25 @@ export class RoutesService {
 		}
 		return route;
 	}
+}
+
+// Discover orders by PublishedAt; ExternalRoutes have none, so they fall back
+// to updatedAt (their import/refresh time). The merge of the two pre-sorted
+// windows is stable for the union (ADR 0033).
+function publicSortKey(summary: PublicRouteSummaryDto): number {
+	const stamp = summary.publishedAt ?? summary.updatedAt;
+	return stamp ? Date.parse(stamp) : 0;
+}
+
+// The indexable (SEO) surface orders by most-recently-updated for both kinds.
+function indexableSortKey(summary: PublicRouteSummaryDto): number {
+	return summary.updatedAt ? Date.parse(summary.updatedAt) : 0;
+}
+
+function mergeSummariesDesc(
+	a: PublicRouteSummaryDto[],
+	b: PublicRouteSummaryDto[],
+	keyFn: (s: PublicRouteSummaryDto) => number,
+): PublicRouteSummaryDto[] {
+	return [...a, ...b].sort((x, y) => keyFn(y) - keyFn(x));
 }
