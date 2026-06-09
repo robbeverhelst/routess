@@ -23,25 +23,6 @@ export type RouteVisibility = (typeof ROUTE_VISIBILITIES)[number];
 // Map style types
 export type MapStyle = "standard" | "satellite";
 
-// Mapbox map configuration
-export interface MapboxMapProps {
-	initialViewState?: {
-		longitude: number;
-		latitude: number;
-		zoom: number;
-	};
-	width?: string | number;
-	height?: string | number;
-}
-
-// API and data types
-export interface BirdSighting {
-	id: string;
-	location: Coordinate;
-	species: string;
-	timestamp: string;
-}
-
 // Storage abstraction types
 export interface StorageAdapter {
 	getItem(key: string): Promise<string | null> | string | null;
