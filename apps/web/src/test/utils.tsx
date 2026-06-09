@@ -19,7 +19,7 @@ const AllTheProviders = ({ children }: ProvidersProps) => {
 		},
 	});
 
-	return <QueryClientProvider client={queryClient}>{children as any}</QueryClientProvider>;
+	return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
 };
 
 const customRender = (ui: ReactElement, options?: Omit<RenderOptions, "wrapper">) =>
