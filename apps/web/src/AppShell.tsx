@@ -36,9 +36,9 @@ import { MobileTopBar } from "./components/MobileTopBar";
 import { Badge, IconBtn, RDS_COLORS } from "./components/primitives";
 import { RailNav } from "./components/RailNav";
 import { RouteChip } from "./components/RouteChip";
-import { useAccountPreferencesSync } from "./hooks/useAccountPreferencesSync";
 import { useLocateButtonState } from "./hooks/useLocateButtonState";
 import { useOnlineStatus } from "./hooks/useOnlineStatus";
+import { useUserPreferencesSync } from "./hooks/useUserPreferencesSync";
 import { useViewport } from "./hooks/useViewport";
 import { CommandPalette } from "./modals/CommandPalette";
 import { ConfirmDeleteModal } from "./modals/ConfirmDeleteModal";
@@ -56,7 +56,6 @@ import { LibraryPanel } from "./panels/LibraryPanel";
 import { PlanPanel } from "./panels/PlanPanel";
 import { SettingsPanel } from "./panels/SettingsPanel";
 import { SocialPanel } from "./panels/SocialPanel";
-import { AccountScreen } from "./screens/AccountScreen";
 import { CalendarScreen } from "./screens/CalendarScreen";
 import { CoachmarksScreen } from "./screens/CoachmarksScreen";
 import { CompareScreen } from "./screens/CompareScreen";
@@ -68,6 +67,7 @@ import { PostActivityScreen } from "./screens/PostActivityScreen";
 import { ProfileScreen } from "./screens/ProfileScreen";
 import { RecordingScreen } from "./screens/RecordingScreen";
 import { SignUpScreen } from "./screens/SignUpScreen";
+import { UserSettingsScreen } from "./screens/UserSettingsScreen";
 
 const SCREEN_TITLE_KEYS: Record<RedesignContext, string> = {
 	plan: "nav.plan",
@@ -94,7 +94,7 @@ type DevScreen =
 	| "recording"
 	| "postactivity"
 	| "profile"
-	| "account"
+	| "user-settings"
 	| "compare"
 	| "calendar"
 	| "drawer"
@@ -111,7 +111,7 @@ function getDevScreen(): DevScreen | null {
 		"recording",
 		"postactivity",
 		"profile",
-		"account",
+		"user-settings",
 		"compare",
 		"calendar",
 		"drawer",
@@ -180,7 +180,7 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 	const [devScreen, setDevScreen] = useState<DevScreen | null>(getDevScreen);
 	const wasMobileRef = useRef<boolean | null>(null);
 
-	useAccountPreferencesSync(auth);
+	useUserPreferencesSync(auth);
 
 	useEffect(() => {
 		if (wasMobileRef.current === null) {
@@ -245,8 +245,8 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 
 	useEffect(() => {
 		const pushToast = useToastStore.getState().push;
-		const onOpenAccount = () => {
-			setDevScreen("account");
+		const onOpenUserSettings = () => {
+			setDevScreen("user-settings");
 		};
 		const onOpenLogin = () => {
 			setSkippedAuth(false);
@@ -308,7 +308,7 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 			}
 		};
 		const unsubscribers = [
-			onAppEvent("routess:open-account", onOpenAccount),
+			onAppEvent("routess:open-user-settings", onOpenUserSettings),
 			onAppEvent("routess:open-profile", onOpenProfile),
 			onAppEvent("routess:open-login", onOpenLogin),
 			onAppEvent("routess:open-signup", onOpenSignup),
@@ -352,7 +352,7 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 				{devScreen === "recording" && <RecordingScreen onStop={close} />}
 				{devScreen === "postactivity" && <PostActivityScreen onClose={close} />}
 				{devScreen === "profile" && <ProfileScreen />}
-				{devScreen === "account" && <AccountScreen />}
+				{devScreen === "user-settings" && <UserSettingsScreen />}
 				{devScreen === "compare" && <CompareScreen onClose={close} />}
 				{devScreen === "calendar" && <CalendarScreen />}
 				{devScreen === "drawer" && <MobileDrawer onClose={close} />}
