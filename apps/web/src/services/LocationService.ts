@@ -1,7 +1,7 @@
+import { haversineDistance } from "@routess/core";
 import { loadLanguageFromLocalStorage } from "@/features/routing/services/LocalStorageService";
 import { t } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
-import { haversineDistance } from "@/lib/utils/geospatial";
 
 export interface LocationState {
 	location: [number, number] | null;

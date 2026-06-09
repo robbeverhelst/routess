@@ -1,6 +1,11 @@
 import { ApiHttpError, generateRequestId } from "@routess/api-client";
 import type { Coordinate, RouteActivity, SurfaceBucket, SurfaceComposition } from "@routess/core";
-import { decodePolyline6, surfaceCompositionFromEdges, valhallaCostingModelForActivity } from "@routess/core";
+import {
+	decodePolyline6,
+	downsampleCoordinates,
+	surfaceCompositionFromEdges,
+	valhallaCostingModelForActivity,
+} from "@routess/core";
 import { Logger } from "@/lib/logger";
 import { getRuntimeConfig } from "@/lib/runtime-config";
 
@@ -45,7 +50,7 @@ export async function fetchSurfaceBreakdown(
 ): Promise<SurfaceBreakdown | null> {
 	if (coords.length < 2) return null;
 
-	const shape = downsampleCoords(coords, MAX_SHAPE_POINTS).map(([lng, lat]) => ({ lat, lon: lng }));
+	const shape = downsampleCoordinates(coords, MAX_SHAPE_POINTS).map(([lng, lat]) => ({ lat, lon: lng }));
 
 	const body = { shape, costing: valhallaCostingModelForActivity(activity) };
 
@@ -110,15 +115,4 @@ export function breakdownFromComposition(composition: SurfaceComposition): Surfa
 					.filter((segment) => segment.coordinates.length >= 2)
 			: [];
 	return { meters: composition.meters, total: composition.total, segments };
-}
-
-function downsampleCoords(coords: Coordinate[], max: number): Coordinate[] {
-	if (coords.length <= max) return coords;
-	// Reserve the last slot for the final coord so the result is always
-	// exactly `max` points and never overshoots the API cap.
-	const step = coords.length / (max - 1);
-	const out: Coordinate[] = [];
-	for (let i = 0; i < max - 1; i++) out.push(coords[Math.floor(i * step)]);
-	out.push(coords[coords.length - 1]);
-	return out;
 }
