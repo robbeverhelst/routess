@@ -20,16 +20,19 @@ const HIKING_COLOR = "#dc2626";
 const CYCLING_COLOR = "#1d4ed8";
 const ODBL_ATTRIBUTION = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors (ODbL)';
 
-// Lines render from a low zoom (clean network shape); the numbered nodes only
-// appear once they are large enough to read, so dense areas stay legible.
+// Lines render from a low zoom (clean network shape). The numbered nodes are
+// all-or-nothing: hidden while zoomed out, then every dot + number shows at
+// once from NODE_MIN_ZOOM (labels allow overlap, so none are collision-hidden).
+// A partial collision reveal reads as "numbers missing", so we wait until the
+// zoom where nodes are spaced enough to show the whole set.
 const LINE_MIN_ZOOM = 8;
-const NODE_MIN_ZOOM = 11;
+const NODE_MIN_ZOOM = 12;
 
 const LINE_WIDTH = ["interpolate", ["linear"], ["zoom"], 9, 1.2, 12, 2, 14, 2.6, 17, 3.6];
-const HIGHLIGHT_LINE_WIDTH = ["interpolate", ["linear"], ["zoom"], 11, 4, 14, 6, 17, 8];
-const NODE_RADIUS = ["interpolate", ["linear"], ["zoom"], 11, 7, 14, 10, 17, 13];
-const NODE_HALO_RADIUS = ["interpolate", ["linear"], ["zoom"], 11, 10, 14, 14, 17, 17];
-const NODE_TEXT_SIZE = ["interpolate", ["linear"], ["zoom"], 11, 10, 14, 11.5, 17, 13];
+const HIGHLIGHT_LINE_WIDTH = ["interpolate", ["linear"], ["zoom"], 12, 4, 14, 6, 17, 8];
+const NODE_RADIUS = ["interpolate", ["linear"], ["zoom"], 12, 8, 14, 10, 17, 13];
+const NODE_HALO_RADIUS = ["interpolate", ["linear"], ["zoom"], 12, 11, 14, 14, 17, 17];
+const NODE_TEXT_SIZE = ["interpolate", ["linear"], ["zoom"], 12, 10.5, 14, 11.5, 17, 13];
 
 type ActiveNode = {
 	kind: NodeNetworkKind;
@@ -328,8 +331,8 @@ function ActiveNodesOverlay({
 						"text-field": ["coalesce", ["get", "ref"], ""],
 						"text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
 						"text-size": NODE_TEXT_SIZE,
-						"text-allow-overlap": false,
-						"text-ignore-placement": false,
+						"text-allow-overlap": true,
+						"text-ignore-placement": true,
 						"text-padding": 2,
 					}}
 					paint={{ "text-color": HIKING_COLOR, "text-halo-color": "#ffffff", "text-halo-width": 1.4 }}
@@ -346,8 +349,8 @@ function ActiveNodesOverlay({
 						"text-field": ["coalesce", ["get", "ref"], ""],
 						"text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
 						"text-size": NODE_TEXT_SIZE,
-						"text-allow-overlap": false,
-						"text-ignore-placement": false,
+						"text-allow-overlap": true,
+						"text-ignore-placement": true,
 						"text-padding": 2,
 					}}
 					paint={{ "text-color": CYCLING_COLOR, "text-halo-color": "#ffffff", "text-halo-width": 1.4 }}
