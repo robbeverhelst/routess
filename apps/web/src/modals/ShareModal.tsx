@@ -32,6 +32,19 @@ import { Btn, RDS_COLORS, SecTitle } from "../components/primitives";
 const PREVIEW_WIDTH = 480;
 const PREVIEW_HEIGHT = 168;
 
+const HINT_BOX_STYLE: CSSProperties = {
+	fontSize: 11.5,
+	color: RDS_COLORS.fgSubtle,
+	lineHeight: 1.5,
+	padding: "8px 10px",
+	borderRadius: 8,
+	background: `color-mix(in oklch, ${RDS_COLORS.warn} 8%, transparent)`,
+	border: `1px solid color-mix(in oklch, ${RDS_COLORS.warn} 25%, transparent)`,
+};
+
+// Third-party brand colors for share targets, not part of our design tokens.
+const BRAND_TINT = { facebook: "#1877F2", whatsapp: "#25D366" } as const;
+
 type Coordinate = [number, number];
 
 interface TargetTileProps {
@@ -488,35 +501,9 @@ export function ShareModal() {
 							{copied ? t("common.copied") : t("common.copy")}
 						</Btn>
 					</div>
-					{savedRouteId === null && hasRoute && (
-						<div
-							style={{
-								fontSize: 11.5,
-								color: RDS_COLORS.fgSubtle,
-								lineHeight: 1.5,
-								padding: "8px 10px",
-								borderRadius: 8,
-								background: `color-mix(in oklch, ${RDS_COLORS.warn} 8%, transparent)`,
-								border: `1px solid color-mix(in oklch, ${RDS_COLORS.warn} 25%, transparent)`,
-							}}
-						>
-							{t("share.unsavedHint")}
-						</div>
-					)}
+					{savedRouteId === null && hasRoute && <div style={HINT_BOX_STYLE}>{t("share.unsavedHint")}</div>}
 					{savedRouteId !== null && savedVisibility === "private" && (
-						<div
-							style={{
-								fontSize: 11.5,
-								color: RDS_COLORS.fgSubtle,
-								lineHeight: 1.5,
-								padding: "8px 10px",
-								borderRadius: 8,
-								background: `color-mix(in oklch, ${RDS_COLORS.warn} 8%, transparent)`,
-								border: `1px solid color-mix(in oklch, ${RDS_COLORS.warn} 25%, transparent)`,
-							}}
-						>
-							{t("share.privateHint")}
-						</div>
+						<div style={HINT_BOX_STYLE}>{t("share.privateHint")}</div>
 					)}
 					{canShareCanonical && (
 						<div style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle }}>{t("share.canonicalHint")}</div>
@@ -559,14 +546,14 @@ export function ShareModal() {
 							label={t("share.facebook")}
 							icon={<FacebookBrand size={18} />}
 							onClick={shareFacebook}
-							tint="#1877F2"
+							tint={BRAND_TINT.facebook}
 							disabled={!hasRoute}
 						/>
 						<TargetTile
 							label={t("share.whatsapp")}
 							icon={<WhatsAppBrand size={18} />}
 							onClick={shareWhatsApp}
-							tint="#25D366"
+							tint={BRAND_TINT.whatsapp}
 							disabled={!hasRoute}
 						/>
 						<TargetTile
