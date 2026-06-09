@@ -6,6 +6,8 @@ import {
 	ROUTE_VISIBILITIES,
 	type RouteActivity,
 	type RouteVisibility,
+	WAYPOINT_TYPES,
+	type WaypointType,
 } from "@routess/core";
 import { Transform, Type } from "class-transformer";
 import {
@@ -89,12 +91,12 @@ class WaypointDto {
 
 	@ApiProperty({
 		description: "Type of waypoint routing",
-		enum: ["routed", "direct"],
+		enum: WAYPOINT_TYPES,
 		example: "routed",
 	})
 	@IsString()
-	@IsIn(["routed", "direct"])
-	type!: "routed" | "direct";
+	@IsIn(WAYPOINT_TYPES)
+	type!: WaypointType;
 
 	@ApiProperty({
 		description: "Optional user-assigned name for the waypoint",
