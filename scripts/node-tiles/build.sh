@@ -73,18 +73,20 @@ echo "==> [4/6] transforming to node-network schema"
 bun "$SCRIPT_DIR/transform.ts" points.geojsons lines.geojsons > nodes.geojsons
 
 echo "==> [5/6] building vector tiles (tippecanoe -> PMTiles)"
-# One source-layer 'node_network'; drop the densest features at low zoom rather
-# than failing, so dense regions still tile. Numbered nodes are revealed by the
-# client at higher zoom anyway.
+# One source-layer 'node_network'. Retain EVERY node and connection at every
+# zoom: -r1 disables point thinning and we do NOT drop-densest. Node networks
+# are sparse (all of Benelux is ~25MB), and any dropping makes numbered nodes
+# "pop in" as you zoom -- a dense z12 tile (Antwerp) goes from 6 nodes with
+# dropping to 38 without. Tiles stay small even so (z8 ~200KB).
 tippecanoe \
   --output=nodes.pmtiles \
   --force \
   --layer=node_network \
   --minimum-zoom="$MIN_ZOOM" \
   --maximum-zoom="$MAX_ZOOM" \
-  --drop-densest-as-needed \
-  --extend-zooms-if-still-dropping \
+  -r1 \
   --no-tile-size-limit \
+  --no-feature-limit \
   nodes.geojsons
 
 echo "==> [6/6] uploading to s3://$S3_BUCKET/$OBJECT_KEY"
