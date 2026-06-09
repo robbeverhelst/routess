@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { NODE_NETWORK_COLORS } from "@/features/overlays/nodeNetworkColors";
 import { loadLastMapViewFromLocalStorage } from "@/features/routing/services/LocalStorageService";
 import { useT } from "@/lib/i18n";
 import { getRuntimeConfig } from "@/lib/runtime-config";
@@ -46,8 +47,18 @@ type OverlayRow = {
 };
 
 const OVERLAY_ROWS: OverlayRow[] = [
-	{ key: "hikingNodes", labelKey: "layers.hikingNodes", subKey: "layers.hikingNodesSub", color: "#dc2626" },
-	{ key: "cyclingNodes", labelKey: "layers.cyclingNodes", subKey: "layers.cyclingNodesSub", color: "#1d4ed8" },
+	{
+		key: "hikingNodes",
+		labelKey: "layers.hikingNodes",
+		subKey: "layers.hikingNodesSub",
+		color: NODE_NETWORK_COLORS.hiking,
+	},
+	{
+		key: "cyclingNodes",
+		labelKey: "layers.cyclingNodes",
+		subKey: "layers.cyclingNodesSub",
+		color: NODE_NETWORK_COLORS.cycling,
+	},
 ];
 
 export function LayerPicker() {
