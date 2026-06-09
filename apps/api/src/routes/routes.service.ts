@@ -2,7 +2,7 @@ import { EntityManager, EntityRepository, type FilterQuery, QueryOrder } from "@
 import { InjectRepository } from "@mikro-orm/nestjs";
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { EventEmitter2 } from "@nestjs/event-emitter";
-import { INDEXABLE_MIN_DISTANCE_METERS, isRouteIndexable, routeBoundingBox } from "@routess/core";
+import { isRouteIndexable, routeBoundingBox } from "@routess/core";
 import type { AppConfig } from "../config/app-config";
 import { APP_CONFIG } from "../config/config.module";
 import { Route } from "../entities/route.entity";
@@ -17,7 +17,12 @@ import {
 } from "../telemetry/domain-events";
 import type { CreateRouteDto } from "./dto/create-route.dto";
 import type { PublicRouteSummaryDto } from "./dto/public-route-summary.dto";
-import { type PublicRoutesQueryDto, parseBbox } from "./dto/public-routes-query.dto";
+import {
+	type PublicListingFilters,
+	type PublicRoutesQueryDto,
+	parseBbox,
+	publicListingWhere,
+} from "./dto/public-routes-query.dto";
 import type { RouteResponseDto } from "./dto/route-response.dto";
 import type { UpdateRouteDto } from "./dto/update-route.dto";
 import { toPublicRouteSummaryDto, toRouteResponseDto } from "./route.mapper";
@@ -131,37 +136,20 @@ export class RoutesService {
 		offset: number,
 	): Promise<{ items: PublicRouteSummaryDto[]; total: number }> {
 		const gate = query.gate ?? "indexable";
-		const view = query.bbox ? parseBbox(query.bbox) : undefined;
-		const where: FilterQuery<Route> = { visibility: "public" };
-		if (query.activity) where.activity = query.activity;
-		// Case-insensitive exact match: geocoder casing should not leak into URLs.
-		if (query.placeCity) where.placeCity = { $ilike: query.placeCity.replace(/[%_\\]/g, (c) => `\\${c}`) };
-		if (query.minDistance !== undefined || query.maxDistance !== undefined) {
-			where.distance = {
-				...(query.minDistance !== undefined ? { $gte: query.minDistance } : {}),
-				...(query.maxDistance !== undefined ? { $lte: query.maxDistance } : {}),
-			};
-		}
-		if (view) {
-			// Viewport overlap on the persisted bbox columns (ADR 0030).
-			where.bboxMinLat = { $lte: view.maxLat };
-			where.bboxMaxLat = { $gte: view.minLat };
-			where.bboxMinLng = { $lte: view.maxLng };
-			where.bboxMaxLng = { $gte: view.minLng };
-		}
+		const filters: PublicListingFilters = {
+			activity: query.activity,
+			placeCity: query.placeCity,
+			minDistance: query.minDistance,
+			maxDistance: query.maxDistance,
+			bbox: query.bbox ? parseBbox(query.bbox) : undefined,
+		};
+		const where = { visibility: "public", ...publicListingWhere(filters, gate) } as FilterQuery<Route>;
 
 		// The seeded ExternalRoute layer is unioned in at read time (the ODbL
 		// "Produced Work", ADR 0033). We fetch a window of `offset + limit` from
 		// each source, merge, sort, and slice, since the two tables are wholly
 		// independent and cannot be joined in SQL. Fine at our volumes.
 		const take = offset + limit;
-		const externalFilters = {
-			activity: query.activity,
-			placeCity: query.placeCity,
-			minDistance: query.minDistance,
-			maxDistance: query.maxDistance,
-			bbox: view,
-		};
 
 		if (gate === "public") {
 			const [routes, routeTotal] = await this.routeRepository.findAndCount(where, {
@@ -172,15 +160,11 @@ export class RoutesService {
 			const routeItems = routes.map((route) =>
 				toPublicRouteSummaryDto(route, this.config.analytics.salt, { includeGeometry: true }),
 			);
-			const external = await this.externalRoutes.findPublicMatches(externalFilters, "public", take);
+			const external = await this.externalRoutes.findPublicMatches(filters, "public", take);
 			const merged = mergeSummariesDesc(routeItems, external.items, publicSortKey).slice(offset, offset + limit);
 			return { items: merged, total: routeTotal + external.total };
 		}
 
-		where.distance = {
-			...(where.distance as object | undefined),
-			$gte: Math.max(query.minDistance ?? 0, INDEXABLE_MIN_DISTANCE_METERS),
-		};
 		const candidates = await this.routeRepository.find(where, {
 			populate: ["user"],
 			orderBy: { updatedAt: "DESC" },
@@ -190,7 +174,7 @@ export class RoutesService {
 		const routeItems = indexableRoutes
 			.slice(0, take)
 			.map((route) => toPublicRouteSummaryDto(route, this.config.analytics.salt, { includeGeometry: false }));
-		const external = await this.externalRoutes.findPublicMatches(externalFilters, "indexable", take);
+		const external = await this.externalRoutes.findPublicMatches(filters, "indexable", take);
 		const merged = mergeSummariesDesc(routeItems, external.items, indexableSortKey).slice(offset, offset + limit);
 		return { items: merged, total: indexableRoutes.length + external.total };
 	}

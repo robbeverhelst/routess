@@ -1,8 +1,11 @@
 import { buildExternalRouteSlugId, downsampleCoordinates } from "@routess/core";
 import type { ExternalRoute } from "../entities/external-route.entity";
 import type { SeedSource } from "../entities/seed-source.entity";
-import type { PublicRouteSourceDto, PublicRouteSummaryDto } from "../routes/dto/public-route-summary.dto";
-import { PUBLIC_SUMMARY_GEOMETRY_MAX_POINTS } from "../routes/route.mapper";
+import {
+	PUBLIC_SUMMARY_GEOMETRY_MAX_POINTS,
+	type PublicRouteSourceDto,
+	type PublicRouteSummaryDto,
+} from "../routes/dto/public-route-summary.dto";
 import type { ExternalRouteResponseDto } from "./dto/external-route-response.dto";
 
 // `route.source` must be populated by the caller before mapping.

@@ -2,28 +2,17 @@ import { createHash } from "node:crypto";
 import { EntityManager, EntityRepository, type FilterQuery } from "@mikro-orm/core";
 import { InjectRepository } from "@mikro-orm/nestjs";
 import { Injectable, NotFoundException } from "@nestjs/common";
-import {
-	INDEXABLE_MIN_DISTANCE_METERS,
-	isRouteIndexable,
-	type RouteActivity,
-	routeBoundingBox,
-	type SeedAdapter,
-	type SeedRoute,
-} from "@routess/core";
+import { isRouteIndexable, routeBoundingBox, type SeedAdapter, type SeedRoute } from "@routess/core";
 import { ExternalRoute } from "../entities/external-route.entity";
 import { SeedSource } from "../entities/seed-source.entity";
 import type { PublicRouteSummaryDto } from "../routes/dto/public-route-summary.dto";
-import type { ParsedBbox, PublicRouteGate } from "../routes/dto/public-routes-query.dto";
+import {
+	type PublicListingFilters,
+	type PublicRouteGate,
+	publicListingWhere,
+} from "../routes/dto/public-routes-query.dto";
 import type { ExternalRouteResponseDto } from "./dto/external-route-response.dto";
 import { toExternalRouteResponseDto, toExternalRouteSummaryDto } from "./external-route.mapper";
-
-export interface ExternalListingFilters {
-	activity?: RouteActivity;
-	placeCity?: string;
-	minDistance?: number;
-	maxDistance?: number;
-	bbox?: ParsedBbox;
-}
 
 export interface UpsertResult {
 	inserted: number;
@@ -171,31 +160,13 @@ export class ExternalRoutesService {
 	// summaries matching the same filters, plus the total. RoutesService merges
 	// these with user-Route summaries (the ODbL Produced Work, ADR 0033).
 	async findPublicMatches(
-		filters: ExternalListingFilters,
+		filters: PublicListingFilters,
 		gate: PublicRouteGate,
 		take: number,
 	): Promise<{ items: PublicRouteSummaryDto[]; total: number }> {
-		const where: FilterQuery<ExternalRoute> = {};
-		if (filters.activity) where.activity = filters.activity;
-		if (filters.placeCity) where.placeCity = { $ilike: filters.placeCity.replace(/[%_\\]/g, (c) => `\\${c}`) };
-		if (filters.minDistance !== undefined || filters.maxDistance !== undefined) {
-			where.distance = {
-				...(filters.minDistance !== undefined ? { $gte: filters.minDistance } : {}),
-				...(filters.maxDistance !== undefined ? { $lte: filters.maxDistance } : {}),
-			};
-		}
-		if (filters.bbox) {
-			where.bboxMinLat = { $lte: filters.bbox.maxLat };
-			where.bboxMaxLat = { $gte: filters.bbox.minLat };
-			where.bboxMinLng = { $lte: filters.bbox.maxLng };
-			where.bboxMaxLng = { $gte: filters.bbox.minLng };
-		}
+		const where = publicListingWhere(filters, gate) as FilterQuery<ExternalRoute>;
 
 		if (gate === "indexable") {
-			where.distance = {
-				...(where.distance as object | undefined),
-				$gte: Math.max(filters.minDistance ?? 0, INDEXABLE_MIN_DISTANCE_METERS),
-			};
 			// ExternalRoutes are always public; the gate is the quality bar.
 			const candidates = await this.externalRouteRepository.find(where, {
 				populate: ["source"],

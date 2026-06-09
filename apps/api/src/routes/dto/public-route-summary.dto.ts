@@ -2,6 +2,10 @@ import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { ROUTE_ACTIVITIES, type RouteActivity } from "@routess/core";
 import { PublicUserDto } from "../../users/dto/user-response.dto";
 
+// Cards and map previews don't need the full RoutePath; this keeps a 50-item
+// Discover page at a sane payload size.
+export const PUBLIC_SUMMARY_GEOMETRY_MAX_POINTS = 80;
+
 // Attribution block for an ExternalRoute (ADR 0033). Present only on seeded
 // open-data routes; user Routes leave it undefined. The creator-on-the-map.
 export class PublicRouteSourceDto {

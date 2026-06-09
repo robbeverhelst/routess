@@ -6,50 +6,15 @@ import { useT } from "@/lib/i18n";
 import { useUnits } from "@/lib/units";
 import { buildMapboxStaticPreviewUrl } from "@/lib/utils/mapboxStaticPreview";
 import { I } from "../components/icons";
-import { Btn, RDS_COLORS, SecTitle } from "../components/primitives";
+import { Btn, RDS_COLORS } from "../components/primitives";
+import { PublicPageShell, StatBlock, setCanonical, setMetaTag } from "./public-page";
 
 const HERO_WIDTH = 1200;
 const HERO_HEIGHT = 480;
 
-function setMetaTag(attr: "name" | "property", key: string, content: string) {
-	if (typeof document === "undefined") return;
-	let el = document.head.querySelector<HTMLMetaElement>(`meta[${attr}="${key}"]`);
-	if (!el) {
-		el = document.createElement("meta");
-		el.setAttribute(attr, key);
-		document.head.appendChild(el);
-	}
-	el.setAttribute("content", content);
-}
-
-function setCanonical(href: string) {
-	if (typeof document === "undefined") return;
-	let el = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]');
-	if (!el) {
-		el = document.createElement("link");
-		el.rel = "canonical";
-		document.head.appendChild(el);
-	}
-	el.href = href;
-}
-
-function StatBlock({ label, value, unit }: { label: string; value: string; unit?: string }) {
-	return (
-		<div style={{ padding: "12px 16px", borderRight: `1px solid ${RDS_COLORS.border}` }}>
-			<SecTitle>{label}</SecTitle>
-			<div className="rds-mono" style={{ fontSize: 24, fontWeight: 600, lineHeight: 1.1, marginTop: 4 }}>
-				{value}
-				{unit && (
-					<span style={{ fontSize: 12, color: RDS_COLORS.fgSubtle, marginLeft: 4, fontWeight: 400 }}>{unit}</span>
-				)}
-			</div>
-		</div>
-	);
-}
-
-// Page for a seeded ExternalRoute (/r/{slug}-x{id}, ADR 0033). Deliberately
-// distinct from PublicRouteScreen: no owner, no in-app editor entry (editing is
-// a fork, future slice). The source attribution is mandatory (license).
+// Page for a seeded ExternalRoute (/r/{slug}-x{id}, ADR 0033). No owner, no
+// in-app editor entry (editing is a fork, future slice). The source
+// attribution is mandatory (license).
 export function ExternalRouteScreen({ slug, externalId }: { slug: string; externalId: number }) {
 	const t = useT();
 	const { formatDistanceParts, formatElevationParts } = useUnits();
@@ -92,143 +57,109 @@ export function ExternalRouteScreen({ slug, externalId }: { slug: string; extern
 	const elevation = route?.elevationGain ? formatElevationParts(route.elevationGain) : null;
 
 	return (
-		<div style={{ minHeight: "100svh", display: "flex", flexDirection: "column", background: RDS_COLORS.bg }}>
-			<header
-				style={{
-					display: "flex",
-					alignItems: "center",
-					gap: 12,
-					padding: "14px 20px",
-					borderBottom: `1px solid ${RDS_COLORS.border}`,
-				}}
-			>
-				<a
-					href="/"
-					style={{ display: "inline-flex", alignItems: "center", gap: 8, textDecoration: "none", color: RDS_COLORS.fg }}
+		<PublicPageShell isLoading={isLoading} isError={isError}>
+			{route && (
+				<div
+					style={{ display: "flex", flexDirection: "column", gap: 20, padding: 20, maxWidth: 960, margin: "0 auto" }}
 				>
-					<I.route size={18} />
-					<span style={{ fontWeight: 600, fontSize: 14, letterSpacing: -0.2 }}>routess</span>
-				</a>
-				<div style={{ flex: 1 }} />
-				<a href="/" style={{ textDecoration: "none" }}>
-					<Btn variant="ghost">{t("public.signIn")}</Btn>
-				</a>
-			</header>
-			<main style={{ flex: 1 }}>
-				{isLoading && (
-					<div style={{ padding: 40, textAlign: "center", color: RDS_COLORS.fgSubtle, fontSize: 14 }}>
-						{t("public.loading")}
+					<div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+						<a
+							href={route.source.url}
+							target="_blank"
+							rel="noreferrer noopener"
+							className="rds-mono"
+							style={{ fontSize: 11.5, color: RDS_COLORS.accent, letterSpacing: 0.4, textDecoration: "none" }}
+						>
+							{route.source.name}
+						</a>
+						<h1 style={{ margin: 0, fontSize: 32, fontWeight: 700, letterSpacing: -0.6 }}>{route.name}</h1>
+						{route.description && (
+							<p style={{ margin: "4px 0 0", fontSize: 14, color: RDS_COLORS.fgMuted, lineHeight: 1.5 }}>
+								{route.description}
+							</p>
+						)}
 					</div>
-				)}
-				{isError && (
-					<div style={{ padding: 40, textAlign: "center", color: RDS_COLORS.fgMuted }}>
-						<h2 style={{ fontSize: 18, fontWeight: 600, margin: "0 0 8px" }}>{t("public.notFound.title")}</h2>
-						<p style={{ fontSize: 13, color: RDS_COLORS.fgSubtle, margin: 0 }}>{t("public.notFound.body")}</p>
-					</div>
-				)}
-				{route && (
 					<div
-						style={{ display: "flex", flexDirection: "column", gap: 20, padding: 20, maxWidth: 960, margin: "0 auto" }}
+						style={{
+							borderRadius: 16,
+							overflow: "hidden",
+							border: `1px solid ${RDS_COLORS.border}`,
+							background: RDS_COLORS.bgPanelElev,
+							aspectRatio: "5 / 2",
+						}}
 					>
-						<div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-							<a
-								href={route.source.url}
-								target="_blank"
-								rel="noreferrer noopener"
-								className="rds-mono"
-								style={{ fontSize: 11.5, color: RDS_COLORS.accent, letterSpacing: 0.4, textDecoration: "none" }}
+						{heroUrl ? (
+							<img
+								src={heroUrl}
+								alt={t("public.mapAlt", { name: route.name })}
+								style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+							/>
+						) : (
+							<div
+								style={{
+									display: "flex",
+									alignItems: "center",
+									justifyContent: "center",
+									height: "100%",
+									color: RDS_COLORS.fgSubtle,
+									fontSize: 13,
+								}}
 							>
-								{route.source.name}
-							</a>
-							<h1 style={{ margin: 0, fontSize: 32, fontWeight: 700, letterSpacing: -0.6 }}>{route.name}</h1>
-							{route.description && (
-								<p style={{ margin: "4px 0 0", fontSize: 14, color: RDS_COLORS.fgMuted, lineHeight: 1.5 }}>
-									{route.description}
-								</p>
-							)}
-						</div>
-						<div
-							style={{
-								borderRadius: 16,
-								overflow: "hidden",
-								border: `1px solid ${RDS_COLORS.border}`,
-								background: RDS_COLORS.bgPanelElev,
-								aspectRatio: "5 / 2",
-							}}
-						>
-							{heroUrl ? (
-								<img
-									src={heroUrl}
-									alt={t("public.mapAlt", { name: route.name })}
-									style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-								/>
-							) : (
-								<div
-									style={{
-										display: "flex",
-										alignItems: "center",
-										justifyContent: "center",
-										height: "100%",
-										color: RDS_COLORS.fgSubtle,
-										fontSize: 13,
-									}}
-								>
-									{t("public.noPreview")}
-								</div>
-							)}
-						</div>
-						<div
-							style={{
-								display: "grid",
-								gridTemplateColumns: "repeat(3, 1fr)",
-								border: `1px solid ${RDS_COLORS.border}`,
-								borderRadius: 12,
-								background: RDS_COLORS.bgPanel,
-								overflow: "hidden",
-							}}
-						>
-							<StatBlock label={t("route.distance")} value={distance ? distance.value : "—"} unit={distance?.unit} />
-							<StatBlock label={t("route.duration")} value={duration} />
-							<StatBlock label={t("route.elev")} value={elevation ? elevation.value : "—"} unit={elevation?.unit} />
-						</div>
-						<div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-							<a href={apiService.externalRouteGpxUrl(route.id)} style={{ textDecoration: "none" }}>
-								<Btn variant="primary">
-									<I.download size={14} /> {t("public.downloadGpx")}
-								</Btn>
-							</a>
-						</div>
-						{/* Attribution: the ODbL/CC license obligation, rendered on every page. */}
-						<div style={{ fontSize: 12, color: RDS_COLORS.fgSubtle, lineHeight: 1.5 }}>
-							<a href={route.source.url} target="_blank" rel="noreferrer noopener" style={{ color: RDS_COLORS.accent }}>
-								{route.source.attribution}
-							</a>{" "}
-							· {route.source.license}
-						</div>
-						{route.tags.length > 0 && (
-							<div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-								{route.tags.map((tag) => (
-									<span
-										key={tag}
-										style={{
-											display: "inline-flex",
-											alignItems: "center",
-											padding: "4px 10px",
-											borderRadius: 999,
-											background: RDS_COLORS.accentSoft,
-											color: RDS_COLORS.accent,
-											fontSize: 12,
-											fontWeight: 500,
-										}}
-									>
-										#{tag}
-									</span>
-								))}
+								{t("public.noPreview")}
 							</div>
 						)}
 					</div>
-				)}
-			</main>
-		</div>
+					<div
+						style={{
+							display: "grid",
+							gridTemplateColumns: "repeat(3, 1fr)",
+							border: `1px solid ${RDS_COLORS.border}`,
+							borderRadius: 12,
+							background: RDS_COLORS.bgPanel,
+							overflow: "hidden",
+						}}
+					>
+						<StatBlock label={t("route.distance")} value={distance ? distance.value : "—"} unit={distance?.unit} />
+						<StatBlock label={t("route.duration")} value={duration} />
+						<StatBlock label={t("route.elev")} value={elevation ? elevation.value : "—"} unit={elevation?.unit} />
+					</div>
+					<div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+						<a href={apiService.externalRouteGpxUrl(route.id)} style={{ textDecoration: "none" }}>
+							<Btn variant="primary">
+								<I.download size={14} /> {t("public.downloadGpx")}
+							</Btn>
+						</a>
+					</div>
+					{/* Attribution: the ODbL/CC license obligation, rendered on every page. */}
+					<div style={{ fontSize: 12, color: RDS_COLORS.fgSubtle, lineHeight: 1.5 }}>
+						<a href={route.source.url} target="_blank" rel="noreferrer noopener" style={{ color: RDS_COLORS.accent }}>
+							{route.source.attribution}
+						</a>{" "}
+						· {route.source.license}
+					</div>
+					{route.tags.length > 0 && (
+						<div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+							{route.tags.map((tag) => (
+								<span
+									key={tag}
+									style={{
+										display: "inline-flex",
+										alignItems: "center",
+										padding: "4px 10px",
+										borderRadius: 999,
+										background: RDS_COLORS.accentSoft,
+										color: RDS_COLORS.accent,
+										fontSize: 12,
+										fontWeight: 500,
+									}}
+								>
+									#{tag}
+								</span>
+							))}
+						</div>
+					)}
+				</div>
+			)}
+		</PublicPageShell>
 	);
 }
