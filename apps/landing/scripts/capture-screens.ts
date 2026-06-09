@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 /**
  * Regenerates every product image on the landing page from the REAL app:
  *
- *  1. hero-screenshot.png      — Playwright shot of the live planner seeded
+ *  1. hero-screenshot.webp     — Playwright shot of the live planner seeded
  *                                with the Sint-Amands loop via a ?route= link
  *  2. app-panel.png            — element shot of the plan panel (elevation +
  *                                surface breakdown) from the same session
@@ -210,11 +210,11 @@ async function captureAppShots(): Promise<void> {
 		const heroShot = await heroPage.screenshot();
 		const sharp = (await import("sharp")).default;
 		writeFileSync(
-			resolve(PUBLIC_DIR, "hero-screenshot.png"),
-			await sharp(heroShot).resize(1840, 1120).png().toBuffer(),
+			resolve(PUBLIC_DIR, "hero-screenshot.webp"),
+			await sharp(heroShot).resize(1840, 1120).webp({ quality: 82 }).toBuffer(),
 		);
 		await heroCtx.close();
-		log("wrote hero-screenshot.png");
+		log("wrote hero-screenshot.webp");
 
 		await loadPlanner(page, SINT_AMANDS_LOOP);
 
@@ -299,8 +299,9 @@ async function captureAppShots(): Promise<void> {
 		});
 		await mobilePage.locator(byLabel("Zoom out")).first().click();
 		await mobilePage.waitForTimeout(8_000);
-		await mobilePage.screenshot({ path: resolve(PUBLIC_DIR, "app-mobile.png") });
-		log("wrote app-mobile.png");
+		const mobileShot = await mobilePage.screenshot();
+		writeFileSync(resolve(PUBLIC_DIR, "app-mobile.webp"), await sharp(mobileShot).webp({ quality: 82 }).toBuffer());
+		log("wrote app-mobile.webp");
 	} finally {
 		await browser.close();
 	}

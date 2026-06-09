@@ -1,5 +1,6 @@
 import Image from "next/image";
 import type { Dict } from "@/lib/content";
+import mobileShot from "../../public/app-mobile.webp";
 import { AccentInline } from "./AccentText";
 
 // Phone-framed capture of the real mobile layout plus the GPX in/out story.
@@ -25,10 +26,9 @@ export function TakeItOutside({ dict }: { dict: Dict }) {
 							}}
 						>
 							<Image
-								src="/app-mobile.png"
+								src={mobileShot}
 								alt=""
-								width={780}
-								height={1600}
+								placeholder="blur"
 								sizes="280px"
 								style={{ width: "100%", display: "block", borderRadius: 30 }}
 							/>
