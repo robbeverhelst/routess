@@ -1,6 +1,6 @@
 import type { GeoJSONSource, Map as MapboxMap, MapMouseEvent } from "mapbox-gl";
 import mapboxgl from "mapbox-gl";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { onAppEvent } from "@/lib/app-events";
 import { useT } from "@/lib/i18n";
 import { useDiscoverStore } from "@/stores/discoverStore";
@@ -61,6 +61,25 @@ export function DiscoverMapBindings({ mapRef }: { mapRef: React.RefObject<Mapbox
 	const viewRouteLabel = t("discover.viewRoute");
 	const popupRef = useRef<mapboxgl.Popup | null>(null);
 
+	// The map ref fills in after mount without a re-render; poll it into
+	// state once per activation so every effect below can depend on a real
+	// map instance instead of racing the ref (a panel restored as the active
+	// context on page load would otherwise never get its layers).
+	const [map, setMap] = useState<MapboxMap | null>(mapRef.current);
+	useEffect(() => {
+		if (!active) return;
+		if (mapRef.current) {
+			setMap(mapRef.current);
+			return;
+		}
+		const poll = setInterval(() => {
+			if (!mapRef.current) return;
+			clearInterval(poll);
+			setMap(mapRef.current);
+		}, 200);
+		return () => clearInterval(poll);
+	}, [active, mapRef]);
+
 	// Popup lifecycle is deliberately separate from the markers effect: that
 	// effect re-runs on every hover change and its cleanup would kill a popup
 	// the moment a dot click sets hoveredRouteId.
@@ -81,53 +100,31 @@ export function DiscoverMapBindings({ mapRef }: { mapRef: React.RefObject<Mapbox
 	const setViewportBbox = useDiscoverStore((s) => s.setViewportBbox);
 	const setHoveredRouteId = useDiscoverStore((s) => s.setHoveredRouteId);
 
-	// Viewport sync: the map is the filter. The map can be a beat behind the
-	// panel (refs don't re-render), so acquisition polls until it exists;
-	// without this the panel would wait for a bbox that never comes.
+	// Viewport sync: the map is the filter.
 	useEffect(() => {
-		if (!active) return;
+		if (!active || !map) return;
 
 		let timer: ReturnType<typeof setTimeout> | null = null;
-		let poll: ReturnType<typeof setInterval> | null = null;
-		let bound: MapboxMap | null = null;
-
 		const report = () => {
-			if (!bound) return;
-			const bbox = currentBbox(bound);
+			const bbox = currentBbox(map);
 			if (bbox) setViewportBbox(bbox);
 		};
 		const schedule = () => {
 			if (timer) clearTimeout(timer);
 			timer = setTimeout(report, VIEWPORT_DEBOUNCE_MS);
 		};
-		const bind = (map: MapboxMap) => {
-			bound = map;
-			report();
-			map.on("moveend", schedule);
-			map.on("zoomend", schedule);
-		};
 
-		if (mapRef.current) bind(mapRef.current);
-		else {
-			poll = setInterval(() => {
-				if (!mapRef.current) return;
-				if (poll) clearInterval(poll);
-				poll = null;
-				bind(mapRef.current);
-			}, 200);
-		}
-
+		report();
+		map.on("moveend", schedule);
+		map.on("zoomend", schedule);
 		const offSearch = onAppEvent("routess:discover-search-area", report);
 		return () => {
 			if (timer) clearTimeout(timer);
-			if (poll) clearInterval(poll);
 			offSearch();
-			if (bound) {
-				bound.off("moveend", schedule);
-				bound.off("zoomend", schedule);
-			}
+			map.off("moveend", schedule);
+			map.off("zoomend", schedule);
 		};
-	}, [active, mapRef, setViewportBbox]);
+	}, [active, map, setViewportBbox]);
 
 	// Keep handler closures fresh without re-registering them: layer setup
 	// and event handlers live in ONE effect keyed only on [active]; data
@@ -139,7 +136,6 @@ export function DiscoverMapBindings({ mapRef }: { mapRef: React.RefObject<Mapbox
 
 	// Layers + interaction handlers: stable per activation.
 	useEffect(() => {
-		const map = mapRef.current;
 		if (!map || !active) return;
 
 		const ensureLayers = () => {
@@ -218,39 +214,49 @@ export function DiscoverMapBindings({ mapRef }: { mapRef: React.RefObject<Mapbox
 			map.getCanvas().style.cursor = "";
 		};
 
+		// Style readiness is polled rather than event-driven: on a cold load
+		// with Discover already active, 'idle' can stay away for a long time
+		// (terrain/config churn keeps the map busy) and a missed one-shot
+		// event would leave the surface dotless.
+		let readiness: ReturnType<typeof setInterval> | null = null;
 		if (map.isStyleLoaded()) ensureLayers();
-		else map.once("idle", ensureLayers);
+		else {
+			readiness = setInterval(() => {
+				if (!map.isStyleLoaded()) return;
+				if (readiness) clearInterval(readiness);
+				readiness = null;
+				ensureLayers();
+			}, 250);
+		}
 		// Style switches wipe custom layers; re-apply when the new style lands.
 		map.on("style.load", ensureLayers);
 		map.on("click", STARTS_LAYER_ID, onCircleClick);
 		map.on("mouseenter", STARTS_LAYER_ID, onEnter);
 		map.on("mouseleave", STARTS_LAYER_ID, onLeave);
 		return () => {
-			map.off("idle", ensureLayers);
+			if (readiness) clearInterval(readiness);
 			map.off("style.load", ensureLayers);
 			map.off("click", STARTS_LAYER_ID, onCircleClick);
 			map.off("mouseenter", STARTS_LAYER_ID, onEnter);
 			map.off("mouseleave", STARTS_LAYER_ID, onLeave);
 			if (map.isStyleLoaded()) removeLayers(map);
 		};
-	}, [active, mapRef, setHoveredRouteId]);
+	}, [active, map, setHoveredRouteId]);
 
 	// Data sync: markers follow the current results.
 	useEffect(() => {
-		const map = mapRef.current;
 		if (!map || !active) return;
 		const source = map.getSource(STARTS_SOURCE_ID);
 		if (source && source.type === "geojson") (source as GeoJSONSource).setData(startsCollection(routes));
-	}, [active, routes, mapRef]);
+	}, [active, routes, map]);
 
 	// Hover path follows the hovered card/dot.
 	useEffect(() => {
-		const map = mapRef.current;
 		if (!map || !active) return;
 		const hovered = routes.find((r) => r.id === hoveredRouteId);
 		const source = map.getSource(PATH_SOURCE_ID);
 		if (source && source.type === "geojson") (source as GeoJSONSource).setData(pathFeature(hovered?.geometry ?? null));
-	}, [active, routes, hoveredRouteId, mapRef]);
+	}, [active, routes, hoveredRouteId, map]);
 
 	return null;
 }
