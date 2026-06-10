@@ -5,6 +5,8 @@ import {
 	calculatePathDistance,
 	densifyWaypointsAlongPath,
 	estimateWalkingDuration,
+	IMPORTED_DENSIFY_MAX_TOTAL_WAYPOINTS,
+	IMPORTED_DENSIFY_THRESHOLDS,
 	selectSmartWaypoints,
 } from "@routess/core";
 import type { GeoJSONSource, Map as MapboxMap } from "mapbox-gl";
@@ -144,7 +146,16 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 		const routePath = getCurrentRoutePath();
 		if (store.waypoints.length < 2 || routePath.length < 2) return identity;
 
-		const { waypoints, indexMap, insertedCount } = densifyWaypointsAlongPath(store.waypoints, routePath);
+		// Imported/external tracks need much denser pins than generated drafts:
+		// the engine reproduces its own geometry between sparse pins, but not a
+		// foreign track's.
+		const imported = store.creationSource === "imported";
+		const { waypoints, indexMap, insertedCount } = densifyWaypointsAlongPath(
+			store.waypoints,
+			routePath,
+			imported ? IMPORTED_DENSIFY_THRESHOLDS : undefined,
+			imported ? IMPORTED_DENSIFY_MAX_TOTAL_WAYPOINTS : undefined,
+		);
 		if (insertedCount === 0) return identity;
 		Logger.info(`[RouteDraftEditor] Densified ${store.creationSource} draft: +${insertedCount} waypoints before edit`);
 		setWaypoints(waypoints);

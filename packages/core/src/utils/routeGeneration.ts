@@ -142,6 +142,20 @@ export const DENSIFY_THRESHOLDS: SmartWaypointThresholds = {
 // chunk requests.
 export const DENSIFY_MAX_TOTAL_WAYPOINTS = 20;
 
+// Imported/external geometry did NOT come from the routing engine, so legs
+// between sparse pins recalculate to the engine's preferred path, not the
+// original track. Pinning must be much denser to stay shape-faithful; the
+// client routes recalculations in stitched chunks, and the save cap is 100
+// waypoints, so the budget stays just under that.
+export const IMPORTED_DENSIFY_THRESHOLDS: SmartWaypointThresholds = {
+	directionChangeThresholdDeg: 35,
+	maxDistanceIntervalKm: 0.5,
+	minDistanceBetweenWaypointsKm: 0.15,
+	maxWaypoints: 24,
+};
+
+export const IMPORTED_DENSIFY_MAX_TOTAL_WAYPOINTS = 90;
+
 function nearestPathIndex(point: Coordinate, path: Coordinate[], from: number): number {
 	let best = from;
 	let bestKm = Infinity;
@@ -165,6 +179,7 @@ export function densifyWaypointsAlongPath(
 	waypoints: Waypoint[],
 	routePath: Coordinate[],
 	thresholds: SmartWaypointThresholds = DENSIFY_THRESHOLDS,
+	maxTotalWaypoints: number = DENSIFY_MAX_TOTAL_WAYPOINTS,
 ): DensifyResult {
 	const identity = () => ({
 		waypoints,
@@ -216,7 +231,7 @@ export function densifyWaypointsAlongPath(
 
 	// Stay routable in one call: thin segments evenly until the total fits
 	// the budget, the densest segment giving up points first.
-	const budget = Math.max(0, DENSIFY_MAX_TOTAL_WAYPOINTS - waypoints.length);
+	const budget = Math.max(0, maxTotalWaypoints - waypoints.length);
 	let totalInsertions = insertionsPerSegment.reduce((sum, list) => sum + list.length, 0);
 	while (totalInsertions > budget) {
 		const largest = insertionsPerSegment.reduce((a, b) => (b.length > a.length ? b : a));
