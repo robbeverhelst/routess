@@ -9,7 +9,7 @@ import { getRuntimeConfig } from "@/lib/runtime-config";
 import { serializeAndCompress } from "@/lib/shareUtils";
 import { formatDistance, type UnitSystem } from "@/lib/units";
 import { buildMapboxStaticPreviewUrl } from "@/lib/utils/mapboxStaticPreview";
-import { buildRouteShareCard } from "@/lib/utils/routeShareCard";
+import { buildRouteShareCard, SHARE_CARD_INK } from "@/lib/utils/routeShareCard";
 import { useMapViewStore } from "@/stores/mapViewStore";
 import { useModalsStore } from "@/stores/modalsStore";
 import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
@@ -105,7 +105,7 @@ export function ShareModal() {
 	const activityType = useUiStore((s) => s.activityType);
 	const activityIconUrl = useMemo(() => {
 		const ActivityIcon = activityType === "cycle" ? I.bike : activityType === "walk" ? I.walk : I.run;
-		const svg = renderToStaticMarkup(<ActivityIcon size={64} />).replace("<svg", '<svg color="#16161d"');
+		const svg = renderToStaticMarkup(<ActivityIcon size={64} />).replace("<svg", `<svg color="${SHARE_CARD_INK}"`);
 		return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 	}, [activityType]);
 	const waypoints = useWaypoints();

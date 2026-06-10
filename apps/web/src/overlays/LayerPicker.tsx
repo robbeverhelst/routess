@@ -1,5 +1,5 @@
+import { nodeNetworkColors } from "@routess/design-tokens";
 import { useMemo } from "react";
-import { NODE_NETWORK_COLORS } from "@/features/overlays/nodeNetworkColors";
 import { loadLastMapViewFromLocalStorage } from "@/features/routing/services/LocalStorageService";
 import { useT } from "@/lib/i18n";
 import { getRuntimeConfig } from "@/lib/runtime-config";
@@ -51,13 +51,13 @@ const OVERLAY_ROWS: OverlayRow[] = [
 		key: "hikingNodes",
 		labelKey: "layers.hikingNodes",
 		subKey: "layers.hikingNodesSub",
-		color: NODE_NETWORK_COLORS.hiking,
+		color: nodeNetworkColors.hiking,
 	},
 	{
 		key: "cyclingNodes",
 		labelKey: "layers.cyclingNodes",
 		subKey: "layers.cyclingNodesSub",
-		color: NODE_NETWORK_COLORS.cycling,
+		color: nodeNetworkColors.cycling,
 	},
 ];
 

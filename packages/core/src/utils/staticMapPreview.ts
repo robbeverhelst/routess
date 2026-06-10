@@ -1,8 +1,16 @@
 type Coordinate = [number, number];
 
-const ROUTE_COLOR = "7d62ff";
-const START_COLOR = "22c55e";
-const END_COLOR = "ef4444";
+// Overlay colors for Mapbox Static previews (hex without '#', per the Static
+// Images API path syntax). Exported so screenshot pipelines stay in sync.
+export const STATIC_PREVIEW_COLORS = {
+	route: "7d62ff",
+	start: "22c55e",
+	end: "ef4444",
+} as const;
+
+const ROUTE_COLOR = STATIC_PREVIEW_COLORS.route;
+const START_COLOR = STATIC_PREVIEW_COLORS.start;
+const END_COLOR = STATIC_PREVIEW_COLORS.end;
 
 export type StaticPreviewMapStyle = "streets" | "outdoors" | "satellite";
 

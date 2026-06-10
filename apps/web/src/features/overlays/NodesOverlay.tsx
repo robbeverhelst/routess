@@ -1,9 +1,9 @@
+import { nodeNetworkColors } from "@routess/design-tokens";
 import type { MapLayerMouseEvent } from "mapbox-gl";
 import { useEffect, useState } from "react";
 import { Layer, Source, useMap } from "react-map-gl/mapbox";
 import { getRuntimeConfig } from "@/lib/runtime-config";
 import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
-import { NODE_NETWORK_COLORS } from "./nodeNetworkColors";
 import { resolveNodeTilesUrl } from "./nodeTilesUrl";
 
 // Node networks are pre-extracted from OSM into a self-hosted PMTiles file
@@ -17,8 +17,8 @@ const SOURCE_ID = "rds-nodes";
 const SOURCE_LAYER = "node_network";
 const NODE_TILES_URL = resolveNodeTilesUrl(getRuntimeConfig("VITE_NODE_TILES_URL"));
 
-const HIKING_COLOR = NODE_NETWORK_COLORS.hiking;
-const CYCLING_COLOR = NODE_NETWORK_COLORS.cycling;
+const HIKING_COLOR = nodeNetworkColors.hiking;
+const CYCLING_COLOR = nodeNetworkColors.cycling;
 const ODBL_ATTRIBUTION = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors (ODbL)';
 
 // Lines render from a low zoom (clean network shape). The numbered nodes are

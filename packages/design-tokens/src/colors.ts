@@ -210,6 +210,15 @@ export const surfaceBucketColors = {
 } as const;
 
 /**
+ * Display colors for the two NodeNetwork kinds (ADR 0033), shared so the map
+ * overlay and the layer-picker legend never drift apart.
+ */
+export const nodeNetworkColors = {
+	hiking: "#dc2626",
+	cycling: "#1d4ed8",
+} as const;
+
+/**
  * Landing-page accents: marketing-only shades outside the core brand ramps
  * (deep text accents, dark-section text grades, the cream mockup background).
  */
