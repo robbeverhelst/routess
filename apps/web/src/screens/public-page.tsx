@@ -1,11 +1,14 @@
 import type { ReactNode } from "react";
+import { useEffect } from "react";
 import { useT } from "@/lib/i18n";
-import { I } from "../components/icons";
+import { useUiStore } from "@/stores/uiStore";
 import { Btn, RDS_COLORS, SecTitle } from "../components/primitives";
 
 // Shared chrome for the anonymous public route pages (/r/{slugId}): user
 // Routes and ExternalRoutes (ADR 0033) render different content in the same
-// shell with the same SEO head handling.
+// shell with the same SEO head handling. The shell activates the design
+// system ([data-redesign] scopes every RDS token) and follows the user's
+// theme/accent like the app and admin shells do.
 
 export function setMetaTag(attr: "name" | "property", key: string, content: string) {
 	if (typeof document === "undefined") return;
@@ -31,9 +34,9 @@ export function setCanonical(href: string) {
 
 export function StatBlock({ label, value, unit }: { label: string; value: string; unit?: string }) {
 	return (
-		<div style={{ padding: "12px 16px", borderRight: `1px solid ${RDS_COLORS.border}` }}>
+		<div style={{ padding: "14px 18px" }}>
 			<SecTitle>{label}</SecTitle>
-			<div className="rds-mono" style={{ fontSize: 24, fontWeight: 600, lineHeight: 1.1, marginTop: 4 }}>
+			<div className="rds-mono" style={{ fontSize: 24, fontWeight: 600, lineHeight: 1.1, marginTop: 6 }}>
 				{value}
 				{unit && (
 					<span style={{ fontSize: 12, color: RDS_COLORS.fgSubtle, marginLeft: 4, fontWeight: 400 }}>{unit}</span>
@@ -53,27 +56,53 @@ export function PublicPageShell({
 	children: ReactNode;
 }) {
 	const t = useT();
+	const { theme, accent } = useUiStore();
+
+	useEffect(() => {
+		document.documentElement.classList.toggle("dark", theme === "dark");
+	}, [theme]);
+
 	return (
-		<div style={{ minHeight: "100svh", display: "flex", flexDirection: "column", background: RDS_COLORS.bg }}>
+		<div
+			data-redesign
+			data-accent={accent}
+			className={theme === "dark" ? "dark" : undefined}
+			style={{
+				minHeight: "100svh",
+				display: "flex",
+				flexDirection: "column",
+				background: RDS_COLORS.bgCanvas,
+				color: RDS_COLORS.fg,
+			}}
+		>
 			<header
 				style={{
 					display: "flex",
 					alignItems: "center",
-					gap: 12,
-					padding: "14px 20px",
+					gap: 10,
+					padding: "12px 20px",
 					borderBottom: `1px solid ${RDS_COLORS.border}`,
+					background: RDS_COLORS.bgPanel,
 				}}
 			>
 				<a
 					href="/"
-					style={{ display: "inline-flex", alignItems: "center", gap: 8, textDecoration: "none", color: RDS_COLORS.fg }}
+					style={{
+						display: "inline-flex",
+						alignItems: "center",
+						gap: 10,
+						textDecoration: "none",
+						color: RDS_COLORS.fg,
+					}}
 				>
-					<I.route size={18} />
-					<span style={{ fontWeight: 600, fontSize: 14, letterSpacing: -0.2 }}>routess</span>
+					<img src="/logo.png" alt="routess" width={26} height={26} style={{ borderRadius: 7, display: "block" }} />
+					<span style={{ fontWeight: 650, fontSize: 15, letterSpacing: -0.3 }}>routess</span>
 				</a>
 				<div style={{ flex: 1 }} />
 				<a href="/" style={{ textDecoration: "none" }}>
-					<Btn variant="ghost">{t("public.signIn")}</Btn>
+					<Btn variant="primary" style={{ height: 32 }}>
+						{t("public.openInRoutess")}
+					</Btn>
 				</a>
 			</header>
 			<main style={{ flex: 1 }}>

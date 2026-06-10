@@ -48,7 +48,7 @@ describe("PublicRouteScreen", () => {
 		expect(screen.getByText("A scenic loop")).toBeTruthy();
 
 		// map preview image
-		const img = screen.getByRole("img") as HTMLImageElement;
+		const img = screen.getByAltText("public.mapAlt") as HTMLImageElement;
 		expect(img.src).toBe("https://maps.test/preview.png");
 
 		// distance stat (3500 m -> 3.5 km)

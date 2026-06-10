@@ -126,6 +126,10 @@ const SKIPPED_AUTH_KEY = "routess.skippedAuth";
 
 function readSkippedAuth(): boolean {
 	if (typeof window === "undefined") return false;
+	// Deep links into a shared or seeded route must never hit the sign-in
+	// wall: the URL is the capability (ADR 0025), the wall would break it.
+	const params = new URLSearchParams(window.location.search);
+	if (params.has("route") || params.has("externalRoute")) return true;
 	try {
 		return localStorage.getItem(SKIPPED_AUTH_KEY) === "1";
 	} catch {
