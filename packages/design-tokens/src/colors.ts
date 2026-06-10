@@ -196,3 +196,51 @@ export const darkColors: ColorTokens = {
 	sidebarBorder: darkBrand.line,
 	sidebarRing: darkBrand.indigo,
 };
+
+/**
+ * SurfaceBucket display palette (paved / compacted / unpaved / path).
+ * Single source for the app's surface breakdowns (RouteProfileChart,
+ * GenerationOverlay) and landing's marketing mockups.
+ */
+export const surfaceBucketColors = {
+	paved: "oklch(0.45 0.02 240)",
+	compacted: "oklch(0.72 0.07 75)",
+	unpaved: "oklch(0.6 0.11 50)",
+	path: "oklch(0.62 0.13 145)",
+} as const;
+
+/**
+ * Display colors for the two NodeNetwork kinds (ADR 0033), shared so the map
+ * overlay and the layer-picker legend never drift apart.
+ */
+export const nodeNetworkColors = {
+	hiking: "#dc2626",
+	cycling: "#1d4ed8",
+} as const;
+
+/**
+ * Landing-page accents: marketing-only shades outside the core brand ramps
+ * (deep text accents, dark-section text grades, the cream mockup background).
+ */
+export const landingAccents = {
+	mossDeep: "oklch(0.32 0.08 145)",
+	terracottaDeep: "oklch(0.42 0.13 45)",
+	cream: "oklch(0.96 0.03 80)",
+	eyebrowOnDark: "oklch(0.78 0.04 80)",
+	mutedOnDark: "oklch(0.78 0.01 80)",
+	lavender: "oklch(0.92 0.04 280)",
+	lavenderDim: "oklch(0.84 0.04 280)",
+	indigoActive: "oklch(0.5 0.17 282)",
+	indigoActiveSoft: "oklch(0.5 0.17 282 / 0.12)",
+	indigoGradientEnd: "oklch(0.32 0.14 280)",
+} as const;
+
+/**
+ * Hex mirrors of brand colors for surfaces that cannot parse oklch()
+ * (web manifest theme colors, some image pipelines). Visually matched to
+ * lightBrand, not exact conversions.
+ */
+export const brandHex = {
+	paper: "#fdfaf2",
+	indigo: "#5b3df5",
+} as const;

@@ -20,7 +20,7 @@ interface AuthStatusSnapshot {
 	user: ApiUser | null;
 }
 
-export function useAccountPreferencesSync(auth: AuthStatusSnapshot | undefined) {
+export function useUserPreferencesSync(auth: AuthStatusSnapshot | undefined) {
 	const queryClient = useQueryClient();
 	const isAuthenticated = auth?.isAuthenticated ?? false;
 	const authUser = auth?.user ?? null;
@@ -194,7 +194,7 @@ export function useAccountPreferencesSync(auth: AuthStatusSnapshot | undefined) 
 					scheduleStatusReset("saved", 2000);
 				})
 				.catch((error) => {
-					Logger.error("[useAccountPreferencesSync] Failed to sync account preferences:", error);
+					Logger.error("[useUserPreferencesSync] Failed to sync user preferences:", error);
 					scheduleStatusReset("error", 4000);
 					pushToast({ kind: "error", title: t("settings.sync.failed") });
 				});

@@ -47,7 +47,7 @@ function initialsFromName(name: string | null | undefined, email: string | null 
 	return parts.map((p) => p[0]?.toUpperCase() ?? "").join("") || source[0]?.toUpperCase() || "?";
 }
 
-export function AccountScreen() {
+export function UserSettingsScreen() {
 	const { data: auth } = useAuthStatus();
 	const user = auth?.user ?? null;
 	const pushToast = useToastStore((s) => s.push);

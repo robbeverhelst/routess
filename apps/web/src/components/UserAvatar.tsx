@@ -43,7 +43,7 @@ export function UserAvatar({ size = 30, onClick, title, compact = false }: UserA
 			return;
 		}
 		if (isAuthenticated) {
-			emitAppEvent("routess:open-account");
+			emitAppEvent("routess:open-user-settings");
 		} else {
 			emitAppEvent("routess:open-login");
 		}

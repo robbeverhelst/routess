@@ -1,4 +1,4 @@
-import { type Ref } from "@mikro-orm/core";
+import { type Rel } from "@mikro-orm/core";
 import { Entity, Index, ManyToOne, PrimaryKey, Property } from "@mikro-orm/decorators/legacy";
 import { BaseEntity } from "./base.entity";
 import { Route } from "./route.entity";
@@ -17,13 +17,13 @@ export class RouteShare extends BaseEntity {
 	id!: number;
 
 	@ManyToOne(() => User, { deleteRule: "cascade" })
-	sender!: Ref<User>;
+	sender!: Rel<User>;
 
 	@ManyToOne(() => User, { deleteRule: "cascade" })
-	recipient!: Ref<User>;
+	recipient!: Rel<User>;
 
 	@ManyToOne(() => Route, { deleteRule: "cascade" })
-	route!: Ref<Route>;
+	route!: Rel<Route>;
 
 	@Property({ nullable: true, length: 500 })
 	message?: string;

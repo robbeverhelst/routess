@@ -50,7 +50,7 @@ export interface AppEventMap {
 	"routess:pick-loop-start": NoDetail;
 	"routess:set-map-style": { styleKey: RedesignMapStyle };
 	"routess:set-pois": { visible: boolean };
-	"routess:open-account": NoDetail;
+	"routess:open-user-settings": NoDetail;
 	"routess:open-profile": NoDetail;
 	"routess:open-login": NoDetail;
 	"routess:open-signup": NoDetail;

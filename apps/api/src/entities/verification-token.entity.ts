@@ -1,4 +1,4 @@
-import { type Ref } from "@mikro-orm/core";
+import { type Rel } from "@mikro-orm/core";
 import { Entity, Index, ManyToOne, PrimaryKey, Property } from "@mikro-orm/decorators/legacy";
 import { BaseEntity } from "./base.entity";
 import { User } from "./user.entity";
@@ -27,7 +27,7 @@ export class VerificationToken extends BaseEntity {
 	email!: string;
 
 	@ManyToOne(() => User, { nullable: true, deleteRule: "cascade" })
-	user?: Ref<User>;
+	user?: Rel<User>;
 
 	// Argon2id hash for pending_signup; null for password_reset (the new hash
 	// arrives with the consume request, not stored ahead of time).

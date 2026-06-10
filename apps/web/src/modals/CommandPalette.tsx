@@ -122,10 +122,10 @@ export function CommandPalette() {
 						run: () => openModal("share"),
 					},
 					{
-						id: "act-account",
+						id: "act-user-settings",
 						icon: I.user,
-						label: t("cmd.action.account"),
-						run: () => emitAppEvent("routess:open-account"),
+						label: t("cmd.action.userSettings"),
+						run: () => emitAppEvent("routess:open-user-settings"),
 					},
 					{ id: "act-theme", icon: I.moon, label: t("cmd.action.theme"), kbd: "⌘ D", run: toggleTheme },
 				],

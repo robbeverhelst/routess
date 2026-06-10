@@ -7,6 +7,8 @@ import {
 	type RouteActivity,
 	type RouteVisibility,
 	type SurfaceComposition,
+	WAYPOINT_TYPES,
+	type WaypointType,
 } from "@routess/core";
 import { RoutingPreferencesDto } from "../../common/routing-preferences.dto";
 import { PublicUserDto } from "../../users/dto/user-response.dto";
@@ -23,9 +25,9 @@ class WaypointResponseDto {
 	coord!: [number, number];
 
 	@ApiProperty({
-		enum: ["routed", "direct"],
+		enum: WAYPOINT_TYPES,
 	})
-	type!: "routed" | "direct";
+	type!: WaypointType;
 
 	@ApiPropertyOptional({ description: "Optional user-assigned name for the waypoint" })
 	name?: string;

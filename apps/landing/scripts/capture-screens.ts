@@ -19,6 +19,7 @@ import { resolve } from "node:path";
  * Point at a specific web server with WEB_URL=http://localhost:<port>
  */
 import { deflateSync } from "node:zlib";
+import { STATIC_PREVIEW_COLORS } from "@routess/core";
 import {
 	type DemoRoute,
 	FOREST_WALK,
@@ -34,10 +35,10 @@ const PUBLIC_DIR = resolve(LANDING_DIR, "public");
 const PREVIEWS_DIR = resolve(PUBLIC_DIR, "previews");
 const WEB_URL = process.env.WEB_URL ?? "http://localhost:5173";
 
-// Matches the overlay colors in apps/web/src/lib/utils/mapboxStaticPreview.ts.
-const ROUTE_COLOR = "7d62ff";
-const START_COLOR = "22c55e";
-const END_COLOR = "ef4444";
+// The app's static-preview overlay colors (packages/core staticMapPreview).
+const ROUTE_COLOR = STATIC_PREVIEW_COLORS.route;
+const START_COLOR = STATIC_PREVIEW_COLORS.start;
+const END_COLOR = STATIC_PREVIEW_COLORS.end;
 const STATIC_STYLE = "mapbox/outdoors-v12";
 
 // Crop region for the styles-grid tiles, taken straight from the live app so

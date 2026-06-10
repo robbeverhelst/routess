@@ -1,4 +1,5 @@
 import type { ElevationProfilePoint } from "@routess/core";
+import { surfaceBucketColors } from "@routess/design-tokens";
 import { type CSSProperties, type PointerEvent as ReactPointerEvent, useCallback, useMemo, useRef } from "react";
 import type { SurfaceBreakdown, SurfaceBucket } from "@/features/routing/services/SurfaceService";
 import { useUnits } from "@/lib/units";
@@ -30,12 +31,7 @@ const BUCKET_LABEL: Record<SurfaceBucket, string> = {
 	path: "Path",
 };
 
-const BUCKET_COLOR: Record<SurfaceBucket, string> = {
-	paved: "oklch(0.45 0.02 240)",
-	compacted: "oklch(0.72 0.07 75)",
-	unpaved: "oklch(0.6 0.11 50)",
-	path: "oklch(0.62 0.13 145)",
-};
+const BUCKET_COLOR: Record<SurfaceBucket, string> = surfaceBucketColors;
 
 interface CurveSummary {
 	line: string;

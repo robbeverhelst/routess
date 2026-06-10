@@ -95,7 +95,7 @@ export class RoutesService {
 		if (!route) {
 			throw new NotFoundException(`Route with ID ${id} not found`);
 		}
-		const ownerId = (route.user as unknown as User).id;
+		const ownerId = route.user.id;
 		const isOwner = viewerId !== null && ownerId === viewerId;
 		if (!isOwner && route.visibility !== "public") {
 			throw new NotFoundException(`Route with ID ${id} not found`);
@@ -230,7 +230,7 @@ export class RoutesService {
 		if (!route) {
 			throw new NotFoundException(`Route with ID ${id} not found`);
 		}
-		const ownerId = (route.user as unknown as { id: number }).id;
+		const ownerId = route.user.id;
 		const isOwner = viewerId !== null && ownerId === viewerId;
 		if (!isOwner && route.visibility !== "public") {
 			throw new NotFoundException(`Route with ID ${id} not found`);

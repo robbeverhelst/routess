@@ -1,4 +1,4 @@
-import { type Ref } from "@mikro-orm/core";
+import { type Rel } from "@mikro-orm/core";
 import { Entity, Index, ManyToOne, PrimaryKey, Unique } from "@mikro-orm/decorators/legacy";
 import { BaseEntity } from "./base.entity";
 import { User } from "./user.entity";
@@ -15,8 +15,8 @@ export class Follow extends BaseEntity {
 	id!: number;
 
 	@ManyToOne(() => User, { deleteRule: "cascade" })
-	follower!: Ref<User>;
+	follower!: Rel<User>;
 
 	@ManyToOne(() => User, { deleteRule: "cascade" })
-	followee!: Ref<User>;
+	followee!: Rel<User>;
 }

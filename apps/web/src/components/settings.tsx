@@ -12,7 +12,7 @@ import { I } from "./icons";
 import { IconBtn, RDS_COLORS, SecTitle } from "./primitives";
 import { Tooltip } from "./Tooltip";
 
-// Shared settings primitives. All settings UI (SettingsPanel, AccountScreen,
+// Shared settings primitives. All settings UI (SettingsPanel, UserSettingsScreen,
 // ApiTokensSection) must compose these instead of hand-rolling rows/cards.
 
 interface SettingsSectionProps {

@@ -16,7 +16,7 @@ type NavItem = {
 	badgeText?: string;
 	accent?: boolean;
 	context?: RedesignContext;
-	action?: "profile" | "account" | "achievements";
+	action?: "profile" | "user-settings" | "achievements";
 };
 
 function buildNav(_language: SupportedLanguage, libraryCount: string): NavItem[] {
@@ -33,7 +33,7 @@ function buildNav(_language: SupportedLanguage, libraryCount: string): NavItem[]
 			action: "achievements",
 		},
 		{ icon: I.user, labelKey: "drawer.profile", action: "profile" },
-		{ icon: I.settings, labelKey: "drawer.accountBilling", action: "account" },
+		{ icon: I.settings, labelKey: "drawer.userSettings", action: "user-settings" },
 	];
 }
 
@@ -65,8 +65,8 @@ export function MobileDrawer({ onClose }: { onClose?: () => void }) {
 			onClose?.();
 			return;
 		}
-		if (item.action === "account") {
-			emitAppEvent("routess:open-account");
+		if (item.action === "user-settings") {
+			emitAppEvent("routess:open-user-settings");
 			onClose?.();
 			return;
 		}

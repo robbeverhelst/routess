@@ -1,4 +1,4 @@
-import { type Opt, type Ref } from "@mikro-orm/core";
+import { type Opt, type Rel } from "@mikro-orm/core";
 import { Entity, Index, ManyToOne, PrimaryKey, Property } from "@mikro-orm/decorators/legacy";
 import type {
 	Provenance,
@@ -122,5 +122,5 @@ export class Route extends BaseEntity {
 	copiedFromUserId?: number;
 
 	@ManyToOne(() => User)
-	user!: Ref<User>;
+	user!: Rel<User>;
 }
