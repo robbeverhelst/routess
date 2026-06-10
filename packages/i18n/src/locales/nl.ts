@@ -651,6 +651,11 @@ export const nl: Record<string, string> = {
 		"Ontdekken is gloednieuw en de verzameling publieke routes groeit nog. Publiceer je eigen routes om jouw streek op de kaart te zetten.",
 	"discover.notice.dismiss": "Sluiten",
 	"discover.loading": "Routes zoeken…",
+	"discover.updating": "Bijwerken…",
+	"discover.waitingForMap": "Wachten op de kaart…",
+	"discover.searchArea": "Zoek in dit gebied",
+	"discover.error.title": "Routes laden mislukt",
+	"discover.error.retry": "Opnieuw proberen",
 	"discover.inView": "in beeld",
 	"discover.empty.title": "Nog geen publieke routes hier",
 	"discover.empty.body":

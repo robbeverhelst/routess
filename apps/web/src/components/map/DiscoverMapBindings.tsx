@@ -1,5 +1,6 @@
 import type { GeoJSONSource, Map as MapboxMap, MapMouseEvent } from "mapbox-gl";
 import { useEffect } from "react";
+import { onAppEvent } from "@/lib/app-events";
 import { useDiscoverStore } from "@/stores/discoverStore";
 import { useUiStore } from "@/stores/uiStore";
 
@@ -59,28 +60,51 @@ export function DiscoverMapBindings({ mapRef }: { mapRef: React.RefObject<Mapbox
 	const setViewportBbox = useDiscoverStore((s) => s.setViewportBbox);
 	const setHoveredRouteId = useDiscoverStore((s) => s.setHoveredRouteId);
 
-	// Viewport sync: the map is the filter.
+	// Viewport sync: the map is the filter. The map can be a beat behind the
+	// panel (refs don't re-render), so acquisition polls until it exists;
+	// without this the panel would wait for a bbox that never comes.
 	useEffect(() => {
-		const map = mapRef.current;
-		if (!map || !active) return;
+		if (!active) return;
 
 		let timer: ReturnType<typeof setTimeout> | null = null;
+		let poll: ReturnType<typeof setInterval> | null = null;
+		let bound: MapboxMap | null = null;
+
 		const report = () => {
-			const bbox = currentBbox(map);
+			if (!bound) return;
+			const bbox = currentBbox(bound);
 			if (bbox) setViewportBbox(bbox);
 		};
 		const schedule = () => {
 			if (timer) clearTimeout(timer);
 			timer = setTimeout(report, VIEWPORT_DEBOUNCE_MS);
 		};
+		const bind = (map: MapboxMap) => {
+			bound = map;
+			report();
+			map.on("moveend", schedule);
+			map.on("zoomend", schedule);
+		};
 
-		report();
-		map.on("moveend", schedule);
-		map.on("zoomend", schedule);
+		if (mapRef.current) bind(mapRef.current);
+		else {
+			poll = setInterval(() => {
+				if (!mapRef.current) return;
+				if (poll) clearInterval(poll);
+				poll = null;
+				bind(mapRef.current);
+			}, 200);
+		}
+
+		const offSearch = onAppEvent("routess:discover-search-area", report);
 		return () => {
 			if (timer) clearTimeout(timer);
-			map.off("moveend", schedule);
-			map.off("zoomend", schedule);
+			if (poll) clearInterval(poll);
+			offSearch();
+			if (bound) {
+				bound.off("moveend", schedule);
+				bound.off("zoomend", schedule);
+			}
 		};
 	}, [active, mapRef, setViewportBbox]);
 

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useIsAuthenticated } from "@/hooks/useAuthState";
 import { trackEvent } from "@/lib/analytics/track";
 import { useDiscoverRoutes } from "@/lib/api-queries";
+import { emitAppEvent } from "@/lib/app-events";
 import { useT } from "@/lib/i18n";
 import { useUnits } from "@/lib/units";
 import { useDiscoverStore } from "@/stores/discoverStore";
@@ -86,7 +87,7 @@ export function DiscoverPanel() {
 	const setRoutes = useDiscoverStore((s) => s.setRoutes);
 
 	const band = DISTANCE_BANDS.find((b) => b.key === distanceBand);
-	const { data, isLoading } = useDiscoverRoutes({
+	const { data, isLoading, isError, isFetching, refetch } = useDiscoverRoutes({
 		bbox: viewportBbox,
 		activity: activity === "all" ? undefined : activity,
 		minDistance: band && band.min > 0 ? band.min : undefined,
@@ -121,8 +122,13 @@ export function DiscoverPanel() {
 		return `${formatDistance(b.min / 1000)} – ${formatDistance(b.max / 1000)}`;
 	};
 
-	const showLoading = isLoading || viewportBbox === null;
-	const empty = !showLoading && items.length === 0;
+	// Distinct surface states: waiting for the map to report a viewport,
+	// first fetch, failure, then results (previous results stay visible while
+	// a pan refetches; `isFetching` only drives the subtle inline hint).
+	const waitingForMap = viewportBbox === null;
+	const showLoading = !waitingForMap && isLoading && !isError;
+	const showError = !waitingForMap && isError;
+	const empty = !waitingForMap && !showLoading && !showError && items.length === 0;
 
 	return (
 		<div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
@@ -215,19 +221,52 @@ export function DiscoverPanel() {
 							))}
 						</DropMenu>
 					</div>
-					{!empty && !showLoading && (
+					{!empty && !showLoading && !showError && !waitingForMap && (
 						<span className="rds-mono" style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle, marginLeft: "auto" }}>
-							{items.length} {items.length === 1 ? t("library.routeSingular") : t("library.routePlural")}{" "}
-							{t("discover.inView")}
+							{isFetching
+								? t("discover.updating")
+								: `${items.length} ${items.length === 1 ? t("library.routeSingular") : t("library.routePlural")} ${t("discover.inView")}`}
 						</span>
 					)}
 				</div>
 			</div>
 
 			<div style={{ flex: 1, overflowY: "auto", borderTop: `1px solid ${RDS_COLORS.border}` }}>
+				{waitingForMap && (
+					<div
+						style={{
+							padding: 40,
+							textAlign: "center",
+							fontSize: 13,
+							color: RDS_COLORS.fgSubtle,
+							display: "flex",
+							flexDirection: "column",
+							alignItems: "center",
+							gap: 12,
+						}}
+					>
+						<span>{t("discover.waitingForMap")}</span>
+						<Btn onClick={() => emitAppEvent("routess:discover-search-area")}>{t("discover.searchArea")}</Btn>
+					</div>
+				)}
 				{showLoading && (
 					<div style={{ padding: 40, textAlign: "center", fontSize: 13, color: RDS_COLORS.fgSubtle }}>
 						{t("discover.loading")}
+					</div>
+				)}
+				{showError && (
+					<div
+						style={{
+							padding: 40,
+							textAlign: "center",
+							display: "flex",
+							flexDirection: "column",
+							alignItems: "center",
+							gap: 12,
+						}}
+					>
+						<span style={{ fontSize: 13.5, fontWeight: 600 }}>{t("discover.error.title")}</span>
+						<Btn onClick={() => void refetch()}>{t("discover.error.retry")}</Btn>
 					</div>
 				)}
 				{empty && !isAuthenticated && (
