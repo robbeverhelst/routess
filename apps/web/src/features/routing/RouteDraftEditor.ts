@@ -24,10 +24,13 @@ import {
 } from "./managers/WaypointCoordinator";
 import { parseGPXFile, processGPXWaypoints } from "./services/GPXService";
 import {
+	capturePreEditState,
 	clearCurrentRoutePath,
 	computeElevationInBackground,
 	getCurrentRoutePath,
 	getRoute as getRouteFromService,
+	type PreEditState,
+	patchRoute,
 	setCurrentRoutePath,
 } from "./services/RouteCalculationService";
 
@@ -129,6 +132,25 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 		}
 	};
 
+	// Edit-local recompute: routes only the legs the edit touched, keeping
+	// every other leg's geometry verbatim (patchRoute falls back to a full
+	// recompute on any anomaly). `prev` must be captured AFTER
+	// ensureEditableShape and BEFORE the store mutation, so the diff is just
+	// the edit itself.
+	const recomputeLocal = async (prev: PreEditState, options?: { restore?: boolean }): Promise<EditResult> => {
+		const store = useRoutingStore.getState();
+		store.setIsComputingRoute(true);
+		try {
+			const result = await patchRoute(map, accessToken, prev, options);
+			if (result.success && result.waypointsSnapped && result.snappedWaypoints) {
+				setWaypoints(result.snappedWaypoints);
+			}
+			return result.success ? ok() : fail(result.error ?? "Failed to calculate route.");
+		} finally {
+			store.setIsComputingRoute(false);
+		}
+	};
+
 	// Generated, imported, and external drafts carry more shape in their
 	// geometry than their sparse control waypoints reproduce: recalculating
 	// from just those would unravel the route into plain shortest paths.
@@ -164,6 +186,7 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 
 	const addWaypoint = async (coord: Coordinate, type: WaypointType = "routed"): Promise<EditResult> => {
 		ensureEditableShape();
+		const prev = capturePreEditState();
 		saveSnapshot();
 
 		const resolved = await resolveAddCoord(coord, type, accessToken);
@@ -177,7 +200,7 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 			return ok();
 		}
 
-		const result = await recompute();
+		const result = await recomputeLocal(prev);
 		if (result.success) return ok();
 
 		// Directions could not compute a route. Roll back the just-added
@@ -204,10 +227,11 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 		}
 
 		const mappedIndex = ensureEditableShape()[index];
+		const prev = capturePreEditState();
 		saveSnapshot();
 		useRoutingStore.getState().removeWaypoint(mappedIndex);
 
-		if (getWaypoints().length >= 2) await recompute();
+		if (getWaypoints().length >= 2) await recomputeLocal(prev);
 		else clearComputedRouteUi();
 
 		return ok();
@@ -223,6 +247,7 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 
 		const mappedIndex = ensureEditableShape()[index];
 		const oldCoord = getWaypoints()[mappedIndex].coord;
+		const prev = capturePreEditState();
 
 		// Apply the raw coord immediately so the marker lands without waiting
 		// on the network; the recompute below snaps it onto the road via the
@@ -231,7 +256,7 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 		// Snapshot pre-mutation state so a single undo press reverts the move.
 		saveSnapshot();
 		setWaypoints(setWaypointCoord(getWaypoints(), mappedIndex, coord));
-		const result = await recompute();
+		const result = await recomputeLocal(prev);
 
 		if (result.success) return ok();
 
@@ -276,6 +301,7 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 		// Snapshot pre-mutation state so a single undo press reverts the
 		// insert. With skipRouteCalc the caller (drag handler) owns the
 		// commit; the snapshot still belongs to the insert itself.
+		const prev = capturePreEditState();
 		saveSnapshot();
 		setWaypoints(decision.waypoints);
 
@@ -283,7 +309,7 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 			return { success: true, newIndex: decision.insertIndex };
 		}
 
-		if (getWaypoints().length >= 2) await recompute();
+		if (getWaypoints().length >= 2) await recomputeLocal(prev);
 		else clearComputedRouteUi();
 
 		return { success: true, newIndex: decision.insertIndex };
@@ -325,15 +351,25 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 	const undo = async (): Promise<EditResult> => {
 		const store = useRoutingStore.getState();
 		if (!store.canUndo) return ok();
+		const prev = capturePreEditState();
 		store.undo();
-		return recompute();
+		if (getWaypoints().length < 2) {
+			clearComputedRouteUi();
+			return ok();
+		}
+		return recomputeLocal(prev, { restore: true });
 	};
 
 	const redo = async (): Promise<EditResult> => {
 		const store = useRoutingStore.getState();
 		if (!store.canRedo) return ok();
+		const prev = capturePreEditState();
 		store.redo();
-		return recompute();
+		if (getWaypoints().length < 2) {
+			clearComputedRouteUi();
+			return ok();
+		}
+		return recomputeLocal(prev, { restore: true });
 	};
 
 	const applyExactRoutePath = (waypoints: Waypoint[], exactRoutePath: Coordinate[]) => {
