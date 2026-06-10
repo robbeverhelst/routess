@@ -30,6 +30,10 @@ export interface SeedSourceMeta {
 	status: SeedSourceStatus;
 	// How often the refresh job should re-pull this source.
 	refreshIntervalDays: number;
+	// Stable bulk-download URL the refresh job fetches. Absent = the source has
+	// no stable feed (e.g. EuroVelo's per-route pages) and stays manual: the
+	// seed script is run by hand with downloaded files.
+	feedUrl?: string;
 }
 
 // One external route as emitted by an adapter, before persistence. Geometry is

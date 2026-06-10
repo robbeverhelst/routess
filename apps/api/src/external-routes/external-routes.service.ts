@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { EntityManager, EntityRepository, type FilterQuery } from "@mikro-orm/core";
 import { InjectRepository } from "@mikro-orm/nestjs";
 import { Injectable, NotFoundException } from "@nestjs/common";
-import { isRouteIndexable, routeBoundingBox, type SeedAdapter, type SeedRoute } from "@routess/core";
+import { isRouteIndexable, routeBoundingBox, type SeedAdapter, type SeedRoute, seedAdapterByKey } from "@routess/core";
 import { ExternalRoute } from "../entities/external-route.entity";
 import { SeedSource } from "../entities/seed-source.entity";
 import type { PublicRouteSummaryDto } from "../routes/dto/public-route-summary.dto";
@@ -19,6 +19,28 @@ export interface UpsertResult {
 	updated: number;
 	unchanged: number;
 	removed: number;
+}
+
+export interface SeedSourceStats {
+	key: string;
+	displayName: string;
+	license: string;
+	status: string;
+	routeCount: number;
+	removedCount: number;
+	refreshIntervalDays: number;
+	// null = never synced
+	lastRefreshedAt: string | null;
+	// null = manual source (no feedUrl), never auto-refreshed
+	nextRefreshAt: string | null;
+	automatic: boolean;
+}
+
+export interface RefreshRunResult {
+	source: string;
+	skipped?: "not-due" | "manual" | "blocked";
+	result?: UpsertResult;
+	error?: string;
 }
 
 function contentHash(seed: SeedRoute): string {
@@ -76,8 +98,87 @@ export class ExternalRoutesService {
 			source.status = meta.status;
 			source.refreshIntervalDays = meta.refreshIntervalDays;
 		}
+		source.feedUrl = meta.feedUrl;
 		await this.em.persist(source).flush();
 		return source;
+	}
+
+	// Scheduled refresh (the Helm CronJob's entry point): every green source
+	// with a feedUrl whose lastRefreshedAt is older than its interval gets
+	// re-fetched, re-parsed, and upserted. Manual sources (no feedUrl) and
+	// not-yet-due sources are reported as skipped. `fetchText` is injectable
+	// so tests run without network.
+	async refreshDueSources(
+		fetchText: (url: string) => Promise<string> = async (url) => {
+			const res = await fetch(url);
+			if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${url}`);
+			return res.text();
+		},
+	): Promise<RefreshRunResult[]> {
+		const sources = await this.seedSourceRepository.find({});
+		const results: RefreshRunResult[] = [];
+		for (const source of sources) {
+			if (source.status !== "green") {
+				results.push({ source: source.key, skipped: "blocked" });
+				continue;
+			}
+			if (!source.feedUrl) {
+				results.push({ source: source.key, skipped: "manual" });
+				continue;
+			}
+			const dueAt = source.lastRefreshedAt
+				? source.lastRefreshedAt.getTime() + source.refreshIntervalDays * 86_400_000
+				: 0;
+			if (Date.now() < dueAt) {
+				results.push({ source: source.key, skipped: "not-due" });
+				continue;
+			}
+			const adapter = seedAdapterByKey(source.key);
+			if (!adapter) {
+				results.push({ source: source.key, error: "no adapter registered" });
+				continue;
+			}
+			try {
+				const payload = await fetchText(source.feedUrl);
+				const result = await this.upsertSeedRoutes(source.key, adapter.parse(payload));
+				results.push({ source: source.key, result });
+			} catch (error) {
+				// One broken source must not block the rest of the run.
+				results.push({ source: source.key, error: error instanceof Error ? error.message : String(error) });
+			}
+		}
+		return results;
+	}
+
+	// Per-source inventory for the admin panel: live/removed counts, last sync,
+	// and the projected next automatic sync (null for manual sources).
+	async sourceStats(): Promise<SeedSourceStats[]> {
+		const sources = await this.seedSourceRepository.find({}, { orderBy: { key: "ASC" } });
+		return Promise.all(
+			sources.map(async (source) => {
+				const [routeCount, totalCount] = await Promise.all([
+					this.externalRouteRepository.count({ source: source.id }),
+					this.externalRouteRepository.count({ source: source.id }, { filters: { softDelete: false } }),
+				]);
+				const automatic = source.status === "green" && !!source.feedUrl;
+				const nextRefreshAt =
+					automatic && source.lastRefreshedAt
+						? new Date(source.lastRefreshedAt.getTime() + source.refreshIntervalDays * 86_400_000).toISOString()
+						: null;
+				return {
+					key: source.key,
+					displayName: source.displayName,
+					license: source.license,
+					status: source.status,
+					routeCount,
+					removedCount: totalCount - routeCount,
+					refreshIntervalDays: source.refreshIntervalDays,
+					lastRefreshedAt: source.lastRefreshedAt?.toISOString() ?? null,
+					nextRefreshAt,
+					automatic,
+				};
+			}),
+		);
 	}
 
 	// Idempotent upsert keyed on (source, sourceRecordId) (ADR 0033): insert

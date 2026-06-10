@@ -47,6 +47,10 @@ export class SeedSource extends BaseEntity {
 	@Property({ type: "integer", default: 30 })
 	refreshIntervalDays = 30;
 
+	// Stable bulk-download URL for the scheduled refresh; null = manual source.
+	@Property({ nullable: true })
+	feedUrl?: string;
+
 	@Property({ type: "timestamp", nullable: true })
 	lastRefreshedAt?: Date;
 

@@ -4,6 +4,7 @@ import type {
 	AdminRouteDetail,
 	AdminRouteList,
 	AdminRouteStats,
+	AdminSeedSources,
 	AdminSystemHealth,
 	AdminUserDetail,
 	AdminUserList,
@@ -445,6 +446,10 @@ export class ApiClient {
 
 	async adminGetRouteStats(): Promise<AdminRouteStats> {
 		return this.request<AdminRouteStats>("/admin/stats/routes");
+	}
+
+	async adminGetSeedSources(): Promise<AdminSeedSources> {
+		return this.request<AdminSeedSources>("/admin/stats/seed-sources");
 	}
 
 	async adminListUsers(params: { page?: number; pageSize?: number; search?: string } = {}): Promise<AdminUserList> {

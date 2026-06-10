@@ -138,6 +138,64 @@ describe("ExternalRoutes (ADR 0033)", () => {
 		expect(res.text).toContain("EuroVelo");
 	});
 
+	it("refreshDueSources pulls due feed sources, skips manual ones, and reports stats", async () => {
+		const service = app.get(ExternalRoutesService);
+		const orm = app.get(MikroORM);
+		await withRequestContext(app, async () => {
+			// One automatic source (feedUrl) and one manual (no feedUrl).
+			await service.ensureSource({
+				key: "eurovelo",
+				displayName: "EuroVelo",
+				license: "ODbL-1.0",
+				attribution: "© EuroVelo / ECF, ODbL",
+				sourceUrl: "https://eurovelo.com",
+				countries: ["BE"],
+				activities: ["cycle"],
+				status: "green",
+				refreshIntervalDays: 30,
+				feedUrl: "https://example.test/eurovelo.gpx",
+			});
+			const manual = orm.em.create(SeedSource, {
+				key: "manual-source",
+				displayName: "Manual",
+				license: "CC-BY-4.0",
+				attribution: "© Manual",
+				sourceUrl: "https://example.test",
+				countries: ["BE"],
+				activities: ["cycle"],
+				status: "green",
+				refreshIntervalDays: 30,
+			});
+			await orm.em.persist(manual).flush();
+		});
+
+		const gpx = `<gpx><metadata><name>EuroVelo network</name></metadata><trk><name>EuroVelo 5 - Via Romea (Francigena)</name><trkseg>
+			<trkpt lat="51.05" lon="3.72"></trkpt><trkpt lat="51.06" lon="3.74"></trkpt><trkpt lat="51.07" lon="3.76"></trkpt>
+		</trkseg></trk></gpx>`;
+		const fetched: string[] = [];
+		const fakeFetch = async (url: string) => {
+			fetched.push(url);
+			return gpx;
+		};
+
+		const first = await withRequestContext(app, () => service.refreshDueSources(fakeFetch));
+		expect(fetched).toEqual(["https://example.test/eurovelo.gpx"]);
+		expect(first.find((r) => r.source === "eurovelo")?.result).toMatchObject({ inserted: 1 });
+		expect(first.find((r) => r.source === "manual-source")?.skipped).toBe("manual");
+
+		// Immediately after a sync the source is not due again.
+		const second = await withRequestContext(app, () => service.refreshDueSources(fakeFetch));
+		expect(second.find((r) => r.source === "eurovelo")?.skipped).toBe("not-due");
+
+		const stats = await withRequestContext(app, () => service.sourceStats());
+		const ev = stats.find((s) => s.key === "eurovelo");
+		expect(ev).toMatchObject({ routeCount: 1, removedCount: 0, automatic: true });
+		expect(ev?.lastRefreshedAt).toBeTruthy();
+		expect(ev?.nextRefreshAt).toBeTruthy();
+		const manualStats = stats.find((s) => s.key === "manual-source");
+		expect(manualStats).toMatchObject({ routeCount: 0, automatic: false, nextRefreshAt: null });
+	});
+
 	it("upserts idempotently on (source, sourceRecordId): re-running does not duplicate", async () => {
 		await createSeedSource(app);
 		const service = app.get(ExternalRoutesService);

@@ -78,6 +78,23 @@ export interface AdminTimeseriesPoint {
 	count: number;
 }
 
+export interface AdminSeedSource {
+	key: string;
+	displayName: string;
+	license: string;
+	status: "green" | "yellow" | "red";
+	routeCount: number;
+	removedCount: number;
+	refreshIntervalDays: number;
+	lastRefreshedAt: string | null;
+	nextRefreshAt: string | null;
+	automatic: boolean;
+}
+
+export interface AdminSeedSources {
+	items: AdminSeedSource[];
+}
+
 export interface AdminOverview {
 	totalUsers: number;
 	totalRoutes: number;
