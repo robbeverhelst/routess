@@ -2,7 +2,14 @@ import { createHash } from "node:crypto";
 import { EntityManager, EntityRepository, type FilterQuery } from "@mikro-orm/core";
 import { InjectRepository } from "@mikro-orm/nestjs";
 import { Injectable, NotFoundException } from "@nestjs/common";
-import { isRouteIndexable, routeBoundingBox, type SeedAdapter, type SeedRoute, seedAdapterByKey } from "@routess/core";
+import {
+	isRouteIndexable,
+	routeBoundingBox,
+	SEED_ADAPTERS,
+	type SeedAdapter,
+	type SeedRoute,
+	seedAdapterByKey,
+} from "@routess/core";
 import { ExternalRoute } from "../entities/external-route.entity";
 import { SeedSource } from "../entities/seed-source.entity";
 import type { PublicRouteSummaryDto } from "../routes/dto/public-route-summary.dto";
@@ -98,7 +105,9 @@ export class ExternalRoutesService {
 			source.status = meta.status;
 			source.refreshIntervalDays = meta.refreshIntervalDays;
 		}
-		source.feedUrl = meta.feedUrl;
+		// Meta wins when it names a feed; an operator-set feedUrl survives
+		// re-registration otherwise.
+		source.feedUrl = meta.feedUrl ?? source.feedUrl;
 		await this.em.persist(source).flush();
 		return source;
 	}
@@ -115,6 +124,11 @@ export class ExternalRoutesService {
 			return res.text();
 		},
 	): Promise<RefreshRunResult[]> {
+		// Self-bootstrap: every green adapter in the registry gets its SeedSource
+		// row, so deploying a new adapter needs no manual registration step.
+		for (const adapter of SEED_ADAPTERS) {
+			if (adapter.meta.status === "green") await this.ensureSource(adapter.meta);
+		}
 		const sources = await this.seedSourceRepository.find({});
 		const results: RefreshRunResult[] = [];
 		for (const source of sources) {

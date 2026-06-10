@@ -173,13 +173,16 @@ describe("ExternalRoutes (ADR 0033)", () => {
 			<trkpt lat="51.05" lon="3.72"></trkpt><trkpt lat="51.06" lon="3.74"></trkpt><trkpt lat="51.07" lon="3.76"></trkpt>
 		</trkseg></trk></gpx>`;
 		const fetched: string[] = [];
+		// Registry sources (e.g. tv-icoonroutes) also get fetched; only the
+		// eurovelo URL returns parseable GPX, the rest error per-source without
+		// blocking the run.
 		const fakeFetch = async (url: string) => {
 			fetched.push(url);
 			return gpx;
 		};
 
 		const first = await withRequestContext(app, () => service.refreshDueSources(fakeFetch));
-		expect(fetched).toEqual(["https://example.test/eurovelo.gpx"]);
+		expect(fetched).toContain("https://example.test/eurovelo.gpx");
 		expect(first.find((r) => r.source === "eurovelo")?.result).toMatchObject({ inserted: 1 });
 		expect(first.find((r) => r.source === "manual-source")?.skipped).toBe("manual");
 
