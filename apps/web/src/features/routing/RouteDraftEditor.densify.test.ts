@@ -102,6 +102,14 @@ describe("RouteDraftEditor — lazy densify of generated drafts", () => {
 		expect(after.some((wp) => wp.coord === movedOriginal.coord)).toBe(false);
 	});
 
+	it("densifies imported drafts (GPX and external routes) the same way", async () => {
+		useRoutingStore.setState({ creationSource: "imported" });
+		const editor = createRouteDraftEditor({ map: mapStub, accessToken: "test-token" });
+		const originalCount = useRoutingStore.getState().waypoints.length;
+		await editor.moveWaypoint(1, [4.6, 51.0]);
+		expect(useRoutingStore.getState().waypoints.length).toBeGreaterThan(originalCount);
+	});
+
 	it("does not densify manual drafts", async () => {
 		useRoutingStore.setState({ creationSource: "manual" });
 		const editor = createRouteDraftEditor({ map: mapStub, accessToken: "test-token" });

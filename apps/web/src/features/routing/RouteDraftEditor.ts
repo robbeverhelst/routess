@@ -127,24 +127,26 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 		}
 	};
 
-	// A generated draft's geometry carries more shape than its sparse control
-	// waypoints reproduce: recalculating from just start + vias would unravel
-	// the loop into plain shortest paths. Before the first mutating edit,
-	// densify: insert smart waypoints along the CURRENT RoutePath so every
-	// leg is short enough to recalculate faithfully and edits stay local.
-	// Runs before the edit's own snapshot (undo restores the densified,
-	// shape-faithful state) and is idempotent once segments are short.
-	// Returns the original→new index map for callers holding an index.
+	// Generated, imported, and external drafts carry more shape in their
+	// geometry than their sparse control waypoints reproduce: recalculating
+	// from just those would unravel the route into plain shortest paths.
+	// Before the first mutating edit, densify: insert smart waypoints along
+	// the CURRENT RoutePath so every leg is short enough to recalculate
+	// faithfully and edits stay local. Only hand-placed (manual) drafts skip
+	// this; their waypoints ARE the shape. Runs before the edit's own
+	// snapshot (undo restores the densified, shape-faithful state) and is
+	// idempotent once segments are short. Returns the original→new index map
+	// for callers holding an index.
 	const ensureEditableShape = (): number[] => {
 		const store = useRoutingStore.getState();
 		const identity = store.waypoints.map((_, i) => i);
-		if (store.creationSource !== "generated") return identity;
+		if (store.creationSource === "manual") return identity;
 		const routePath = getCurrentRoutePath();
 		if (store.waypoints.length < 2 || routePath.length < 2) return identity;
 
 		const { waypoints, indexMap, insertedCount } = densifyWaypointsAlongPath(store.waypoints, routePath);
 		if (insertedCount === 0) return identity;
-		Logger.info(`[RouteDraftEditor] Densified generated draft: +${insertedCount} waypoints before edit`);
+		Logger.info(`[RouteDraftEditor] Densified ${store.creationSource} draft: +${insertedCount} waypoints before edit`);
 		setWaypoints(waypoints);
 		return indexMap;
 	};
