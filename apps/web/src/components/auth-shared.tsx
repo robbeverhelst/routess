@@ -7,7 +7,7 @@ import { useViewport } from "../hooks/useViewport";
 import { I } from "./icons";
 import { IconBtn, RDS_COLORS } from "./primitives";
 
-export function GoogleIcon({ size = 18 }: { size?: number }) {
+function GoogleIcon({ size = 18 }: { size?: number }) {
 	return (
 		<svg width={size} height={size} viewBox="0 0 18 18" aria-hidden="true">
 			<title>Google</title>
@@ -99,7 +99,7 @@ export function CustomGoogleButton({
 	);
 }
 
-export function AuthThemeToggle() {
+function AuthThemeToggle() {
 	const theme = useUiStore((s) => s.theme);
 	const toggleTheme = useUiStore((s) => s.toggleTheme);
 	return (
