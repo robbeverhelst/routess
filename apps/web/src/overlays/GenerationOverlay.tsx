@@ -1,4 +1,5 @@
 import { formatDistance, formatDuration, type GenerationFailureCode, type SurfaceBucket } from "@routess/core";
+import { surfaceBucketColors } from "@routess/design-tokens";
 import { candidateWaypoints, startGeneration } from "@/features/generation/generationService";
 import { useRouteDraftEditor } from "@/features/routing/RouteDraftEditorProvider";
 import { useIsMobile } from "@/hooks/useViewport";
@@ -15,12 +16,7 @@ import { Btn, RDS_COLORS } from "../components/primitives";
 // than forcing the flex button past the modal edge on narrow screens.
 const ELLIPSIS: React.CSSProperties = { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" };
 
-const BUCKET_COLOR: Record<SurfaceBucket, string> = {
-	paved: "oklch(0.45 0.02 240)",
-	compacted: "oklch(0.72 0.07 75)",
-	unpaved: "oklch(0.6 0.11 50)",
-	path: "oklch(0.62 0.13 145)",
-};
+const BUCKET_COLOR: Record<SurfaceBucket, string> = surfaceBucketColors;
 
 const FAILURE_MESSAGE_KEY: Record<GenerationFailureCode, string> = {
 	invalid_input: "loop.failure.invalidInput",
