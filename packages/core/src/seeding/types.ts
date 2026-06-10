@@ -53,10 +53,19 @@ export interface SeedRoute {
 	sourceUpdatedAt?: string;
 }
 
+// Context the orchestration layer knows but the payload does not. EuroVelo's
+// per-route GPX files, for example, never name the route inside the file;
+// the label comes from which URL/file was fetched.
+export interface SeedParseContext {
+	// Human label of the payload's parent route/collection, e.g.
+	// "EuroVelo 5 - Via Romea (Francigena)".
+	label?: string;
+}
+
 // A source adapter: its static metadata plus a PURE parse of an
 // already-fetched payload into normalized SeedRoutes. Fetching (network,
 // impure) lives in the orchestration layer, so `parse` is fixture-testable.
 export interface SeedAdapter {
 	meta: SeedSourceMeta;
-	parse(payload: string): SeedRoute[];
+	parse(payload: string, context?: SeedParseContext): SeedRoute[];
 }

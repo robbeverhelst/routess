@@ -1,28 +1,37 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { MikroORM, RequestContext } from "@mikro-orm/core";
 import { Logger } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
-import { EUROVELO_SOURCE, euroVeloAdapter, type SeedRoute } from "@routess/core";
+import { EUROVELO_ROUTE_LABELS, EUROVELO_SOURCE, euroVeloAdapter, type SeedRoute } from "@routess/core";
 import { AppModule } from "../app.module";
 import { loadEnvironment } from "../config/app-config";
 import { ExternalRoutesService } from "../external-routes/external-routes.service";
 
 const logger = new Logger("SeedEuroVelo");
 
-// Seeds EuroVelo ExternalRoutes from official ECF GPX (ADR 0033). Fetch the GPX
-// out of band (open ODbL since 2024) and point this at the file or directory:
+// Seeds EuroVelo ExternalRoutes from official ECF GPX (ADR 0033). Download the
+// per-route GPX (https://en.eurovelo.com/route/get-gpx/{id}, ODbL) as
+// ev{N}.gpx files and point this at the directory:
 //   bun run seed:eurovelo ./data/eurovelo
-// IMPORTANT: pass the COMPLETE set of GPX for the source. The upsert soft-deletes
-// any EuroVelo route absent from the input, so a partial run would prune the rest.
-function readGpxFiles(target: string): string[] {
+// The filename (ev5.gpx) selects the route label; ECF files carry no route
+// name inside. IMPORTANT: pass the COMPLETE set of GPX for the source. The
+// upsert soft-deletes any EuroVelo route absent from the input, so a partial
+// run would prune the rest.
+function readGpxFiles(target: string): { label: string | undefined; gpx: string }[] {
+	const labelFor = (file: string) => {
+		const key = basename(file)
+			.replace(/\.gpx$/i, "")
+			.toLowerCase();
+		return EUROVELO_ROUTE_LABELS[key] ?? (/^ev\d+$/.test(key) ? `EuroVelo ${key.slice(2)}` : undefined);
+	};
 	const stat = statSync(target);
 	if (stat.isDirectory()) {
 		return readdirSync(target)
 			.filter((f) => f.toLowerCase().endsWith(".gpx"))
-			.map((f) => readFileSync(join(target, f), "utf8"));
+			.map((f) => ({ label: labelFor(f), gpx: readFileSync(join(target, f), "utf8") }));
 	}
-	return [readFileSync(target, "utf8")];
+	return [{ label: labelFor(target), gpx: readFileSync(target, "utf8") }];
 }
 
 async function seedEuroVelo(): Promise<void> {
@@ -39,7 +48,7 @@ async function seedEuroVelo(): Promise<void> {
 	const externalRoutes = app.get(ExternalRoutesService);
 
 	const payloads = readGpxFiles(target);
-	const seeds: SeedRoute[] = payloads.flatMap((gpx) => euroVeloAdapter.parse(gpx));
+	const seeds: SeedRoute[] = payloads.flatMap(({ gpx, label }) => euroVeloAdapter.parse(gpx, { label }));
 	logger.log(`Parsed ${seeds.length} EuroVelo routes from ${payloads.length} GPX file(s).`);
 
 	await RequestContext.create(orm.em, async () => {

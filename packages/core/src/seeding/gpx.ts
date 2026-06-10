@@ -2,13 +2,14 @@ import type { Coordinate } from "../types";
 
 export interface GpxTrack {
 	name?: string;
+	desc?: string;
 	points: Coordinate[];
 }
 
-function extractName(xml: string): string | undefined {
-	const match = /<name\b[^>]*>([\s\S]*?)<\/name>/i.exec(xml);
-	const name = match?.[1]?.trim();
-	return name ? decodeXml(name) : undefined;
+function extractTag(xml: string, tag: "name" | "desc"): string | undefined {
+	const match = new RegExp(`<${tag}\\b[^>]*>([\\s\\S]*?)</${tag}>`, "i").exec(xml);
+	const value = match?.[1]?.trim();
+	return value ? decodeXml(value) : undefined;
 }
 
 function decodeXml(value: string): string {
@@ -44,7 +45,7 @@ function extractPoints(block: string): Coordinate[] {
 // becomes one GpxTrack; a nameless segment inherits the <metadata> name.
 export function parseGpxTracks(xml: string): GpxTrack[] {
 	const metadataBlock = /<metadata\b[\s\S]*?<\/metadata>/i.exec(xml)?.[0] ?? "";
-	const fallbackName = extractName(metadataBlock);
+	const fallbackName = extractTag(metadataBlock, "name");
 
 	const tracks: GpxTrack[] = [];
 	const blockPattern = /<(trk|rte)\b[\s\S]*?<\/\1>/gi;
@@ -57,7 +58,7 @@ export function parseGpxTracks(xml: string): GpxTrack[] {
 			// Name from the block's own <name>, but skip a <name> that belongs to
 			// a nested point: take the first one before the first point tag.
 			const head = body.slice(0, body.search(/<(?:trkpt|rtept)\b/i));
-			tracks.push({ name: extractName(head) ?? fallbackName, points });
+			tracks.push({ name: extractTag(head, "name") ?? fallbackName, desc: extractTag(head, "desc"), points });
 		}
 		block = blockPattern.exec(xml);
 	}
