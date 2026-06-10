@@ -1,5 +1,10 @@
 import type { Coordinate, RouteActivity, RouteBaseline, Waypoint, WaypointType } from "@routess/core";
-import { calculatePathDistance, densifyWaypointsAlongPath, estimateWalkingDuration } from "@routess/core";
+import {
+	buildRouteGpx,
+	calculatePathDistance,
+	densifyWaypointsAlongPath,
+	estimateWalkingDuration,
+} from "@routess/core";
 import type { GeoJSONSource, Map as MapboxMap } from "mapbox-gl";
 import { trackEvent } from "@/lib/analytics/track";
 import { type ApiRoute, apiService } from "@/lib/api";
@@ -13,7 +18,7 @@ import {
 	reverseWaypoints,
 	setWaypointCoord,
 } from "./managers/WaypointCoordinator";
-import { generateGPXString, parseGPXFile, processGPXWaypoints } from "./services/GPXService";
+import { parseGPXFile, processGPXWaypoints } from "./services/GPXService";
 import {
 	clearCurrentRoutePath,
 	computeElevationInBackground,
@@ -495,7 +500,7 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 
 		const routePath = getCurrentRoutePath();
 		const effectivePath = routePath.length >= 2 ? routePath : waypoints.map((wp) => wp.coord);
-		const contents = generateGPXString(waypoints, effectivePath);
+		const contents = buildRouteGpx({ waypoints, geometry: effectivePath });
 		const blob = new Blob([contents], { type: "application/gpx+xml;charset=utf-8" });
 		const url = URL.createObjectURL(blob);
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { buildRouteGpx } from "../../../src/routes/gpx";
+import { buildRouteGpx } from "@routess/core";
 
 describe("buildRouteGpx", () => {
 	it("emits a track from geometry", () => {
