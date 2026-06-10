@@ -119,7 +119,10 @@ export class ExternalRoutesService {
 	// so tests run without network.
 	async refreshDueSources(
 		fetchText: (url: string) => Promise<string> = async (url) => {
-			const res = await fetch(url);
+			// Some providers (Overpass) 406 requests without explicit headers.
+			const res = await fetch(url, {
+				headers: { Accept: "application/json", "User-Agent": "routess-seeder/1.0 (+https://routess.com)" },
+			});
 			if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${url}`);
 			return res.text();
 		},
@@ -211,7 +214,9 @@ export class ExternalRoutesService {
 		const byRecordId = new Map(existing.map((r) => [r.sourceRecordId, r]));
 		const seenRecordIds = new Set<string>();
 
-		for (const seed of seeds) {
+		for (const rawSeed of seeds) {
+			// Clamp wire-size fields; open-data names occasionally run long.
+			const seed = { ...rawSeed, name: rawSeed.name.slice(0, 255), description: rawSeed.description?.slice(0, 2000) };
 			seenRecordIds.add(seed.sourceRecordId);
 			const hash = contentHash(seed);
 			const box = routeBoundingBox(seed.geometry);

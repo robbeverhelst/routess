@@ -20,7 +20,7 @@ export class ExternalRoute extends BaseEntity {
 	@Property()
 	name!: string;
 
-	@Property({ nullable: true })
+	@Property({ type: "text", nullable: true })
 	description?: string;
 
 	@Property({ type: "string", nullable: true })

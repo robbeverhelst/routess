@@ -35,7 +35,8 @@
 		"openapi:generate": "bun src/openapi.ts",
 		"backfill:places": "bun src/scripts/backfill-places.ts",
 		"seed:eurovelo": "bun src/scripts/seed-eurovelo.ts",
-		"seed:refresh": "bun src/scripts/refresh-seeds.ts"
+		"seed:refresh": "bun src/scripts/refresh-seeds.ts",
+		"seed:file": "bun src/scripts/seed-file.ts"
 	},
 	"dependencies": {
 		"@mikro-orm/cli": "^7.0.0",

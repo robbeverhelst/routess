@@ -48,7 +48,8 @@ export class SeedSource extends BaseEntity {
 	refreshIntervalDays = 30;
 
 	// Stable bulk-download URL for the scheduled refresh; null = manual source.
-	@Property({ nullable: true })
+	// text: Overpass feed URLs embed a whole encoded query.
+	@Property({ type: "text", nullable: true })
 	feedUrl?: string;
 
 	@Property({ type: "timestamp", nullable: true })
