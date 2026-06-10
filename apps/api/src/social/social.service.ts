@@ -89,8 +89,8 @@ export class SocialService {
 			this.followRepository.find({ followee: userId }, { populate: ["follower"], orderBy: { createdAt: "DESC" } }),
 		]);
 		return {
-			following: following.map((f) => toProfileSummary(f.followee as unknown as User)),
-			followers: followers.map((f) => toProfileSummary(f.follower as unknown as User)),
+			following: following.map((f) => toProfileSummary(f.followee)),
+			followers: followers.map((f) => toProfileSummary(f.follower)),
 		};
 	}
 
@@ -112,7 +112,7 @@ export class SocialService {
 		return {
 			items: routes.map((route) => ({
 				...toProfileRouteDto(route),
-				author: toProfileSummary(route.user as unknown as User),
+				author: toProfileSummary(route.user),
 			})),
 			total,
 		};
@@ -172,9 +172,7 @@ export class SocialService {
 			? await this.routeRepository.find({ id: { $in: routeIds }, visibility: { $ne: "private" } })
 			: [];
 		const routeById = new Map(routes.map((r) => [r.id, r]));
-		return shares.map((share) =>
-			this.toShareDto(share, share.sender as unknown as User, routeById.get(share.route.id) ?? null),
-		);
+		return shares.map((share) => this.toShareDto(share, share.sender, routeById.get(share.route.id) ?? null));
 	}
 
 	async unreadCount(userId: number): Promise<number> {
@@ -271,12 +269,12 @@ export class SocialService {
 		const items: NotificationItemDto[] = [
 			...follows.map((f) => ({
 				type: "follow" as const,
-				actor: toProfileSummary(f.follower as unknown as User),
+				actor: toProfileSummary(f.follower),
 				createdAt: f.createdAt.toISOString(),
 			})),
 			...shares.map((s) => ({
 				type: "route_share" as const,
-				actor: toProfileSummary(s.sender as unknown as User),
+				actor: toProfileSummary(s.sender),
 				shareId: s.id,
 				routeName: nameById.get(s.route.id) ?? null,
 				createdAt: s.createdAt.toISOString(),

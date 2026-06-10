@@ -1,4 +1,4 @@
-import { type Opt, Collection as OrmCollection, type Ref } from "@mikro-orm/core";
+import { type Opt, Collection as OrmCollection, type Rel } from "@mikro-orm/core";
 import { Entity, Index, ManyToOne, OneToMany, PrimaryKey, Property } from "@mikro-orm/decorators/legacy";
 import type { RouteVisibility } from "@routess/core";
 import { generateShareToken } from "../common/share-token";
@@ -29,7 +29,7 @@ export class Collection extends BaseEntity {
 	shareToken: string & Opt = generateShareToken();
 
 	@ManyToOne(() => User)
-	user!: Ref<User>;
+	user!: Rel<User>;
 
 	@OneToMany(
 		() => CollectionRoute,

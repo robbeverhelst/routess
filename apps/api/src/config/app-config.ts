@@ -134,7 +134,7 @@ function parseJsonObject(value: string | undefined): Record<string, string> | un
 	}
 
 	try {
-		const parsed = JSON.parse(value) as unknown;
+		const parsed: unknown = JSON.parse(value);
 		if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
 			return undefined;
 		}

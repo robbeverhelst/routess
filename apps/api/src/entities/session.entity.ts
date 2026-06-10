@@ -1,4 +1,4 @@
-import { type Ref } from "@mikro-orm/core";
+import { type Rel } from "@mikro-orm/core";
 import { Entity, Index, ManyToOne, PrimaryKey, Property } from "@mikro-orm/decorators/legacy";
 import { BaseEntity } from "./base.entity";
 import { User } from "./user.entity";
@@ -15,7 +15,7 @@ export class Session extends BaseEntity {
 	jti!: string; // JWT ID for tracking
 
 	@ManyToOne(() => User)
-	user!: Ref<User>;
+	user!: Rel<User>;
 
 	@Property({ type: "timestamp" })
 	expiresAt!: Date;

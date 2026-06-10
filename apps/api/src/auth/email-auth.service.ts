@@ -220,7 +220,7 @@ export class EmailAuthService {
 			throw new UnauthorizedException("Email or password is incorrect.");
 		}
 
-		const user = method.user as unknown as User;
+		const user = method.user;
 		method.lastUsedAt = new Date();
 		method.failedLoginAttempts = 0;
 		method.lockedUntil = null;
