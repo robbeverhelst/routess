@@ -1,9 +1,11 @@
+import type { ApiExternalRoute } from "@routess/api-client";
 import type { Coordinate, RouteActivity, RouteBaseline, Waypoint, WaypointType } from "@routess/core";
 import {
 	buildRouteGpx,
 	calculatePathDistance,
 	densifyWaypointsAlongPath,
 	estimateWalkingDuration,
+	selectSmartWaypoints,
 } from "@routess/core";
 import type { GeoJSONSource, Map as MapboxMap } from "mapbox-gl";
 import { trackEvent } from "@/lib/analytics/track";
@@ -70,6 +72,7 @@ export interface RouteDraftEditor {
 	undo(): Promise<EditResult>;
 	redo(): Promise<EditResult>;
 	loadFromApiRoute(route: ApiRoute): Promise<EditResult>;
+	loadFromExternalRoute(route: ApiExternalRoute): Promise<EditResult>;
 	loadFromShareLink(encoded: string): Promise<EditResult>;
 	loadFromGpx(gpxString: string): Promise<EditResult>;
 	loadWaypoints(waypoints: Waypoint[], options?: LoadOptions): Promise<EditResult>;
@@ -425,6 +428,26 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 		});
 	};
 
+	// Opens a seeded ExternalRoute (ADR 0033) in the planner as a fresh
+	// unsaved draft: the official geometry is pinned exactly; smart waypoints
+	// make it editable. Saving creates the user's own copy (the fork), never
+	// touches the ExternalRoute.
+	const loadFromExternalRoute = async (route: ApiExternalRoute): Promise<EditResult> => {
+		const store = useRoutingStore.getState();
+		store.setMode({ kind: "unsaved" });
+		if (route.activity) store.setActivity(route.activity);
+		store.setCreationSource("imported");
+		trackEvent({
+			name: "route_loaded_into_editor",
+			properties: { creation_source: "external" },
+		});
+		const waypoints: Waypoint[] = selectSmartWaypoints(route.geometry).map((coord) => ({
+			coord,
+			type: "routed" as const,
+		}));
+		return loadWaypoints(waypoints, { exactRoutePath: route.geometry, saveSnapshot: true });
+	};
+
 	const unload = (): void => {
 		useRoutingStore.getState().setMode({ kind: "unsaved" });
 	};
@@ -554,6 +577,7 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 		loadFromApiRoute,
 		loadFromShareLink,
 		loadFromGpx,
+		loadFromExternalRoute,
 		loadWaypoints,
 		unload,
 		clearDraft,

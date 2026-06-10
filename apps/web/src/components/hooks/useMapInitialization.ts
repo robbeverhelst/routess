@@ -9,6 +9,7 @@ import { readMapPalette, subscribeMapPalette } from "@/features/routing/managers
 import { createRouteDraftEditor, type RouteDraftEditor } from "@/features/routing/RouteDraftEditor";
 import { getCurrentRoutePath } from "@/features/routing/services/RouteCalculationService";
 import { zoomToRoute } from "@/features/routing/utils/RoutingUtils";
+import { apiService } from "@/lib/api";
 import { t } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
 import { useToastStore } from "@/stores/toastStore";
@@ -75,8 +76,30 @@ export const useMapInitialization = ({
 
 			const urlParams = new URLSearchParams(window.location.search);
 			const encodedRoute = urlParams.get("route") || routeId;
+			const externalRouteId = Number(urlParams.get("externalRoute"));
 
-			if (encodedRoute) {
+			if (externalRouteId > 0) {
+				// Seeded ExternalRoute opened from its /r/ page (ADR 0033): loads
+				// as a fresh draft with the official geometry pinned.
+				Logger.info("[useMapInitialization] Loading external route", externalRouteId);
+				try {
+					const externalRoute = await apiService.getExternalRoute(externalRouteId);
+					const result = await editor.loadFromExternalRoute(externalRoute);
+					if (!result.success) {
+						pushToast({ kind: "danger", title: result.message ?? "Failed to load route" });
+					} else {
+						window.history.replaceState({}, document.title, window.location.pathname);
+						const routeCoords = getCurrentRoutePath();
+						if (routeCoords && routeCoords.length > 0) {
+							map.stop();
+							zoomToRoute(map, routeCoords);
+						}
+					}
+				} catch (error) {
+					Logger.warn("[useMapInitialization] external route load failed:", error);
+					pushToast({ kind: "danger", title: "Failed to load route" });
+				}
+			} else if (encodedRoute) {
 				Logger.info("[useMapInitialization] Found shared route data, attempting to load...");
 				const result = await editor.loadFromShareLink(encodedRoute);
 				if (!result.success) {
