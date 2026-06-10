@@ -41,3 +41,33 @@ export function stitchLooseSegments(pieces: Coordinate[][]): Coordinate[] {
 	}
 	return path;
 }
+
+export interface PathJumpStats {
+	lengthMeters: number;
+	jumpMeters: number;
+	maxJumpMeters: number;
+}
+
+const METERS_PER_DEGREE = 111_320;
+
+// Quantifies stitching damage: consecutive gaps above `thresholdMeters` are
+// artificial connectors (no underlying way), summed so adapters can refuse
+// routes that stitched badly. Equirectangular approx is plenty at gap scale.
+export function pathJumpStats(path: Coordinate[], thresholdMeters = 150): PathJumpStats {
+	let lengthMeters = 0;
+	let jumpMeters = 0;
+	let maxJumpMeters = 0;
+	for (let i = 0; i < path.length - 1; i++) {
+		const a = path[i] as Coordinate;
+		const b = path[i + 1] as Coordinate;
+		const dx = (a[0] - b[0]) * Math.cos((a[1] * Math.PI) / 180) * METERS_PER_DEGREE;
+		const dy = (a[1] - b[1]) * METERS_PER_DEGREE;
+		const step = Math.hypot(dx, dy);
+		lengthMeters += step;
+		if (step > thresholdMeters) {
+			jumpMeters += step;
+			maxJumpMeters = Math.max(maxJumpMeters, step);
+		}
+	}
+	return { lengthMeters, jumpMeters, maxJumpMeters };
+}

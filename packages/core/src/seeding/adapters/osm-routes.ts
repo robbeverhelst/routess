@@ -1,6 +1,6 @@
 import type { Coordinate, RouteActivity } from "../../types";
 import { calculatePathDistance } from "../../utils/geospatial";
-import { stitchLooseSegments } from "../stitch";
+import { pathJumpStats, stitchLooseSegments } from "../stitch";
 import type { SeedAdapter, SeedRoute, SeedSourceMeta } from "../types";
 
 // Named OSM route relations in Belgium (route=bicycle|hiking|foot), excluding
@@ -36,6 +36,18 @@ function activityFor(tags: Record<string, string>): RouteActivity {
 	return tags.route === "bicycle" ? "cycle" : "walk";
 }
 
+// Variant/detour member roles that would tangle the main line.
+const EXCLUDED_ROLES = new Set([
+	"alternative",
+	"alternate",
+	"excursion",
+	"approach",
+	"connection",
+	"shortcut",
+	"variant",
+	"link",
+]);
+
 export const osmBelgiumAdapter: SeedAdapter = {
 	meta: OSM_BELGIUM_SOURCE,
 	parse(payload: string): SeedRoute[] {
@@ -49,10 +61,16 @@ export const osmBelgiumAdapter: SeedAdapter = {
 			// Superroutes nest other relations; their members carry no geometry
 			// here and the child routes are ingested individually anyway.
 			const pieces: Coordinate[][] = (relation.members ?? [])
-				.filter((m) => m.type === "way" && m.geometry && m.role !== "platform")
+				.filter((m) => m.type === "way" && m.geometry && !EXCLUDED_ROLES.has(m.role ?? ""))
 				.map((m) => (m.geometry as { lat: number; lon: number }[]).map((p): Coordinate => [p.lon, p.lat]));
 			const geometry = stitchLooseSegments(pieces);
 			if (geometry.length < 2) continue;
+			// Relation structures we cannot stitch into one honest line (heavy
+			// forward/backward splits, broken member chains) are skipped rather
+			// than rendered with off-road connector artifacts: ~70% of Belgian
+			// relations pass. Better absent than wrong on the map.
+			const stats = pathJumpStats(geometry);
+			if (stats.maxJumpMeters > 500 || stats.jumpMeters > stats.lengthMeters * 0.15) continue;
 			const network = tags.network?.trim();
 			routes.push({
 				sourceRecordId: `rel-${relation.id}`,

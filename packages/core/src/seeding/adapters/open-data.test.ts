@@ -11,19 +11,29 @@ describe("osmBelgiumAdapter", () => {
 				id: 123456,
 				tags: { route: "bicycle", name: "Kempense Heuvelrugroute", network: "lcn", ref: "KHR" },
 				members: [
-					// Second leg listed first and stored reversed; stitching must fix both.
+					// Second leg listed first and stored reversed; stitching must fix
+					// both. Points ~110m apart so the quality gate sees no jumps.
 					{
 						type: "way",
 						geometry: [
-							{ lat: 51.2, lon: 4.6 },
-							{ lat: 51.15, lon: 4.55 },
+							{ lat: 51.102, lon: 4.502 },
+							{ lat: 51.101, lon: 4.501 },
 						],
 					},
 					{
 						type: "way",
 						geometry: [
 							{ lat: 51.1, lon: 4.5 },
-							{ lat: 51.15, lon: 4.55 },
+							{ lat: 51.101, lon: 4.501 },
+						],
+					},
+					// Far-away variant leg: excluded by role, not stitched in.
+					{
+						type: "way",
+						role: "alternative",
+						geometry: [
+							{ lat: 51.5, lon: 5.0 },
+							{ lat: 51.501, lon: 5.001 },
 						],
 					},
 				],
@@ -37,7 +47,29 @@ describe("osmBelgiumAdapter", () => {
 						type: "way",
 						geometry: [
 							{ lat: 51.0, lon: 4.0 },
-							{ lat: 51.01, lon: 4.01 },
+							{ lat: 51.001, lon: 4.001 },
+						],
+					},
+				],
+			},
+			// Unstitchable: two pieces kilometers apart -> quality gate skips it.
+			{
+				type: "relation",
+				id: 444,
+				tags: { route: "hiking", name: "Kapotte route" },
+				members: [
+					{
+						type: "way",
+						geometry: [
+							{ lat: 50.0, lon: 4.0 },
+							{ lat: 50.001, lon: 4.001 },
+						],
+					},
+					{
+						type: "way",
+						geometry: [
+							{ lat: 50.2, lon: 4.2 },
+							{ lat: 50.201, lon: 4.201 },
 						],
 					},
 				],
@@ -54,8 +86,8 @@ describe("osmBelgiumAdapter", () => {
 		expect(bike?.name).toBe("Kempense Heuvelrugroute (KHR)");
 		expect(bike?.activity).toBe("cycle");
 		expect(bike?.tags).toContain("lcn");
-		// Continuous after reorder + reverse: 4.5 -> 4.55 -> 4.6 longitude.
-		expect(bike?.geometry.map((c) => c[0])).toEqual([4.6, 4.55, 4.5]);
+		// Continuous after reorder + reverse, variant role excluded.
+		expect(bike?.geometry.map((c) => c[0])).toEqual([4.502, 4.501, 4.5]);
 		expect(routes[1]?.activity).toBe("walk");
 	});
 });
