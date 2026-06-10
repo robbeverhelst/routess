@@ -45,6 +45,11 @@ export const useMapInitialization = ({
 		async (event: { target: MapboxMap }) => {
 			Logger.info("[useMapInitialization] Map loaded, setting up routing");
 			const map = event.target;
+			// Dev-only handle for browser automation (Playwright projects
+			// coordinates via map.project); stripped from production builds.
+			if (import.meta.env.DEV) {
+				(window as unknown as { __routessMap?: MapboxMap }).__routessMap = map;
+			}
 
 			const initialPalette = readMapPalette();
 			initializeSourcesAndLayers(map, initialPalette);

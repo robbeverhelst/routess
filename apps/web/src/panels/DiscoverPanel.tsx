@@ -104,6 +104,13 @@ export function DiscoverPanel() {
 		setRoutes(data?.items ?? []);
 	}, [data, setRoutes]);
 
+	// Map-driven hover (dot mouseover/click) scrolls its card into view; for
+	// list-driven hover the card is already visible, so this is a no-op.
+	useEffect(() => {
+		if (hoveredRouteId == null) return;
+		document.querySelector(`[data-discover-card="${hoveredRouteId}"]`)?.scrollIntoView({ block: "nearest" });
+	}, [hoveredRouteId]);
+
 	const pickActivity = (key: "all" | RouteActivity) => {
 		setActivity(key);
 		trackEvent({ name: "discover_filtered", properties: { filter_type: "activity" } });
@@ -150,6 +157,7 @@ export function DiscoverPanel() {
 						{t("discover.beta")}
 					</span>
 				</div>
+				<div style={{ fontSize: 12, color: RDS_COLORS.fgSubtle, marginTop: 4 }}>{t("discover.subtitle")}</div>
 				{!noticeDismissed && (
 					<div
 						style={{

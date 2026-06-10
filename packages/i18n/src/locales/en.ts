@@ -675,6 +675,8 @@ export const en: Record<string, string> = {
 	"discover.notice.dismiss": "Dismiss",
 	"discover.loading": "Finding routes…",
 	"discover.updating": "Updating…",
+	"discover.viewRoute": "View route",
+	"discover.subtitle": "Public routes in the current map view. Pan or zoom to search.",
 	"discover.waitingForMap": "Waiting for the map…",
 	"discover.searchArea": "Search this area",
 	"discover.error.title": "Couldn't load routes",

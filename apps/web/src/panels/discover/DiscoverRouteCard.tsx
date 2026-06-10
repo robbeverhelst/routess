@@ -32,6 +32,7 @@ export function DiscoverRouteCard({
 
 	return (
 		<a
+			data-discover-card={route.id}
 			href={`/r/${route.slugId}`}
 			onClick={onOpen}
 			onMouseEnter={() => onHover(route.id)}

@@ -15,6 +15,7 @@ import {
 import type { RouteDraftEditor } from "@/features/routing/RouteDraftEditor";
 import { Logger } from "@/lib/logger";
 import { useRoutingStore } from "@/stores/routingStore";
+import { useUiStore } from "@/stores/uiStore";
 import { useWaypointDragStore } from "@/stores/waypointDragStore";
 import { useWaypointHoverStore } from "@/stores/waypointHoverStore";
 import type { Coordinate } from "@/types/map";
@@ -454,6 +455,10 @@ export const initializeMapInteractions = (
 
 	const handleMapClick = async (event: MapMouseEvent) => {
 		if (isMapLockedRef.current || isOverlayEvent(event)) return;
+
+		// Discover is a browsing surface: clicks belong to its markers/popups,
+		// never to the planner's add-waypoint grammar.
+		if (useUiStore.getState().context === "discover") return;
 
 		if (state.suppressNextClick) {
 			state.suppressNextClick = false;

@@ -652,6 +652,8 @@ export const nl: Record<string, string> = {
 	"discover.notice.dismiss": "Sluiten",
 	"discover.loading": "Routes zoeken…",
 	"discover.updating": "Bijwerken…",
+	"discover.viewRoute": "Bekijk route",
+	"discover.subtitle": "Publieke routes in het huidige kaartbeeld. Versleep of zoom om te zoeken.",
 	"discover.waitingForMap": "Wachten op de kaart…",
 	"discover.searchArea": "Zoek in dit gebied",
 	"discover.error.title": "Routes laden mislukt",

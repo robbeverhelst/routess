@@ -2,7 +2,7 @@ import { EntityManager, EntityRepository, type FilterQuery, QueryOrder } from "@
 import { InjectRepository } from "@mikro-orm/nestjs";
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { EventEmitter2 } from "@nestjs/event-emitter";
-import { isRouteIndexable, routeBoundingBox } from "@routess/core";
+import { isRouteIndexable, pathIntersectsBbox, routeBoundingBox } from "@routess/core";
 import type { AppConfig } from "../config/app-config";
 import { APP_CONFIG } from "../config/config.module";
 import { Route } from "../entities/route.entity";
@@ -152,16 +152,28 @@ export class RoutesService {
 		const take = offset + limit;
 
 		if (gate === "public") {
+			// Fetch beyond the page so the exact path-in-viewport filter below
+			// can drop bbox false positives without under-filling the page.
+			const window = take * 2;
 			const [routes, routeTotal] = await this.routeRepository.findAndCount(where, {
 				populate: ["user"],
 				orderBy: { publishedAt: QueryOrder.DESC_NULLS_LAST, id: "DESC" },
-				limit: take,
+				limit: window,
 			});
 			const routeItems = routes.map((route) =>
 				toPublicRouteSummaryDto(route, this.config.analytics.salt, { includeGeometry: true }),
 			);
-			const external = await this.externalRoutes.findPublicMatches(filters, "public", take);
-			const merged = mergeSummariesDesc(routeItems, external.items, publicSortKey).slice(offset, offset + limit);
+			const external = await this.externalRoutes.findPublicMatches(filters, "public", window);
+			// The bbox columns over-match long routes whose box overlaps the
+			// viewport while the path runs elsewhere (ADR 0030); Discover renders
+			// the result, so apply the exact check on the downsampled geometry.
+			const view = filters.bbox;
+			const inView = (item: PublicRouteSummaryDto) =>
+				!view || !item.geometry || item.geometry.length < 2 || pathIntersectsBbox(item.geometry, view);
+			const merged = mergeSummariesDesc(routeItems.filter(inView), external.items.filter(inView), publicSortKey).slice(
+				offset,
+				offset + limit,
+			);
 			return { items: merged, total: routeTotal + external.total };
 		}
 
