@@ -19,7 +19,8 @@
 	"scripts": {
 		"build": "tsc -b --force tsconfig.json",
 		"clean": "rm -rf dist tsconfig.tsbuildinfo",
-		"lint": "biome check ."
+		"lint": "biome check .",
+		"test": "bun test"
 	},
 	"dependencies": {
 		"@routess/core": "workspace:*"
