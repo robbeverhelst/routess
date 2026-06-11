@@ -24,6 +24,7 @@ class FakeRouting {
 	locateHandler: (body: { locations: { lat: number; lon: number }[] }) => unknown;
 	routeHandler: (body: { locations: { lat: number; lon: number; type?: string }[] }) => unknown;
 	traceHandler: (body: unknown) => unknown;
+	isochroneHandler: (body: { locations: { lat: number; lon: number }[]; contours: { distance: number }[] }) => unknown;
 	calls: string[] = [];
 
 	constructor() {
@@ -63,6 +64,14 @@ class FakeRouting {
 				end_heading: (i * 15 + 10) % 360,
 			})),
 		});
+		this.isochroneHandler = (body) => {
+			const center = body.locations[0];
+			const ring: [number, number][] = [];
+			for (let deg = 0; deg <= 360; deg += 10) {
+				ring.push(destinationPoint([center.lon, center.lat], deg, body.contours[0].distance));
+			}
+			return { features: [{ geometry: { coordinates: [ring] } }] };
+		};
 	}
 
 	callValhalla(path: string, body: unknown): Promise<unknown> {
@@ -70,6 +79,7 @@ class FakeRouting {
 		if (path === "/locate") return Promise.resolve(this.locateHandler(body as never));
 		if (path === "/route") return Promise.resolve(this.routeHandler(body as never));
 		if (path === "/trace_attributes") return Promise.resolve(this.traceHandler(body));
+		if (path === "/isochrone") return Promise.resolve(this.isochroneHandler(body as never));
 		return Promise.reject(new Error(`unexpected path ${path}`));
 	}
 }
@@ -450,6 +460,53 @@ describe("GenerationService", () => {
 		const response = await service.generate(REQUEST);
 		expect(response.failure).toBeUndefined();
 		expect(response.candidates[0]?.distanceKm).toBe(30);
+	});
+
+	describe("isochrone fallback (generation v2)", () => {
+		// Fan plans route start + 3 vias + start = 5 locations; isochrone plans
+		// have 2 vias = 4 locations. Failing the 5-location requests simulates
+		// hostile geometry where only the frontier tactic finds a way around.
+		const failFanRoutes = () => {
+			const original = fake.routeHandler;
+			fake.routeHandler = (body) => (body.locations.length === 5 ? { error: "no path" } : original(body));
+		};
+
+		it("rescues a generation whose entire fan is unroutable", async () => {
+			failFanRoutes();
+			let traceCount = 0;
+			fake.traceHandler = () => {
+				traceCount++;
+				return {
+					edges: Array.from({ length: 24 }, (_, i) => ({
+						way_id: traceCount * 1000 + i,
+						surface: "paved",
+						length: 30 / 24,
+						begin_heading: (i * 15) % 360,
+						end_heading: (i * 15 + 10) % 360,
+					})),
+				};
+			};
+
+			const response = await service.generate(REQUEST);
+			expect(response.failure).toBeUndefined();
+			expect(response.candidates.length).toBeGreaterThan(0);
+			expect(response.candidates[0].viaPoints).toHaveLength(2);
+			expect(fake.calls.filter((path) => path === "/isochrone")).toHaveLength(1);
+			expect(events[0]?.usedIsochroneFallback).toBe(true);
+		});
+
+		it("still fails honestly when even the frontier routes nothing", async () => {
+			fake.routeHandler = () => ({ error: "no path" });
+			const response = await service.generate(REQUEST);
+			expect(response.failure?.code).toBe("no_candidates_routable");
+			expect(fake.calls.filter((path) => path === "/isochrone")).toHaveLength(1);
+		});
+
+		it("never fires when the fan produced candidates", async () => {
+			await service.generate(REQUEST);
+			expect(fake.calls.filter((path) => path === "/isochrone")).toHaveLength(0);
+			expect(events[0]?.usedIsochroneFallback).toBe(false);
+		});
 	});
 
 	describe("anchors stage (generation v2, ADR-0037)", () => {

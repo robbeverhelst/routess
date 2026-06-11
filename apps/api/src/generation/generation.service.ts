@@ -19,10 +19,12 @@ import {
 	haversineDistance,
 	injectRequiredAnchors,
 	isLowQuality,
+	isochroneContourKm,
 	loopRadiusKm,
 	MAX_REQUIRED_ANCHORS,
 	OVERLAP_WARN_LIMIT,
 	planCandidateFan,
+	planIsochroneCandidates,
 	planSurfaceAnchoredCandidates,
 	planSurfaceWave,
 	type RoutedCandidate,
@@ -146,6 +148,12 @@ interface ValhallaTraceEdge {
 interface ValhallaTraceResponse {
 	shape?: string;
 	edges?: ValhallaTraceEdge[];
+}
+
+interface ValhallaIsochroneResponse {
+	features?: {
+		geometry?: { coordinates?: unknown[][] };
+	}[];
 }
 
 interface RoutedLeg {
@@ -274,10 +282,20 @@ export class GenerationService {
 			if (err instanceof GenerationFailure) return fail(err.failureCode);
 			throw err;
 		}
-		if (snappedPlans.length === 0) return fail("no_candidates_routable");
+		const scored =
+			snappedPlans.length > 0
+				? await this.routeAndScore(snappedPlans, start, request, costing, anchors, countCall)
+				: [];
 
-		const scored = await this.routeAndScore(snappedPlans, start, request, costing, anchors, countCall);
-		if (scored.length === 0) return fail("no_candidates_routable");
+		// Isochrone fallback (generation v2): a fan that routes nothing usually
+		// means hostile geometry (coast, canal belt), not an unroutable area —
+		// retry once with vias on the reachability frontier.
+		let usedIsochroneFallback = false;
+		if (scored.length === 0) {
+			scored.push(...(await this.isochroneFallback(start, request, costing, anchors, countCall)));
+			usedIsochroneFallback = scored.length > 0;
+			if (scored.length === 0) return fail("no_candidates_routable");
+		}
 
 		scored.push(...(await this.surfaceWave(scored, plans, start, request, costing, anchors, countCall)));
 
@@ -290,6 +308,7 @@ export class GenerationService {
 		emit("succeeded", {
 			candidateCount: selected.length,
 			bestOverlapPct: Math.round(selected[0].score.overlap * 100),
+			usedIsochroneFallback,
 		});
 
 		return { candidates: selected.map((candidate) => this.toDto(candidate)) };
@@ -518,6 +537,53 @@ export class GenerationService {
 		}
 		if (snapped.length === 0) return [];
 		return this.routeAndScore(snapped, start, request, costing, anchors, countCall);
+	}
+
+	/**
+	 * The isochrone fallback tactic: ask Valhalla which points are reachable
+	 * at ~target/2.6 road distance and plan two-via loops along that frontier.
+	 * Opportunistic like the wave — any failure just returns no candidates.
+	 */
+	private async isochroneFallback(
+		start: Coordinate,
+		request: GenerateRequestDto,
+		costing: ValhallaCostingRequest,
+		anchors: AnchorContext,
+		countCall: <T>(promise: Promise<T>) => Promise<T>,
+	): Promise<(ScoredCandidate & { shape: string })[]> {
+		try {
+			const data = await countCall(
+				this.routing.callValhalla<ValhallaIsochroneResponse>(
+					"/isochrone",
+					{
+						locations: [{ lat: start[1], lon: start[0] }],
+						costing: costing.costing,
+						costing_options: costing.costing_options,
+						contours: [{ distance: isochroneContourKm(request.targetDistanceKm) }],
+						polygons: true,
+					},
+					"generation",
+				),
+			);
+			const ring = data.features?.[0]?.geometry?.coordinates?.[0] ?? [];
+			const frontier = ring.filter(
+				(point): point is [number, number] =>
+					Array.isArray(point) && typeof point[0] === "number" && typeof point[1] === "number",
+			);
+
+			let plans = planIsochroneCandidates(start, frontier, request.heading, request.excludeBearings);
+			if (plans.length === 0) return [];
+			plans = plans.map((plan) => applyAnchors(plan, anchors, start));
+
+			const snapped = await countCall(
+				this.snapPlans(start, plans, request.targetDistanceKm, costing, request.preferences.surfacePreference),
+			);
+			if (snapped.length === 0) return [];
+			return await this.routeAndScore(snapped, start, request, costing, anchors, countCall);
+		} catch (err) {
+			this.logger.warn(`Isochrone fallback failed: ${(err as Error).message}`);
+			return [];
+		}
 	}
 
 	/** A regenerated anchored candidate would rebuild near the same bearing; skip it. */

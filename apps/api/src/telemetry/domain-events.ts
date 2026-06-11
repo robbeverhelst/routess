@@ -26,6 +26,8 @@ export interface RouteGenerationCompletedEvent {
 	/** On success: the winning candidate's Overlap. On quality failure: the best rejected Overlap. */
 	bestOverlapPct?: number;
 	failureCode?: string;
+	/** True when the candidates came from the isochrone fallback tactic. */
+	usedIsochroneFallback?: boolean;
 }
 
 export interface UserRegisteredEvent {
