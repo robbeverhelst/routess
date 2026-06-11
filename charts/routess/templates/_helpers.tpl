@@ -226,3 +226,118 @@ env-config.js by its entrypoint at container start).
   value: {{ .Values.global.umami.websiteId | quote }}
 {{- end }}
 {{- end }}
+
+{{/*
+Full API container env. Shared by the api Deployment and the seed-refresh
+CronJob so they never drift: the refresh script boots the same AppModule and
+validates the same production config, so it needs every value the api needs.
+*/}}
+{{- define "routess.api.env" -}}
+- name: NODE_ENV
+  value: {{ .Values.api.env.nodeEnv | quote }}
+# Stamped into logs and the Prometheus target_info series so
+# Grafana can segment by release. Falls back to the image tag.
+- name: APP_VERSION
+  value: {{ .Values.api.env.appVersion | default .Values.api.image.tag | quote }}
+- name: PORT
+  value: {{ .Values.api.env.port | quote }}
+- name: FRONTEND_URLS
+  value: {{ include "routess.frontendUrls" . | quote }}
+- name: PUBLIC_SITE_URL
+  value: {{ .Values.api.env.publicSiteUrl | quote }}
+- name: SWAGGER_ENABLED
+  value: {{ .Values.api.env.swaggerEnabled | quote }}
+- name: SWAGGER_PATH
+  value: {{ .Values.api.env.swaggerPath | quote }}
+{{- with .Values.api.adminEmails }}
+- name: ADMIN_EMAILS
+  value: {{ join "," . | quote }}
+{{- end }}
+{{- $grafana := dict }}
+{{- range $k, $v := .Values.monitoring.grafanaUrls }}
+{{- if $v }}
+{{- $_ := set $grafana $k $v }}
+{{- end }}
+{{- end }}
+{{- if $grafana }}
+- name: GRAFANA_URLS
+  value: {{ $grafana | toJson | quote }}
+{{- end }}
+- name: JWT_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "routess.fullname" . }}-api
+      key: jwt-secret
+- name: GOOGLE_CLIENT_ID
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "routess.fullname" . }}-api
+      key: google-client-id
+- name: GOOGLE_CLIENT_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "routess.fullname" . }}-api
+      key: google-client-secret
+- name: DB_HOST
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "routess.fullname" . }}-api
+      key: db-host
+- name: DB_PORT
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "routess.fullname" . }}-api
+      key: db-port
+- name: DB_USER
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "routess.fullname" . }}-api
+      key: db-user
+- name: DB_PASSWORD
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "routess.fullname" . }}-api
+      key: db-password
+- name: DB_NAME
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "routess.fullname" . }}-api
+      key: db-name
+- name: ANALYTICS_SALT
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "routess.fullname" . }}-api
+      key: analytics-salt
+- name: PAT_PEPPER
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "routess.fullname" . }}-api
+      key: pat-pepper
+- name: EMAIL_FROM
+  value: {{ .Values.api.env.emailFrom | quote }}
+{{- with .Values.api.env.valhallaUrl }}
+- name: VALHALLA_URL
+  value: {{ . | quote }}
+{{- end }}
+{{- with .Values.api.env.mapboxPublicToken }}
+- name: MAPBOX_PUBLIC_TOKEN
+  value: {{ . | quote }}
+{{- end }}
+{{- with .Values.api.env.geocodingReferer }}
+- name: GEOCODING_REFERER
+  value: {{ . | quote }}
+{{- end }}
+{{- if .Values.redis.enabled }}
+- name: REDIS_URL
+  value: "redis://{{ include "routess.fullname" . }}-redis:{{ .Values.redis.service.port }}"
+{{- end }}
+{{- with .Values.api.env.generationQuotaPerDay }}
+- name: GENERATION_QUOTA_PER_DAY
+  value: {{ . | quote }}
+{{- end }}
+- name: RESEND_API_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "routess.fullname" . }}-api
+      key: resend-api-key
+{{- end }}

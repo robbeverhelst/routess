@@ -150,12 +150,16 @@ api:
     # Weekly, Monday 04:15 UTC. Sources gate themselves on refreshIntervalDays,
     # so a frequent schedule only re-pulls what is actually due.
     schedule: "15 4 * * 1"
+    # The refresh boots the full AppModule and holds many sources' geometry in
+    # memory while parsing (EuroVelo's 17 feeds, OSM Belgium's ~3k relations),
+    # so it needs far more headroom than the API server. 512Mi OOM-killed it.
     resources:
       requests:
-        cpu: 50m
-        memory: 192Mi
-      limits:
+        cpu: 250m
         memory: 512Mi
+      limits:
+        cpu: "2"
+        memory: 2Gi
   # Email allowlist for admin role. Source of truth for User.role; reconciled at
   # login via AuthService. Empty list disables reconciliation entirely (existing
   # roles are preserved). See ADR-0015.
