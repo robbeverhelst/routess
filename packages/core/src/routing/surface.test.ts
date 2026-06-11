@@ -3,7 +3,7 @@ import {
 	bucketMatchesPreference,
 	bucketSurfaceType,
 	isSurfaceMismatch,
-	SURFACE_MISMATCH_THRESHOLD,
+	SURFACE_MISMATCH_THRESHOLDS,
 	surfaceMismatchFraction,
 } from "./surface";
 import type { SurfaceBucket } from "./types";
@@ -87,18 +87,27 @@ describe("surfaceMismatchFraction", () => {
 describe("isSurfaceMismatch", () => {
 	const zero: Record<SurfaceBucket, number> = { paved: 0, compacted: 0, unpaved: 0, path: 0 };
 
-	it("is false at exactly the threshold", () => {
-		const violating = SURFACE_MISMATCH_THRESHOLD * 1000;
+	it("is false at exactly the preference's threshold", () => {
+		const violating = SURFACE_MISMATCH_THRESHOLDS.paved * 1000;
 		const matching = 1000 - violating;
 		expect(isSurfaceMismatch({ ...zero, paved: matching, unpaved: violating }, "paved")).toBe(false);
 	});
 
-	it("is true above the threshold", () => {
-		expect(isSurfaceMismatch({ ...zero, paved: 900, unpaved: 100 }, "paved")).toBe(true);
+	it("warns on a paved route with real gravel in it", () => {
+		expect(isSurfaceMismatch({ ...zero, paved: 700, unpaved: 300 }, "paved")).toBe(true);
 	});
 
-	it("is false below the threshold", () => {
-		expect(isSurfaceMismatch({ ...zero, paved: 990, unpaved: 10 }, "paved")).toBe(false);
+	it("tolerates moderate gravel on a paved route", () => {
+		expect(isSurfaceMismatch({ ...zero, paved: 900, unpaved: 100 }, "paved")).toBe(false);
+	});
+
+	it("tolerates the paved connectors gravel reality requires", () => {
+		// 50% tarmac on an unpaved ride is normal, not a warning.
+		expect(isSurfaceMismatch({ ...zero, paved: 500, unpaved: 500 }, "unpaved")).toBe(false);
+	});
+
+	it("warns when an unpaved ride is mostly tarmac", () => {
+		expect(isSurfaceMismatch({ ...zero, paved: 700, unpaved: 300 }, "unpaved")).toBe(true);
 	});
 
 	it("is always false for mixed pref", () => {

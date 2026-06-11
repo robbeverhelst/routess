@@ -19,7 +19,7 @@ vi.mock("./valhallaClient", () => ({
 }));
 
 import { useRoutingStore } from "@/stores/routingStore";
-import { getRoute } from "./RouteCalculationService";
+import { capturePreEditState, getRoute, patchRoute } from "./RouteCalculationService";
 
 const flushMicrotasks = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
@@ -140,6 +140,58 @@ describe("RouteCalculationService.getRoute — elevation lifecycle", () => {
 		await flushMicrotasks();
 
 		expect(useRoutingStore.getState().elevationGain).toBeUndefined();
+	});
+
+	it("re-routes the dead via's span when undoing an add (restore must not keep the detour)", async () => {
+		// Route A → B with a detour through the added via D: the undo restores
+		// waypoints [A, B], so the rendered path must lose D's detour.
+		const a: Coordinate = [0, 0];
+		const b: Coordinate = [0.02, 0];
+		const detour: Coordinate = [0.01, 0.01];
+		useRoutingStore.getState().setWaypoints([wp(a), wp(detour), wp(b)]);
+		useRoutingStore.getState().setRoutePath([a, detour, b]);
+		useRoutingStore.setState({ distanceMeters: 3000, durationSeconds: 600, hasRoute: true });
+
+		// capture mirrors RouteDraftEditor.undo: prev holds the post-add state.
+		const prev = capturePreEditState();
+		// The store's undo restores the pre-add waypoints.
+		useRoutingStore.getState().setWaypoints([wp(a), wp(b)]);
+
+		computeRouteMock.mockResolvedValue({
+			ok: true,
+			routePath: [a, [0.01, 0], b],
+			distanceKm: 2.2,
+			durationMinutes: 8,
+		});
+		sampleAndComputeMock.mockReturnValue(new Promise(() => {}));
+
+		const result = await patchRoute(mapStub, "test-token", prev, { restore: true });
+		expect(result.success).toBe(true);
+
+		const path = useRoutingStore.getState().routePath;
+		// The detour coordinate must be gone from the rendered path.
+		expect(path.some(([lon, lat]) => lon === detour[0] && lat === detour[1])).toBe(false);
+		expect(computeRouteMock).toHaveBeenCalledTimes(1);
+	});
+
+	it("keeps the trim-don't-route restore for undo of a move-back-on-path", async () => {
+		// Same waypoint count, every restored waypoint on the previous path:
+		// the shortcut may trim instead of routing.
+		const a: Coordinate = [0, 0];
+		const mid: Coordinate = [0.01, 0];
+		const b: Coordinate = [0.02, 0];
+		useRoutingStore.getState().setWaypoints([wp(a), wp(mid), wp(b)]);
+		useRoutingStore.getState().setRoutePath([a, mid, b]);
+		useRoutingStore.setState({ distanceMeters: 2200, durationSeconds: 480, hasRoute: true });
+
+		const prev = capturePreEditState();
+		useRoutingStore.getState().setWaypoints([wp(a), wp(mid), wp(b)]);
+		sampleAndComputeMock.mockReturnValue(new Promise(() => {}));
+
+		const result = await patchRoute(mapStub, "test-token", prev, { restore: true });
+		expect(result.success).toBe(true);
+		expect(computeRouteMock).not.toHaveBeenCalled();
+		expect(useRoutingStore.getState().routePath).toEqual([a, mid, b]);
 	});
 
 	it("commits the prefs that produced a successful route onto the draft", async () => {

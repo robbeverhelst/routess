@@ -52,10 +52,20 @@ export function surfaceMismatchFraction(metersByBucket: Record<SurfaceBucket, nu
 	return violating / total;
 }
 
-export const SURFACE_MISMATCH_THRESHOLD = 0.05;
+// A SurfaceType is a bias, not a guarantee, and the two strict preferences
+// are not symmetric: a paved route can realistically be ~100% paved, while
+// an unpaved ride always needs paved connectors between the good parts —
+// 30-60% tarmac is normal gravel reality in most regions. The warning only
+// fires when the preference visibly failed: a "paved" route with real gravel
+// in it, or an "unpaved" ride that is mostly tarmac.
+export const SURFACE_MISMATCH_THRESHOLDS: Record<SurfaceType, number> = {
+	mixed: 1,
+	paved: 0.2,
+	unpaved: 0.6,
+};
 
 export function isSurfaceMismatch(metersByBucket: Record<SurfaceBucket, number>, pref: SurfaceType): boolean {
-	return surfaceMismatchFraction(metersByBucket, pref) > SURFACE_MISMATCH_THRESHOLD;
+	return surfaceMismatchFraction(metersByBucket, pref) > SURFACE_MISMATCH_THRESHOLDS[pref];
 }
 
 // Surface composition persisted on a saved Route (ADR 0032): the result of

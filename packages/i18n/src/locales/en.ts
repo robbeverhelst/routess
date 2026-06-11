@@ -908,9 +908,9 @@ export const en: Record<string, string> = {
 	"routing.surface.paved": "Paved",
 	"routing.surface.mixed": "Mixed",
 	"routing.surface.unpaved": "Unpaved",
-	"routing.surface.mismatchTitle": "This route doesn't match your '{pref}' preference",
+	"routing.surface.mismatchTitle": "Your '{pref}' preference barely applied here",
 	"routing.surface.mismatchBody":
-		"{pct}% of the route is on surfaces that don't match. Adjust preferences or move waypoints.",
+		"{pct}% of the route is on other surfaces. The preference is a bias, not a guarantee; this may be the best mix this area allows.",
 	"routing.ferries.label": "Avoid ferries",
 	"routing.ferries.hint": "Skip routes that cross water by ferry",
 	"route.provenance.mapboxLegacy": "Originally planned with a previous routing engine",

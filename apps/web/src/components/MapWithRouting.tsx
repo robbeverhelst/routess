@@ -119,6 +119,19 @@ const MapWithRoutingContent: React.FC<MapboxMapProps> = ({
 		mapboxToken: MAPBOX_TOKEN,
 	});
 
+	// Self-heal a rehydrated draft whose RoutePath is missing (a quota-trimmed
+	// persisted snapshot keeps waypoints and metrics but sheds the path):
+	// recompute from the intact waypoints instead of showing markers with no
+	// route line. Idempotent: once the path exists the condition never holds.
+	useEffect(() => {
+		if (!editor) return;
+		const state = useRoutingStore.getState();
+		if (state.hasRoute && state.waypoints.length >= 2 && state.routePath.length < 2) {
+			Logger.info("[MapWithRouting] Rehydrated draft has waypoints but no RoutePath; recomputing.");
+			void editor.recalculate();
+		}
+	}, [editor]);
+
 	useEffect(() => {
 		const onUndo = () => {
 			void handleUndo();

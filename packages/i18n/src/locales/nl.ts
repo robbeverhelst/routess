@@ -887,9 +887,9 @@ export const nl: Record<string, string> = {
 	"routing.surface.paved": "Verhard",
 	"routing.surface.mixed": "Gemengd",
 	"routing.surface.unpaved": "Onverhard",
-	"routing.surface.mismatchTitle": "Deze route past niet bij je '{pref}'-voorkeur",
+	"routing.surface.mismatchTitle": "Je '{pref}'-voorkeur kwam hier amper uit de verf",
 	"routing.surface.mismatchBody":
-		"{pct}% van de route ligt op een ondergrond die niet past. Pas je voorkeuren aan of verplaats waypoints.",
+		"{pct}% van de route ligt op een andere ondergrond. De voorkeur is een bias, geen garantie; dit is mogelijk de beste mix die hier kan.",
 	"routing.ferries.label": "Veerboten vermijden",
 	"routing.ferries.hint": "Sla routes over die via een veerboot het water oversteken",
 	"route.provenance.mapboxLegacy": "Oorspronkelijk gepland met een vorige routeringsengine",

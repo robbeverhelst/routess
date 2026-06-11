@@ -9,9 +9,10 @@ interface Props {
 	preference: SurfaceType | null | undefined;
 }
 
-// A1: shows a small warning when the actual surface composition violates the
-// user's surfacePreference by more than SURFACE_MISMATCH_THRESHOLD (5%).
-// "mixed" preference is permissive and never produces a mismatch.
+// A1: shows a small warning when the surfacePreference visibly failed, per
+// the per-preference SURFACE_MISMATCH_THRESHOLDS (paved routes tolerate far
+// less gravel than unpaved rides tolerate connector tarmac). "mixed" is
+// permissive and never produces a mismatch.
 export function SurfaceMismatchBadge({ breakdown, preference }: Props) {
 	const t = useT();
 	if (!breakdown || !preference || preference === "mixed") return null;
