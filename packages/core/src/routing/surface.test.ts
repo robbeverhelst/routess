@@ -102,12 +102,13 @@ describe("isSurfaceMismatch", () => {
 	});
 
 	it("tolerates the paved connectors gravel reality requires", () => {
-		// 50% tarmac on an unpaved ride is normal, not a warning.
+		// Even ~70% tarmac is a normal unpaved-preferring walk in Flanders.
 		expect(isSurfaceMismatch({ ...zero, paved: 500, unpaved: 500 }, "unpaved")).toBe(false);
+		expect(isSurfaceMismatch({ ...zero, paved: 700, unpaved: 300 }, "unpaved")).toBe(false);
 	});
 
-	it("warns when an unpaved ride is mostly tarmac", () => {
-		expect(isSurfaceMismatch({ ...zero, paved: 700, unpaved: 300 }, "unpaved")).toBe(true);
+	it("warns when an unpaved ride is essentially all tarmac", () => {
+		expect(isSurfaceMismatch({ ...zero, paved: 800, unpaved: 200 }, "unpaved")).toBe(true);
 	});
 
 	it("is always false for mixed pref", () => {
