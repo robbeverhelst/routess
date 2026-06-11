@@ -1,7 +1,7 @@
 "use client";
 
 import "mapbox-gl/dist/mapbox-gl.css";
-import { haversineDistance } from "@routess/core";
+import { haversineDistance } from "@routess/core/utils";
 import { landingAccents } from "@routess/design-tokens";
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";

@@ -41,7 +41,9 @@ export class I18nService implements II18nService {
 		if (replacements) {
 			Object.keys(replacements).forEach((placeholder) => {
 				const value = replacements[placeholder];
-				text = text.replaceAll(`{${placeholder}}`, value);
+				// Function replacer: a plain string would apply $-substitution
+				// semantics, corrupting values that contain $$ or $&.
+				text = text.replaceAll(`{${placeholder}}`, () => value);
 			});
 		}
 

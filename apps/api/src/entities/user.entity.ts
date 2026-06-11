@@ -8,13 +8,15 @@ export function randomHandle(): string {
 	return `user-${randomBytes(4).toString("hex")}`;
 }
 
-export type UserRole = "user" | "admin";
+export const USER_ROLES = ["user", "admin"] as const;
+export type UserRole = (typeof USER_ROLES)[number];
 
 // 'active' is the normal state. 'pending_hard_delete' means the User has
 // requested self-deletion and is in the grace window before the hard-delete
 // cron purges them (ADR 0017). Distinct from admin-driven soft-delete (ADR 0016)
 // which leaves deletionStatus = 'active' and is reversible by relogin.
-export type UserDeletionStatus = "active" | "pending_hard_delete";
+export const USER_DELETION_STATUSES = ["active", "pending_hard_delete"] as const;
+export type UserDeletionStatus = (typeof USER_DELETION_STATUSES)[number];
 
 @Entity()
 @Index({ properties: ["email"] })

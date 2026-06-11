@@ -1,5 +1,6 @@
 import { type GeoJSONSource, LngLatBounds, type Map as MapboxMap, type MapMouseEvent } from "mapbox-gl";
 import { useEffect } from "react";
+import { ROUTE_PREVIEW_COLOR } from "@/components/map/colors";
 import { type GenerationCandidateView, useGenerationStore } from "@/stores/generationStore";
 
 const SOURCE_ID = "generation-candidates";
@@ -47,7 +48,7 @@ function draw(map: MapboxMap, candidates: GenerationCandidateView[], selectedInd
 		source: SOURCE_ID,
 		filter: ["==", ["get", "selected"], false],
 		layout: { "line-cap": "round", "line-join": "round" },
-		paint: { "line-color": "#7d62ff", "line-width": 3, "line-opacity": 0.35 },
+		paint: { "line-color": ROUTE_PREVIEW_COLOR, "line-width": 3, "line-opacity": 0.35 },
 	});
 	map.addLayer({
 		id: SELECTED_LAYER_ID,
@@ -55,7 +56,7 @@ function draw(map: MapboxMap, candidates: GenerationCandidateView[], selectedInd
 		source: SOURCE_ID,
 		filter: ["==", ["get", "selected"], true],
 		layout: { "line-cap": "round", "line-join": "round" },
-		paint: { "line-color": "#7d62ff", "line-width": 4.5, "line-opacity": 0.95 },
+		paint: { "line-color": ROUTE_PREVIEW_COLOR, "line-width": 4.5, "line-opacity": 0.95 },
 	});
 }
 

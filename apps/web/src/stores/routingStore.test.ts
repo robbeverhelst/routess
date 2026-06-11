@@ -1,7 +1,11 @@
 import { emptyHistory, type Waypoint } from "@routess/core";
 import { vi } from "vitest";
 import { useRoutingStore } from "@/stores/routingStore";
-import { mockCoordinates } from "../test/utils";
+
+const mockCoordinates = {
+	berlin: [13.405, 52.52] as [number, number],
+	paris: [2.3522, 48.8566] as [number, number],
+};
 
 const mockLocalStorage = {
 	getItem: vi.fn(),
