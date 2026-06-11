@@ -12,7 +12,10 @@ import { APP_CONFIG } from "../config/config.module";
 // out-of-coverage bbox yields an empty pool and generation proceeds without
 // knooppunt mode — the toggle can never fail a generation.
 
-const TILE_FETCH_TIMEOUT_MS = 3000;
+// Generous enough for a cold TLS + CDN first hit (observed >3s once in dev,
+// which silently dropped knooppunt mode); warm fetches take ~100ms and the
+// decoded tiles cache for a week.
+const TILE_FETCH_TIMEOUT_MS = 5000;
 
 // Node networks rebuild monthly; a week-long TTL still refreshes well within
 // two builds. TileJSON refreshes hourly so a tiles-URL change rolls out fast.
