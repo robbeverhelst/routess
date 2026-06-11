@@ -55,6 +55,14 @@ export class SeedSource extends BaseEntity {
 	@Property({ type: "timestamp", nullable: true })
 	lastRefreshedAt?: Date;
 
+	// Outcome of the most recent automatic refresh: the admin panel's signal
+	// that a source silently broke. Null error = last run succeeded.
+	@Property({ type: "text", nullable: true })
+	lastRefreshError?: string;
+
+	@Property({ type: "json", nullable: true })
+	lastRefreshStats?: { inserted: number; updated: number; unchanged: number; removed: number } | null;
+
 	@OneToMany(
 		() => ExternalRoute,
 		(route) => route.source,

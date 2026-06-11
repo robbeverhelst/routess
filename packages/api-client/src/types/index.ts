@@ -89,6 +89,8 @@ export interface AdminSeedSource {
 	lastRefreshedAt: string | null;
 	nextRefreshAt: string | null;
 	automatic: boolean;
+	lastRefreshError: string | null;
+	lastRefreshStats: { inserted: number; updated: number; unchanged: number; removed: number } | null;
 }
 
 export interface AdminSeedSources {

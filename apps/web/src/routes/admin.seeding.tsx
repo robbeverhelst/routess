@@ -46,6 +46,7 @@ function AdminSeedingPage() {
 								<Th align="right">Routes</Th>
 								<Th align="right">Removed</Th>
 								<Th>Last sync</Th>
+								<Th>Last result</Th>
 								<Th>Next sync</Th>
 							</tr>
 						</thead>
@@ -65,6 +66,19 @@ function AdminSeedingPage() {
 										{source.removedCount}
 									</Td>
 									<Td muted>{source.lastRefreshedAt ? formatDate(source.lastRefreshedAt) : "never"}</Td>
+									<Td muted>
+										{source.lastRefreshError ? (
+											<span title={source.lastRefreshError}>
+												<Badge variant="default" dot>
+													failed
+												</Badge>
+											</span>
+										) : source.lastRefreshStats ? (
+											`+${source.lastRefreshStats.inserted} ~${source.lastRefreshStats.updated} −${source.lastRefreshStats.removed}`
+										) : (
+											"—"
+										)}
+									</Td>
 									<Td muted>
 										{source.automatic
 											? source.nextRefreshAt

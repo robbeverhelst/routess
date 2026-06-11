@@ -41,6 +41,9 @@ export interface SeedSourceStats {
 	// null = manual source (no feedUrl), never auto-refreshed
 	nextRefreshAt: string | null;
 	automatic: boolean;
+	// Outcome of the latest refresh attempt; error null = succeeded.
+	lastRefreshError: string | null;
+	lastRefreshStats: UpsertResult | null;
 }
 
 export interface RefreshRunResult {
@@ -173,10 +176,16 @@ export class ExternalRoutesService {
 					seeds.push(...adapter.parse(payload, { label: feed.label }));
 				}
 				const result = await this.upsertSeedRoutes(source.key, seeds);
+				source.lastRefreshError = undefined;
+				source.lastRefreshStats = result;
+				await this.em.flush();
 				results.push({ source: source.key, result });
 			} catch (error) {
-				// One broken source must not block the rest of the run.
-				results.push({ source: source.key, error: error instanceof Error ? error.message : String(error) });
+				// One broken source must not block the rest of the run; the error
+				// lands on the row so the admin panel shows it.
+				source.lastRefreshError = error instanceof Error ? error.message : String(error);
+				await this.em.flush();
+				results.push({ source: source.key, error: source.lastRefreshError });
 			}
 		}
 		return results;
@@ -209,6 +218,8 @@ export class ExternalRoutesService {
 					lastRefreshedAt: source.lastRefreshedAt?.toISOString() ?? null,
 					nextRefreshAt,
 					automatic,
+					lastRefreshError: source.lastRefreshError ?? null,
+					lastRefreshStats: source.lastRefreshStats ?? null,
 				};
 			}),
 		);

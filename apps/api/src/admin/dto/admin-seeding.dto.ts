@@ -31,6 +31,12 @@ export class AdminSeedSourceDto {
 
 	@ApiProperty({ description: "True when a green source has a stable feedUrl the CronJob can pull." })
 	automatic!: boolean;
+
+	@ApiPropertyOptional({ nullable: true, description: "Error of the latest refresh attempt; null = succeeded." })
+	lastRefreshError!: string | null;
+
+	@ApiPropertyOptional({ nullable: true, description: "Counts from the latest successful refresh." })
+	lastRefreshStats!: { inserted: number; updated: number; unchanged: number; removed: number } | null;
 }
 
 export class AdminSeedSourcesDto {
