@@ -264,6 +264,25 @@ export const nl: Dict = {
 		planYourOwn: "Plan je eigen route",
 		summaryTemplate: "{name} deelt {count} publieke routes op routess, samen goed voor {distance}.",
 	},
+	hub: {
+		activities: {
+			cycle: {
+				eyebrow: "Fietsroutes",
+				title: "Fietsroutes in {place}",
+				description:
+					"{count} fietsroutes in en rond {place}. Bekijk ze op de kaart, bewerk ze en exporteer de GPX gratis met routess.",
+				intro:
+					"Rij een van de {count} fietsroutes die starten in {place}. Elke route is gratis te bekijken, te bewerken en te exporteren als GPX.",
+			},
+		},
+		stats: { routes: "Routes", totalDistance: "Totale afstand", elevation: "Hoogtemeters", region: "Regio" },
+		byAuthor: "door {name}",
+		cta: {
+			title: "Staat je favoriete rit rond {place} er nog niet tussen?",
+			body: "Stippel hem zelf uit in een paar minuten, gratis, en deel hem met een link.",
+		},
+		planYourOwn: "Plan je eigen route",
+	},
 	meta: {
 		landing: {
 			title: "routess · plan routes om te lopen, fietsen & wandelen",

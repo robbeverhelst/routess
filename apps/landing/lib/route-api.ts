@@ -29,6 +29,9 @@ export interface PublicRouteSummary {
 	name: string;
 	distance?: number;
 	updatedAt: string;
+	// Canonical public-page slug: '{slug}-{id}' for user Routes, '{slug}-x{id}'
+	// for ExternalRoutes (ADR 0025 amendment).
+	slugId: string;
 }
 
 // `ref` is a numeric route id (public routes) or a 32-hex share token (unlisted).
@@ -39,6 +42,31 @@ export async function fetchPublicRoute(ref: number | string): Promise<PublicRout
 	if (res.status === 404) return null;
 	if (!res.ok) throw new Error(`Route fetch failed with ${res.status}`);
 	return (await res.json()) as PublicRoute;
+}
+
+export interface PublicExternalRoute {
+	id: number;
+	slugId: string;
+	name: string;
+	description?: string;
+	activity?: "run" | "cycle" | "walk";
+	tags: string[];
+	geometry: [number, number][];
+	distance?: number;
+	duration?: number;
+	elevationGain?: number;
+	source: { key: string; name: string; license: string; attribution: string; url: string };
+	kind: "external";
+	updatedAt: string;
+}
+
+// ExternalRoutes are immutable between weekly seed refreshes (ADR 0035), so a
+// longer revalidation window than user routes is safe.
+export async function fetchExternalRoute(externalId: number): Promise<PublicExternalRoute | null> {
+	const res = await fetch(`${API_URL}/api/v1/external-routes/${externalId}`, { next: { revalidate: 3600 } });
+	if (res.status === 404) return null;
+	if (!res.ok) throw new Error(`External route fetch failed with ${res.status}`);
+	return (await res.json()) as PublicExternalRoute;
 }
 
 // Full Indexable corpus for the sitemap, paged through X-Total-Count.

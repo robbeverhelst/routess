@@ -4,6 +4,7 @@ import { NestFactory } from "@nestjs/core";
 import { AppModule } from "../app.module";
 import { loadEnvironment } from "../config/app-config";
 import { ExternalRoutesService } from "../external-routes/external-routes.service";
+import { PlacesService } from "../places/places.service";
 
 const logger = new Logger("RefreshSeeds");
 
@@ -15,6 +16,7 @@ async function refreshSeeds(): Promise<void> {
 	const app = await NestFactory.createApplicationContext(AppModule, { logger: ["warn", "error"] });
 	const orm = app.get(MikroORM);
 	const externalRoutes = app.get(ExternalRoutesService);
+	const places = app.get(PlacesService);
 
 	await RequestContext.create(orm.em, async () => {
 		const runs = await externalRoutes.refreshDueSources();
@@ -26,6 +28,14 @@ async function refreshSeeds(): Promise<void> {
 				logger.log(
 					`${run.source}: ${run.result.inserted} inserted, ${run.result.updated} updated, ${run.result.unchanged} unchanged, ${run.result.removed} removed`,
 				);
+		}
+		// Newly seeded ExternalRoutes need a Place to count toward RegionalHubs
+		// (#236). Idempotent and fail-open, like the refresh itself.
+		try {
+			const { placed } = await places.backfillExternalMissing();
+			if (placed > 0) logger.log(`Places: ${placed} ExternalRoutes geocoded.`);
+		} catch (error) {
+			logger.warn(`External place backfill failed: ${error instanceof Error ? error.message : String(error)}`);
 		}
 		// A failed source exits non-zero so the CronJob surfaces it.
 		if (runs.some((r) => r.error)) process.exitCode = 1;

@@ -144,6 +144,15 @@ export interface Dict {
 		planYourOwn: string;
 		summaryTemplate: string;
 	};
+	hub: {
+		activities: {
+			cycle: { eyebrow: string; title: string; description: string; intro: string };
+		};
+		stats: { routes: string; totalDistance: string; elevation: string; region: string };
+		byAuthor: string;
+		cta: { title: string; body: string };
+		planYourOwn: string;
+	};
 	meta: {
 		landing: { title: string; description: string };
 		developers: { title: string; description: string };

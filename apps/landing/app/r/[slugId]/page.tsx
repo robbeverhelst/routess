@@ -6,7 +6,7 @@ import { type Dict, getDict } from "@/lib/content";
 import { APP_HOST, HTML_LANG, type Locale, SELF_HOST, SISTER_HOST } from "@/lib/i18n";
 import { serializeJsonLd } from "@/lib/json-ld";
 import { getLocale } from "@/lib/locale";
-import { fetchPublicRoute, PUBLIC_API_URL, type PublicRoute } from "@/lib/route-api";
+import { fetchExternalRoute, fetchPublicRoute, PUBLIC_API_URL } from "@/lib/route-api";
 import { Footer } from "../../components/Footer";
 import { Nav } from "../../components/Nav";
 
@@ -14,19 +14,73 @@ interface Params {
 	slugId: string;
 }
 
-async function resolveRoute(slugId: string): Promise<{ route: PublicRoute; canonicalSlugId: string } | null> {
+// One normalized view over both route kinds: user Routes and seeded
+// ExternalRoutes ('-x{id}' slugs, ADR 0035). The render-time combination is
+// the ODbL Produced Work; the only visible differences are the author line
+// versus the source attribution, and where the GPX comes from.
+interface RouteView {
+	name: string;
+	description?: string;
+	activity?: "run" | "cycle" | "walk";
+	tags: string[];
+	distance?: number;
+	duration?: number;
+	elevationGain?: number;
+	canonicalSlugId: string;
+	indexable: boolean;
+	user?: { name: string; handle: string };
+	source?: { name: string; attribution: string; url: string };
+	gpxHref: string;
+}
+
+async function resolveRoute(slugId: string): Promise<RouteView | null> {
 	const parsed = parseRouteSlugId(slugId);
-	// External (-x) slugs have no landing SSR yet (ADR 0035); the app serves them.
-	if (!parsed || parsed.externalId !== undefined) return null;
+	if (!parsed) return null;
+	if (parsed.externalId !== undefined) {
+		const route = await fetchExternalRoute(parsed.externalId);
+		if (!route) return null;
+		return {
+			name: route.name,
+			description: route.description,
+			activity: route.activity,
+			tags: route.tags,
+			distance: route.distance,
+			duration: route.duration,
+			elevationGain: route.elevationGain,
+			canonicalSlugId: route.slugId,
+			// ExternalRoutes are always public; the gate is the quality bar.
+			indexable: isRouteIndexable({
+				visibility: "public",
+				name: route.name,
+				distance: route.distance,
+				description: route.description,
+				tags: route.tags,
+			}),
+			source: route.source,
+			gpxHref: `${PUBLIC_API_URL}/api/v1/external-routes/${route.id}/gpx`,
+		};
+	}
 	const route = await fetchPublicRoute(parsed.id ?? parsed.token);
 	if (!route) return null;
 	// Public routes get the canonical id URL; unlisted keep the unguessable
 	// token so the link cannot be derived from the sequential id.
 	const canonicalRef = route.visibility === "public" ? route.id : route.shareToken;
-	return { route, canonicalSlugId: buildRouteSlugId(route.name, canonicalRef) };
+	return {
+		name: route.name,
+		description: route.description,
+		activity: route.activity,
+		tags: route.tags,
+		distance: route.distance,
+		duration: route.duration,
+		elevationGain: route.elevationGain,
+		canonicalSlugId: buildRouteSlugId(route.name, canonicalRef),
+		indexable: isRouteIndexable(route),
+		user: route.user,
+		gpxHref: `${PUBLIC_API_URL}/api/v1/routes/${route.id}/gpx`,
+	};
 }
 
-function summary(dict: Dict, route: PublicRoute): string {
+function summary(dict: Dict, route: RouteView): string {
 	const description = route.description?.trim();
 	if (description) return description;
 	const activity = dict.routePage.activities[route.activity ?? "route"] ?? dict.routePage.activities.route;
@@ -40,18 +94,16 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
 	const { slugId } = await params;
 	const resolved = await resolveRoute(slugId);
 	if (!resolved) return {};
-	const { route, canonicalSlugId } = resolved;
 	const locale = await getLocale();
 	const dict = getDict(locale);
 	const sisterLocale: Locale = locale === "en" ? "nl" : "en";
-	const path = `/r/${canonicalSlugId}`;
+	const path = `/r/${resolved.canonicalSlugId}`;
 	const url = `https://${SELF_HOST[locale]}${path}`;
-	const description = summary(dict, route);
-	const indexable = isRouteIndexable(route);
+	const description = summary(dict, resolved);
 	return {
-		title: route.name,
+		title: resolved.name,
 		description,
-		...(indexable ? {} : { robots: { index: false, follow: false } }),
+		...(resolved.indexable ? {} : { robots: { index: false, follow: false } }),
 		alternates: {
 			canonical: url,
 			languages: {
@@ -64,32 +116,31 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
 			type: "website",
 			url,
 			siteName: "routess",
-			title: route.name,
+			title: resolved.name,
 			description,
 			images: [{ url: `${url}/og.png`, width: 1200, height: 630 }],
 		},
-		twitter: { card: "summary_large_image", title: route.name, description },
+		twitter: { card: "summary_large_image", title: resolved.name, description },
 	};
 }
 
-function jsonLd(route: PublicRoute, canonicalSlugId: string, locale: Locale) {
+function jsonLd(route: RouteView, locale: Locale) {
 	const base = `https://${SELF_HOST[locale]}`;
 	return {
 		"@context": "https://schema.org",
 		"@type": "BreadcrumbList",
 		itemListElement: [
 			{ "@type": "ListItem", position: 1, name: "routess", item: `${base}/` },
-			{ "@type": "ListItem", position: 2, name: route.name, item: `${base}/r/${canonicalSlugId}` },
+			{ "@type": "ListItem", position: 2, name: route.name, item: `${base}/r/${route.canonicalSlugId}` },
 		],
 	};
 }
 
 export default async function PublicRoutePage({ params }: { params: Promise<Params> }) {
 	const { slugId } = await params;
-	const resolved = await resolveRoute(slugId);
-	if (!resolved) notFound();
-	const { route, canonicalSlugId } = resolved;
-	if (slugId !== canonicalSlugId) permanentRedirect(`/r/${canonicalSlugId}`);
+	const route = await resolveRoute(slugId);
+	if (!route) notFound();
+	if (slugId !== route.canonicalSlugId) permanentRedirect(`/r/${route.canonicalSlugId}`);
 	const locale = await getLocale();
 	const dict = getDict(locale);
 	const copy = dict.routePage;
@@ -142,12 +193,21 @@ export default async function PublicRoutePage({ params }: { params: Promise<Para
 							{/* Served by our own og.png proxy: crawler-safe (no Referer needed) and cached. */}
 							{/* biome-ignore lint/performance/noImgElement: proxied remote image, next/image adds nothing here */}
 							<img
-								src={`/r/${canonicalSlugId}/og.png`}
+								src={`/r/${route.canonicalSlugId}/og.png`}
 								alt={copy.mapAlt}
 								width={1200}
 								height={630}
 								style={{ width: "100%", height: "auto", borderRadius: 16, border: "1px solid var(--line)" }}
 							/>
+							{route.source ? (
+								// License obligation (ADR 0035): attribution on every
+								// externally-derived route page.
+								<p className="mono" style={{ fontSize: 13, opacity: 0.7, margin: "10px 0 0" }}>
+									<a href={route.source.url} rel="license noopener" style={{ color: "inherit" }}>
+										{route.source.attribution}
+									</a>
+								</p>
+							) : null}
 							{description ? (
 								<>
 									<h2 className="display" style={{ fontSize: 24, margin: "32px 0 8px" }}>
@@ -157,10 +217,10 @@ export default async function PublicRoutePage({ params }: { params: Promise<Para
 								</>
 							) : null}
 							<div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 32 }}>
-								<a className="btn btn-primary" href={`https://${APP_HOST}/r/${canonicalSlugId}`}>
+								<a className="btn btn-primary" href={`https://${APP_HOST}/r/${route.canonicalSlugId}`}>
 									{copy.openInApp}
 								</a>
-								<a className="btn btn-ghost" href={`${PUBLIC_API_URL}/api/v1/routes/${route.id}/gpx`}>
+								<a className="btn btn-ghost" href={route.gpxHref}>
 									{copy.downloadGpx}
 								</a>
 								<a className="btn btn-ghost" href={`https://${APP_HOST}`}>
@@ -176,7 +236,7 @@ export default async function PublicRoutePage({ params }: { params: Promise<Para
 				id="ld-route"
 				type="application/ld+json"
 				// biome-ignore lint/security/noDangerouslySetInnerHtml: serialized JSON-LD
-				dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd(route, canonicalSlugId, locale)) }}
+				dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd(route, locale)) }}
 			/>
 		</>
 	);
