@@ -9,10 +9,16 @@ const BRUGES: Coordinate = [3.2247, 51.2093];
 const CORRIDOR_KM = haversineDistance(GHENT, BRUGES);
 
 describe("planAtoBCandidates", () => {
-	it("offers only the direct plan when the target equals the shortest path", () => {
+	it("nudges quiet alternatives beside the direct plan when the target equals the shortest path", () => {
 		const plans = planAtoBCandidates(GHENT, BRUGES, CORRIDOR_KM * CIRCUITY_FACTOR);
-		expect(plans).toHaveLength(1);
+		expect(plans).toHaveLength(3);
 		expect(plans[0].viaPoints).toEqual([]);
+		// The nudged vias sit close to the corridor: a hair longer, much quieter.
+		for (const plan of plans.slice(1)) {
+			expect(plan.viaPoints).toHaveLength(1);
+			const crow = calculatePathDistance([GHENT, ...plan.viaPoints, BRUGES]);
+			expect(crow).toBeLessThan(CORRIDOR_KM * 1.05);
+		}
 	});
 
 	it("spends the stretch budget: detour plans crow-fly near the target", () => {

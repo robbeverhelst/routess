@@ -147,6 +147,7 @@ interface ValhallaTraceEdge {
 	// Valhalla returns the network membership mask as `bicycle_network`
 	// (the request filter key is `edge.bicycle_network`); 0 = not signed.
 	bicycle_network?: number | boolean;
+	road_class?: string;
 }
 
 interface ValhallaTraceResponse {
@@ -827,6 +828,7 @@ export class GenerationService {
 						"edge.begin_shape_index",
 						"edge.end_shape_index",
 						"edge.bicycle_network",
+						"edge.road_class",
 						"shape",
 					],
 					action: "include",
@@ -853,6 +855,7 @@ export class GenerationService {
 			midpoint: midpointOf(edge),
 			onBikeNetwork:
 				typeof edge.bicycle_network === "number" ? edge.bicycle_network > 0 : edge.bicycle_network === true,
+			roadClass: edge.road_class,
 		}));
 	}
 

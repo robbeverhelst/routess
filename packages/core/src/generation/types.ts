@@ -80,6 +80,8 @@ export interface CandidateEdge {
 	midpoint?: Coordinate;
 	/** Edge is part of a signed cycle network (Valhalla `bicycle_network`). */
 	onBikeNetwork?: boolean;
+	/** Valhalla road class ("primary", "residential", …) for Quietness. */
+	roadClass?: string;
 }
 
 /** A candidate after routing + map matching, before scoring. */
@@ -99,6 +101,8 @@ export interface CandidateScore {
 	distanceMatch: number;
 	surfaceFit: number;
 	shapeCompactness: number;
+	/** Quietness: 1 minus the busy-road (trunk/primary/secondary) share. */
+	quietness: number;
 	/** NetworkFit (CONTEXT.md): only present when knooppunt mode was active. */
 	networkFit?: number;
 }

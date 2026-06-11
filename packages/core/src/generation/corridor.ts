@@ -11,6 +11,20 @@ import type { CandidatePlan } from "./types";
 /** Detour offsets below this are noise; the direct route is the candidate. */
 const MIN_DETOUR_OFFSET_KM = 0.3;
 
+// When the target barely exceeds the shortest path, the budget affords no
+// real detour and the direct plan would be the only candidate — which on
+// Belgian corridors is usually the N-road (Valhalla rewards its separated
+// cycle track regardless of use_roads). A small sideways nudge pulls the
+// route onto parallel local roads at near-zero distance cost, so the picker
+// always has quiet alternatives next to the direct baseline.
+const QUIET_NUDGE_MIN_KM = 0.8;
+const QUIET_NUDGE_MAX_KM = 2;
+const QUIET_NUDGE_CORRIDOR_FRACTION = 0.06;
+
+function quietNudgeKm(corridorKm: number): number {
+	return Math.min(QUIET_NUDGE_MAX_KM, Math.max(QUIET_NUDGE_MIN_KM, corridorKm * QUIET_NUDGE_CORRIDOR_FRACTION));
+}
+
 /** Crow-flies length budget the routed target affords (circuity paid). */
 const crowBudgetKm = (targetDistanceKm: number): number => targetDistanceKm / CIRCUITY_FACTOR;
 
@@ -55,11 +69,12 @@ export function planAtoBCandidates(
 		if (!excluded.has(normalized)) plans.push({ bearingDeg: normalized, viaPoints });
 	};
 
-	// The direct path: the honest baseline (and the only plan when the target
-	// barely exceeds the shortest path).
+	// The direct path: the honest baseline.
 	push(heading, []);
 
-	const single = singleDetourOffsetKm(corridorKm, targetDistanceKm);
+	// Single-via detours always exist: budget-sized when the target affords
+	// one, otherwise the quiet nudge.
+	const single = Math.max(singleDetourOffsetKm(corridorKm, targetDistanceKm), quietNudgeKm(corridorKm));
 	if (single >= MIN_DETOUR_OFFSET_KM) {
 		const midpoint = destinationPoint(start, heading, corridorKm / 2);
 		for (const side of [90, -90]) {

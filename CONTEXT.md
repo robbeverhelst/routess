@@ -34,8 +34,12 @@ Score component measuring how much a candidate rides the **NodeNetwork**: for cy
 _Avoid_: network score, knooppunt score.
 
 **GenerationCandidate**:
-One scored loop produced by a RouteGeneration attempt: geometry, via points, Distance, ElevationGain, surface composition, and score components (**Overlap**, distance match, surface fit, shape compactness). Candidates shown to the user are mutually diverse (near-identical shapes are deduped, the issue's "duplicate avoidance"). Mediocre candidates are shown with their flaw labeled; unusable ones are dropped behind a quality floor. A GenerationCandidate is not a Route: it becomes one only after the user confirms and saves it.
+One scored route produced by a RouteGeneration attempt: geometry, via points, Distance, ElevationGain, surface composition, and score components (**Overlap**, distance match, surface fit, shape compactness or corridor sanity, **Quietness**, and **NetworkFit** when knooppunt mode is active). Candidates shown to the user are mutually diverse (near-identical shapes are deduped, the issue's "duplicate avoidance"). Mediocre candidates are shown with their flaw labeled; unusable ones are dropped behind a quality floor. A GenerationCandidate is not a Route: it becomes one only after the user confirms and saves it.
 _Avoid_: suggestion, alternative, option, variant.
+
+**Quietness** (of a GenerationCandidate):
+Score component: 1 minus the length-weighted share of busy roads (trunk/primary fully, secondary half). Exists because the routing engine rewards busy roads whenever they carry a separated cycle track, so candidate scoring is the only place left to prefer the quiet parallel road.
+_Avoid_: traffic score, safety score (it measures road class, not measured traffic).
 
 **Overlap** (of a GenerationCandidate):
 The fraction of a candidate's Distance that traverses the same underlying way more than once (measured via duplicated Valhalla `way_id`s, length-weighted). The primary quality signal: a pure out-and-back has ~100% Overlap, a clean loop near 0%. Drives the heaviest scoring weight and the quality floor.
