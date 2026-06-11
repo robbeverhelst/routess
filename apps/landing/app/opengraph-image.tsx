@@ -1,3 +1,4 @@
+import { brandHex } from "@routess/design-tokens";
 import { ImageResponse } from "next/og";
 import { getDict } from "@/lib/content";
 import { getLocale } from "@/lib/locale";
@@ -20,8 +21,7 @@ export default async function OGImage() {
 				flexDirection: "column",
 				justifyContent: "space-between",
 				padding: "72px 80px",
-				background:
-					"radial-gradient(ellipse at 20% 0%, #d8efd6 0%, transparent 55%), radial-gradient(ellipse at 100% 100%, #e2dcfb 0%, transparent 55%), #fdfaf2",
+				background: `radial-gradient(ellipse at 20% 0%, #d8efd6 0%, transparent 55%), radial-gradient(ellipse at 100% 100%, #e2dcfb 0%, transparent 55%), ${brandHex.paper}`,
 				fontFamily: "system-ui, sans-serif",
 				color: "#1a1530",
 			}}
@@ -32,7 +32,7 @@ export default async function OGImage() {
 						width: 64,
 						height: 64,
 						borderRadius: 14,
-						background: "#5b3df5",
+						background: brandHex.indigo,
 						display: "flex",
 						alignItems: "center",
 						justifyContent: "center",
