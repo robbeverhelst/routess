@@ -268,8 +268,12 @@ export const en: Dict = {
 					"Ride one of {count} cycling routes starting in {place}. Every route is free to view, edit, and export as GPX.",
 			},
 		},
-		stats: { routes: "Routes", totalDistance: "Total distance", region: "Region" },
-		routesTitle: "Routes in {place}",
+		stats: { routes: "Routes", totalDistance: "Total distance", elevation: "Climbing", region: "Region" },
+		byAuthor: "by {name}",
+		cta: {
+			title: "Your favourite ride around {place} isn't here yet?",
+			body: "Plot it yourself in a couple of minutes, free, and share it with a link.",
+		},
 		planYourOwn: "Plan your own route",
 	},
 	meta: {

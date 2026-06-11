@@ -148,8 +148,9 @@ export interface Dict {
 		activities: {
 			cycle: { eyebrow: string; title: string; description: string; intro: string };
 		};
-		stats: { routes: string; totalDistance: string; region: string };
-		routesTitle: string;
+		stats: { routes: string; totalDistance: string; elevation: string; region: string };
+		byAuthor: string;
+		cta: { title: string; body: string };
 		planYourOwn: string;
 	};
 	meta: {

@@ -275,8 +275,12 @@ export const nl: Dict = {
 					"Rij een van de {count} fietsroutes die starten in {place}. Elke route is gratis te bekijken, te bewerken en te exporteren als GPX.",
 			},
 		},
-		stats: { routes: "Routes", totalDistance: "Totale afstand", region: "Regio" },
-		routesTitle: "Routes in {place}",
+		stats: { routes: "Routes", totalDistance: "Totale afstand", elevation: "Hoogtemeters", region: "Regio" },
+		byAuthor: "door {name}",
+		cta: {
+			title: "Staat je favoriete rit rond {place} er nog niet tussen?",
+			body: "Stippel hem zelf uit in een paar minuten, gratis, en deel hem met een link.",
+		},
 		planYourOwn: "Plan je eigen route",
 	},
 	meta: {
