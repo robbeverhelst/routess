@@ -39,6 +39,7 @@
 		"seed:file": "bun src/scripts/seed-file.ts"
 	},
 	"dependencies": {
+		"@mapbox/vector-tile": "^3.0.0",
 		"@mikro-orm/cli": "^7.0.0",
 		"@mikro-orm/core": "^7.0.0",
 		"@mikro-orm/decorators": "^7.0.0",
@@ -78,6 +79,7 @@
 		"passport": "^0.7.0",
 		"passport-http-bearer": "^1.0.1",
 		"passport-jwt": "^4.0.1",
+		"pbf": "^5.1.0",
 		"pg": "^8.16.2",
 		"pino": "^10.0.0",
 		"pino-http": "^11.0.0",

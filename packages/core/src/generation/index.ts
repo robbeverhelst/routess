@@ -1,3 +1,4 @@
+export * from "./anchors";
 export * from "./fan";
 export * from "./scoring";
 export * from "./selection";

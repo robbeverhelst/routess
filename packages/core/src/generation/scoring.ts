@@ -30,6 +30,25 @@ export function generationScoreWeights(pref: SurfaceType): GenerationScoreWeight
 	return pref === "mixed" ? GENERATION_SCORE_WEIGHTS : STRICT_SURFACE_SCORE_WEIGHTS;
 }
 
+// NetworkFit (knooppunt mode, ADR-0037): when active it takes this share of
+// the total and the base weights shrink proportionally, so the relative
+// balance between Overlap/distance/surface/shape never changes.
+export const NETWORK_FIT_WEIGHT = 0.2;
+
+/**
+ * Length-weighted fraction of the candidate riding signed cycle-network
+ * edges. The cycle NetworkFit signal; walk/run uses anchoredViaFraction.
+ */
+export function bikeNetworkFraction(edges: CandidateEdge[]): number {
+	let totalKm = 0;
+	let networkKm = 0;
+	for (const edge of edges) {
+		totalKm += edge.lengthKm;
+		if (edge.onBikeNetwork) networkKm += edge.lengthKm;
+	}
+	return totalKm <= 0 ? 0 : Math.min(1, networkKm / totalKm);
+}
+
 /** Distance within ±10% of target scores 1; beyond, a gaussian falloff. */
 const DISTANCE_FREE_BAND = 0.1;
 const DISTANCE_FALLOFF_SIGMA = 0.25;
@@ -124,6 +143,7 @@ export function scoreCandidate(
 	targetDistanceKm: number,
 	surfacePreference: SurfaceType,
 	metersByBucket: Record<SurfaceBucket, number>,
+	options: { networkFit?: number } = {},
 ): CandidateScore {
 	const overlap = overlapFraction(candidate.edges);
 	const distanceMatch = distanceMatchScore(candidate.distanceKm, targetDistanceKm);
@@ -131,11 +151,15 @@ export function scoreCandidate(
 	const compactness = shapeCompactness(candidate.geometry);
 
 	const w = generationScoreWeights(surfacePreference);
+	const networkFit = options.networkFit;
+	const baseScale = networkFit === undefined ? 1 : 1 - NETWORK_FIT_WEIGHT;
 	const total =
-		w.overlap * (1 - overlap) +
-		w.distanceMatch * distanceMatch +
-		w.surfaceFit * surfaceFit +
-		w.shapeCompactness * compactness;
+		baseScale *
+			(w.overlap * (1 - overlap) +
+				w.distanceMatch * distanceMatch +
+				w.surfaceFit * surfaceFit +
+				w.shapeCompactness * compactness) +
+		(networkFit === undefined ? 0 : NETWORK_FIT_WEIGHT * networkFit);
 
 	return {
 		total,
@@ -143,5 +167,6 @@ export function scoreCandidate(
 		distanceMatch,
 		surfaceFit,
 		shapeCompactness: compactness,
+		...(networkFit === undefined ? {} : { networkFit }),
 	};
 }

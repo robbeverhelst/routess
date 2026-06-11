@@ -319,6 +319,10 @@ validates the same production config, so it needs every value the api needs.
 - name: VALHALLA_URL
   value: {{ . | quote }}
 {{- end }}
+{{- with .Values.api.env.nodeTilesUrl }}
+- name: NODE_TILES_URL
+  value: {{ . | quote }}
+{{- end }}
 {{- with .Values.api.env.mapboxPublicToken }}
 - name: MAPBOX_PUBLIC_TOKEN
   value: {{ . | quote }}

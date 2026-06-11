@@ -134,6 +134,11 @@ api:
     # `http://valhalla.valhalla.svc.cluster.local:8002`, an ingress, or a
     # Tailscale hostname.
     valhallaUrl: ""
+    # TileJSON URL of the node-network tiles served by go-pmtiles (ADR
+    # 0033/0037), e.g. https://tiles.routess.com/nodes.json. The generation
+    # pipeline derives knooppunt anchor pools from it; usually the same URL
+    # as the web app's VITE_NODE_TILES_URL. Empty disables knooppunt mode.
+    nodeTilesUrl: ""
     # Mapbox public token for server-side reverse geocoding (Place derivation,
     # CONTEXT.md "Place"). Public pk token, URL-restricted; the API sends the
     # referer below with each request. Leave empty to disable derivation

@@ -73,6 +73,10 @@ export interface AppConfig {
 		// /trace_attributes through this so the browser never hits Valhalla
 		// directly (it lives on a cluster-internal Service).
 		valhallaUrl: string;
+		// TileJSON URL of the node-network tiles served by go-pmtiles (ADR
+		// 0033/0037); the generation pipeline derives knooppunt anchor pools
+		// from it. Empty disables knooppunt mode (silent degrade).
+		nodeTilesUrl: string;
 	};
 	geocoding: {
 		// Mapbox public token for server-side reverse geocoding (Place
@@ -269,6 +273,7 @@ export function getAppConfig(): AppConfig {
 		},
 		routing: {
 			valhallaUrl: (process.env.VALHALLA_URL ?? "").replace(/\/+$/, ""),
+			nodeTilesUrl: (process.env.NODE_TILES_URL ?? "").trim(),
 		},
 		geocoding: {
 			mapboxToken: process.env.MAPBOX_PUBLIC_TOKEN ?? "",
