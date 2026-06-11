@@ -4,7 +4,13 @@ import type { Dict } from "@/lib/content";
 import { AccentInline } from "./AccentText";
 
 // Same surface-breakdown colors as the app's RouteProfileChart.
-const BUCKET_COLORS = Object.values(surfaceBucketColors);
+// Explicit order: paired by index with dict.surface.buckets.
+const BUCKET_COLORS = [
+	surfaceBucketColors.paved,
+	surfaceBucketColors.compacted,
+	surfaceBucketColors.unpaved,
+	surfaceBucketColors.path,
+];
 
 export function SurfaceSection({ dict }: { dict: Dict }) {
 	const buckets = dict.surface.buckets;
