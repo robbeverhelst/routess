@@ -186,12 +186,40 @@ const dropLegacyMetricStrings = (persisted: Record<string, unknown> & Partial<Ro
 };
 
 // localStorage wrapper that survives QuotaExceededError on long routes.
-// routePath/elevationProfile can each be tens of thousands of coordinates;
-// hitting the ~5MB quota would otherwise throw out of setItem and abort the
-// entire store update (see RouteCalculationService.setRoutePath). On overflow
-// we drop those two derived fields and persist the rest; they repopulate the
-// next time the user nudges a waypoint and recompute fires.
-function createQuotaSafeStorage(logger: Logger) {
+// The persisted draft can grow large (a dense RoutePath, the 50-deep undo
+// history of full waypoint arrays, the elevation profile); hitting the ~5MB
+// quota would otherwise throw out of setItem and abort the entire store
+// update. On overflow we shed state cheapest-loss-first: the undo history
+// (a convenience, and usually the biggest block), then the elevation profile
+// (recomputed from the path), and only as a last resort the RoutePath — the
+// route itself, which the web app can self-heal by recomputing from the
+// persisted waypoints on the next boot.
+const QUOTA_TRIM_STEPS: { fields: string[]; trim: (state: Record<string, unknown>) => void }[] = [
+	{
+		fields: ["history"],
+		trim: (state) => {
+			state.history = { past: [], future: [] };
+			state.canUndo = false;
+			state.canRedo = false;
+		},
+	},
+	{
+		fields: ["elevationProfile"],
+		trim: (state) => {
+			state.elevationProfile = undefined;
+		},
+	},
+	{
+		fields: ["routePath"],
+		trim: (state) => {
+			state.routePath = [];
+		},
+	},
+];
+
+const isQuotaError = (err: unknown): boolean => err instanceof DOMException && err.name === "QuotaExceededError";
+
+export function createQuotaSafeStorage(logger: Logger) {
 	return {
 		getItem: (name: string): string | null => {
 			try {
@@ -205,20 +233,26 @@ function createQuotaSafeStorage(logger: Logger) {
 				localStorage.setItem(name, value);
 				return;
 			} catch (err) {
-				if (!(err instanceof DOMException) || err.name !== "QuotaExceededError") {
-					throw err;
-				}
+				if (!isQuotaError(err)) throw err;
 			}
 			try {
 				const parsed = JSON.parse(value) as { state?: Record<string, unknown> };
-				if (parsed.state) {
-					parsed.state.routePath = [];
-					parsed.state.elevationProfile = undefined;
+				if (!parsed.state) return;
+				const dropped: string[] = [];
+				for (const step of QUOTA_TRIM_STEPS) {
+					step.trim(parsed.state);
+					dropped.push(...step.fields);
+					try {
+						localStorage.setItem(name, JSON.stringify(parsed));
+						logger.warn(
+							`[RoutingStore] localStorage quota exceeded; dropped ${dropped.join(", ")} from persisted snapshot`,
+						);
+						return;
+					} catch (err) {
+						if (!isQuotaError(err)) throw err;
+					}
 				}
-				localStorage.setItem(name, JSON.stringify(parsed));
-				logger.warn(
-					"[RoutingStore] localStorage quota exceeded; dropped routePath/elevationProfile from persisted snapshot",
-				);
+				logger.error("[RoutingStore] Could not persist snapshot even after trimming all derived state");
 			} catch (retryErr) {
 				logger.error("[RoutingStore] Failed to persist trimmed snapshot:", retryErr);
 			}

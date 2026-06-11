@@ -1,3 +1,4 @@
+import { haversineDistance } from "@routess/core";
 import { useEffect } from "react";
 import { useLocalStorageInit } from "@/components/hooks/useLocalStorageInit";
 import { useMapWithRoutingState } from "@/components/hooks/useMapWithRoutingState";
@@ -118,6 +119,19 @@ const MapWithRoutingContent: React.FC<MapboxMapProps> = ({
 		mapboxToken: MAPBOX_TOKEN,
 	});
 
+	// Self-heal a rehydrated draft whose RoutePath is missing (a quota-trimmed
+	// persisted snapshot keeps waypoints and metrics but sheds the path):
+	// recompute from the intact waypoints instead of showing markers with no
+	// route line. Idempotent: once the path exists the condition never holds.
+	useEffect(() => {
+		if (!editor) return;
+		const state = useRoutingStore.getState();
+		if (state.hasRoute && state.waypoints.length >= 2 && state.routePath.length < 2) {
+			Logger.info("[MapWithRouting] Rehydrated draft has waypoints but no RoutePath; recomputing.");
+			void editor.recalculate();
+		}
+	}, [editor]);
+
 	useEffect(() => {
 		const onUndo = () => {
 			void handleUndo();
@@ -191,14 +205,24 @@ const MapWithRoutingContent: React.FC<MapboxMapProps> = ({
 		};
 		const onGenerateLoop = (detail: AppEventMap["routess:generate-loop"]) => {
 			const center = mapRef.current?.getCenter();
-			const start = detail?.start ?? (center ? ([center.lng, center.lat] as [number, number]) : undefined);
+			const mapCenter = center ? ([center.lng, center.lat] as [number, number]) : undefined;
+			const start = detail?.start ?? mapCenter;
 			if (!start) {
 				pushToast({ kind: "warn", title: t("map.notReady") });
 				return;
 			}
-			void startGeneration(start);
+			const isAtoB = useLoopPreferencesStore.getState().routeType === "a-to-b";
+			const end = isAtoB ? (detail?.end ?? mapCenter) : undefined;
+			// Both pickers on "map center" resolve to the same point; an a-to-b
+			// from a point to itself is a loop the user didn't ask for.
+			if (end && haversineDistance(start, end) < 0.05) {
+				pushToast({ kind: "warn", title: t("loop.endSameAsStart") });
+				useModalsStore.getState().openModal("loop");
+				return;
+			}
+			void startGeneration(start, end ? { end } : undefined);
 		};
-		const onPickLoopStart = () => {
+		const pickLoopPoint = (hintKey: string, assign: (coord: [number, number]) => void) => {
 			const map = mapRef.current;
 			if (!map) {
 				pushToast({ kind: "warn", title: t("map.notReady") });
@@ -206,7 +230,7 @@ const MapWithRoutingContent: React.FC<MapboxMapProps> = ({
 			}
 			const canvas = map.getCanvas();
 			canvas.style.cursor = "crosshair";
-			pushToast({ kind: "info", title: t("loop.pickStartHint") });
+			pushToast({ kind: "info", title: t(hintKey) });
 
 			const finish = () => {
 				canvas.style.cursor = "";
@@ -220,8 +244,18 @@ const MapWithRoutingContent: React.FC<MapboxMapProps> = ({
 			};
 			window.addEventListener("keydown", onEscape);
 			requestMapPick((coord) => {
-				useLoopPreferencesStore.getState().setStart({ kind: "point", coord: [coord[0], coord[1]], source: "picked" });
+				assign([coord[0], coord[1]]);
 				finish();
+			});
+		};
+		const onPickLoopStart = () => {
+			pickLoopPoint("loop.pickStartHint", (coord) => {
+				useLoopPreferencesStore.getState().setStart({ kind: "point", coord, source: "picked" });
+			});
+		};
+		const onPickLoopEnd = () => {
+			pickLoopPoint("loop.pickEndHint", (coord) => {
+				useLoopPreferencesStore.getState().setEnd({ kind: "point", coord, source: "picked" });
 			});
 		};
 		const onImportGpx = (detail: { gpxString?: string; fileName?: string }) => {
@@ -254,6 +288,7 @@ const MapWithRoutingContent: React.FC<MapboxMapProps> = ({
 			onAppEvent("routess:recalculate-route", onRecalculate),
 			onAppEvent("routess:generate-loop", onGenerateLoop),
 			onAppEvent("routess:pick-loop-start", onPickLoopStart),
+			onAppEvent("routess:pick-loop-end", onPickLoopEnd),
 		];
 		return () => {
 			for (const unsubscribe of unsubscribers) {

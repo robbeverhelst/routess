@@ -1,10 +1,18 @@
 import { EventEmitter2 } from "@nestjs/event-emitter";
 import { Test, type TestingModule } from "@nestjs/testing";
-import { type Coordinate, destinationPoint, encodePolyline6 } from "@routess/core";
+import {
+	type Coordinate,
+	destinationPoint,
+	encodePolyline6,
+	type GenerationAnchor,
+	haversineDistance,
+	loopRadiusKm,
+} from "@routess/core";
 import { RoutingService } from "../routing/routing.service";
 import { ROUTE_GENERATION_COMPLETED, type RouteGenerationCompletedEvent } from "../telemetry/domain-events";
 import type { GenerateRequestDto } from "./dto/generate.dto";
 import { GenerationService } from "./generation.service";
+import { NodeNetworksService } from "./node-networks.service";
 
 const GHENT: Coordinate = [3.7174, 51.0543];
 
@@ -23,6 +31,7 @@ class FakeRouting {
 	locateHandler: (body: { locations: { lat: number; lon: number }[] }) => unknown;
 	routeHandler: (body: { locations: { lat: number; lon: number; type?: string }[] }) => unknown;
 	traceHandler: (body: unknown) => unknown;
+	isochroneHandler: (body: { locations: { lat: number; lon: number }[]; contours: { distance: number }[] }) => unknown;
 	calls: string[] = [];
 
 	constructor() {
@@ -62,6 +71,14 @@ class FakeRouting {
 				end_heading: (i * 15 + 10) % 360,
 			})),
 		});
+		this.isochroneHandler = (body) => {
+			const center = body.locations[0];
+			const ring: [number, number][] = [];
+			for (let deg = 0; deg <= 360; deg += 10) {
+				ring.push(destinationPoint([center.lon, center.lat], deg, body.contours[0].distance));
+			}
+			return { features: [{ geometry: { coordinates: [ring] } }] };
+		};
 	}
 
 	callValhalla(path: string, body: unknown): Promise<unknown> {
@@ -69,22 +86,37 @@ class FakeRouting {
 		if (path === "/locate") return Promise.resolve(this.locateHandler(body as never));
 		if (path === "/route") return Promise.resolve(this.routeHandler(body as never));
 		if (path === "/trace_attributes") return Promise.resolve(this.traceHandler(body));
+		if (path === "/isochrone") return Promise.resolve(this.isochroneHandler(body as never));
 		return Promise.reject(new Error(`unexpected path ${path}`));
+	}
+}
+
+// Fake node tiles: an empty pool by default (out of coverage); tests place
+// Nodes explicitly.
+class FakeNodeNetworks {
+	enabled = true;
+	pool: GenerationAnchor[] = [];
+
+	anchorsForBbox(): Promise<GenerationAnchor[]> {
+		return Promise.resolve(this.pool);
 	}
 }
 
 describe("GenerationService", () => {
 	let service: GenerationService;
 	let fake: FakeRouting;
+	let nodes: FakeNodeNetworks;
 	let emitter: EventEmitter2;
 	let events: RouteGenerationCompletedEvent[];
 
 	beforeEach(async () => {
 		fake = new FakeRouting();
+		nodes = new FakeNodeNetworks();
 		const module: TestingModule = await Test.createTestingModule({
 			providers: [
 				GenerationService,
 				{ provide: RoutingService, useValue: fake },
+				{ provide: NodeNetworksService, useValue: nodes },
 				{ provide: EventEmitter2, useValue: new EventEmitter2() },
 			],
 		}).compile();
@@ -435,5 +467,256 @@ describe("GenerationService", () => {
 		const response = await service.generate(REQUEST);
 		expect(response.failure).toBeUndefined();
 		expect(response.candidates[0]?.distanceKm).toBe(30);
+	});
+
+	describe("isochrone fallback (generation v2)", () => {
+		// Fan plans route start + 3 vias + start = 5 locations; isochrone plans
+		// have 2 vias = 4 locations. Failing the 5-location requests simulates
+		// hostile geometry where only the frontier tactic finds a way around.
+		const failFanRoutes = () => {
+			const original = fake.routeHandler;
+			fake.routeHandler = (body) => (body.locations.length === 5 ? { error: "no path" } : original(body));
+		};
+
+		it("rescues a generation whose entire fan is unroutable", async () => {
+			failFanRoutes();
+			let traceCount = 0;
+			fake.traceHandler = () => {
+				traceCount++;
+				return {
+					edges: Array.from({ length: 24 }, (_, i) => ({
+						way_id: traceCount * 1000 + i,
+						surface: "paved",
+						length: 30 / 24,
+						begin_heading: (i * 15) % 360,
+						end_heading: (i * 15 + 10) % 360,
+					})),
+				};
+			};
+
+			const response = await service.generate(REQUEST);
+			expect(response.failure).toBeUndefined();
+			expect(response.candidates.length).toBeGreaterThan(0);
+			expect(response.candidates[0].viaPoints).toHaveLength(2);
+			expect(fake.calls.filter((path) => path === "/isochrone")).toHaveLength(1);
+			expect(events[0]?.usedIsochroneFallback).toBe(true);
+		});
+
+		it("still fails honestly when even the frontier routes nothing", async () => {
+			fake.routeHandler = () => ({ error: "no path" });
+			const response = await service.generate(REQUEST);
+			expect(response.failure?.code).toBe("no_candidates_routable");
+			expect(fake.calls.filter((path) => path === "/isochrone")).toHaveLength(1);
+		});
+
+		it("never fires when the fan produced candidates", async () => {
+			await service.generate(REQUEST);
+			expect(fake.calls.filter((path) => path === "/isochrone")).toHaveLength(0);
+			expect(events[0]?.usedIsochroneFallback).toBe(false);
+		});
+	});
+
+	describe("a-to-b generation (generation v2)", () => {
+		const END: Coordinate = destinationPoint(GHENT, 90, 15);
+		const ATOB: GenerateRequestDto = {
+			...REQUEST,
+			routeType: "a-to-b",
+			end: { lat: END[1], lon: END[0] },
+			targetDistanceKm: 35,
+		};
+
+		// Route start → vias → end as straight legs at road circuity 1.3,
+		// densified so downstream geometry checks have enough points.
+		const corridorRouter = () => {
+			fake.routeHandler = (body) => {
+				const points = body.locations.map((loc) => [loc.lon, loc.lat] as Coordinate);
+				const geometry: Coordinate[] = [];
+				let crowKm = 0;
+				for (let i = 0; i < points.length - 1; i++) {
+					crowKm += haversineDistance(points[i], points[i + 1]);
+					for (let step = 0; step < 5; step++) {
+						geometry.push([
+							points[i][0] + ((points[i + 1][0] - points[i][0]) * step) / 5,
+							points[i][1] + ((points[i + 1][1] - points[i][1]) * step) / 5,
+						]);
+					}
+				}
+				geometry.push(points[points.length - 1]);
+				const lengthKm = crowKm * 1.3;
+				return {
+					trip: { legs: [{ shape: encodePolyline6(geometry), summary: { length: lengthKm, time: lengthKm * 180 } }] },
+				};
+			};
+			let traceCount = 0;
+			fake.traceHandler = () => {
+				traceCount++;
+				return {
+					edges: Array.from({ length: 24 }, (_, i) => ({
+						way_id: traceCount * 1000 + i,
+						surface: "paved",
+						length: 35 / 24,
+						begin_heading: (i * 15) % 360,
+						end_heading: (i * 15 + 10) % 360,
+					})),
+				};
+			};
+		};
+
+		it("stretches the corridor to within ±10% of the target distance", async () => {
+			corridorRouter();
+			const response = await service.generate(ATOB);
+			expect(response.failure).toBeUndefined();
+			expect(response.candidates.length).toBeGreaterThan(0);
+			const best = response.candidates[0];
+			expect(Math.abs(best.distanceKm - ATOB.targetDistanceKm) / ATOB.targetDistanceKm).toBeLessThanOrEqual(0.1);
+			expect(events[0]?.outcome).toBe("succeeded");
+		});
+
+		it("offers detours to both sides plus the direct baseline", async () => {
+			corridorRouter();
+			const response = await service.generate(ATOB);
+			const viaCounts = response.candidates.map((c) => c.viaPoints.length);
+			expect(Math.max(...viaCounts)).toBeGreaterThanOrEqual(1);
+		});
+
+		it("fails with invalid_input when end is missing", async () => {
+			const response = await service.generate({ ...ATOB, end: undefined });
+			expect(response.failure?.code).toBe("invalid_input");
+			expect(fake.calls).toHaveLength(0);
+		});
+
+		it("fails with end_not_routable when the end has no edges", async () => {
+			corridorRouter();
+			fake.locateHandler = (body) =>
+				body.locations.map((loc, i) =>
+					i === 1
+						? { edges: null }
+						: {
+								edges: [
+									{
+										correlated_lat: loc.lat,
+										correlated_lon: loc.lon,
+										distance: 5,
+										outbound_reach: 50,
+										inbound_reach: 50,
+										edge: { classification: { classification: "residential", use: "road" } },
+									},
+								],
+							},
+				);
+			const response = await service.generate(ATOB);
+			expect(response.failure?.code).toBe("end_not_routable");
+		});
+
+		it("never fires the isochrone fallback for a-to-b", async () => {
+			fake.routeHandler = () => ({ error: "no path" });
+			const response = await service.generate(ATOB);
+			expect(response.failure?.code).toBe("no_candidates_routable");
+			expect(fake.calls.filter((path) => path === "/isochrone")).toHaveLength(0);
+		});
+	});
+
+	describe("anchors stage (generation v2, ADR-0037)", () => {
+		// A Node within snap range of every fan via: one ring of Nodes at the
+		// via radius around the start, denser than the fan's bearing spacing.
+		const nodeRing = (): GenerationAnchor[] => {
+			const radius = loopRadiusKm(REQUEST.targetDistanceKm);
+			const ring: GenerationAnchor[] = [];
+			for (let deg = 0; deg < 360; deg += 10) {
+				ring.push({ coordinate: destinationPoint(GHENT, deg, 2 * radius), ref: String(deg / 10 + 1) });
+				ring.push({ coordinate: destinationPoint(GHENT, deg, radius), ref: String(deg / 10 + 100) });
+			}
+			return ring;
+		};
+
+		const diverseTraces = (withNetwork: boolean) => {
+			let traceCount = 0;
+			fake.traceHandler = () => {
+				traceCount++;
+				return {
+					edges: Array.from({ length: 24 }, (_, i) => ({
+						way_id: traceCount * 1000 + i,
+						surface: "paved",
+						length: 30 / 24,
+						begin_heading: (i * 15) % 360,
+						end_heading: (i * 15 + 10) % 360,
+						...(withNetwork ? { bicycle_network: i % 2 } : {}),
+					})),
+				};
+			};
+		};
+
+		it("snaps vias onto Nodes and reports refs + NetworkFit for cycle", async () => {
+			nodes.pool = nodeRing();
+			diverseTraces(true);
+
+			const response = await service.generate({ ...REQUEST, preferNodeNetworks: true });
+			expect(response.failure).toBeUndefined();
+			const best = response.candidates[0];
+			expect(best.viaPoints.some((via) => via.ref !== undefined)).toBe(true);
+			// Half the traced length is network-flagged.
+			expect(best.networkFitPct).toBe(50);
+		});
+
+		it("measures walk NetworkFit by anchored vias, not edges", async () => {
+			nodes.pool = nodeRing();
+			diverseTraces(false);
+
+			const response = await service.generate({ ...REQUEST, activity: "walk", preferNodeNetworks: true });
+			expect(response.failure).toBeUndefined();
+			const best = response.candidates[0];
+			const anchored = best.viaPoints.filter((via) => via.ref !== undefined).length;
+			expect(best.networkFitPct).toBe(Math.round((anchored / best.viaPoints.length) * 100));
+		});
+
+		it("degrades silently to v1 behaviour out of coverage", async () => {
+			nodes.pool = [];
+			diverseTraces(false);
+
+			const response = await service.generate({ ...REQUEST, preferNodeNetworks: true });
+			expect(response.failure).toBeUndefined();
+			expect(response.candidates.length).toBe(3);
+			expect(response.candidates[0].networkFitPct).toBeUndefined();
+			expect(response.candidates[0].viaPoints.every((via) => via.ref === undefined)).toBe(true);
+		});
+
+		it("injects a must-pass anchor as a via in every candidate", async () => {
+			diverseTraces(false);
+			const landmark = destinationPoint(GHENT, 90, 3);
+
+			const response = await service.generate({
+				...REQUEST,
+				anchors: [{ lat: landmark[1], lon: landmark[0], name: "Kasteel", required: true }],
+			});
+			expect(response.failure).toBeUndefined();
+			for (const candidate of response.candidates) {
+				expect(candidate.viaPoints).toHaveLength(4);
+				expect(candidate.viaPoints.some((via) => via.name === "Kasteel")).toBe(true);
+			}
+		});
+
+		it("rejects a must-pass anchor the loop cannot plausibly reach", async () => {
+			const faraway = destinationPoint(GHENT, 90, 100);
+
+			const response = await service.generate({
+				...REQUEST,
+				anchors: [{ lat: faraway[1], lon: faraway[0], required: true }],
+			});
+			expect(response.candidates).toEqual([]);
+			expect(response.failure?.code).toBe("invalid_input");
+			expect(fake.calls).toHaveLength(0);
+		});
+
+		it("ignores pool anchors out of snap range instead of distorting the loop", async () => {
+			diverseTraces(false);
+			const faraway = destinationPoint(GHENT, 0, 80);
+
+			const response = await service.generate({
+				...REQUEST,
+				anchors: [{ lat: faraway[1], lon: faraway[0], ref: "999" }],
+			});
+			expect(response.failure).toBeUndefined();
+			expect(response.candidates[0].viaPoints.every((via) => via.ref === undefined)).toBe(true);
+		});
 	});
 });

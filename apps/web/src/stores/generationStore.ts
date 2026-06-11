@@ -3,6 +3,7 @@ import type {
 	GenerationFailureCode,
 	Heading,
 	RouteActivity,
+	RouteGenerationType,
 	RoutingPreferences,
 	SurfaceType,
 } from "@routess/core";
@@ -12,23 +13,33 @@ import { create } from "zustand";
 export interface GenerationCandidateView {
 	bearingDeg: number;
 	viaPoints: Coordinate[];
+	/** Parallel to viaPoints: Node ref / landmark name when the via has one. */
+	viaMeta: ({ ref?: string; name?: string } | undefined)[];
 	geometry: Coordinate[];
 	distanceKm: number;
 	durationSeconds: number;
 	overlapPct: number;
 	score: number;
 	lowQuality: boolean;
+	/** NetworkFit %, only present when knooppunt mode found a Node pool. */
+	networkFitPct?: number;
 	surfaceMetersByBucket: Record<"paved" | "compacted" | "unpaved" | "path", number>;
 	/** Computed client-side after candidates arrive; null while sampling. */
 	elevationGainM: number | null;
 }
 
 export interface GenerationRequestSnapshot {
+	routeType: RouteGenerationType;
 	start: Coordinate;
+	/** A-to-b destination; absent for loops. */
+	end?: Coordinate;
 	activity: RouteActivity;
 	targetDistanceKm: number;
 	heading: Heading;
 	surface: SurfaceType;
+	preferNodeNetworks: boolean;
+	/** Pinned must-pass landmarks sent as required anchors. */
+	landmarks: { coord: Coordinate; name: string }[];
 	/** The RoutingPreferences sent to the API; copied onto the draft on confirm (ADR-0023). */
 	preferences: RoutingPreferences;
 }
@@ -100,11 +111,15 @@ export const useGenerationStore = create<GenerationState>()((set) => ({
 function sameRequest(a: GenerationRequestSnapshot | null, b: GenerationRequestSnapshot): boolean {
 	if (!a) return false;
 	return (
+		a.routeType === b.routeType &&
 		a.start[0] === b.start[0] &&
 		a.start[1] === b.start[1] &&
+		a.end?.[0] === b.end?.[0] &&
+		a.end?.[1] === b.end?.[1] &&
 		a.activity === b.activity &&
 		a.targetDistanceKm === b.targetDistanceKm &&
 		a.heading === b.heading &&
-		a.surface === b.surface
+		a.surface === b.surface &&
+		a.preferNodeNetworks === b.preferNodeNetworks
 	);
 }

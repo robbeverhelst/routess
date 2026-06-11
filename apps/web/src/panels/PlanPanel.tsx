@@ -484,6 +484,7 @@ export function PlanPanel() {
 											justifyContent: "center",
 											gap: 6,
 											flex: 1,
+											minWidth: 0,
 											height: 28,
 											padding: "0 8px",
 											borderRadius: 999,
@@ -497,7 +498,8 @@ export function PlanPanel() {
 											transition: "background 120ms, color 120ms",
 										}}
 									>
-										<Icon size={14} /> {t(a.labelKey)}
+										<Icon size={14} style={{ flexShrink: 0 }} />
+										<span className="rds-activity-label">{t(a.labelKey)}</span>
 									</button>
 								</Tooltip>
 							);

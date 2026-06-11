@@ -30,6 +30,50 @@ export function generationScoreWeights(pref: SurfaceType): GenerationScoreWeight
 	return pref === "mixed" ? GENERATION_SCORE_WEIGHTS : STRICT_SURFACE_SCORE_WEIGHTS;
 }
 
+// NetworkFit (knooppunt mode, ADR-0037): when active it takes this share of
+// the total and the base weights shrink proportionally, so the relative
+// balance between Overlap/distance/surface/shape never changes.
+export const NETWORK_FIT_WEIGHT = 0.2;
+
+// Quietness: generated routes are leisure routes, but Valhalla's bicycle
+// costing rewards busy roads whenever they carry a separated cycle track
+// (ubiquitous on Belgian N-roads) and use_roads cannot override that. The
+// only place left to prefer the quiet parallel road is candidate scoring.
+export const QUIETNESS_WEIGHT = 0.1;
+
+/** How "busy" each Valhalla road class counts toward the Quietness penalty. */
+const BUSY_ROAD_WEIGHT: Record<string, number> = {
+	motorway: 1,
+	trunk: 1,
+	primary: 1,
+	secondary: 0.5,
+};
+
+/** 1 = entirely on quiet roads; 0 = entirely on trunk/primary roads. */
+export function quietnessFraction(edges: CandidateEdge[]): number {
+	let totalKm = 0;
+	let busyKm = 0;
+	for (const edge of edges) {
+		totalKm += edge.lengthKm;
+		busyKm += edge.lengthKm * (BUSY_ROAD_WEIGHT[edge.roadClass ?? ""] ?? 0);
+	}
+	return totalKm <= 0 ? 1 : 1 - Math.min(1, busyKm / totalKm);
+}
+
+/**
+ * Length-weighted fraction of the candidate riding signed cycle-network
+ * edges. The cycle NetworkFit signal; walk/run uses anchoredViaFraction.
+ */
+export function bikeNetworkFraction(edges: CandidateEdge[]): number {
+	let totalKm = 0;
+	let networkKm = 0;
+	for (const edge of edges) {
+		totalKm += edge.lengthKm;
+		if (edge.onBikeNetwork) networkKm += edge.lengthKm;
+	}
+	return totalKm <= 0 ? 0 : Math.min(1, networkKm / totalKm);
+}
+
 /** Distance within ±10% of target scores 1; beyond, a gaussian falloff. */
 const DISTANCE_FREE_BAND = 0.1;
 const DISTANCE_FALLOFF_SIGMA = 0.25;
@@ -124,18 +168,30 @@ export function scoreCandidate(
 	targetDistanceKm: number,
 	surfacePreference: SurfaceType,
 	metersByBucket: Record<SurfaceBucket, number>,
+	// For a-to-b, corridorSanity replaces compactness in the same weight slot
+	// (a corridor route is never compact; staying corridor-shaped is its
+	// equivalent virtue) and is reported as shapeCompactness.
+	options: { networkFit?: number; corridorSanity?: number } = {},
 ): CandidateScore {
 	const overlap = overlapFraction(candidate.edges);
 	const distanceMatch = distanceMatchScore(candidate.distanceKm, targetDistanceKm);
 	const surfaceFit = surfaceFitScore(metersByBucket, surfacePreference);
-	const compactness = shapeCompactness(candidate.geometry);
+	const compactness = options.corridorSanity ?? shapeCompactness(candidate.geometry);
+	const quietness = quietnessFraction(candidate.edges);
 
 	const w = generationScoreWeights(surfacePreference);
+	const networkFit = options.networkFit;
+	// Fixed-share components scale the base weights down so the relative
+	// balance between Overlap/distance/surface/shape never changes.
+	const baseScale = 1 - QUIETNESS_WEIGHT - (networkFit === undefined ? 0 : NETWORK_FIT_WEIGHT);
 	const total =
-		w.overlap * (1 - overlap) +
-		w.distanceMatch * distanceMatch +
-		w.surfaceFit * surfaceFit +
-		w.shapeCompactness * compactness;
+		baseScale *
+			(w.overlap * (1 - overlap) +
+				w.distanceMatch * distanceMatch +
+				w.surfaceFit * surfaceFit +
+				w.shapeCompactness * compactness) +
+		QUIETNESS_WEIGHT * quietness +
+		(networkFit === undefined ? 0 : NETWORK_FIT_WEIGHT * networkFit);
 
 	return {
 		total,
@@ -143,5 +199,7 @@ export function scoreCandidate(
 		distanceMatch,
 		surfaceFit,
 		shapeCompactness: compactness,
+		quietness,
+		...(networkFit === undefined ? {} : { networkFit }),
 	};
 }

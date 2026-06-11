@@ -7,6 +7,7 @@ import {
 	GENERATION_SCORE_WEIGHTS,
 	generationScoreWeights,
 	overlapFraction,
+	QUIETNESS_WEIGHT,
 	STRICT_SURFACE_SCORE_WEIGHTS,
 	scoreCandidate,
 	shapeCompactness,
@@ -178,9 +179,32 @@ describe("scoreCandidate", () => {
 		expect(score.overlap).toBe(0);
 		expect(score.distanceMatch).toBe(1);
 		expect(score.surfaceFit).toBe(1);
+		expect(score.quietness).toBe(1);
 		const w = generationScoreWeights("paved");
-		const expected = w.overlap + w.distanceMatch + w.surfaceFit + w.shapeCompactness * score.shapeCompactness;
-		expect(score.total).toBeCloseTo(expected, 10);
+		const base = w.overlap + w.distanceMatch + w.surfaceFit + w.shapeCompactness * score.shapeCompactness;
+		expect(score.total).toBeCloseTo((1 - QUIETNESS_WEIGHT) * base + QUIETNESS_WEIGHT, 10);
+	});
+
+	it("demotes candidates riding busy roads via Quietness", () => {
+		const busy: RoutedCandidate = {
+			...candidate,
+			edges: [
+				{ wayId: 1, lengthKm: 20, surface: "paved", roadClass: "primary" },
+				{ wayId: 2, lengthKm: 20, surface: "paved", roadClass: "residential" },
+			],
+		};
+		const quiet: RoutedCandidate = {
+			...candidate,
+			edges: [
+				{ wayId: 1, lengthKm: 20, surface: "paved", roadClass: "residential" },
+				{ wayId: 2, lengthKm: 20, surface: "paved", roadClass: "tertiary" },
+			],
+		};
+		const busyScore = scoreCandidate(busy, 40, "mixed", meters({ paved: 40000 }));
+		const quietScore = scoreCandidate(quiet, 40, "mixed", meters({ paved: 40000 }));
+		expect(busyScore.quietness).toBeCloseTo(0.5);
+		expect(quietScore.quietness).toBe(1);
+		expect(quietScore.total).toBeGreaterThan(busyScore.total);
 	});
 
 	it("uses the default weights for mixed and the strict weights for paved/unpaved", () => {

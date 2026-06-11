@@ -346,4 +346,10 @@
 	[data-redesign] {
 		--rds-panel-w: 320px;
 	}
+
+	/* At 320px the activity pills' text would overflow under the Options
+	 * button; keep icons only (the tooltip still names them). */
+	[data-redesign] .rds-activity-label {
+		display: none;
+	}
 }

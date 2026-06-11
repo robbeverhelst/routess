@@ -13,19 +13,45 @@ export function isHeading(value: unknown): value is Heading {
 	return HEADINGS.includes(value as Heading);
 }
 
+/**
+ * An Anchor (CONTEXT.md): a geographic hint that draws candidate vias toward
+ * it (pool anchor) or forces the route through it (must-pass). Pool anchors
+ * come from the caller or are derived server-side from the NodeNetwork
+ * (ADR-0037); either way the server still validates and scores everything.
+ */
+export interface GenerationAnchor {
+	coordinate: Coordinate;
+	/** Node number when the anchor is a NodeNetwork Node ("45"). */
+	ref?: string;
+	name?: string;
+	/** true = must-pass (injected as a via); false/absent = snap pool. */
+	required?: boolean;
+}
+
+export const ROUTE_GENERATION_TYPES = ["loop", "a-to-b"] as const;
+export type RouteGenerationType = (typeof ROUTE_GENERATION_TYPES)[number];
+
 export interface GenerationRequest {
 	start: Coordinate;
+	/** Destination for a-to-b generation; absent for loops. */
+	end?: Coordinate;
+	routeType?: RouteGenerationType;
 	activity: RouteActivity;
 	targetDistanceKm: number;
 	heading: Heading;
 	preferences: RoutingPreferences;
 	/** Bearings already shown to the user; regenerate excludes them. */
 	excludeBearings?: number[];
+	/** Explicit anchors (POI landmarks, LLM hints). Validated server-side. */
+	anchors?: GenerationAnchor[];
+	/** Soft knooppunt mode: server derives a Node pool and rewards NetworkFit. */
+	preferNodeNetworks?: boolean;
 }
 
 export const GENERATION_FAILURE_CODES = [
 	"invalid_input",
 	"start_not_routable",
+	"end_not_routable",
 	"no_candidates_routable",
 	"all_candidates_low_quality",
 	"all_bearings_excluded",
@@ -38,6 +64,8 @@ export interface CandidatePlan {
 	bearingDeg: number;
 	/** Via points only — the loop is start → vias… → start. */
 	viaPoints: Coordinate[];
+	/** Parallel to viaPoints: the Anchor a via snapped to, when it did. */
+	viaAnchors?: (GenerationAnchor | undefined)[];
 }
 
 /** One edge of a map-matched RoutePath, in path order. */
@@ -50,6 +78,10 @@ export interface CandidateEdge {
 	endHeadingDeg?: number;
 	/** Where the edge sits, for surface-anchored planning. */
 	midpoint?: Coordinate;
+	/** Edge is part of a signed cycle network (Valhalla `bicycle_network`). */
+	onBikeNetwork?: boolean;
+	/** Valhalla road class ("primary", "residential", …) for Quietness. */
+	roadClass?: string;
 }
 
 /** A candidate after routing + map matching, before scoring. */
@@ -69,6 +101,10 @@ export interface CandidateScore {
 	distanceMatch: number;
 	surfaceFit: number;
 	shapeCompactness: number;
+	/** Quietness: 1 minus the busy-road (trunk/primary/secondary) share. */
+	quietness: number;
+	/** NetworkFit (CONTEXT.md): only present when knooppunt mode was active. */
+	networkFit?: number;
 }
 
 /** A GenerationCandidate: scored, gate-checked, ready for selection. */

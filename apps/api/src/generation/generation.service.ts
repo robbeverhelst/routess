@@ -1,6 +1,9 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { EventEmitter2 } from "@nestjs/event-emitter";
 import {
+	anchoredViaFraction,
+	anchorSnapRadiusKm,
+	bikeNetworkFraction,
 	bucketFromValhallaSurface,
 	bucketMatchesPreference,
 	type CandidateEdge,
@@ -8,14 +11,23 @@ import {
 	type Coordinate,
 	closestPointOnSegment,
 	collectSurfaceAnchors,
+	corridorSanity,
 	decodePolyline6,
+	destinationPoint,
 	encodePolyline6,
+	type GenerationAnchor,
 	type GenerationFailureCode,
 	haversineDistance,
+	injectRequiredAnchors,
 	isLowQuality,
+	isochroneContourKm,
 	loopRadiusKm,
+	MAX_REQUIRED_ANCHORS,
+	NODE_NETWORK_VIA_COUNT,
 	OVERLAP_WARN_LIMIT,
+	planAtoBCandidates,
 	planCandidateFan,
+	planIsochroneCandidates,
 	planSurfaceAnchoredCandidates,
 	planSurfaceWave,
 	type RoutedCandidate,
@@ -27,12 +39,15 @@ import {
 	type SurfaceType,
 	scoreCandidate,
 	selectDiverseCandidates,
+	singleDetourOffsetKm,
+	snapViasToAnchors,
 	type ValhallaCostingRequest,
 	valhallaCostingFromPreferences,
 } from "@routess/core";
 import { RoutingService } from "../routing/routing.service";
 import { ROUTE_GENERATION_COMPLETED, type RouteGenerationCompletedEvent } from "../telemetry/domain-events";
 import type { GenerateRequestDto, GenerateResponseDto, GenerationCandidateDto } from "./dto/generate.dto";
+import { NodeNetworksService, nodeKindForActivity } from "./node-networks.service";
 
 // Orchestrates the RouteGeneration pipeline (ADR-0029): the pure stages live
 // in @routess/core; this service owns the Valhalla calls — one batched
@@ -129,11 +144,21 @@ interface ValhallaTraceEdge {
 	end_heading?: number;
 	begin_shape_index?: number;
 	end_shape_index?: number;
+	// Valhalla returns the network membership mask as `bicycle_network`
+	// (the request filter key is `edge.bicycle_network`); 0 = not signed.
+	bicycle_network?: number | boolean;
+	road_class?: string;
 }
 
 interface ValhallaTraceResponse {
 	shape?: string;
 	edges?: ValhallaTraceEdge[];
+}
+
+interface ValhallaIsochroneResponse {
+	features?: {
+		geometry?: { coordinates?: unknown[][] };
+	}[];
 }
 
 interface RoutedLeg {
@@ -147,6 +172,28 @@ class GenerationFailure extends Error {
 	constructor(readonly failureCode: GenerationFailureCode) {
 		super(failureCode);
 	}
+}
+
+/**
+ * The anchors stage state for one generation (ADR-0037). `pool` attracts
+ * vias; `required` is injected into every candidate; `networkFitMode` says
+ * how NetworkFit is measured (cycle: network edges; walk/run: anchored vias;
+ * null: knooppunt mode inactive, score and response omit NetworkFit).
+ */
+interface AnchorContext {
+	pool: GenerationAnchor[];
+	required: GenerationAnchor[];
+	snapRadiusKm: number;
+	networkFitMode: "bike-edges" | "anchored-vias" | null;
+}
+
+const INACTIVE_ANCHORS: AnchorContext = { pool: [], required: [], snapRadiusKm: 0, networkFitMode: null };
+
+/** Apply the anchors stage to one geometric plan. */
+function applyAnchors(plan: CandidatePlan, ctx: AnchorContext, start: Coordinate): CandidatePlan {
+	let result = ctx.pool.length > 0 ? snapViasToAnchors(plan, ctx.pool, ctx.snapRadiusKm) : plan;
+	if (ctx.required.length > 0) result = injectRequiredAnchors(result, ctx.required, start);
+	return result;
 }
 
 /** Nearest point on the loop geometry, refined onto the adjacent segments. */
@@ -181,6 +228,7 @@ export class GenerationService {
 
 	constructor(
 		private readonly routing: RoutingService,
+		private readonly nodeNetworks: NodeNetworksService,
 		private readonly eventEmitter: EventEmitter2,
 	) {}
 
@@ -215,27 +263,64 @@ export class GenerationService {
 		const start: Coordinate = [request.start.lon, request.start.lat];
 		const costing = valhallaCostingFromPreferences(request.activity, request.preferences);
 
-		const plans = planCandidateFan(start, request.heading, request.targetDistanceKm, request.excludeBearings);
-		if (plans.length === 0) return fail("all_bearings_excluded");
+		const isAtoB = request.routeType === "a-to-b";
+		const end: Coordinate | undefined = isAtoB && request.end ? [request.end.lon, request.end.lat] : undefined;
+		if (isAtoB && (!end || haversineDistance(start, end) <= 0)) return fail("invalid_input");
 
-		// One batched /locate validates the start and every via point: vias in
-		// fields, water, or off-network get their candidate dropped or snapped
-		// to the correlated road position (the dead-end-spur fix).
+		let anchors: AnchorContext;
+		try {
+			anchors = await this.buildAnchorContext(request, start, end);
+		} catch (err) {
+			if (err instanceof GenerationFailure) return fail(err.failureCode);
+			throw err;
+		}
+
+		// Knooppunt mode rides on via density: a 5-via ring snapped onto Nodes
+		// follows the network far better than the default 3 corners.
+		const fanViaCount = anchors.networkFitMode ? NODE_NETWORK_VIA_COUNT : undefined;
+		let plans = end
+			? planAtoBCandidates(start, end, request.targetDistanceKm, request.excludeBearings)
+			: planCandidateFan(start, request.heading, request.targetDistanceKm, request.excludeBearings, fanViaCount);
+		if (plans.length === 0) return fail("all_bearings_excluded");
+		plans = plans.map((plan) => applyAnchors(plan, anchors, start));
+
+		// One batched /locate validates the start, end, and every via point:
+		// vias in fields, water, or off-network get their candidate dropped or
+		// snapped to the correlated road position (the dead-end-spur fix).
 		let snappedPlans: CandidatePlan[];
 		try {
 			snappedPlans = await countCall(
-				this.snapPlans(start, plans, request.targetDistanceKm, costing, request.preferences.surfacePreference),
+				this.snapPlans(start, plans, request.targetDistanceKm, costing, request.preferences.surfacePreference, end),
 			);
 		} catch (err) {
 			if (err instanceof GenerationFailure) return fail(err.failureCode);
 			throw err;
 		}
-		if (snappedPlans.length === 0) return fail("no_candidates_routable");
+		const scored =
+			snappedPlans.length > 0
+				? await this.routeAndScore(snappedPlans, start, request, costing, anchors, countCall, {
+						// The corridor tactic places exact-budget detours; the loop
+						// fan's ring-rescale refinement does not apply to it.
+						refineDistance: !end,
+						end,
+					})
+				: [];
 
-		const scored = await this.routeAndScore(snappedPlans, start, request, costing, countCall);
+		// Isochrone fallback (generation v2, loops only): a fan that routes
+		// nothing usually means hostile geometry (coast, canal belt), not an
+		// unroutable area — retry once with vias on the reachability frontier.
+		let usedIsochroneFallback = false;
+		if (scored.length === 0 && !end) {
+			scored.push(...(await this.isochroneFallback(start, request, costing, anchors, countCall)));
+			usedIsochroneFallback = scored.length > 0;
+		}
 		if (scored.length === 0) return fail("no_candidates_routable");
 
-		scored.push(...(await this.surfaceWave(scored, plans, start, request, costing, countCall)));
+		// The surface wave harvests loop anchors; the corridor tactic gets its
+		// surface bias from the locate nudge alone.
+		if (!end) {
+			scored.push(...(await this.surfaceWave(scored, plans, start, request, costing, anchors, countCall)));
+		}
 
 		const selected = selectDiverseCandidates(scored);
 		if (selected.length === 0) {
@@ -246,9 +331,73 @@ export class GenerationService {
 		emit("succeeded", {
 			candidateCount: selected.length,
 			bestOverlapPct: Math.round(selected[0].score.overlap * 100),
+			usedIsochroneFallback,
+			...(selected[0].score.networkFit !== undefined
+				? { bestNetworkFitPct: Math.round(selected[0].score.networkFit * 100) }
+				: {}),
 		});
 
 		return { candidates: selected.map((candidate) => this.toDto(candidate)) };
+	}
+
+	/**
+	 * The anchors stage input for one generation (ADR-0037): explicit client
+	 * anchors split into pool and must-pass, plus the server-derived Node pool
+	 * when knooppunt mode is on. Fail-open on the Node side; fail-honest
+	 * (invalid_input) on contract violations in explicit anchors.
+	 */
+	private async buildAnchorContext(
+		request: GenerateRequestDto,
+		start: Coordinate,
+		end?: Coordinate,
+	): Promise<AnchorContext> {
+		const explicit: GenerationAnchor[] = (request.anchors ?? []).map((anchor) => ({
+			coordinate: [anchor.lon, anchor.lat] as Coordinate,
+			ref: anchor.ref,
+			name: anchor.name,
+			required: anchor.required === true,
+		}));
+
+		const required = explicit.filter((anchor) => anchor.required);
+		// A must-pass anchor the route cannot plausibly reach is a contract
+		// error, not a hint to stretch the route across the map.
+		const maxReachKm = request.targetDistanceKm / 2;
+		const reachable = (anchor: GenerationAnchor) =>
+			haversineDistance(start, anchor.coordinate) <= maxReachKm ||
+			(end !== undefined && haversineDistance(end, anchor.coordinate) <= maxReachKm);
+		if (required.length > MAX_REQUIRED_ANCHORS || !required.every(reachable)) {
+			throw new GenerationFailure("invalid_input");
+		}
+
+		const pool = explicit.filter((anchor) => !anchor.required);
+		let networkFitMode: AnchorContext["networkFitMode"] = null;
+		if (request.preferNodeNetworks) {
+			// Loops: vias reach up to 2× the loop radius from the start.
+			// A-to-b: vias sit within the single-detour offset of the corridor.
+			// Pad by the snap radius so edge-of-reach vias still find a Node.
+			const padKm =
+				(end
+					? singleDetourOffsetKm(haversineDistance(start, end), request.targetDistanceKm)
+					: 2 * loopRadiusKm(request.targetDistanceKm)) + anchorSnapRadiusKm(request.targetDistanceKm);
+			const corners = [start, ...(end ? [end] : [])];
+			const lons = corners.map((c) => c[0]);
+			const lats = corners.map((c) => c[1]);
+			const north = destinationPoint([lons[0], Math.max(...lats)], 0, padKm);
+			const south = destinationPoint([lons[0], Math.min(...lats)], 180, padKm);
+			const east = destinationPoint([Math.max(...lons), lats[0]], 90, padKm);
+			const west = destinationPoint([Math.min(...lons), lats[0]], 270, padKm);
+			const nodes = await this.nodeNetworks.anchorsForBbox(
+				{ minLon: west[0], minLat: south[1], maxLon: east[0], maxLat: north[1] },
+				nodeKindForActivity(request.activity),
+			);
+			if (nodes.length > 0) {
+				pool.push(...nodes);
+				networkFitMode = request.activity === "cycle" ? "bike-edges" : "anchored-vias";
+			}
+		}
+
+		if (pool.length === 0 && required.length === 0) return INACTIVE_ANCHORS;
+		return { pool, required, snapRadiusKm: anchorSnapRadiusKm(request.targetDistanceKm), networkFitMode };
 	}
 
 	private async snapPlans(
@@ -257,6 +406,7 @@ export class GenerationService {
 		targetDistanceKm: number,
 		costing: ValhallaCostingRequest,
 		surfacePreference: SurfaceType,
+		end?: Coordinate,
 	): Promise<CandidatePlan[]> {
 		// A strict surface preference widens the via search so /locate returns
 		// every edge within the nudge radius, not just the nearest; pickViaEdge
@@ -264,6 +414,7 @@ export class GenerationService {
 		const viaRadius = surfacePreference === "mixed" ? undefined : SURFACE_NUDGE_RADIUS_M;
 		const locations = [
 			{ lat: start[1], lon: start[0] },
+			...(end ? [{ lat: end[1], lon: end[0] }] : []),
 			...plans.flatMap((plan) =>
 				plan.viaPoints.map(([lon, lat]) => (viaRadius ? { lat, lon, radius: viaRadius } : { lat, lon })),
 			),
@@ -294,14 +445,20 @@ export class GenerationService {
 		const radius = loopRadiusKm(targetDistanceKm);
 		const maxViaSnapKm = Math.max(0.5, radius / 2);
 
-		// The start never surface-nudges: the user picked it deliberately.
+		// Start and end never surface-nudge: the user picked them deliberately.
 		const snappedStart = snappedCoord(results[0], "mixed");
 		if (!snappedStart || haversineDistance(start, snappedStart) > MAX_START_SNAP_KM) {
 			throw new GenerationFailure("start_not_routable");
 		}
+		if (end) {
+			const snappedEnd = snappedCoord(results[1], "mixed");
+			if (!snappedEnd || haversineDistance(end, snappedEnd) > MAX_START_SNAP_KM) {
+				throw new GenerationFailure("end_not_routable");
+			}
+		}
 
 		const snapped: CandidatePlan[] = [];
-		let cursor = 1;
+		let cursor = end ? 2 : 1;
 		for (const plan of plans) {
 			const vias: Coordinate[] = [];
 			let viable = true;
@@ -314,7 +471,9 @@ export class GenerationService {
 				vias.push(coord);
 			}
 			cursor += plan.viaPoints.length;
-			if (viable) snapped.push({ bearingDeg: plan.bearingDeg, viaPoints: vias });
+			// viaAnchors indexes stay aligned: /locate snapping moves coordinates
+			// but never reorders or drops individual vias within a viable plan.
+			if (viable) snapped.push({ bearingDeg: plan.bearingDeg, viaPoints: vias, viaAnchors: plan.viaAnchors });
 		}
 		return snapped;
 	}
@@ -324,8 +483,9 @@ export class GenerationService {
 		start: Coordinate,
 		request: GenerateRequestDto,
 		costing: ValhallaCostingRequest,
+		anchors: AnchorContext,
 		countCall: <T>(promise: Promise<T>) => Promise<T>,
-		options: { refineDistance: boolean } = { refineDistance: true },
+		options: { refineDistance: boolean; end?: Coordinate } = { refineDistance: true },
 	): Promise<(ScoredCandidate & { shape: string })[]> {
 		const results: (ScoredCandidate & { shape: string })[] = [];
 		const queue = [...plans];
@@ -333,7 +493,7 @@ export class GenerationService {
 		const worker = async () => {
 			for (let plan = queue.shift(); plan; plan = queue.shift()) {
 				try {
-					const candidate = await this.buildCandidate(plan, start, request, costing, countCall, options);
+					const candidate = await this.buildCandidate(plan, start, request, costing, anchors, countCall, options);
 					if (candidate) results.push(candidate);
 				} catch (err) {
 					// One failed candidate never sinks the generation; the fan has more.
@@ -360,6 +520,7 @@ export class GenerationService {
 		start: Coordinate,
 		request: GenerateRequestDto,
 		costing: ValhallaCostingRequest,
+		anchors: AnchorContext,
 		countCall: <T>(promise: Promise<T>) => Promise<T>,
 	): Promise<(ScoredCandidate & { shape: string })[]> {
 		const pref = request.preferences.surfacePreference;
@@ -372,8 +533,8 @@ export class GenerationService {
 		let bestFit = best.score.surfaceFit;
 
 		for (let round = 0; round < MAX_WAVE_ROUNDS; round++) {
-			const anchors = collectSurfaceAnchors(pool, pref, start, request.targetDistanceKm);
-			const plans = planSurfaceAnchoredCandidates(start, anchors, request.targetDistanceKm).filter(
+			const surfaceAnchors = collectSurfaceAnchors(pool, pref, start, request.targetDistanceKm);
+			const plans = planSurfaceAnchoredCandidates(start, surfaceAnchors, request.targetDistanceKm).filter(
 				(plan) => !this.bearingAlreadySeen(plan.bearingDeg, request.excludeBearings),
 			);
 			// Anchor vias are midpoints of edges already traversed: on the network
@@ -383,7 +544,10 @@ export class GenerationService {
 			// defeat the router.
 			let routed: (ScoredCandidate & { shape: string }) | null = null;
 			for (const plan of plans) {
-				const [candidate] = await this.routeAndScore([plan], start, request, costing, countCall, {
+				// Wave plans stay a pure surface tactic (their vias are already on
+				// the network); anchors are not re-applied, but NetworkFit is still
+				// scored via the shared context so all candidates stay comparable.
+				const [candidate] = await this.routeAndScore([plan], start, request, costing, anchors, countCall, {
 					refineDistance: false,
 				});
 				// Forcing the loop through gravel can spur in and back out; a
@@ -417,7 +581,54 @@ export class GenerationService {
 			return [];
 		}
 		if (snapped.length === 0) return [];
-		return this.routeAndScore(snapped, start, request, costing, countCall);
+		return this.routeAndScore(snapped, start, request, costing, anchors, countCall);
+	}
+
+	/**
+	 * The isochrone fallback tactic: ask Valhalla which points are reachable
+	 * at ~target/2.6 road distance and plan two-via loops along that frontier.
+	 * Opportunistic like the wave — any failure just returns no candidates.
+	 */
+	private async isochroneFallback(
+		start: Coordinate,
+		request: GenerateRequestDto,
+		costing: ValhallaCostingRequest,
+		anchors: AnchorContext,
+		countCall: <T>(promise: Promise<T>) => Promise<T>,
+	): Promise<(ScoredCandidate & { shape: string })[]> {
+		try {
+			const data = await countCall(
+				this.routing.callValhalla<ValhallaIsochroneResponse>(
+					"/isochrone",
+					{
+						locations: [{ lat: start[1], lon: start[0] }],
+						costing: costing.costing,
+						costing_options: costing.costing_options,
+						contours: [{ distance: isochroneContourKm(request.targetDistanceKm) }],
+						polygons: true,
+					},
+					"generation",
+				),
+			);
+			const ring = data.features?.[0]?.geometry?.coordinates?.[0] ?? [];
+			const frontier = ring.filter(
+				(point): point is [number, number] =>
+					Array.isArray(point) && typeof point[0] === "number" && typeof point[1] === "number",
+			);
+
+			let plans = planIsochroneCandidates(start, frontier, request.heading, request.excludeBearings);
+			if (plans.length === 0) return [];
+			plans = plans.map((plan) => applyAnchors(plan, anchors, start));
+
+			const snapped = await countCall(
+				this.snapPlans(start, plans, request.targetDistanceKm, costing, request.preferences.surfacePreference),
+			);
+			if (snapped.length === 0) return [];
+			return await this.routeAndScore(snapped, start, request, costing, anchors, countCall);
+		} catch (err) {
+			this.logger.warn(`Isochrone fallback failed: ${(err as Error).message}`);
+			return [];
+		}
 	}
 
 	/** A regenerated anchored candidate would rebuild near the same bearing; skip it. */
@@ -434,19 +645,25 @@ export class GenerationService {
 		start: Coordinate,
 		request: GenerateRequestDto,
 		costing: ValhallaCostingRequest,
+		anchors: AnchorContext,
 		countCall: <T>(promise: Promise<T>) => Promise<T>,
-		options: { refineDistance: boolean } = { refineDistance: true },
+		options: { refineDistance: boolean; end?: Coordinate } = { refineDistance: true },
 	): Promise<(ScoredCandidate & { shape: string }) | null> {
 		let activePlan = plan;
-		let routed = await countCall(this.routeLoop(activePlan, start, costing));
+		let routed = await countCall(this.routeLoop(activePlan, start, costing, options.end));
 		if (!routed) return null;
 
 		// One-shot radius refinement when the routed distance misses badly.
-		const refined = options.refineDistance
-			? refinePlanForDistance(start, activePlan, request.targetDistanceKm, routed.distanceKm, plan.viaPoints.length)
+		// The refined ring is geometric again, so the anchors stage re-applies
+		// (must-pass vias were extras on top of the geometric ring; rebuild
+		// with the geometric count, then snap and re-inject).
+		const geometricViaCount = plan.viaPoints.length - anchors.required.length;
+		const refinedGeometric = options.refineDistance
+			? refinePlanForDistance(start, activePlan, request.targetDistanceKm, routed.distanceKm, geometricViaCount)
 			: null;
+		const refined = refinedGeometric ? applyAnchors(refinedGeometric, anchors, start) : null;
 		if (refined) {
-			const rerouted = await countCall(this.routeLoop(refined, start, costing));
+			const rerouted = await countCall(this.routeLoop(refined, start, costing, options.end));
 			if (
 				rerouted &&
 				Math.abs(rerouted.distanceKm - request.targetDistanceKm) <
@@ -462,12 +679,23 @@ export class GenerationService {
 		// via). Move such vias to the pinch junction and route once more; the
 		// loop then passes through naturally. Score decides which version wins.
 		const repair = repairSpurVias(routed.geometry, activePlan.viaPoints, request.targetDistanceKm);
-		let scored = await this.scoreRouted(activePlan, routed, request, countCall);
-		if (repair.movedCount > 0) {
-			const repairedPlan: CandidatePlan = { bearingDeg: activePlan.bearingDeg, viaPoints: repair.viaPoints };
-			const rerouted = await countCall(this.routeLoop(repairedPlan, start, costing));
+		let scored = await this.scoreRouted(activePlan, routed, request, anchors, countCall, options.end);
+		// A must-pass via is the user's explicit choice; repair never moves it,
+		// even when it pinches. Pool-snapped vias may move but lose their ref.
+		const repairedVias = repair.viaPoints.map((point, i) =>
+			activePlan.viaAnchors?.[i]?.required ? activePlan.viaPoints[i] : point,
+		);
+		const movedVia = (i: number) =>
+			repairedVias[i][0] !== activePlan.viaPoints[i][0] || repairedVias[i][1] !== activePlan.viaPoints[i][1];
+		if (repair.movedCount > 0 && repairedVias.some((_, i) => movedVia(i))) {
+			const repairedPlan: CandidatePlan = {
+				bearingDeg: activePlan.bearingDeg,
+				viaPoints: repairedVias,
+				viaAnchors: activePlan.viaAnchors?.map((anchor, i) => (movedVia(i) ? undefined : anchor)),
+			};
+			const rerouted = await countCall(this.routeLoop(repairedPlan, start, costing, options.end));
 			if (rerouted) {
-				const repairedScored = await this.scoreRouted(repairedPlan, rerouted, request, countCall);
+				const repairedScored = await this.scoreRouted(repairedPlan, rerouted, request, anchors, countCall, options.end);
 				if (repairedScored.score.total > scored.score.total) scored = repairedScored;
 			}
 		}
@@ -478,7 +706,9 @@ export class GenerationService {
 		plan: CandidatePlan,
 		routed: RoutedLeg,
 		request: GenerateRequestDto,
+		anchors: AnchorContext,
 		countCall: <T>(promise: Promise<T>) => Promise<T>,
+		end?: Coordinate,
 	): Promise<ScoredCandidate & { shape: string }> {
 		const costing = valhallaCostingFromPreferences(request.activity, request.preferences);
 		const edges = await countCall(this.traceEdges(routed.shape, costing));
@@ -495,11 +725,32 @@ export class GenerationService {
 			durationSeconds: routed.durationSeconds,
 			edges,
 		};
+		const networkFit =
+			anchors.networkFitMode === "bike-edges"
+				? bikeNetworkFraction(edges)
+				: anchors.networkFitMode === "anchored-vias"
+					? anchoredViaFraction(plan)
+					: undefined;
 		const score = scoreCandidate(
 			candidate,
 			request.targetDistanceKm,
 			request.preferences.surfacePreference,
 			metersByBucket,
+			{
+				networkFit,
+				// A corridor route is never compact; staying corridor-shaped is
+				// its equivalent virtue (same weight slot).
+				...(end
+					? {
+							corridorSanity: corridorSanity(
+								routed.geometry,
+								[request.start.lon, request.start.lat],
+								end,
+								request.targetDistanceKm,
+							),
+						}
+					: {}),
+			},
 		);
 
 		return {
@@ -515,6 +766,7 @@ export class GenerationService {
 		plan: CandidatePlan,
 		start: Coordinate,
 		costing: ValhallaCostingRequest,
+		end: Coordinate = start,
 	): Promise<RoutedLeg | null> {
 		const data = await this.routing.callValhalla<ValhallaRouteResponse>(
 			"/route",
@@ -522,9 +774,10 @@ export class GenerationService {
 				locations: [
 					{ lat: start[1], lon: start[0], type: "break" },
 					// `through` forbids U-turns at via points: the router must pass
-					// through and keep going, which is what makes the loop a loop.
+					// through and keep going, which is what makes the loop a loop
+					// (and keeps an a-to-b detour from collapsing back early).
 					...plan.viaPoints.map(([lon, lat]) => ({ lat, lon, type: "through" })),
-					{ lat: start[1], lon: start[0], type: "break" },
+					{ lat: end[1], lon: end[0], type: "break" },
 				],
 				costing: costing.costing,
 				costing_options: costing.costing_options,
@@ -574,6 +827,8 @@ export class GenerationService {
 						"edge.end_heading",
 						"edge.begin_shape_index",
 						"edge.end_shape_index",
+						"edge.bicycle_network",
+						"edge.road_class",
 						"shape",
 					],
 					action: "include",
@@ -598,6 +853,9 @@ export class GenerationService {
 			beginHeadingDeg: edge.begin_heading,
 			endHeadingDeg: edge.end_heading,
 			midpoint: midpointOf(edge),
+			onBikeNetwork:
+				typeof edge.bicycle_network === "number" ? edge.bicycle_network > 0 : edge.bicycle_network === true,
+			roadClass: edge.road_class,
 		}));
 	}
 
@@ -609,13 +867,24 @@ export class GenerationService {
 			// edge the router didn't pick).
 			viaPoints: candidate.plan.viaPoints
 				.map((via) => projectOntoGeometry(via, candidate.geometry))
-				.map(([lon, lat]) => ({ lat, lon })),
+				.map(([lon, lat], i) => {
+					const anchor = candidate.plan.viaAnchors?.[i];
+					return {
+						lat,
+						lon,
+						...(anchor?.ref !== undefined ? { ref: anchor.ref } : {}),
+						...(anchor?.name !== undefined ? { name: anchor.name } : {}),
+					};
+				}),
 			shape: candidate.shape,
 			distanceKm: candidate.distanceKm,
 			durationSeconds: candidate.durationSeconds,
 			overlapPct: Math.round(candidate.score.overlap * 100),
 			score: Number(candidate.score.total.toFixed(3)),
 			lowQuality: candidate.lowQuality,
+			...(candidate.score.networkFit !== undefined
+				? { networkFitPct: Math.round(candidate.score.networkFit * 100) }
+				: {}),
 			surfaceMetersByBucket: {
 				paved: Math.round(candidate.metersByBucket.paved),
 				compacted: Math.round(candidate.metersByBucket.compacted),

@@ -338,7 +338,28 @@ export const patchRoute = async (
 			const first = anchors[0] as number;
 			const last = anchors[anchors.length - 1] as number;
 			const restored = prev.routePath.slice(first, last + 1);
-			if (restored.length >= 2) {
+			// Undoing an ADD removes a via, and removing a via never takes the
+			// survivors off the old path — so anchoring `next` alone would keep
+			// the dead via's detour rendered (waypoint gone, route line stays).
+			// Trimming is only sound when every removed waypoint sits OUTSIDE
+			// the kept span (the appended-then-undone case); a mid-route
+			// removal falls through to the boundary patch, which re-routes
+			// exactly the dead via's span.
+			const prevAnchors = anchorIndices(prev.waypoints, prev.routePath);
+			const deadViaInsideKeptSpan = (() => {
+				if (!prevAnchors) return true; // cannot prove safety: patch instead
+				let ni = 0;
+				for (let pi = 0; pi < prev.waypoints.length; pi++) {
+					if (ni < next.length && sameWaypoint(prev.waypoints[pi], next[ni])) {
+						ni++;
+						continue;
+					}
+					const at = prevAnchors[pi] as number;
+					if (at > first && at < last) return true;
+				}
+				return false;
+			})();
+			if (!deadViaInsideKeptSpan && restored.length >= 2) {
 				Logger.info("[RCS/patchRoute] Restore: trimmed previous path, no routing.");
 				const restoredKm = calculatePathDistance(restored);
 				const prevKm = prev.distanceMeters / 1000;

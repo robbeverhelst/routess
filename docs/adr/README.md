@@ -35,6 +35,7 @@ Use the [template](0000-template.md) when adding a new one. Number sequentially 
 - [0031 — Strict surface preferences steer candidate placement, not just costing](0031-surface-first-generation-for-strict-surface-preferences.md)
 - [0034 — Centralize routing in the API; share only pure costing logic in core](0034-centralize-routing-in-the-api.md)
 - [0035 — Seeded routes: ExternalRoute as an independent ODbL Collective Database](0035-external-route-layer-and-seeding.md)
+- [0037 — Server-side knooppunt anchor fill from the node tiles](0037-server-side-knooppunt-anchor-fill-from-node-tiles.md)
 
 ### Frontend state
 - [0002 — Zustand for RouteDraft state](0002-zustand-for-routedraft-state.md)
