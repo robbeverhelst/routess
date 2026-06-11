@@ -90,17 +90,26 @@ export function planCandidate(
 	return { bearingDeg, viaPoints };
 }
 
+/**
+ * Via count for knooppunt mode: more polygon corners means more vias to snap
+ * onto Nodes, which is what actually drags the loop along the network (the
+ * router never follows signed routes between two distant points on its own).
+ * Still bounded: too many `through` points starts defeating the router.
+ */
+export const NODE_NETWORK_VIA_COUNT = 5;
+
 /** The full fan for a request, minus bearings the user has already seen. */
 export function planCandidateFan(
 	start: Coordinate,
 	heading: Heading,
 	targetDistanceKm: number,
 	excludeBearings: number[] = [],
+	viaCount: number = VIA_POINT_COUNT,
 ): CandidatePlan[] {
 	const excluded = new Set(excludeBearings.map(normalizeBearing));
 	return bearingsForHeading(heading)
 		.filter((bearing) => !excluded.has(bearing))
-		.map((bearing) => planCandidate(start, bearing, targetDistanceKm));
+		.map((bearing) => planCandidate(start, bearing, targetDistanceKm, viaCount));
 }
 
 /**

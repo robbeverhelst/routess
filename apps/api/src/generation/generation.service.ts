@@ -23,6 +23,7 @@ import {
 	isochroneContourKm,
 	loopRadiusKm,
 	MAX_REQUIRED_ANCHORS,
+	NODE_NETWORK_VIA_COUNT,
 	OVERLAP_WARN_LIMIT,
 	planAtoBCandidates,
 	planCandidateFan,
@@ -273,9 +274,12 @@ export class GenerationService {
 			throw err;
 		}
 
+		// Knooppunt mode rides on via density: a 5-via ring snapped onto Nodes
+		// follows the network far better than the default 3 corners.
+		const fanViaCount = anchors.networkFitMode ? NODE_NETWORK_VIA_COUNT : undefined;
 		let plans = end
 			? planAtoBCandidates(start, end, request.targetDistanceKm, request.excludeBearings)
-			: planCandidateFan(start, request.heading, request.targetDistanceKm, request.excludeBearings);
+			: planCandidateFan(start, request.heading, request.targetDistanceKm, request.excludeBearings, fanViaCount);
 		if (plans.length === 0) return fail("all_bearings_excluded");
 		plans = plans.map((plan) => applyAnchors(plan, anchors, start));
 
