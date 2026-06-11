@@ -327,6 +327,9 @@ export class GenerationService {
 			candidateCount: selected.length,
 			bestOverlapPct: Math.round(selected[0].score.overlap * 100),
 			usedIsochroneFallback,
+			...(selected[0].score.networkFit !== undefined
+				? { bestNetworkFitPct: Math.round(selected[0].score.networkFit * 100) }
+				: {}),
 		});
 
 		return { candidates: selected.map((candidate) => this.toDto(candidate)) };

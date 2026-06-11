@@ -191,14 +191,17 @@ const MapWithRoutingContent: React.FC<MapboxMapProps> = ({
 		};
 		const onGenerateLoop = (detail: AppEventMap["routess:generate-loop"]) => {
 			const center = mapRef.current?.getCenter();
-			const start = detail?.start ?? (center ? ([center.lng, center.lat] as [number, number]) : undefined);
+			const mapCenter = center ? ([center.lng, center.lat] as [number, number]) : undefined;
+			const start = detail?.start ?? mapCenter;
 			if (!start) {
 				pushToast({ kind: "warn", title: t("map.notReady") });
 				return;
 			}
-			void startGeneration(start);
+			const isAtoB = useLoopPreferencesStore.getState().routeType === "a-to-b";
+			const end = isAtoB ? (detail?.end ?? mapCenter) : undefined;
+			void startGeneration(start, end ? { end } : undefined);
 		};
-		const onPickLoopStart = () => {
+		const pickLoopPoint = (hintKey: string, assign: (coord: [number, number]) => void) => {
 			const map = mapRef.current;
 			if (!map) {
 				pushToast({ kind: "warn", title: t("map.notReady") });
@@ -206,7 +209,7 @@ const MapWithRoutingContent: React.FC<MapboxMapProps> = ({
 			}
 			const canvas = map.getCanvas();
 			canvas.style.cursor = "crosshair";
-			pushToast({ kind: "info", title: t("loop.pickStartHint") });
+			pushToast({ kind: "info", title: t(hintKey) });
 
 			const finish = () => {
 				canvas.style.cursor = "";
@@ -220,8 +223,18 @@ const MapWithRoutingContent: React.FC<MapboxMapProps> = ({
 			};
 			window.addEventListener("keydown", onEscape);
 			requestMapPick((coord) => {
-				useLoopPreferencesStore.getState().setStart({ kind: "point", coord: [coord[0], coord[1]], source: "picked" });
+				assign([coord[0], coord[1]]);
 				finish();
+			});
+		};
+		const onPickLoopStart = () => {
+			pickLoopPoint("loop.pickStartHint", (coord) => {
+				useLoopPreferencesStore.getState().setStart({ kind: "point", coord, source: "picked" });
+			});
+		};
+		const onPickLoopEnd = () => {
+			pickLoopPoint("loop.pickEndHint", (coord) => {
+				useLoopPreferencesStore.getState().setEnd({ kind: "point", coord, source: "picked" });
 			});
 		};
 		const onImportGpx = (detail: { gpxString?: string; fileName?: string }) => {
@@ -254,6 +267,7 @@ const MapWithRoutingContent: React.FC<MapboxMapProps> = ({
 			onAppEvent("routess:recalculate-route", onRecalculate),
 			onAppEvent("routess:generate-loop", onGenerateLoop),
 			onAppEvent("routess:pick-loop-start", onPickLoopStart),
+			onAppEvent("routess:pick-loop-end", onPickLoopEnd),
 		];
 		return () => {
 			for (const unsubscribe of unsubscribers) {

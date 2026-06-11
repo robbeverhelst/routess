@@ -53,11 +53,12 @@ export class MetricsService implements OnModuleInit, OnModuleDestroy, Metrics {
 	private providerCalls!: Counter;
 	private cacheEvents!: Counter;
 
-	// Route generation metrics (issue #136: quality, latency, provider calls)
+	// Route generation metrics (issues #136/#262: quality, latency, provider calls)
 	private routeGenerations!: Counter;
 	private routeGenerationDuration!: Histogram;
 	private routeGenerationValhallaCalls!: Histogram;
 	private routeGenerationOverlapPct!: Histogram;
+	private routeGenerationNetworkFitPct!: Histogram;
 
 	async onModuleInit() {
 		await this.initializeMetrics();
@@ -145,6 +146,11 @@ export class MetricsService implements OnModuleInit, OnModuleDestroy, Metrics {
 
 		this.routeGenerationOverlapPct = this.meter.createHistogram("route_generation_overlap_pct", {
 			description: "Best candidate Overlap percentage per generation (quality watch: lower is better)",
+			unit: "%",
+		});
+
+		this.routeGenerationNetworkFitPct = this.meter.createHistogram("route_generation_network_fit_pct", {
+			description: "Best candidate NetworkFit percentage when knooppunt mode was active (higher is better)",
 			unit: "%",
 		});
 
@@ -243,12 +249,18 @@ export class MetricsService implements OnModuleInit, OnModuleDestroy, Metrics {
 			outcome: event.outcome,
 			activity: event.activity,
 			...(event.failureCode ? { failure_code: event.failureCode } : {}),
+			// Attributes rescues so the fallback's effect on
+			// no_candidates_routable stays measurable (issue #262 slice 4).
+			...(event.usedIsochroneFallback ? { used_isochrone_fallback: "true" } : {}),
 		};
 		this.routeGenerations.add(1, labels);
 		this.routeGenerationDuration.record(event.durationMs, { outcome: event.outcome });
 		this.routeGenerationValhallaCalls.record(event.valhallaCalls, { outcome: event.outcome });
 		if (event.outcome === "succeeded" && typeof event.bestOverlapPct === "number") {
 			this.routeGenerationOverlapPct.record(event.bestOverlapPct);
+		}
+		if (event.outcome === "succeeded" && typeof event.bestNetworkFitPct === "number") {
+			this.routeGenerationNetworkFitPct.record(event.bestNetworkFitPct);
 		}
 	}
 }

@@ -29,13 +29,14 @@ const GENERATION_URL = `${API_BASE_URL.replace(/\/+$/, "")}/api/v1/generation`;
 
 interface ApiCandidate {
 	bearingDeg: number;
-	viaPoints: { lat: number; lon: number }[];
+	viaPoints: { lat: number; lon: number; ref?: string; name?: string }[];
 	shape: string;
 	distanceKm: number;
 	durationSeconds: number;
 	overlapPct: number;
 	score: number;
 	lowQuality: boolean;
+	networkFitPct?: number;
 	surfaceMetersByBucket: Record<"paved" | "compacted" | "unpaved" | "path", number>;
 }
 
@@ -77,13 +78,17 @@ function deltaBucket(actualKm: number, targetKm: number): string {
 const FAILURE_TO_EVENT_REASON: Record<GenerationFailureCode, "no_route_found" | "provider_error" | "invalid_input"> = {
 	invalid_input: "invalid_input",
 	start_not_routable: "no_route_found",
+	end_not_routable: "no_route_found",
 	no_candidates_routable: "no_route_found",
 	all_candidates_low_quality: "no_route_found",
 	all_bearings_excluded: "no_route_found",
 	provider_unavailable: "provider_error",
 };
 
-export async function startGeneration(start: Coordinate, options?: { regenerate?: boolean }): Promise<void> {
+export async function startGeneration(
+	start: Coordinate,
+	options?: { regenerate?: boolean; end?: Coordinate },
+): Promise<void> {
 	const store = useGenerationStore.getState();
 	const loopPrefs = useLoopPreferencesStore.getState();
 	const activity = useUiStore.getState().activityType;
@@ -93,12 +98,21 @@ export async function startGeneration(start: Coordinate, options?: { regenerate?
 	// draft's previous surface preference.
 	const requestPreferences: RoutingPreferences = { ...preferences, surfacePreference: loopPrefs.surface };
 
+	// On regenerate the snapshot's end wins: the store's `end` may say
+	// "map center", which has moved since the original request.
+	const end = options?.regenerate ? store.request?.end : options?.end;
+	const routeType = end ? ("a-to-b" as const) : ("loop" as const);
+
 	const request: GenerationRequestSnapshot = {
+		routeType,
 		start,
+		...(end ? { end } : {}),
 		activity,
 		targetDistanceKm: loopPrefs.distanceKm,
 		heading: loopPrefs.heading,
 		surface: loopPrefs.surface,
+		preferNodeNetworks: loopPrefs.preferNodeNetworks,
+		landmarks: loopPrefs.landmarks.map((l) => ({ coord: l.coord, name: l.name })),
 		preferences: requestPreferences,
 	};
 
@@ -109,7 +123,7 @@ export async function startGeneration(start: Coordinate, options?: { regenerate?
 		name: "route_generation_started",
 		properties: {
 			activity,
-			route_type: "loop",
+			route_type: routeType,
 			target_distance_m_bucket: distanceBucket(loopPrefs.distanceKm),
 			surface_type: loopPrefs.surface,
 			heading: loopPrefs.heading,
@@ -125,22 +139,34 @@ export async function startGeneration(start: Coordinate, options?: { regenerate?
 			credentials: "include",
 			body: JSON.stringify({
 				start: { lat: start[1], lon: start[0] },
+				...(end ? { routeType: "a-to-b", end: { lat: end[1], lon: end[0] } } : {}),
 				activity,
 				targetDistanceKm: loopPrefs.distanceKm,
 				heading: loopPrefs.heading,
 				preferences: requestPreferences,
+				...(loopPrefs.preferNodeNetworks ? { preferNodeNetworks: true } : {}),
+				...(request.landmarks.length > 0
+					? {
+							anchors: request.landmarks.map((l) => ({
+								lat: l.coord[1],
+								lon: l.coord[0],
+								name: l.name,
+								required: true,
+							})),
+						}
+					: {}),
 				...(excludeBearings.length > 0 ? { excludeBearings } : {}),
 			}),
 		});
 	} catch (err) {
 		Logger.warn("[Generation] transport failure:", err);
-		failWith("provider_unavailable", activity);
+		failWith("provider_unavailable", activity, routeType);
 		return;
 	}
 
 	if (!response.ok) {
 		Logger.warn(`[Generation] API returned ${response.status}`);
-		failWith(response.status === 400 ? "invalid_input" : "provider_unavailable", activity);
+		failWith(response.status === 400 ? "invalid_input" : "provider_unavailable", activity, routeType);
 		return;
 	}
 
@@ -153,7 +179,7 @@ export async function startGeneration(start: Coordinate, options?: { regenerate?
 		});
 		trackEvent({
 			name: "route_generation_failed",
-			properties: { activity, route_type: "loop", failure_reason: FAILURE_TO_EVENT_REASON[code] },
+			properties: { activity, route_type: routeType, failure_reason: FAILURE_TO_EVENT_REASON[code] },
 		});
 		return;
 	}
@@ -161,12 +187,16 @@ export async function startGeneration(start: Coordinate, options?: { regenerate?
 	const candidates: GenerationCandidateView[] = data.candidates.map((c) => ({
 		bearingDeg: c.bearingDeg,
 		viaPoints: c.viaPoints.map((p) => [p.lon, p.lat] as Coordinate),
+		viaMeta: c.viaPoints.map((p) =>
+			p.ref !== undefined || p.name !== undefined ? { ref: p.ref, name: p.name } : undefined,
+		),
 		geometry: decodePolyline6(c.shape),
 		distanceKm: c.distanceKm,
 		durationSeconds: c.durationSeconds,
 		overlapPct: c.overlapPct,
 		score: c.score,
 		lowQuality: c.lowQuality,
+		...(c.networkFitPct !== undefined ? { networkFitPct: c.networkFitPct } : {}),
 		surfaceMetersByBucket: c.surfaceMetersByBucket,
 		elevationGainM: null,
 	}));
@@ -177,7 +207,7 @@ export async function startGeneration(start: Coordinate, options?: { regenerate?
 		name: "route_generation_succeeded",
 		properties: {
 			activity,
-			route_type: "loop",
+			route_type: routeType,
 			candidate_count: candidates.length,
 			duration_ms_bucket: durationBucket(performance.now() - startedAt),
 			delta_from_target_pct_bucket: deltaBucket(candidates[0].distanceKm, loopPrefs.distanceKm),
@@ -192,20 +222,35 @@ export async function startGeneration(start: Coordinate, options?: { regenerate?
 	});
 }
 
-function failWith(code: GenerationFailureCode, activity: RouteActivity): void {
+function failWith(code: GenerationFailureCode, activity: RouteActivity, routeType: "loop" | "a-to-b"): void {
 	useGenerationStore.getState().setFailure({ code });
 	trackEvent({
 		name: "route_generation_failed",
-		properties: { activity, route_type: "loop", failure_reason: FAILURE_TO_EVENT_REASON[code] },
+		properties: { activity, route_type: routeType, failure_reason: FAILURE_TO_EVENT_REASON[code] },
 	});
 }
 
-/** The Waypoints a confirmed candidate carries into the RouteDraft. */
-export function candidateWaypoints(candidate: GenerationCandidateView): Waypoint[] {
+/** Display name for a via: landmark name, or the knooppunt the via sits on. */
+function viaName(meta: { ref?: string; name?: string } | undefined): string | undefined {
+	if (!meta) return undefined;
+	if (meta.name) return meta.name;
+	return meta.ref !== undefined ? `Knooppunt ${meta.ref}` : undefined;
+}
+
+/**
+ * The Waypoints a confirmed candidate carries into the RouteDraft. Vias on a
+ * Node or landmark keep its name (it travels into GPX export). Loops close
+ * back on the start; a-to-b ends at the routed geometry's last point.
+ */
+export function candidateWaypoints(candidate: GenerationCandidateView, routeType: "loop" | "a-to-b"): Waypoint[] {
 	const start = candidate.geometry[0];
+	const end = routeType === "a-to-b" ? candidate.geometry[candidate.geometry.length - 1] : start;
 	return [
 		{ coord: start, type: "routed" },
-		...candidate.viaPoints.map((coord): Waypoint => ({ coord, type: "routed" })),
-		{ coord: start, type: "routed" },
+		...candidate.viaPoints.map((coord, i): Waypoint => {
+			const name = viaName(candidate.viaMeta[i]);
+			return { coord, type: "routed", ...(name ? { name } : {}) };
+		}),
+		{ coord: end, type: "routed" },
 	];
 }

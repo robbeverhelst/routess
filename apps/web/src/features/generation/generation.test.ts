@@ -10,6 +10,7 @@ const candidate = (bearingDeg: number): GenerationCandidateView => ({
 		[3.7, 51.09],
 		[3.68, 51.07],
 	],
+	viaMeta: [undefined, undefined, undefined],
 	geometry: [
 		[3.7174, 51.0543],
 		[3.75, 51.08],
@@ -27,22 +28,49 @@ const candidate = (bearingDeg: number): GenerationCandidateView => ({
 });
 
 const request = {
+	routeType: "loop" as const,
 	start: [3.7174, 51.0543] as Coordinate,
 	activity: "cycle" as const,
 	targetDistanceKm: 30,
 	heading: "any" as const,
 	surface: "mixed" as const,
+	preferNodeNetworks: false,
+	landmarks: [],
 	preferences: { surfacePreference: "mixed" as const, avoidFerries: true, avoidHighways: false },
 };
 
 describe("candidateWaypoints", () => {
 	it("builds start + vias + start, all routed", () => {
-		const waypoints = candidateWaypoints(candidate(45));
+		const waypoints = candidateWaypoints(candidate(45), "loop");
 		expect(waypoints).toHaveLength(5);
 		expect(waypoints[0].coord).toEqual(waypoints[4].coord);
 		expect(waypoints[0].coord).toEqual([3.7174, 51.0543]);
 		expect(waypoints.every((wp) => wp.type === "routed")).toBe(true);
 		expect(waypoints.slice(1, 4).map((wp) => wp.coord)).toEqual(candidate(45).viaPoints);
+	});
+
+	it("names vias by knooppunt ref or landmark name", () => {
+		const withMeta = { ...candidate(45), viaMeta: [{ ref: "45" }, undefined, { name: "Kasteel van Horst" }] };
+		const waypoints = candidateWaypoints(withMeta, "loop");
+		expect(waypoints[1].name).toBe("Knooppunt 45");
+		expect(waypoints[2].name).toBeUndefined();
+		expect(waypoints[3].name).toBe("Kasteel van Horst");
+	});
+
+	it("ends an a-to-b candidate at the geometry's last point", () => {
+		const atob = {
+			...candidate(90),
+			geometry: [
+				[3.7174, 51.0543],
+				[3.75, 51.08],
+				[3.7, 51.09],
+				[3.68, 51.07],
+				[3.9, 51.1],
+			] as Coordinate[],
+		};
+		const waypoints = candidateWaypoints(atob, "a-to-b");
+		expect(waypoints[0].coord).toEqual([3.7174, 51.0543]);
+		expect(waypoints[waypoints.length - 1].coord).toEqual([3.9, 51.1]);
 	});
 });
 

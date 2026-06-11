@@ -21,6 +21,7 @@ const BUCKET_COLOR: Record<SurfaceBucket, string> = surfaceBucketColors;
 const FAILURE_MESSAGE_KEY: Record<GenerationFailureCode, string> = {
 	invalid_input: "loop.failure.invalidInput",
 	start_not_routable: "loop.failure.startNotRoutable",
+	end_not_routable: "loop.failure.endNotRoutable",
 	no_candidates_routable: "loop.failure.noCandidates",
 	all_candidates_low_quality: "loop.failure.lowQuality",
 	all_bearings_excluded: "loop.failure.fanExhausted",
@@ -90,8 +91,29 @@ function CandidateCard({
 					</span>
 				) : null}
 			</div>
+			<NodeSequence candidate={candidate} />
 			<SurfaceBar meters={candidate.surfaceMetersByBucket} />
 		</button>
+	);
+}
+
+// The knooppunt sequence a candidate rides ("via 45 → 52 → 67"), plus the
+// NetworkFit share when knooppunt mode was active.
+function NodeSequence({ candidate }: { candidate: GenerationCandidateView }) {
+	const t = useT();
+	const refs = candidate.viaMeta.map((meta) => meta?.ref).filter((ref): ref is string => ref !== undefined);
+	if (refs.length === 0 && candidate.networkFitPct === undefined) return null;
+	return (
+		<div
+			style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10.5, color: RDS_COLORS.fgSubtle, ...ELLIPSIS }}
+		>
+			{refs.length > 0 ? <span style={ELLIPSIS}>{t("loop.viaNodes", { seq: refs.join(" → ") })}</span> : null}
+			{candidate.networkFitPct !== undefined ? (
+				<span className="rds-mono" style={{ flexShrink: 0 }}>
+					{t("loop.networkFit", { pct: String(candidate.networkFitPct) })}
+				</span>
+			) : null}
+		</div>
 	);
 }
 
@@ -168,12 +190,12 @@ export function GenerationOverlay() {
 	if (status === "failed" && failure) {
 		const retry = () => {
 			if (!request) return;
-			void startGeneration(request.start);
+			void startGeneration(request.start, request.end ? { end: request.end } : undefined);
 		};
 		const retryWith = (mutate: () => void) => () => {
 			if (!request) return;
 			mutate();
-			void startGeneration(request.start);
+			void startGeneration(request.start, request.end ? { end: request.end } : undefined);
 		};
 		const chips: { key: string; label: string; onClick: () => void }[] = [];
 		if (request) {
@@ -253,7 +275,7 @@ export function GenerationOverlay() {
 
 	const confirm = async () => {
 		if (!editor || !request) return;
-		const result = await editor.loadWaypoints(candidateWaypoints(selected), {
+		const result = await editor.loadWaypoints(candidateWaypoints(selected, request.routeType), {
 			exactRoutePath: selected.geometry,
 			saveSnapshot: true,
 		});

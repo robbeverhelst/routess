@@ -28,6 +28,8 @@ export interface RouteGenerationCompletedEvent {
 	failureCode?: string;
 	/** True when the candidates came from the isochrone fallback tactic. */
 	usedIsochroneFallback?: boolean;
+	/** Winning candidate's NetworkFit %, when knooppunt mode was active. */
+	bestNetworkFitPct?: number;
 }
 
 export interface UserRegisteredEvent {
