@@ -553,6 +553,7 @@ export const en: Record<string, string> = {
 	"loop.landmarksPlaceholder": "Search a place the route must pass\u2026",
 	"loop.viaNodes": "via {seq}",
 	"loop.networkFit": "{pct}% network",
+	"loop.endSameAsStart": "Pick an end point that differs from the start (or generate a loop instead).",
 
 	// ImportModal
 	"import.gpxOnly.title": "Only GPX is supported right now",

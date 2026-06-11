@@ -1,3 +1,4 @@
+import { haversineDistance } from "@routess/core";
 import { useEffect } from "react";
 import { useLocalStorageInit } from "@/components/hooks/useLocalStorageInit";
 import { useMapWithRoutingState } from "@/components/hooks/useMapWithRoutingState";
@@ -199,6 +200,13 @@ const MapWithRoutingContent: React.FC<MapboxMapProps> = ({
 			}
 			const isAtoB = useLoopPreferencesStore.getState().routeType === "a-to-b";
 			const end = isAtoB ? (detail?.end ?? mapCenter) : undefined;
+			// Both pickers on "map center" resolve to the same point; an a-to-b
+			// from a point to itself is a loop the user didn't ask for.
+			if (end && haversineDistance(start, end) < 0.05) {
+				pushToast({ kind: "warn", title: t("loop.endSameAsStart") });
+				useModalsStore.getState().openModal("loop");
+				return;
+			}
 			void startGeneration(start, end ? { end } : undefined);
 		};
 		const pickLoopPoint = (hintKey: string, assign: (coord: [number, number]) => void) => {

@@ -528,6 +528,7 @@ export const nl: Record<string, string> = {
 	"loop.landmarksPlaceholder": "Zoek een plek waar de route langs moet\u2026",
 	"loop.viaNodes": "via {seq}",
 	"loop.networkFit": "{pct}% netwerk",
+	"loop.endSameAsStart": "Kies een eindpunt dat verschilt van het startpunt (of genereer een lus).",
 
 	// ImportModal
 	"import.gpxOnly.title": "Alleen GPX wordt nu ondersteund",
