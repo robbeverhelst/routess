@@ -37,59 +37,61 @@ function AdminSeedingPage() {
 				</Card>
 			) : (
 				<Card padding={0}>
-					<table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-						<thead>
-							<tr style={{ background: RDS_COLORS.bgPanelElev }}>
-								<Th>Source</Th>
-								<Th>License</Th>
-								<Th>Status</Th>
-								<Th align="right">Routes</Th>
-								<Th align="right">Removed</Th>
-								<Th>Last sync</Th>
-								<Th>Last result</Th>
-								<Th>Next sync</Th>
-							</tr>
-						</thead>
-						<tbody>
-							{items.map((source, idx) => (
-								<tr key={source.key} style={{ borderTop: idx === 0 ? "none" : `1px solid ${RDS_COLORS.border}` }}>
-									<Td>
-										<span style={{ color: RDS_COLORS.fg, fontWeight: 500 }}>{source.displayName}</span>
-										<span style={{ color: RDS_COLORS.fgSubtle, marginLeft: 8, fontSize: 11.5 }}>{source.key}</span>
-									</Td>
-									<Td muted>{source.license}</Td>
-									<Td>
-										<Badge variant={source.status === "green" ? "accent" : "default"}>{source.status}</Badge>
-									</Td>
-									<Td align="right">{source.routeCount}</Td>
-									<Td align="right" muted>
-										{source.removedCount}
-									</Td>
-									<Td muted>{source.lastRefreshedAt ? formatDate(source.lastRefreshedAt) : "never"}</Td>
-									<Td muted>
-										{source.lastRefreshError ? (
-											<span title={source.lastRefreshError}>
-												<Badge variant="default" dot>
-													failed
-												</Badge>
-											</span>
-										) : source.lastRefreshStats ? (
-											`+${source.lastRefreshStats.inserted} ~${source.lastRefreshStats.updated} −${source.lastRefreshStats.removed}`
-										) : (
-											"—"
-										)}
-									</Td>
-									<Td muted>
-										{source.automatic
-											? source.nextRefreshAt
-												? `${formatDate(source.nextRefreshAt)} (every ${source.refreshIntervalDays}d)`
-												: "on next run"
-											: "manual"}
-									</Td>
+					<div style={{ width: "100%", overflowX: "auto" }}>
+						<table style={{ width: "100%", minWidth: 760, borderCollapse: "collapse", fontSize: 13 }}>
+							<thead>
+								<tr style={{ background: RDS_COLORS.bgPanelElev }}>
+									<Th>Source</Th>
+									<Th>License</Th>
+									<Th>Status</Th>
+									<Th align="right">Routes</Th>
+									<Th align="right">Removed</Th>
+									<Th>Last sync</Th>
+									<Th>Last result</Th>
+									<Th>Next sync</Th>
 								</tr>
-							))}
-						</tbody>
-					</table>
+							</thead>
+							<tbody>
+								{items.map((source, idx) => (
+									<tr key={source.key} style={{ borderTop: idx === 0 ? "none" : `1px solid ${RDS_COLORS.border}` }}>
+										<Td>
+											<span style={{ color: RDS_COLORS.fg, fontWeight: 500 }}>{source.displayName}</span>
+											<span style={{ color: RDS_COLORS.fgSubtle, marginLeft: 8, fontSize: 11.5 }}>{source.key}</span>
+										</Td>
+										<Td muted>{source.license}</Td>
+										<Td>
+											<Badge variant={source.status === "green" ? "accent" : "default"}>{source.status}</Badge>
+										</Td>
+										<Td align="right">{source.routeCount}</Td>
+										<Td align="right" muted>
+											{source.removedCount}
+										</Td>
+										<Td muted>{source.lastRefreshedAt ? formatDate(source.lastRefreshedAt) : "never"}</Td>
+										<Td muted>
+											{source.lastRefreshError ? (
+												<span title={source.lastRefreshError}>
+													<Badge variant="default" dot>
+														failed
+													</Badge>
+												</span>
+											) : source.lastRefreshStats ? (
+												`+${source.lastRefreshStats.inserted} ~${source.lastRefreshStats.updated} −${source.lastRefreshStats.removed}`
+											) : (
+												"—"
+											)}
+										</Td>
+										<Td muted>
+											{source.automatic
+												? source.nextRefreshAt
+													? `${formatDate(source.nextRefreshAt)} (every ${source.refreshIntervalDays}d)`
+													: "on next run"
+												: "manual"}
+										</Td>
+									</tr>
+								))}
+							</tbody>
+						</table>
+					</div>
 				</Card>
 			)}
 		</div>
