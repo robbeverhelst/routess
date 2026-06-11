@@ -1,6 +1,7 @@
 import type { ApiRoute } from "@routess/api-client";
 import { type GeoJSONSource, LngLatBounds, type Map as MapboxMap } from "mapbox-gl";
 import { useEffect } from "react";
+import { ROUTE_PREVIEW_COLOR } from "@/components/map/colors";
 import { useLibraryStore } from "@/stores/libraryStore";
 
 const SOURCE_ID = "library-route-preview";
@@ -43,7 +44,7 @@ function drawPreview(map: MapboxMap, coords: [number, number][]) {
 		type: "line",
 		source: SOURCE_ID,
 		layout: { "line-cap": "round", "line-join": "round" },
-		paint: { "line-color": "#7d62ff", "line-width": 4, "line-opacity": 0.95 },
+		paint: { "line-color": ROUTE_PREVIEW_COLOR, "line-width": 4, "line-opacity": 0.95 },
 	});
 }
 

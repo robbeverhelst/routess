@@ -1,6 +1,7 @@
 import type { GeoJSONSource, Map as MapboxMap, MapMouseEvent } from "mapbox-gl";
 import mapboxgl from "mapbox-gl";
 import { useEffect, useRef, useState } from "react";
+import { ROUTE_PREVIEW_COLOR } from "@/components/map/colors";
 import { onAppEvent } from "@/lib/app-events";
 import { useT } from "@/lib/i18n";
 import { useDiscoverStore } from "@/stores/discoverStore";
@@ -153,7 +154,7 @@ export function DiscoverMapBindings({ mapRef }: { mapRef: React.RefObject<Mapbox
 				type: "line",
 				source: PATH_SOURCE_ID,
 				layout: { "line-cap": "round", "line-join": "round" },
-				paint: { "line-color": "#7d62ff", "line-width": 3.5, "line-opacity": 0.95 },
+				paint: { "line-color": ROUTE_PREVIEW_COLOR, "line-width": 3.5, "line-opacity": 0.95 },
 			});
 			map.addSource(STARTS_SOURCE_ID, { type: "geojson", data: startsCollection(useDiscoverStore.getState().routes) });
 			map.addLayer({
@@ -162,7 +163,7 @@ export function DiscoverMapBindings({ mapRef }: { mapRef: React.RefObject<Mapbox
 				source: STARTS_SOURCE_ID,
 				paint: {
 					"circle-radius": 6,
-					"circle-color": "#7d62ff",
+					"circle-color": ROUTE_PREVIEW_COLOR,
 					"circle-stroke-color": "#ffffff",
 					"circle-stroke-width": 2,
 					"circle-opacity": 0.9,
