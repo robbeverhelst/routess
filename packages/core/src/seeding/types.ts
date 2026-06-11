@@ -1,6 +1,6 @@
 import type { Coordinate, RouteActivity } from "../types";
 
-// Seeding (CONTEXT.md "Seeding", ADR 0033). These types describe the open-data
+// Seeding (CONTEXT.md "Seeding", ADR 0035). These types describe the open-data
 // ExternalRoute layer: the normalized shape adapters emit, and the SeedSource
 // metadata that carries license/attribution/refresh/takedown.
 
@@ -45,7 +45,7 @@ export interface SeedSourceMeta {
 // One external route as emitted by an adapter, before persistence. Geometry is
 // [lng, lat] pairs (the RoutePath order used everywhere else). `sourceRecordId`
 // is the stable id within the source: together with the SeedSource key it forms
-// the upsert key, so a refresh updates rather than duplicates (ADR 0033).
+// the upsert key, so a refresh updates rather than duplicates (ADR 0035).
 export interface SeedRoute {
 	sourceRecordId: string;
 	name: string;

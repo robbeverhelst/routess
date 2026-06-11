@@ -1,3 +1,4 @@
+import { landingAccents } from "@routess/design-tokens";
 import type { Dict } from "@/lib/content";
 import { APP_HOST } from "@/lib/i18n";
 import { AccentLines } from "./AccentText";
@@ -25,7 +26,7 @@ export function Hero({ dict }: { dict: Dict }) {
 								style={{
 									background: "var(--moss-soft)",
 									borderColor: "transparent",
-									color: "oklch(0.32 0.08 145)",
+									color: landingAccents.mossDeep,
 								}}
 							>
 								<Dot color="var(--moss)" /> {dict.hero.chip}

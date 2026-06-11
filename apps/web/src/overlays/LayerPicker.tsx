@@ -1,3 +1,4 @@
+import { nodeNetworkColors } from "@routess/design-tokens";
 import { useMemo } from "react";
 import { loadLastMapViewFromLocalStorage } from "@/features/routing/services/LocalStorageService";
 import { useT } from "@/lib/i18n";
@@ -46,8 +47,18 @@ type OverlayRow = {
 };
 
 const OVERLAY_ROWS: OverlayRow[] = [
-	{ key: "hikingNodes", labelKey: "layers.hikingNodes", subKey: "layers.hikingNodesSub", color: "#dc2626" },
-	{ key: "cyclingNodes", labelKey: "layers.cyclingNodes", subKey: "layers.cyclingNodesSub", color: "#1d4ed8" },
+	{
+		key: "hikingNodes",
+		labelKey: "layers.hikingNodes",
+		subKey: "layers.hikingNodesSub",
+		color: nodeNetworkColors.hiking,
+	},
+	{
+		key: "cyclingNodes",
+		labelKey: "layers.cyclingNodes",
+		subKey: "layers.cyclingNodesSub",
+		color: nodeNetworkColors.cycling,
+	},
 ];
 
 export function LayerPicker() {

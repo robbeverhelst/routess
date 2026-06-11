@@ -102,7 +102,7 @@ export class RoutesService {
 		if (!route) {
 			throw new NotFoundException(`Route with ID ${id} not found`);
 		}
-		const ownerId = (route.user as unknown as User).id;
+		const ownerId = route.user.id;
 		const isOwner = viewerId !== null && ownerId === viewerId;
 		if (!isOwner && route.visibility !== "public") {
 			throw new NotFoundException(`Route with ID ${id} not found`);
@@ -146,7 +146,7 @@ export class RoutesService {
 		const where = { visibility: "public", ...publicListingWhere(filters, gate) } as FilterQuery<Route>;
 
 		// The seeded ExternalRoute layer is unioned in at read time (the ODbL
-		// "Produced Work", ADR 0033). We fetch a window of `offset + limit` from
+		// "Produced Work", ADR 0035). We fetch a window of `offset + limit` from
 		// each source, merge, sort, and slice, since the two tables are wholly
 		// independent and cannot be joined in SQL. Fine at our volumes.
 		const take = offset + limit;
@@ -244,7 +244,7 @@ export class RoutesService {
 		if (!route) {
 			throw new NotFoundException(`Route with ID ${id} not found`);
 		}
-		const ownerId = (route.user as unknown as { id: number }).id;
+		const ownerId = route.user.id;
 		const isOwner = viewerId !== null && ownerId === viewerId;
 		if (!isOwner && route.visibility !== "public") {
 			throw new NotFoundException(`Route with ID ${id} not found`);
@@ -279,7 +279,7 @@ export class RoutesService {
 
 // Discover orders by PublishedAt; ExternalRoutes have none, so they fall back
 // to updatedAt (their import/refresh time). The merge of the two pre-sorted
-// windows is stable for the union (ADR 0033).
+// windows is stable for the union (ADR 0035).
 function publicSortKey(summary: PublicRouteSummaryDto): number {
 	const stamp = summary.publishedAt ?? summary.updatedAt;
 	return stamp ? Date.parse(stamp) : 0;

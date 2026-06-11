@@ -1,5 +1,6 @@
 "use client";
 
+import { landingAccents } from "@routess/design-tokens";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import type { Dict } from "@/lib/content";
@@ -143,7 +144,7 @@ export function RouteGen({ dict }: { dict: Dict }) {
 									borderRadius: 12,
 									overflow: "hidden",
 									position: "relative",
-									background: "oklch(0.96 0.03 80)",
+									background: landingAccents.cream,
 								}}
 							>
 								{/* Real map tiles: a loop routed via Mapbox Directions, baked

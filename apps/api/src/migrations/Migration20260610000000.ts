@@ -1,6 +1,6 @@
 import { Migration } from "@mikro-orm/migrations";
 
-// Automated seed refresh (ADR 0033 follow-up): a SeedSource with a stable
+// Automated seed refresh (ADR 0035 follow-up): a SeedSource with a stable
 // bulk feed URL gets re-pulled on a schedule; without one it stays manual.
 export class Migration20260610000000 extends Migration {
 	override async up(): Promise<void> {

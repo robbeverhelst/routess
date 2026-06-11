@@ -2,8 +2,8 @@
  * Route and waypoint validation utilities
  */
 
+import { isValidCoordinate } from "@routess/core";
 import type { Coordinate } from "@/types/map";
-import { isValidCoordinate } from "./geospatial";
 
 /**
  * Validation result interface

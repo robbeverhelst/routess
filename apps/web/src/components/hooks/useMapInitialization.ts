@@ -84,7 +84,7 @@ export const useMapInitialization = ({
 			const externalRouteId = Number(urlParams.get("externalRoute"));
 
 			if (externalRouteId > 0) {
-				// Seeded ExternalRoute opened from its /r/ page (ADR 0033): loads
+				// Seeded ExternalRoute opened from its /r/ page (ADR 0035): loads
 				// as a fresh draft with the official geometry pinned.
 				Logger.info("[useMapInitialization] Loading external route", externalRouteId);
 				try {

@@ -10,7 +10,7 @@ import { ExternalRoutesService } from "./external-routes.service";
 	controllers: [ExternalRoutesController],
 	providers: [ExternalRoutesService],
 	// Exported so RoutesService can union ExternalRoutes into Discover at read
-	// time (the ODbL Produced Work, ADR 0033).
+	// time (the ODbL Produced Work, ADR 0035).
 	exports: [ExternalRoutesService],
 })
 export class ExternalRoutesModule {}

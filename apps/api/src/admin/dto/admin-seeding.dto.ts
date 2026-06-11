@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
-// One row per SeedSource for the admin seeding panel (ADR 0033).
+// One row per SeedSource for the admin seeding panel (ADR 0035).
 export class AdminSeedSourceDto {
 	@ApiProperty({ example: "eurovelo" })
 	key!: string;

@@ -46,6 +46,7 @@ replace_placeholders() {
     replace_token "$file" "__VITE_GOOGLE_CLIENT_ID__" "${VITE_GOOGLE_CLIENT_ID:-}"
     replace_token "$file" "__VITE_APP_URL__" "${VITE_APP_URL:-}"
     replace_token "$file" "__VITE_API_URL__" "${VITE_API_URL:-}"
+    replace_token "$file" "__VITE_NODE_TILES_URL__" "${VITE_NODE_TILES_URL:-}"
     replace_token "$file" "__VITE_PUBLIC_ROUTE_BASE_URL__" "${VITE_PUBLIC_ROUTE_BASE_URL:-}"
     replace_token "$file" "__VITE_APP_VERSION__" "${VITE_APP_VERSION:-}"
     replace_token "$file" "__VITE_UMAMI_URL__" "${VITE_UMAMI_URL:-}"

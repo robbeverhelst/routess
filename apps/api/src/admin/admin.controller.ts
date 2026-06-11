@@ -58,7 +58,7 @@ export class AdminController {
 	@ApiOperation({
 		summary: "Seeded route inventory per SeedSource",
 		description:
-			"Per-source ExternalRoute counts, last sync, and projected next automatic sync (ADR 0033). Backs the admin seeding panel.",
+			"Per-source ExternalRoute counts, last sync, and projected next automatic sync (ADR 0035). Backs the admin seeding panel.",
 	})
 	async getSeedSources(): Promise<AdminSeedSourcesDto> {
 		return { items: await this.externalRoutes.sourceStats() };

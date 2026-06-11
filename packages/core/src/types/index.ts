@@ -1,8 +1,10 @@
 // Core coordinate and geometry types
 export type Coordinate = [number, number];
 
-// Route and waypoint types
-export type WaypointType = "routed" | "direct";
+// Route and waypoint types. WAYPOINT_TYPES is the runtime array for validation
+// (class-validator @IsIn, swagger enum); the literal type derives from it.
+export const WAYPOINT_TYPES = ["routed", "direct"] as const;
+export type WaypointType = (typeof WAYPOINT_TYPES)[number];
 
 export interface Waypoint {
 	coord: Coordinate;
@@ -22,25 +24,6 @@ export type RouteVisibility = (typeof ROUTE_VISIBILITIES)[number];
 
 // Map style types
 export type MapStyle = "standard" | "satellite";
-
-// Mapbox map configuration
-export interface MapboxMapProps {
-	initialViewState?: {
-		longitude: number;
-		latitude: number;
-		zoom: number;
-	};
-	width?: string | number;
-	height?: string | number;
-}
-
-// API and data types
-export interface BirdSighting {
-	id: string;
-	location: Coordinate;
-	species: string;
-	timestamp: string;
-}
 
 // Storage abstraction types
 export interface StorageAdapter {

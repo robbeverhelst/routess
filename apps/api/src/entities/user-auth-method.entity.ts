@@ -1,4 +1,4 @@
-import { type Opt, type Ref } from "@mikro-orm/core";
+import { type Opt, type Rel } from "@mikro-orm/core";
 import { Entity, Index, ManyToOne, PrimaryKey, Property, Unique } from "@mikro-orm/decorators/legacy";
 import { BaseEntity } from "./base.entity";
 import { User } from "./user.entity";
@@ -22,7 +22,7 @@ export class UserAuthMethod extends BaseEntity {
 	id!: number;
 
 	@ManyToOne(() => User, { deleteRule: "cascade" })
-	user!: Ref<User>;
+	user!: Rel<User>;
 
 	@Property({ type: "string" })
 	provider!: AuthProvider;

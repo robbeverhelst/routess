@@ -1,25 +1,39 @@
+import { nodeNetworkColors } from "@routess/design-tokens";
 import type { MapLayerMouseEvent } from "mapbox-gl";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Layer, Source, useMap } from "react-map-gl/mapbox";
-import { Logger } from "@/lib/logger";
+import { getRuntimeConfig } from "@/lib/runtime-config";
 import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
-import {
-	bboxArea,
-	bboxKey,
-	fetchNodeNetwork,
-	NODE_OVERLAY_MAX_BBOX_DEG,
-	NODE_OVERLAY_MIN_ZOOM,
-	type NodeFeatureCollection,
-	type NodeNetworkBbox,
-	type NodeNetworkKind,
-} from "./services/OverpassNodesService";
+import { resolveNodeTilesUrl } from "./nodeTilesUrl";
 
-const EMPTY_DATA: NodeFeatureCollection = { type: "FeatureCollection", features: [] };
-const DEBOUNCE_MS = 450;
-const BBOX_PADDING_RATIO = 0.35;
+// Node networks are pre-extracted from OSM into a self-hosted PMTiles file
+// (ADR 0033), served as standard vector tiles via a TileJSON endpoint
+// (go-pmtiles). VITE_NODE_TILES_URL is that TileJSON URL, not the raw .pmtiles:
+// mapbox-gl's native pmtiles provider crashes under terrain. A plain vector
+// source renders like the basemap, so Mapbox owns culling, caching, and LOD.
+export type NodeNetworkKind = "hiking" | "cycling";
 
-const HIKING_COLOR = "#dc2626";
-const CYCLING_COLOR = "#1d4ed8";
+const SOURCE_ID = "rds-nodes";
+const SOURCE_LAYER = "node_network";
+const NODE_TILES_URL = resolveNodeTilesUrl(getRuntimeConfig("VITE_NODE_TILES_URL"));
+
+const HIKING_COLOR = nodeNetworkColors.hiking;
+const CYCLING_COLOR = nodeNetworkColors.cycling;
+const ODBL_ATTRIBUTION = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors (ODbL)';
+
+// Lines render from a low zoom (clean network shape). The numbered nodes are
+// all-or-nothing: hidden while zoomed out, then every dot + number shows at
+// once from NODE_MIN_ZOOM (labels allow overlap, so none are collision-hidden).
+// A partial collision reveal reads as "numbers missing", so we wait until the
+// zoom where nodes are spaced enough to show the whole set.
+const LINE_MIN_ZOOM = 8;
+const NODE_MIN_ZOOM = 12;
+
+const LINE_WIDTH = ["interpolate", ["linear"], ["zoom"], 9, 1.2, 12, 2, 14, 2.6, 17, 3.6];
+const HIGHLIGHT_LINE_WIDTH = ["interpolate", ["linear"], ["zoom"], 12, 4, 14, 6, 17, 8];
+const NODE_RADIUS = ["interpolate", ["linear"], ["zoom"], 12, 8, 14, 10, 17, 13];
+const NODE_HALO_RADIUS = ["interpolate", ["linear"], ["zoom"], 12, 11, 14, 14, 17, 17];
+const NODE_TEXT_SIZE = ["interpolate", ["linear"], ["zoom"], 12, 10.5, 14, 11.5, 17, 13];
 
 type ActiveNode = {
 	kind: NodeNetworkKind;
@@ -30,14 +44,6 @@ type ActiveNodePair = {
 	from: ActiveNode;
 	to: ActiveNode;
 };
-
-const BASE_LINE_WIDTH = ["interpolate", ["linear"], ["zoom"], 11, 1.4, 14, 2.4, 17, 3.4];
-const HIGHLIGHT_LINE_WIDTH = ["interpolate", ["linear"], ["zoom"], 11, 4, 14, 6, 17, 8];
-const NODE_RADIUS = ["interpolate", ["linear"], ["zoom"], 11, 6.5, 14, 10, 17, 13];
-const NODE_HALO_RADIUS = ["interpolate", ["linear"], ["zoom"], 11, 9, 14, 14, 17, 17];
-const NODE_TEXT_SIZE = ["interpolate", ["linear"], ["zoom"], 11, 9, 14, 11, 17, 13];
-const HIKING_TRANSLATE = [-5, -5];
-const CYCLING_TRANSLATE = [5, 5];
 
 function kindColor(kind: NodeNetworkKind): string {
 	return kind === "hiking" ? HIKING_COLOR : CYCLING_COLOR;
@@ -74,8 +80,6 @@ function connectedLineFilter(pair: ActiveNodePair): unknown[] {
 			"any",
 			["all", ["==", ["get", "fromRef"], from.ref], ["==", ["get", "toRef"], to.ref]],
 			["all", ["==", ["get", "fromRef"], to.ref], ["==", ["get", "toRef"], from.ref]],
-			["==", ["get", "ref"], `${from.ref}-${to.ref}`],
-			["==", ["get", "ref"], `${to.ref}-${from.ref}`],
 		],
 	];
 }
@@ -88,45 +92,57 @@ function nodeFromEvent(event: MapLayerMouseEvent): ActiveNode | null {
 	return { kind: props.kind, ref: props.ref };
 }
 
-function padBbox(bbox: NodeNetworkBbox): NodeNetworkBbox {
-	const latPadding = (bbox.north - bbox.south) * BBOX_PADDING_RATIO;
-	const lngPadding = (bbox.east - bbox.west) * BBOX_PADDING_RATIO;
-
-	return {
-		south: Math.max(-85, bbox.south - latPadding),
-		west: Math.max(-180, bbox.west - lngPadding),
-		north: Math.min(85, bbox.north + latPadding),
-		east: Math.min(180, bbox.east + lngPadding),
-	};
-}
-
-function containsBbox(outer: NodeNetworkBbox, inner: NodeNetworkBbox): boolean {
-	return (
-		outer.south <= inner.south && outer.west <= inner.west && outer.north >= inner.north && outer.east >= inner.east
-	);
-}
-
 export function NodesOverlay() {
 	const showNodeNetworkOverlays = useRedesignSettingsStore((s) => s.showNodeNetworkOverlays);
 	const showHiking = useRedesignSettingsStore((s) => s.overlays?.hikingNodes ?? false);
 	const showCycling = useRedesignSettingsStore((s) => s.overlays?.cyclingNodes ?? false);
 
+	if (!NODE_TILES_URL) return null;
 	if (!showNodeNetworkOverlays) return null;
 	if (!showHiking && !showCycling) return null;
 
-	return <ActiveNodesOverlay showHiking={showHiking} showCycling={showCycling} />;
+	return <ActiveNodesOverlay tilesUrl={NODE_TILES_URL} showHiking={showHiking} showCycling={showCycling} />;
 }
 
-function ActiveNodesOverlay({ showHiking, showCycling }: { showHiking: boolean; showCycling: boolean }) {
+// ODbL credit for the self-hosted node-network data (ADR 0033). The map's
+// global attribution control is disabled, so we surface a scoped credit only
+// while the overlay is visible. Mount this as a sibling of the map canvas.
+export function NodeNetworkAttribution() {
+	const showNodeNetworkOverlays = useRedesignSettingsStore((s) => s.showNodeNetworkOverlays);
+	const showHiking = useRedesignSettingsStore((s) => s.overlays?.hikingNodes ?? false);
+	const showCycling = useRedesignSettingsStore((s) => s.overlays?.cyclingNodes ?? false);
+
+	if (!NODE_TILES_URL) return null;
+	if (!showNodeNetworkOverlays) return null;
+	if (!showHiking && !showCycling) return null;
+
+	return (
+		<div className="pointer-events-none absolute bottom-1 left-1 z-10 rounded bg-white/70 px-1.5 py-0.5 text-[10px] leading-none text-gray-600 dark:bg-black/50 dark:text-gray-300">
+			<a
+				className="pointer-events-auto hover:underline"
+				href="https://www.openstreetmap.org/copyright"
+				target="_blank"
+				rel="noreferrer"
+			>
+				© OpenStreetMap (ODbL)
+			</a>
+		</div>
+	);
+}
+
+function ActiveNodesOverlay({
+	tilesUrl,
+	showHiking,
+	showCycling,
+}: {
+	tilesUrl: string;
+	showHiking: boolean;
+	showCycling: boolean;
+}) {
 	const { current: mapRef } = useMap();
-	const [data, setData] = useState<NodeFeatureCollection>(EMPTY_DATA);
 	const [hoveredNode, setHoveredNode] = useState<ActiveNode | null>(null);
 	const [selectedNode, setSelectedNode] = useState<ActiveNode | null>(null);
 	const [previousNode, setPreviousNode] = useState<ActiveNode | null>(null);
-	const lastKeyRef = useRef<string | null>(null);
-	const loadedBboxRef = useRef<NodeNetworkBbox | null>(null);
-	const abortRef = useRef<AbortController | null>(null);
-	const splitKinds = showHiking && showCycling;
 	const activeNode = hoveredNode ?? selectedNode;
 	const activePair =
 		activeNode && selectedNode && activeNode.kind === selectedNode.kind && !sameNode(activeNode, selectedNode)
@@ -135,111 +151,16 @@ function ActiveNodesOverlay({ showHiking, showCycling }: { showHiking: boolean; 
 				? { from: previousNode, to: selectedNode }
 				: null;
 	const activeNodeColor = activeNode ? kindColor(activeNode.kind) : HIKING_COLOR;
-	const activeTranslate =
-		activeNode && splitKinds ? (activeNode.kind === "hiking" ? HIKING_TRANSLATE : CYCLING_TRANSLATE) : [0, 0];
 	const previousEndpoint = activePair?.from ?? null;
 	const previousNodeColor = previousEndpoint ? kindColor(previousEndpoint.kind) : HIKING_COLOR;
-	const previousTranslate =
-		previousEndpoint && splitKinds
-			? previousEndpoint.kind === "hiking"
-				? HIKING_TRANSLATE
-				: CYCLING_TRANSLATE
-			: [0, 0];
 
+	// Drop any selection whose kind was just toggled off.
 	useEffect(() => {
-		const map = mapRef?.getMap();
-		if (!map) {
-			Logger.warn("[NodesOverlay] map ref not ready");
-			return;
-		}
-
-		Logger.warn("[NodesOverlay] enabled, attaching listeners");
-		let timer: number | null = null;
-
-		const refresh = () => {
-			const zoom = map.getZoom();
-			if (zoom < NODE_OVERLAY_MIN_ZOOM) {
-				Logger.warn(`[NodesOverlay] zoom ${zoom.toFixed(1)} below min ${NODE_OVERLAY_MIN_ZOOM}, zoom in`);
-				if (lastKeyRef.current !== "below-zoom") {
-					lastKeyRef.current = "below-zoom";
-					loadedBboxRef.current = null;
-					setData(EMPTY_DATA);
-				}
-				return;
-			}
-			const b = map.getBounds();
-			if (!b) return;
-			const bbox: NodeNetworkBbox = {
-				south: b.getSouth(),
-				west: b.getWest(),
-				north: b.getNorth(),
-				east: b.getEast(),
-			};
-			const loadedBbox = loadedBboxRef.current;
-			if (loadedBbox && containsBbox(loadedBbox, bbox)) {
-				return;
-			}
-
-			const fetchBbox = padBbox(bbox);
-			if (bboxArea(fetchBbox) > NODE_OVERLAY_MAX_BBOX_DEG * NODE_OVERLAY_MAX_BBOX_DEG) {
-				Logger.warn("[NodesOverlay] bbox too large, zoom in further");
-				if (lastKeyRef.current !== "too-large") {
-					lastKeyRef.current = "too-large";
-					loadedBboxRef.current = null;
-					setData(EMPTY_DATA);
-				}
-				return;
-			}
-			const key = bboxKey(fetchBbox);
-			if (key === lastKeyRef.current) return;
-			lastKeyRef.current = key;
-
-			abortRef.current?.abort();
-			const controller = new AbortController();
-			abortRef.current = controller;
-
-			Logger.warn(`[NodesOverlay] fetching zoom=${zoom.toFixed(1)} bbox=${key}`);
-			fetchNodeNetwork(fetchBbox, controller.signal)
-				.then((collection) => {
-					if (controller.signal.aborted) return;
-					Logger.warn(`[NodesOverlay] received ${collection.features.length} features`);
-					loadedBboxRef.current = fetchBbox;
-					setData(collection);
-				})
-				.catch((err) => {
-					if ((err as { name?: string }).name === "AbortError") return;
-					Logger.warn("[NodesOverlay] fetch failed", err);
-				});
-		};
-
-		const schedule = () => {
-			if (timer !== null) window.clearTimeout(timer);
-			timer = window.setTimeout(refresh, DEBOUNCE_MS);
-		};
-
-		schedule();
-		map.on("moveend", schedule);
-		map.on("zoomend", schedule);
-
-		return () => {
-			if (timer !== null) window.clearTimeout(timer);
-			map.off("moveend", schedule);
-			map.off("zoomend", schedule);
-			abortRef.current?.abort();
-			abortRef.current = null;
-		};
-	}, [mapRef]);
-
-	useEffect(() => {
-		setHoveredNode((node) =>
-			node && ((node.kind === "hiking" && showHiking) || (node.kind === "cycling" && showCycling)) ? node : null,
-		);
-		setSelectedNode((node) =>
-			node && ((node.kind === "hiking" && showHiking) || (node.kind === "cycling" && showCycling)) ? node : null,
-		);
-		setPreviousNode((node) =>
-			node && ((node.kind === "hiking" && showHiking) || (node.kind === "cycling" && showCycling)) ? node : null,
-		);
+		const keep = (node: ActiveNode | null) =>
+			node && ((node.kind === "hiking" && showHiking) || (node.kind === "cycling" && showCycling)) ? node : null;
+		setHoveredNode(keep);
+		setSelectedNode(keep);
+		setPreviousNode(keep);
 	}, [showHiking, showCycling]);
 
 	useEffect(() => {
@@ -297,41 +218,35 @@ function ActiveNodesOverlay({ showHiking, showCycling }: { showHiking: boolean; 
 	}, [mapRef, showHiking, showCycling]);
 
 	return (
-		<Source id="rds-nodes" type="geojson" data={data}>
+		<Source id={SOURCE_ID} type="vector" url={tilesUrl} attribution={ODBL_ATTRIBUTION}>
 			{showHiking && (
 				<Layer
 					id="rds-nodes-line-hiking"
 					type="line"
+					source-layer={SOURCE_LAYER}
+					minzoom={LINE_MIN_ZOOM}
 					filter={lineFilter("hiking")}
 					layout={{ "line-join": "round", "line-cap": "round" }}
-					paint={{
-						"line-color": HIKING_COLOR,
-						"line-width": BASE_LINE_WIDTH,
-						"line-dasharray": [2, 1.5],
-						"line-opacity": 0.85,
-						"line-offset": splitKinds ? -1.3 : 0,
-					}}
+					paint={{ "line-color": HIKING_COLOR, "line-width": LINE_WIDTH, "line-opacity": 0.9 }}
 				/>
 			)}
 			{showCycling && (
 				<Layer
 					id="rds-nodes-line-cycling"
 					type="line"
+					source-layer={SOURCE_LAYER}
+					minzoom={LINE_MIN_ZOOM}
 					filter={lineFilter("cycling")}
 					layout={{ "line-join": "round", "line-cap": "round" }}
-					paint={{
-						"line-color": CYCLING_COLOR,
-						"line-width": BASE_LINE_WIDTH,
-						"line-dasharray": [4, 2],
-						"line-opacity": 0.85,
-						"line-offset": splitKinds ? 1.3 : 0,
-					}}
+					paint={{ "line-color": CYCLING_COLOR, "line-width": LINE_WIDTH, "line-opacity": 0.9 }}
 				/>
 			)}
 			{activePair && (
 				<Layer
 					id="rds-nodes-line-active"
 					type="line"
+					source-layer={SOURCE_LAYER}
+					minzoom={LINE_MIN_ZOOM}
 					filter={connectedLineFilter(activePair)}
 					layout={{ "line-join": "round", "line-cap": "round" }}
 					paint={{
@@ -339,7 +254,6 @@ function ActiveNodesOverlay({ showHiking, showCycling }: { showHiking: boolean; 
 						"line-width": HIGHLIGHT_LINE_WIDTH,
 						"line-opacity": 0.9,
 						"line-blur": 0.5,
-						"line-offset": splitKinds ? (activeNode.kind === "hiking" ? -1.3 : 1.3) : 0,
 					}}
 				/>
 			)}
@@ -347,14 +261,15 @@ function ActiveNodesOverlay({ showHiking, showCycling }: { showHiking: boolean; 
 				<Layer
 					id="rds-nodes-point-hiking"
 					type="circle"
+					source-layer={SOURCE_LAYER}
+					minzoom={NODE_MIN_ZOOM}
 					filter={pointFilter("hiking")}
 					paint={{
 						"circle-radius": NODE_RADIUS,
 						"circle-color": "#ffffff",
 						"circle-stroke-color": HIKING_COLOR,
-						"circle-stroke-width": 1.5,
-						"circle-opacity": 0.95,
-						"circle-translate": splitKinds ? HIKING_TRANSLATE : [0, 0],
+						"circle-stroke-width": 2,
+						"circle-opacity": 1,
 					}}
 				/>
 			)}
@@ -362,14 +277,15 @@ function ActiveNodesOverlay({ showHiking, showCycling }: { showHiking: boolean; 
 				<Layer
 					id="rds-nodes-point-cycling"
 					type="circle"
+					source-layer={SOURCE_LAYER}
+					minzoom={NODE_MIN_ZOOM}
 					filter={pointFilter("cycling")}
 					paint={{
 						"circle-radius": NODE_RADIUS,
 						"circle-color": "#ffffff",
 						"circle-stroke-color": CYCLING_COLOR,
-						"circle-stroke-width": 1.5,
-						"circle-opacity": 0.95,
-						"circle-translate": splitKinds ? CYCLING_TRANSLATE : [0, 0],
+						"circle-stroke-width": 2,
+						"circle-opacity": 1,
 					}}
 				/>
 			)}
@@ -377,6 +293,8 @@ function ActiveNodesOverlay({ showHiking, showCycling }: { showHiking: boolean; 
 				<Layer
 					id="rds-nodes-point-previous"
 					type="circle"
+					source-layer={SOURCE_LAYER}
+					minzoom={NODE_MIN_ZOOM}
 					filter={activePointFilter(previousEndpoint)}
 					paint={{
 						"circle-radius": NODE_HALO_RADIUS,
@@ -384,7 +302,6 @@ function ActiveNodesOverlay({ showHiking, showCycling }: { showHiking: boolean; 
 						"circle-stroke-color": previousNodeColor,
 						"circle-stroke-width": 2,
 						"circle-opacity": 0.75,
-						"circle-translate": previousTranslate,
 					}}
 				/>
 			)}
@@ -392,6 +309,8 @@ function ActiveNodesOverlay({ showHiking, showCycling }: { showHiking: boolean; 
 				<Layer
 					id="rds-nodes-point-active"
 					type="circle"
+					source-layer={SOURCE_LAYER}
+					minzoom={NODE_MIN_ZOOM}
 					filter={activePointFilter(activeNode)}
 					paint={{
 						"circle-radius": NODE_HALO_RADIUS,
@@ -399,7 +318,6 @@ function ActiveNodesOverlay({ showHiking, showCycling }: { showHiking: boolean; 
 						"circle-stroke-color": activeNodeColor,
 						"circle-stroke-width": 3,
 						"circle-opacity": 0.95,
-						"circle-translate": activeTranslate,
 					}}
 				/>
 			)}
@@ -407,42 +325,36 @@ function ActiveNodesOverlay({ showHiking, showCycling }: { showHiking: boolean; 
 				<Layer
 					id="rds-nodes-label-hiking"
 					type="symbol"
+					source-layer={SOURCE_LAYER}
+					minzoom={NODE_MIN_ZOOM}
 					filter={pointFilter("hiking")}
 					layout={{
 						"text-field": ["coalesce", ["get", "ref"], ""],
 						"text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
 						"text-size": NODE_TEXT_SIZE,
-						"text-allow-overlap": false,
-						"text-ignore-placement": false,
+						"text-allow-overlap": true,
+						"text-ignore-placement": true,
 						"text-padding": 2,
 					}}
-					paint={{
-						"text-color": HIKING_COLOR,
-						"text-halo-color": "#ffffff",
-						"text-halo-width": 1.2,
-						"text-translate": splitKinds ? HIKING_TRANSLATE : [0, 0],
-					}}
+					paint={{ "text-color": HIKING_COLOR, "text-halo-color": "#ffffff", "text-halo-width": 1.4 }}
 				/>
 			)}
 			{showCycling && (
 				<Layer
 					id="rds-nodes-label-cycling"
 					type="symbol"
+					source-layer={SOURCE_LAYER}
+					minzoom={NODE_MIN_ZOOM}
 					filter={pointFilter("cycling")}
 					layout={{
 						"text-field": ["coalesce", ["get", "ref"], ""],
 						"text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
 						"text-size": NODE_TEXT_SIZE,
-						"text-allow-overlap": false,
-						"text-ignore-placement": false,
+						"text-allow-overlap": true,
+						"text-ignore-placement": true,
 						"text-padding": 2,
 					}}
-					paint={{
-						"text-color": CYCLING_COLOR,
-						"text-halo-color": "#ffffff",
-						"text-halo-width": 1.2,
-						"text-translate": splitKinds ? CYCLING_TRANSLATE : [0, 0],
-					}}
+					paint={{ "text-color": CYCLING_COLOR, "text-halo-color": "#ffffff", "text-halo-width": 1.4 }}
 				/>
 			)}
 		</Source>

@@ -477,7 +477,7 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 		});
 	};
 
-	// Opens a seeded ExternalRoute (ADR 0033) in the planner as a fresh
+	// Opens a seeded ExternalRoute (ADR 0035) in the planner as a fresh
 	// unsaved draft: the official geometry is pinned exactly; smart waypoints
 	// make it editable. Saving creates the user's own copy (the fork), never
 	// touches the ExternalRoute.

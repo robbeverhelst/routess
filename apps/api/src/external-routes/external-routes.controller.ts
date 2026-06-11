@@ -6,7 +6,7 @@ import { ThrottleModerate } from "../common/decorators/throttle.decorator";
 import { ExternalRouteResponseDto } from "./dto/external-route-response.dto";
 import { ExternalRoutesService } from "./external-routes.service";
 
-// Public, anonymous read surface for seeded ExternalRoutes (ADR 0033). They are
+// Public, anonymous read surface for seeded ExternalRoutes (ADR 0035). They are
 // always public, so there is no auth, visibility, or share-token logic here —
 // just id-addressed detail and GPX with attribution embedded.
 @ApiTags("external-routes")
@@ -16,7 +16,7 @@ export class ExternalRoutesController {
 
 	@ApiOperation({
 		summary: "Download external route as GPX",
-		description: "GPX 1.1 with the SeedSource attribution embedded as <copyright> (license obligation, ADR 0033).",
+		description: "GPX 1.1 with the SeedSource attribution embedded as <copyright> (license obligation, ADR 0035).",
 	})
 	@ApiParam({ name: "id", description: "External route ID", type: "number" })
 	@ApiResponse({ status: 200, description: "GPX document" })

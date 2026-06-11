@@ -1,6 +1,6 @@
 import { Migration } from "@mikro-orm/migrations";
 
-// Seeded routes (ADR 0033):
+// Seeded routes (ADR 0035):
 // - seed_source: external open-data providers (license, attribution, refresh,
 //   green/yellow/red status).
 // - external_route: routes derived from those sources, in their OWN table with

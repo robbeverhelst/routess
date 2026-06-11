@@ -5,7 +5,7 @@ import type { SeedAdapter, SeedParseContext, SeedRoute, SeedSourceMeta } from ".
 
 // EuroVelo: the European Cyclists' Federation publishes the official EuroVelo
 // network as GPX, open since 2024 under ODbL with a fixed attribution string.
-// One green source; the headline cross-border seed (ADR 0033, epic #248).
+// One green source; the headline cross-border seed (ADR 0035, epic #248).
 // Downloads are per-route (https://en.eurovelo.com/route/get-gpx/{id}), one
 // file per EV route containing one <trk> per signed stage.
 export const EUROVELO_SOURCE: SeedSourceMeta = {

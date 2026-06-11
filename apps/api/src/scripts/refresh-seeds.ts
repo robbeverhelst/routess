@@ -7,7 +7,7 @@ import { ExternalRoutesService } from "../external-routes/external-routes.servic
 
 const logger = new Logger("RefreshSeeds");
 
-// Scheduled ExternalRoute refresh (ADR 0033): re-pulls every green SeedSource
+// Scheduled ExternalRoute refresh (ADR 0035): re-pulls every green SeedSource
 // with a feedUrl that is due per its refreshIntervalDays. Idempotent, so an
 // extra run is a no-op. Run by the Helm CronJob; manually: bun run seed:refresh
 async function refreshSeeds(): Promise<void> {

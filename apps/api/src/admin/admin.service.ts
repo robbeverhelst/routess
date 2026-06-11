@@ -264,7 +264,7 @@ export class AdminService {
 	async getRouteDetail(id: number): Promise<AdminRouteDetailDto> {
 		const route = await this.routes.findOne({ id }, { populate: ["user"], filters: { softDelete: false } });
 		if (!route) throw new NotFoundException(`Route ${id} not found`);
-		const owner = route.user as unknown as User;
+		const owner = route.user;
 		return {
 			id: route.id,
 			name: route.name,

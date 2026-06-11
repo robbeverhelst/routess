@@ -483,8 +483,8 @@ async function main() {
 		await sleep(2500);
 		await fullShot(ap, "api-tokens");
 
-		// Account screen: sessions + security.
-		await ap.evaluate(() => window.dispatchEvent(new CustomEvent("routess:open-account")));
+		// User settings screen: sessions + security.
+		await ap.evaluate(() => window.dispatchEvent(new CustomEvent("routess:open-user-settings")));
 		await sleep(3500);
 		await fullShot(ap, "account-security");
 

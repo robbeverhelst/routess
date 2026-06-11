@@ -10,7 +10,7 @@ import { ExternalRoutesService } from "../external-routes/external-routes.servic
 
 const logger = new Logger("SeedEuroVelo");
 
-// Seeds EuroVelo ExternalRoutes from official ECF GPX (ADR 0033). Download the
+// Seeds EuroVelo ExternalRoutes from official ECF GPX (ADR 0035). Download the
 // per-route GPX (https://en.eurovelo.com/route/get-gpx/{id}, ODbL) as
 // ev{N}.gpx files and point this at the directory:
 //   bun run seed:eurovelo ./data/eurovelo

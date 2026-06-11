@@ -382,7 +382,7 @@ export function SettingsPanel() {
 						name={profile?.name}
 						email={profile?.email}
 						avatar={profile?.avatar}
-						onClick={() => emitAppEvent(profile ? "routess:open-account" : "routess:open-login")}
+						onClick={() => emitAppEvent(profile ? "routess:open-user-settings" : "routess:open-login")}
 					/>
 				</SettingsSection>
 				<SettingsSection title={t("settings.quick.title")}>

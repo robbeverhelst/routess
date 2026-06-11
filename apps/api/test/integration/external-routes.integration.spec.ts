@@ -60,7 +60,7 @@ async function createExternalRoute(
 	});
 }
 
-describe("ExternalRoutes (ADR 0033)", () => {
+describe("ExternalRoutes (ADR 0035)", () => {
 	let app: INestApplication;
 
 	beforeAll(async () => {

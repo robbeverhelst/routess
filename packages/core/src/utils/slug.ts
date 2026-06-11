@@ -18,7 +18,7 @@ export function buildRouteSlugId(name: string, ref: number | string): string {
 	return `${toRouteSlug(name)}-${ref}`;
 }
 
-// ExternalRoutes live in their own table with their own id sequence (ADR 0033),
+// ExternalRoutes live in their own table with their own id sequence (ADR 0035),
 // so their public page uses an `-x{id}` tail to stay unambiguous against a user
 // Route's `-{id}`. The `x` is the only marker the resolver needs.
 export function buildExternalRouteSlugId(name: string, externalId: number): string {

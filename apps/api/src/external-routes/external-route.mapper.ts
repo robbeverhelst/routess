@@ -22,7 +22,7 @@ function sourceDto(route: ExternalRoute): PublicRouteSourceDto {
 
 // Maps an ExternalRoute into the SAME summary shape as a user Route, so the
 // Discover/listing union is one homogeneous list (the ODbL "Produced Work" is
-// the render-time combination, ADR 0033). Distinguished only by `source` being
+// the render-time combination, ADR 0035). Distinguished only by `source` being
 // set and `user` absent. publishedAt is left undefined; external routes sort by
 // updatedAt (import/refresh time) in the merge.
 export function toExternalRouteSummaryDto(

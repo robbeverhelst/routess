@@ -4,7 +4,7 @@ import { PublicRouteSourceDto } from "../../routes/dto/public-route-summary.dto"
 
 // Detail shape for a single ExternalRoute page (/r/{slug}-x{id}). Deliberately
 // separate from RouteResponseDto: an ExternalRoute has no owner, Waypoints,
-// visibility, or share token (ADR 0033). It carries source attribution instead.
+// visibility, or share token (ADR 0035). It carries source attribution instead.
 export class ExternalRouteResponseDto {
 	@ApiProperty()
 	id!: number;

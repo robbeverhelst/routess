@@ -19,6 +19,13 @@ web:
     VITE_GOOGLE_CLIENT_ID: ""
     VITE_APP_URL: "https://app.routess.com"
     VITE_API_URL: "https://api.routess.com"
+    # TileJSON URL of the node-network tiles (ADR 0033), served by go-pmtiles
+    # from the .pmtiles file, e.g. https://tiles.routess.com/nodes.json. Empty
+    # disables the overlay. Do NOT point this at the raw .pmtiles file:
+    # mapbox-gl's native pmtiles provider throws "a is not defined" under
+    # terrain/globe. The TileJSON's tiles[] serve standard MVT, which renders
+    # like the basemap (terrain-safe).
+    VITE_NODE_TILES_URL: ""
     # Origin that serves the canonical public route page (the landing host, e.g.
     # https://routess.com). Empty falls back to the app origin. See ADR 0025.
     VITE_PUBLIC_ROUTE_BASE_URL: "https://routess.com"
@@ -136,7 +143,7 @@ api:
     # Per-User daily cap on RouteGeneration attempts (each fans out into many
     # paid Valhalla calls). Empty uses the API default (50); "0" disables.
     generationQuotaPerDay: ""
-  # Scheduled ExternalRoute refresh (ADR 0033). Pulls green SeedSources with
+  # Scheduled ExternalRoute refresh (ADR 0035). Pulls green SeedSources with
   # a stable feedUrl when due per their refreshIntervalDays; idempotent.
   seedRefresh:
     enabled: true
@@ -260,6 +267,71 @@ redis:
     capabilities:
       drop: [ALL]
     readOnlyRootFilesystem: true
+
+nodeTiles:
+  # Monthly OSM -> PMTiles build for the node-network overlay (ADR 0033).
+  # Disabled by default: enable once an object-storage bucket exists and the
+  # web app's VITE_NODE_TILES_URL points at the uploaded file.
+  enabled: false
+  image:
+    repository: ghcr.io/robbeverhelst/routess-node-tiles
+    tag: latest
+    pullPolicy: IfNotPresent
+  # 03:00 UTC on the 1st of each month. Node networks change slowly.
+  schedule: "0 3 1 * *"
+  # Space-separated Geofabrik .osm.pbf extracts. Geofabrik no longer offers a
+  # combined "benelux" file, so Benelux is assembled from the three per-country
+  # extracts. Trim to a single country to shrink the build (Netherlands has the
+  # densest network, Belgium is smallest), or add europe-latest.osm.pbf to widen.
+  geofabrikUrl: "https://download.geofabrik.de/europe/belgium-latest.osm.pbf https://download.geofabrik.de/europe/netherlands-latest.osm.pbf https://download.geofabrik.de/europe/luxembourg-latest.osm.pbf"
+  minZoom: 8
+  maxZoom: 14
+  # Hard ceiling so a stuck download/build cannot run forever (3h).
+  activeDeadlineSeconds: 10800
+  # Scratch space for the build, sized for the Benelux extract: the raw .osm.pbf
+  # is ~1.5GB and everything after osmium filtering is small, so peak is ~2-4GB.
+  # For a Europe extract (~28GB raw) raise this and the ephemeral-storage limit
+  # to ~40Gi.
+  workSizeLimit: 8Gi
+  s3:
+    # S3-compatible endpoint (MinIO, R2, ...), bucket, and object key the web
+    # app reads. The object must be public-read with CORS allowing the web
+    # origin and Range requests (CORS lives in the infra repo).
+    endpoint: ""
+    bucket: ""
+    objectKey: "nodes.pmtiles"
+    acl: "public-read"
+    cacheControl: "public, max-age=86400"
+    region: ""
+    # Credentials: either inline here, or reference an existing secret holding
+    # AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY (preferred).
+    existingSecret: ""
+    accessKeyId: ""
+    secretAccessKey: ""
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+      ephemeral-storage: 2Gi
+    limits:
+      cpu: "2"
+      memory: 4Gi
+      ephemeral-storage: 8Gi
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65532
+    runAsGroup: 65532
+    fsGroup: 65532
+    seccompProfile:
+      type: RuntimeDefault
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    runAsNonRoot: true
+    capabilities:
+      drop: [ALL]
+    # gdal/tippecanoe write scratch under /tmp (an emptyDir); root stays clean
+    # but is not forced read-only to avoid tool-specific temp surprises.
+    readOnlyRootFilesystem: false
 
 landing:
   replicaCount: 2

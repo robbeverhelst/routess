@@ -6,7 +6,7 @@ import { PublicUserDto } from "../../users/dto/user-response.dto";
 // Discover page at a sane payload size.
 export const PUBLIC_SUMMARY_GEOMETRY_MAX_POINTS = 80;
 
-// Attribution block for an ExternalRoute (ADR 0033). Present only on seeded
+// Attribution block for an ExternalRoute (ADR 0035). Present only on seeded
 // open-data routes; user Routes leave it undefined. The creator-on-the-map.
 export class PublicRouteSourceDto {
 	@ApiProperty({ description: "SeedSource key, e.g. 'eurovelo'." })
@@ -76,7 +76,7 @@ export class PublicRouteSummaryDto {
 
 	@ApiPropertyOptional({
 		type: PublicRouteSourceDto,
-		description: "Attribution for a seeded ExternalRoute; absent on user routes (ADR 0033).",
+		description: "Attribution for a seeded ExternalRoute; absent on user routes (ADR 0035).",
 	})
 	source?: PublicRouteSourceDto;
 }

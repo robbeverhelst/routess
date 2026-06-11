@@ -10,7 +10,7 @@ export const Route = createFileRoute("/admin/seeding")({
 	component: AdminSeedingPage,
 });
 
-// Seeded route inventory per SeedSource (ADR 0033): counts, last sync, and
+// Seeded route inventory per SeedSource (ADR 0035): counts, last sync, and
 // the projected next automatic sync. Manual sources show "manual".
 function AdminSeedingPage() {
 	const q = useQuery({

@@ -75,7 +75,7 @@ export interface PublicListingFilters {
 }
 
 // Shared where-clause for the public listing surfaces, applied identically to
-// Route and ExternalRoute so the read-time union (ADR 0033) can never drift.
+// Route and ExternalRoute so the read-time union (ADR 0035) can never drift.
 // The indexable gate folds in the quality-floor distance prefilter; bbox is
 // viewport overlap on the persisted columns (ADR 0030).
 export function publicListingWhere(filters: PublicListingFilters, gate: PublicRouteGate): Record<string, unknown> {

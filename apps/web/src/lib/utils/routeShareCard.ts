@@ -14,6 +14,10 @@ import type { RedesignMapStyle } from "@/stores/redesignSettingsStore";
 
 type Coordinate = [number, number];
 
+// Ink color for share-card text and the activity icon tint (used here and in
+// ShareModal's icon rendering).
+export const SHARE_CARD_INK = "#16161d";
+
 // Keep in sync with the style variants in MapCanvas.
 const STYLE_URLS: Record<RedesignMapStyle, string> = {
 	streets: "mapbox://styles/mapbox/standard",
@@ -218,7 +222,7 @@ export async function buildRouteShareCard(input: RouteShareCardInput): Promise<B
 		ctx.drawImage(activityIcon, rightX - statsWidth - gap - iconSize, footerCenterY - iconSize / 2, iconSize, iconSize);
 	}
 
-	ctx.fillStyle = "#16161d";
+	ctx.fillStyle = SHARE_CARD_INK;
 	ctx.font = "700 64px Inter, system-ui, -apple-system, sans-serif";
 	ctx.fillText(distText, rightX, footerCenterY - 30);
 	if (subText) {

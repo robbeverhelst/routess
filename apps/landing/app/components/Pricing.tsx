@@ -1,3 +1,4 @@
+import { darkBrand, landingAccents, lightBrand } from "@routess/design-tokens";
 import type { Dict } from "@/lib/content";
 import { APP_HOST, REPO_URL } from "@/lib/i18n";
 import { AccentInline } from "./AccentText";
@@ -21,7 +22,7 @@ function PricingList({
 						display: "flex",
 						gap: 10,
 						alignItems: "flex-start",
-						color: dim ? "oklch(0.85 0.01 80)" : "var(--paper)",
+						color: dim ? darkBrand.inkSoft : "var(--paper)",
 						fontSize: 14,
 					}}
 				>
@@ -34,7 +35,7 @@ function PricingList({
 							display: "inline-flex",
 							alignItems: "center",
 							justifyContent: "center",
-							color: "oklch(0.18 0.02 270)",
+							color: lightBrand.ink,
 							fontSize: 11,
 							fontWeight: 800,
 							flexShrink: 0,
@@ -56,7 +57,7 @@ export function Pricing({ dict }: { dict: Dict }) {
 		<section id="pricing" style={{ background: "var(--ink)", color: "var(--paper)" }}>
 			<div className="container-x">
 				<div style={{ textAlign: "center", maxWidth: 760, margin: "0 auto 56px" }}>
-					<span className="eyebrow" style={{ color: "oklch(0.78 0.04 80)" }}>
+					<span className="eyebrow" style={{ color: landingAccents.eyebrowOnDark }}>
 						{dict.pricing.eyebrow}
 					</span>
 					<h2
@@ -65,7 +66,7 @@ export function Pricing({ dict }: { dict: Dict }) {
 					>
 						<AccentInline pieces={dict.pricing.title} color="var(--sun)" />
 					</h2>
-					<p className="body-lg" style={{ color: "oklch(0.85 0.01 80)" }}>
+					<p className="body-lg" style={{ color: darkBrand.inkSoft }}>
 						{dict.pricing.body}
 					</p>
 				</div>
@@ -77,7 +78,7 @@ export function Pricing({ dict }: { dict: Dict }) {
 					<div
 						className="reveal card-lift"
 						style={{
-							background: "oklch(0.22 0.02 270)",
+							background: darkBrand.paper2,
 							border: "1px solid oklch(1 0 0 / 0.08)",
 							borderRadius: 24,
 							padding: 32,
@@ -95,13 +96,13 @@ export function Pricing({ dict }: { dict: Dict }) {
 									{dict.pricing.freeName}
 								</span>
 							</div>
-							<div style={{ color: "oklch(0.78 0.01 80)", fontSize: 14 }}>{dict.pricing.freeTagline}</div>
+							<div style={{ color: landingAccents.mutedOnDark, fontSize: 14 }}>{dict.pricing.freeTagline}</div>
 						</div>
 						<div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
 							<span className="display" style={{ fontSize: 56, color: "var(--paper)" }}>
 								{dict.pricing.freePrice}
 							</span>
-							<span style={{ color: "oklch(0.78 0.01 80)", fontFamily: "var(--font-mono)" }}>
+							<span style={{ color: landingAccents.mutedOnDark, fontFamily: "var(--font-mono)" }}>
 								{dict.pricing.freePeriod}
 							</span>
 						</div>
@@ -118,7 +119,7 @@ export function Pricing({ dict }: { dict: Dict }) {
 					<div
 						className="reveal card-lift"
 						style={{
-							background: "linear-gradient(160deg, oklch(0.42 0.19 280) 0%, oklch(0.32 0.14 280) 100%)",
+							background: `linear-gradient(160deg, ${lightBrand.indigoDeep} 0%, ${landingAccents.indigoGradientEnd} 100%)`,
 							border: "1px solid oklch(1 0 0 / 0.15)",
 							borderRadius: 24,
 							padding: 32,
@@ -159,7 +160,7 @@ export function Pricing({ dict }: { dict: Dict }) {
 									textTransform: "uppercase",
 									letterSpacing: "0.1em",
 									background: "var(--sun)",
-									color: "oklch(0.18 0.02 270)",
+									color: lightBrand.ink,
 									padding: "4px 10px",
 									borderRadius: 999,
 									fontWeight: 700,
@@ -177,17 +178,22 @@ export function Pricing({ dict }: { dict: Dict }) {
 									{dict.pricing.proName}
 								</span>
 							</div>
-							<div style={{ color: "oklch(0.92 0.04 280)", fontSize: 14 }}>{dict.pricing.proTagline}</div>
+							<div style={{ color: landingAccents.lavender, fontSize: 14 }}>{dict.pricing.proTagline}</div>
 						</div>
 						<div style={{ position: "relative", display: "flex", alignItems: "baseline", gap: 6 }}>
 							<span className="display" style={{ fontSize: 56, color: "var(--paper)" }}>
 								{dict.pricing.proPrice}
 							</span>
-							<span style={{ color: "oklch(0.92 0.04 280)", fontFamily: "var(--font-mono)" }}>
+							<span style={{ color: landingAccents.lavender, fontFamily: "var(--font-mono)" }}>
 								{dict.pricing.proPeriod}
 							</span>
 							<span
-								style={{ marginLeft: 10, color: "oklch(0.84 0.04 280)", fontSize: 12, fontFamily: "var(--font-mono)" }}
+								style={{
+									marginLeft: 10,
+									color: landingAccents.lavenderDim,
+									fontSize: 12,
+									fontFamily: "var(--font-mono)",
+								}}
 							>
 								{dict.pricing.proAlt}
 							</span>
@@ -200,7 +206,7 @@ export function Pricing({ dict }: { dict: Dict }) {
 							href={`${REPO_URL}/issues`}
 							style={{
 								background: "var(--sun)",
-								color: "oklch(0.18 0.02 270)",
+								color: lightBrand.ink,
 								marginTop: "auto",
 								position: "relative",
 								fontWeight: 700,
@@ -216,7 +222,7 @@ export function Pricing({ dict }: { dict: Dict }) {
 					style={{
 						marginTop: 32,
 						textAlign: "center",
-						color: "oklch(0.78 0.01 80)",
+						color: landingAccents.mutedOnDark,
 						fontSize: 13,
 						fontFamily: "var(--font-mono)",
 					}}

@@ -54,37 +54,6 @@ export const calculatePathDistance = (coordinates: Coordinate[]): number => {
 };
 
 /**
- * Calculates the distance from a point to a line segment
- * Used for determining if a click is close enough to a route for insertion
- *
- * @param point - The point coordinate
- * @param lineStart - Start of the line segment
- * @param lineEnd - End of the line segment
- * @returns The distance in kilometers
- */
-export const pointToSegmentDistance = (point: Coordinate, lineStart: Coordinate, lineEnd: Coordinate): number => {
-	const [px, py] = point;
-	const [x1, y1] = lineStart;
-	const [x2, y2] = lineEnd;
-
-	const dx = x2 - x1;
-	const dy = y2 - y1;
-
-	if (dx === 0 && dy === 0) {
-		// Start and end are the same point
-		return haversineDistance(point, lineStart);
-	}
-
-	// Calculate the projection parameter t
-	const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy)));
-
-	// Find the closest point on the line segment
-	const closestPoint: Coordinate = [x1 + t * dx, y1 + t * dy];
-
-	return haversineDistance(point, closestPoint);
-};
-
-/**
  * Validates that a coordinate is within valid ranges
  *
  * @param coordinate - The coordinate to validate [longitude, latitude]

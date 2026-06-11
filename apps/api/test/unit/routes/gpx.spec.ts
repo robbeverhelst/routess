@@ -16,7 +16,7 @@ describe("buildRouteGpx", () => {
 		expect(gpx).not.toContain("<copyright");
 	});
 
-	it("embeds source attribution as <copyright> when provided (ADR 0033)", () => {
+	it("embeds source attribution as <copyright> when provided (ADR 0035)", () => {
 		const gpx = buildRouteGpx({
 			name: "EuroVelo 5",
 			waypoints: [],

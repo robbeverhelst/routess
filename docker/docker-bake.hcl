@@ -91,3 +91,20 @@ target "landing" {
   cache-from = ["type=registry,ref=${REGISTRY}/${OWNER}/routess-landing:buildcache"]
   cache-to   = ["type=registry,ref=${REGISTRY}/${OWNER}/routess-landing:buildcache,mode=max"]
 }
+
+# OSM -> PMTiles toolchain for the monthly node-network tile job (ADR 0033).
+# Deliberately NOT in the default group: it is a heavy, rarely-changing build
+# image (compiles tippecanoe from source), and coupling it to the per-release
+# image bake means one broken target blocks every app image. It is published
+# on its own by .github/workflows/node-tiles-image.yml (manual or on changes to
+# its files), tagged latest + sha rather than tracking the app version.
+target "node-tiles" {
+  inherits   = ["common"]
+  dockerfile = "docker/Dockerfile.node-tiles"
+  tags = [
+    "${REGISTRY}/${OWNER}/routess-node-tiles:latest",
+    "${REGISTRY}/${OWNER}/routess-node-tiles:sha-${SHA}",
+  ]
+  cache-from = ["type=registry,ref=${REGISTRY}/${OWNER}/routess-node-tiles:buildcache"]
+  cache-to   = ["type=registry,ref=${REGISTRY}/${OWNER}/routess-node-tiles:buildcache,mode=max"]
+}

@@ -289,7 +289,7 @@ export interface ApiRoute {
 	updatedAt: string;
 }
 
-// Detail for a seeded ExternalRoute page (/r/{slug}-x{id}, ADR 0033). No owner,
+// Detail for a seeded ExternalRoute page (/r/{slug}-x{id}, ADR 0035). No owner,
 // Waypoints, visibility, or share token; carries source attribution instead.
 // `kind: "external"` lets callers branch.
 export interface ApiExternalRoute {
@@ -443,7 +443,7 @@ export interface ApiFeedPage {
 	total: number;
 }
 
-// Attribution for a seeded ExternalRoute (ADR 0033). Present only on open-data
+// Attribution for a seeded ExternalRoute (ADR 0035). Present only on open-data
 // routes; user routes carry `user` instead. The creator-on-the-map.
 export interface ApiRouteSource {
 	key: string;

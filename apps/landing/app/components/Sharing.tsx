@@ -1,9 +1,10 @@
+import { landingAccents, surfaceBucketColors } from "@routess/design-tokens";
 import Image from "next/image";
 import type { Dict } from "@/lib/content";
 
 const SURFACE_FLEX = [46, 13, 38, 3];
-// The app's surface-breakdown colors (apps/web/src/components/RouteProfileChart.tsx).
-const SURFACE_COLORS = ["oklch(0.45 0.02 240)", "oklch(0.72 0.07 75)", "oklch(0.6 0.11 50)", "oklch(0.62 0.13 145)"];
+// Same surface-breakdown colors as the app's RouteProfileChart.
+const SURFACE_COLORS = Object.values(surfaceBucketColors);
 
 export function Sharing({ dict }: { dict: Dict }) {
 	const routes = dict.sharing.routes;
@@ -56,7 +57,7 @@ export function Sharing({ dict }: { dict: Dict }) {
 												marginBottom: 12,
 												position: "relative",
 												overflow: "hidden",
-												background: "oklch(0.96 0.03 80)",
+												background: landingAccents.cream,
 											}}
 										>
 											{/* Real map tiles: Mapbox Static preview of actual Directions
@@ -197,7 +198,7 @@ export function Sharing({ dict }: { dict: Dict }) {
 								borderColor: "transparent",
 							}}
 						>
-							<div className="eyebrow" style={{ color: "oklch(0.42 0.13 45)", marginBottom: 8 }}>
+							<div className="eyebrow" style={{ color: landingAccents.terracottaDeep, marginBottom: 8 }}>
 								{dict.sharing.comingSoonEyebrow}
 							</div>
 							<div style={{ fontWeight: 600, fontSize: 16, marginBottom: 6 }}>{dict.sharing.comingSoonTitle}</div>

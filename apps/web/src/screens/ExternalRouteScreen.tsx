@@ -17,7 +17,7 @@ const HERO_HEIGHT = 480;
 // arrives once the user opens the route in the planner.
 const ESTIMATE_SPEED_KMH = { cycle: 18, run: 10, walk: 5 } as const;
 
-// Page for a seeded ExternalRoute (/r/{slug}-x{id}, ADR 0033). Mirrors the
+// Page for a seeded ExternalRoute (/r/{slug}-x{id}, ADR 0035). Mirrors the
 // user route page; the creator line is the SeedSource and "Open in routess"
 // loads the official geometry into the planner as a fresh draft (saving forks
 // a copy, the ExternalRoute itself stays immutable). ElevationGain is sampled

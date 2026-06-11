@@ -41,8 +41,7 @@ export class I18nService implements II18nService {
 		if (replacements) {
 			Object.keys(replacements).forEach((placeholder) => {
 				const value = replacements[placeholder];
-				// Use a regex to replace all occurrences of {placeholder}
-				text = text.replace(new RegExp(`\\{${placeholder}\\}`, "g"), value);
+				text = text.replaceAll(`{${placeholder}}`, value);
 			});
 		}
 

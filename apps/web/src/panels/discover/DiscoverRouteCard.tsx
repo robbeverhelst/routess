@@ -97,7 +97,7 @@ export function DiscoverRouteCard({
 					</div>
 				)}
 				{route.source && (
-					// Seeded ExternalRoute (ADR 0033): the source is the creator. The
+					// Seeded ExternalRoute (ADR 0035): the source is the creator. The
 					// license badge satisfies the attribution obligation in the listing.
 					<div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, color: RDS_COLORS.fgSubtle }}>
 						<span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>

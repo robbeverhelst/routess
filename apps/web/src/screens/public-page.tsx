@@ -5,7 +5,7 @@ import { useUiStore } from "@/stores/uiStore";
 import { Btn, RDS_COLORS, SecTitle } from "../components/primitives";
 
 // Shared chrome for the anonymous public route pages (/r/{slugId}): user
-// Routes and ExternalRoutes (ADR 0033) render different content in the same
+// Routes and ExternalRoutes (ADR 0035) render different content in the same
 // shell with the same SEO head handling. The shell activates the design
 // system ([data-redesign] scopes every RDS token) and follows the user's
 // theme/accent like the app and admin shells do.

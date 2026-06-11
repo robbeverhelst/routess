@@ -80,6 +80,12 @@ _Avoid_: climb, ascent, vertical.
 **Bearing**:
 Compass direction (0 to 360°) of a Waypoint or segment. Used by GPX import for smart waypoint detection at turns.
 
+## Map overlays
+
+**NodeNetwork** (knooppuntennetwerk):
+A wayfinding system of numbered junctions connected by signed segments, used across Belgium and the Netherlands: cyclists and walkers plan by stringing together junction numbers ("42 → 7 → 13"). Routess shows it as an optional, display-only map overlay in two independent kinds, **hiking** (walking) nodes and **cycling** nodes, each toggled separately. A single junction is a **Node** carrying a `ref` (its number); a **Connection** is the segment linking two adjacent Nodes (`fromRef`, `toRef`). The source is OpenStreetMap (`rwn_ref`/`lwn_ref` walking, `rcn_ref`/`lcn_ref` cycling, `network:type=node_network`), ODbL-licensed, slowly-changing, and self-hosted as pre-built vector tiles rather than fetched live (see ADR 0033). The overlay never affects routing or a saved Route; it is purely a reference layer the user can read off the map.
+_Avoid_: knooppunt for the whole network (a knooppunt is one **Node**), junction network (too generic), POI layer (Nodes are not points of interest). Distinct from a **RoutePath**: a NodeNetwork is fixed public infrastructure, not a user's route.
+
 ## Editing & state
 
 **RouteDraft**:
@@ -90,7 +96,7 @@ The bundle of inputs that shape how a Route is computed: **SurfaceType**, `avoid
 _Avoid_: routing profile, routing mode, routing options, route settings.
 
 **Provenance**:
-How a Route came to exist: `valhalla` (computed by the current routing engine), `mapbox-legacy` (computed by the pre-Valhalla engine; has no **RoutingPreferences**), `gpx-import` (no inputs, geometry came from a file), `generation` (produced by a **RouteGeneration**), `external-fork` (geometry copied by a User from an **ExternalRoute**, carrying the source's inherited license and attribution; see ADR 0033). Immutable after creation. Determines whether "recalculate" is available and whether the Route's **RoutingPreferences** are meaningful.
+How a Route came to exist: `valhalla` (computed by the current routing engine), `mapbox-legacy` (computed by the pre-Valhalla engine; has no **RoutingPreferences**), `gpx-import` (no inputs, geometry came from a file), `generation` (produced by a **RouteGeneration**), `external-fork` (geometry copied by a User from an **ExternalRoute**, carrying the source's inherited license and attribution; see ADR 0035). Immutable after creation. Determines whether "recalculate" is available and whether the Route's **RoutingPreferences** are meaningful.
 _Avoid_: source, origin, type (Type is already taken by Waypoint). "Source" is especially confusing now that **SeedSource** exists — never use bare "source" for provenance.
 
 **HistoryManager**:
@@ -195,7 +201,7 @@ _Avoid_: lastRead, readAt (taken by RouteShare).
 - A **Route** has at most one **Place** (city + region + country), derived from its **RoutePath** start, never user-edited. **Discover** and **RegionalHub** query Routes through it.
 - A **User** has one **NotificationsSeenAt** watermark; their **Notification** list is derived per read from Follows of them and RouteShares to them, never stored.
 - An **ExternalRoute** is attributed to exactly one **SeedSource**, has no owning **User**, and has no **RouteVisibility** (it is always public). It is identified for refresh by `(sourceKey, sourceRecordId)`.
-- **Discover** and **RegionalHub** combine **Route**s and **ExternalRoute**s at *read time* only; the two are never joined, deduped, or cross-referenced in stored data (ADR 0033).
+- **Discover** and **RegionalHub** combine **Route**s and **ExternalRoute**s at *read time* only; the two are never joined, deduped, or cross-referenced in stored data (ADR 0035).
 - A **User** may **Favourite** or add to a **Collection** an **ExternalRoute** *by reference* (no geometry copy). Editing one **forks** it into a new user-owned **Route** with **Provenance** `external-fork` carrying the **SeedSource**'s license and attribution; the **ExternalRoute** itself stays immutable.
 - **Generated fill** Routes are owned by the **system seed User** and are never **Indexable** while system-owned.
 
@@ -216,7 +222,7 @@ _Avoid_: lastRead, readAt (taken by RouteShare).
 - **"Direct" naming** appears in code as `directFlag`, `isDirect`, `type: "direct"`. In conversation and new code, say **Type = direct**.
 - **"Snap"** is implementation jargon for "find the nearest road and adjust the Waypoint to lie on it." Use it for engineering conversation, not for user-facing copy or domain modelling.
 - **"Loop"** is a **RouteType** value, not a synonym for "cycle" or "ride". A Route's RouteType is either `a-to-b` or `loop`.
-- **"Account"** is not a Routess concept. **Profile** _is_ one (since social v1): the public projection of a User. Use "Profile" only in that sense — never for the settings area, never for routing profiles.
+- **"Account"** is not a Routess concept. **Profile** _is_ one (since social v1): the public projection of a User. Use "Profile" only in that sense — never for the settings area, never for routing profiles. The carve-out mirrors "pin": *user-facing copy* may say "account" for the auth identity ("create an account", "delete account", per ADR 0017's own title), but *engineering identifiers* (components, events, state values, new i18n key prefixes) name that surface "user settings" (`UserSettingsScreen`, `routess:open-user-settings`), never "account". The legacy `account.*` i18n key prefix is grandfathered for existing auth-identity copy; don't extend it.
 - **"Pin" in marketing copy**: the avoid-list above governs engineering, in-app UI, and domain conversation. Marketing copy on the public landing page may use "pin" as a verb-phrase ("pin it", "drop pins") because in that register it's a universally-understood action verb, not a name for the **Waypoint** entity. The carve-out is verb-only: copy must still not refer to a Waypoint as a "pin" (noun). If "the API returns pins" or "the user has 5 pins saved" appears anywhere, that's a leak — fix it.
 - **"Surface"** is overloaded: **SurfaceType** is a routing *preference* (3 values, an input), **SurfaceBucket** is a per-segment *classification* (4 values, an observation on the resulting RoutePath). Don't conflate them; in conversation, name the specific term.
 - **"Profile" / "routing profile" / "routing mode"**: the legacy `routingPreferencesStore.profile` field (`fast | scenic | safe | flat`) is being retired with the Valhalla migration (#137). These are not domain terms and should not appear in new code or user-facing copy. The replacement is **RoutingPreferences** (a structured object), not a single enum. "Mode" remains on the avoid list (it collides with Waypoint **Type**).
@@ -229,7 +235,7 @@ _Avoid_: lastRead, readAt (taken by RouteShare).
 
 **Indexable** (of a Route):
 A derived property: a `public` Route is Indexable when it clears the quality gate (has a real name, meets a minimum length, and carries a description or tags). Only Indexable Routes appear in sitemaps and are eligible for search-engine indexing; public Routes below the bar still render but carry `noindex`. `unlisted` Routes are never Indexable regardless of quality (the URL is the capability). The gate may loosen over time; tightening after indexing is costly, so it starts strict.
-Indexability keys on *owner*, not **Provenance**: a human-owned `public` Route is eligible however its geometry was made (hand-drawn, `gpx-import`, `generation`, or `external-fork`). Routes owned by the **system seed User** (**Generated fill**) are never Indexable. An **ExternalRoute** is Indexable when it clears the same gate; that is how open data (and only open data, not raw generated fill) becomes an SEO anchor. See ADR 0033.
+Indexability keys on *owner*, not **Provenance**: a human-owned `public` Route is eligible however its geometry was made (hand-drawn, `gpx-import`, `generation`, or `external-fork`). Routes owned by the **system seed User** (**Generated fill**) are never Indexable. An **ExternalRoute** is Indexable when it clears the same gate; that is how open data (and only open data, not raw generated fill) becomes an SEO anchor. See ADR 0035.
 The property extends to **Profiles**: a Profile is Indexable when it has at least 3 Indexable Routes; below that its page renders but carries `noindex` and stays out of sitemaps (thin-content rule, same spirit as the RegionalHub threshold).
 _Avoid_: published, listed, searchable.
 
@@ -248,11 +254,11 @@ _Avoid_: explore, browse, search, marketplace, "nearby routes" (the viewport, no
 ## Seeding
 
 **Seeding**:
-Bootstrapping route inventory before enough organic content exists, in two structurally independent forms: open-data **ExternalRoute**s (the SEO anchors) and **Generated fill** (in-app map population). A human GPX/Komoot/Strava import is a normal user action, *not* Seeding. See ADR 0033.
+Bootstrapping route inventory before enough organic content exists, in two structurally independent forms: open-data **ExternalRoute**s (the SEO anchors) and **Generated fill** (in-app map population). A human GPX/Komoot/Strava import is a normal user action, *not* Seeding. See ADR 0035.
 _Avoid_: import (a user action), bootstrap, backfill.
 
 **ExternalRoute**:
-A route derived from a licensed external **SeedSource** (e.g. EuroVelo, RAVeL, Toerisme Vlaanderen), stored in its own table with **no foreign key to Route or User**, so ODbL share-alike can never reach user routes (ADR 0033). Always-public, immutable, ownerless; combined with **Route**s only at read time (`Discover`, `RegionalHub`, route pages). Its public route page lives at `/r/{slug}-x{id}` (the `x` marks the external id space, ADR 0025 amendment). `Indexable` on the normal quality gate.
+A route derived from a licensed external **SeedSource** (e.g. EuroVelo, RAVeL, Toerisme Vlaanderen), stored in its own table with **no foreign key to Route or User**, so ODbL share-alike can never reach user routes (ADR 0035). Always-public, immutable, ownerless; combined with **Route**s only at read time (`Discover`, `RegionalHub`, route pages). Its public route page lives at `/r/{slug}-x{id}` (the `x` marks the external id space, ADR 0025 amendment). `Indexable` on the normal quality gate.
 _Avoid_: seed route, imported route, foreign route, partner route.
 
 **SeedSource**:

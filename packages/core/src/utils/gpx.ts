@@ -15,7 +15,7 @@ function escapeXml(value: string): string {
 // Embeds the Waypoint Type in a routess-namespaced extension so round-trips
 // preserve routed/direct semantics; foreign tools ignore unknown extensions.
 // `attribution`/`sourceUrl` carry the SeedSource license obligation on
-// ExternalRoute exports (ADR 0033).
+// ExternalRoute exports (ADR 0035).
 export function buildRouteGpx(args: {
 	name?: string;
 	description?: string;

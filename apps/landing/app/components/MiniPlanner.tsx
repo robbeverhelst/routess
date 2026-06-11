@@ -1,6 +1,8 @@
 "use client";
 
 import "mapbox-gl/dist/mapbox-gl.css";
+import { haversineDistance } from "@routess/core";
+import { landingAccents } from "@routess/design-tokens";
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Dict } from "@/lib/content";
@@ -46,20 +48,10 @@ interface RouteResult {
 	snapped: LngLat[] | null;
 }
 
-function haversineKm(a: LngLat, b: LngLat): number {
-	const R = 6371;
-	const dLat = ((b[1] - a[1]) * Math.PI) / 180;
-	const dLng = ((b[0] - a[0]) * Math.PI) / 180;
-	const lat1 = (a[1] * Math.PI) / 180;
-	const lat2 = (b[1] * Math.PI) / 180;
-	const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
-	return 2 * R * Math.asin(Math.sqrt(h));
-}
-
 async function fetchRoute(waypoints: LngLat[], mode: Mode, token: string | undefined): Promise<RouteResult> {
 	const fallback: RouteResult = {
 		geometry: waypoints,
-		distanceKm: waypoints.slice(1).reduce((sum, wp, i) => sum + haversineKm(waypoints[i] as LngLat, wp), 0),
+		distanceKm: waypoints.slice(1).reduce((sum, wp, i) => sum + haversineDistance(waypoints[i] as LngLat, wp), 0),
 		snapped: null,
 	};
 	if (!token || waypoints.length < 2) return fallback;
@@ -349,9 +341,9 @@ export function MiniPlanner({ dict, mapboxToken }: { dict: Dict; mapboxToken?: s
 											cursor: "pointer",
 											fontSize: 13,
 											fontWeight: 600,
-											border: mode === m ? "1px solid oklch(0.5 0.17 282)" : "1px solid var(--line)",
-											background: mode === m ? "oklch(0.5 0.17 282 / 0.12)" : "var(--paper)",
-											color: mode === m ? "oklch(0.5 0.17 282)" : "var(--ink-soft)",
+											border: mode === m ? `1px solid ${landingAccents.indigoActive}` : "1px solid var(--line)",
+											background: mode === m ? landingAccents.indigoActiveSoft : "var(--paper)",
+											color: mode === m ? landingAccents.indigoActive : "var(--ink-soft)",
 											transition: "all 120ms",
 										}}
 									>

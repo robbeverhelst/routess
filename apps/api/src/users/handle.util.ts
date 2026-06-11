@@ -11,9 +11,7 @@ export async function generateUniqueHandle(em: EntityManager, name: string, emai
 	const base = handleBaseFromName(name);
 	if (!base || base === emailLocal || base === handleBaseFromName(emailLocal)) return randomHandle();
 
-	const taken = (await em
-		.getConnection()
-		.execute(`select 1 from "user" where "handle" = ? limit 1`, [base])) as unknown[];
+	const taken: unknown[] = await em.getConnection().execute(`select 1 from "user" where "handle" = ? limit 1`, [base]);
 	if (taken.length === 0) return base;
 	return `${base}-${randomHandle().slice(-4)}`;
 }

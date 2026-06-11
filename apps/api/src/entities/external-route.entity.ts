@@ -5,7 +5,7 @@ import { BaseEntity } from "./base.entity";
 import { SeedSource } from "./seed-source.entity";
 
 // A route derived from a licensed external SeedSource (CONTEXT.md
-// "ExternalRoute", ADR 0033). Its own table, NO foreign key to Route or User,
+// "ExternalRoute", ADR 0035). Its own table, NO foreign key to Route or User,
 // so ODbL share-alike never reaches user routes. Always public, immutable,
 // ownerless; combined with Route only at read time. The (source, sourceRecordId)
 // pair is the idempotent upsert key; refresh updates rather than duplicates.

@@ -1,3 +1,4 @@
+import { darkBrand, landingAccents } from "@routess/design-tokens";
 import type { Metadata } from "next";
 import { Fragment, type ReactNode } from "react";
 import { getDict } from "@/lib/content";
@@ -161,13 +162,13 @@ export default async function DevelopersPage() {
 								borderColor: "transparent",
 							}}
 						>
-							<span className="eyebrow" style={{ color: "oklch(0.78 0.04 80)" }}>
+							<span className="eyebrow" style={{ color: landingAccents.eyebrowOnDark }}>
 								{dict.openSource.repo}
 							</span>
 							<h3 className="display" style={{ fontSize: 32, margin: 0, color: "var(--paper)" }}>
 								{dict.openSource.title}
 							</h3>
-							<p style={{ margin: 0, color: "oklch(0.85 0.01 80)", maxWidth: 600 }}>{dict.openSource.body}</p>
+							<p style={{ margin: 0, color: darkBrand.inkSoft, maxWidth: 600 }}>{dict.openSource.body}</p>
 							<div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
 								<a className="btn" href={REPO_URL} style={{ background: "var(--paper)", color: "var(--ink)" }}>
 									<GhIcon /> {dict.nav.github}

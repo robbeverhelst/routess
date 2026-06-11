@@ -1,5 +1,5 @@
 {{- if .Values.api.seedRefresh.enabled }}
-# Scheduled ExternalRoute refresh (ADR 0033): re-pulls green SeedSources with
+# Scheduled ExternalRoute refresh (ADR 0035): re-pulls green SeedSources with
 # a stable feedUrl that are due per their refreshIntervalDays. Idempotent, so
 # an extra or overlapping run is harmless. Manual sources are skipped.
 apiVersion: batch/v1

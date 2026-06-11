@@ -287,7 +287,7 @@ export class ApiClient {
 		return `${this.config.baseUrl}/api/v1/routes/${ref}/gpx`;
 	}
 
-	// Seeded ExternalRoute detail by numeric id (the `-x{id}` page form, ADR 0033).
+	// Seeded ExternalRoute detail by numeric id (the `-x{id}` page form, ADR 0035).
 	async getExternalRoute(id: number): Promise<ApiExternalRoute> {
 		return this.request<ApiExternalRoute>(`/external-routes/${id}`);
 	}

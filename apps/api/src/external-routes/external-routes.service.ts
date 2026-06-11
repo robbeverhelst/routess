@@ -80,7 +80,7 @@ export class ExternalRoutesService {
 
 	// Upserts the SeedSource row from adapter metadata so the orchestration
 	// script never hand-writes it. Refuses red (blocklisted) sources by
-	// construction (ADR 0033).
+	// construction (ADR 0035).
 	async ensureSource(meta: SeedAdapter["meta"]): Promise<SeedSource> {
 		if (meta.status === "red") {
 			throw new Error(`Refusing to register blocklisted SeedSource '${meta.key}'`);
@@ -225,7 +225,7 @@ export class ExternalRoutesService {
 		);
 	}
 
-	// Idempotent upsert keyed on (source, sourceRecordId) (ADR 0033): insert
+	// Idempotent upsert keyed on (source, sourceRecordId) (ADR 0035): insert
 	// new, update changed (by content hash), revive soft-deleted, soft-delete
 	// records that vanished from the source. Stable ids keep URLs stable.
 	async upsertSeedRoutes(sourceKey: string, seeds: SeedRoute[]): Promise<UpsertResult> {
@@ -308,7 +308,7 @@ export class ExternalRoutesService {
 
 	// Read-time union helper for /routes/public: returns up to `take` external
 	// summaries matching the same filters, plus the total. RoutesService merges
-	// these with user-Route summaries (the ODbL Produced Work, ADR 0033).
+	// these with user-Route summaries (the ODbL Produced Work, ADR 0035).
 	async findPublicMatches(
 		filters: PublicListingFilters,
 		gate: PublicRouteGate,

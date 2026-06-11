@@ -69,7 +69,7 @@ export class AuthService {
 			{ provider: "google", providerId: googleId },
 			{ populate: ["user"], filters: { softDelete: false } },
 		);
-		let user = existingMethod ? (existingMethod.user as unknown as User) : null;
+		let user = existingMethod ? existingMethod.user : null;
 		if (!user) {
 			user = await this.userRepository.findOne({ email }, { filters: { softDelete: false } });
 		}

@@ -1,5 +1,7 @@
 # Valhalla via Stadia Maps for routing
 
+> **Update:** the engine choice (Valhalla over Mapbox/ORS/GraphHopper/OSRM/BRouter) still holds, but the "Stadia first, self-host later" hosting plan has since executed. Valhalla now runs self-hosted cluster-internal, reached only through the API. See [ADR-0034](0034-centralize-routing-in-the-api.md).
+
 Routing migrates from Mapbox Directions to Valhalla, initially hosted on Stadia Maps (extending the existing relationship that already powers post-hoc surface analysis via `trace_attributes`). Mapbox's cycling and walking profiles expose almost no user-tunable preferences (cycling: `exclude=ferry` only; walking: `exclude=ferry`, `walking_speed`, `walkway_bias`) — no surface preference, no climb/gradient control, no bicycle-type tuning. Valhalla's costing model exposes exactly the levers Routess needs (`bicycle_type`, `use_hills`, `use_tracks`, `avoid_bad_surfaces`, surface preference, max grade) as per-request inputs, making it the only practical engine that aligns with the **RoutingPreferences** vocabulary Routess wants to offer users.
 
 Stadia first, self-host later. Self-hosting Valhalla in the existing k8s cluster is operationally non-trivial (tile builds are heavy, OSM refresh is recurring, storage cost is meaningful, on-call burden is new). At current volume the per-request Stadia bill is cheaper than self-host compute + ops. The migration trigger is recorded in #171 — revisit when monthly Stadia cost is ≥ 2× the equivalent self-host steady state.

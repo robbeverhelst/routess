@@ -7,7 +7,7 @@ import { ExternalRoute } from "./external-route.entity";
 export type { SeedSourceStatus } from "@routess/core";
 
 // An external open-data provider that ExternalRoutes are attributed to
-// (CONTEXT.md "SeedSource", ADR 0033). The single home for license,
+// (CONTEXT.md "SeedSource", ADR 0035). The single home for license,
 // attribution, refresh cadence, scope, and the green/yellow/red blocklist.
 @Entity()
 export class SeedSource extends BaseEntity {

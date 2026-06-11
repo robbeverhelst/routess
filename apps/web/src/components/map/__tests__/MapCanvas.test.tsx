@@ -16,7 +16,26 @@ import { MapCanvas } from "../MapCanvas";
 vi.mock("react-map-gl/mapbox", () => ({
 	__esModule: true,
 	default: React.forwardRef(
-		({ children, onLoad, style, mapStyle, initialViewState, minPitch, maxPitch }: any, ref: any) => {
+		(
+			{
+				children,
+				onLoad,
+				style,
+				mapStyle,
+				initialViewState,
+				minPitch,
+				maxPitch,
+			}: {
+				children?: React.ReactNode;
+				onLoad?: (e: { target: unknown }) => void;
+				style?: React.CSSProperties;
+				mapStyle?: string;
+				initialViewState?: unknown;
+				minPitch?: number;
+				maxPitch?: number;
+			},
+			ref: React.Ref<unknown>,
+		) => {
 			React.useImperativeHandle(ref, () => ({ getMap: () => mockMapInstance }));
 
 			React.useEffect(() => {

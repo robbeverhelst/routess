@@ -9,7 +9,7 @@ export const nl: Dict = {
 		features: "Features",
 		community: "Community",
 		pricing: "Prijzen",
-		planRoute: "Plan een route",
+		planRoute: "Open de app",
 		home: "Home",
 		docs: "Docs",
 		github: "GitHub",
