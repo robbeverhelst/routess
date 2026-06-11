@@ -4,9 +4,12 @@ import { ProfileSummaryDto } from "../../profiles/dto/profile-response.dto";
 // A Notification is a derived pointer (CONTEXT.md "Notification"): one item per
 // Follow of you or RouteShare sent to you. Nothing is stored per item, so an
 // unfollow or dismissed share removes its item instantly.
+export const NOTIFICATION_TYPES = ["follow", "route_share"] as const;
+export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
+
 export class NotificationItemDto {
-	@ApiProperty({ enum: ["follow", "route_share"], example: "follow" })
-	type!: "follow" | "route_share";
+	@ApiProperty({ enum: NOTIFICATION_TYPES, example: "follow" })
+	type!: NotificationType;
 
 	@ApiProperty({ type: ProfileSummaryDto })
 	actor!: ProfileSummaryDto;

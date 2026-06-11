@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { USER_ROLES, type UserRole } from "../../entities/user.entity";
 
 export class AdminUserListItemDto {
 	@ApiProperty({ example: 42 })
@@ -10,8 +11,8 @@ export class AdminUserListItemDto {
 	@ApiProperty({ example: "Jane Doe" })
 	name!: string;
 
-	@ApiProperty({ example: "user", enum: ["user", "admin"] })
-	role!: "user" | "admin";
+	@ApiProperty({ example: "user", enum: USER_ROLES })
+	role!: UserRole;
 
 	@ApiProperty({ example: true })
 	isEmailVerified!: boolean;
