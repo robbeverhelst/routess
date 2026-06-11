@@ -30,10 +30,16 @@ export interface SeedSourceMeta {
 	status: SeedSourceStatus;
 	// How often the refresh job should re-pull this source.
 	refreshIntervalDays: number;
-	// Stable bulk-download URL the refresh job fetches. Absent = the source has
-	// no stable feed (e.g. EuroVelo's per-route pages) and stays manual: the
-	// seed script is run by hand with downloaded files.
+	// Stable bulk-download URL the refresh job fetches. Absent (and no
+	// feedUrls) = the source has no stable feed and stays manual: the seed
+	// script is run by hand with downloaded files.
 	feedUrl?: string;
+	// Sources published as multiple per-collection downloads (EuroVelo's
+	// per-route GPX endpoints). The refresh fetches ALL of them and upserts
+	// the combined result in one pass; a single failed feed aborts the
+	// source's refresh so the soft-delete sweep cannot prune routes whose
+	// feed merely failed to download.
+	feedUrls?: { url: string; label?: string }[];
 }
 
 // One external route as emitted by an adapter, before persistence. Geometry is

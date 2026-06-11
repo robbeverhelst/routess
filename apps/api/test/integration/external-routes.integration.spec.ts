@@ -182,7 +182,10 @@ describe("ExternalRoutes (ADR 0033)", () => {
 		};
 
 		const first = await withRequestContext(app, () => service.refreshDueSources(fakeFetch));
-		expect(fetched).toContain("https://example.test/eurovelo.gpx");
+		// EuroVelo refreshes from its per-route endpoints in adapter metadata
+		// (they take precedence over the row's feedUrl); the same fixture GPX
+		// for every URL collapses to one record via in-batch dedupe.
+		expect(fetched.filter((u) => u.includes("en.eurovelo.com/route/get-gpx")).length).toBe(17);
 		expect(first.find((r) => r.source === "eurovelo")?.result).toMatchObject({ inserted: 1 });
 		expect(first.find((r) => r.source === "manual-source")?.skipped).toBe("manual");
 

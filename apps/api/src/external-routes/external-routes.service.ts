@@ -139,7 +139,16 @@ export class ExternalRoutesService {
 				results.push({ source: source.key, skipped: "blocked" });
 				continue;
 			}
-			if (!source.feedUrl) {
+			const adapter = seedAdapterByKey(source.key);
+			// Multi-feed sources (per-route downloads) carry their URLs in the
+			// adapter metadata; single-feed sources use the row's feedUrl (which
+			// an operator may override).
+			const feeds = adapter?.meta.feedUrls?.length
+				? adapter.meta.feedUrls
+				: source.feedUrl
+					? [{ url: source.feedUrl, label: undefined as string | undefined }]
+					: [];
+			if (feeds.length === 0) {
 				results.push({ source: source.key, skipped: "manual" });
 				continue;
 			}
@@ -150,14 +159,20 @@ export class ExternalRoutesService {
 				results.push({ source: source.key, skipped: "not-due" });
 				continue;
 			}
-			const adapter = seedAdapterByKey(source.key);
 			if (!adapter) {
 				results.push({ source: source.key, error: "no adapter registered" });
 				continue;
 			}
 			try {
-				const payload = await fetchText(source.feedUrl);
-				const result = await this.upsertSeedRoutes(source.key, adapter.parse(payload));
+				// All feeds must succeed before upserting: the soft-delete sweep
+				// prunes anything absent from the input, so a partial download
+				// would wrongly remove the failed feed's routes.
+				const seeds: SeedRoute[] = [];
+				for (const feed of feeds) {
+					const payload = await fetchText(feed.url);
+					seeds.push(...adapter.parse(payload, { label: feed.label }));
+				}
+				const result = await this.upsertSeedRoutes(source.key, seeds);
 				results.push({ source: source.key, result });
 			} catch (error) {
 				// One broken source must not block the rest of the run.
@@ -177,7 +192,8 @@ export class ExternalRoutesService {
 					this.externalRouteRepository.count({ source: source.id }),
 					this.externalRouteRepository.count({ source: source.id }, { filters: { softDelete: false } }),
 				]);
-				const automatic = source.status === "green" && !!source.feedUrl;
+				const automatic =
+					source.status === "green" && (!!source.feedUrl || !!seedAdapterByKey(source.key)?.meta.feedUrls?.length);
 				const nextRefreshAt =
 					automatic && source.lastRefreshedAt
 						? new Date(source.lastRefreshedAt.getTime() + source.refreshIntervalDays * 86_400_000).toISOString()
@@ -217,6 +233,9 @@ export class ExternalRoutesService {
 		for (const rawSeed of seeds) {
 			// Clamp wire-size fields; open-data names occasionally run long.
 			const seed = { ...rawSeed, name: rawSeed.name.slice(0, 255), description: rawSeed.description?.slice(0, 2000) };
+			// In-batch duplicate: keep the first occurrence (multi-feed inputs
+			// can repeat a record id), never double-insert into the unique key.
+			if (seenRecordIds.has(seed.sourceRecordId)) continue;
 			seenRecordIds.add(seed.sourceRecordId);
 			const hash = contentHash(seed);
 			const box = routeBoundingBox(seed.geometry);
