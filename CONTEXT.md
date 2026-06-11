@@ -22,8 +22,16 @@ The ordered sequence of geographic coordinates the system computes by stitching 
 _Avoid_: line, geometry, polyline, track.
 
 **RouteGeneration**:
-Algorithmic creation of a Route from high-level parameters (RouteType, SurfaceType, Heading, target distance) instead of hand-placed waypoints. Runs as a staged pipeline (anchors → candidates → routing → scoring → selection) on the server and returns up to 3 diverse **GenerationCandidates**; confirming one yields a RouteDraft with Provenance `generation`. v1 generates loops only. See ADR 0029.
+Algorithmic creation of a Route from high-level parameters (RouteType, SurfaceType, Heading, target distance) instead of hand-placed waypoints. Runs as a staged pipeline (anchors → candidates → routing → scoring → selection) on the server and returns up to 3 diverse **GenerationCandidates**; confirming one yields a RouteDraft with Provenance `generation`. v1 generated loops only; v2 (issue #262) adds a-to-b generation, **Anchors**, and a soft NodeNetwork preference. See ADR 0029.
 _Avoid_: AI route, auto route, suggested route.
+
+**Anchor** (of a RouteGeneration):
+A geographic hint supplied to a RouteGeneration that influences where candidate via points land. A *pool anchor* (`required: false`) is a snap target: nearby candidate vias move onto it. A *must-pass anchor* (`required: true`) is injected as a via into every candidate. Anchors come from the caller (e.g. a pinned POI landmark) or are derived server-side from the **NodeNetwork** when the user prefers knooppunten; either way they are hints, the server still validates and scores everything. An Anchor is not a **Waypoint**: it never appears in the resulting Route, it only shapes where generated vias go.
+_Avoid_: landmark (one use case, not the concept), via (the routed point an Anchor may produce), pin.
+
+**NetworkFit** (of a GenerationCandidate):
+Score component measuring how much a candidate rides the **NodeNetwork**: for cycle activities, the length-weighted fraction of distance on network-flagged edges; for walk/run (where the routing engine has no foot-network edge attribute), the fraction of vias snapped to Nodes. Only computed and weighted when the user prefers knooppunten; weights renormalize when active.
+_Avoid_: network score, knooppunt score.
 
 **GenerationCandidate**:
 One scored loop produced by a RouteGeneration attempt: geometry, via points, Distance, ElevationGain, surface composition, and score components (**Overlap**, distance match, surface fit, shape compactness). Candidates shown to the user are mutually diverse (near-identical shapes are deduped, the issue's "duplicate avoidance"). Mediocre candidates are shown with their flaw labeled; unusable ones are dropped behind a quality floor. A GenerationCandidate is not a Route: it becomes one only after the user confirms and saves it.
@@ -83,7 +91,7 @@ Compass direction (0 to 360°) of a Waypoint or segment. Used by GPX import for 
 ## Map overlays
 
 **NodeNetwork** (knooppuntennetwerk):
-A wayfinding system of numbered junctions connected by signed segments, used across Belgium and the Netherlands: cyclists and walkers plan by stringing together junction numbers ("42 → 7 → 13"). Routess shows it as an optional, display-only map overlay in two independent kinds, **hiking** (walking) nodes and **cycling** nodes, each toggled separately. A single junction is a **Node** carrying a `ref` (its number); a **Connection** is the segment linking two adjacent Nodes (`fromRef`, `toRef`). The source is OpenStreetMap (`rwn_ref`/`lwn_ref` walking, `rcn_ref`/`lcn_ref` cycling, `network:type=node_network`), ODbL-licensed, slowly-changing, and self-hosted as pre-built vector tiles rather than fetched live (see ADR 0033). The overlay never affects routing or a saved Route; it is purely a reference layer the user can read off the map.
+A wayfinding system of numbered junctions connected by signed segments, used across Belgium and the Netherlands: cyclists and walkers plan by stringing together junction numbers ("42 → 7 → 13"). Routess shows it as an optional, display-only map overlay in two independent kinds, **hiking** (walking) nodes and **cycling** nodes, each toggled separately. A single junction is a **Node** carrying a `ref` (its number); a **Connection** is the segment linking two adjacent Nodes (`fromRef`, `toRef`). The source is OpenStreetMap (`rwn_ref`/`lwn_ref` walking, `rcn_ref`/`lcn_ref` cycling, `network:type=node_network`), ODbL-licensed, slowly-changing, and self-hosted as pre-built vector tiles rather than fetched live (see ADR 0033). The overlay never affects ordinary routing or a saved Route. The one sanctioned influence on route computation is **RouteGeneration** with "prefer knooppunten" enabled: Nodes then act as pool **Anchors** and **NetworkFit** rewards riding the network, always as a soft preference, never a hard constraint (generation v2, issue #262).
 _Avoid_: knooppunt for the whole network (a knooppunt is one **Node**), junction network (too generic), POI layer (Nodes are not points of interest). Distinct from a **RoutePath**: a NodeNetwork is fixed public infrastructure, not a user's route.
 
 ## Editing & state
