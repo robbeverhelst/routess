@@ -11,6 +11,7 @@ import {
 	type Coordinate,
 	closestPointOnSegment,
 	collectSurfaceAnchors,
+	corridorSanity,
 	decodePolyline6,
 	destinationPoint,
 	encodePolyline6,
@@ -23,6 +24,7 @@ import {
 	loopRadiusKm,
 	MAX_REQUIRED_ANCHORS,
 	OVERLAP_WARN_LIMIT,
+	planAtoBCandidates,
 	planCandidateFan,
 	planIsochroneCandidates,
 	planSurfaceAnchoredCandidates,
@@ -36,6 +38,7 @@ import {
 	type SurfaceType,
 	scoreCandidate,
 	selectDiverseCandidates,
+	singleDetourOffsetKm,
 	snapViasToAnchors,
 	type ValhallaCostingRequest,
 	valhallaCostingFromPreferences,
@@ -258,25 +261,31 @@ export class GenerationService {
 		const start: Coordinate = [request.start.lon, request.start.lat];
 		const costing = valhallaCostingFromPreferences(request.activity, request.preferences);
 
+		const isAtoB = request.routeType === "a-to-b";
+		const end: Coordinate | undefined = isAtoB && request.end ? [request.end.lon, request.end.lat] : undefined;
+		if (isAtoB && (!end || haversineDistance(start, end) <= 0)) return fail("invalid_input");
+
 		let anchors: AnchorContext;
 		try {
-			anchors = await this.buildAnchorContext(request, start);
+			anchors = await this.buildAnchorContext(request, start, end);
 		} catch (err) {
 			if (err instanceof GenerationFailure) return fail(err.failureCode);
 			throw err;
 		}
 
-		let plans = planCandidateFan(start, request.heading, request.targetDistanceKm, request.excludeBearings);
+		let plans = end
+			? planAtoBCandidates(start, end, request.targetDistanceKm, request.excludeBearings)
+			: planCandidateFan(start, request.heading, request.targetDistanceKm, request.excludeBearings);
 		if (plans.length === 0) return fail("all_bearings_excluded");
 		plans = plans.map((plan) => applyAnchors(plan, anchors, start));
 
-		// One batched /locate validates the start and every via point: vias in
-		// fields, water, or off-network get their candidate dropped or snapped
-		// to the correlated road position (the dead-end-spur fix).
+		// One batched /locate validates the start, end, and every via point:
+		// vias in fields, water, or off-network get their candidate dropped or
+		// snapped to the correlated road position (the dead-end-spur fix).
 		let snappedPlans: CandidatePlan[];
 		try {
 			snappedPlans = await countCall(
-				this.snapPlans(start, plans, request.targetDistanceKm, costing, request.preferences.surfacePreference),
+				this.snapPlans(start, plans, request.targetDistanceKm, costing, request.preferences.surfacePreference, end),
 			);
 		} catch (err) {
 			if (err instanceof GenerationFailure) return fail(err.failureCode);
@@ -284,20 +293,29 @@ export class GenerationService {
 		}
 		const scored =
 			snappedPlans.length > 0
-				? await this.routeAndScore(snappedPlans, start, request, costing, anchors, countCall)
+				? await this.routeAndScore(snappedPlans, start, request, costing, anchors, countCall, {
+						// The corridor tactic places exact-budget detours; the loop
+						// fan's ring-rescale refinement does not apply to it.
+						refineDistance: !end,
+						end,
+					})
 				: [];
 
-		// Isochrone fallback (generation v2): a fan that routes nothing usually
-		// means hostile geometry (coast, canal belt), not an unroutable area —
-		// retry once with vias on the reachability frontier.
+		// Isochrone fallback (generation v2, loops only): a fan that routes
+		// nothing usually means hostile geometry (coast, canal belt), not an
+		// unroutable area — retry once with vias on the reachability frontier.
 		let usedIsochroneFallback = false;
-		if (scored.length === 0) {
+		if (scored.length === 0 && !end) {
 			scored.push(...(await this.isochroneFallback(start, request, costing, anchors, countCall)));
 			usedIsochroneFallback = scored.length > 0;
-			if (scored.length === 0) return fail("no_candidates_routable");
 		}
+		if (scored.length === 0) return fail("no_candidates_routable");
 
-		scored.push(...(await this.surfaceWave(scored, plans, start, request, costing, anchors, countCall)));
+		// The surface wave harvests loop anchors; the corridor tactic gets its
+		// surface bias from the locate nudge alone.
+		if (!end) {
+			scored.push(...(await this.surfaceWave(scored, plans, start, request, costing, anchors, countCall)));
+		}
 
 		const selected = selectDiverseCandidates(scored);
 		if (selected.length === 0) {
@@ -320,7 +338,11 @@ export class GenerationService {
 	 * when knooppunt mode is on. Fail-open on the Node side; fail-honest
 	 * (invalid_input) on contract violations in explicit anchors.
 	 */
-	private async buildAnchorContext(request: GenerateRequestDto, start: Coordinate): Promise<AnchorContext> {
+	private async buildAnchorContext(
+		request: GenerateRequestDto,
+		start: Coordinate,
+		end?: Coordinate,
+	): Promise<AnchorContext> {
 		const explicit: GenerationAnchor[] = (request.anchors ?? []).map((anchor) => ({
 			coordinate: [anchor.lon, anchor.lat] as Coordinate,
 			ref: anchor.ref,
@@ -329,26 +351,33 @@ export class GenerationService {
 		}));
 
 		const required = explicit.filter((anchor) => anchor.required);
-		// A must-pass anchor the loop cannot plausibly reach is a contract
-		// error, not a hint to stretch the loop across the map.
+		// A must-pass anchor the route cannot plausibly reach is a contract
+		// error, not a hint to stretch the route across the map.
 		const maxReachKm = request.targetDistanceKm / 2;
-		if (
-			required.length > MAX_REQUIRED_ANCHORS ||
-			required.some((anchor) => haversineDistance(start, anchor.coordinate) > maxReachKm)
-		) {
+		const reachable = (anchor: GenerationAnchor) =>
+			haversineDistance(start, anchor.coordinate) <= maxReachKm ||
+			(end !== undefined && haversineDistance(end, anchor.coordinate) <= maxReachKm);
+		if (required.length > MAX_REQUIRED_ANCHORS || !required.every(reachable)) {
 			throw new GenerationFailure("invalid_input");
 		}
 
 		const pool = explicit.filter((anchor) => !anchor.required);
 		let networkFitMode: AnchorContext["networkFitMode"] = null;
 		if (request.preferNodeNetworks) {
-			// Vias reach up to 2× the loop radius from the start; pad by the
-			// snap radius so edge-of-reach vias still find their nearest Node.
-			const reachKm = 2 * loopRadiusKm(request.targetDistanceKm) + anchorSnapRadiusKm(request.targetDistanceKm);
-			const north = destinationPoint(start, 0, reachKm);
-			const east = destinationPoint(start, 90, reachKm);
-			const south = destinationPoint(start, 180, reachKm);
-			const west = destinationPoint(start, 270, reachKm);
+			// Loops: vias reach up to 2× the loop radius from the start.
+			// A-to-b: vias sit within the single-detour offset of the corridor.
+			// Pad by the snap radius so edge-of-reach vias still find a Node.
+			const padKm =
+				(end
+					? singleDetourOffsetKm(haversineDistance(start, end), request.targetDistanceKm)
+					: 2 * loopRadiusKm(request.targetDistanceKm)) + anchorSnapRadiusKm(request.targetDistanceKm);
+			const corners = [start, ...(end ? [end] : [])];
+			const lons = corners.map((c) => c[0]);
+			const lats = corners.map((c) => c[1]);
+			const north = destinationPoint([lons[0], Math.max(...lats)], 0, padKm);
+			const south = destinationPoint([lons[0], Math.min(...lats)], 180, padKm);
+			const east = destinationPoint([Math.max(...lons), lats[0]], 90, padKm);
+			const west = destinationPoint([Math.min(...lons), lats[0]], 270, padKm);
 			const nodes = await this.nodeNetworks.anchorsForBbox(
 				{ minLon: west[0], minLat: south[1], maxLon: east[0], maxLat: north[1] },
 				nodeKindForActivity(request.activity),
@@ -369,6 +398,7 @@ export class GenerationService {
 		targetDistanceKm: number,
 		costing: ValhallaCostingRequest,
 		surfacePreference: SurfaceType,
+		end?: Coordinate,
 	): Promise<CandidatePlan[]> {
 		// A strict surface preference widens the via search so /locate returns
 		// every edge within the nudge radius, not just the nearest; pickViaEdge
@@ -376,6 +406,7 @@ export class GenerationService {
 		const viaRadius = surfacePreference === "mixed" ? undefined : SURFACE_NUDGE_RADIUS_M;
 		const locations = [
 			{ lat: start[1], lon: start[0] },
+			...(end ? [{ lat: end[1], lon: end[0] }] : []),
 			...plans.flatMap((plan) =>
 				plan.viaPoints.map(([lon, lat]) => (viaRadius ? { lat, lon, radius: viaRadius } : { lat, lon })),
 			),
@@ -406,14 +437,20 @@ export class GenerationService {
 		const radius = loopRadiusKm(targetDistanceKm);
 		const maxViaSnapKm = Math.max(0.5, radius / 2);
 
-		// The start never surface-nudges: the user picked it deliberately.
+		// Start and end never surface-nudge: the user picked them deliberately.
 		const snappedStart = snappedCoord(results[0], "mixed");
 		if (!snappedStart || haversineDistance(start, snappedStart) > MAX_START_SNAP_KM) {
 			throw new GenerationFailure("start_not_routable");
 		}
+		if (end) {
+			const snappedEnd = snappedCoord(results[1], "mixed");
+			if (!snappedEnd || haversineDistance(end, snappedEnd) > MAX_START_SNAP_KM) {
+				throw new GenerationFailure("end_not_routable");
+			}
+		}
 
 		const snapped: CandidatePlan[] = [];
-		let cursor = 1;
+		let cursor = end ? 2 : 1;
 		for (const plan of plans) {
 			const vias: Coordinate[] = [];
 			let viable = true;
@@ -440,7 +477,7 @@ export class GenerationService {
 		costing: ValhallaCostingRequest,
 		anchors: AnchorContext,
 		countCall: <T>(promise: Promise<T>) => Promise<T>,
-		options: { refineDistance: boolean } = { refineDistance: true },
+		options: { refineDistance: boolean; end?: Coordinate } = { refineDistance: true },
 	): Promise<(ScoredCandidate & { shape: string })[]> {
 		const results: (ScoredCandidate & { shape: string })[] = [];
 		const queue = [...plans];
@@ -602,10 +639,10 @@ export class GenerationService {
 		costing: ValhallaCostingRequest,
 		anchors: AnchorContext,
 		countCall: <T>(promise: Promise<T>) => Promise<T>,
-		options: { refineDistance: boolean } = { refineDistance: true },
+		options: { refineDistance: boolean; end?: Coordinate } = { refineDistance: true },
 	): Promise<(ScoredCandidate & { shape: string }) | null> {
 		let activePlan = plan;
-		let routed = await countCall(this.routeLoop(activePlan, start, costing));
+		let routed = await countCall(this.routeLoop(activePlan, start, costing, options.end));
 		if (!routed) return null;
 
 		// One-shot radius refinement when the routed distance misses badly.
@@ -618,7 +655,7 @@ export class GenerationService {
 			: null;
 		const refined = refinedGeometric ? applyAnchors(refinedGeometric, anchors, start) : null;
 		if (refined) {
-			const rerouted = await countCall(this.routeLoop(refined, start, costing));
+			const rerouted = await countCall(this.routeLoop(refined, start, costing, options.end));
 			if (
 				rerouted &&
 				Math.abs(rerouted.distanceKm - request.targetDistanceKm) <
@@ -634,7 +671,7 @@ export class GenerationService {
 		// via). Move such vias to the pinch junction and route once more; the
 		// loop then passes through naturally. Score decides which version wins.
 		const repair = repairSpurVias(routed.geometry, activePlan.viaPoints, request.targetDistanceKm);
-		let scored = await this.scoreRouted(activePlan, routed, request, anchors, countCall);
+		let scored = await this.scoreRouted(activePlan, routed, request, anchors, countCall, options.end);
 		// A must-pass via is the user's explicit choice; repair never moves it,
 		// even when it pinches. Pool-snapped vias may move but lose their ref.
 		const repairedVias = repair.viaPoints.map((point, i) =>
@@ -648,9 +685,9 @@ export class GenerationService {
 				viaPoints: repairedVias,
 				viaAnchors: activePlan.viaAnchors?.map((anchor, i) => (movedVia(i) ? undefined : anchor)),
 			};
-			const rerouted = await countCall(this.routeLoop(repairedPlan, start, costing));
+			const rerouted = await countCall(this.routeLoop(repairedPlan, start, costing, options.end));
 			if (rerouted) {
-				const repairedScored = await this.scoreRouted(repairedPlan, rerouted, request, anchors, countCall);
+				const repairedScored = await this.scoreRouted(repairedPlan, rerouted, request, anchors, countCall, options.end);
 				if (repairedScored.score.total > scored.score.total) scored = repairedScored;
 			}
 		}
@@ -663,6 +700,7 @@ export class GenerationService {
 		request: GenerateRequestDto,
 		anchors: AnchorContext,
 		countCall: <T>(promise: Promise<T>) => Promise<T>,
+		end?: Coordinate,
 	): Promise<ScoredCandidate & { shape: string }> {
 		const costing = valhallaCostingFromPreferences(request.activity, request.preferences);
 		const edges = await countCall(this.traceEdges(routed.shape, costing));
@@ -690,7 +728,21 @@ export class GenerationService {
 			request.targetDistanceKm,
 			request.preferences.surfacePreference,
 			metersByBucket,
-			{ networkFit },
+			{
+				networkFit,
+				// A corridor route is never compact; staying corridor-shaped is
+				// its equivalent virtue (same weight slot).
+				...(end
+					? {
+							corridorSanity: corridorSanity(
+								routed.geometry,
+								[request.start.lon, request.start.lat],
+								end,
+								request.targetDistanceKm,
+							),
+						}
+					: {}),
+			},
 		);
 
 		return {
@@ -706,6 +758,7 @@ export class GenerationService {
 		plan: CandidatePlan,
 		start: Coordinate,
 		costing: ValhallaCostingRequest,
+		end: Coordinate = start,
 	): Promise<RoutedLeg | null> {
 		const data = await this.routing.callValhalla<ValhallaRouteResponse>(
 			"/route",
@@ -713,9 +766,10 @@ export class GenerationService {
 				locations: [
 					{ lat: start[1], lon: start[0], type: "break" },
 					// `through` forbids U-turns at via points: the router must pass
-					// through and keep going, which is what makes the loop a loop.
+					// through and keep going, which is what makes the loop a loop
+					// (and keeps an a-to-b detour from collapsing back early).
 					...plan.viaPoints.map(([lon, lat]) => ({ lat, lon, type: "through" })),
-					{ lat: start[1], lon: start[0], type: "break" },
+					{ lat: end[1], lon: end[0], type: "break" },
 				],
 				costing: costing.costing,
 				costing_options: costing.costing_options,

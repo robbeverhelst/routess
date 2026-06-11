@@ -1,4 +1,5 @@
 export * from "./anchors";
+export * from "./corridor";
 export * from "./fan";
 export * from "./isochrone";
 export * from "./scoring";

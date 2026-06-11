@@ -51,6 +51,7 @@ export interface GenerationRequest {
 export const GENERATION_FAILURE_CODES = [
 	"invalid_input",
 	"start_not_routable",
+	"end_not_routable",
 	"no_candidates_routable",
 	"all_candidates_low_quality",
 	"all_bearings_excluded",

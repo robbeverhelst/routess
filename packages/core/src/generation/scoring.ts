@@ -143,12 +143,15 @@ export function scoreCandidate(
 	targetDistanceKm: number,
 	surfacePreference: SurfaceType,
 	metersByBucket: Record<SurfaceBucket, number>,
-	options: { networkFit?: number } = {},
+	// For a-to-b, corridorSanity replaces compactness in the same weight slot
+	// (a corridor route is never compact; staying corridor-shaped is its
+	// equivalent virtue) and is reported as shapeCompactness.
+	options: { networkFit?: number; corridorSanity?: number } = {},
 ): CandidateScore {
 	const overlap = overlapFraction(candidate.edges);
 	const distanceMatch = distanceMatchScore(candidate.distanceKm, targetDistanceKm);
 	const surfaceFit = surfaceFitScore(metersByBucket, surfacePreference);
-	const compactness = shapeCompactness(candidate.geometry);
+	const compactness = options.corridorSanity ?? shapeCompactness(candidate.geometry);
 
 	const w = generationScoreWeights(surfacePreference);
 	const networkFit = options.networkFit;

@@ -1,6 +1,13 @@
 import { EventEmitter2 } from "@nestjs/event-emitter";
 import { Test, type TestingModule } from "@nestjs/testing";
-import { type Coordinate, destinationPoint, encodePolyline6, type GenerationAnchor, loopRadiusKm } from "@routess/core";
+import {
+	type Coordinate,
+	destinationPoint,
+	encodePolyline6,
+	type GenerationAnchor,
+	haversineDistance,
+	loopRadiusKm,
+} from "@routess/core";
 import { RoutingService } from "../routing/routing.service";
 import { ROUTE_GENERATION_COMPLETED, type RouteGenerationCompletedEvent } from "../telemetry/domain-events";
 import type { GenerateRequestDto } from "./dto/generate.dto";
@@ -506,6 +513,106 @@ describe("GenerationService", () => {
 			await service.generate(REQUEST);
 			expect(fake.calls.filter((path) => path === "/isochrone")).toHaveLength(0);
 			expect(events[0]?.usedIsochroneFallback).toBe(false);
+		});
+	});
+
+	describe("a-to-b generation (generation v2)", () => {
+		const END: Coordinate = destinationPoint(GHENT, 90, 15);
+		const ATOB: GenerateRequestDto = {
+			...REQUEST,
+			routeType: "a-to-b",
+			end: { lat: END[1], lon: END[0] },
+			targetDistanceKm: 35,
+		};
+
+		// Route start → vias → end as straight legs at road circuity 1.3,
+		// densified so downstream geometry checks have enough points.
+		const corridorRouter = () => {
+			fake.routeHandler = (body) => {
+				const points = body.locations.map((loc) => [loc.lon, loc.lat] as Coordinate);
+				const geometry: Coordinate[] = [];
+				let crowKm = 0;
+				for (let i = 0; i < points.length - 1; i++) {
+					crowKm += haversineDistance(points[i], points[i + 1]);
+					for (let step = 0; step < 5; step++) {
+						geometry.push([
+							points[i][0] + ((points[i + 1][0] - points[i][0]) * step) / 5,
+							points[i][1] + ((points[i + 1][1] - points[i][1]) * step) / 5,
+						]);
+					}
+				}
+				geometry.push(points[points.length - 1]);
+				const lengthKm = crowKm * 1.3;
+				return {
+					trip: { legs: [{ shape: encodePolyline6(geometry), summary: { length: lengthKm, time: lengthKm * 180 } }] },
+				};
+			};
+			let traceCount = 0;
+			fake.traceHandler = () => {
+				traceCount++;
+				return {
+					edges: Array.from({ length: 24 }, (_, i) => ({
+						way_id: traceCount * 1000 + i,
+						surface: "paved",
+						length: 35 / 24,
+						begin_heading: (i * 15) % 360,
+						end_heading: (i * 15 + 10) % 360,
+					})),
+				};
+			};
+		};
+
+		it("stretches the corridor to within ±10% of the target distance", async () => {
+			corridorRouter();
+			const response = await service.generate(ATOB);
+			expect(response.failure).toBeUndefined();
+			expect(response.candidates.length).toBeGreaterThan(0);
+			const best = response.candidates[0];
+			expect(Math.abs(best.distanceKm - ATOB.targetDistanceKm) / ATOB.targetDistanceKm).toBeLessThanOrEqual(0.1);
+			expect(events[0]?.outcome).toBe("succeeded");
+		});
+
+		it("offers detours to both sides plus the direct baseline", async () => {
+			corridorRouter();
+			const response = await service.generate(ATOB);
+			const viaCounts = response.candidates.map((c) => c.viaPoints.length);
+			expect(Math.max(...viaCounts)).toBeGreaterThanOrEqual(1);
+		});
+
+		it("fails with invalid_input when end is missing", async () => {
+			const response = await service.generate({ ...ATOB, end: undefined });
+			expect(response.failure?.code).toBe("invalid_input");
+			expect(fake.calls).toHaveLength(0);
+		});
+
+		it("fails with end_not_routable when the end has no edges", async () => {
+			corridorRouter();
+			fake.locateHandler = (body) =>
+				body.locations.map((loc, i) =>
+					i === 1
+						? { edges: null }
+						: {
+								edges: [
+									{
+										correlated_lat: loc.lat,
+										correlated_lon: loc.lon,
+										distance: 5,
+										outbound_reach: 50,
+										inbound_reach: 50,
+										edge: { classification: { classification: "residential", use: "road" } },
+									},
+								],
+							},
+				);
+			const response = await service.generate(ATOB);
+			expect(response.failure?.code).toBe("end_not_routable");
+		});
+
+		it("never fires the isochrone fallback for a-to-b", async () => {
+			fake.routeHandler = () => ({ error: "no path" });
+			const response = await service.generate(ATOB);
+			expect(response.failure?.code).toBe("no_candidates_routable");
+			expect(fake.calls.filter((path) => path === "/isochrone")).toHaveLength(0);
 		});
 	});
 
