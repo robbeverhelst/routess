@@ -1,7 +1,7 @@
 import type { ApiRoute } from "@routess/api-client";
+import { buildRouteGpx } from "@routess/core";
 import { trackEvent } from "@/lib/analytics/track";
 import { Logger } from "@/lib/logger";
-import { generateGPXString } from "./GPXService";
 
 const safeFilename = (name: string): string => {
 	const slug = name
@@ -14,7 +14,7 @@ const safeFilename = (name: string): string => {
 // Downloads a saved route as GPX, independent of the active draft.
 export const exportRouteGpx = (route: ApiRoute): boolean => {
 	const path = route.geometry && route.geometry.length >= 2 ? route.geometry : route.waypoints.map((wp) => wp.coord);
-	const contents = generateGPXString(route.waypoints, path, route.name);
+	const contents = buildRouteGpx({ name: route.name, waypoints: route.waypoints, geometry: path });
 	const blob = new Blob([contents], { type: "application/gpx+xml;charset=utf-8" });
 	const url = URL.createObjectURL(blob);
 

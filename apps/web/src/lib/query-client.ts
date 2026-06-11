@@ -39,6 +39,7 @@ export const queryKeys = {
 		all: ["routes"] as const,
 		list: () => [...queryKeys.routes.all, "list"] as const,
 		detail: (id: string) => [...queryKeys.routes.all, "detail", id] as const,
+		external: (id: number) => [...queryKeys.routes.all, "external", id] as const,
 		byUser: (userId: number) => [...queryKeys.routes.all, "byUser", userId] as const,
 		discover: (params: Record<string, string | number | undefined>) =>
 			[...queryKeys.routes.all, "discover", params] as const,

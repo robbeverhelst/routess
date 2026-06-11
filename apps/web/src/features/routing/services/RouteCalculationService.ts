@@ -1,5 +1,5 @@
 import type { Coordinate, RouteActivity, RoutingPreferences, Waypoint } from "@routess/core";
-import { defaultPreferencesForActivity } from "@routess/core";
+import { calculatePathDistance, defaultPreferencesForActivity, haversineDistance } from "@routess/core";
 import type { Map as MapboxMap } from "mapbox-gl";
 import { Logger } from "@/lib/logger";
 import serviceWorkerManager from "@/lib/serviceWorker";
@@ -215,4 +215,225 @@ export const clearCurrentRoutePath = (): void => {
 
 export const setCurrentRoutePath = (coordinates: Coordinate[]): void => {
 	useRoutingStore.getState().setRoutePath([...coordinates]);
+};
+
+// ============================================================================
+// EDIT-LOCAL RECOMPUTATION (patchRoute)
+//
+// Untouched legs never re-route. A waypoint mutation diffs the previous and
+// current waypoint lists, keeps the path slices of the common prefix/suffix
+// verbatim, routes only the changed middle (one small call), and splices.
+// This is what preserves imported/external/generated geometry across edits:
+// the engine cannot re-route a foreign track faithfully (e.g. a crossing it
+// refuses), so it must not get the chance on legs the user did not touch.
+// Densify insertions are recognized as pure on-path insertions and change
+// nothing at all. Any anomaly falls back to a full getRoute().
+// ============================================================================
+
+export interface PreEditState {
+	waypoints: Waypoint[];
+	routePath: Coordinate[];
+	distanceMeters: number;
+	durationSeconds: number;
+}
+
+export const capturePreEditState = (): PreEditState => {
+	const state = useRoutingStore.getState();
+	return {
+		waypoints: state.waypoints.map((wp) => ({ ...wp })),
+		routePath: [...state.routePath],
+		distanceMeters: state.distanceMeters,
+		durationSeconds: state.durationSeconds,
+	};
+};
+
+// A waypoint participating in the splice must sit on the previous path;
+// beyond this it is not a faithful control point and we recompute fully.
+const ANCHOR_TOLERANCE_KM = 0.1;
+
+function anchorIndices(waypoints: Waypoint[], path: Coordinate[]): number[] | null {
+	const anchors: number[] = [];
+	let cursor = 0;
+	for (const wp of waypoints) {
+		let best = cursor;
+		let bestKm = Infinity;
+		for (let i = cursor; i < path.length; i++) {
+			const km = haversineDistance(wp.coord, path[i]);
+			if (km < bestKm) {
+				bestKm = km;
+				best = i;
+			}
+		}
+		if (bestKm > ANCHOR_TOLERANCE_KM) return null;
+		anchors.push(best);
+		cursor = best;
+	}
+	return anchors;
+}
+
+function commonPrefixLength(a: Waypoint[], b: Waypoint[]): number {
+	const max = Math.min(a.length, b.length);
+	let n = 0;
+	while (n < max && sameWaypoint(a[n], b[n])) n++;
+	return n;
+}
+
+function commonSuffixLength(a: Waypoint[], b: Waypoint[], prefix: number): number {
+	const max = Math.min(a.length, b.length) - prefix;
+	let n = 0;
+	while (n < max && sameWaypoint(a[a.length - 1 - n], b[b.length - 1 - n])) n++;
+	return n;
+}
+
+// True when every previous waypoint appears in order in `next` and every
+// inserted one lies on the previous path: the densify signature. The path is
+// already correct; nothing needs routing.
+function isPureOnPathInsertion(prev: Waypoint[], next: Waypoint[], path: Coordinate[]): boolean {
+	if (next.length <= prev.length) return false;
+	let pi = 0;
+	const inserted: Waypoint[] = [];
+	for (const wp of next) {
+		if (pi < prev.length && sameWaypoint(wp, prev[pi])) pi++;
+		else inserted.push(wp);
+	}
+	if (pi !== prev.length) return false;
+	return anchorIndices(inserted, path) !== null;
+}
+
+export interface PatchRouteOptions {
+	// Restore semantics (undo/redo): when every remaining waypoint still lies
+	// on the previous path, trim/keep that path instead of routing anything.
+	// An edit-removal must NOT do this: deleting a via is a request to
+	// re-route that span.
+	restore?: boolean;
+}
+
+export const patchRoute = async (
+	map: MapboxMap,
+	accessToken: string,
+	prev: PreEditState,
+	patchOptions: PatchRouteOptions = {},
+): Promise<RouteResult> => {
+	const store = useRoutingStore.getState();
+	const next = store.waypoints;
+
+	const fullRecompute = (reason: string): Promise<RouteResult> => {
+		Logger.info(`[RCS/patchRoute] Falling back to full recompute: ${reason}`);
+		return getRoute(map, accessToken);
+	};
+
+	if (next.length < 2 || prev.waypoints.length < 2 || prev.routePath.length < 2) {
+		return fullRecompute("no previous route to patch");
+	}
+	if (store.isOfflineRoute) return fullRecompute("offline route");
+
+	if (isPureOnPathInsertion(prev.waypoints, next, prev.routePath)) {
+		Logger.info("[RCS/patchRoute] Pure on-path insertion; path unchanged.");
+		return { success: true, waypointsSnapped: false };
+	}
+
+	if (patchOptions.restore) {
+		const anchors = anchorIndices(next, prev.routePath);
+		if (anchors && anchors.length > 0) {
+			const first = anchors[0] as number;
+			const last = anchors[anchors.length - 1] as number;
+			const restored = prev.routePath.slice(first, last + 1);
+			if (restored.length >= 2) {
+				Logger.info("[RCS/patchRoute] Restore: trimmed previous path, no routing.");
+				const restoredKm = calculatePathDistance(restored);
+				const prevKm = prev.distanceMeters / 1000;
+				const share = prevKm > 0 ? restoredKm / prevKm : 1;
+				const after = useRoutingStore.getState();
+				after.setRoutePath(restored);
+				after.setRouteMetrics({
+					distanceMeters: restoredKm * 1000,
+					durationSeconds: Math.max(0, Math.round(prev.durationSeconds * share)),
+					isOffline: false,
+				});
+				after.setHasRoute(true);
+				computeElevationInBackground(restored, accessToken);
+				return { success: true, waypointsSnapped: false };
+			}
+		}
+		// A moved/foreign waypoint in the restored state: patch it like an edit.
+	}
+
+	const prefix = commonPrefixLength(prev.waypoints, next);
+	const suffix = commonSuffixLength(prev.waypoints, next, prefix);
+	if (prefix + suffix === prev.waypoints.length && prefix + suffix === next.length) {
+		return { success: true, waypointsSnapped: false };
+	}
+
+	// Boundary waypoints bracketing the change; the legs outside them keep
+	// their existing geometry verbatim.
+	const boundaryFrom = Math.max(0, prefix - 1);
+	const boundaryToPrev = prev.waypoints.length - Math.max(0, suffix - 1) - 1;
+	const boundaryToNext = next.length - Math.max(0, suffix - 1) - 1;
+	const segment = next.slice(boundaryFrom, boundaryToNext + 1);
+	if (segment.length < 2) return fullRecompute("degenerate segment");
+
+	// Anchor the FULL previous list (forward walk): anchoring only the two
+	// boundary waypoints would let a loop's closing waypoint match the path
+	// START instead of its end.
+	const anchors = anchorIndices(prev.waypoints, prev.routePath);
+	if (!anchors) return fullRecompute("boundary waypoint off the previous path");
+	const keepUntil = anchors[boundaryFrom] as number;
+	const keepFrom = anchors[boundaryToPrev] as number;
+
+	const activity = store.activity ?? useUiStore.getState().activityType;
+	const { prefs, options } = buildComputeOptions(activity);
+	const outcome = await computeRoute(segment, activity, prefs, options);
+
+	if (!routeInputsMatch(next)) {
+		Logger.info("[RCS/patchRoute] Route inputs changed during patch. Discarding stale result.");
+		return staleRouteResult();
+	}
+	if (!outcome.ok) return fullRecompute(`segment routing failed (${outcome.error ?? "unknown"})`);
+
+	// Keep the boundary coordinates from the previous path verbatim and trim
+	// the new leg's duplicated endpoints (polyline decoding rounds them, and a
+	// rounded twin would creep into the kept geometry on every edit). When a
+	// side has no kept legs (edit at an end), the leg keeps that endpoint.
+	const hasPrefix = prefix > 0;
+	const hasSuffix = suffix > 0;
+	const prefixPath = hasPrefix ? prev.routePath.slice(0, keepUntil + 1) : [];
+	const suffixPath = hasSuffix ? prev.routePath.slice(keepFrom) : [];
+	let middle = outcome.routePath;
+	if (hasPrefix) middle = middle.slice(1);
+	if (hasSuffix) middle = middle.slice(0, -1);
+	const newPath = [...prefixPath, ...middle, ...suffixPath];
+
+	// Distance is exact (recomputed over the spliced path). Duration is the
+	// previous total minus the replaced slice's share plus the new segment's
+	// routed time; an explicit recalculate trues it up.
+	const replacedKm = calculatePathDistance(prev.routePath.slice(keepUntil, keepFrom + 1));
+	if (newPath.length < 2) return fullRecompute("patched path degenerate");
+	const prevKm = prev.distanceMeters / 1000;
+	const replacedShare = prevKm > 0 ? Math.min(1, replacedKm / prevKm) : 0;
+	const newDistanceKm = calculatePathDistance(newPath);
+	const newDurationSeconds = Math.max(
+		0,
+		Math.round(prev.durationSeconds * (1 - replacedShare) + outcome.durationMinutes * 60),
+	);
+
+	const after = useRoutingStore.getState();
+	after.setRoutePath(newPath);
+	after.setRouteMetrics({
+		distanceMeters: newDistanceKm * 1000,
+		durationSeconds: newDurationSeconds,
+		isOffline: false,
+	});
+	after.setHasRoute(true);
+	if (!after.routingPreferences) after.setRoutingPreferences(prefs);
+	computeElevationInBackground(newPath, accessToken);
+
+	// Snap-writeback for the recomputed segment only.
+	if (outcome.snappedWaypoints) {
+		const merged = [...next];
+		outcome.snappedWaypoints.forEach((wp, i) => {
+			merged[boundaryFrom + i] = wp;
+		});
+		return { success: true, waypointsSnapped: true, snappedWaypoints: merged };
+	}
+	return { success: true, waypointsSnapped: false };
 };

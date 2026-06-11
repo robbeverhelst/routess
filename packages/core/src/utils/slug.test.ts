@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { buildRouteSlugId, parseRouteSlugId, toRouteSlug } from "./slug";
+import { buildExternalRouteSlugId, buildRouteSlugId, parseRouteSlugId, toRouteSlug } from "./slug";
 
 describe("toRouteSlug", () => {
 	it("kebab-cases a plain name", () => {
@@ -61,5 +61,29 @@ describe("parseRouteSlugId", () => {
 
 	it("does not treat shorter hex tails as tokens", () => {
 		expect(parseRouteSlugId("sunday-loop-abcdef")).toBeNull();
+	});
+
+	it("parses an external -x{id} tail as an externalId, not an id", () => {
+		expect(parseRouteSlugId("eurovelo-5-x42")).toEqual({ slug: "eurovelo-5", externalId: 42 });
+	});
+
+	it("keeps a plain numeric tail as a user-route id", () => {
+		const parsed = parseRouteSlugId("eurovelo-5-42");
+		expect(parsed).toEqual({ slug: "eurovelo-5", id: 42 });
+	});
+
+	it("rejects non-positive external ids", () => {
+		expect(parseRouteSlugId("loop-x0")).toBeNull();
+	});
+});
+
+describe("buildExternalRouteSlugId", () => {
+	it("marks the id with an x discriminator", () => {
+		expect(buildExternalRouteSlugId("EuroVelo 5", 42)).toBe("eurovelo-5-x42");
+	});
+
+	it("round-trips through parseRouteSlugId", () => {
+		const slugId = buildExternalRouteSlugId("Via Romea", 7);
+		expect(parseRouteSlugId(slugId)).toEqual({ slug: "via-romea", externalId: 7 });
 	});
 });

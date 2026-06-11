@@ -143,6 +143,19 @@ api:
     # Per-User daily cap on RouteGeneration attempts (each fans out into many
     # paid Valhalla calls). Empty uses the API default (50); "0" disables.
     generationQuotaPerDay: ""
+  # Scheduled ExternalRoute refresh (ADR 0035). Pulls green SeedSources with
+  # a stable feedUrl when due per their refreshIntervalDays; idempotent.
+  seedRefresh:
+    enabled: true
+    # Weekly, Monday 04:15 UTC. Sources gate themselves on refreshIntervalDays,
+    # so a frequent schedule only re-pulls what is actually due.
+    schedule: "15 4 * * 1"
+    resources:
+      requests:
+        cpu: 50m
+        memory: 192Mi
+      limits:
+        memory: 512Mi
   # Email allowlist for admin role. Source of truth for User.role; reconciled at
   # login via AuthService. Empty list disables reconciliation entirely (existing
   # roles are preserved). See ADR-0015.

@@ -15,6 +15,7 @@ import { RedisThrottlerStorage } from "./cache/redis-throttler.storage";
 import { CollectionsModule } from "./collections/collections.module";
 import type { AppConfig } from "./config/app-config";
 import { APP_CONFIG, ConfigModule } from "./config/config.module";
+import { ExternalRoutesModule } from "./external-routes/external-routes.module";
 import { GenerationModule } from "./generation/generation.module";
 import { HealthModule } from "./health/health.module";
 import config from "./mikro-orm.config";
@@ -93,6 +94,7 @@ import { UsersModule } from "./users/users.module";
 		UsersModule,
 		AuthModule,
 		RoutesModule,
+		ExternalRoutesModule,
 		CollectionsModule,
 		ProfilesModule,
 		SocialModule,

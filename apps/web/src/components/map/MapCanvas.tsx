@@ -466,7 +466,10 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
 	// Map positioning hook
 	// A shared route is being opened when there's a route id or a ?route= param.
 	const pendingSharedRoute = useMemo(
-		() => Boolean(routeId) || new URLSearchParams(window.location.search).has("route"),
+		() =>
+			Boolean(routeId) ||
+			new URLSearchParams(window.location.search).has("route") ||
+			new URLSearchParams(window.location.search).has("externalRoute"),
 		[routeId],
 	);
 

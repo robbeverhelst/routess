@@ -14,6 +14,7 @@ import {
 	UseGuards,
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiHeader, ApiOperation, ApiParam, ApiResponse, ApiTags } from "@nestjs/swagger";
+import { buildRouteGpx } from "@routess/core";
 import type { Response } from "express";
 import type { AuthenticatedUser } from "../auth/authenticated-user";
 import { CurrentUser, OptionalCurrentUser } from "../auth/decorators/current-user.decorator";
@@ -32,7 +33,6 @@ import { PublicRouteSummaryDto } from "./dto/public-route-summary.dto";
 import { PublicRoutesQueryDto } from "./dto/public-routes-query.dto";
 import { RouteResponseDto } from "./dto/route-response.dto";
 import { UpdateRouteDto } from "./dto/update-route.dto";
-import { buildRouteGpx } from "./gpx";
 import { RoutesService } from "./routes.service";
 
 @ApiTags("routes")

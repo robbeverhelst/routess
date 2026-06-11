@@ -4,6 +4,7 @@ import type {
 	AdminRouteDetail,
 	AdminRouteList,
 	AdminRouteStats,
+	AdminSeedSources,
 	AdminSystemHealth,
 	AdminUserDetail,
 	AdminUserList,
@@ -13,6 +14,7 @@ import type {
 	ApiCollectionDetail,
 	ApiDiscoverPage,
 	ApiDiscoverRoute,
+	ApiExternalRoute,
 	ApiFeedItem,
 	ApiFeedPage,
 	ApiFollows,
@@ -285,6 +287,15 @@ export class ApiClient {
 		return `${this.config.baseUrl}/api/v1/routes/${ref}/gpx`;
 	}
 
+	// Seeded ExternalRoute detail by numeric id (the `-x{id}` page form, ADR 0035).
+	async getExternalRoute(id: number): Promise<ApiExternalRoute> {
+		return this.request<ApiExternalRoute>(`/external-routes/${id}`);
+	}
+
+	externalRouteGpxUrl(id: number): string {
+		return `${this.config.baseUrl}/api/v1/external-routes/${id}/gpx`;
+	}
+
 	async updateRoute(id: number, route: UpdateRouteRequest): Promise<ApiRoute> {
 		return this.request<ApiRoute>(`/routes/${id}`, {
 			method: "PATCH",
@@ -435,6 +446,10 @@ export class ApiClient {
 
 	async adminGetRouteStats(): Promise<AdminRouteStats> {
 		return this.request<AdminRouteStats>("/admin/stats/routes");
+	}
+
+	async adminGetSeedSources(): Promise<AdminSeedSources> {
+		return this.request<AdminSeedSources>("/admin/stats/seed-sources");
 	}
 
 	async adminListUsers(params: { page?: number; pageSize?: number; search?: string } = {}): Promise<AdminUserList> {

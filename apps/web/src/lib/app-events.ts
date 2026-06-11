@@ -55,6 +55,8 @@ export interface AppEventMap {
 	"routess:open-login": NoDetail;
 	"routess:open-signup": NoDetail;
 	"routess:open-discover": NoDetail;
+	// Manual viewport re-report for Discover (panel "Search this area").
+	"routess:discover-search-area": NoDetail;
 	"routess:open-explore": NoDetail;
 	"routess:open-social": NoDetail;
 	"routess:open-activity": NoDetail;

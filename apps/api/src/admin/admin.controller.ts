@@ -14,9 +14,11 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
+import { ExternalRoutesService } from "../external-routes/external-routes.service";
 import { AdminService } from "./admin.service";
 import { AuditInterceptor } from "./audit.interceptor";
 import { AdminRouteDetailDto, AdminRouteListDto } from "./dto/admin-route.dto";
+import { AdminSeedSourcesDto } from "./dto/admin-seeding.dto";
 import { AdminOverviewDto, AdminRouteStatsDto, AdminUserStatsDto } from "./dto/admin-stats.dto";
 import { AdminConfigSummaryDto, AdminSystemHealthDto } from "./dto/admin-system.dto";
 import { AdminUserDetailDto, AdminUserListDto } from "./dto/admin-user.dto";
@@ -28,7 +30,10 @@ import { AdminUserDetailDto, AdminUserListDto } from "./dto/admin-user.dto";
 @UseInterceptors(AuditInterceptor)
 @Roles("admin")
 export class AdminController {
-	constructor(private readonly admin: AdminService) {}
+	constructor(
+		private readonly admin: AdminService,
+		private readonly externalRoutes: ExternalRoutesService,
+	) {}
 
 	@Get("stats/overview")
 	@ApiOperation({
@@ -47,6 +52,16 @@ export class AdminController {
 	})
 	getUserStats(): Promise<AdminUserStatsDto> {
 		return this.admin.getUserStats();
+	}
+
+	@Get("stats/seed-sources")
+	@ApiOperation({
+		summary: "Seeded route inventory per SeedSource",
+		description:
+			"Per-source ExternalRoute counts, last sync, and projected next automatic sync (ADR 0035). Backs the admin seeding panel.",
+	})
+	async getSeedSources(): Promise<AdminSeedSourcesDto> {
+		return { items: await this.externalRoutes.sourceStats() };
 	}
 
 	@Get("stats/routes")

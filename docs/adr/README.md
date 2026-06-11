@@ -22,6 +22,7 @@ Use the [template](0000-template.md) when adding a new one. Number sequentially 
 - [0030 — Discovery geo queries use persisted bbox columns, not PostGIS](0030-bbox-columns-not-postgis-for-discovery.md)
 - [0032 — Layered caching and provider cost control](0032-layered-caching-and-provider-cost-control.md)
 - [0033 — Node networks as self-hosted vector tiles, not a live Overpass proxy](0033-node-network-tiles-from-self-hosted-pmtiles.md)
+- [0036 — Auth guard stacks stay explicit per endpoint](0036-guard-stacks-stay-explicit.md)
 
 ### Routing & domain
 - [0007 — Single canonical Waypoint type](0007-single-canonical-waypoint-type.md)
@@ -33,6 +34,7 @@ Use the [template](0000-template.md) when adding a new one. Number sequentially 
 - [0029 — Route generation is a scored candidate pipeline](0029-route-generation-as-scored-candidate-pipeline.md)
 - [0031 — Strict surface preferences steer candidate placement, not just costing](0031-surface-first-generation-for-strict-surface-preferences.md)
 - [0034 — Centralize routing in the API; share only pure costing logic in core](0034-centralize-routing-in-the-api.md)
+- [0035 — Seeded routes: ExternalRoute as an independent ODbL Collective Database](0035-external-route-layer-and-seeding.md)
 
 ### Frontend state
 - [0002 — Zustand for RouteDraft state](0002-zustand-for-routedraft-state.md)

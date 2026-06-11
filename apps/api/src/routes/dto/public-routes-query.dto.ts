@@ -1,6 +1,6 @@
 import { BadRequestException } from "@nestjs/common";
 import { ApiPropertyOptional } from "@nestjs/swagger";
-import { ROUTE_ACTIVITIES, type RouteActivity } from "@routess/core";
+import { INDEXABLE_MIN_DISTANCE_METERS, ROUTE_ACTIVITIES, type RouteActivity } from "@routess/core";
 import { Type } from "class-transformer";
 import { IsIn, IsInt, IsOptional, IsString, Matches, MaxLength, Min } from "class-validator";
 import { ListRoutesQueryDto } from "./list-routes-query.dto";
@@ -64,6 +64,44 @@ export class PublicRoutesQueryDto extends ListRoutesQueryDto {
 	@IsInt()
 	@Min(0)
 	maxDistance?: number;
+}
+
+export interface PublicListingFilters {
+	activity?: RouteActivity;
+	placeCity?: string;
+	minDistance?: number;
+	maxDistance?: number;
+	bbox?: ParsedBbox;
+}
+
+// Shared where-clause for the public listing surfaces, applied identically to
+// Route and ExternalRoute so the read-time union (ADR 0035) can never drift.
+// The indexable gate folds in the quality-floor distance prefilter; bbox is
+// viewport overlap on the persisted columns (ADR 0030).
+export function publicListingWhere(filters: PublicListingFilters, gate: PublicRouteGate): Record<string, unknown> {
+	const where: Record<string, unknown> = {};
+	if (filters.activity) where.activity = filters.activity;
+	// Case-insensitive exact match: geocoder casing should not leak into URLs.
+	if (filters.placeCity) where.placeCity = { $ilike: filters.placeCity.replace(/[%_\\]/g, (c) => `\\${c}`) };
+	if (filters.minDistance !== undefined || filters.maxDistance !== undefined) {
+		where.distance = {
+			...(filters.minDistance !== undefined ? { $gte: filters.minDistance } : {}),
+			...(filters.maxDistance !== undefined ? { $lte: filters.maxDistance } : {}),
+		};
+	}
+	if (gate === "indexable") {
+		where.distance = {
+			...(where.distance as object | undefined),
+			$gte: Math.max(filters.minDistance ?? 0, INDEXABLE_MIN_DISTANCE_METERS),
+		};
+	}
+	if (filters.bbox) {
+		where.bboxMinLat = { $lte: filters.bbox.maxLat };
+		where.bboxMaxLat = { $gte: filters.bbox.minLat };
+		where.bboxMinLng = { $lte: filters.bbox.maxLng };
+		where.bboxMaxLng = { $gte: filters.bbox.minLng };
+	}
+	return where;
 }
 
 export function parseBbox(bbox: string): ParsedBbox {

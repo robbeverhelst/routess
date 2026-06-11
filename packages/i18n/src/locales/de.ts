@@ -96,4 +96,11 @@ export const de: Record<string, string> = {
 	"pwa.update.title": "Update verfügbar",
 	"pwa.update.body": "Eine neue Version von routess ist bereit.",
 	"pwa.update.reload": "Neu laden",
+	"discover.updating": "Aktualisieren…",
+	"discover.viewRoute": "Route ansehen",
+	"discover.subtitle": "Öffentliche Routen im aktuellen Kartenausschnitt. Verschieben oder zoomen zum Suchen.",
+	"discover.waitingForMap": "Warten auf die Karte…",
+	"discover.searchArea": "In diesem Bereich suchen",
+	"discover.error.title": "Routen konnten nicht geladen werden",
+	"discover.error.retry": "Erneut versuchen",
 };

@@ -7,7 +7,8 @@ import { fetchPublicRoute } from "@/lib/route-api";
 export async function GET(_request: Request, ctx: { params: Promise<{ slugId: string }> }) {
 	const { slugId } = await ctx.params;
 	const parsed = parseRouteSlugId(slugId);
-	if (!parsed) return new Response("Not found", { status: 404 });
+	// External (-x) slugs have no landing SSR yet (ADR 0035); the app serves them.
+	if (!parsed || parsed.externalId !== undefined) return new Response("Not found", { status: 404 });
 	const route = await fetchPublicRoute(parsed.id ?? parsed.token);
 	const points = route?.geometry?.length ? route.geometry : (route?.waypoints ?? []).map((w) => w.coord);
 	if (!route || points.length === 0) return new Response("Not found", { status: 404 });

@@ -173,3 +173,35 @@ export const calculateBearing = (coord1: Coordinate, coord2: Coordinate): number
 	const bearing = Math.atan2(x, y);
 	return ((bearing * 180) / Math.PI + 360) % 360;
 };
+
+// True when any vertex falls inside the box or any segment crosses it.
+// Discover's bbox prefilter (ADR 0030) over-matches long routes whose box
+// overlaps the viewport while the path runs elsewhere; this is the cheap
+// exact-enough check (downsampled paths, <=80 points) that removes them.
+export const pathIntersectsBbox = (
+	path: Coordinate[],
+	box: { minLng: number; minLat: number; maxLng: number; maxLat: number },
+): boolean => {
+	const inside = ([lng, lat]: Coordinate) =>
+		lng >= box.minLng && lng <= box.maxLng && lat >= box.minLat && lat <= box.maxLat;
+	for (const point of path) {
+		if (inside(point)) return true;
+	}
+	// Segment-rectangle crossing: test each segment against the box edges.
+	const corners: Coordinate[] = [
+		[box.minLng, box.minLat],
+		[box.maxLng, box.minLat],
+		[box.maxLng, box.maxLat],
+		[box.minLng, box.maxLat],
+	];
+	const orient = (a: Coordinate, b: Coordinate, c: Coordinate) =>
+		Math.sign((b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]));
+	const segmentsCross = (a: Coordinate, b: Coordinate, c: Coordinate, d: Coordinate) =>
+		orient(a, b, c) !== orient(a, b, d) && orient(c, d, a) !== orient(c, d, b);
+	for (let i = 0; i < path.length - 1; i++) {
+		for (let e = 0; e < 4; e++) {
+			if (segmentsCross(path[i], path[i + 1], corners[e], corners[(e + 1) % 4])) return true;
+		}
+	}
+	return false;
+};

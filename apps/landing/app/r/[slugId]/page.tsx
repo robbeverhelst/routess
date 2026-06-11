@@ -16,7 +16,8 @@ interface Params {
 
 async function resolveRoute(slugId: string): Promise<{ route: PublicRoute; canonicalSlugId: string } | null> {
 	const parsed = parseRouteSlugId(slugId);
-	if (!parsed) return null;
+	// External (-x) slugs have no landing SSR yet (ADR 0035); the app serves them.
+	if (!parsed || parsed.externalId !== undefined) return null;
 	const route = await fetchPublicRoute(parsed.id ?? parsed.token);
 	if (!route) return null;
 	// Public routes get the canonical id URL; unlisted keep the unguessable

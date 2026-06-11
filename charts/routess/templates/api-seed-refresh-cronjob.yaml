@@ -1,0 +1,82 @@
+{{- if .Values.api.seedRefresh.enabled }}
+# Scheduled ExternalRoute refresh (ADR 0035): re-pulls green SeedSources with
+# a stable feedUrl that are due per their refreshIntervalDays. Idempotent, so
+# an extra or overlapping run is harmless. Manual sources are skipped.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "routess.fullname" . }}-seed-refresh
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "routess.api.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.api.seedRefresh.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 1800
+      template:
+        metadata:
+          labels:
+            {{- include "routess.api.selectorLabels" . | nindent 12 }}
+            routess.app/job: seed-refresh
+        spec:
+          restartPolicy: Never
+          serviceAccountName: {{ include "routess.api.serviceAccountName" . }}
+          automountServiceAccountToken: false
+          {{- with .Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          securityContext:
+            {{- toYaml .Values.api.securityContext | nindent 12 }}
+          containers:
+            - name: seed-refresh
+              image: "{{ .Values.api.image.repository }}:{{ .Values.api.image.tag }}"
+              imagePullPolicy: {{ .Values.api.image.pullPolicy }}
+              # Production image ships dist only; run the compiled script.
+              command: ["bun", "dist/scripts/refresh-seeds.js"]
+              env:
+                - name: NODE_ENV
+                  value: {{ .Values.api.env.nodeEnv | quote }}
+                - name: DB_HOST
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "routess.fullname" . }}-api
+                      key: db-host
+                - name: DB_PORT
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "routess.fullname" . }}-api
+                      key: db-port
+                - name: DB_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "routess.fullname" . }}-api
+                      key: db-user
+                - name: DB_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "routess.fullname" . }}-api
+                      key: db-password
+                - name: DB_NAME
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "routess.fullname" . }}-api
+                      key: db-name
+                - name: JWT_SECRET
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "routess.fullname" . }}-api
+                      key: jwt-secret
+                - name: ANALYTICS_SALT
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "routess.fullname" . }}-api
+                      key: analytics-salt
+              resources:
+                {{- toYaml .Values.api.seedRefresh.resources | nindent 16 }}
+{{- end }}

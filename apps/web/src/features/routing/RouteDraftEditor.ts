@@ -1,5 +1,14 @@
+import type { ApiExternalRoute } from "@routess/api-client";
 import type { Coordinate, RouteActivity, RouteBaseline, Waypoint, WaypointType } from "@routess/core";
-import { calculatePathDistance, densifyWaypointsAlongPath, estimateWalkingDuration } from "@routess/core";
+import {
+	buildRouteGpx,
+	calculatePathDistance,
+	densifyWaypointsAlongPath,
+	estimateWalkingDuration,
+	IMPORTED_DENSIFY_MAX_TOTAL_WAYPOINTS,
+	IMPORTED_DENSIFY_THRESHOLDS,
+	selectSmartWaypoints,
+} from "@routess/core";
 import type { GeoJSONSource, Map as MapboxMap } from "mapbox-gl";
 import { trackEvent } from "@/lib/analytics/track";
 import { type ApiRoute, apiService } from "@/lib/api";
@@ -13,12 +22,15 @@ import {
 	reverseWaypoints,
 	setWaypointCoord,
 } from "./managers/WaypointCoordinator";
-import { generateGPXString, parseGPXFile, processGPXWaypoints } from "./services/GPXService";
+import { parseGPXFile, processGPXWaypoints } from "./services/GPXService";
 import {
+	capturePreEditState,
 	clearCurrentRoutePath,
 	computeElevationInBackground,
 	getCurrentRoutePath,
 	getRoute as getRouteFromService,
+	type PreEditState,
+	patchRoute,
 	setCurrentRoutePath,
 } from "./services/RouteCalculationService";
 
@@ -65,6 +77,7 @@ export interface RouteDraftEditor {
 	undo(): Promise<EditResult>;
 	redo(): Promise<EditResult>;
 	loadFromApiRoute(route: ApiRoute): Promise<EditResult>;
+	loadFromExternalRoute(route: ApiExternalRoute): Promise<EditResult>;
 	loadFromShareLink(encoded: string): Promise<EditResult>;
 	loadFromGpx(gpxString: string): Promise<EditResult>;
 	loadWaypoints(waypoints: Waypoint[], options?: LoadOptions): Promise<EditResult>;
@@ -119,30 +132,61 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 		}
 	};
 
-	// A generated draft's geometry carries more shape than its sparse control
-	// waypoints reproduce: recalculating from just start + vias would unravel
-	// the loop into plain shortest paths. Before the first mutating edit,
-	// densify: insert smart waypoints along the CURRENT RoutePath so every
-	// leg is short enough to recalculate faithfully and edits stay local.
-	// Runs before the edit's own snapshot (undo restores the densified,
-	// shape-faithful state) and is idempotent once segments are short.
-	// Returns the original→new index map for callers holding an index.
+	// Edit-local recompute: routes only the legs the edit touched, keeping
+	// every other leg's geometry verbatim (patchRoute falls back to a full
+	// recompute on any anomaly). `prev` must be captured AFTER
+	// ensureEditableShape and BEFORE the store mutation, so the diff is just
+	// the edit itself.
+	const recomputeLocal = async (prev: PreEditState, options?: { restore?: boolean }): Promise<EditResult> => {
+		const store = useRoutingStore.getState();
+		store.setIsComputingRoute(true);
+		try {
+			const result = await patchRoute(map, accessToken, prev, options);
+			if (result.success && result.waypointsSnapped && result.snappedWaypoints) {
+				setWaypoints(result.snappedWaypoints);
+			}
+			return result.success ? ok() : fail(result.error ?? "Failed to calculate route.");
+		} finally {
+			store.setIsComputingRoute(false);
+		}
+	};
+
+	// Generated, imported, and external drafts carry more shape in their
+	// geometry than their sparse control waypoints reproduce: recalculating
+	// from just those would unravel the route into plain shortest paths.
+	// Before the first mutating edit, densify: insert smart waypoints along
+	// the CURRENT RoutePath so every leg is short enough to recalculate
+	// faithfully and edits stay local. Only hand-placed (manual) drafts skip
+	// this; their waypoints ARE the shape. Runs before the edit's own
+	// snapshot (undo restores the densified, shape-faithful state) and is
+	// idempotent once segments are short. Returns the original→new index map
+	// for callers holding an index.
 	const ensureEditableShape = (): number[] => {
 		const store = useRoutingStore.getState();
 		const identity = store.waypoints.map((_, i) => i);
-		if (store.creationSource !== "generated") return identity;
+		if (store.creationSource === "manual") return identity;
 		const routePath = getCurrentRoutePath();
 		if (store.waypoints.length < 2 || routePath.length < 2) return identity;
 
-		const { waypoints, indexMap, insertedCount } = densifyWaypointsAlongPath(store.waypoints, routePath);
+		// Imported/external tracks need much denser pins than generated drafts:
+		// the engine reproduces its own geometry between sparse pins, but not a
+		// foreign track's.
+		const imported = store.creationSource === "imported";
+		const { waypoints, indexMap, insertedCount } = densifyWaypointsAlongPath(
+			store.waypoints,
+			routePath,
+			imported ? IMPORTED_DENSIFY_THRESHOLDS : undefined,
+			imported ? IMPORTED_DENSIFY_MAX_TOTAL_WAYPOINTS : undefined,
+		);
 		if (insertedCount === 0) return identity;
-		Logger.info(`[RouteDraftEditor] Densified generated draft: +${insertedCount} waypoints before edit`);
+		Logger.info(`[RouteDraftEditor] Densified ${store.creationSource} draft: +${insertedCount} waypoints before edit`);
 		setWaypoints(waypoints);
 		return indexMap;
 	};
 
 	const addWaypoint = async (coord: Coordinate, type: WaypointType = "routed"): Promise<EditResult> => {
 		ensureEditableShape();
+		const prev = capturePreEditState();
 		saveSnapshot();
 
 		const resolved = await resolveAddCoord(coord, type, accessToken);
@@ -156,7 +200,7 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 			return ok();
 		}
 
-		const result = await recompute();
+		const result = await recomputeLocal(prev);
 		if (result.success) return ok();
 
 		// Directions could not compute a route. Roll back the just-added
@@ -183,10 +227,11 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 		}
 
 		const mappedIndex = ensureEditableShape()[index];
+		const prev = capturePreEditState();
 		saveSnapshot();
 		useRoutingStore.getState().removeWaypoint(mappedIndex);
 
-		if (getWaypoints().length >= 2) await recompute();
+		if (getWaypoints().length >= 2) await recomputeLocal(prev);
 		else clearComputedRouteUi();
 
 		return ok();
@@ -202,6 +247,7 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 
 		const mappedIndex = ensureEditableShape()[index];
 		const oldCoord = getWaypoints()[mappedIndex].coord;
+		const prev = capturePreEditState();
 
 		// Apply the raw coord immediately so the marker lands without waiting
 		// on the network; the recompute below snaps it onto the road via the
@@ -210,7 +256,7 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 		// Snapshot pre-mutation state so a single undo press reverts the move.
 		saveSnapshot();
 		setWaypoints(setWaypointCoord(getWaypoints(), mappedIndex, coord));
-		const result = await recompute();
+		const result = await recomputeLocal(prev);
 
 		if (result.success) return ok();
 
@@ -255,6 +301,7 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 		// Snapshot pre-mutation state so a single undo press reverts the
 		// insert. With skipRouteCalc the caller (drag handler) owns the
 		// commit; the snapshot still belongs to the insert itself.
+		const prev = capturePreEditState();
 		saveSnapshot();
 		setWaypoints(decision.waypoints);
 
@@ -262,7 +309,7 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 			return { success: true, newIndex: decision.insertIndex };
 		}
 
-		if (getWaypoints().length >= 2) await recompute();
+		if (getWaypoints().length >= 2) await recomputeLocal(prev);
 		else clearComputedRouteUi();
 
 		return { success: true, newIndex: decision.insertIndex };
@@ -304,15 +351,25 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 	const undo = async (): Promise<EditResult> => {
 		const store = useRoutingStore.getState();
 		if (!store.canUndo) return ok();
+		const prev = capturePreEditState();
 		store.undo();
-		return recompute();
+		if (getWaypoints().length < 2) {
+			clearComputedRouteUi();
+			return ok();
+		}
+		return recomputeLocal(prev, { restore: true });
 	};
 
 	const redo = async (): Promise<EditResult> => {
 		const store = useRoutingStore.getState();
 		if (!store.canRedo) return ok();
+		const prev = capturePreEditState();
 		store.redo();
-		return recompute();
+		if (getWaypoints().length < 2) {
+			clearComputedRouteUi();
+			return ok();
+		}
+		return recomputeLocal(prev, { restore: true });
 	};
 
 	const applyExactRoutePath = (waypoints: Waypoint[], exactRoutePath: Coordinate[]) => {
@@ -420,6 +477,26 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 		});
 	};
 
+	// Opens a seeded ExternalRoute (ADR 0035) in the planner as a fresh
+	// unsaved draft: the official geometry is pinned exactly; smart waypoints
+	// make it editable. Saving creates the user's own copy (the fork), never
+	// touches the ExternalRoute.
+	const loadFromExternalRoute = async (route: ApiExternalRoute): Promise<EditResult> => {
+		const store = useRoutingStore.getState();
+		store.setMode({ kind: "unsaved" });
+		if (route.activity) store.setActivity(route.activity);
+		store.setCreationSource("imported");
+		trackEvent({
+			name: "route_loaded_into_editor",
+			properties: { creation_source: "external" },
+		});
+		const waypoints: Waypoint[] = selectSmartWaypoints(route.geometry).map((coord) => ({
+			coord,
+			type: "routed" as const,
+		}));
+		return loadWaypoints(waypoints, { exactRoutePath: route.geometry, saveSnapshot: true });
+	};
+
 	const unload = (): void => {
 		useRoutingStore.getState().setMode({ kind: "unsaved" });
 	};
@@ -495,7 +572,7 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 
 		const routePath = getCurrentRoutePath();
 		const effectivePath = routePath.length >= 2 ? routePath : waypoints.map((wp) => wp.coord);
-		const contents = generateGPXString(waypoints, effectivePath);
+		const contents = buildRouteGpx({ waypoints, geometry: effectivePath });
 		const blob = new Blob([contents], { type: "application/gpx+xml;charset=utf-8" });
 		const url = URL.createObjectURL(blob);
 
@@ -549,6 +626,7 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 		loadFromApiRoute,
 		loadFromShareLink,
 		loadFromGpx,
+		loadFromExternalRoute,
 		loadWaypoints,
 		unload,
 		clearDraft,

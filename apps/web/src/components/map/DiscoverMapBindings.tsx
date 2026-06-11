@@ -1,5 +1,8 @@
 import type { GeoJSONSource, Map as MapboxMap, MapMouseEvent } from "mapbox-gl";
-import { useEffect } from "react";
+import mapboxgl from "mapbox-gl";
+import { useEffect, useRef, useState } from "react";
+import { onAppEvent } from "@/lib/app-events";
+import { useT } from "@/lib/i18n";
 import { useDiscoverStore } from "@/stores/discoverStore";
 import { useUiStore } from "@/stores/uiStore";
 
@@ -54,6 +57,44 @@ function pathFeature(coords: [number, number][] | null) {
 // as LibraryRoutePreview.
 export function DiscoverMapBindings({ mapRef }: { mapRef: React.RefObject<MapboxMap | null> }) {
 	const active = useUiStore((s) => s.context === "discover");
+	const t = useT();
+	const viewRouteLabel = t("discover.viewRoute");
+	const popupRef = useRef<mapboxgl.Popup | null>(null);
+
+	// The map ref fills in after mount without a re-render; poll it into
+	// state once per activation so every effect below can depend on a real
+	// map instance instead of racing the ref (a panel restored as the active
+	// context on page load would otherwise never get its layers).
+	const [map, setMap] = useState<MapboxMap | null>(mapRef.current);
+	useEffect(() => {
+		if (!active) return;
+		if (mapRef.current) {
+			setMap(mapRef.current);
+			return;
+		}
+		const poll = setInterval(() => {
+			if (!mapRef.current) return;
+			clearInterval(poll);
+			setMap(mapRef.current);
+		}, 200);
+		return () => clearInterval(poll);
+	}, [active, mapRef]);
+
+	// Popup lifecycle is deliberately separate from the markers effect: that
+	// effect re-runs on every hover change and its cleanup would kill a popup
+	// the moment a dot click sets hoveredRouteId.
+	useEffect(() => {
+		if (active) return;
+		popupRef.current?.remove();
+		popupRef.current = null;
+	}, [active]);
+	useEffect(
+		() => () => {
+			popupRef.current?.remove();
+			popupRef.current = null;
+		},
+		[],
+	);
 	const routes = useDiscoverStore((s) => s.routes);
 	const hoveredRouteId = useDiscoverStore((s) => s.hoveredRouteId);
 	const setViewportBbox = useDiscoverStore((s) => s.setViewportBbox);
@@ -61,8 +102,7 @@ export function DiscoverMapBindings({ mapRef }: { mapRef: React.RefObject<Mapbox
 
 	// Viewport sync: the map is the filter.
 	useEffect(() => {
-		const map = mapRef.current;
-		if (!map || !active) return;
+		if (!active || !map) return;
 
 		let timer: ReturnType<typeof setTimeout> | null = null;
 		const report = () => {
@@ -77,34 +117,30 @@ export function DiscoverMapBindings({ mapRef }: { mapRef: React.RefObject<Mapbox
 		report();
 		map.on("moveend", schedule);
 		map.on("zoomend", schedule);
+		const offSearch = onAppEvent("routess:discover-search-area", report);
 		return () => {
 			if (timer) clearTimeout(timer);
+			offSearch();
 			map.off("moveend", schedule);
 			map.off("zoomend", schedule);
 		};
-	}, [active, mapRef, setViewportBbox]);
+	}, [active, map, setViewportBbox]);
 
-	// Markers + hovered path.
+	// Keep handler closures fresh without re-registering them: layer setup
+	// and event handlers live in ONE effect keyed only on [active]; data
+	// changes go through setData below. Re-creating layers on every hover
+	// change would tear the layer out from under an in-flight click (the
+	// mouseenter that precedes the click would destroy its own target).
+	const viewRouteLabelRef = useRef(viewRouteLabel);
+	viewRouteLabelRef.current = viewRouteLabel;
+
+	// Layers + interaction handlers: stable per activation.
 	useEffect(() => {
-		const map = mapRef.current;
-		if (!map) return;
+		if (!map || !active) return;
 
-		const hovered = routes.find((r) => r.id === hoveredRouteId);
-		const starts = startsCollection(routes);
-		const path = pathFeature(hovered?.geometry ?? null);
-
-		const draw = () => {
-			if (!active) {
-				removeLayers(map);
-				return;
-			}
-			const startsSource = map.getSource(STARTS_SOURCE_ID);
-			if (startsSource && startsSource.type === "geojson") {
-				(startsSource as GeoJSONSource).setData(starts);
-				(map.getSource(PATH_SOURCE_ID) as GeoJSONSource).setData(path);
-				return;
-			}
-			map.addSource(PATH_SOURCE_ID, { type: "geojson", data: path });
+		const ensureLayers = () => {
+			if (map.getSource(STARTS_SOURCE_ID)) return;
+			map.addSource(PATH_SOURCE_ID, { type: "geojson", data: pathFeature(null) });
 			map.addLayer({
 				id: PATH_CASING_LAYER_ID,
 				type: "line",
@@ -119,7 +155,7 @@ export function DiscoverMapBindings({ mapRef }: { mapRef: React.RefObject<Mapbox
 				layout: { "line-cap": "round", "line-join": "round" },
 				paint: { "line-color": "#7d62ff", "line-width": 3.5, "line-opacity": 0.95 },
 			});
-			map.addSource(STARTS_SOURCE_ID, { type: "geojson", data: starts });
+			map.addSource(STARTS_SOURCE_ID, { type: "geojson", data: startsCollection(useDiscoverStore.getState().routes) });
 			map.addLayer({
 				id: STARTS_LAYER_ID,
 				type: "circle",
@@ -134,38 +170,93 @@ export function DiscoverMapBindings({ mapRef }: { mapRef: React.RefObject<Mapbox
 			});
 		};
 
-		// Marker tap/click highlights the path (the card is the way in).
+		// Marker click: claim the event (preventDefault keeps the planner's
+		// add-waypoint grammar away from Discover dots), highlight the path,
+		// and open a popup with the route identity + link.
 		const onCircleClick = (e: MapMouseEvent) => {
+			e.preventDefault();
 			const feature = map.queryRenderedFeatures(e.point, { layers: [STARTS_LAYER_ID] })[0];
 			const routeId = feature?.properties?.routeId;
-			if (typeof routeId === "number") setHoveredRouteId(routeId);
+			if (typeof routeId !== "number") return;
+			setHoveredRouteId(routeId);
+			const route = useDiscoverStore.getState().routes.find((r) => r.id === routeId);
+			if (!route) return;
+			popupRef.current?.remove();
+			const start = route.geometry?.[0];
+			if (!start) return;
+			const km = route.distance ? `${(route.distance / 1000).toFixed(1)} km · ` : "";
+			const container = document.createElement("div");
+			container.style.cssText = "font: 12.5px/1.45 system-ui, sans-serif; max-width: 220px;";
+			const title = document.createElement("div");
+			title.style.cssText = "font-weight: 600; margin-bottom: 2px;";
+			title.textContent = route.name;
+			const meta = document.createElement("div");
+			meta.style.cssText = "opacity: .75; margin-bottom: 6px;";
+			meta.textContent = `${km}${route.source?.name ?? route.user?.name ?? ""}`;
+			const link = document.createElement("a");
+			link.href = `/r/${route.slugId}`;
+			link.textContent = viewRouteLabelRef.current;
+			link.style.cssText = "color: #7d62ff; font-weight: 600; text-decoration: none;";
+			container.append(title, meta, link);
+			popupRef.current = new mapboxgl.Popup({ offset: 12, closeButton: false, maxWidth: "240px" })
+				.setLngLat(start as [number, number])
+				.setDOMContent(container)
+				.addTo(map);
 		};
-		const onEnter = () => {
+		const onEnter = (e: MapMouseEvent) => {
 			map.getCanvas().style.cursor = "pointer";
+			const feature = map.queryRenderedFeatures(e.point, { layers: [STARTS_LAYER_ID] })[0];
+			const routeId = feature?.properties?.routeId;
+			// Cross-highlight: hovering a dot lights up its card and path.
+			if (typeof routeId === "number") setHoveredRouteId(routeId);
 		};
 		const onLeave = () => {
 			map.getCanvas().style.cursor = "";
 		};
 
-		if (map.isStyleLoaded()) {
-			draw();
-		} else {
-			map.once("idle", draw);
+		// Style readiness is polled rather than event-driven: on a cold load
+		// with Discover already active, 'idle' can stay away for a long time
+		// (terrain/config churn keeps the map busy) and a missed one-shot
+		// event would leave the surface dotless.
+		let readiness: ReturnType<typeof setInterval> | null = null;
+		if (map.isStyleLoaded()) ensureLayers();
+		else {
+			readiness = setInterval(() => {
+				if (!map.isStyleLoaded()) return;
+				if (readiness) clearInterval(readiness);
+				readiness = null;
+				ensureLayers();
+			}, 250);
 		}
 		// Style switches wipe custom layers; re-apply when the new style lands.
-		map.on("style.load", draw);
+		map.on("style.load", ensureLayers);
 		map.on("click", STARTS_LAYER_ID, onCircleClick);
 		map.on("mouseenter", STARTS_LAYER_ID, onEnter);
 		map.on("mouseleave", STARTS_LAYER_ID, onLeave);
 		return () => {
-			map.off("idle", draw);
-			map.off("style.load", draw);
+			if (readiness) clearInterval(readiness);
+			map.off("style.load", ensureLayers);
 			map.off("click", STARTS_LAYER_ID, onCircleClick);
 			map.off("mouseenter", STARTS_LAYER_ID, onEnter);
 			map.off("mouseleave", STARTS_LAYER_ID, onLeave);
 			if (map.isStyleLoaded()) removeLayers(map);
 		};
-	}, [active, routes, hoveredRouteId, mapRef, setHoveredRouteId]);
+	}, [active, map, setHoveredRouteId]);
+
+	// Data sync: markers follow the current results.
+	useEffect(() => {
+		if (!map || !active) return;
+		const source = map.getSource(STARTS_SOURCE_ID);
+		if (source && source.type === "geojson") (source as GeoJSONSource).setData(startsCollection(routes));
+	}, [active, routes, map]);
+
+	// Hover path follows the hovered card/dot.
+	useEffect(() => {
+		if (!map || !active) return;
+		const hovered = routes.find((r) => r.id === hoveredRouteId);
+		const source = map.getSource(PATH_SOURCE_ID);
+		if (source && source.type === "geojson") (source as GeoJSONSource).setData(pathFeature(hovered?.geometry ?? null));
+	}, [active, routes, hoveredRouteId, map]);
 
 	return null;
 }

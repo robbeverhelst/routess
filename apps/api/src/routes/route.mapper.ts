@@ -3,7 +3,7 @@ import { buildRouteSlugId, downsampleCoordinates } from "@routess/core";
 import type { Route } from "../entities/route.entity";
 import type { User } from "../entities/user.entity";
 import { toPublicUserDto } from "../users/user.mapper";
-import type { PublicRouteSummaryDto } from "./dto/public-route-summary.dto";
+import { PUBLIC_SUMMARY_GEOMETRY_MAX_POINTS, type PublicRouteSummaryDto } from "./dto/public-route-summary.dto";
 import type { RouteResponseDto } from "./dto/route-response.dto";
 
 // Routes can be served to non-owners (public/unlisted), so the embedded
@@ -40,10 +40,6 @@ export function toRouteResponseDto(route: Route, analyticsSalt: string): RouteRe
 		updatedAt: route.updatedAt.toISOString(),
 	};
 }
-
-// Cards and map previews don't need the full RoutePath; this keeps a 50-item
-// Discover page at a sane payload size.
-export const PUBLIC_SUMMARY_GEOMETRY_MAX_POINTS = 80;
 
 export function toPublicRouteSummaryDto(
 	route: Route,

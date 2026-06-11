@@ -1,5 +1,6 @@
 import type { Waypoint } from "@routess/core";
-import { generateGPXString, parseGPXFile } from "@/features/routing/services/GPXService";
+import { buildRouteGpx } from "@routess/core";
+import { parseGPXFile } from "@/features/routing/services/GPXService";
 
 describe("GPXService", () => {
 	it("preserves Waypoint Type across a round-trip via the routess:type extension", async () => {
@@ -13,7 +14,7 @@ describe("GPXService", () => {
 			[4.4025, 51.2194],
 		];
 
-		const gpxString = generateGPXString(waypoints, routePath);
+		const gpxString = buildRouteGpx({ waypoints, geometry: routePath });
 		const parsed = await parseGPXFile(gpxString);
 
 		expect(parsed.error).toBeUndefined();
@@ -45,7 +46,10 @@ describe("GPXService", () => {
 	});
 
 	it("round-trips the route name through metadata", async () => {
-		const gpxString = generateGPXString([{ coord: [4.3517, 50.8503], type: "routed" }], [], "Kanaalroute Gent");
+		const gpxString = buildRouteGpx({
+			name: "Kanaalroute Gent",
+			waypoints: [{ coord: [4.3517, 50.8503], type: "routed" }],
+		});
 		const parsed = await parseGPXFile(gpxString);
 
 		expect(parsed.name).toBe("Kanaalroute Gent");

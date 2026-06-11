@@ -78,6 +78,25 @@ export interface AdminTimeseriesPoint {
 	count: number;
 }
 
+export interface AdminSeedSource {
+	key: string;
+	displayName: string;
+	license: string;
+	status: "green" | "yellow" | "red";
+	routeCount: number;
+	removedCount: number;
+	refreshIntervalDays: number;
+	lastRefreshedAt: string | null;
+	nextRefreshAt: string | null;
+	automatic: boolean;
+	lastRefreshError: string | null;
+	lastRefreshStats: { inserted: number; updated: number; unchanged: number; removed: number } | null;
+}
+
+export interface AdminSeedSources {
+	items: AdminSeedSource[];
+}
+
 export interface AdminOverview {
 	totalUsers: number;
 	totalRoutes: number;
@@ -270,6 +289,28 @@ export interface ApiRoute {
 	updatedAt: string;
 }
 
+// Detail for a seeded ExternalRoute page (/r/{slug}-x{id}, ADR 0035). No owner,
+// Waypoints, visibility, or share token; carries source attribution instead.
+// `kind: "external"` lets callers branch.
+export interface ApiExternalRoute {
+	id: number;
+	slugId: string;
+	name: string;
+	description?: string;
+	activity?: RouteActivity;
+	tags: string[];
+	geometry: [number, number][];
+	distance?: number;
+	duration?: number;
+	elevationGain?: number;
+	placeCity?: string;
+	placeRegion?: string;
+	placeCountryCode?: string;
+	source: ApiRouteSource;
+	kind: "external";
+	updatedAt: string;
+}
+
 export interface CreateRouteRequest {
 	name: string;
 	description?: string;
@@ -402,9 +443,19 @@ export interface ApiFeedPage {
 	total: number;
 }
 
+// Attribution for a seeded ExternalRoute (ADR 0035). Present only on open-data
+// routes; user routes carry `user` instead. The creator-on-the-map.
+export interface ApiRouteSource {
+	key: string;
+	name: string;
+	license: string;
+	attribution: string;
+	url: string;
+}
+
 // Item of GET /routes/public?gate=public — the in-app Discover surface
-// (CONTEXT.md "Discover"). Always the id slug form: the listing only ever
-// serves public routes.
+// (CONTEXT.md "Discover"). Mostly the id slug form; seeded ExternalRoutes use
+// the `-x{id}` form and carry `source` instead of `user`.
 export interface ApiDiscoverRoute {
 	id: number;
 	slugId: string;
@@ -420,6 +471,8 @@ export interface ApiDiscoverRoute {
 	// Downsampled RoutePath as [lng, lat] pairs for thumbs and map previews.
 	geometry?: [number, number][];
 	user?: ApiPublicUser;
+	// Set on seeded ExternalRoutes; mutually exclusive with `user`.
+	source?: ApiRouteSource;
 	updatedAt: string;
 }
 

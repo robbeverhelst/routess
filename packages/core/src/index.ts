@@ -3,6 +3,7 @@ export * from "./generation";
 export * from "./history";
 export * from "./preferences/user-preferences";
 export * from "./routing";
+export * from "./seeding";
 export * from "./social";
 export * from "./stores";
 export * from "./types";

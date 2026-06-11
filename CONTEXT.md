@@ -96,8 +96,8 @@ The bundle of inputs that shape how a Route is computed: **SurfaceType**, `avoid
 _Avoid_: routing profile, routing mode, routing options, route settings.
 
 **Provenance**:
-How a Route came to exist: `valhalla` (computed by the current routing engine), `mapbox-legacy` (computed by the pre-Valhalla engine; has no **RoutingPreferences**), `gpx-import` (no inputs, geometry came from a file), `generation` (produced by a **RouteGeneration**). Immutable after creation. Determines whether "recalculate" is available and whether the Route's **RoutingPreferences** are meaningful.
-_Avoid_: source, origin, type (Type is already taken by Waypoint).
+How a Route came to exist: `valhalla` (computed by the current routing engine), `mapbox-legacy` (computed by the pre-Valhalla engine; has no **RoutingPreferences**), `gpx-import` (no inputs, geometry came from a file), `generation` (produced by a **RouteGeneration**), `external-fork` (geometry copied by a User from an **ExternalRoute**, carrying the source's inherited license and attribution; see ADR 0035). Immutable after creation. Determines whether "recalculate" is available and whether the Route's **RoutingPreferences** are meaningful.
+_Avoid_: source, origin, type (Type is already taken by Waypoint). "Source" is especially confusing now that **SeedSource** exists — never use bare "source" for provenance.
 
 **HistoryManager**:
 The undo/redo stack over RouteDraft mutations. _(Implementation term, included here because the store explicitly models it as a first-class concept.)_
@@ -200,6 +200,10 @@ _Avoid_: lastRead, readAt (taken by RouteShare).
 - An **Admin** is a **User** with elevated access; admin status is derived from the `ADMIN_EMAILS` env var at login time, not granted in-app.
 - A **Route** has at most one **Place** (city + region + country), derived from its **RoutePath** start, never user-edited. **Discover** and **RegionalHub** query Routes through it.
 - A **User** has one **NotificationsSeenAt** watermark; their **Notification** list is derived per read from Follows of them and RouteShares to them, never stored.
+- An **ExternalRoute** is attributed to exactly one **SeedSource**, has no owning **User**, and has no **RouteVisibility** (it is always public). It is identified for refresh by `(sourceKey, sourceRecordId)`.
+- **Discover** and **RegionalHub** combine **Route**s and **ExternalRoute**s at *read time* only; the two are never joined, deduped, or cross-referenced in stored data (ADR 0035).
+- A **User** may **Favourite** or add to a **Collection** an **ExternalRoute** *by reference* (no geometry copy). Editing one **forks** it into a new user-owned **Route** with **Provenance** `external-fork` carrying the **SeedSource**'s license and attribution; the **ExternalRoute** itself stays immutable.
+- **Generated fill** Routes are owned by the **system seed User** and are never **Indexable** while system-owned.
 
 ## Example dialogue
 
@@ -224,12 +228,14 @@ _Avoid_: lastRead, readAt (taken by RouteShare).
 - **"Profile" / "routing profile" / "routing mode"**: the legacy `routingPreferencesStore.profile` field (`fast | scenic | safe | flat`) is being retired with the Valhalla migration (#137). These are not domain terms and should not appear in new code or user-facing copy. The replacement is **RoutingPreferences** (a structured object), not a single enum. "Mode" remains on the avoid list (it collides with Waypoint **Type**).
 - **"Profile" in provider terms** (e.g. Mapbox's `cycling` / `walking` / `driving` profile, or Valhalla's `bicycle` / `pedestrian` costing) is an *implementation detail* derived from **Activity**, not a domain concept the user picks directly.
 - **"Seen" vs "read"**: two unrelated states that sound alike. *Seen* belongs to the **NotificationsSeenAt** watermark (bell badge, all-or-nothing, bumped on opening the NotificationCenter). *Read* belongs to an individual **RouteShare** (`readAt`, toggled per item in the inbox). Marking notifications seen never marks shares read, and vice versa. Don't introduce a per-notification read state; there are no stored notifications to put it on.
+- **"Source"** is overloaded: **Provenance** avoids it for *how a route was made*, while **SeedSource** is a real concept (the external data provider). In seeding conversation say **SeedSource**; never use bare "source" for provenance. "Seeded route" is itself ambiguous (**ExternalRoute** vs **Generated fill**) — name the specific one.
 - **"Metric" / "analytics"** are overloaded across four distinct uses. The **Metrics** section above defines _route metrics_, properties of a Route (Distance, Duration, ElevationGain). Separately the API exposes _operational metrics_ (HTTP request rate, route-generation latency, event loop lag) via Prometheus at `/metrics`. _ProductEvents_ are behavioural events (a user did X at moment T) sent to self-hosted Umami; they are the raw stream from which funnels and retention are derived. The admin API surfaces _business analytics_ (signup counts, top creators, retention) computed from Postgres aggregate queries, **not** from Umami — Postgres is authoritative for per-entity KPIs. In ambiguous conversations, qualify: **route metric**, **operational metric**, **ProductEvent**, or **business analytic**.
 
 ## Public discovery
 
 **Indexable** (of a Route):
 A derived property: a `public` Route is Indexable when it clears the quality gate (has a real name, meets a minimum length, and carries a description or tags). Only Indexable Routes appear in sitemaps and are eligible for search-engine indexing; public Routes below the bar still render but carry `noindex`. `unlisted` Routes are never Indexable regardless of quality (the URL is the capability). The gate may loosen over time; tightening after indexing is costly, so it starts strict.
+Indexability keys on *owner*, not **Provenance**: a human-owned `public` Route is eligible however its geometry was made (hand-drawn, `gpx-import`, `generation`, or `external-fork`). Routes owned by the **system seed User** (**Generated fill**) are never Indexable. An **ExternalRoute** is Indexable when it clears the same gate; that is how open data (and only open data, not raw generated fill) becomes an SEO anchor. See ADR 0035.
 The property extends to **Profiles**: a Profile is Indexable when it has at least 3 Indexable Routes; below that its page renders but carries `noindex` and stays out of sitemaps (thin-content rule, same spirit as the RegionalHub threshold).
 _Avoid_: published, listed, searchable.
 
@@ -244,6 +250,28 @@ _Avoid_: location, area, geotag. "City" and "region" name the components, not th
 **Discover**:
 The in-app browsing surface over `public` Routes: all public Routes whose bounding box intersects the current map viewport, newest **PublishedAt** first, filterable by activity and distance band. Eligibility is `public`, full stop — **Indexable governs search engines only** and never hides a public Route from Discover. Anonymous-accessible. Like the **Feed**, it is a derived view: nothing is stored per viewer, so a Route flipped back to `private` vanishes from the origin instantly; an edge-cached Discover response lags within the **VisibilityPropagation** bound.
 _Avoid_: explore, browse, search, marketplace, "nearby routes" (the viewport, not the user's position, is the query).
+
+## Seeding
+
+**Seeding**:
+Bootstrapping route inventory before enough organic content exists, in two structurally independent forms: open-data **ExternalRoute**s (the SEO anchors) and **Generated fill** (in-app map population). A human GPX/Komoot/Strava import is a normal user action, *not* Seeding. See ADR 0035.
+_Avoid_: import (a user action), bootstrap, backfill.
+
+**ExternalRoute**:
+A route derived from a licensed external **SeedSource** (e.g. EuroVelo, RAVeL, Toerisme Vlaanderen), stored in its own table with **no foreign key to Route or User**, so ODbL share-alike can never reach user routes (ADR 0035). Always-public, immutable, ownerless; combined with **Route**s only at read time (`Discover`, `RegionalHub`, route pages). Its public route page lives at `/r/{slug}-x{id}` (the `x` marks the external id space, ADR 0025 amendment). `Indexable` on the normal quality gate.
+_Avoid_: seed route, imported route, foreign route, partner route.
+
+**SeedSource**:
+The external data provider an **ExternalRoute** is attributed to: a stable key, display name, license, attribution string, source/homepage URL, refresh cadence, country + activity scope, and a green/yellow/red status. The unit of attribution (rendered on every external route page and embedded in exported GPX), of refresh, and of takedown (`delete-all-by-sourceKey`, the kill switch). Adding a provider = one SeedSource row plus one adapter. The red/blocklist status keeps prohibited providers (French GR, Fietsplatform, Wandelnet) excluded by construction.
+_Avoid_: source (collides with Provenance), provider, feed, dataset.
+
+**Generated fill**:
+Ordinary **Route**s manufactured by **RouteGeneration** over a region and owned by the **system seed User**, to populate **Discover** where organic and **ExternalRoute** coverage is thin. Always `noindex`, absent from sitemaps and **RegionalHub** counts while system-owned; raw machine output is map fill, not SEO content. Becomes `Indexable` only once a human forks and publishes one.
+_Avoid_: seeded route (ambiguous with ExternalRoute), auto route, fake route.
+
+**system seed User**:
+A single reserved **User** that owns **Generated fill**. Excluded from **Profile** pages and the Indexable-profile rollup, so it has no public Profile and pollutes no stats. Routes it owns render as the routess brand with a "generated" badge, never as a linkable Profile.
+_Avoid_: bot user, admin user (it is neither), house account.
 
 ## Product analytics
 
