@@ -3,6 +3,7 @@ import { Inject, Injectable, Logger } from "@nestjs/common";
 import { routeBoundingBox } from "@routess/core";
 import type { AppConfig } from "../config/app-config";
 import { APP_CONFIG } from "../config/config.module";
+import { ExternalRoute } from "../entities/external-route.entity";
 import { GeocodeCache } from "../entities/geocode-cache.entity";
 import { Route } from "../entities/route.entity";
 import { MetricsService } from "../telemetry/metrics.service";
@@ -143,6 +144,32 @@ export class PlacesService {
 		}
 		await em.flush();
 		return { boxed, placed };
+	}
+
+	// Same idempotent backfill for the ExternalRoute layer (ADR 0035): seeded
+	// routes need a Place to count toward RegionalHubs (#236). Geometry is the
+	// whole record there, so only the Place part applies (bbox is set on
+	// upsert). Fail-open like everything else here.
+	async backfillExternalMissing(options: { geocodeDelayMs?: number } = {}): Promise<{ placed: number }> {
+		if (!this.enabled) return { placed: 0 };
+		const delay = options.geocodeDelayMs ?? 150;
+		const em = this.em.fork();
+		const routes = await em.find(ExternalRoute, { placeCity: null });
+		let placed = 0;
+		for (const route of routes) {
+			const start = route.geometry[0];
+			if (!start) continue;
+			const place = await this.reverseGeocodePlace(start);
+			if (place) {
+				route.placeCity = place.city;
+				route.placeRegion = place.region;
+				route.placeCountryCode = place.countryCode;
+				placed++;
+			}
+			if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay));
+		}
+		await em.flush();
+		return { placed };
 	}
 
 	// Fire-and-forget entry point used after route saves. Forks the EM so it is

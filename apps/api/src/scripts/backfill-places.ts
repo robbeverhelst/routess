@@ -19,7 +19,8 @@ async function backfillPlaces() {
 	await RequestContext.create(orm.em, async () => {
 		logger.log(`Geocoding ${places.enabled ? "enabled" : "DISABLED: set MAPBOX_PUBLIC_TOKEN"}`);
 		const { boxed, placed } = await places.backfillMissing();
-		logger.log(`Done: ${boxed} bboxes, ${placed} places filled.`);
+		const external = await places.backfillExternalMissing();
+		logger.log(`Done: ${boxed} bboxes, ${placed} route places, ${external.placed} external route places filled.`);
 	});
 
 	await app.close();

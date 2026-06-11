@@ -2,6 +2,11 @@ import type { RouteVisibility } from "../types";
 
 export const INDEXABLE_MIN_DISTANCE_METERS = 1000;
 
+// A RegionalHub exists only once its place has at least this many Indexable
+// routes; below the threshold the page must 404 and stay out of sitemaps
+// (thin-content rule, CONTEXT.md "RegionalHub").
+export const REGIONAL_HUB_MIN_INDEXABLE_ROUTES = 5;
+
 export interface RouteIndexabilityInput {
 	visibility: RouteVisibility;
 	name: string;
