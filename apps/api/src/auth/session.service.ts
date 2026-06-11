@@ -107,8 +107,6 @@ export class SessionService {
 			await this.em.persist(session).flush();
 		}
 
-		// Populated Ref behaves as the entity at runtime; cast through unknown
-		// because the Ref<T> type-level wrapper lies about that shape.
 		const user = session.user;
 		if (!user || user.deletedAt) return null;
 		return user;
