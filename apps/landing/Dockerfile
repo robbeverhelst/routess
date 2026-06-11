@@ -13,9 +13,12 @@ COPY packages ./packages
 
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# @routess/core resolves to its built dist (the route pages import slug and
-# static-map helpers), so compile it before the Next build.
+# @routess/core (slug + static-map helpers) and @routess/design-tokens (landing
+# accents/brand colors) both resolve to their built dist, so compile them before
+# the Next build. tsc -b on core also builds its referenced projects.
 RUN cd /app/packages/core && \
+	node /app/node_modules/.bin/tsc -b --force && \
+	cd /app/packages/design-tokens && \
 	node /app/node_modules/.bin/tsc -b --force
 
 RUN cd /app/apps/landing && \
