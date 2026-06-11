@@ -257,6 +257,21 @@ export const en: Dict = {
 		planYourOwn: "Plan your own route",
 		summaryTemplate: "{name} shares {count} public routes on routess, covering {distance} in total.",
 	},
+	hub: {
+		activities: {
+			cycle: {
+				eyebrow: "Cycling routes",
+				title: "Cycling routes in {place}",
+				description:
+					"{count} cycling routes in and around {place}. View them on the map, edit them, and export the GPX free with routess.",
+				intro:
+					"Ride one of {count} cycling routes starting in {place}. Every route is free to view, edit, and export as GPX.",
+			},
+		},
+		stats: { routes: "Routes", totalDistance: "Total distance", region: "Region" },
+		routesTitle: "Routes in {place}",
+		planYourOwn: "Plan your own route",
+	},
 	meta: {
 		landing: {
 			title: "routess · plan routes for running, cycling & hiking",
