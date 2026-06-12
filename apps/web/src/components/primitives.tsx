@@ -28,6 +28,8 @@ interface IconBtnProps {
 	onClick?: () => void;
 	title?: string;
 	pressed?: boolean;
+	// Pressed state uses accent colors, for toggles whose active state must stand out.
+	pressedAccent?: boolean;
 	style?: CSSProperties;
 	disabled?: boolean;
 	// Greyed-out + not clickable, but still hoverable so the tooltip explaining
@@ -44,6 +46,7 @@ export function IconBtn({
 	onClick,
 	title,
 	pressed,
+	pressedAccent,
 	style,
 	disabled,
 	inactive,
@@ -72,9 +75,9 @@ export function IconBtn({
 					alignItems: "center",
 					justifyContent: "center",
 					borderRadius: "var(--rds-radius-sm)",
-					background: pressed ? RDS_COLORS.bgActive : "transparent",
+					background: pressed ? (pressedAccent ? RDS_COLORS.accent : RDS_COLORS.bgActive) : "transparent",
 					border: "1px solid transparent",
-					color: pressed ? RDS_COLORS.fg : RDS_COLORS.fgMuted,
+					color: pressed ? (pressedAccent ? RDS_COLORS.accentFg : RDS_COLORS.fg) : RDS_COLORS.fgMuted,
 					transition: "background 120ms, color 120ms, border 120ms",
 					cursor: blocked ? "not-allowed" : "pointer",
 					opacity: blocked ? 0.5 : 1,
