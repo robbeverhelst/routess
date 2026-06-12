@@ -104,27 +104,30 @@ export function readMapPalette(): MapPalette {
 		// Location blue, kept off the accent so the puck stands apart from route/waypoints.
 		const userLoc = dark ? resolve("oklch(0.72 0.15 255)") : resolve("oklch(0.58 0.16 255)");
 
-		const casing = dark ? resolve("oklch(1 0 0 / 0.22)") : resolve("oklch(0 0 0 / 0.18)");
+		const casing = dark ? resolve("oklch(0 0 0 / 0.55)") : resolve("oklch(0 0 0 / 0.18)");
 		const shadow = dark ? resolve("oklch(0 0 0 / 0.55)") : resolve("oklch(0 0 0 / 0.18)");
 		const kmHalo = dark ? "rgba(0, 0, 0, 0.7)" : "rgba(255, 255, 255, 0.95)";
+		// Light marker rings/cores in dark mode; the dark panel background
+		// would camouflage them against the night basemap.
+		const markerContrast = dark ? resolve("oklch(0.95 0.005 270)") : panelBg;
 
 		return {
 			isDark: dark,
 			routeMain: accent,
 			routeCasing: casing,
 			routeHover: accentSoft,
-			arrowFill: panelBg,
+			arrowFill: markerContrast,
 			arrowHalo: accent,
 			waypointStart: start,
 			waypointEnd: end,
 			waypointDirect: direct,
 			waypointInter: accent,
 			waypointShadow: shadow,
-			waypointStroke: panelBg,
+			waypointStroke: markerContrast,
 			kmText: fg,
 			kmHalo,
 			userLocation: userLoc,
-			userLocationStroke: panelBg,
+			userLocationStroke: markerContrast,
 			dragLine: accent,
 		};
 	} catch (err) {

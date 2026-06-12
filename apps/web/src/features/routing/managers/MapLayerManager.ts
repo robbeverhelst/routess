@@ -256,6 +256,7 @@ export const initializeSourcesAndLayers = (map: MapboxMap, palette?: MapPalette)
 				"circle-radius-transition": { duration: 180, delay: 0 },
 				"circle-color": p.waypointShadow,
 				"circle-blur": 0.6,
+				"circle-emissive-strength": 1,
 			},
 		});
 		map.addLayer({
@@ -279,6 +280,7 @@ export const initializeSourcesAndLayers = (map: MapboxMap, palette?: MapPalette)
 				"circle-stroke-width": interpolateZoomStops(4, 1.75),
 				"circle-stroke-width-transition": { duration: 180, delay: 0 },
 				"circle-stroke-color": p.waypointStroke,
+				"circle-emissive-strength": 1,
 			},
 		});
 		map.addLayer({
@@ -290,6 +292,7 @@ export const initializeSourcesAndLayers = (map: MapboxMap, palette?: MapPalette)
 				"circle-radius": interpolateZoomStops(3, 1.35),
 				"circle-radius-transition": { duration: 180, delay: 0 },
 				"circle-color": p.waypointStroke,
+				"circle-emissive-strength": 1,
 			},
 		});
 		// Name labels above the marker; only features carrying a name render one.
@@ -356,6 +359,7 @@ export const initializeSourcesAndLayers = (map: MapboxMap, palette?: MapPalette)
 				"circle-opacity": 0.18,
 				"circle-blur": 0.4,
 				"circle-stroke-width": 0,
+				"circle-emissive-strength": 1,
 			},
 		});
 		// Heading cone: only rendered for features that carry a `heading`,
@@ -385,6 +389,7 @@ export const initializeSourcesAndLayers = (map: MapboxMap, palette?: MapPalette)
 				"circle-color": p.userLocation,
 				"circle-stroke-width": 2.5,
 				"circle-stroke-color": p.userLocationStroke,
+				"circle-emissive-strength": 1,
 			},
 		});
 	}
@@ -488,6 +493,7 @@ export const initializeSourcesAndLayers = (map: MapboxMap, palette?: MapPalette)
 				"line-width": 2.5,
 				"line-opacity": 0.7,
 				"line-dasharray": [2, 2],
+				"line-emissive-strength": 1,
 			},
 		});
 	}
@@ -506,6 +512,7 @@ export const initializeSourcesAndLayers = (map: MapboxMap, palette?: MapPalette)
 				"line-color": "rgba(128, 128, 128, 0.75)",
 				"line-width": 2,
 				"line-dasharray": [1, 2],
+				"line-emissive-strength": 1,
 			},
 		});
 	}
