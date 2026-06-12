@@ -5,7 +5,7 @@ import { useT } from "@/lib/i18n";
 import { useUnits } from "@/lib/units";
 import { useLibraryStore } from "@/stores/libraryStore";
 import { I, type IconKey } from "../../components/icons";
-import { Btn, RDS_COLORS } from "../../components/primitives";
+import { Btn, RDS_COLORS, Skeleton } from "../../components/primitives";
 import { Tooltip } from "../../components/Tooltip";
 import { DropMenu, MenuDivider, MenuItem } from "./DropMenu";
 import { RouteCard } from "./RouteCard";
@@ -288,8 +288,26 @@ export function RoutesTab({
 
 			<div style={{ padding: "10px 14px", overflow: "auto", flex: 1 }}>
 				{isLoading && (
-					<div style={{ padding: 20, textAlign: "center", fontSize: 13, color: RDS_COLORS.fgSubtle }}>
-						{t("library.loading")}
+					<div role="status" aria-busy="true" aria-label={t("library.loading")}>
+						{[0, 1, 2].map((i) => (
+							<div
+								key={i}
+								style={{
+									borderRadius: 14,
+									border: `1px solid ${RDS_COLORS.border}`,
+									background: RDS_COLORS.bgPanel,
+									marginBottom: 10,
+									overflow: "hidden",
+									opacity: 1 - i * 0.3,
+								}}
+							>
+								<Skeleton height={96} radius={0} style={{ borderRadius: 0 }} />
+								<div style={{ padding: "10px 12px", display: "flex", flexDirection: "column", gap: 8 }}>
+									<Skeleton width="55%" />
+									<Skeleton width="35%" height={10} />
+								</div>
+							</div>
+						))}
 					</div>
 				)}
 				{!isLoading && filtered.length === 0 && (
@@ -302,21 +320,30 @@ export function RoutesTab({
 						)}
 					</div>
 				)}
-				{filtered.map((r) => (
-					<RouteCard
+				{filtered.map((r, i) => (
+					<div
 						key={r.id}
-						route={r}
-						selected={selectedRoute?.id === r.id}
-						onOpen={() => {
-							// Keep the route selected so the map previews it behind the
-							// details panel; selectRoute toggles, so skip when already set.
-							if (selectedRoute?.id !== r.id) selectRoute(r);
-							onOpen(r);
+						style={{
+							animation: "rds-rise-in var(--rds-dur-slow) var(--rds-ease-out) both",
+							// Stagger the first few cards only; the tail mounts together so
+							// long lists never feel slow.
+							animationDelay: `calc(var(--rds-stagger) * ${Math.min(i, 8)})`,
 						}}
-						onTagClick={(tag) => {
-							if (!tagFilters.includes(tag)) toggleTagFilter(tag);
-						}}
-					/>
+					>
+						<RouteCard
+							route={r}
+							selected={selectedRoute?.id === r.id}
+							onOpen={() => {
+								// Keep the route selected so the map previews it behind the
+								// details panel; selectRoute toggles, so skip when already set.
+								if (selectedRoute?.id !== r.id) selectRoute(r);
+								onOpen(r);
+							}}
+							onTagClick={(tag) => {
+								if (!tagFilters.includes(tag)) toggleTagFilter(tag);
+							}}
+						/>
+					</div>
 				))}
 			</div>
 		</>

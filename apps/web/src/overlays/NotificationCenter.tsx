@@ -113,7 +113,7 @@ export function NotificationCenter() {
 							zIndex: 60,
 							display: "flex",
 							flexDirection: "column",
-							animation: "rds-sheet-in 200ms cubic-bezier(0.32, 0.72, 0, 1)",
+							animation: "rds-sheet-in var(--rds-dur-slow) var(--rds-ease-spring)",
 						}
 					: {
 							position: "absolute",
@@ -128,6 +128,8 @@ export function NotificationCenter() {
 							zIndex: 60,
 							display: "flex",
 							flexDirection: "column",
+							transformOrigin: "top right",
+							animation: "rds-pop-in var(--rds-dur-base) var(--rds-ease-out)",
 						}
 			}
 		>
