@@ -1,6 +1,8 @@
 import { Body, Controller, HttpCode, HttpStatus, Post } from "@nestjs/common";
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { ThrottleModerate } from "../common/decorators/throttle.decorator";
+import { CuesService } from "./cues.service";
+import { CuesRequestDto, CuesResponseDto } from "./dto/cues.dto";
 import { RouteRequestDto, RoutingRouteResponseDto } from "./dto/route.dto";
 import { TraceAttributesRequestDto, TraceAttributesResponseDto } from "./dto/trace-attributes.dto";
 import { RoutingService } from "./routing.service";
@@ -8,7 +10,10 @@ import { RoutingService } from "./routing.service";
 @ApiTags("routing")
 @Controller("routing")
 export class RoutingController {
-	constructor(private readonly routingService: RoutingService) {}
+	constructor(
+		private readonly routingService: RoutingService,
+		private readonly cuesService: CuesService,
+	) {}
 
 	@ApiOperation({
 		summary: "Match a recorded shape against the road network",
@@ -40,5 +45,21 @@ export class RoutingController {
 	@Post("route")
 	route(@Body() body: RouteRequestDto): Promise<RoutingRouteResponseDto> {
 		return this.routingService.route(body);
+	}
+
+	@ApiOperation({
+		summary: "Derive navigation Cues for a RoutePath",
+		description:
+			"Map-matches the geometry through Valhalla `trace_route` for street-level ManeuverCues and decorates it with NodeNetwork passages (NodeCues). Cue anchors are projected onto the stored RoutePath, which stays canonical. Accepts a public/unlisted route id, an external route id, or raw geometry. See ADR 0038.",
+	})
+	@ApiBody({ type: CuesRequestDto })
+	@ApiResponse({ status: 200, description: "Ordered cues along the RoutePath", type: CuesResponseDto })
+	@ApiResponse({ status: 400, description: "Invalid geometry selector" })
+	@ApiResponse({ status: 404, description: "Route not found or not navigable anonymously" })
+	@ThrottleModerate()
+	@HttpCode(HttpStatus.OK)
+	@Post("cues")
+	cues(@Body() body: CuesRequestDto): Promise<CuesResponseDto> {
+		return this.cuesService.cues(body);
 	}
 }

@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import MapWithRouting from "@/components/MapWithRouting";
+import { ResumeNavBanner } from "@/features/navigation/ResumeNavBanner";
 import { useRouteSurfaceSync } from "@/features/routing/services/useSurfaceBreakdown";
 import { useRouteDraftRehydration } from "@/features/routing/useRouteDraftRehydration";
 import { usePwaUpdateToast } from "@/hooks/usePwaUpdateToast";
@@ -14,6 +15,7 @@ import { queryKeys } from "@/lib/query-client";
 import { useUnits } from "@/lib/units";
 import { useLibraryStore } from "@/stores/libraryStore";
 import { useModalsStore } from "@/stores/modalsStore";
+import { useNavigationStore } from "@/stores/navigationStore";
 import {
 	useCanRedo,
 	useCanUndo,
@@ -90,7 +92,6 @@ interface AppShellProps {
 type AuthView = "app" | "login" | "signup";
 
 type DevScreen =
-	| "livenav"
 	| "recording"
 	| "postactivity"
 	| "profile"
@@ -107,7 +108,6 @@ function getDevScreen(): DevScreen | null {
 	const value = new URLSearchParams(window.location.search).get("screen");
 	if (!value) return null;
 	const allowed: DevScreen[] = [
-		"livenav",
 		"recording",
 		"postactivity",
 		"profile",
@@ -182,6 +182,7 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 	}, []);
 	const [offlineDismissed, setOfflineDismissed] = useState(false);
 	const [devScreen, setDevScreen] = useState<DevScreen | null>(getDevScreen);
+	const navActive = useNavigationStore((s) => !!s.active);
 	const wasMobileRef = useRef<boolean | null>(null);
 
 	useUserPreferencesSync(auth);
@@ -352,7 +353,6 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 				className={theme === "dark" ? "dark" : undefined}
 				style={{ position: "fixed", inset: 0, background: RDS_COLORS.bgCanvas, color: RDS_COLORS.fg }}
 			>
-				{devScreen === "livenav" && <LiveNavScreen onClose={close} />}
 				{devScreen === "recording" && <RecordingScreen onStop={close} />}
 				{devScreen === "postactivity" && <PostActivityScreen onClose={close} />}
 				{devScreen === "profile" && <ProfileScreen />}
@@ -549,6 +549,17 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 			</div>
 		) : null;
 
+	// A live NavigationSession covers the whole shell (above panels and modals,
+	// below auth and toasts); when idle, the resume banner offers to pick a
+	// killed session back up.
+	const NavOverlay = navActive ? (
+		<div style={{ position: "absolute", inset: 0, zIndex: 150 }}>
+			<LiveNavScreen />
+		</div>
+	) : showApp ? (
+		<ResumeNavBanner />
+	) : null;
+
 	const AuthOverlay =
 		showLogin || showSignup ? (
 			<div
@@ -617,6 +628,7 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 				<div style={{ position: "absolute", inset: 0, zIndex: 100, pointerEvents: "none" }}>
 					<div style={{ pointerEvents: "auto" }}>{renderModal()}</div>
 				</div>
+				{NavOverlay}
 				{AuthOverlay}
 			</div>,
 		);
@@ -675,6 +687,7 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 			<div style={{ position: "absolute", inset: 0, zIndex: 100, pointerEvents: "none" }}>
 				<div style={{ pointerEvents: "auto" }}>{renderModal()}</div>
 			</div>
+			{NavOverlay}
 			{AuthOverlay}
 		</div>,
 	);

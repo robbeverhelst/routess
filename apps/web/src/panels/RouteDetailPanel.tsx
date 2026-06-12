@@ -6,6 +6,7 @@ import {
 	type RouteVisibility,
 } from "@routess/core";
 import { type KeyboardEvent, useEffect, useMemo, useState } from "react";
+import { startNavigation } from "@/features/navigation/startNavigation";
 import { useComputedElevationProfile } from "@/features/routing/services/elevation";
 import {
 	breakdownFromComposition,
@@ -340,6 +341,14 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 		// Share this route directly; loading it into the planner first would
 		// clobber whatever draft the user is working on.
 		openShareModal(route.id);
+	};
+
+	const dispatchNavigate = () => {
+		void startNavigation({
+			routeName: route.name,
+			geometry: elevationGeometry,
+			activity: route.activity ?? "cycle",
+		});
 	};
 
 	const dispatchFavorite = () => {
@@ -770,7 +779,10 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 					borderTop: `1px solid ${RDS_COLORS.border}`,
 				}}
 			>
-				<Btn variant="primary" style={{ flex: 1 }} onClick={dispatchLoadRoute}>
+				<Btn variant="primary" style={{ flex: 1 }} onClick={dispatchNavigate}>
+					<I.play size={13} /> {t("nav.navigate")}
+				</Btn>
+				<Btn style={{ flex: 1 }} onClick={dispatchLoadRoute}>
 					<I.route size={13} /> {t("route.editRoute")}
 				</Btn>
 				{/* Two share actions with different meanings: label both so they

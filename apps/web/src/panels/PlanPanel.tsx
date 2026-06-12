@@ -1,5 +1,6 @@
 import { calculatePathDistance, haversineDistance } from "@routess/core";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { startNavigation } from "@/features/navigation/startNavigation";
 import { applySavedRoute } from "@/features/routing/applySavedRoute";
 import { isDraftDirty } from "@/features/routing/draftDirty";
 import { useSurfaceBreakdown } from "@/features/routing/services/useSurfaceBreakdown";
@@ -907,6 +908,20 @@ export function PlanPanel() {
 						<I.copy size={14} />
 					</Btn>
 				)}
+				<Btn
+					title={t("nav.navigate")}
+					disabled={!hasRoute || routePath.length < 2}
+					onClick={() => {
+						void startNavigation({
+							routeName: editingName ?? t("nav.currentRoute"),
+							geometry: routePath,
+							activity: draftActivity ?? "cycle",
+						});
+					}}
+					style={{ padding: "0 10px" }}
+				>
+					<I.play size={14} />
+				</Btn>
 				<Btn
 					title={t("plan.shareRoute")}
 					disabled={!hasRoute}
