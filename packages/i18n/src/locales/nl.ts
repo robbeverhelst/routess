@@ -483,8 +483,6 @@ export const nl: Record<string, string> = {
 	"loop.surface.mixed": "Gemengd",
 	"loop.surface.paved": "Verhard",
 	"loop.surface.unpaved": "Onverhard",
-	"loop.geoUnavailable": "Geolocatie niet beschikbaar",
-	"loop.geoUnavailableSub": "Deze browser biedt geen locatie-API.",
 	"loop.couldNotLocate": "Kon je locatie niet ophalen",
 	"loop.locating": "Locatie zoeken…",
 	"loop.coords": "Lat {lat}, Lng {lng}",
