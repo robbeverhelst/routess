@@ -30,6 +30,40 @@ interface MapToolbarProps {
 	isMobile?: boolean;
 }
 
+// Animated show/hide that keeps children mounted; collapses a grid track to 0
+// so width/height tween instead of snapping. collapsedMargin cancels the
+// parent's flex gap while collapsed.
+function Collapse({
+	open,
+	vertical,
+	collapsedMargin = 0,
+	children,
+}: {
+	open: boolean;
+	vertical?: boolean;
+	collapsedMargin?: number;
+	children: ReactNode;
+}) {
+	return (
+		<div
+			aria-hidden={!open}
+			style={{
+				display: "grid",
+				...(vertical
+					? { gridTemplateRows: open ? "1fr" : "0fr", marginTop: open ? 0 : -collapsedMargin }
+					: { gridTemplateColumns: open ? "1fr" : "0fr", marginLeft: open ? 0 : -collapsedMargin }),
+				opacity: open ? 1 : 0,
+				visibility: open ? "visible" : "hidden",
+				pointerEvents: open ? undefined : "none",
+				transition:
+					"grid-template-columns 200ms ease, grid-template-rows 200ms ease, margin 200ms ease, opacity 150ms ease, visibility 200ms",
+			}}
+		>
+			<div style={{ display: "flex", overflow: "hidden", minWidth: 0, minHeight: 0 }}>{children}</div>
+		</div>
+	);
+}
+
 function Group({ children, vertical }: { children: ReactNode; vertical?: boolean }) {
 	return (
 		<div
@@ -89,9 +123,11 @@ export function MapToolbar(props: MapToolbarProps) {
 				}}
 			>
 				<Group vertical>
-					<IconBtn title={t("loop.title")} onClick={props.onGenerateLoop} style={btnStyle}>
-						<I.compass size={18} />
-					</IconBtn>
+					<Collapse open={!props.isLocked} vertical collapsedMargin={2}>
+						<IconBtn title={t("loop.title")} onClick={props.onGenerateLoop} style={btnStyle}>
+							<I.compass size={18} />
+						</IconBtn>
+					</Collapse>
 					{renderLocateBtn(18, btnStyle)}
 					<IconBtn title={t("toolbar.mapStyle")} onClick={props.onLayers} style={btnStyle}>
 						<I.layers size={18} />
@@ -100,6 +136,7 @@ export function MapToolbar(props: MapToolbarProps) {
 						title={props.isLocked ? t("toolbar.unlock") : t("toolbar.lock")}
 						onClick={props.onLock}
 						pressed={props.isLocked}
+						pressedAccent
 						style={btnStyle}
 					>
 						{props.isLocked ? <I.lock size={18} /> : <I.unlock size={18} />}
@@ -122,22 +159,24 @@ export function MapToolbar(props: MapToolbarProps) {
 					</IconBtn>
 				</Group>
 				{(props.canUndo || props.canRedo || canRemoveRoute) && (
-					<Group vertical>
-						<IconBtn title={t("toolbar.undo")} onClick={props.onUndo} disabled={!props.canUndo} style={btnStyle}>
-							<I.undo size={18} />
-						</IconBtn>
-						<IconBtn title={t("toolbar.redo")} onClick={props.onRedo} disabled={!props.canRedo} style={btnStyle}>
-							<I.redo size={18} />
-						</IconBtn>
-						<IconBtn
-							title={t("toolbar.removeRoute")}
-							onClick={props.onRemoveRoute}
-							disabled={!canRemoveRoute}
-							style={btnStyle}
-						>
-							<I.trash size={18} />
-						</IconBtn>
-					</Group>
+					<Collapse open={!props.isLocked} vertical collapsedMargin={8}>
+						<Group vertical>
+							<IconBtn title={t("toolbar.undo")} onClick={props.onUndo} disabled={!props.canUndo} style={btnStyle}>
+								<I.undo size={18} />
+							</IconBtn>
+							<IconBtn title={t("toolbar.redo")} onClick={props.onRedo} disabled={!props.canRedo} style={btnStyle}>
+								<I.redo size={18} />
+							</IconBtn>
+							<IconBtn
+								title={t("toolbar.removeRoute")}
+								onClick={props.onRemoveRoute}
+								disabled={!canRemoveRoute}
+								style={btnStyle}
+							>
+								<I.trash size={18} />
+							</IconBtn>
+						</Group>
+					</Collapse>
 				)}
 			</div>
 		);
@@ -159,25 +198,29 @@ export function MapToolbar(props: MapToolbarProps) {
 			}}
 		>
 			<Group>
-				<IconBtn title={t("loop.title")} onClick={props.onGenerateLoop}>
-					<I.compass size={16} />
-				</IconBtn>
+				<Collapse open={!props.isLocked} collapsedMargin={2}>
+					<IconBtn title={t("loop.title")} onClick={props.onGenerateLoop}>
+						<I.compass size={16} />
+					</IconBtn>
+				</Collapse>
 				<IconBtn title={t("toolbar.searchLocation")} onClick={props.onSearch}>
 					<I.search size={16} />
 				</IconBtn>
 				{renderLocateBtn(16)}
 			</Group>
-			<Group>
-				<IconBtn title={t("toolbar.undo")} onClick={props.onUndo} disabled={!props.canUndo}>
-					<I.undo size={16} />
-				</IconBtn>
-				<IconBtn title={t("toolbar.redo")} onClick={props.onRedo} disabled={!props.canRedo}>
-					<I.redo size={16} />
-				</IconBtn>
-				<IconBtn title={t("toolbar.removeRoute")} onClick={props.onRemoveRoute} disabled={!canRemoveRoute}>
-					<I.trash size={16} />
-				</IconBtn>
-			</Group>
+			<Collapse open={!props.isLocked} collapsedMargin={8}>
+				<Group>
+					<IconBtn title={t("toolbar.undo")} onClick={props.onUndo} disabled={!props.canUndo}>
+						<I.undo size={16} />
+					</IconBtn>
+					<IconBtn title={t("toolbar.redo")} onClick={props.onRedo} disabled={!props.canRedo}>
+						<I.redo size={16} />
+					</IconBtn>
+					<IconBtn title={t("toolbar.removeRoute")} onClick={props.onRemoveRoute} disabled={!canRemoveRoute}>
+						<I.trash size={16} />
+					</IconBtn>
+				</Group>
+			</Collapse>
 			<Group>
 				<IconBtn title={t("toolbar.mapStyle")} onClick={props.onLayers}>
 					<I.layers size={16} />
@@ -186,6 +229,7 @@ export function MapToolbar(props: MapToolbarProps) {
 					title={props.isLocked ? t("toolbar.unlock") : t("toolbar.lock")}
 					onClick={props.onLock}
 					pressed={props.isLocked}
+					pressedAccent
 				>
 					{props.isLocked ? <I.lock size={16} /> : <I.unlock size={16} />}
 				</IconBtn>
