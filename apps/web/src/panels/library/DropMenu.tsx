@@ -109,6 +109,9 @@ export function DropMenu({
 							padding: 4,
 							boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
 							zIndex: 80,
+							// translateY only: placement reads menuRect.width/height, which
+							// a vertical shift can't disturb.
+							animation: "rds-menu-in var(--rds-dur-fast) var(--rds-ease-out)",
 							...style,
 						}}
 					>

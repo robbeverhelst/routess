@@ -52,7 +52,7 @@ export function Tooltip({ label, children, side = "top", align = "center" }: Too
 						fontSize: 11.5,
 						fontWeight: 500,
 						lineHeight: 1.4,
-						animation: "rds-fade-in 120ms ease-out",
+						animation: "rds-fade-in var(--rds-dur-fast) ease-out",
 						pointerEvents: "none",
 					}}
 				>

@@ -3,6 +3,7 @@ import { haversineDistance } from "@routess/core";
 import type { GeoJSONSource, Map as MapboxMap } from "mapbox-gl";
 import type { SurfaceSegment } from "@/features/routing/services/SurfaceService";
 import { Logger } from "@/lib/logger";
+import { prefersReducedMotion } from "@/lib/motion";
 import type { Coordinate } from "@/types/map";
 import { type MapPalette, readMapPalette } from "./mapPalette";
 
@@ -133,6 +134,8 @@ export const initializeSourcesAndLayers = (map: MapboxMap, palette?: MapPalette)
 	if (!map.getSource(ROUTE_SOURCE_ID)) {
 		map.addSource(ROUTE_SOURCE_ID, {
 			type: "geojson",
+			// lineMetrics enables line-trim-offset, which animateRouteDrawIn uses.
+			lineMetrics: true,
 			data: {
 				type: "Feature",
 				id: "main_route_line",
@@ -626,6 +629,7 @@ export const setLiftedWaypoint = (map: MapboxMap, previousIndex: number | null, 
 // noticeable. Feature-state changes don't transition, hence the rAF loop.
 export const animateWaypointSpawn = (map: MapboxMap, index: number): void => {
 	if (!map?.getSource(WAYPOINTS_SOURCE_ID)) return;
+	if (prefersReducedMotion()) return;
 	const id = waypointFeatureIdFromIndex(index);
 	const duration = 320;
 	const start = performance.now();
@@ -699,6 +703,59 @@ export const updateUserLocationLayer = (
 	}
 	const source = map.getSource(USER_LOCATION_SOURCE_ID) as GeoJSONSource;
 	source.setData({ type: "FeatureCollection" as const, features });
+};
+
+// Draw-in for a route that just landed (generation accept, library load, GPX
+// import, first segment). Reveals the line from its start by animating
+// line-trim-offset; recalculations mid-edit never trigger this (the caller
+// only fires on an empty → non-empty path transition).
+const drawInTokens = new WeakMap<MapboxMap, number>();
+
+export const animateRouteDrawIn = (map: MapboxMap, durationMs = 700): void => {
+	if (!map?.getLayer(ROUTE_LAYER_ID)) return;
+	if (prefersReducedMotion()) return;
+	const token = (drawInTokens.get(map) ?? 0) + 1;
+	drawInTokens.set(map, token);
+
+	const setTrim = (visibleUpTo: number) => {
+		// The [visibleUpTo, 1] section is trimmed (transparent), so the visible
+		// part grows from the start of the line as visibleUpTo goes 0 → 1.
+		for (const id of [ROUTE_CASING_LAYER_ID, ROUTE_LAYER_ID]) {
+			if (map.getLayer(id)) map.setPaintProperty(id, "line-trim-offset", [visibleUpTo, 1]);
+		}
+	};
+	const setArrowOpacity = (opacity: number) => {
+		if (map.getLayer(ROUTE_ARROWS_LAYER_ID)) {
+			map.setPaintProperty(ROUTE_ARROWS_LAYER_ID, "text-opacity", opacity);
+		}
+	};
+	const finish = () => {
+		for (const id of [ROUTE_CASING_LAYER_ID, ROUTE_LAYER_ID]) {
+			if (map.getLayer(id)) map.setPaintProperty(id, "line-trim-offset", [0, 0]);
+		}
+		setArrowOpacity(0.95);
+	};
+
+	const easeOutCubic = (t: number): number => 1 - (1 - t) ** 3;
+	const start = performance.now();
+	setTrim(0);
+	setArrowOpacity(0);
+	const step = (now: number) => {
+		if (drawInTokens.get(map) !== token) return;
+		try {
+			if (!map.getStyle() || !map.getLayer(ROUTE_LAYER_ID)) return;
+			const t = Math.min(1, (now - start) / durationMs);
+			if (t >= 1) {
+				finish();
+				return;
+			}
+			setTrim(easeOutCubic(t));
+		} catch {
+			return; // map torn down mid-animation
+		}
+		requestAnimationFrame(step);
+	};
+	requestAnimationFrame(step);
 };
 
 export const updateRouteLayer = (map: MapboxMap, routeCoordinates: Coordinate[]): void => {

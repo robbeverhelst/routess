@@ -302,6 +302,33 @@ export function PreviewBanner({
 	);
 }
 
+export function Skeleton({
+	width = "100%",
+	height = 12,
+	radius = 6,
+	style,
+}: {
+	width?: number | string;
+	height?: number | string;
+	radius?: number;
+	style?: CSSProperties;
+}) {
+	return (
+		<span
+			aria-hidden="true"
+			style={{
+				display: "block",
+				width,
+				height,
+				borderRadius: radius,
+				background: RDS_COLORS.bgActive,
+				animation: "rds-pulse 1.6s ease-in-out infinite",
+				...style,
+			}}
+		/>
+	);
+}
+
 export function SecTitle({ children, style }: { children: ReactNode; style?: CSSProperties }) {
 	return (
 		<div

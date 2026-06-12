@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { t } from "@/lib/i18n";
 import { I } from "./icons";
 import { IconBtn, RDS_COLORS } from "./primitives";
@@ -14,13 +14,19 @@ interface ModalShellProps {
 }
 
 export function ModalShell({ title, sub, children, footer, width = 480, onClose, anchor = "center" }: ModalShellProps) {
+	// Escape/backdrop/X play a short exit animation before unmounting; the
+	// actual onClose fires from onAnimationEnd. Consumers that close via the
+	// store directly (e.g. after a successful save) still unmount instantly.
+	const [closing, setClosing] = useState(false);
+	const requestClose = useCallback(() => setClosing(true), []);
+
 	useEffect(() => {
 		const onKey = (e: KeyboardEvent) => {
-			if (e.key === "Escape") onClose();
+			if (e.key === "Escape") requestClose();
 		};
 		window.addEventListener("keydown", onKey);
 		return () => window.removeEventListener("keydown", onKey);
-	}, [onClose]);
+	}, [requestClose]);
 
 	return (
 		<div
@@ -39,7 +45,7 @@ export function ModalShell({ title, sub, children, footer, width = 480, onClose,
 			<button
 				type="button"
 				aria-label="Close modal"
-				onClick={onClose}
+				onClick={requestClose}
 				style={{
 					position: "absolute",
 					inset: 0,
@@ -48,9 +54,15 @@ export function ModalShell({ title, sub, children, footer, width = 480, onClose,
 					border: 0,
 					padding: 0,
 					cursor: "default",
+					animation: closing
+						? "rds-fade-out var(--rds-dur-fast) ease-out forwards"
+						: "rds-fade-in var(--rds-dur-base) ease-out",
 				}}
 			/>
 			<div
+				onAnimationEnd={(e) => {
+					if (closing && e.animationName === "rds-pop-out") onClose();
+				}}
 				style={{
 					position: "relative",
 					width: "100%",
@@ -62,6 +74,9 @@ export function ModalShell({ title, sub, children, footer, width = 480, onClose,
 					display: "flex",
 					flexDirection: "column",
 					maxHeight: "min(86dvh, calc(100dvh - 24px))",
+					animation: closing
+						? "rds-pop-out var(--rds-dur-fast) var(--rds-ease-out) forwards"
+						: "rds-pop-in var(--rds-dur-base) var(--rds-ease-out)",
 				}}
 			>
 				<div
@@ -86,7 +101,7 @@ export function ModalShell({ title, sub, children, footer, width = 480, onClose,
 						</div>
 						{sub && <div style={{ fontSize: 12, color: RDS_COLORS.fgSubtle, marginTop: 3 }}>{sub}</div>}
 					</div>
-					<IconBtn title={t("common.close")} onClick={onClose}>
+					<IconBtn title={t("common.close")} onClick={requestClose}>
 						<I.close size={14} />
 					</IconBtn>
 				</div>
