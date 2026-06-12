@@ -249,6 +249,7 @@ export function SearchModal() {
 					background: "color-mix(in oklch, oklch(0 0 0) 30%, transparent)",
 					border: 0,
 					padding: 0,
+					animation: "rds-fade-in var(--rds-dur-base) ease-out",
 				}}
 			/>
 			<div
@@ -256,6 +257,7 @@ export function SearchModal() {
 					position: "relative",
 					width: "100%",
 					maxWidth: 560,
+					animation: "rds-pop-in var(--rds-dur-base) var(--rds-ease-out)",
 					background: RDS_COLORS.bgPanel,
 					border: `1px solid ${RDS_COLORS.border}`,
 					borderRadius: 14,
