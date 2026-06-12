@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { emitAppEvent } from "@/lib/app-events";
 import { useT } from "@/lib/i18n";
 import { getRuntimeConfig } from "@/lib/runtime-config";
+import { LocationService } from "@/services/LocationService";
 import { type LoopStart, MAX_LANDMARKS, useLoopPreferencesStore } from "@/stores/loopPreferencesStore";
 import { useModalsStore } from "@/stores/modalsStore";
 import { useToastStore } from "@/stores/toastStore";
@@ -44,41 +45,52 @@ function PointPicker({
 	const pushToast = useToastStore((s) => s.push);
 
 	const handleUseCurrentLocation = () => {
-		if (!navigator.geolocation) {
-			pushToast({
-				kind: "danger",
-				title: t("loop.geoUnavailable"),
-				body: t("loop.geoUnavailableSub"),
-			});
-			return;
+		const service = LocationService.getInstance();
+
+		// Seed instantly from the last known location (shared with the map's
+		// locate button), then refine with a fresh fix in the background.
+		const lastKnown = service.getLastKnownLocation();
+		if (lastKnown) {
+			onChange({ kind: "point", coord: lastKnown, source: "geolocation" });
 		}
+
 		setIsLocating(true);
-		navigator.geolocation.getCurrentPosition(
-			(pos) => {
-				onChange({ kind: "point", coord: [pos.coords.longitude, pos.coords.latitude], source: "geolocation" });
-				setIsLocating(false);
-			},
-			(err) => {
-				setIsLocating(false);
-				pushToast({
-					kind: "danger",
-					title: t("loop.couldNotLocate"),
-					body: err.message,
-				});
-			},
-			{ enableHighAccuracy: true, timeout: 8000 },
-		);
+		// LocationService enforces its own timeout, so this always settles even
+		// when the browser never answers (e.g. a pending OS location prompt).
+		service
+			.getCurrentLocation({ timeout: 8000, maximumAge: 60000 })
+			.then((state) => {
+				if (state.location) {
+					onChange({ kind: "point", coord: state.location, source: "geolocation" });
+				}
+			})
+			.catch((err: Error) => {
+				if (!lastKnown) {
+					pushToast({
+						kind: "danger",
+						title: t("loop.couldNotLocate"),
+						body: err.message,
+					});
+				}
+			})
+			.finally(() => setIsLocating(false));
 	};
 
-	const label = isLocating
-		? t("loop.locating")
-		: value.kind === "point"
+	const label =
+		value.kind === "point"
 			? t("loop.coords", { lat: value.coord[1].toFixed(4), lng: value.coord[0].toFixed(4) })
-			: t("loop.mapCenter");
+			: isLocating
+				? t("loop.locating")
+				: t("loop.mapCenter");
 
 	const options = [
 		{ key: "center", label: t("loop.mapCenter"), icon: I.globe, onClick: () => onChange({ kind: "center" }) },
-		{ key: "geolocation", label: t("loop.myLocation"), icon: I.target, onClick: handleUseCurrentLocation },
+		{
+			key: "geolocation",
+			label: isLocating ? t("loop.locating") : t("loop.myLocation"),
+			icon: I.target,
+			onClick: handleUseCurrentLocation,
+		},
 		{ key: "picked", label: t("loop.pickOnMap"), icon: I.pin, onClick: onPickOnMap },
 	] as const;
 	const activeKey = value.kind === "center" ? "center" : value.source === "geolocation" ? "geolocation" : "picked";
@@ -94,7 +106,6 @@ function PointPicker({
 							key={option.key}
 							type="button"
 							onClick={option.onClick}
-							disabled={isLocating}
 							style={{
 								display: "inline-flex",
 								alignItems: "center",
@@ -107,7 +118,7 @@ function PointPicker({
 								color: on ? RDS_COLORS.accent : RDS_COLORS.fgMuted,
 								fontSize: 12,
 								fontWeight: 500,
-								cursor: isLocating ? "wait" : "pointer",
+								cursor: "pointer",
 							}}
 						>
 							<Icon size={13} /> {option.label}
@@ -308,7 +319,6 @@ export function LoopModal() {
 
 	const [isLocatingStart, setIsLocatingStart] = useState(false);
 	const [isLocatingEnd, setIsLocatingEnd] = useState(false);
-	const isLocating = isLocatingStart || isLocatingEnd;
 	const isAtoB = routeType === "a-to-b";
 
 	const handlePickOnMap = (event: "routess:pick-loop-start" | "routess:pick-loop-end") => {
@@ -343,7 +353,7 @@ export function LoopModal() {
 				<>
 					<div style={{ flex: 1 }} />
 					<Btn onClick={closeModal}>{t("common.cancel")}</Btn>
-					<Btn variant="primary" onClick={handleGenerate} disabled={isLocating}>
+					<Btn variant="primary" onClick={handleGenerate}>
 						<I.compass size={14} /> {t("loop.generate")}
 					</Btn>
 				</>

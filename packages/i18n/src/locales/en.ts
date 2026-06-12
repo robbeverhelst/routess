@@ -508,8 +508,6 @@ export const en: Record<string, string> = {
 	"loop.surface.mixed": "Mixed",
 	"loop.surface.paved": "Paved",
 	"loop.surface.unpaved": "Unpaved",
-	"loop.geoUnavailable": "Geolocation unavailable",
-	"loop.geoUnavailableSub": "This browser doesn't expose a location API.",
 	"loop.couldNotLocate": "Couldn't get your location",
 	"loop.locating": "Locating…",
 	"loop.coords": "Lat {lat}, Lng {lng}",
