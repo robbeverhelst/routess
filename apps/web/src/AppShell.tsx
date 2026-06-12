@@ -338,53 +338,55 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 	// instance behind it).
 	const showApp = isAuthenticated || skippedAuth;
 
-	if (devScreen) {
-		const close = () => {
-			setDevScreen(null);
-			window.history.replaceState({}, "", window.location.pathname);
-		};
-		const errKind: ErrorKind | null =
-			devScreen === "err-routefail" ? "routefail" : devScreen === "err-gps" ? "gps" : null;
-		return (
-			<div
-				data-redesign
-				data-accent={accent}
-				className={theme === "dark" ? "dark" : undefined}
-				style={{ position: "fixed", inset: 0, background: RDS_COLORS.bgCanvas, color: RDS_COLORS.fg }}
+	const closeDevScreen = () => {
+		setDevScreen(null);
+		window.history.replaceState({}, "", window.location.pathname);
+	};
+	const devErrKind: ErrorKind | null =
+		devScreen === "err-routefail" ? "routefail" : devScreen === "err-gps" ? "gps" : null;
+	// Full-screen views cover the shell instead of replacing it, so the map
+	// (and the routing editor behind it) stays mounted underneath.
+	const DevScreenOverlay = devScreen ? (
+		<div
+			style={{
+				position: "absolute",
+				inset: 0,
+				zIndex: 250,
+				background: RDS_COLORS.bgCanvas,
+				color: RDS_COLORS.fg,
+			}}
+		>
+			{devScreen === "livenav" && <LiveNavScreen onClose={closeDevScreen} />}
+			{devScreen === "recording" && <RecordingScreen onStop={closeDevScreen} />}
+			{devScreen === "postactivity" && <PostActivityScreen onClose={closeDevScreen} />}
+			{devScreen === "profile" && <ProfileScreen />}
+			{devScreen === "user-settings" && <UserSettingsScreen />}
+			{devScreen === "compare" && <CompareScreen onClose={closeDevScreen} />}
+			{devScreen === "calendar" && <CalendarScreen />}
+			{devScreen === "drawer" && <MobileDrawer onClose={closeDevScreen} />}
+			{devScreen === "coachmarks" && <CoachmarksScreen onComplete={closeDevScreen} />}
+			{devErrKind && <ErrorScreen kind={devErrKind} onAction={closeDevScreen} onFallback={closeDevScreen} />}
+			<button
+				type="button"
+				onClick={closeDevScreen}
+				style={{
+					position: "fixed",
+					top: 16,
+					right: 16,
+					background: RDS_COLORS.bgPanel,
+					border: `1px solid ${RDS_COLORS.border}`,
+					borderRadius: 999,
+					padding: "6px 14px",
+					fontSize: 12,
+					color: RDS_COLORS.fgMuted,
+					cursor: "pointer",
+					zIndex: 200,
+				}}
 			>
-				{devScreen === "livenav" && <LiveNavScreen onClose={close} />}
-				{devScreen === "recording" && <RecordingScreen onStop={close} />}
-				{devScreen === "postactivity" && <PostActivityScreen onClose={close} />}
-				{devScreen === "profile" && <ProfileScreen />}
-				{devScreen === "user-settings" && <UserSettingsScreen />}
-				{devScreen === "compare" && <CompareScreen onClose={close} />}
-				{devScreen === "calendar" && <CalendarScreen />}
-				{devScreen === "drawer" && <MobileDrawer onClose={close} />}
-				{devScreen === "coachmarks" && <CoachmarksScreen onComplete={close} />}
-				{errKind && <ErrorScreen kind={errKind} onAction={close} onFallback={close} />}
-				<button
-					type="button"
-					onClick={close}
-					style={{
-						position: "fixed",
-						top: 16,
-						right: 16,
-						background: RDS_COLORS.bgPanel,
-						border: `1px solid ${RDS_COLORS.border}`,
-						borderRadius: 999,
-						padding: "6px 14px",
-						fontSize: 12,
-						color: RDS_COLORS.fgMuted,
-						cursor: "pointer",
-						zIndex: 200,
-					}}
-				>
-					{t("appshell.backToApp")}
-				</button>
-				<ToastStack />
-			</div>
-		);
-	}
+				{t("appshell.backToApp")}
+			</button>
+		</div>
+	) : null;
 
 	const renderPanelContent = (): ReactNode => {
 		switch (context) {
@@ -580,58 +582,19 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 		</div>
 	);
 
-	if (isMobile) {
-		return sharedRoot(
-			<div style={{ position: "absolute", inset: 0 }}>
-				<main
-					style={{
-						position: "absolute",
-						inset: 0,
-						overflow: "hidden",
-						background: RDS_COLORS.bgCanvas,
-					}}
-				>
-					{showApp && MapNode}
-					{showApp && Toolbar}
-					{showApp && Chip}
-					{showApp && renderOverlay()}
-					{Offline}
-				</main>
-				{showApp && <MobileTopBar />}
-				{showApp && (
-					<MobilePanelDrawer
-						title={screenTitle(context, language)}
-						headerSlot={context === "plan" ? <MobilePlanTitle /> : undefined}
-						// Close while a modal is open so the drawer's focus trap
-						// doesn't steal focus from modal text inputs on mobile.
-						open={!panelCollapsed && modal === null}
-						onClose={() => useUiStore.getState().setPanelCollapsed(true)}
-					>
-						{renderPanelContent()}
-					</MobilePanelDrawer>
-				)}
-				{showApp && <BottomTabBar />}
-				{/* Modals must render above the side panel/drawer; keeping them
-				   inside main would trap their z-index in main's stacking
-				   context and let the drawer cover them. */}
-				<div style={{ position: "absolute", inset: 0, zIndex: 100, pointerEvents: "none" }}>
-					<div style={{ pointerEvents: "auto" }}>{renderModal()}</div>
-				</div>
-				{AuthOverlay}
-			</div>,
-		);
-	}
-
+	// One tree for both layouts: the map's tree position must not change when
+	// isMobile flips, or React remounts the whole Mapbox subtree on every
+	// breakpoint crossing (including phone rotation). Only chrome may branch.
 	return sharedRoot(
 		<div style={{ position: "absolute", inset: 0 }}>
-			{showApp && <RailNav />}
+			{showApp && !isMobile && <RailNav />}
 			<main
 				style={{
 					position: "absolute",
 					top: 0,
 					right: 0,
 					bottom: 0,
-					left: showApp ? "var(--rds-rail-w)" : 0,
+					left: showApp && !isMobile ? "var(--rds-rail-w)" : 0,
 					overflow: "hidden",
 					background: RDS_COLORS.bgCanvas,
 					zIndex: 1,
@@ -643,39 +606,54 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 				{showApp && renderOverlay()}
 				{Offline}
 			</main>
-			{showApp && (
-				<aside
-					aria-hidden={panelCollapsed}
-					style={{
-						position: "absolute",
-						top: 0,
-						bottom: 0,
-						left: "var(--rds-rail-w)",
-						width: "var(--rds-panel-w)",
-						background: RDS_COLORS.bgPanel,
-						borderRight: `1px solid ${RDS_COLORS.border}`,
-						display: "flex",
-						flexDirection: "column",
-						overflow: "hidden",
-						zIndex: 3,
-						transform: panelCollapsed ? "translateX(-100%)" : "translateX(0)",
-						boxShadow: panelCollapsed ? "none" : "var(--rds-shadow-md)",
-						transition: "transform var(--rds-panel-anim), box-shadow var(--rds-panel-anim)",
-						willChange: "transform",
-						pointerEvents: panelCollapsed ? "none" : "auto",
-					}}
-				>
-					{PanelHeader}
-					<div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>{renderPanelContent()}</div>
-				</aside>
-			)}
-			{/* Modals render above main and aside; nesting them inside main would
-			   trap their z-index in main's stacking context and let the open
-			   sidebar cover them on narrow viewports. */}
+			{showApp && isMobile && <MobileTopBar />}
+			{showApp &&
+				(isMobile ? (
+					<MobilePanelDrawer
+						title={screenTitle(context, language)}
+						headerSlot={context === "plan" ? <MobilePlanTitle /> : undefined}
+						// Close while a modal is open so the drawer's focus trap
+						// doesn't steal focus from modal text inputs on mobile.
+						open={!panelCollapsed && modal === null}
+						onClose={() => useUiStore.getState().setPanelCollapsed(true)}
+					>
+						{renderPanelContent()}
+					</MobilePanelDrawer>
+				) : (
+					<aside
+						aria-hidden={panelCollapsed}
+						style={{
+							position: "absolute",
+							top: 0,
+							bottom: 0,
+							left: "var(--rds-rail-w)",
+							width: "var(--rds-panel-w)",
+							background: RDS_COLORS.bgPanel,
+							borderRight: `1px solid ${RDS_COLORS.border}`,
+							display: "flex",
+							flexDirection: "column",
+							overflow: "hidden",
+							zIndex: 3,
+							transform: panelCollapsed ? "translateX(-100%)" : "translateX(0)",
+							boxShadow: panelCollapsed ? "none" : "var(--rds-shadow-md)",
+							transition: "transform var(--rds-panel-anim), box-shadow var(--rds-panel-anim)",
+							willChange: "transform",
+							pointerEvents: panelCollapsed ? "none" : "auto",
+						}}
+					>
+						{PanelHeader}
+						<div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>{renderPanelContent()}</div>
+					</aside>
+				))}
+			{showApp && isMobile && <BottomTabBar />}
+			{/* Modals must render above the side panel/drawer; keeping them
+			   inside main would trap their z-index in main's stacking
+			   context and let the drawer or sidebar cover them. */}
 			<div style={{ position: "absolute", inset: 0, zIndex: 100, pointerEvents: "none" }}>
 				<div style={{ pointerEvents: "auto" }}>{renderModal()}</div>
 			</div>
 			{AuthOverlay}
+			{DevScreenOverlay}
 		</div>,
 	);
 }
