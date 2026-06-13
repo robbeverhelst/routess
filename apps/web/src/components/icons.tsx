@@ -48,6 +48,7 @@ import {
 	Share2,
 	Shield,
 	SlidersHorizontal,
+	Sparkles,
 	Sun,
 	Tag,
 	Target,
@@ -129,6 +130,7 @@ export const I = {
 	check: Check,
 	shield: Shield,
 	alert: AlertTriangle,
+	sparkles: Sparkles,
 };
 
 export type IconKey = keyof typeof I;

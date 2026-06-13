@@ -1,5 +1,6 @@
 import type { Heading, RouteGenerationType, SurfaceType } from "@routess/core";
 import { useEffect, useRef, useState } from "react";
+import { GenerateNlLayer } from "@/features/generation/GenerateNlLayer";
 import { emitAppEvent } from "@/lib/app-events";
 import { useT } from "@/lib/i18n";
 import { getRuntimeConfig } from "@/lib/runtime-config";
@@ -360,6 +361,7 @@ export function LoopModal() {
 			}
 		>
 			<div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+				<GenerateNlLayer />
 				<div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 6 }}>
 					{TABS.map((tab) => {
 						const on = routeType === tab.key;
@@ -539,7 +541,7 @@ export function LoopModal() {
 							justifyContent: "center",
 							background: preferNodeNetworks ? RDS_COLORS.accent : "transparent",
 							border: `1px solid ${preferNodeNetworks ? RDS_COLORS.accent : RDS_COLORS.border}`,
-							color: "#fff",
+							color: RDS_COLORS.accentFg,
 						}}
 					>
 						{preferNodeNetworks ? <I.check size={11} /> : null}
