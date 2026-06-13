@@ -24,6 +24,7 @@ import {
 	Globe,
 	GripVertical,
 	Heart,
+	Hexagon,
 	Layers,
 	LocateFixed,
 	Lock,
@@ -131,6 +132,7 @@ export const I = {
 	shield: Shield,
 	alert: AlertTriangle,
 	sparkles: Sparkles,
+	hexagon: Hexagon,
 };
 
 export type IconKey = keyof typeof I;
