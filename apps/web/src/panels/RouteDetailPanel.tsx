@@ -467,7 +467,13 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 					onSave={renameRoute}
 					disabled={updateRoute.isPending}
 					ariaLabel={t("library.card.rename")}
-					style={{ fontSize: 22, fontWeight: 600, letterSpacing: -0.4, width: "100%" }}
+					style={{
+						fontFamily: "'Bricolage Grotesque', sans-serif",
+						fontSize: 24,
+						fontWeight: 700,
+						letterSpacing: -0.4,
+						width: "100%",
+					}}
 				/>
 				<p className="rds-mono" style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle, margin: "4px 0 0" }}>
 					{t("route.created", {

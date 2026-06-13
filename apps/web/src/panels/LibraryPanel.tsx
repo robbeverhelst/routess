@@ -174,7 +174,7 @@ function LibraryPanelInner() {
 							flex: 1,
 							background: RDS_COLORS.bgInput,
 							border: `1px solid ${RDS_COLORS.border}`,
-							borderRadius: 8,
+							borderRadius: 10,
 							height: 36,
 							padding: "0 10px",
 						}}

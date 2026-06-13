@@ -81,7 +81,7 @@ function SocialPanelInner() {
 									background: "transparent",
 									border: 0,
 									borderBottom: `2px solid ${on ? RDS_COLORS.accent : "transparent"}`,
-									color: on ? RDS_COLORS.fg : RDS_COLORS.fgMuted,
+									color: on ? RDS_COLORS.accentDeep : RDS_COLORS.fgMuted,
 									fontSize: 13,
 									fontWeight: on ? 600 : 500,
 									cursor: "pointer",
