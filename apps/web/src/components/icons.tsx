@@ -1,5 +1,6 @@
 import {
 	Activity,
+	AlertTriangle,
 	ArrowUp,
 	ArrowUpDown,
 	Bell,
@@ -127,6 +128,7 @@ export const I = {
 	walk: Footprints,
 	check: Check,
 	shield: Shield,
+	alert: AlertTriangle,
 };
 
 export type IconKey = keyof typeof I;

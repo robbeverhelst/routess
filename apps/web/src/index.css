@@ -1,4 +1,9 @@
 @import "tailwindcss";
+/* Brand identity (warm paper, Bricolage, earthy accents). Defines the
+ * `--paper / --ink / --indigo / --moss / ...` layer the redesign reads.
+ * The legacy app's own `:root` below overrides the shadcn semantic tokens,
+ * so importing this only adds the brand vars — legacy colors are unchanged. */
+@import "../../../packages/design-tokens/css/tokens.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -140,34 +145,35 @@
  * tokens above; the redesign reads these.
  * ==================================================================== */
 [data-redesign] {
-	/* Surfaces */
-	--rds-bg-canvas: oklch(0.985 0.003 250);
-	--rds-bg-app: oklch(1 0 0);
-	--rds-bg-rail: oklch(0.975 0.004 250);
-	--rds-bg-panel: oklch(1 0 0);
-	--rds-bg-panel-elev: oklch(0.985 0.003 250);
-	--rds-bg-input: oklch(0.97 0.004 250);
-	--rds-bg-hover: oklch(0.955 0.005 250);
-	--rds-bg-active: oklch(0.93 0.006 250);
+	/* Surfaces — warm paper, derived from the @routess/design-tokens brand layer */
+	--rds-bg-canvas: var(--paper-2);
+	--rds-bg-app: var(--paper);
+	--rds-bg-rail: var(--paper-2);
+	--rds-bg-panel: var(--paper);
+	--rds-bg-panel-elev: var(--paper-2);
+	--rds-bg-input: var(--paper-2);
+	--rds-bg-hover: color-mix(in oklch, var(--ink) 5%, var(--paper));
+	--rds-bg-active: color-mix(in oklch, var(--ink) 9%, var(--paper));
 
 	/* Foreground */
-	--rds-fg: oklch(0.205 0.01 270);
-	--rds-fg-muted: oklch(0.5 0.012 270);
-	--rds-fg-subtle: oklch(0.65 0.01 270);
+	--rds-fg: var(--ink);
+	--rds-fg-muted: var(--muted-color);
+	--rds-fg-subtle: color-mix(in oklch, var(--muted-color) 72%, var(--paper));
 
 	/* Borders */
-	--rds-border: oklch(0.92 0.005 250);
-	--rds-border-strong: oklch(0.86 0.006 250);
+	--rds-border: var(--line);
+	--rds-border-strong: color-mix(in oklch, var(--ink) 14%, var(--line));
 
-	/* Accent (violet by default, swappable) */
-	--rds-accent: oklch(0.5 0.17 282);
-	--rds-accent-soft: oklch(0.96 0.03 282);
-	--rds-accent-fg: oklch(0.99 0 0);
-	--rds-accent-line: oklch(0.5 0.17 282);
+	/* Accent — indigo (swappable via [data-accent]) */
+	--rds-accent: var(--indigo);
+	--rds-accent-soft: var(--indigo-soft);
+	--rds-accent-deep: var(--indigo-deep);
+	--rds-accent-fg: var(--paper);
+	--rds-accent-line: var(--indigo);
 
-	/* Status colors */
-	--rds-success: oklch(0.62 0.14 155);
-	--rds-warn: oklch(0.7 0.14 70);
+	/* Status colors — moss success, deep sun warn, brand-red danger */
+	--rds-success: var(--moss);
+	--rds-warn: oklch(0.62 0.14 72);
 	--rds-danger: oklch(0.58 0.21 27);
 
 	/* Radius */
@@ -197,23 +203,24 @@
 
 [data-redesign].dark,
 .dark [data-redesign] {
-	--rds-bg-canvas: oklch(0.16 0.012 270);
-	--rds-bg-app: oklch(0.18 0.012 270);
-	--rds-bg-rail: oklch(0.155 0.012 270);
-	--rds-bg-panel: oklch(0.205 0.013 270);
-	--rds-bg-panel-elev: oklch(0.235 0.014 270);
-	--rds-bg-input: oklch(0.235 0.014 270);
-	--rds-bg-hover: oklch(0.245 0.014 270);
-	--rds-bg-active: oklch(0.28 0.015 270);
-	--rds-fg: oklch(0.97 0.005 270);
-	--rds-fg-muted: oklch(0.7 0.015 270);
-	--rds-fg-subtle: oklch(0.55 0.013 270);
-	--rds-border: oklch(1 0 0 / 0.08);
-	--rds-border-strong: oklch(1 0 0 / 0.14);
-	--rds-accent: oklch(0.7 0.18 282);
-	--rds-accent-soft: oklch(0.32 0.09 282);
-	--rds-accent-fg: oklch(0.15 0.01 270);
-	--rds-accent-line: oklch(0.72 0.18 282);
+	--rds-bg-canvas: var(--paper);
+	--rds-bg-app: var(--paper);
+	--rds-bg-rail: color-mix(in oklch, var(--paper) 92%, oklch(0 0 0));
+	--rds-bg-panel: var(--paper-2);
+	--rds-bg-panel-elev: color-mix(in oklch, var(--paper-2) 90%, oklch(1 0 0));
+	--rds-bg-input: var(--paper-2);
+	--rds-bg-hover: color-mix(in oklch, var(--paper-2) 90%, oklch(1 0 0));
+	--rds-bg-active: color-mix(in oklch, var(--paper-2) 82%, oklch(1 0 0));
+	--rds-fg: var(--ink);
+	--rds-fg-muted: var(--muted-color);
+	--rds-fg-subtle: color-mix(in oklch, var(--muted-color) 80%, var(--paper));
+	--rds-border: var(--line);
+	--rds-border-strong: color-mix(in oklch, var(--line) 65%, oklch(1 0 0));
+	--rds-accent: var(--indigo);
+	--rds-accent-soft: var(--indigo-soft);
+	--rds-accent-deep: var(--indigo-deep);
+	--rds-accent-fg: var(--ink);
+	--rds-accent-line: var(--indigo);
 	--rds-shadow-sm: 0 1px 0 oklch(0 0 0 / 0.4), 0 1px 2px oklch(0 0 0 / 0.4);
 	--rds-shadow-md: 0 1px 0 oklch(0 0 0 / 0.4), 0 6px 16px oklch(0 0 0 / 0.4), 0 16px 40px -8px oklch(0 0 0 / 0.5);
 	--rds-shadow-lg: 0 1px 0 oklch(0 0 0 / 0.5), 0 12px 32px oklch(0 0 0 / 0.5), 0 32px 80px -16px oklch(0 0 0 / 0.7);

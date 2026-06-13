@@ -451,7 +451,7 @@ export function PlanPanel() {
 			{/* Activity tabs + start/end */}
 			<div
 				style={{
-					padding: "16px 20px 12px",
+					padding: "12px 18px 12px",
 					borderBottom: `1px solid ${RDS_COLORS.border}`,
 				}}
 			>
@@ -461,10 +461,10 @@ export function PlanPanel() {
 							display: "flex",
 							alignItems: "center",
 							gap: 2,
-							padding: 2,
+							padding: 3,
 							flex: 1,
 							minWidth: 0,
-							borderRadius: 999,
+							borderRadius: 10,
 							border: `1px solid ${RDS_COLORS.border}`,
 							background: RDS_COLORS.bgInput,
 						}}
@@ -487,11 +487,11 @@ export function PlanPanel() {
 											minWidth: 0,
 											height: 28,
 											padding: "0 8px",
-											borderRadius: 999,
+											borderRadius: 8,
 											border: 0,
 											background: on ? RDS_COLORS.bgPanel : "transparent",
-											boxShadow: on ? "0 1px 2px rgba(15, 23, 42, 0.12)" : "none",
-											color: on ? RDS_COLORS.accent : RDS_COLORS.fgMuted,
+											boxShadow: on ? "var(--rds-shadow-sm)" : "none",
+											color: on ? RDS_COLORS.accentDeep : RDS_COLORS.fgMuted,
 											fontSize: 12.5,
 											fontWeight: on ? 600 : 500,
 											cursor: "pointer",
