@@ -176,6 +176,12 @@
 	--rds-warn: oklch(0.62 0.14 72);
 	--rds-danger: oklch(0.58 0.21 27);
 
+	/* Dark inset (stat strips, hero cards) — fixed in both themes, not inverted */
+	--rds-inset-bg: oklch(0.22 0.02 270);
+	--rds-inset-fg: oklch(0.97 0.01 80);
+	--rds-inset-label: oklch(0.68 0.015 270);
+	--rds-inset-border: oklch(1 0 0 / 0.1);
+
 	/* Radius */
 	--rds-radius-xs: 6px;
 	--rds-radius-sm: 8px;

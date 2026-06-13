@@ -22,6 +22,10 @@ export const RDS_COLORS = {
 	success: "var(--rds-success)",
 	warn: "var(--rds-warn)",
 	danger: "var(--rds-danger)",
+	insetBg: "var(--rds-inset-bg)",
+	insetFg: "var(--rds-inset-fg)",
+	insetLabel: "var(--rds-inset-label)",
+	insetBorder: "var(--rds-inset-border)",
 } as const;
 
 interface IconBtnProps {
