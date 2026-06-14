@@ -6,6 +6,7 @@ import { createContext, useCallback, useContext, useEffect, useRef } from "react
 import { updateLineToRouteLayer, updateUserLocationLayer } from "@/features/routing/managers/MapLayerManager";
 import { useDeviceHeading } from "@/hooks/useDeviceHeading";
 import { useEnhancedLocation } from "@/hooks/useEnhancedLocation";
+import { useSmoothedHeading } from "@/hooks/useSmoothedHeading";
 import { useViewport } from "@/hooks/useViewport";
 import { useWakeLock } from "@/hooks/useWakeLock";
 import { Logger } from "@/lib/logger";
@@ -95,9 +96,9 @@ export const UserLocationProvider: React.FC<UserLocationProviderProps> = ({
 		autoStart: false, // Start manually when needed
 		trackingMode: "walking", // Optimized for walking
 		onLocationUpdate: (state) => {
-			// Update map with new location (with the latest known heading).
+			// Update map with new location (with the latest smoothed heading).
 			if (mapRef.current && state.location) {
-				updateUserLocationLayer(mapRef.current, state.location, headingRef.current);
+				updateUserLocationLayer(mapRef.current, state.location, smoothedHeadingRef.current);
 			}
 		},
 	});
@@ -110,12 +111,25 @@ export const UserLocationProvider: React.FC<UserLocationProviderProps> = ({
 	// while stationary), fall back to GPS course-over-ground while moving.
 	const compassHeading = useDeviceHeading();
 	const showHeadingCone = useRedesignSettingsStore((s) => s.showHeadingCone);
-	const rawHeading = compassHeading ?? movementHeading ?? null;
-	const effectiveHeading = showHeadingCone ? rawHeading : null;
-	const headingRef = useRef<number | null>(effectiveHeading);
+	const targetHeading = showHeadingCone ? (compassHeading ?? movementHeading ?? null) : null;
+
+	// Keep the latest location in a ref so the per-frame easing callback can
+	// repaint the cone without re-running effects.
+	const userLocationRef = useRef(userLocation);
 	useEffect(() => {
-		headingRef.current = effectiveHeading;
-	}, [effectiveHeading]);
+		userLocationRef.current = userLocation;
+	}, [userLocation]);
+
+	// Ease the cone toward the raw target instead of snapping to noisy sensor
+	// readings; the loop drives the map imperatively each frame.
+	const smoothedHeadingRef = useRef<number | null>(null);
+	useSmoothedHeading(targetHeading, (heading) => {
+		smoothedHeadingRef.current = heading;
+		const map = mapRef.current;
+		if (map && isMapReady && userLocationRef.current) {
+			updateUserLocationLayer(map, userLocationRef.current, heading);
+		}
+	});
 
 	// Keep the screen awake while following a route on a phone: tracking is
 	// active and the user is on a mobile viewport. Desktop planning sessions
@@ -145,15 +159,15 @@ export const UserLocationProvider: React.FC<UserLocationProviderProps> = ({
 		}
 	}, [isLocationTracking, locationError, stopLocationTracking]);
 
-	// Update map with user location + heading from hook. Re-runs on heading
-	// change too, so the cone rotates even while the user stands still.
+	// Repaint on location change (and initial mount). Heading rotation is driven
+	// separately by the easing loop above, so it isn't a dependency here.
 	useEffect(() => {
 		if (!mapRef.current) return;
 
 		if (isMapReady && userLocation) {
-			updateUserLocationLayer(mapRef.current, userLocation, effectiveHeading);
+			updateUserLocationLayer(mapRef.current, userLocation, smoothedHeadingRef.current);
 		}
-	}, [userLocation, isMapReady, mapRef, effectiveHeading]);
+	}, [userLocation, isMapReady, mapRef]);
 
 	// Off-track guide line: a dashed connector from the user to the nearest
 	// point on the route. Only in follow/lock mode, when enabled, and once
