@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import React from "react";
 import { type Mock, vi } from "vitest";
 import { useMapInitialization } from "@/components/hooks/useMapInitialization";
@@ -39,7 +39,12 @@ vi.mock("react-map-gl/mapbox", () => ({
 			React.useImperativeHandle(ref, () => ({ getMap: () => mockMapInstance }));
 
 			React.useEffect(() => {
-				if (onLoad) onLoad({ target: mockMapInstance });
+				if (!onLoad) return;
+				if (mockLoadControl.defer) {
+					mockLoadControl.fire = () => onLoad({ target: mockMapInstance });
+					return;
+				}
+				onLoad({ target: mockMapInstance });
 			}, [onLoad]);
 
 			return (
@@ -77,6 +82,9 @@ vi.mock("@/components/map/MapPopup", () => ({
 vi.mock("@/components/map/SunPositionIndicator", () => ({
 	SunPositionIndicator: ({ azimuth }: any) => <div data-testid="sun-indicator">Azimuth: {azimuth}</div>,
 }));
+
+// Lets a test hold back the mock map's load event to exercise slow-load paths.
+const mockLoadControl = { defer: false, fire: null as null | (() => void) };
 
 const mockMapInstance = {
 	on: vi.fn(),
@@ -147,6 +155,8 @@ describe("MapCanvas", () => {
 
 	beforeEach(() => {
 		vi.clearAllMocks();
+		mockLoadControl.defer = false;
+		mockLoadControl.fire = null;
 
 		setStyleKey("streets");
 		mockStoreSelector(useRoutingStore as unknown as Mock, { isMapLocked: false });
@@ -387,6 +397,28 @@ describe("MapCanvas", () => {
 			await waitFor(() => {
 				expect(mockSetCurrentBearing).not.toHaveBeenCalled();
 			});
+		});
+	});
+
+	describe("Load timeout", () => {
+		it("clears the timeout panel when the map finishes loading late", () => {
+			vi.useFakeTimers();
+			mockLoadControl.defer = true;
+			try {
+				render(<MapCanvas {...defaultProps} />);
+
+				act(() => {
+					vi.advanceTimersByTime(12000);
+				});
+				expect(screen.getByText("Map is still loading")).toBeInTheDocument();
+
+				act(() => {
+					mockLoadControl.fire?.();
+				});
+				expect(screen.queryByText("Map is still loading")).not.toBeInTheDocument();
+			} finally {
+				vi.useRealTimers();
+			}
 		});
 	});
 });

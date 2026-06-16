@@ -589,6 +589,9 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
 						// (locate, zoom-to-route) until a full page reload.
 						mapRef.current = evt.target;
 						setIsMapLoaded(true);
+						// A slow load can trip the 12s timeout before finishing; clear
+						// it so the "still loading" panel doesn't cover a working map.
+						setLoadTimedOut(false);
 						if (supportsBasemapLightPreset) {
 							try {
 								evt.target.setConfigProperty("basemap", "lightPreset", effectiveLightPreset);
