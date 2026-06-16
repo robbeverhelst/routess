@@ -799,6 +799,16 @@ export const en: Record<string, string> = {
 	"nav.backOnRouteSpoken": "Back on route.",
 	"nav.rejoinSpoken": "Rerouting. Follow the dashed line back to the route.",
 	"nav.arrivedSpoken": "You have arrived.",
+	"nav.min": "min",
+	"nav.arrives": "arrives {time}",
+	"nav.overview": "Overview",
+	"nav.shareEta": "Share ETA",
+	"nav.shareEtaText": "ETA {eta}, {distance} to go",
+	"nav.directions": "Directions",
+	"nav.arriveAt": "Arrive at {name}",
+	"nav.destination": "Destination",
+	"nav.endNavigation": "End navigation",
+	"nav.time": "Time",
 
 	// RecordingScreen
 	"record.recording": "Recording",

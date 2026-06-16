@@ -777,6 +777,16 @@ export const nl: Record<string, string> = {
 	"nav.backOnRouteSpoken": "Terug op de route.",
 	"nav.rejoinSpoken": "Herrouteren. Volg de stippellijn terug naar de route.",
 	"nav.arrivedSpoken": "Je bent gearriveerd.",
+	"nav.min": "min",
+	"nav.arrives": "aankomst {time}",
+	"nav.overview": "Overzicht",
+	"nav.shareEta": "ETA delen",
+	"nav.shareEtaText": "ETA {eta}, nog {distance}",
+	"nav.directions": "Routebeschrijving",
+	"nav.arriveAt": "Aankomst bij {name}",
+	"nav.destination": "Bestemming",
+	"nav.endNavigation": "Navigatie beëindigen",
+	"nav.time": "Tijd",
 
 	// RecordingScreen
 	"record.recording": "Opnemen",

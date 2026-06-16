@@ -13,8 +13,29 @@ const ROUTE_LINE_LAYER = "nav-route-line";
 const REJOIN_SOURCE = "nav-rejoin";
 const REJOIN_LAYER = "nav-rejoin-line";
 
-const FOLLOW_ZOOM = 16;
-const FOLLOW_PITCH = 45;
+const FOLLOW_ZOOM = 16.5;
+const FOLLOW_PITCH = 48;
+
+// Brand purple and a green that match the design reference. Mapbox paint and
+// marker DOM both need concrete colours (CSS vars don't resolve in GL paint).
+const ROUTE_PURPLE = "#7d62ff";
+const FLAG_GREEN = "oklch(0.5 0.16 155)";
+
+// Heading puck: accuracy halo + a forward cone + a dot, screen-aligned so the
+// cone points up (in heading-up follow the map rotates under it, so up is the
+// direction of travel). Mirrors the reference nav design.
+const PUCK_SVG =
+	`<svg width="76" height="76" viewBox="0 0 76 76" style="overflow:visible;display:block">` +
+	`<circle cx="38" cy="38" r="34" fill="rgba(125,98,255,0.12)"></circle>` +
+	`<path d="M38,16 l13,20 a15,15 0 0 1 -26,0 z" fill="rgba(125,98,255,0.32)"></path>` +
+	`<circle cx="38" cy="38" r="12" fill="${ROUTE_PURPLE}" stroke="#ffffff" stroke-width="4"></circle>` +
+	`</svg>`;
+
+const FLAG_HTML =
+	`<div style="display:flex;flex-direction:column;align-items:center;transform:translateY(-12px)">` +
+	`<span style="width:34px;height:34px;border-radius:50% 50% 50% 0;background:${FLAG_GREEN};` +
+	`transform:rotate(45deg);box-shadow:0 4px 10px -2px rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center">` +
+	`<span style="transform:rotate(-45deg);color:white;font-size:15px;line-height:1">⚑</span></span></div>`;
 
 function lineFeature(coords: Coordinate[]) {
 	return {
@@ -32,14 +53,14 @@ function ensureLayers(map: MapboxMap, path: Coordinate[], rejoinPath: Coordinate
 			type: "line",
 			source: ROUTE_SOURCE,
 			layout: { "line-cap": "round", "line-join": "round" },
-			paint: { "line-color": "#ffffff", "line-width": 10, "line-opacity": 0.85 },
+			paint: { "line-color": "#ffffff", "line-width": 11, "line-opacity": 0.9 },
 		});
 		map.addLayer({
 			id: ROUTE_LINE_LAYER,
 			type: "line",
 			source: ROUTE_SOURCE,
 			layout: { "line-cap": "round", "line-join": "round" },
-			paint: { "line-color": "#7d62ff", "line-width": 5, "line-opacity": 0.95 },
+			paint: { "line-color": ROUTE_PURPLE, "line-width": 6, "line-opacity": 0.96 },
 		});
 	} else {
 		(map.getSource(ROUTE_SOURCE) as GeoJSONSource).setData(lineFeature(path));
@@ -66,6 +87,7 @@ export function NavMap({
 	puck,
 	headingDeg,
 	follow,
+	overviewNonce,
 	onUserPan,
 }: {
 	path: Coordinate[];
@@ -73,11 +95,13 @@ export function NavMap({
 	puck: Coordinate | null;
 	headingDeg: number | null;
 	follow: boolean;
+	// Bumping this fits the whole route into view (the Overview control).
+	overviewNonce: number;
 	onUserPan: () => void;
 }) {
 	const mapRef = useRef<MapboxMap | null>(null);
-	const puckEl = useRef<HTMLDivElement | null>(null);
-	const markerRef = useRef<Marker | null>(null);
+	const puckMarker = useRef<Marker | null>(null);
+	const flagMarker = useRef<Marker | null>(null);
 	const mapboxToken = getRuntimeConfig("VITE_MAPBOX_ACCESS_TOKEN") ?? "";
 
 	const applyLayers = useCallback(() => {
@@ -90,25 +114,34 @@ export function NavMap({
 		applyLayers();
 	}, [applyLayers]);
 
-	// Camera: bearing-up follow with the puck in the lower third, so the map
-	// shows what is ahead. Manual pan breaks follow (ADR 0038 / ADR 0028: the
-	// map is read-only during a session).
+	// Camera: heading-up follow with the puck low so the map shows what is
+	// ahead. Manual pan breaks follow (ADR 0038 / ADR 0028: the map is read-only
+	// during a session).
 	useEffect(() => {
 		const map = mapRef.current;
 		if (!map || !puck) return;
-		if (markerRef.current) markerRef.current.setLngLat(puck);
-		if (puckEl.current) puckEl.current.style.transform = `rotate(${headingDeg ?? 0}deg)`;
+		puckMarker.current?.setLngLat(puck);
 		if (!follow) return;
 		map.easeTo({
 			center: puck,
 			bearing: headingDeg ?? map.getBearing(),
 			zoom: FOLLOW_ZOOM,
 			pitch: FOLLOW_PITCH,
-			padding: { top: window.innerHeight * 0.35, bottom: 0, left: 0, right: 0 },
+			padding: { top: 0, bottom: Math.round(window.innerHeight * 0.42), left: 0, right: 0 },
 			duration: 900,
 			easing: (v) => v,
 		});
 	}, [puck, headingDeg, follow]);
+
+	// Overview: fit the whole route, leaving room for the top bar and sheet.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: overviewNonce is a trigger, fit on each bump
+	useEffect(() => {
+		const map = mapRef.current;
+		if (!map || path.length < 2) return;
+		const bounds = path.reduce((b, c) => b.extend(c), new LngLatBounds(path[0], path[0]));
+		map.easeTo({ bearing: 0, pitch: 0, duration: 500 });
+		map.fitBounds(bounds, { padding: { top: 160, bottom: 220, left: 60, right: 60 }, duration: 600, maxZoom: 16 });
+	}, [overviewNonce, path]);
 
 	return (
 		<MapGL
@@ -128,20 +161,23 @@ export function NavMap({
 					map.fitBounds(bounds, { padding: 80, duration: 0 });
 				}
 
-				const el = document.createElement("div");
-				el.style.cssText =
-					"width:0;height:0;border-left:11px solid transparent;border-right:11px solid transparent;border-bottom:26px solid #7d62ff;filter:drop-shadow(0 1px 4px rgba(0,0,0,0.45));";
-				const wrapper = document.createElement("div");
-				wrapper.appendChild(el);
-				puckEl.current = wrapper;
-				markerRef.current = new Marker({ element: wrapper, rotationAlignment: "map" })
-					.setLngLat(puck ?? path[0] ?? [4.35, 50.85])
-					.addTo(map);
+				const puckEl = document.createElement("div");
+				puckEl.innerHTML = PUCK_SVG;
+				puckMarker.current = new Marker({ element: puckEl }).setLngLat(puck ?? path[0] ?? [4.35, 50.85]).addTo(map);
+
+				const end = path[path.length - 1];
+				if (end) {
+					const flagEl = document.createElement("div");
+					flagEl.innerHTML = FLAG_HTML;
+					flagMarker.current = new Marker({ element: flagEl, anchor: "bottom" }).setLngLat(end).addTo(map);
+				}
 			}}
 			onDragStart={onUserPan}
 			onRemove={() => {
-				markerRef.current?.remove();
-				markerRef.current = null;
+				puckMarker.current?.remove();
+				flagMarker.current?.remove();
+				puckMarker.current = null;
+				flagMarker.current = null;
 				mapRef.current = null;
 			}}
 		/>
