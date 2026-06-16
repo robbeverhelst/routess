@@ -21,6 +21,7 @@ import { Logger } from "@/lib/logger";
 import { useUnits } from "@/lib/units";
 import { MOBILE_DRAWER_SNAPS, useMobileDrawerStore } from "@/stores/mobileDrawerStore";
 import { useModalsStore } from "@/stores/modalsStore";
+import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 import { useToastStore } from "@/stores/toastStore";
 import { useUiStore } from "@/stores/uiStore";
 import { EditableLabel } from "../components/EditableLabel";
@@ -227,6 +228,7 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 	const pushToast = useToastStore((s) => s.push);
 	const toggleFavourite = useToggleFavourite();
 	const setContext = useUiStore((s) => s.setContext);
+	const navigationEnabled = useRedesignSettingsStore((s) => s.navigationEnabled);
 	const favorited = route.favourite;
 
 	// Saved routes don't persist the elevation profile array (only the gain
@@ -779,10 +781,12 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 					borderTop: `1px solid ${RDS_COLORS.border}`,
 				}}
 			>
-				<Btn variant="primary" style={{ flex: 1 }} onClick={dispatchNavigate}>
-					<I.play size={13} /> {t("nav.navigate")}
-				</Btn>
-				<Btn style={{ flex: 1 }} onClick={dispatchLoadRoute}>
+				{navigationEnabled && (
+					<Btn variant="primary" style={{ flex: 1 }} onClick={dispatchNavigate}>
+						<I.play size={13} /> {t("nav.navigate")}
+					</Btn>
+				)}
+				<Btn variant={navigationEnabled ? undefined : "primary"} style={{ flex: 1 }} onClick={dispatchLoadRoute}>
 					<I.route size={13} /> {t("route.editRoute")}
 				</Btn>
 				{/* Two share actions with different meanings: label both so they

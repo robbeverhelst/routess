@@ -153,6 +153,9 @@ export const nl: Record<string, string> = {
 	"settings.experimental": "Experimenteel",
 	"settings.experimental.nodeNetworkOverlays": "Knooppunten-overlays",
 	"settings.experimental.nodeNetworkOverlaysSub": "Toon wandel- en fietsknooppunten in de kaartlaagkiezer.",
+	"settings.experimental.navigation": "Navigatie met afslagen",
+	"settings.experimental.navigationSub":
+		"Toon een Navigeren-knop om een route live te volgen met gesproken begeleiding. Nog in ontwikkeling; houd je scherm aan tijdens het rijden.",
 	"settings.security.changePasswordAction": "Wijzigen",
 	"settings.security.passwordUpdated": "Wachtwoord bijgewerkt.",
 	"settings.security.passwordFailed": "Kon wachtwoord niet bijwerken.",

@@ -29,6 +29,9 @@ export const de: Record<string, string> = {
 	"settings.experimental.nodeNetworkOverlays": "Knotenpunkt-Netzwerk-Overlays",
 	"settings.experimental.nodeNetworkOverlaysSub":
 		"Zeigt Steuerelemente für Wander- und Rad-Knotenpunktnetze in der Kartenebenenauswahl an.",
+	"settings.experimental.navigation": "Abbiegehinweise",
+	"settings.experimental.navigationSub":
+		"Zeigt eine Navigieren-Schaltfläche, um einer Route live mit Sprachführung zu folgen. In Arbeit; halte den Bildschirm während der Fahrt an.",
 
 	// Footer translations
 

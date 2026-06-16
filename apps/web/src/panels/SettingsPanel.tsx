@@ -328,6 +328,8 @@ export function SettingsPanel() {
 	const setShowHeadingCone = useRedesignSettingsStore((s) => s.setShowHeadingCone);
 	const showNodeNetworkOverlays = useRedesignSettingsStore((s) => s.showNodeNetworkOverlays);
 	const setShowNodeNetworkOverlays = useRedesignSettingsStore((s) => s.setShowNodeNetworkOverlays);
+	const navigationEnabled = useRedesignSettingsStore((s) => s.navigationEnabled);
+	const setNavigationEnabled = useRedesignSettingsStore((s) => s.setNavigationEnabled);
 
 	const defaultSport: RedesignActivity | null =
 		selectedSports.length === 0 ? null : selectedSports.includes(activityType) ? activityType : selectedSports[0];
@@ -773,6 +775,17 @@ export function SettingsPanel() {
 									on={showNodeNetworkOverlays}
 									onChange={setShowNodeNetworkOverlays}
 									label={t("settings.experimental.nodeNetworkOverlays")}
+								/>
+							}
+						/>
+						<SettingsRow
+							label={t("settings.experimental.navigation")}
+							sub={t("settings.experimental.navigationSub")}
+							control={
+								<Toggle
+									on={navigationEnabled}
+									onChange={setNavigationEnabled}
+									label={t("settings.experimental.navigation")}
 								/>
 							}
 						/>

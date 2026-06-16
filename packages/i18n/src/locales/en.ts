@@ -152,6 +152,9 @@ export const en: Record<string, string> = {
 	"settings.experimental.nodeNetworkOverlays": "Node network overlays",
 	"settings.experimental.nodeNetworkOverlaysSub":
 		"Show walking and cycling node-network controls in the map layer picker.",
+	"settings.experimental.navigation": "Turn-by-turn navigation",
+	"settings.experimental.navigationSub":
+		"Show a Navigate button to follow a route live with voice guidance. Work in progress; keep your screen on while riding.",
 	"settings.security.changePasswordAction": "Change",
 	"settings.security.passwordUpdated": "Password updated.",
 	"settings.security.passwordFailed": "Could not update password.",

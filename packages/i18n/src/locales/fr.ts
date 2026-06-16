@@ -29,6 +29,9 @@ export const fr: Record<string, string> = {
 	"settings.experimental.nodeNetworkOverlays": "Superpositions de réseaux de nœuds",
 	"settings.experimental.nodeNetworkOverlaysSub":
 		"Afficher les contrôles des réseaux de nœuds pédestres et cyclables dans le sélecteur de couches.",
+	"settings.experimental.navigation": "Navigation virage par virage",
+	"settings.experimental.navigationSub":
+		"Afficher un bouton Naviguer pour suivre un itinéraire en direct avec guidage vocal. En cours de développement ; gardez votre écran allumé pendant le trajet.",
 
 	// Footer translations
 

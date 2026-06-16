@@ -16,6 +16,7 @@ import { useUnits } from "@/lib/units";
 import { useLibraryStore } from "@/stores/libraryStore";
 import { useModalsStore } from "@/stores/modalsStore";
 import { useNavigationStore } from "@/stores/navigationStore";
+import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 import {
 	useCanRedo,
 	useCanUndo,
@@ -183,6 +184,7 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 	const [offlineDismissed, setOfflineDismissed] = useState(false);
 	const [devScreen, setDevScreen] = useState<DevScreen | null>(getDevScreen);
 	const navActive = useNavigationStore((s) => !!s.active);
+	const navigationEnabled = useRedesignSettingsStore((s) => s.navigationEnabled);
 	const wasMobileRef = useRef<boolean | null>(null);
 
 	useUserPreferencesSync(auth);
@@ -556,7 +558,7 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 		<div style={{ position: "absolute", inset: 0, zIndex: 150 }}>
 			<LiveNavScreen />
 		</div>
-	) : showApp ? (
+	) : showApp && navigationEnabled ? (
 		<ResumeNavBanner />
 	) : null;
 

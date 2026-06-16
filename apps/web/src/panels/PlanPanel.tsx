@@ -298,6 +298,7 @@ export function PlanPanel() {
 
 	const sportSpeeds = useRedesignSettingsStore((s) => s.sportSpeeds);
 	const selectedSports = useRedesignSettingsStore((s) => s.selectedSports);
+	const navigationEnabled = useRedesignSettingsStore((s) => s.navigationEnabled);
 
 	const availableActivities = useMemo(
 		() => (selectedSports.length > 0 ? ACTIVITIES.filter((a) => selectedSports.includes(a.key)) : ACTIVITIES),
@@ -908,20 +909,22 @@ export function PlanPanel() {
 						<I.copy size={14} />
 					</Btn>
 				)}
-				<Btn
-					title={t("nav.navigate")}
-					disabled={!hasRoute || routePath.length < 2}
-					onClick={() => {
-						void startNavigation({
-							routeName: editingName ?? t("nav.currentRoute"),
-							geometry: routePath,
-							activity: draftActivity ?? "cycle",
-						});
-					}}
-					style={{ padding: "0 10px" }}
-				>
-					<I.play size={14} />
-				</Btn>
+				{navigationEnabled && (
+					<Btn
+						title={t("nav.navigate")}
+						disabled={!hasRoute || routePath.length < 2}
+						onClick={() => {
+							void startNavigation({
+								routeName: editingName ?? t("nav.currentRoute"),
+								geometry: routePath,
+								activity: draftActivity ?? "cycle",
+							});
+						}}
+						style={{ padding: "0 10px" }}
+					>
+						<I.play size={14} />
+					</Btn>
+				)}
 				<Btn
 					title={t("plan.shareRoute")}
 					disabled={!hasRoute}
