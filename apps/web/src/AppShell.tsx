@@ -34,6 +34,7 @@ import { BottomTabBar } from "./components/BottomTabBar";
 import { I } from "./components/icons";
 import { MapToolbar } from "./components/MapToolbar";
 import { MobilePanelDrawer } from "./components/MobilePanelDrawer";
+import { MobilePlanActionBar } from "./components/MobilePlanActionBar";
 import { MobilePlanTitle } from "./components/MobilePlanTitle";
 import { MobileTopBar } from "./components/MobileTopBar";
 import { Badge, IconBtn, RDS_COLORS } from "./components/primitives";
@@ -504,6 +505,12 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 	// The plan panel shows the same stats; only float the chip when they are
 	// not already visible (panel collapsed or another context active).
 	const planPanelVisible = !isMobile && !panelCollapsed && context === "plan";
+
+	// Mobile Plan action bar: present whenever the Plan drawer is open with a
+	// route in progress. While it shows, it replaces the bottom tab bar (one
+	// solid docked bar instead of two stacked ones bleeding panel content
+	// through the gap). Closing the Plan sheet brings the tab bar back.
+	const showPlanActionBar = showApp && isMobile && context === "plan" && !panelCollapsed && hasAnyWaypoint;
 	const Chip =
 		hasRoute && !planPanelVisible ? (
 			<RouteChip distance={distance || "—"} time={duration || "—"} elevation={elevation} />
@@ -658,7 +665,12 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 						<div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>{renderPanelContent()}</div>
 					</aside>
 				))}
-			{showApp && isMobile && <BottomTabBar />}
+			{showApp && isMobile && !showPlanActionBar && <BottomTabBar />}
+			{/* Persistent Plan action bar: keeps Save/Navigate/Share/Import/Clear
+			   reachable on mobile regardless of drawer scroll (the in-panel footer
+			   would otherwise hide under the tab bar). Replaces the tab bar while a
+			   route is being planned. */}
+			{showPlanActionBar && <MobilePlanActionBar />}
 			{/* Modals must render above the side panel/drawer; keeping them
 			   inside main would trap their z-index in main's stacking
 			   context and let the drawer or sidebar cover them. */}
