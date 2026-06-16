@@ -418,7 +418,7 @@ export function PlanPanel() {
 	}, [waypoints, routePath]);
 
 	return (
-		<div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+		<div style={{ display: "flex", flexDirection: "column", height: isMobile ? "auto" : "100%" }}>
 			{mode.kind === "editing" && (
 				<div
 					style={{
@@ -641,8 +641,12 @@ export function PlanPanel() {
 				<PlanRouteProfileChart />
 			</div>
 
-			{/* Waypoints list */}
-			<div style={{ padding: "14px 20px", overflow: "auto", flex: 1, minHeight: 0 }}>
+			{/* Waypoints list. On mobile the whole panel scrolls in the drawer's
+			    single scroll container, so this list flows instead of nesting its
+			    own scroll; on desktop it keeps its own scroll inside the side panel. */}
+			<div
+				style={isMobile ? { padding: "14px 20px" } : { padding: "14px 20px", overflow: "auto", flex: 1, minHeight: 0 }}
+			>
 				<SecTitle style={{ marginBottom: 10 }}>
 					{t("plan.waypointsCount", { count: String(waypoints.length) })}
 				</SecTitle>
@@ -873,85 +877,91 @@ export function PlanPanel() {
 				</button>
 			</div>
 
-			{/* Footer */}
-			<div
-				style={{
-					display: "flex",
-					alignItems: "center",
-					gap: 6,
-					padding: "12px 16px",
-					borderTop: `1px solid ${RDS_COLORS.border}`,
-				}}
-			>
-				<Btn
-					variant="primary"
-					style={{ flex: 1, minWidth: 0, padding: "0 10px" }}
-					disabled={mode.kind === "editing" ? !isDirty || waypoints.length < 2 || updateRoute.isPending : !hasRoute}
-					onClick={handleSaveClick}
-					// No surprise sign-in wall at the end of the flow: tell
-					// anonymous users up front that saving needs an account.
-					title={isAuthenticated ? undefined : t("save.signInHint")}
+			{/* Footer. On mobile the actions live in the persistent
+			    MobilePlanActionBar (fixed above the tab bar) so they are always
+			    reachable; this in-panel footer is desktop-only. The spacer keeps
+			    the last scrolled content clear of that fixed bar. */}
+			{isMobile && <div style={{ height: 76 }} />}
+			{!isMobile && (
+				<div
+					style={{
+						display: "flex",
+						alignItems: "center",
+						gap: 6,
+						padding: "12px 16px",
+						borderTop: `1px solid ${RDS_COLORS.border}`,
+					}}
 				>
-					<I.save size={14} />{" "}
-					{mode.kind === "editing" && updateRoute.isPending
-						? t("save.saving")
-						: isAuthenticated
-							? t("common.save")
-							: t("save.signInShort")}
-				</Btn>
-				{mode.kind === "editing" && (
 					<Btn
-						title={t("plan.duplicate")}
-						disabled={!hasRoute || saveRoute.isPending}
-						onClick={handleDuplicate}
+						variant="primary"
+						style={{ flex: 1, minWidth: 0, padding: "0 10px" }}
+						disabled={mode.kind === "editing" ? !isDirty || waypoints.length < 2 || updateRoute.isPending : !hasRoute}
+						onClick={handleSaveClick}
+						// No surprise sign-in wall at the end of the flow: tell
+						// anonymous users up front that saving needs an account.
+						title={isAuthenticated ? undefined : t("save.signInHint")}
+					>
+						<I.save size={14} />{" "}
+						{mode.kind === "editing" && updateRoute.isPending
+							? t("save.saving")
+							: isAuthenticated
+								? t("common.save")
+								: t("save.signInShort")}
+					</Btn>
+					{mode.kind === "editing" && (
+						<Btn
+							title={t("plan.duplicate")}
+							disabled={!hasRoute || saveRoute.isPending}
+							onClick={handleDuplicate}
+							style={{ padding: "0 10px" }}
+						>
+							<I.copy size={14} />
+						</Btn>
+					)}
+					{navigationEnabled && (
+						<Btn
+							title={t("nav.navigate")}
+							disabled={!hasRoute || routePath.length < 2}
+							onClick={() => {
+								void startNavigation({
+									routeName: editingName ?? t("nav.currentRoute"),
+									geometry: routePath,
+									activity: draftActivity ?? "cycle",
+								});
+							}}
+							style={{ padding: "0 10px" }}
+						>
+							<I.play size={14} />
+						</Btn>
+					)}
+					<Btn
+						title={t("plan.shareRoute")}
+						disabled={!hasRoute}
+						onClick={() => openModal("share")}
 						style={{ padding: "0 10px" }}
 					>
-						<I.copy size={14} />
+						<I.share size={14} />
 					</Btn>
-				)}
-				{navigationEnabled && (
 					<Btn
-						title={t("nav.navigate")}
-						disabled={!hasRoute || routePath.length < 2}
-						onClick={() => {
-							void startNavigation({
-								routeName: editingName ?? t("nav.currentRoute"),
-								geometry: routePath,
-								activity: draftActivity ?? "cycle",
-							});
-						}}
+						title={t("plan.importGpx")}
+						disabled={routePath.length === 0 && waypoints.length === 0}
+						onClick={() => openModal("import")}
 						style={{ padding: "0 10px" }}
 					>
-						<I.play size={14} />
+						<I.upload size={14} />
 					</Btn>
-				)}
-				<Btn
-					title={t("plan.shareRoute")}
-					disabled={!hasRoute}
-					onClick={() => openModal("share")}
-					style={{ padding: "0 10px" }}
-				>
-					<I.share size={14} />
-				</Btn>
-				<Btn
-					title={t("plan.importGpx")}
-					disabled={routePath.length === 0 && waypoints.length === 0}
-					onClick={() => openModal("import")}
-					style={{ padding: "0 10px" }}
-				>
-					<I.upload size={14} />
-				</Btn>
-				<div style={{ width: 1, alignSelf: "stretch", margin: "6px 2px", background: RDS_COLORS.border }} />
-				<Btn
-					title={t("plan.clear")}
-					variant="ghost"
-					onClick={handleClear}
-					disabled={waypoints.length === 0}
-					style={{ padding: "0 10px", color: RDS_COLORS.danger }}
-				>
-					<I.trash size={14} />
-				</Btn>
-			</div>
+					<div style={{ width: 1, alignSelf: "stretch", margin: "6px 2px", background: RDS_COLORS.border }} />
+					<Btn
+						title={t("plan.clear")}
+						variant="ghost"
+						onClick={handleClear}
+						disabled={waypoints.length === 0}
+						style={{ padding: "0 10px", color: RDS_COLORS.danger }}
+					>
+						<I.trash size={14} />
+					</Btn>
+				</div>
+			)}
 		</div>
 	);
 }
