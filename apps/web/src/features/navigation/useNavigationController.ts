@@ -51,10 +51,17 @@ export function useNavigationController(): NavigationController {
 	const running = !!active && active.engine.status !== "ended";
 	useWakeLock(running);
 
+	// Key the context on the session's stable inputs (path + cues), NOT the
+	// whole `active` object: the store hands out a new `active` on every engine
+	// update, so depending on `active` would rebuild the context each GPS fix,
+	// tear down and resubscribe the location effect, and re-emit the position —
+	// an infinite update loop. path/cues only change when a new session starts.
+	const path = active?.path;
+	const cues = active?.cues;
 	const context = useMemo(() => {
-		if (!active) return null;
-		return createNavigationContext(active.path, active.cues);
-	}, [active]);
+		if (!path || !cues) return null;
+		return createNavigationContext(path, cues);
+	}, [path, cues]);
 
 	const sayCue = useCallback((text: string) => {
 		if (!mutedRef.current) speak(text, languageRef.current);
