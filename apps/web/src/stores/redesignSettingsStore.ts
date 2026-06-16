@@ -89,6 +89,9 @@ interface SettingsState {
 	showOffTrackGuideLine: boolean;
 	showHeadingCone: boolean;
 	showNodeNetworkOverlays: boolean;
+	// Feature flag for unreleased turn-by-turn navigation. Off by default and
+	// per-device so it can be dogfooded on a phone before a proper release.
+	navigationEnabled: boolean;
 
 	setUnits: (units: RedesignUnits) => void;
 	setShowPois: (showPois: boolean) => void;
@@ -105,6 +108,7 @@ interface SettingsState {
 	setShowOffTrackGuideLine: (show: boolean) => void;
 	setShowHeadingCone: (show: boolean) => void;
 	setShowNodeNetworkOverlays: (show: boolean) => void;
+	setNavigationEnabled: (enabled: boolean) => void;
 	setRoutingDefaultsForActivity: (activity: RedesignActivity, prefs: Partial<RoutingPreferences>) => void;
 	replaceAllSettings: (settings: RedesignSettingsSnapshot) => void;
 }
@@ -151,6 +155,7 @@ const DEFAULT_LOCATION_PERMISSION: LocationPermission = "unknown";
 const DEFAULT_SHOW_OFFTRACK_GUIDE_LINE = true;
 const DEFAULT_SHOW_HEADING_CONE = true;
 const DEFAULT_SHOW_NODE_NETWORK_OVERLAYS = false;
+const DEFAULT_NAVIGATION_ENABLED = false;
 
 function isActivity(value: unknown): value is RedesignActivity {
 	return value === "run" || value === "cycle" || value === "walk";
@@ -266,6 +271,7 @@ export const useRedesignSettingsStore = create<SettingsState>()(
 			showOffTrackGuideLine: DEFAULT_SHOW_OFFTRACK_GUIDE_LINE,
 			showHeadingCone: DEFAULT_SHOW_HEADING_CONE,
 			showNodeNetworkOverlays: DEFAULT_SHOW_NODE_NETWORK_OVERLAYS,
+			navigationEnabled: DEFAULT_NAVIGATION_ENABLED,
 
 			setUnits: (units) => set({ units }),
 			setShowPois: (showPois) => set({ showPois }),
@@ -295,6 +301,7 @@ export const useRedesignSettingsStore = create<SettingsState>()(
 			setShowOffTrackGuideLine: (showOffTrackGuideLine) => set({ showOffTrackGuideLine }),
 			setShowHeadingCone: (showHeadingCone) => set({ showHeadingCone }),
 			setShowNodeNetworkOverlays: (showNodeNetworkOverlays) => set({ showNodeNetworkOverlays }),
+			setNavigationEnabled: (navigationEnabled) => set({ navigationEnabled }),
 			setRoutingDefaultsForActivity: (activity, prefs) =>
 				set((state) => ({
 					routingDefaults: mergeRoutingDefaults(state.routingDefaults, {
@@ -306,7 +313,7 @@ export const useRedesignSettingsStore = create<SettingsState>()(
 		}),
 		{
 			name: "routess.redesign.settings",
-			version: 8,
+			version: 9,
 			migrate: (persisted, version) => {
 				const state = persisted as
 					| (Partial<RedesignSettingsSnapshot> & {
@@ -314,6 +321,7 @@ export const useRedesignSettingsStore = create<SettingsState>()(
 							showOffTrackGuideLine?: boolean;
 							showHeadingCone?: boolean;
 							showNodeNetworkOverlays?: boolean;
+							navigationEnabled?: boolean;
 					  })
 					| null;
 				if (state && version < 4) {
@@ -340,12 +348,15 @@ export const useRedesignSettingsStore = create<SettingsState>()(
 					typeof state?.showNodeNetworkOverlays === "boolean"
 						? state.showNodeNetworkOverlays
 						: DEFAULT_SHOW_NODE_NETWORK_OVERLAYS;
+				const navigationEnabled =
+					typeof state?.navigationEnabled === "boolean" ? state.navigationEnabled : DEFAULT_NAVIGATION_ENABLED;
 				return {
 					...normalizeRedesignSettings(state),
 					locationPermission,
 					showOffTrackGuideLine,
 					showHeadingCone,
 					showNodeNetworkOverlays,
+					navigationEnabled,
 				};
 			},
 		},

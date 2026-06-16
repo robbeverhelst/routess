@@ -1,6 +1,7 @@
 export * from "./errors";
 export * from "./generation";
 export * from "./history";
+export * from "./navigation";
 export * from "./preferences/user-preferences";
 export * from "./routing";
 export * from "./seeding";
