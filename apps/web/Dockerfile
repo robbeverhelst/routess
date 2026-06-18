@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.24
+# syntax=docker/dockerfile:1.25
 ARG DEPS_IMAGE
 FROM ${DEPS_IMAGE} AS deps
 
