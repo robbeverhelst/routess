@@ -28,7 +28,15 @@ function AdminSystemPage() {
 
 	const health = healthQ.data;
 	const config = configQ.data;
-	const grafanaEntries = Object.entries(config.grafanaUrls).filter(([, url]) => Boolean(url));
+	const dashboardLinks: Array<{ key: string; label: string; url: string }> = [
+		...Object.entries(config.grafanaUrls)
+			.filter(([, url]) => Boolean(url))
+			.map(([key, url]) => ({ key: `grafana:${key}`, label: prettify(key), url })),
+		...(config.umamiUrl ? [{ key: "umami", label: "Umami (product analytics)", url: config.umamiUrl }] : []),
+		...(config.glitchtipUrl
+			? [{ key: "glitchtip", label: "GlitchTip (error reports)", url: config.glitchtipUrl }]
+			: []),
+	];
 
 	return (
 		<div>
@@ -102,7 +110,7 @@ function AdminSystemPage() {
 			<section style={{ marginTop: 22 }}>
 				<SecTitle style={{ marginBottom: 10 }}>Dashboards</SecTitle>
 				<Card>
-					{grafanaEntries.length === 0 ? (
+					{dashboardLinks.length === 0 ? (
 						<div style={{ fontSize: 13, color: RDS_COLORS.fgMuted, lineHeight: 1.55 }}>
 							Set{" "}
 							<code
@@ -114,8 +122,16 @@ function AdminSystemPage() {
 								}}
 							>
 								monitoring.grafanaUrls.*
+							</code>
+							,{" "}
+							<code style={{ background: RDS_COLORS.bgInput, padding: "1px 6px", borderRadius: 4, fontSize: 12 }}>
+								UMAMI_DASHBOARD_URL
+							</code>
+							, or{" "}
+							<code style={{ background: RDS_COLORS.bgInput, padding: "1px 6px", borderRadius: 4, fontSize: 12 }}>
+								GLITCHTIP_URL
 							</code>{" "}
-							in your Helm values to surface Grafana dashboards here.
+							in your Helm values to surface dashboards here.
 						</div>
 					) : (
 						<ul
@@ -128,7 +144,7 @@ function AdminSystemPage() {
 								gap: 8,
 							}}
 						>
-							{grafanaEntries.map(([key, url]) => (
+							{dashboardLinks.map(({ key, label, url }) => (
 								<li key={key}>
 									<a
 										href={url}
@@ -150,7 +166,7 @@ function AdminSystemPage() {
 										}}
 									>
 										<I.trend size={14} />
-										{prettify(key)}
+										{label}
 										<I.chevronR size={12} />
 									</a>
 								</li>
@@ -162,48 +178,34 @@ function AdminSystemPage() {
 
 			<section style={{ marginTop: 22 }}>
 				<SecTitle style={{ marginBottom: 10 }}>Errors</SecTitle>
-				<div
-					role="note"
-					style={{
-						display: "flex",
-						alignItems: "flex-start",
-						gap: 10,
-						padding: "12px 14px",
-						background: `color-mix(in oklch, ${RDS_COLORS.warn} 14%, transparent)`,
-						color: RDS_COLORS.warn,
-						border: `1px solid color-mix(in oklch, ${RDS_COLORS.warn} 35%, transparent)`,
-						borderRadius: 10,
-						fontSize: 12.5,
-						lineHeight: 1.5,
-					}}
-				>
-					<span
-						aria-hidden="true"
-						style={{
-							display: "inline-flex",
-							alignItems: "center",
-							justifyContent: "center",
-							width: 18,
-							height: 18,
-							borderRadius: 999,
-							background: "currentColor",
-							color: RDS_COLORS.bgPanel,
-							fontSize: 11,
-							fontWeight: 700,
-							flexShrink: 0,
-							marginTop: 1,
-						}}
-					>
-						!
-					</span>
-					<div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-						<div style={{ fontWeight: 600 }}>Error reporting not yet configured</div>
-						<div style={{ color: RDS_COLORS.fgMuted, fontWeight: 400 }}>
-							Tracked as a follow-up issue. For now, errors live in the API logs (Pino) and the app console (frontend
-							Logger).
+				<Card>
+					{config.glitchtipUrl ? (
+						<div style={{ fontSize: 13, color: RDS_COLORS.fgMuted, lineHeight: 1.55 }}>
+							Browser errors are reported to GlitchTip via the same-origin tunnel (ADR 0019, 0021).{" "}
+							<a
+								href={config.glitchtipUrl}
+								target="_blank"
+								rel="noreferrer"
+								style={{ color: RDS_COLORS.accent, textDecoration: "none" }}
+							>
+								Open the GlitchTip project
+							</a>{" "}
+							to triage. API-side errors live in the container logs (Pino).
 						</div>
-					</div>
-				</div>
+					) : (
+						<div style={{ fontSize: 13, color: RDS_COLORS.fgMuted, lineHeight: 1.55 }}>
+							Browser error reporting ships to GlitchTip when{" "}
+							<code style={{ background: RDS_COLORS.bgInput, padding: "1px 6px", borderRadius: 4, fontSize: 12 }}>
+								VITE_SENTRY_DSN
+							</code>{" "}
+							is set (ADR 0019, 0021). Set{" "}
+							<code style={{ background: RDS_COLORS.bgInput, padding: "1px 6px", borderRadius: 4, fontSize: 12 }}>
+								GLITCHTIP_URL
+							</code>{" "}
+							to link the project here. API-side errors live in the container logs (Pino).
+						</div>
+					)}
+				</Card>
 			</section>
 		</div>
 	);

@@ -16,6 +16,9 @@ function AdminRoutesPage() {
 	const [routesPage, setRoutesPage] = useState(1);
 	const [searchInput, setSearchInput] = useState("");
 	const [search, setSearch] = useState("");
+	const [visibility, setVisibility] = useState<string[]>([]);
+	const [problemsOnly, setProblemsOnly] = useState(false);
+	const [deletedOnly, setDeletedOnly] = useState(false);
 	const pageSize = 20;
 
 	const statsQ = useQuery({
@@ -24,10 +27,37 @@ function AdminRoutesPage() {
 		staleTime: 30_000,
 	});
 	const listQ = useQuery({
-		queryKey: ["admin", "routes", { page: routesPage, pageSize, search }],
-		queryFn: () => apiService.adminListRoutes({ page: routesPage, pageSize, search: search || undefined }),
+		queryKey: ["admin", "routes", { page: routesPage, pageSize, search, visibility, problemsOnly, deletedOnly }],
+		queryFn: () =>
+			apiService.adminListRoutes({
+				page: routesPage,
+				pageSize,
+				search: search || undefined,
+				visibility: visibility.length ? visibility : undefined,
+				problemsOnly: problemsOnly || undefined,
+				deletedOnly: deletedOnly || undefined,
+			}),
 		staleTime: 30_000,
 	});
+
+	const setVisibilityFilter = (value: string[]) => {
+		setVisibility(value);
+		setProblemsOnly(false);
+		setDeletedOnly(false);
+		setRoutesPage(1);
+	};
+	const toggleProblems = () => {
+		setProblemsOnly((p) => !p);
+		setDeletedOnly(false);
+		setVisibility([]);
+		setRoutesPage(1);
+	};
+	const toggleDeleted = () => {
+		setDeletedOnly((d) => !d);
+		setProblemsOnly(false);
+		setVisibility([]);
+		setRoutesPage(1);
+	};
 
 	if (statsQ.isLoading) return <PageSkeleton title="Routes" />;
 	if (statsQ.error || !statsQ.data) return <PageError title="Routes" error={statsQ.error} />;
@@ -129,9 +159,39 @@ function AdminRoutesPage() {
 						justifyContent: "space-between",
 						gap: 12,
 						marginBottom: 10,
+						flexWrap: "wrap",
 					}}
 				>
 					<SecTitle>All routes {list ? `(${list.total})` : ""}</SecTitle>
+					<div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+						<FilterChip
+							active={visibility.length === 0 && !problemsOnly && !deletedOnly}
+							onClick={() => setVisibilityFilter([])}
+						>
+							All
+						</FilterChip>
+						<FilterChip active={visibility.length === 2} onClick={() => setVisibilityFilter(["public", "unlisted"])}>
+							Exposed
+						</FilterChip>
+						<FilterChip
+							active={visibility.length === 1 && visibility[0] === "public"}
+							onClick={() => setVisibilityFilter(["public"])}
+						>
+							Public
+						</FilterChip>
+						<FilterChip
+							active={visibility.length === 1 && visibility[0] === "unlisted"}
+							onClick={() => setVisibilityFilter(["unlisted"])}
+						>
+							Unlisted
+						</FilterChip>
+						<FilterChip active={problemsOnly} danger onClick={toggleProblems}>
+							Problems
+						</FilterChip>
+						<FilterChip active={deletedOnly} danger onClick={toggleDeleted}>
+							Deleted
+						</FilterChip>
+					</div>
 					<form
 						onSubmit={(e) => {
 							e.preventDefault();
@@ -194,7 +254,7 @@ function AdminRoutesPage() {
 							<tr style={{ background: RDS_COLORS.bgPanelElev }}>
 								<Th>Name</Th>
 								<Th>Activity</Th>
-								<Th>Privacy</Th>
+								<Th>Visibility</Th>
 								<Th align="right">Distance</Th>
 								<Th>Owner</Th>
 								<Th>Created</Th>
@@ -357,6 +417,38 @@ function AdminRoutesPage() {
 				</Card>
 			</section>
 		</div>
+	);
+}
+
+function FilterChip({
+	children,
+	active,
+	danger,
+	onClick,
+}: {
+	children: React.ReactNode;
+	active: boolean;
+	danger?: boolean;
+	onClick: () => void;
+}) {
+	const accent = danger ? RDS_COLORS.danger : RDS_COLORS.accent;
+	return (
+		<button
+			type="button"
+			onClick={onClick}
+			style={{
+				height: 28,
+				padding: "0 10px",
+				fontSize: 12,
+				cursor: "pointer",
+				borderRadius: 999,
+				border: `1px solid ${active ? accent : RDS_COLORS.border}`,
+				background: active ? `color-mix(in oklch, ${accent} 16%, transparent)` : "transparent",
+				color: active ? accent : RDS_COLORS.fgMuted,
+			}}
+		>
+			{children}
+		</button>
 	);
 }
 

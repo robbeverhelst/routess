@@ -24,6 +24,9 @@ export class AdminUserListItemDto {
 
 	@ApiPropertyOptional({ nullable: true, example: "2026-05-08T08:59:00.000Z" })
 	lastActiveAt!: string | null;
+
+	@ApiPropertyOptional({ nullable: true, description: "When soft-deleted, if applicable" })
+	deletedAt!: string | null;
 }
 
 export class AdminUserListDto {

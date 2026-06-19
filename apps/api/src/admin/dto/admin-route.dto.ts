@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import type { RoutingPreferences, SurfaceComposition, Waypoint } from "@routess/core";
 
 export class AdminRouteOwnerDto {
 	@ApiProperty({ example: 42 })
@@ -38,6 +39,9 @@ export class AdminRouteListItemDto {
 
 	@ApiProperty({ example: "2026-05-08T08:59:00.000Z" })
 	createdAt!: string;
+
+	@ApiPropertyOptional({ nullable: true, description: "When soft-deleted, if applicable" })
+	deletedAt!: string | null;
 }
 
 export class AdminRouteListDto {
@@ -67,6 +71,57 @@ export class AdminRouteDetailDto extends AdminRouteListItemDto {
 	@ApiProperty({ example: true, description: "Whether the route has a computed RoutePath geometry" })
 	hasGeometry!: boolean;
 
+	@ApiProperty({ description: "Ordered Waypoints (coord, type, optional name/timestamp)" })
+	waypoints!: Waypoint[];
+
+	@ApiPropertyOptional({
+		nullable: true,
+		description: "Computed RoutePath coordinate pairs for map rendering; null for routes with no geometry",
+	})
+	geometry!: [number, number][] | null;
+
+	@ApiPropertyOptional({
+		nullable: true,
+		description: "RoutePath bounding box as [minLng, minLat, maxLng, maxLat]; null when no geometry",
+	})
+	bbox!: [number, number, number, number] | null;
+
+	@ApiProperty({ example: "valhalla", description: "How the route was made (Provenance)" })
+	provenance!: string;
+
+	@ApiProperty({ example: false })
+	favourite!: boolean;
+
+	@ApiPropertyOptional({
+		nullable: true,
+		description: "RoutingPreferences that produced the geometry; null for legacy/GPX routes",
+	})
+	routingPreferences!: RoutingPreferences | null;
+
+	@ApiPropertyOptional({ nullable: true, description: "SurfaceBucket composition along the RoutePath" })
+	surfaceComposition!: SurfaceComposition | null;
+
+	@ApiProperty({ description: "Share token backing unlisted/public links" })
+	shareToken!: string;
+
+	@ApiPropertyOptional({ nullable: true })
+	placeCity!: string | null;
+
+	@ApiPropertyOptional({ nullable: true })
+	placeRegion!: string | null;
+
+	@ApiPropertyOptional({ nullable: true })
+	placeCountryCode!: string | null;
+
+	@ApiPropertyOptional({ nullable: true, description: "First public transition timestamp" })
+	publishedAt!: string | null;
+
+	@ApiPropertyOptional({ nullable: true, description: "Source route id when copied from a shared route" })
+	copiedFromRouteId!: number | null;
+
+	@ApiPropertyOptional({ nullable: true, description: "Source user id when copied from a shared route" })
+	copiedFromUserId!: number | null;
+
 	@ApiPropertyOptional({ nullable: true })
 	startAddress!: string | null;
 
@@ -75,7 +130,4 @@ export class AdminRouteDetailDto extends AdminRouteListItemDto {
 
 	@ApiProperty({ example: "2026-05-08T08:59:00.000Z" })
 	updatedAt!: string;
-
-	@ApiPropertyOptional({ nullable: true, description: "When the route was soft-deleted, if applicable" })
-	deletedAt!: string | null;
 }

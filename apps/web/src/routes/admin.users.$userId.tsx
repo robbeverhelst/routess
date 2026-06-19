@@ -35,8 +35,18 @@ function AdminUserDetailPage() {
 		},
 	});
 
+	const restore = useMutation({
+		mutationFn: () => apiService.adminRestoreUser(id),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+			queryClient.invalidateQueries({ queryKey: ["admin", "users", id] });
+		},
+	});
+
 	if (isLoading) return <PageSkeleton title="User" />;
 	if (error || !data) return <PageError title="User" error={error} />;
+
+	const isDeleted = data.deletedAt !== null;
 
 	return (
 		<div>
@@ -66,27 +76,42 @@ function AdminUserDetailPage() {
 				title={data.name}
 				subtitle={data.email}
 				right={
-					<Btn
-						variant="danger"
-						onClick={() => {
-							if (
-								confirm(
-									`Soft-delete ${data.email}? Their routes and sessions will be hidden. They can recover by logging in again.`,
-								)
-							) {
-								softDelete.mutate();
-							}
-						}}
-						disabled={softDelete.isPending}
-						style={{
-							background: "transparent",
-							color: RDS_COLORS.danger,
-							border: `1px solid color-mix(in oklch, ${RDS_COLORS.danger} 40%, ${RDS_COLORS.border})`,
-						}}
-					>
-						<I.trash size={14} />
-						{softDelete.isPending ? "Deleting…" : "Soft-delete"}
-					</Btn>
+					isDeleted ? (
+						<Btn
+							onClick={() => restore.mutate()}
+							disabled={restore.isPending}
+							style={{
+								background: "transparent",
+								color: RDS_COLORS.accent,
+								border: `1px solid color-mix(in oklch, ${RDS_COLORS.accent} 40%, ${RDS_COLORS.border})`,
+							}}
+						>
+							<I.refresh size={14} />
+							{restore.isPending ? "Restoring…" : "Restore"}
+						</Btn>
+					) : (
+						<Btn
+							variant="danger"
+							onClick={() => {
+								if (
+									confirm(
+										`Soft-delete ${data.email}? Their routes and sessions will be hidden. They can recover by logging in again.`,
+									)
+								) {
+									softDelete.mutate();
+								}
+							}}
+							disabled={softDelete.isPending}
+							style={{
+								background: "transparent",
+								color: RDS_COLORS.danger,
+								border: `1px solid color-mix(in oklch, ${RDS_COLORS.danger} 40%, ${RDS_COLORS.border})`,
+							}}
+						>
+							<I.trash size={14} />
+							{softDelete.isPending ? "Deleting…" : "Soft-delete"}
+						</Btn>
+					)
 				}
 			/>
 
@@ -95,6 +120,11 @@ function AdminUserDetailPage() {
 				<Badge variant={data.isEmailVerified ? "success" : "warn"}>
 					{data.isEmailVerified ? "verified" : "unverified"}
 				</Badge>
+				{isDeleted && (
+					<Badge variant="warn" dot>
+						soft-deleted
+					</Badge>
+				)}
 			</div>
 
 			<div

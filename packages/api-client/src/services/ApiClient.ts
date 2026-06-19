@@ -1,9 +1,11 @@
 import type {
 	AdminConfigSummary,
+	AdminEngagement,
 	AdminOverview,
 	AdminRouteDetail,
 	AdminRouteList,
 	AdminRouteStats,
+	AdminSeedRefreshResult,
 	AdminSeedSources,
 	AdminSystemHealth,
 	AdminUserDetail,
@@ -452,11 +454,14 @@ export class ApiClient {
 		return this.request<AdminSeedSources>("/admin/stats/seed-sources");
 	}
 
-	async adminListUsers(params: { page?: number; pageSize?: number; search?: string } = {}): Promise<AdminUserList> {
+	async adminListUsers(
+		params: { page?: number; pageSize?: number; search?: string; deletedOnly?: boolean } = {},
+	): Promise<AdminUserList> {
 		const query = new URLSearchParams();
 		if (params.page) query.set("page", params.page.toString());
 		if (params.pageSize) query.set("pageSize", params.pageSize.toString());
 		if (params.search) query.set("search", params.search);
+		if (params.deletedOnly) query.set("deleted", "true");
 		const qs = query.toString();
 		return this.request<AdminUserList>(`/admin/users${qs ? `?${qs}` : ""}`);
 	}
@@ -475,14 +480,29 @@ export class ApiClient {
 		await this.request<void>(`/admin/users/${userId}`, { method: "DELETE" });
 	}
 
+	async adminRestoreUser(userId: number): Promise<void> {
+		await this.request<void>(`/admin/users/${userId}/restore`, { method: "POST" });
+	}
+
 	async adminListRoutes(
-		params: { page?: number; pageSize?: number; search?: string; userId?: number } = {},
+		params: {
+			page?: number;
+			pageSize?: number;
+			search?: string;
+			userId?: number;
+			visibility?: string[];
+			problemsOnly?: boolean;
+			deletedOnly?: boolean;
+		} = {},
 	): Promise<AdminRouteList> {
 		const query = new URLSearchParams();
 		if (params.page) query.set("page", params.page.toString());
 		if (params.pageSize) query.set("pageSize", params.pageSize.toString());
 		if (params.search) query.set("search", params.search);
 		if (params.userId !== undefined) query.set("userId", params.userId.toString());
+		if (params.visibility?.length) query.set("visibility", params.visibility.join(","));
+		if (params.problemsOnly) query.set("problems", "true");
+		if (params.deletedOnly) query.set("deleted", "true");
 		const qs = query.toString();
 		return this.request<AdminRouteList>(`/admin/routes${qs ? `?${qs}` : ""}`);
 	}
@@ -493,6 +513,20 @@ export class ApiClient {
 
 	async adminSoftDeleteRoute(routeId: number): Promise<void> {
 		await this.request<void>(`/admin/routes/${routeId}`, { method: "DELETE" });
+	}
+
+	async adminRestoreRoute(routeId: number): Promise<void> {
+		await this.request<void>(`/admin/routes/${routeId}/restore`, { method: "POST" });
+	}
+
+	async adminGetEngagement(): Promise<AdminEngagement> {
+		return this.request<AdminEngagement>("/admin/stats/engagement");
+	}
+
+	async adminRefreshSeedSource(key: string): Promise<AdminSeedRefreshResult> {
+		return this.request<AdminSeedRefreshResult>(`/admin/seed-sources/${encodeURIComponent(key)}/refresh`, {
+			method: "POST",
+		});
 	}
 
 	async adminGetSystemHealth(): Promise<AdminSystemHealth> {

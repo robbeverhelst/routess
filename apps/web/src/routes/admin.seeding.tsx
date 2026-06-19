@@ -1,7 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import type React from "react";
-import { Badge, RDS_COLORS } from "@/components/primitives";
+import { I } from "@/components/icons";
+import { Badge, Btn, RDS_COLORS } from "@/components/primitives";
 import { apiService } from "@/lib/api";
 import { Card, PageError, PageHeader, PageSkeleton } from "./admin.index";
 import { formatDate } from "./admin.users.index";
@@ -13,10 +14,16 @@ export const Route = createFileRoute("/admin/seeding")({
 // Seeded route inventory per SeedSource (ADR 0035): counts, last sync, and
 // the projected next automatic sync. Manual sources show "manual".
 function AdminSeedingPage() {
+	const queryClient = useQueryClient();
 	const q = useQuery({
 		queryKey: ["admin", "stats", "seed-sources"],
 		queryFn: () => apiService.adminGetSeedSources(),
 		staleTime: 30_000,
+	});
+
+	const resync = useMutation({
+		mutationFn: (key: string) => apiService.adminRefreshSeedSource(key),
+		onSettled: () => queryClient.invalidateQueries({ queryKey: ["admin", "stats", "seed-sources"] }),
 	});
 
 	if (q.isLoading) return <PageSkeleton title="Seeding" />;
@@ -49,6 +56,7 @@ function AdminSeedingPage() {
 									<Th>Last sync</Th>
 									<Th>Last result</Th>
 									<Th>Next sync</Th>
+									<Th align="right">Actions</Th>
 								</tr>
 							</thead>
 							<tbody>
@@ -86,6 +94,19 @@ function AdminSeedingPage() {
 													? `${formatDate(source.nextRefreshAt)} (every ${source.refreshIntervalDays}d)`
 													: "on next run"
 												: "manual"}
+										</Td>
+										<Td align="right">
+											{source.automatic && (
+												<Btn
+													variant="default"
+													onClick={() => resync.mutate(source.key)}
+													disabled={resync.isPending && resync.variables === source.key}
+													style={{ height: 28, padding: "0 10px", fontSize: 12 }}
+												>
+													<I.refresh size={13} />
+													{resync.isPending && resync.variables === source.key ? "Syncing…" : "Re-sync"}
+												</Btn>
+											)}
 										</Td>
 									</tr>
 								))}

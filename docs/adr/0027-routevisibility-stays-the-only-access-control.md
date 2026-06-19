@@ -16,7 +16,12 @@ A consequence of the same principle: the **Feed is a derived view, not a stored 
 - Negative: no granular sharing — an `unlisted` share is visible to anyone who obtains the URL, and un-sharing is all-or-nothing per Route.
 - Follow-ups: if per-person sharing is ever demanded, it must arrive as a deliberate new concept with its own ADR, not as a widening of RouteShare.
 
+## Admin carve-out
+
+The **Admin** role (ADR 0015) operates outside RouteVisibility entirely. The admin API already reads any User's Route metadata regardless of visibility (name, owner, addresses, stats) for operational and moderation purposes. As of the admin route-inspection work, this carve-out explicitly extends to a Route's **RoutePath** geometry: an Admin can view the full map of any Route, including `private` ones, in the admin surface. This is an out-of-band operator capability gated by the admin role and audit-logged, not a widening of RouteVisibility for ordinary read paths. RouteVisibility remains the only access-control concept for every non-admin reader.
+
 ## References
 
 - ADR 0025 (public route page URL; the URL is the capability)
-- CONTEXT.md: RouteVisibility, Follow, RouteShare, Feed, PublishedAt
+- ADR 0015 (admin role reconciled from env var)
+- CONTEXT.md: RouteVisibility, Follow, RouteShare, Feed, PublishedAt, Admin

@@ -14,9 +14,16 @@ function AdminOverviewPage() {
 		queryFn: () => apiService.adminGetOverview(),
 		staleTime: 30_000,
 	});
+	const engagementQ = useQuery({
+		queryKey: ["admin", "engagement"],
+		queryFn: () => apiService.adminGetEngagement(),
+		staleTime: 60_000,
+	});
 
 	if (isLoading) return <PageSkeleton title="Overview" />;
 	if (error || !data) return <PageError title="Overview" error={error} />;
+
+	const engagement = engagementQ.data;
 
 	return (
 		<div>
@@ -47,7 +54,99 @@ function AdminOverviewPage() {
 				<TimeseriesCard title="Signups, last 30 days" series={data.signupsLast30Days} />
 				<TimeseriesCard title="Routes created, last 30 days" series={data.routesCreatedLast30Days} />
 			</div>
+
+			{engagement && (
+				<section style={{ marginTop: 28 }}>
+					<div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
+						<SecTitle>Engagement</SecTitle>
+						<span style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle }}>
+							Postgres-derived. Behavioural funnels live in Umami (System tab).
+						</span>
+					</div>
+
+					<div
+						style={{
+							display: "grid",
+							gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+							gap: 14,
+							marginTop: 12,
+						}}
+					>
+						<MetricCard
+							label="Made a route"
+							value={`${engagement.signupToFirstRoute.conversionPct}%`}
+							hint={`${engagement.signupToFirstRoute.usersWithRoute} of ${engagement.signupToFirstRoute.totalUsers} users`}
+						/>
+					</div>
+
+					<div
+						style={{
+							display: "grid",
+							gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))",
+							gap: 14,
+							marginTop: 14,
+						}}
+					>
+						<DistributionCard title="Routes by distance" buckets={engagement.distanceDistribution} />
+						<RegionsCard regions={engagement.topRegions} />
+					</div>
+				</section>
+			)}
 		</div>
+	);
+}
+
+function DistributionCard({ title, buckets }: { title: string; buckets: Array<{ label: string; count: number }> }) {
+	const max = Math.max(1, ...buckets.map((b) => b.count));
+	return (
+		<Card>
+			<div style={{ fontSize: 13, fontWeight: 500, color: RDS_COLORS.fg, marginBottom: 14 }}>{title}</div>
+			{buckets.length === 0 && <div style={{ fontSize: 13, color: RDS_COLORS.fgMuted }}>No routes yet.</div>}
+			{buckets.map((bucket) => (
+				<div key={bucket.label} style={{ marginBottom: 10 }}>
+					<div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, marginBottom: 4 }}>
+						<span style={{ color: RDS_COLORS.fg }}>{bucket.label}</span>
+						<span style={{ color: RDS_COLORS.fgMuted }}>{bucket.count}</span>
+					</div>
+					<div style={{ height: 6, background: RDS_COLORS.bgInput, borderRadius: 999, overflow: "hidden" }}>
+						<div
+							style={{
+								width: `${(bucket.count / max) * 100}%`,
+								height: "100%",
+								background: RDS_COLORS.accent,
+								borderRadius: 999,
+							}}
+						/>
+					</div>
+				</div>
+			))}
+		</Card>
+	);
+}
+
+function RegionsCard({
+	regions,
+}: {
+	regions: Array<{ city: string | null; region: string | null; countryCode: string | null; count: number }>;
+}) {
+	return (
+		<Card>
+			<div style={{ fontSize: 13, fontWeight: 500, color: RDS_COLORS.fg, marginBottom: 14 }}>Top regions</div>
+			{regions.length === 0 && (
+				<div style={{ fontSize: 13, color: RDS_COLORS.fgMuted }}>No place data derived yet.</div>
+			)}
+			{regions.map((r) => (
+				<div
+					key={`${r.city}-${r.region}-${r.countryCode}`}
+					style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, padding: "5px 0" }}
+				>
+					<span style={{ color: RDS_COLORS.fg }}>
+						{[r.city, r.region, r.countryCode].filter(Boolean).join(", ") || "(unknown)"}
+					</span>
+					<span style={{ color: RDS_COLORS.fgMuted }}>{r.count}</span>
+				</div>
+			))}
+		</Card>
 	);
 }
 

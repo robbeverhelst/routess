@@ -53,6 +53,16 @@ export interface RefreshRunResult {
 	error?: string;
 }
 
+// Default feed fetcher; injectable in refresh methods so tests run offline.
+// Some providers (Overpass) 406 requests without explicit headers.
+async function defaultSeedFetch(url: string): Promise<string> {
+	const res = await fetch(url, {
+		headers: { Accept: "application/json", "User-Agent": "routess-seeder/1.0 (+https://routess.com)" },
+	});
+	if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${url}`);
+	return res.text();
+}
+
 function contentHash(seed: SeedRoute): string {
 	const h = createHash("sha256");
 	h.update(
@@ -120,16 +130,7 @@ export class ExternalRoutesService {
 	// re-fetched, re-parsed, and upserted. Manual sources (no feedUrl) and
 	// not-yet-due sources are reported as skipped. `fetchText` is injectable
 	// so tests run without network.
-	async refreshDueSources(
-		fetchText: (url: string) => Promise<string> = async (url) => {
-			// Some providers (Overpass) 406 requests without explicit headers.
-			const res = await fetch(url, {
-				headers: { Accept: "application/json", "User-Agent": "routess-seeder/1.0 (+https://routess.com)" },
-			});
-			if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${url}`);
-			return res.text();
-		},
-	): Promise<RefreshRunResult[]> {
+	async refreshDueSources(fetchText: (url: string) => Promise<string> = defaultSeedFetch): Promise<RefreshRunResult[]> {
 		// Self-bootstrap: every green adapter in the registry gets its SeedSource
 		// row, so deploying a new adapter needs no manual registration step.
 		for (const adapter of SEED_ADAPTERS) {
@@ -138,57 +139,78 @@ export class ExternalRoutesService {
 		const sources = await this.seedSourceRepository.find({});
 		const results: RefreshRunResult[] = [];
 		for (const source of sources) {
-			if (source.status !== "green") {
-				results.push({ source: source.key, skipped: "blocked" });
-				continue;
-			}
-			const adapter = seedAdapterByKey(source.key);
-			// Multi-feed sources (per-route downloads) carry their URLs in the
-			// adapter metadata; single-feed sources use the row's feedUrl (which
-			// an operator may override).
-			const feeds = adapter?.meta.feedUrls?.length
-				? adapter.meta.feedUrls
-				: source.feedUrl
-					? [{ url: source.feedUrl, label: undefined as string | undefined }]
-					: [];
-			if (feeds.length === 0) {
-				results.push({ source: source.key, skipped: "manual" });
-				continue;
-			}
+			results.push(await this.refreshOneSource(source, fetchText, false));
+		}
+		return results;
+	}
+
+	// Admin "re-sync now": force-refresh a single source by key, bypassing the
+	// not-due check. Throws if the key is unknown.
+	async refreshSource(
+		key: string,
+		fetchText: (url: string) => Promise<string> = defaultSeedFetch,
+	): Promise<RefreshRunResult> {
+		const adapter = seedAdapterByKey(key);
+		if (adapter?.meta.status === "green") await this.ensureSource(adapter.meta);
+		const source = await this.seedSourceRepository.findOne({ key });
+		if (!source) throw new NotFoundException(`Seed source ${key} not found`);
+		return this.refreshOneSource(source, fetchText, true);
+	}
+
+	// Refresh a single source. `force` skips the not-due check (admin re-sync);
+	// the scheduled run passes false so only due sources are re-fetched.
+	private async refreshOneSource(
+		source: SeedSource,
+		fetchText: (url: string) => Promise<string>,
+		force: boolean,
+	): Promise<RefreshRunResult> {
+		if (source.status !== "green") {
+			return { source: source.key, skipped: "blocked" };
+		}
+		const adapter = seedAdapterByKey(source.key);
+		// Multi-feed sources (per-route downloads) carry their URLs in the
+		// adapter metadata; single-feed sources use the row's feedUrl (which
+		// an operator may override).
+		const feeds = adapter?.meta.feedUrls?.length
+			? adapter.meta.feedUrls
+			: source.feedUrl
+				? [{ url: source.feedUrl, label: undefined as string | undefined }]
+				: [];
+		if (feeds.length === 0) {
+			return { source: source.key, skipped: "manual" };
+		}
+		if (!force) {
 			const dueAt = source.lastRefreshedAt
 				? source.lastRefreshedAt.getTime() + source.refreshIntervalDays * 86_400_000
 				: 0;
 			if (Date.now() < dueAt) {
-				results.push({ source: source.key, skipped: "not-due" });
-				continue;
-			}
-			if (!adapter) {
-				results.push({ source: source.key, error: "no adapter registered" });
-				continue;
-			}
-			try {
-				// All feeds must succeed before upserting: the soft-delete sweep
-				// prunes anything absent from the input, so a partial download
-				// would wrongly remove the failed feed's routes.
-				const seeds: SeedRoute[] = [];
-				for (const feed of feeds) {
-					const payload = await fetchText(feed.url);
-					seeds.push(...adapter.parse(payload, { label: feed.label }));
-				}
-				const result = await this.upsertSeedRoutes(source.key, seeds);
-				source.lastRefreshError = undefined;
-				source.lastRefreshStats = result;
-				await this.em.flush();
-				results.push({ source: source.key, result });
-			} catch (error) {
-				// One broken source must not block the rest of the run; the error
-				// lands on the row so the admin panel shows it.
-				source.lastRefreshError = error instanceof Error ? error.message : String(error);
-				await this.em.flush();
-				results.push({ source: source.key, error: source.lastRefreshError });
+				return { source: source.key, skipped: "not-due" };
 			}
 		}
-		return results;
+		if (!adapter) {
+			return { source: source.key, error: "no adapter registered" };
+		}
+		try {
+			// All feeds must succeed before upserting: the soft-delete sweep
+			// prunes anything absent from the input, so a partial download
+			// would wrongly remove the failed feed's routes.
+			const seeds: SeedRoute[] = [];
+			for (const feed of feeds) {
+				const payload = await fetchText(feed.url);
+				seeds.push(...adapter.parse(payload, { label: feed.label }));
+			}
+			const result = await this.upsertSeedRoutes(source.key, seeds);
+			source.lastRefreshError = undefined;
+			source.lastRefreshStats = result;
+			await this.em.flush();
+			return { source: source.key, result };
+		} catch (error) {
+			// One broken source must not block the rest of the run; the error
+			// lands on the row so the admin panel shows it.
+			source.lastRefreshError = error instanceof Error ? error.message : String(error);
+			await this.em.flush();
+			return { source: source.key, error: source.lastRefreshError };
+		}
 	}
 
 	// Per-source inventory for the admin panel: live/removed counts, last sync,
