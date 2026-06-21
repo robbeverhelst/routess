@@ -10,6 +10,8 @@ import { User } from "../entities/user.entity";
 import { TtlCache } from "./admin-cache";
 import type { AdminRouteDetailDto, AdminRouteListDto, AdminRouteListItemDto } from "./dto/admin-route.dto";
 import type {
+	AdminConversionDto,
+	AdminEngagementDto,
 	AdminOverviewDto,
 	AdminRouteStatsDto,
 	AdminTimeseriesPointDto,
@@ -89,12 +91,17 @@ export class AdminService {
 		}) as Promise<AdminRouteStatsDto>;
 	}
 
-	async listUsers(params: { page: number; pageSize: number; search?: string }): Promise<AdminUserListDto> {
+	async listUsers(params: {
+		page: number;
+		pageSize: number;
+		search?: string;
+		deletedOnly?: boolean;
+	}): Promise<AdminUserListDto> {
 		const page = Math.max(1, params.page);
 		const pageSize = Math.min(100, Math.max(1, params.pageSize));
 		const search = params.search?.trim();
 
-		const whereClauses: string[] = [`u."deleted_at" is null`];
+		const whereClauses: string[] = [params.deletedOnly ? `u."deleted_at" is not null` : `u."deleted_at" is null`];
 		const args: Array<string | number> = [];
 		if (search) {
 			whereClauses.push(`(u."email" ilike ? or u."name" ilike ?)`);
@@ -110,7 +117,7 @@ export class AdminService {
 		const offset = (page - 1) * pageSize;
 		const rows = (await this.em.getConnection().execute(
 			`select u."id", u."email", u."name", u."role", u."is_email_verified" as "isEmailVerified",
-			        u."created_at" as "createdAt",
+			        u."created_at" as "createdAt", u."deleted_at" as "deletedAt",
 			        (select max(s."last_activity") from "session" s where s."user_id" = u."id") as "lastActiveAt",
 			        (select count(*)::int from "route" r where r."user_id" = u."id" and r."deleted_at" is null) as "routeCount"
 			 from "user" u
@@ -125,6 +132,7 @@ export class AdminService {
 			role: "user" | "admin";
 			isEmailVerified: boolean;
 			createdAt: Date | string;
+			deletedAt: Date | string | null;
 			lastActiveAt: Date | string | null;
 			routeCount: number | string;
 		}>;
@@ -138,6 +146,7 @@ export class AdminService {
 			routeCount: Number(row.routeCount ?? 0),
 			createdAt: new Date(row.createdAt).toISOString(),
 			lastActiveAt: row.lastActiveAt ? new Date(row.lastActiveAt).toISOString() : null,
+			deletedAt: row.deletedAt ? new Date(row.deletedAt).toISOString() : null,
 		}));
 
 		return { items, total, page, pageSize };
@@ -169,6 +178,7 @@ export class AdminService {
 			routeCount,
 			createdAt: user.createdAt.toISOString(),
 			lastActiveAt: lastActivity,
+			deletedAt: user.deletedAt ? user.deletedAt.toISOString() : null,
 			activeSessions: activeSessions.map((s) => ({
 				id: s.jti,
 				userAgent: s.userAgent ?? null,
@@ -198,12 +208,15 @@ export class AdminService {
 		pageSize: number;
 		search?: string;
 		userId?: number;
+		visibility?: string[];
+		problemsOnly?: boolean;
+		deletedOnly?: boolean;
 	}): Promise<AdminRouteListDto> {
 		const page = Math.max(1, params.page);
 		const pageSize = Math.min(100, Math.max(1, params.pageSize));
 		const search = params.search?.trim();
 
-		const whereClauses: string[] = [`r."deleted_at" is null`];
+		const whereClauses: string[] = [params.deletedOnly ? `r."deleted_at" is not null` : `r."deleted_at" is null`];
 		const args: Array<string | number> = [];
 		if (search) {
 			whereClauses.push(`r."name" ilike ?`);
@@ -212,6 +225,19 @@ export class AdminService {
 		if (params.userId !== undefined) {
 			whereClauses.push(`r."user_id" = ?`);
 			args.push(params.userId);
+		}
+		if (params.visibility?.length) {
+			const placeholders = params.visibility.map(() => "?").join(", ");
+			whereClauses.push(`r."visibility" in (${placeholders})`);
+			args.push(...params.visibility);
+		}
+		if (params.problemsOnly) {
+			// "Saved-while-broken": geometry never landed even though provenance
+			// implies a computed RoutePath should exist. ::text compare works for
+			// both json and jsonb columns and treats null + empty array alike.
+			whereClauses.push(
+				`(r."geometry" is null or r."geometry"::text = '[]') and r."provenance" in ('valhalla', 'generation')`,
+			);
 		}
 		const whereSql = whereClauses.join(" and ");
 
@@ -224,7 +250,7 @@ export class AdminService {
 		const rows = (await this.em.getConnection().execute(
 			`select r."id", r."name", r."activity", r."visibility",
 			        r."distance", r."duration", r."elevation_gain" as "elevationGain",
-			        r."created_at" as "createdAt",
+			        r."created_at" as "createdAt", r."deleted_at" as "deletedAt",
 			        u."id" as "ownerId", u."email" as "ownerEmail", u."name" as "ownerName"
 			 from "route" r
 			 join "user" u on u."id" = r."user_id"
@@ -241,6 +267,7 @@ export class AdminService {
 			duration: number | string | null;
 			elevationGain: number | string | null;
 			createdAt: Date | string;
+			deletedAt: Date | string | null;
 			ownerId: number;
 			ownerEmail: string;
 			ownerName: string;
@@ -256,6 +283,7 @@ export class AdminService {
 			elevationGain: row.elevationGain == null ? null : Number(row.elevationGain),
 			owner: { id: row.ownerId, email: row.ownerEmail, name: row.ownerName },
 			createdAt: new Date(row.createdAt).toISOString(),
+			deletedAt: row.deletedAt ? new Date(row.deletedAt).toISOString() : null,
 		}));
 
 		return { items, total, page, pageSize };
@@ -265,6 +293,11 @@ export class AdminService {
 		const route = await this.routes.findOne({ id }, { populate: ["user"], filters: { softDelete: false } });
 		if (!route) throw new NotFoundException(`Route ${id} not found`);
 		const owner = route.user;
+		const geometry = Array.isArray(route.geometry) && route.geometry.length > 0 ? route.geometry : null;
+		const bbox =
+			route.bboxMinLng != null && route.bboxMinLat != null && route.bboxMaxLng != null && route.bboxMaxLat != null
+				? ([route.bboxMinLng, route.bboxMinLat, route.bboxMaxLng, route.bboxMaxLat] as [number, number, number, number])
+				: null;
 		return {
 			id: route.id,
 			name: route.name,
@@ -278,12 +311,47 @@ export class AdminService {
 			description: route.description ?? null,
 			tags: route.tags ?? [],
 			waypointCount: Array.isArray(route.waypoints) ? route.waypoints.length : 0,
-			hasGeometry: Array.isArray(route.geometry) && route.geometry.length > 0,
+			hasGeometry: geometry !== null,
+			waypoints: Array.isArray(route.waypoints) ? route.waypoints : [],
+			geometry,
+			bbox,
+			provenance: route.provenance,
+			favourite: route.favourite,
+			routingPreferences: route.routingPreferences ?? null,
+			surfaceComposition: route.surfaceComposition ?? null,
+			shareToken: route.shareToken,
+			placeCity: route.placeCity ?? null,
+			placeRegion: route.placeRegion ?? null,
+			placeCountryCode: route.placeCountryCode ?? null,
+			publishedAt: route.publishedAt ? route.publishedAt.toISOString() : null,
+			copiedFromRouteId: route.copiedFromRouteId ?? null,
+			copiedFromUserId: route.copiedFromUserId ?? null,
 			startAddress: route.startAddress ?? null,
 			endAddress: route.endAddress ?? null,
 			updatedAt: route.updatedAt.toISOString(),
 			deletedAt: route.deletedAt ? route.deletedAt.toISOString() : null,
 		};
+	}
+
+	async restoreRoute(id: number): Promise<void> {
+		const route = await this.routes.findOne({ id }, { filters: { softDelete: false } });
+		if (!route) throw new NotFoundException(`Route ${id} not found`);
+		route.deletedAt = undefined;
+		await this.em.persist(route).flush();
+		this.statsCache.invalidate();
+	}
+
+	async restoreUser(userId: number): Promise<void> {
+		const user = await this.users.findOne({ id: userId }, { filters: { softDelete: false } });
+		if (!user) throw new NotFoundException(`User ${userId} not found`);
+		user.deletedAt = undefined;
+		if (user.deletionStatus === "pending_hard_delete") {
+			user.deletionStatus = "active";
+			user.deletionRequestedAt = undefined;
+		}
+		await this.em.getConnection().execute(`update "route" set "deleted_at" = null where "user_id" = ?`, [userId]);
+		await this.em.persist(user).flush();
+		this.statsCache.invalidate();
 	}
 
 	async softDeleteRoute(id: number): Promise<void> {
@@ -331,7 +399,79 @@ export class AdminService {
 			otlpExportConfigured: Boolean(this.config.telemetry.otlpEndpoint),
 			adminEmailsCount: this.config.auth.adminEmails.length,
 			grafanaUrls: this.config.monitoring.grafanaUrls,
+			umamiUrl: this.config.monitoring.umamiUrl ?? null,
+			glitchtipUrl: this.config.monitoring.glitchtipUrl ?? null,
 		};
+	}
+
+	async getEngagement(): Promise<AdminEngagementDto> {
+		return this.statsCache.get("engagement", async () => {
+			const [signupToFirstRoute, distanceDistribution, topRegions] = await Promise.all([
+				this.signupToFirstRoute(),
+				this.distanceDistribution(),
+				this.topRegions(10),
+			]);
+			return { signupToFirstRoute, distanceDistribution, topRegions };
+		}) as Promise<AdminEngagementDto>;
+	}
+
+	private async signupToFirstRoute(): Promise<AdminConversionDto> {
+		const [totalUsers, withRouteRows] = await Promise.all([
+			this.users.count({}),
+			this.em
+				.getConnection()
+				.execute(`select count(distinct "user_id")::int as count from "route" where "deleted_at" is null`) as Promise<
+				RawCount[]
+			>,
+		]);
+		const usersWithRoute = Number(withRouteRows[0]?.count ?? 0);
+		const conversionPct = totalUsers > 0 ? Math.round((usersWithRoute / totalUsers) * 1000) / 10 : 0;
+		return { totalUsers, usersWithRoute, conversionPct };
+	}
+
+	private async distanceDistribution(): Promise<Array<{ label: string; count: number }>> {
+		const rows = (await this.em.getConnection().execute(
+			`select case
+				when "distance" is null then 'unknown'
+				when "distance" < 5000 then '<5km'
+				when "distance" < 15000 then '5-15km'
+				when "distance" < 30000 then '15-30km'
+				when "distance" < 60000 then '30-60km'
+				when "distance" < 100000 then '60-100km'
+				else '100km+'
+			end as bucket, count(*)::int as count
+			from "route"
+			where "deleted_at" is null
+			group by bucket`,
+		)) as Array<{ bucket: string; count: number | string }>;
+		const order = ["<5km", "5-15km", "15-30km", "30-60km", "60-100km", "100km+", "unknown"];
+		const byLabel = new Map(rows.map((r) => [r.bucket, Number(r.count)]));
+		return order.filter((label) => byLabel.has(label)).map((label) => ({ label, count: byLabel.get(label) ?? 0 }));
+	}
+
+	private async topRegions(limit: number): Promise<
+		Array<{
+			city: string | null;
+			region: string | null;
+			countryCode: string | null;
+			count: number;
+		}>
+	> {
+		const rows = (await this.em.getConnection().execute(
+			`select "place_city" as city, "place_region" as region, "place_country_code" as country, count(*)::int as count
+			 from "route"
+			 where "deleted_at" is null and "place_city" is not null
+			 group by "place_city", "place_region", "place_country_code"
+			 order by count desc
+			 limit ?`,
+			[limit],
+		)) as Array<{ city: string | null; region: string | null; country: string | null; count: number | string }>;
+		return rows.map((r) => ({
+			city: r.city ?? null,
+			region: r.region ?? null,
+			countryCode: r.country ?? null,
+			count: Number(r.count),
+		}));
 	}
 
 	private async countSignupsToday(): Promise<number> {

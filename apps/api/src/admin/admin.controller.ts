@@ -6,6 +6,7 @@ import {
 	HttpStatus,
 	Param,
 	ParseIntPipe,
+	Post,
 	Query,
 	UseGuards,
 	UseInterceptors,
@@ -18,10 +19,12 @@ import { ExternalRoutesService } from "../external-routes/external-routes.servic
 import { AdminService } from "./admin.service";
 import { AuditInterceptor } from "./audit.interceptor";
 import { AdminRouteDetailDto, AdminRouteListDto } from "./dto/admin-route.dto";
-import { AdminSeedSourcesDto } from "./dto/admin-seeding.dto";
-import { AdminOverviewDto, AdminRouteStatsDto, AdminUserStatsDto } from "./dto/admin-stats.dto";
+import { AdminSeedRefreshResultDto, AdminSeedSourcesDto } from "./dto/admin-seeding.dto";
+import { AdminEngagementDto, AdminOverviewDto, AdminRouteStatsDto, AdminUserStatsDto } from "./dto/admin-stats.dto";
 import { AdminConfigSummaryDto, AdminSystemHealthDto } from "./dto/admin-system.dto";
 import { AdminUserDetailDto, AdminUserListDto } from "./dto/admin-user.dto";
+
+const ROUTE_VISIBILITIES = new Set(["private", "unlisted", "public"]);
 
 @ApiTags("admin")
 @ApiBearerAuth("JWT-auth")
@@ -64,6 +67,22 @@ export class AdminController {
 		return { items: await this.externalRoutes.sourceStats() };
 	}
 
+	@Post("seed-sources/:key/refresh")
+	@ApiOperation({
+		summary: "Force a re-sync of one SeedSource now",
+		description:
+			"Re-fetches, re-parses, and upserts a single source immediately, bypassing the not-due check the scheduled CronJob honours.",
+	})
+	async refreshSeedSource(@Param("key") key: string): Promise<AdminSeedRefreshResultDto> {
+		const r = await this.externalRoutes.refreshSource(key);
+		return {
+			source: r.source,
+			skipped: r.skipped ?? null,
+			result: r.result ?? null,
+			error: r.error ?? null,
+		};
+	}
+
 	@Get("stats/routes")
 	@ApiOperation({
 		summary: "Route counts by activity, top creators, recent trend",
@@ -77,20 +96,40 @@ export class AdminController {
 	@ApiOperation({
 		summary: "Paginated, searchable route list",
 		description:
-			"Lists routes across all users with `page`/`pageSize` pagination, free-text `search`, and an optional `userId` filter.",
+			"Lists routes across all users with `page`/`pageSize` pagination, free-text `search`, and optional `userId`, `visibility` (comma-separated), and `problems` (geometry-less routes that should have a RoutePath) filters.",
 	})
 	listRoutes(
 		@Query("page") page = "1",
 		@Query("pageSize") pageSize = "20",
 		@Query("search") search?: string,
 		@Query("userId") userId?: string,
+		@Query("visibility") visibility?: string,
+		@Query("problems") problems?: string,
+		@Query("deleted") deleted?: string,
 	): Promise<AdminRouteListDto> {
+		const visibilities = visibility
+			?.split(",")
+			.map((v) => v.trim())
+			.filter((v) => ROUTE_VISIBILITIES.has(v));
 		return this.admin.listRoutes({
 			page: Number.parseInt(page, 10) || 1,
 			pageSize: Number.parseInt(pageSize, 10) || 20,
 			search,
 			userId: userId ? Number.parseInt(userId, 10) : undefined,
+			visibility: visibilities?.length ? visibilities : undefined,
+			problemsOnly: problems === "true" || problems === "1",
+			deletedOnly: deleted === "true" || deleted === "1",
 		});
+	}
+
+	@Get("stats/engagement")
+	@ApiOperation({
+		summary: "Signup-to-route conversion, distance distribution, top regions",
+		description:
+			"Postgres-derived business analytics for the admin engagement view. Behavioural funnels/retention live in Umami (ADR 0014).",
+	})
+	getEngagement(): Promise<AdminEngagementDto> {
+		return this.admin.getEngagement();
 	}
 
 	@Get("routes/:id")
@@ -112,6 +151,16 @@ export class AdminController {
 		return this.admin.softDeleteRoute(id);
 	}
 
+	@Post("routes/:id/restore")
+	@HttpCode(HttpStatus.NO_CONTENT)
+	@ApiOperation({
+		summary: "Restore a soft-deleted route",
+		description: "Clears the route's deletedAt so the owner sees it again. Reverses a soft-delete.",
+	})
+	restoreRoute(@Param("id", ParseIntPipe) id: number): Promise<void> {
+		return this.admin.restoreRoute(id);
+	}
+
 	@Get("users")
 	@ApiOperation({
 		summary: "Paginated, searchable user list",
@@ -121,11 +170,13 @@ export class AdminController {
 		@Query("page") page = "1",
 		@Query("pageSize") pageSize = "20",
 		@Query("search") search?: string,
+		@Query("deleted") deleted?: string,
 	): Promise<AdminUserListDto> {
 		return this.admin.listUsers({
 			page: Number.parseInt(page, 10) || 1,
 			pageSize: Number.parseInt(pageSize, 10) || 20,
 			search,
+			deletedOnly: deleted === "true" || deleted === "1",
 		});
 	}
 
@@ -156,6 +207,17 @@ export class AdminController {
 	})
 	softDeleteUser(@Param("id", ParseIntPipe) id: number): Promise<void> {
 		return this.admin.softDeleteUser(id);
+	}
+
+	@Post("users/:id/restore")
+	@HttpCode(HttpStatus.NO_CONTENT)
+	@ApiOperation({
+		summary: "Restore a soft-deleted user and their routes",
+		description:
+			"Clears the user's deletedAt and un-soft-deletes their routes. Sessions are not restored; the user signs in again.",
+	})
+	restoreUser(@Param("id", ParseIntPipe) id: number): Promise<void> {
+		return this.admin.restoreUser(id);
 	}
 
 	@Get("system/health")

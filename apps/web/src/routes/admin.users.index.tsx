@@ -15,11 +15,13 @@ function AdminUsersPage() {
 	const [page, setPage] = useState(1);
 	const [search, setSearch] = useState("");
 	const [searchInput, setSearchInput] = useState("");
+	const [deletedOnly, setDeletedOnly] = useState(false);
 	const pageSize = 20;
 
 	const { data, isLoading, error } = useQuery({
-		queryKey: ["admin", "users", { page, pageSize, search }],
-		queryFn: () => apiService.adminListUsers({ page, pageSize, search: search || undefined }),
+		queryKey: ["admin", "users", { page, pageSize, search, deletedOnly }],
+		queryFn: () =>
+			apiService.adminListUsers({ page, pageSize, search: search || undefined, deletedOnly: deletedOnly || undefined }),
 		staleTime: 30_000,
 	});
 
@@ -35,61 +37,82 @@ function AdminUsersPage() {
 				title={`Users (${data.total})`}
 				subtitle="Search, drill in, and manage individual users."
 				right={
-					<form
-						onSubmit={(e) => {
-							e.preventDefault();
-							setSearch(searchInput);
-							setPage(1);
-						}}
-						style={{
-							display: "flex",
-							alignItems: "center",
-							gap: 8,
-							background: RDS_COLORS.bgInput,
-							border: `1px solid ${RDS_COLORS.border}`,
-							borderRadius: 8,
-							padding: "0 10px",
-							height: 36,
-							minWidth: 280,
-						}}
-					>
-						<I.search size={14} />
-						<input
-							type="text"
-							value={searchInput}
-							onChange={(e) => setSearchInput(e.target.value)}
-							placeholder="Search email or name…"
-							style={{
-								flex: 1,
-								border: 0,
-								outline: 0,
-								background: "transparent",
-								color: RDS_COLORS.fg,
-								fontSize: 13,
+					<div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+						<button
+							type="button"
+							onClick={() => {
+								setDeletedOnly((d) => !d);
+								setPage(1);
 							}}
-						/>
-						{searchInput && (
-							<button
-								type="button"
-								onClick={() => {
-									setSearchInput("");
-									setSearch("");
-									setPage(1);
-								}}
+							style={{
+								height: 36,
+								padding: "0 12px",
+								fontSize: 12.5,
+								cursor: "pointer",
+								borderRadius: 8,
+								border: `1px solid ${deletedOnly ? RDS_COLORS.danger : RDS_COLORS.border}`,
+								background: deletedOnly ? `color-mix(in oklch, ${RDS_COLORS.danger} 16%, transparent)` : "transparent",
+								color: deletedOnly ? RDS_COLORS.danger : RDS_COLORS.fgMuted,
+							}}
+						>
+							Deleted
+						</button>
+						<form
+							onSubmit={(e) => {
+								e.preventDefault();
+								setSearch(searchInput);
+								setPage(1);
+							}}
+							style={{
+								display: "flex",
+								alignItems: "center",
+								gap: 8,
+								background: RDS_COLORS.bgInput,
+								border: `1px solid ${RDS_COLORS.border}`,
+								borderRadius: 8,
+								padding: "0 10px",
+								height: 36,
+								minWidth: 280,
+							}}
+						>
+							<I.search size={14} />
+							<input
+								type="text"
+								value={searchInput}
+								onChange={(e) => setSearchInput(e.target.value)}
+								placeholder="Search email or name…"
 								style={{
+									flex: 1,
 									border: 0,
+									outline: 0,
 									background: "transparent",
-									color: RDS_COLORS.fgSubtle,
-									cursor: "pointer",
-									padding: 0,
-									display: "inline-flex",
+									color: RDS_COLORS.fg,
+									fontSize: 13,
 								}}
-								aria-label="Clear"
-							>
-								<I.close size={14} />
-							</button>
-						)}
-					</form>
+							/>
+							{searchInput && (
+								<button
+									type="button"
+									onClick={() => {
+										setSearchInput("");
+										setSearch("");
+										setPage(1);
+									}}
+									style={{
+										border: 0,
+										background: "transparent",
+										color: RDS_COLORS.fgSubtle,
+										cursor: "pointer",
+										padding: 0,
+										display: "inline-flex",
+									}}
+									aria-label="Clear"
+								>
+									<I.close size={14} />
+								</button>
+							)}
+						</form>
+					</div>
 				}
 			/>
 

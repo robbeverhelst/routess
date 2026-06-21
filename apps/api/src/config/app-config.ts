@@ -56,6 +56,8 @@ export interface AppConfig {
 	};
 	monitoring: {
 		grafanaUrls: Record<string, string>;
+		umamiUrl?: string;
+		glitchtipUrl?: string;
 	};
 	docs: {
 		enabled: boolean;
@@ -262,6 +264,8 @@ export function getAppConfig(): AppConfig {
 		},
 		monitoring: {
 			grafanaUrls: parseJsonObject(process.env.GRAFANA_URLS) ?? {},
+			umamiUrl: process.env.UMAMI_DASHBOARD_URL || undefined,
+			glitchtipUrl: process.env.GLITCHTIP_URL || undefined,
 		},
 		analytics: {
 			salt: analyticsSalt,

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { I } from "@/components/icons";
+import { AdminRouteMap } from "@/components/map/AdminRouteMap";
 import { Badge, Btn, RDS_COLORS, SecTitle } from "@/components/primitives";
 import { apiService } from "@/lib/api";
 import { Card, PageError, PageHeader, PageSkeleton } from "./admin.index";
@@ -30,6 +31,15 @@ function AdminRouteDetailPage() {
 			queryClient.invalidateQueries({ queryKey: ["admin", "routes"] });
 			queryClient.invalidateQueries({ queryKey: ["admin", "stats", "routes"] });
 			navigate({ to: "/admin/routes" });
+		},
+	});
+
+	const restore = useMutation({
+		mutationFn: () => apiService.adminRestoreRoute(id),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["admin", "routes"] });
+			queryClient.invalidateQueries({ queryKey: ["admin", "routes", id] });
+			queryClient.invalidateQueries({ queryKey: ["admin", "stats", "routes"] });
 		},
 	});
 
@@ -77,7 +87,20 @@ function AdminRouteDetailPage() {
 					</span>
 				}
 				right={
-					!isDeleted && (
+					isDeleted ? (
+						<Btn
+							onClick={() => restore.mutate()}
+							disabled={restore.isPending}
+							style={{
+								background: "transparent",
+								color: RDS_COLORS.accent,
+								border: `1px solid color-mix(in oklch, ${RDS_COLORS.accent} 40%, ${RDS_COLORS.border})`,
+							}}
+						>
+							<I.refresh size={14} />
+							{restore.isPending ? "Restoring…" : "Restore"}
+						</Btn>
+					) : (
 						<Btn
 							onClick={() => {
 								if (confirm(`Soft-delete route "${data.name}"? It will be hidden from the owner.`)) {
@@ -106,12 +129,18 @@ function AdminRouteDetailPage() {
 						#{tag}
 					</Badge>
 				))}
+				{data.favourite && <Badge variant="default">favourite</Badge>}
 				{isDeleted && (
 					<Badge variant="warn" dot>
 						soft-deleted
 					</Badge>
 				)}
 			</div>
+
+			<section style={{ marginTop: 22 }}>
+				<SecTitle style={{ marginBottom: 10 }}>RoutePath</SecTitle>
+				<AdminRouteMap geometry={data.geometry} waypoints={data.waypoints} bbox={data.bbox} />
+			</section>
 
 			<div
 				style={{
@@ -158,6 +187,7 @@ function AdminRouteDetailPage() {
 					>
 						<KV label="Start" value={data.startAddress ?? "—"} />
 						<KV label="End" value={data.endAddress ?? "—"} />
+						<KV label="Place" value={formatPlace(data.placeCity, data.placeRegion, data.placeCountryCode)} />
 						<KV
 							label="RoutePath"
 							value={
@@ -166,6 +196,73 @@ function AdminRouteDetailPage() {
 								</Badge>
 							}
 						/>
+					</div>
+				</Card>
+			</section>
+
+			<section style={{ marginTop: 28 }}>
+				<SecTitle style={{ marginBottom: 10 }}>Routing &amp; surface</SecTitle>
+				<Card>
+					<div
+						style={{
+							display: "grid",
+							gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+							gap: 16,
+						}}
+					>
+						<KV label="Provenance" value={<Badge variant="default">{data.provenance}</Badge>} />
+						<KV label="Surface preference" value={data.routingPreferences?.surfacePreference ?? "—"} />
+						<KV label="Avoid ferries" value={yesNo(data.routingPreferences?.avoidFerries)} />
+						<KV label="Avoid highways" value={yesNo(data.routingPreferences?.avoidHighways)} />
+					</div>
+					{data.surfaceComposition && (
+						<div style={{ marginTop: 16 }}>
+							<div style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle, marginBottom: 8 }}>Surface composition</div>
+							<div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+								{surfaceBreakdown(data.surfaceComposition).map((b) => (
+									<Badge key={b.bucket} variant="default">
+										{b.bucket} {b.pct}%
+									</Badge>
+								))}
+							</div>
+						</div>
+					)}
+				</Card>
+			</section>
+
+			<section style={{ marginTop: 28 }}>
+				<SecTitle style={{ marginBottom: 10 }}>Sharing &amp; lineage</SecTitle>
+				<Card>
+					<div
+						style={{
+							display: "grid",
+							gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+							gap: 16,
+						}}
+					>
+						<KV
+							label="Visibility"
+							value={<Badge variant={data.visibility === "public" ? "accent" : "default"}>{data.visibility}</Badge>}
+						/>
+						<KV label="Published at" value={data.publishedAt ? formatDate(data.publishedAt) : "—"} />
+						<KV
+							label="Share token"
+							value={<span style={{ fontFamily: "monospace", fontSize: 11.5 }}>{data.shareToken}</span>}
+						/>
+						{data.copiedFromRouteId != null && (
+							<KV
+								label="Copied from"
+								value={
+									<Link
+										to="/admin/routes/$routeId"
+										params={{ routeId: data.copiedFromRouteId.toString() }}
+										style={{ color: RDS_COLORS.accent, textDecoration: "none" }}
+									>
+										route #{data.copiedFromRouteId}
+									</Link>
+								}
+							/>
+						)}
 					</div>
 				</Card>
 			</section>
@@ -203,4 +300,26 @@ function KV({ label, value }: { label: string; value: ReactNode }) {
 			<div style={{ marginTop: 4, fontSize: 13, color: RDS_COLORS.fg }}>{value}</div>
 		</div>
 	);
+}
+
+function yesNo(value: boolean | undefined): string {
+	if (value === undefined) return "—";
+	return value ? "Yes" : "No";
+}
+
+function formatPlace(city: string | null, region: string | null, country: string | null): string {
+	const parts = [city, region, country].filter(Boolean);
+	return parts.length ? parts.join(", ") : "—";
+}
+
+function surfaceBreakdown(composition: {
+	meters: Record<string, number>;
+	total: number;
+}): Array<{ bucket: string; pct: number }> {
+	const total = composition.total || Object.values(composition.meters).reduce((a, b) => a + b, 0);
+	if (!total) return [];
+	return Object.entries(composition.meters)
+		.filter(([, meters]) => meters > 0)
+		.map(([bucket, meters]) => ({ bucket, pct: Math.round((meters / total) * 100) }))
+		.sort((a, b) => b.pct - a.pct);
 }

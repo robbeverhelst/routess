@@ -80,3 +80,47 @@ export class AdminRouteStatsDto {
 	@ApiProperty({ type: [AdminTopCreatorDto] })
 	topCreators!: AdminTopCreatorDto[];
 }
+
+export class AdminConversionDto {
+	@ApiProperty({ example: 1342, description: "Non-deleted users" })
+	totalUsers!: number;
+
+	@ApiProperty({ example: 612, description: "Users who own at least one route" })
+	usersWithRoute!: number;
+
+	@ApiProperty({ example: 45.6, description: "usersWithRoute / totalUsers, as a percentage" })
+	conversionPct!: number;
+}
+
+export class AdminDistributionBucketDto {
+	@ApiProperty({ example: "5-15km" })
+	label!: string;
+
+	@ApiProperty({ example: 1204 })
+	count!: number;
+}
+
+export class AdminRegionDto {
+	@ApiProperty({ example: "Gent", nullable: true })
+	city!: string | null;
+
+	@ApiProperty({ example: "Oost-Vlaanderen", nullable: true })
+	region!: string | null;
+
+	@ApiProperty({ example: "BE", nullable: true })
+	countryCode!: string | null;
+
+	@ApiProperty({ example: 87 })
+	count!: number;
+}
+
+export class AdminEngagementDto {
+	@ApiProperty({ type: AdminConversionDto })
+	signupToFirstRoute!: AdminConversionDto;
+
+	@ApiProperty({ type: [AdminDistributionBucketDto], description: "Route counts by distance band" })
+	distanceDistribution!: AdminDistributionBucketDto[];
+
+	@ApiProperty({ type: [AdminRegionDto], description: "Top regions by route count (from derived Place)" })
+	topRegions!: AdminRegionDto[];
+}

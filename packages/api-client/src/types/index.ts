@@ -137,6 +137,7 @@ export interface AdminUserListItem {
 	routeCount: number;
 	createdAt: string;
 	lastActiveAt: string | null;
+	deletedAt: string | null;
 }
 
 export interface AdminUserList {
@@ -177,12 +178,13 @@ export interface AdminRouteListItem {
 	id: number;
 	name: string;
 	activity: string | null;
-	privacy: string;
+	visibility: string;
 	distance: number | null;
 	duration: number | null;
 	elevationGain: number | null;
 	owner: AdminRouteOwner;
 	createdAt: string;
+	deletedAt: string | null;
 }
 
 export interface AdminRouteList {
@@ -197,10 +199,23 @@ export interface AdminRouteDetail extends AdminRouteListItem {
 	tags: string[];
 	waypointCount: number;
 	hasGeometry: boolean;
+	waypoints: Waypoint[];
+	geometry: [number, number][] | null;
+	bbox: [number, number, number, number] | null;
+	provenance: string;
+	favourite: boolean;
+	routingPreferences: RoutingPreferences | null;
+	surfaceComposition: SurfaceComposition | null;
+	shareToken: string;
+	placeCity: string | null;
+	placeRegion: string | null;
+	placeCountryCode: string | null;
+	publishedAt: string | null;
+	copiedFromRouteId: number | null;
+	copiedFromUserId: number | null;
 	startAddress: string | null;
 	endAddress: string | null;
 	updatedAt: string;
-	deletedAt: string | null;
 }
 
 export interface AdminSystemHealth {
@@ -217,6 +232,39 @@ export interface AdminConfigSummary {
 	otlpExportConfigured: boolean;
 	adminEmailsCount: number;
 	grafanaUrls: Record<string, string>;
+	umamiUrl: string | null;
+	glitchtipUrl: string | null;
+}
+
+export interface AdminConversion {
+	totalUsers: number;
+	usersWithRoute: number;
+	conversionPct: number;
+}
+
+export interface AdminDistributionBucket {
+	label: string;
+	count: number;
+}
+
+export interface AdminRegion {
+	city: string | null;
+	region: string | null;
+	countryCode: string | null;
+	count: number;
+}
+
+export interface AdminEngagement {
+	signupToFirstRoute: AdminConversion;
+	distanceDistribution: AdminDistributionBucket[];
+	topRegions: AdminRegion[];
+}
+
+export interface AdminSeedRefreshResult {
+	source: string;
+	skipped: "not-due" | "manual" | "blocked" | null;
+	result: { inserted: number; updated: number; unchanged: number; removed: number } | null;
+	error: string | null;
 }
 
 export interface AuthResponse {

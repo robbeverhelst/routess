@@ -43,3 +43,22 @@ export class AdminSeedSourcesDto {
 	@ApiProperty({ type: [AdminSeedSourceDto] })
 	items!: AdminSeedSourceDto[];
 }
+
+// Outcome of a manual "re-sync now" for one SeedSource.
+export class AdminSeedRefreshResultDto {
+	@ApiProperty({ example: "eurovelo" })
+	source!: string;
+
+	@ApiPropertyOptional({
+		nullable: true,
+		enum: ["not-due", "manual", "blocked"],
+		description: "Set when the source was skipped rather than fetched. Forced re-sync never returns 'not-due'.",
+	})
+	skipped!: "not-due" | "manual" | "blocked" | null;
+
+	@ApiPropertyOptional({ nullable: true, description: "Counts from the refresh; present on success." })
+	result!: { inserted: number; updated: number; unchanged: number; removed: number } | null;
+
+	@ApiPropertyOptional({ nullable: true, description: "Error message; present on failure." })
+	error!: string | null;
+}
