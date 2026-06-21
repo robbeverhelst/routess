@@ -1,6 +1,7 @@
 import type { Coordinate, Waypoint } from "@routess/core";
 import { haversineDistance } from "@routess/core";
 import type { Map as MapboxMap } from "mapbox-gl";
+import { Logger } from "@/lib/logger";
 import { useRouteScrubStore } from "@/stores/routeScrubStore";
 import { useRouteSurfaceStore } from "@/stores/routeSurfaceStore";
 import { useRoutingStore } from "@/stores/routingStore";
@@ -11,6 +12,7 @@ import {
 	clearRouteScrubLayer,
 	clearRouteSurfaceLayer,
 	interpolateOnRoutePath,
+	ROUTE_SOURCE_ID,
 	setHoveredWaypoint,
 	updateKilometerMarkersLayer,
 	updateRouteLayer,
@@ -56,12 +58,25 @@ const renderWaypoints = (map: MapboxMap, waypoints: Waypoint[], isMapLocked: boo
 	updateWaypointsLayer(map, waypoints, isMapLocked);
 };
 
-const renderRoute = (map: MapboxMap, routePath: Coordinate[]) => {
+const renderRoute = (map: MapboxMap, routePath: Coordinate[], retriesLeft = 3) => {
 	if (routePath.length === 0) {
 		clearRouteLayer(map);
 		clearRouteSurfaceLayer(map);
 		clearKilometerMarkersLayer(map);
 		clearRouteScrubLayer(map);
+		return;
+	}
+	// The route source can be absent if a render lands during a style (re)load
+	// or a failed map init. updateRouteLayer would then silently no-op and the
+	// line never paints (route picked, "nothing happens"). Warn so the miss is
+	// visible in GlitchTip, then retry on the next idle once the source is back.
+	if (!map.getSource(ROUTE_SOURCE_ID)) {
+		if (retriesLeft <= 0) {
+			Logger.error("[MapViewAdapter] route source still missing after retries; route will not render");
+			return;
+		}
+		Logger.warn("[MapViewAdapter] route source missing; deferring route render to map idle");
+		map.once("idle", () => renderRoute(map, useRoutingStore.getState().routePath, retriesLeft - 1));
 		return;
 	}
 	updateRouteLayer(map, routePath);
