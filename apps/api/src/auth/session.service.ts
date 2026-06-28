@@ -100,10 +100,15 @@ export class SessionService {
 		);
 		if (!session) return null;
 
+		// Rolling session: active use slides expiresAt forward so a continuously
+		// used session never hits the absolute TTL. Throttled to the same window
+		// as the lastActivity bump to keep this off the per-request write path;
+		// the cookie's JWT is re-issued every request by SessionRefreshInterceptor.
 		const now = new Date();
 		const lastActivityAt = session.lastActivity?.getTime() ?? 0;
 		if (now.getTime() - lastActivityAt >= LAST_ACTIVITY_UPDATE_INTERVAL_MS) {
 			session.lastActivity = now;
+			session.expiresAt = new Date(now.getTime() + this.config.auth.sessionTtlMs);
 			await this.em.persist(session).flush();
 		}
 
