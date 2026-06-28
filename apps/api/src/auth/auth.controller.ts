@@ -18,6 +18,7 @@ import {
 import { LogoutResponseDto } from "./dto/logout-response.dto";
 import { EmailAuthService } from "./email-auth.service";
 import { JwtAuthGuard } from "./guards/jwt-auth.guard";
+import { clearSessionCookie, setSessionCookie } from "./session-cookie";
 
 @ApiTags("auth")
 @Controller("auth")
@@ -164,21 +165,10 @@ export class AuthController {
 	}
 
 	private setSessionCookie(res: Response, accessToken: string): void {
-		res.cookie(this.config.auth.cookieName, accessToken, {
-			httpOnly: true,
-			secure: this.config.app.isProduction,
-			sameSite: this.config.app.isProduction ? "none" : "lax",
-			maxAge: this.config.auth.sessionTtlMs,
-			path: "/",
-		});
+		setSessionCookie(res, this.config, accessToken);
 	}
 
 	private clearSessionCookie(res: Response): void {
-		res.clearCookie(this.config.auth.cookieName, {
-			httpOnly: true,
-			secure: this.config.app.isProduction,
-			sameSite: this.config.app.isProduction ? "none" : "lax",
-			path: "/",
-		});
+		clearSessionCookie(res, this.config);
 	}
 }

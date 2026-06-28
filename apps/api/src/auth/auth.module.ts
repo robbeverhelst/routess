@@ -1,5 +1,6 @@
 import { MikroOrmModule } from "@mikro-orm/nestjs";
 import { Module } from "@nestjs/common";
+import { APP_INTERCEPTOR } from "@nestjs/core";
 import type { JwtModuleOptions } from "@nestjs/jwt";
 import { JwtModule } from "@nestjs/jwt";
 import { PassportModule } from "@nestjs/passport";
@@ -16,6 +17,7 @@ import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
 import { EmailAuthService } from "./email-auth.service";
 import { GOOGLE_IDENTITY_VERIFIER, GoogleOAuth2Verifier } from "./google-identity-verifier";
+import { SessionRefreshInterceptor } from "./interceptors/session-refresh.interceptor";
 import { PasswordService } from "./password.service";
 import { PersonalAccessTokensController } from "./personal-access-tokens.controller";
 import { PersonalAccessTokensService } from "./personal-access-tokens.service";
@@ -54,6 +56,7 @@ import { PatBearerStrategy } from "./strategies/pat-bearer.strategy";
 		PatBearerStrategy,
 		PersonalAccessTokensService,
 		{ provide: GOOGLE_IDENTITY_VERIFIER, useClass: GoogleOAuth2Verifier },
+		{ provide: APP_INTERCEPTOR, useClass: SessionRefreshInterceptor },
 	],
 	exports: [
 		AuthService,

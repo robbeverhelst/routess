@@ -1,3 +1,4 @@
+import { ApiDomainError, ApiHttpError } from "../errors";
 import type {
 	AdminConfigSummary,
 	AdminEngagement,
@@ -39,6 +40,19 @@ import type {
 	UpdateCurrentUserRequest,
 	UpdateRouteRequest,
 } from "../types";
+
+// A 401 means the session is gone (expired or invalidated server-side), so the
+// stored profile is stale and auth state must be cleared to surface the login
+// screen. Detect it by HTTP status across both shapes the HttpClient throws:
+// coded errors carry a human message like "Session expired or user not found"
+// that never contains "401", so the old substring match silently missed them.
+// 403 (authenticated but forbidden) is deliberately excluded: a valid user
+// hitting a restricted route must not be logged out.
+function isUnauthorized(error: unknown): boolean {
+	if (error instanceof ApiDomainError) return error.payload.statusCode === 401;
+	if (error instanceof ApiHttpError) return error.status === 401;
+	return error instanceof Error && error.message.includes("401");
+}
 
 export class ApiClient {
 	private config: ApiClientConfig;
@@ -88,7 +102,7 @@ export class ApiClient {
 		} catch (error) {
 			this.config.logger?.error("API request failed:", error);
 
-			if (error instanceof Error && error.message.includes("401")) {
+			if (isUnauthorized(error)) {
 				this.config.authStateManager.clearToken();
 				this.config.authStateManager.clearAuthState?.();
 			}
