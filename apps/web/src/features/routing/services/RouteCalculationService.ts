@@ -286,18 +286,35 @@ function commonSuffixLength(a: Waypoint[], b: Waypoint[], prefix: number): numbe
 }
 
 // True when every previous waypoint appears in order in `next` and every
-// inserted one lies on the previous path: the densify signature. The path is
-// already correct; nothing needs routing.
+// inserted one is interior (between two surviving neighbours) and lies on the
+// previous path within its neighbours' span: the densify signature. The path
+// is already correct; nothing needs routing. A waypoint appended at either
+// end is a user edit whose leg must be routed, even when it lands within
+// anchor tolerance of the existing path (closely-spaced clicks, loop
+// closings, out-and-backs).
 function isPureOnPathInsertion(prev: Waypoint[], next: Waypoint[], path: Coordinate[]): boolean {
 	if (next.length <= prev.length) return false;
+	const prevAnchors = anchorIndices(prev, path);
+	if (!prevAnchors) return false;
 	let pi = 0;
-	const inserted: Waypoint[] = [];
+	const inserted: { wp: Waypoint; slot: number }[] = [];
 	for (const wp of next) {
 		if (pi < prev.length && sameWaypoint(wp, prev[pi])) pi++;
-		else inserted.push(wp);
+		else inserted.push({ wp, slot: pi });
 	}
 	if (pi !== prev.length) return false;
-	return anchorIndices(inserted, path) !== null;
+	for (const { wp, slot } of inserted) {
+		if (slot === 0 || slot === prev.length) return false;
+		const from = prevAnchors[slot - 1] as number;
+		const to = prevAnchors[slot] as number;
+		let bestKm = Infinity;
+		for (let i = from; i <= to; i++) {
+			const km = haversineDistance(wp.coord, path[i]);
+			if (km < bestKm) bestKm = km;
+		}
+		if (bestKm > ANCHOR_TOLERANCE_KM) return false;
+	}
+	return true;
 }
 
 export interface PatchRouteOptions {
