@@ -149,6 +149,22 @@ describe("RouteDraftEditor — edit-local recomputation", () => {
 		expect(restored[restored.length - 1]).toEqual(path[path.length - 1]);
 	});
 
+	it("addWaypoint appended within anchor tolerance of the path still routes its leg", async () => {
+		// Closely-spaced clicks: the new point lands < 100m from the path's end
+		// (the previous waypoint). This must never be mistaken for a densify
+		// insertion — the appended leg needs routing.
+		useRoutingStore.setState({ creationSource: "manual" });
+		const editor = createRouteDraftEditor({ map: mapStub, accessToken: "test-token" });
+		const target = destinationPoint(path[path.length - 1], 90, 0.05);
+		const result = await editor.addWaypoint(target);
+		expect(result.success).toBe(true);
+
+		expect(routeCalls.length).toBe(1);
+		const newPath = useRoutingStore.getState().routePath;
+		// Polyline6 round-trips at 1e-6 precision; compare within a metre.
+		expect(haversineDistance(newPath[newPath.length - 1], target)).toBeLessThan(0.001);
+	});
+
 	it("removeWaypoint reroutes the joined span only", async () => {
 		const editor = createRouteDraftEditor({ map: mapStub, accessToken: "test-token" });
 		const result = await editor.removeWaypoint(2);
