@@ -1,10 +1,10 @@
 import type { Waypoint } from "@routess/core";
-import pako from "pako";
+import { deflate } from "pako";
 import { decompressAndParse, serializeAndCompress } from "@/lib/shareUtils";
 
 const encodeLegacyV0 = (w: [number, number][], f: boolean[], l?: boolean): string => {
 	const data = { w, f, ...(l !== undefined ? { l } : {}) };
-	const compressed = pako.deflate(JSON.stringify(data));
+	const compressed = deflate(JSON.stringify(data));
 	let binary = "";
 	compressed.forEach((byte) => {
 		binary += String.fromCharCode(byte);
