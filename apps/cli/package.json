@@ -31,7 +31,7 @@
 	"dependencies": {},
 	"devDependencies": {
 		"@routess/core": "workspace:*",
-		"@types/node": "^25.0.0",
+		"@types/node": "^26.0.0",
 		"commander": "^15.0.0",
 		"typescript": "~6.0.0"
 	},
