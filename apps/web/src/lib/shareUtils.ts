@@ -1,5 +1,5 @@
 import type { Coordinate, Waypoint } from "@routess/core";
-import pako from "pako";
+import { deflate, inflate } from "pako";
 import { Logger } from "@/lib/logger";
 
 // Wire format v1: canonical Waypoint[]. Compact under gzip; readers pass it
@@ -54,7 +54,7 @@ const isV1 = (parsed: unknown): parsed is WireRouteShareV1 =>
 export function serializeAndCompress(waypoints: Waypoint[], isLocked: boolean): string | null {
 	try {
 		const data: WireRouteShareV1 = { waypoints, locked: isLocked };
-		const compressed = pako.deflate(JSON.stringify(data));
+		const compressed = deflate(JSON.stringify(data));
 		return uint8ArrayToUrlSafeBase64(compressed);
 	} catch (error) {
 		Logger.error("[ShareUtils] Error serializing/compressing data:", error);
@@ -65,7 +65,7 @@ export function serializeAndCompress(waypoints: Waypoint[], isLocked: boolean): 
 export function decompressAndParse(encodedData: string): SharedRoute | null {
 	try {
 		const compressed = urlSafeBase64ToUint8Array(encodedData);
-		const jsonString = pako.inflate(compressed, { to: "string" });
+		const jsonString = new TextDecoder().decode(inflate(compressed));
 		const parsed = JSON.parse(jsonString) as unknown;
 
 		if (isV1(parsed)) {
