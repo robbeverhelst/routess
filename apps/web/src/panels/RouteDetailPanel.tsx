@@ -478,7 +478,13 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 					onSave={renameRoute}
 					disabled={updateRoute.isPending}
 					ariaLabel={t("library.card.rename")}
-					style={{ fontSize: 22, fontWeight: 600, letterSpacing: -0.4, width: "100%" }}
+					style={{
+						fontFamily: "'Bricolage Grotesque', sans-serif",
+						fontSize: 24,
+						fontWeight: 700,
+						letterSpacing: -0.4,
+						width: "100%",
+					}}
 				/>
 				<p className="rds-mono" style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle, margin: "4px 0 0" }}>
 					{t("route.created", {
@@ -487,27 +493,29 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 					})}
 				</p>
 
-				{/* Stat strip */}
+				{/* Stat strip — dark inset, fixed in both themes per spec */}
 				<div
 					style={{
 						display: "grid",
 						gridTemplateColumns: "repeat(4, 1fr)",
 						marginTop: 14,
 						padding: 14,
-						background: RDS_COLORS.bgPanelElev,
-						borderRadius: 10,
-						border: `1px solid ${RDS_COLORS.border}`,
+						background: RDS_COLORS.insetBg,
+						borderRadius: 12,
+						color: RDS_COLORS.insetFg,
 					}}
 				>
 					{stats.map((s, i) => (
 						<div
 							key={s.label}
 							style={{
-								borderLeft: i ? `1px solid ${RDS_COLORS.border}` : "none",
+								borderLeft: i ? `1px solid ${RDS_COLORS.insetBorder}` : "none",
 								paddingLeft: i ? 14 : 0,
 							}}
 						>
-							<SecTitle style={{ fontSize: 10, whiteSpace: "nowrap" }}>{s.label}</SecTitle>
+							<SecTitle style={{ fontSize: 10, whiteSpace: "nowrap", color: RDS_COLORS.insetLabel }}>
+								{s.label}
+							</SecTitle>
 							<div
 								className="rds-mono"
 								style={{
@@ -519,10 +527,13 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 									lineHeight: 1.1,
 									marginTop: 4,
 									whiteSpace: "nowrap",
+									color: RDS_COLORS.insetFg,
 								}}
 							>
 								{s.value}
-								{s.unit && <span style={{ fontSize: 11, color: RDS_COLORS.fgSubtle, fontWeight: 400 }}>{s.unit}</span>}
+								{s.unit && (
+									<span style={{ fontSize: 11, color: RDS_COLORS.insetLabel, fontWeight: 400 }}>{s.unit}</span>
+								)}
 							</div>
 						</div>
 					))}

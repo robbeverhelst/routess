@@ -17,10 +17,15 @@ export const RDS_COLORS = {
 	borderStrong: "var(--rds-border-strong)",
 	accent: "var(--rds-accent)",
 	accentSoft: "var(--rds-accent-soft)",
+	accentDeep: "var(--rds-accent-deep)",
 	accentFg: "var(--rds-accent-fg)",
 	success: "var(--rds-success)",
 	warn: "var(--rds-warn)",
 	danger: "var(--rds-danger)",
+	insetBg: "var(--rds-inset-bg)",
+	insetFg: "var(--rds-inset-fg)",
+	insetLabel: "var(--rds-inset-label)",
+	insetBorder: "var(--rds-inset-border)",
 } as const;
 
 interface IconBtnProps {

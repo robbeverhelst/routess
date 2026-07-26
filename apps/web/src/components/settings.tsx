@@ -198,7 +198,7 @@ interface SegmentedProps {
 
 export function Segmented({ value, onChange, options }: SegmentedProps) {
 	return (
-		<div style={{ display: "flex", gap: 4, background: RDS_COLORS.bgInput, padding: 2, borderRadius: 6 }}>
+		<div style={{ display: "flex", gap: 4, background: RDS_COLORS.bgInput, padding: 3, borderRadius: 8 }}>
 			{options.map((o) => {
 				const on = value === o.value;
 				return (
@@ -209,12 +209,13 @@ export function Segmented({ value, onChange, options }: SegmentedProps) {
 							aria-pressed={on}
 							style={{
 								padding: "6px 12px",
-								borderRadius: 4,
+								borderRadius: 6,
 								background: on ? RDS_COLORS.bgPanel : "transparent",
+								boxShadow: on ? "var(--rds-shadow-sm)" : "none",
 								border: 0,
 								fontSize: 12,
-								fontWeight: 500,
-								color: on ? RDS_COLORS.fg : RDS_COLORS.fgMuted,
+								fontWeight: on ? 600 : 500,
+								color: on ? RDS_COLORS.accentDeep : RDS_COLORS.fgMuted,
 								cursor: "pointer",
 							}}
 						>

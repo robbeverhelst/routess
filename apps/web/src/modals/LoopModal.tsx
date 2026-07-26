@@ -1,5 +1,6 @@
 import type { Heading, RouteGenerationType, SurfaceType } from "@routess/core";
 import { useEffect, useRef, useState } from "react";
+import { GenerateNlLayer } from "@/features/generation/GenerateNlLayer";
 import { emitAppEvent } from "@/lib/app-events";
 import { useT } from "@/lib/i18n";
 import { getRuntimeConfig } from "@/lib/runtime-config";
@@ -9,7 +10,7 @@ import { useModalsStore } from "@/stores/modalsStore";
 import { useToastStore } from "@/stores/toastStore";
 import { I } from "../components/icons";
 import { ModalShell } from "../components/ModalShell";
-import { Btn, RDS_COLORS, SecTitle } from "../components/primitives";
+import { Btn, RDS_COLORS, SecTitle, Toggle } from "../components/primitives";
 
 const HEADINGS_UI = [
 	{ key: "any", labelKey: "loop.dir.any", icon: I.compass },
@@ -360,6 +361,7 @@ export function LoopModal() {
 			}
 		>
 			<div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+				<GenerateNlLayer />
 				<div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 6 }}>
 					{TABS.map((tab) => {
 						const on = routeType === tab.key;
@@ -513,42 +515,38 @@ export function LoopModal() {
 					</div>
 				</div>
 
-				<button
-					type="button"
-					onClick={() => setPreferNodeNetworks(!preferNodeNetworks)}
+				<div
 					style={{
 						display: "flex",
 						alignItems: "center",
 						gap: 10,
 						padding: "10px 12px",
-						borderRadius: 8,
-						background: preferNodeNetworks ? RDS_COLORS.accentSoft : RDS_COLORS.bgInput,
-						border: preferNodeNetworks ? `1px solid ${RDS_COLORS.accent}` : `1px solid ${RDS_COLORS.border}`,
-						cursor: "pointer",
-						textAlign: "left",
+						borderRadius: 10,
+						background: RDS_COLORS.bgInput,
+						border: `1px solid ${RDS_COLORS.border}`,
 					}}
 				>
 					<div
 						style={{
-							width: 16,
-							height: 16,
-							borderRadius: 4,
+							width: 34,
+							height: 34,
+							borderRadius: 9,
 							flexShrink: 0,
 							display: "inline-flex",
 							alignItems: "center",
 							justifyContent: "center",
-							background: preferNodeNetworks ? RDS_COLORS.accent : "transparent",
-							border: `1px solid ${preferNodeNetworks ? RDS_COLORS.accent : RDS_COLORS.border}`,
-							color: "#fff",
+							background: `color-mix(in oklch, ${RDS_COLORS.success} 16%, transparent)`,
+							color: `color-mix(in oklch, ${RDS_COLORS.success} 75%, ${RDS_COLORS.fg})`,
 						}}
 					>
-						{preferNodeNetworks ? <I.check size={11} /> : null}
+						<I.hexagon size={16} />
 					</div>
-					<div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+					<div style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1, minWidth: 0 }}>
 						<span style={{ fontSize: 12.5, fontWeight: 600, color: RDS_COLORS.fg }}>{t("loop.preferNodes")}</span>
 						<span style={{ fontSize: 11, color: RDS_COLORS.fgSubtle }}>{t("loop.preferNodesSub")}</span>
 					</div>
-				</button>
+					<Toggle on={preferNodeNetworks} onChange={setPreferNodeNetworks} label={t("loop.preferNodes")} />
+				</div>
 
 				<LandmarkPicker />
 			</div>
