@@ -70,17 +70,31 @@ export async function fetchExternalRoute(externalId: number): Promise<PublicExte
 }
 
 // Full Indexable corpus for the sitemap, paged through X-Total-Count.
+// Every page is cached for an hour, so a crawl costs the API one pass per hour
+// per replica rather than one per request.
+//
+// Fails loudly instead of returning what it managed to collect: a short sitemap
+// tells search engines the missing routes are gone, which is far worse than a
+// 5xx they will simply retry (docs/agents/seo.md).
+const SITEMAP_PAGE_LIMIT = 200;
+// Ceiling so a mis-reported X-Total-Count can never spin. Far above the real
+// corpus; reaching it is a bug, not a big sitemap.
+const SITEMAP_MAX_PAGES = 500;
+
 export async function fetchIndexablePublicRoutes(): Promise<PublicRouteSummary[]> {
 	const out: PublicRouteSummary[] = [];
-	const limit = 200;
-	for (let offset = 0; ; offset += limit) {
-		const res = await fetch(`${API_URL}/api/v1/routes/public?limit=${limit}&offset=${offset}`, {
+	for (let page = 0; page < SITEMAP_MAX_PAGES; page++) {
+		const offset = page * SITEMAP_PAGE_LIMIT;
+		const res = await fetch(`${API_URL}/api/v1/routes/public?limit=${SITEMAP_PAGE_LIMIT}&offset=${offset}`, {
 			next: { revalidate: 3600 },
 		});
-		if (!res.ok) return out;
+		if (!res.ok) {
+			throw new Error(`Indexable route page at offset ${offset} failed with ${res.status}`);
+		}
 		const items = (await res.json()) as PublicRouteSummary[];
 		out.push(...items);
 		const total = Number(res.headers.get("x-total-count") ?? out.length);
 		if (items.length === 0 || out.length >= total) return out;
 	}
+	throw new Error(`Indexable route sitemap exceeded ${SITEMAP_MAX_PAGES} pages; refusing to serve a truncated sitemap`);
 }
