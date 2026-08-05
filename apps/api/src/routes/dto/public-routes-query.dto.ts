@@ -1,3 +1,4 @@
+import { raw } from "@mikro-orm/core";
 import { BadRequestException } from "@nestjs/common";
 import { ApiPropertyOptional } from "@nestjs/swagger";
 import { INDEXABLE_MIN_DISTANCE_METERS, ROUTE_ACTIVITIES, type RouteActivity } from "@routess/core";
@@ -74,12 +75,35 @@ export interface PublicListingFilters {
 	bbox?: ParsedBbox;
 }
 
+// The non-distance half of isRouteIndexable, expressed in SQL so the listing
+// can page with a real LIMIT instead of scanning the table and filtering in
+// memory. isRouteIndexable stays the authority (see findPublicListing); this
+// predicate must never be *tighter* than it, or routes would silently drop out
+// of the sitemap. SQL btrim() strips spaces where JS trim() also strips tabs and
+// newlines, so a name padded with those stays in here and is rejected by the
+// canonical gate afterwards: looser, which is the safe direction.
+function indexableGateSql(alias: string): string {
+	const name = `btrim(${alias}.name)`;
+	const tags = `coalesce(${alias}.tags, '[]'::jsonb)`;
+	return `(length(${name}) >= 3
+		and ${name} not ilike 'untitled%'
+		and ${name} not ilike 'naamloos%'
+		and (
+			length(btrim(coalesce(${alias}.description, ''))) >= 20
+			or (jsonb_typeof(${tags}) = 'array' and jsonb_array_length(${tags}) > 0)
+		))`;
+}
+
 // Shared where-clause for the public listing surfaces, applied identically to
 // Route and ExternalRoute so the read-time union (ADR 0035) can never drift.
-// The indexable gate folds in the quality-floor distance prefilter; bbox is
-// viewport overlap on the persisted columns (ADR 0030).
-export function publicListingWhere(filters: PublicListingFilters, gate: PublicRouteGate): Record<string, unknown> {
-	const where: Record<string, unknown> = {};
+// The indexable gate folds in the quality-floor distance prefilter and the
+// quality gate itself; bbox is viewport overlap on the persisted columns
+// (ADR 0030).
+export function publicListingWhere(
+	filters: PublicListingFilters,
+	gate: PublicRouteGate,
+): Record<string | symbol, unknown> {
+	const where: Record<string | symbol, unknown> = {};
 	if (filters.activity) where.activity = filters.activity;
 	// Case-insensitive exact match: geocoder casing should not leak into URLs.
 	if (filters.placeCity) where.placeCity = { $ilike: filters.placeCity.replace(/[%_\\]/g, (c) => `\\${c}`) };
@@ -94,6 +118,7 @@ export function publicListingWhere(filters: PublicListingFilters, gate: PublicRo
 			...(where.distance as object | undefined),
 			$gte: Math.max(filters.minDistance ?? 0, INDEXABLE_MIN_DISTANCE_METERS),
 		};
+		where[raw((alias) => indexableGateSql(alias))] = true;
 	}
 	if (filters.bbox) {
 		where.bboxMinLat = { $lte: filters.bbox.maxLat };

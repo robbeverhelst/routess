@@ -8,8 +8,26 @@ import {
 } from "../routes/dto/public-route-summary.dto";
 import type { ExternalRouteResponseDto } from "./dto/external-route-response.dto";
 
+// The listing surfaces load a column projection rather than the whole entity
+// (#354); geometry is only selected for Discover. A full ExternalRoute still
+// satisfies this.
+export type ExternalRouteSummarySource = Pick<
+	ExternalRoute,
+	| "id"
+	| "name"
+	| "distance"
+	| "updatedAt"
+	| "activity"
+	| "elevationGain"
+	| "tags"
+	| "placeCity"
+	| "placeRegion"
+	| "placeCountryCode"
+	| "source"
+> & { geometry?: [number, number][] };
+
 // `route.source` must be populated by the caller before mapping.
-function sourceDto(route: ExternalRoute): PublicRouteSourceDto {
+function sourceDto(route: Pick<ExternalRoute, "source">): PublicRouteSourceDto {
 	const source = route.source as unknown as SeedSource;
 	return {
 		key: source.key,
@@ -26,7 +44,7 @@ function sourceDto(route: ExternalRoute): PublicRouteSourceDto {
 // set and `user` absent. publishedAt is left undefined; external routes sort by
 // updatedAt (import/refresh time) in the merge.
 export function toExternalRouteSummaryDto(
-	route: ExternalRoute,
+	route: ExternalRouteSummarySource,
 	options: { includeGeometry: boolean },
 ): PublicRouteSummaryDto {
 	return {

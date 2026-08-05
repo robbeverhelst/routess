@@ -184,13 +184,17 @@ api:
     patPepper: ""
     # Empty disables Resend; the API falls back to a console transport (dev-only).
     resendApiKey: ""
+  # Raised from 256Mi/512Mi during the #354 incident, when a single public
+  # listing request could allocate ~700Mi and OOM-kill the pod. The listing is
+  # bounded now, so this is headroom rather than a requirement; keep it until
+  # the new steady state has been observed for a while.
   resources:
     requests:
       cpu: 250m
-      memory: 256Mi
+      memory: 512Mi
     limits:
       cpu: 500m
-      memory: 512Mi
+      memory: 1Gi
   securityContext:
     runAsNonRoot: true
     runAsUser: 1000
@@ -569,6 +573,19 @@ monitoring:
       # Warn when daily-quota 429s exceed this count in 5m (abuse or too-tight
       # a quota).
       quota429sPer5m: 20
+      # Container-level health (#354). Every alert above is computed from
+      # metrics the API exports itself, so a process that dies takes its own
+      # evidence with it: 38 OOM restarts over 30 days raised nothing. These
+      # three read cAdvisor and kube-state-metrics instead, which keep
+      # reporting across a restart. Set any to 0 to disable just that alert.
+      # Fraction of the memory limit that counts as "close to OOM". Evaluated
+      # with max_over_time, not a `for:` duration, because the OOM spike this
+      # was written for lasted a single 30s scrape: a `> 0.85 for: 5m` rule
+      # would have fired zero times in the 30 days it was happening.
+      memoryLimitFraction: 0.9
+      # Restarts within 6h that count as "this keeps happening" rather than a
+      # one-off eviction or node event.
+      restartsPer6h: 2
     # Extra rule entries appended verbatim to the routess-api group.
     additionalRules: []
   # Optional Grafana dashboard URLs surfaced in the admin UI's system panel.

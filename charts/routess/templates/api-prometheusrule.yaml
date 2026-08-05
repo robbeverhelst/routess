@@ -131,6 +131,62 @@ spec:
             summary: "Spike in 429 responses"
             description: "{{`{{ $value | printf \"%.0f\" }}`}} rate-limit/quota rejections in 5m. Either abuse, or a quota/throttle is too tight (GENERATION_QUOTA_PER_DAY)."
         {{- end }}
+        - alert: RoutessApiOOMKilled
+          # The signal that actually survives the failure. Every app-level alert
+          # above is computed from metrics the API exports, so an OOM kill
+          # erases its own evidence: the process dies mid-request, no 5xx is
+          # ever recorded, and the histogram is never scraped. This reads
+          # kube-state-metrics instead. The last-terminated reason latches for
+          # the life of the pod, so it is gated on a restart having actually
+          # happened in the window; without that it would fire forever.
+          expr: |
+            sum by (pod) (increase(kube_pod_container_status_restarts_total{namespace="{{ .Values.global.namespace }}",container="api"}[15m])) > 0
+            and on (pod) max by (pod) (
+              kube_pod_container_status_last_terminated_reason{namespace="{{ .Values.global.namespace }}",container="api",reason="OOMKilled"}
+            ) == 1
+          labels:
+            severity: critical
+          annotations:
+            summary: "routess API pod was OOM-killed"
+            description: "{{`{{ $labels.pod }}`}} hit its memory limit and was killed. In-flight requests were dropped without a 5xx being recorded, so the app-level alerts stay silent."
+        {{- if $t.restartsPer6h }}
+        - alert: RoutessApiRestartingRepeatedly
+          # The chronic-pattern alert. A single restart is noise; a handful in a
+          # day is a bug that is already costing users. This is the one that
+          # would have surfaced #354 weeks before it became an outage.
+          expr: |
+            sum by (container) (increase(kube_pod_container_status_restarts_total{namespace="{{ .Values.global.namespace }}",container="api"}[6h]))
+              >= {{ $t.restartsPer6h }}
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "routess API restarted {{ $t.restartsPer6h }}+ times in 6h"
+            description: "{{`{{ $value | printf \"%.0f\" }}`}} API container restarts in the last 6 hours. Check `kubectl -n {{ .Values.global.namespace }} describe pod` for the termination reason."
+        {{- end }}
+        {{- if $t.memoryLimitFraction }}
+        - alert: RoutessApiMemoryNearLimit
+          # Early warning, best-effort by construction. max_over_time does the
+          # smoothing rather than `for:`, because the spike that motivated this
+          # showed up in exactly one 30s scrape out of 4434 on the incident day.
+          # Putting the window in `for:` instead would make this never fire.
+          # Joins take max() on both sides so a duplicate kube-state-metrics
+          # series (seen after a KSM restart) cannot break the rule.
+          expr: |
+            max_over_time((
+              max by (namespace,pod,container) (
+                container_memory_working_set_bytes{namespace="{{ .Values.global.namespace }}",container="api"}
+              )
+              / on (namespace,pod,container) group_left max by (namespace,pod,container) (
+                kube_pod_container_resource_limits{namespace="{{ .Values.global.namespace }}",container="api",resource="memory"}
+              )
+            )[5m:30s]) > {{ $t.memoryLimitFraction }}
+          labels:
+            severity: warning
+          annotations:
+            summary: "routess API memory above {{ $t.memoryLimitFraction }} of its limit"
+            description: "{{`{{ $labels.pod }}`}} reached {{`{{ $value | humanizePercentage }}`}} of its memory limit in the last 5 minutes. An OOM kill is imminent or already happened."
+        {{- end }}
         {{- with .Values.monitoring.prometheusRule.additionalRules }}
         {{- toYaml . | nindent 8 }}
         {{- end }}

@@ -42,7 +42,12 @@ export class SessionService {
 				this.logger.log(`Cleaned up ${cleanedCount} expired sessions`);
 			}
 		} catch (error) {
-			this.logger.error("Failed to cleanup expired sessions", error);
+			// The bare message told us nothing for the hour-by-hour failures in
+			// #354. Log the stack, and the cause a driver error carries.
+			this.logger.error(
+				`Failed to cleanup expired sessions: ${error instanceof Error ? error.message : String(error)}`,
+				error instanceof Error ? error.stack : undefined,
+			);
 		}
 	}
 
@@ -129,23 +134,23 @@ export class SessionService {
 		}
 	}
 
+	// One indexed bulk UPDATE rather than hydrating every expired Session and
+	// flushing a statement each (#354). That also makes the hourly @Cron safe to
+	// run on every replica without leader election: whichever pod gets there
+	// first soft-deletes the rows, and the others match nothing and emit
+	// nothing, so the telemetry below still counts each expiry once.
 	async cleanupExpiredSessions(): Promise<number> {
-		const expiredSessions = await this.sessionRepository.find({
-			expiresAt: { $lt: new Date() },
-		});
+		const affected = await this.sessionRepository.nativeUpdate(
+			{ expiresAt: { $lt: new Date() }, deletedAt: null },
+			{ deletedAt: new Date() },
+		);
 
-		for (const session of expiredSessions) {
-			session.deletedAt = new Date();
-		}
-
-		await this.em.flush();
-
-		if (expiredSessions.length > 0) {
+		if (affected > 0) {
 			this.events.emit(SESSION_ACTIVITY_CHANGED);
-			this.emitRevoked("expired", expiredSessions.length);
+			this.emitRevoked("expired", affected);
 		}
 
-		return expiredSessions.length;
+		return affected;
 	}
 
 	async getActiveSessionsCount(): Promise<number> {

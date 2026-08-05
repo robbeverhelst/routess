@@ -21,6 +21,30 @@ import {
 import type { ExternalRouteResponseDto } from "./dto/external-route-response.dto";
 import { toExternalRouteResponseDto, toExternalRouteSummaryDto } from "./external-route.mapper";
 
+// Mirror of PUBLIC_SUMMARY_FIELDS on the Route side: everything
+// toExternalRouteSummaryDto and the Indexable gate read, and nothing else.
+// `geometry` is a large JSONB blob and is added back only for Discover (#354).
+const EXTERNAL_SUMMARY_FIELDS = [
+	"id",
+	"name",
+	"description",
+	"distance",
+	"activity",
+	"elevationGain",
+	"tags",
+	"placeCity",
+	"placeRegion",
+	"placeCountryCode",
+	"updatedAt",
+	"source.key",
+	"source.displayName",
+	"source.license",
+	"source.attribution",
+	"source.sourceUrl",
+] as const;
+
+const EXTERNAL_DISCOVER_FIELDS = [...EXTERNAL_SUMMARY_FIELDS, "geometry"] as const;
+
 export interface UpsertResult {
 	inserted: number;
 	updated: number;
@@ -339,26 +363,31 @@ export class ExternalRoutesService {
 		const where = publicListingWhere(filters, gate) as FilterQuery<ExternalRoute>;
 
 		if (gate === "indexable") {
-			// ExternalRoutes are always public; the gate is the quality bar.
-			const candidates = await this.externalRouteRepository.find(where, {
+			// ExternalRoutes are always public; the gate is the quality bar, and
+			// publicListingWhere now applies it in SQL, so this pages instead of
+			// scanning the table (#354). isRouteIndexable remains the authority.
+			const [candidates, total] = await this.externalRouteRepository.findAndCount(where, {
+				fields: EXTERNAL_SUMMARY_FIELDS,
 				populate: ["source"],
 				orderBy: { updatedAt: "DESC" },
-				limit: 5000,
+				limit: take,
 			});
-			const indexable = candidates.filter((r) =>
-				isRouteIndexable({
-					visibility: "public",
-					name: r.name,
-					distance: r.distance,
-					description: r.description,
-					tags: r.tags,
-				}),
-			);
-			const items = indexable.slice(0, take).map((r) => toExternalRouteSummaryDto(r, { includeGeometry: false }));
-			return { items, total: indexable.length };
+			const items = candidates
+				.filter((r) =>
+					isRouteIndexable({
+						visibility: "public",
+						name: r.name,
+						distance: r.distance,
+						description: r.description,
+						tags: r.tags,
+					}),
+				)
+				.map((r) => toExternalRouteSummaryDto(r, { includeGeometry: false }));
+			return { items, total };
 		}
 
 		const [rows, total] = await this.externalRouteRepository.findAndCount(where, {
+			fields: EXTERNAL_DISCOVER_FIELDS,
 			populate: ["source"],
 			orderBy: { updatedAt: "DESC" },
 			limit: take,

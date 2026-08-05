@@ -41,8 +41,27 @@ export function toRouteResponseDto(route: Route, analyticsSalt: string): RouteRe
 	};
 }
 
+// The public listing surfaces load a column projection rather than the whole
+// entity (#354), so this asks for exactly what it reads. A full Route still
+// satisfies it.
+export type RouteSummarySource = Pick<
+	Route,
+	| "id"
+	| "name"
+	| "distance"
+	| "updatedAt"
+	| "activity"
+	| "elevationGain"
+	| "tags"
+	| "publishedAt"
+	| "placeCity"
+	| "placeRegion"
+	| "placeCountryCode"
+	| "geometry"
+> & { user: SerializableUser };
+
 export function toPublicRouteSummaryDto(
-	route: Route,
+	route: RouteSummarySource,
 	analyticsSalt: string,
 	options: { includeGeometry: boolean },
 ): PublicRouteSummaryDto {
