@@ -28,6 +28,33 @@ import type { UpdateRouteDto } from "./dto/update-route.dto";
 import { toPublicRouteSummaryDto, toRouteResponseDto } from "./route.mapper";
 import { SurfaceCompositionService } from "./surface-composition.service";
 
+// Exactly what PublicRouteSummaryDto and the Indexable gate read. Loading the
+// whole entity here pulls the `geometry` and `waypoints` JSONB blobs for every
+// candidate row, which is the difference between a few MB and ~700MB per
+// request on a corpus this size (#354). The Discover gate adds `geometry`
+// because it renders map previews; neither surface ever needs `waypoints`.
+const INDEXABLE_SUMMARY_FIELDS = [
+	"id",
+	"name",
+	"description",
+	"visibility",
+	"distance",
+	"activity",
+	"elevationGain",
+	"tags",
+	"publishedAt",
+	"placeCity",
+	"placeRegion",
+	"placeCountryCode",
+	"updatedAt",
+	"user.id",
+	"user.name",
+	"user.handle",
+	"user.avatar",
+] as const;
+
+const DISCOVER_SUMMARY_FIELDS = [...INDEXABLE_SUMMARY_FIELDS, "geometry"] as const;
+
 @Injectable()
 export class RoutesService {
 	constructor(
@@ -156,6 +183,7 @@ export class RoutesService {
 			// can drop bbox false positives without under-filling the page.
 			const window = take * 2;
 			const [routes, routeTotal] = await this.routeRepository.findAndCount(where, {
+				fields: DISCOVER_SUMMARY_FIELDS,
 				populate: ["user"],
 				orderBy: { publishedAt: QueryOrder.DESC_NULLS_LAST, id: "DESC" },
 				limit: window,
@@ -177,18 +205,22 @@ export class RoutesService {
 			return { items: merged, total: routeTotal + external.total };
 		}
 
-		const candidates = await this.routeRepository.find(where, {
+		// publicListingWhere now applies the Indexable gate in SQL, so this is a
+		// bounded page rather than the old scan-then-filter-in-memory (#354).
+		// isRouteIndexable stays the canonical gate over what comes back: the SQL
+		// is deliberately no tighter, so it can only ever reject a straggler.
+		const [candidates, routeTotal] = await this.routeRepository.findAndCount(where, {
+			fields: INDEXABLE_SUMMARY_FIELDS,
 			populate: ["user"],
 			orderBy: { updatedAt: "DESC" },
-			limit: 5000,
+			limit: take,
 		});
-		const indexableRoutes = candidates.filter((route) => isRouteIndexable(route));
-		const routeItems = indexableRoutes
-			.slice(0, take)
+		const routeItems = candidates
+			.filter((route) => isRouteIndexable(route))
 			.map((route) => toPublicRouteSummaryDto(route, this.config.analytics.salt, { includeGeometry: false }));
 		const external = await this.externalRoutes.findPublicMatches(filters, "indexable", take);
 		const merged = mergeSummariesDesc(routeItems, external.items, indexableSortKey).slice(offset, offset + limit);
-		return { items: merged, total: indexableRoutes.length + external.total };
+		return { items: merged, total: routeTotal + external.total };
 	}
 
 	// Public-only listing for someone else's library. Excludes 'private' and

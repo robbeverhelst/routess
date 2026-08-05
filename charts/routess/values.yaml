@@ -184,13 +184,17 @@ api:
     patPepper: ""
     # Empty disables Resend; the API falls back to a console transport (dev-only).
     resendApiKey: ""
+  # Raised from 256Mi/512Mi during the #354 incident, when a single public
+  # listing request could allocate ~700Mi and OOM-kill the pod. The listing is
+  # bounded now, so this is headroom rather than a requirement; keep it until
+  # the new steady state has been observed for a while.
   resources:
     requests:
       cpu: 250m
-      memory: 256Mi
+      memory: 512Mi
     limits:
       cpu: 500m
-      memory: 512Mi
+      memory: 1Gi
   securityContext:
     runAsNonRoot: true
     runAsUser: 1000

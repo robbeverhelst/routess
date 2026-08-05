@@ -98,6 +98,29 @@ describe("GET /routes/public", () => {
 		expect(res.body.map((r: { name: string }) => r.name)).toEqual(["The keeper"]);
 	});
 
+	// The gate is applied in SQL for pagination and re-applied in JS as the
+	// authority (#354). These pin the conditions that only the SQL half decides
+	// often enough to drift: name floor, the Dutch 'naamloos' default, and a
+	// description standing in for tags.
+	it("applies every Indexable gate condition, and counts what it returns", async () => {
+		const { user } = await createTestUserWithAuth(app, { email: "alice@example.com" });
+		await createRoute(app, user.id, { ...indexable, name: "ab", tags: ["gravel"] });
+		await createRoute(app, user.id, { ...indexable, name: "Naamloos ritje", tags: ["gravel"] });
+		await createRoute(app, user.id, { ...indexable, name: "UNTITLED shout", tags: ["gravel"] });
+		// Near-miss: the gate matches the 'naamloos' prefix, not every word stem.
+		await createRoute(app, user.id, { ...indexable, name: "Naamloze rit", tags: ["gravel"] });
+		await createRoute(app, user.id, {
+			...indexable,
+			name: "Described but untagged",
+			tags: [],
+			description: "A long enough description to clear the gate.",
+		});
+		await createRoute(app, user.id, { ...indexable, name: "Short description", tags: [], description: "too short" });
+		const res = await supertest(app.getHttpServer()).get("/api/v1/routes/public").expect(200);
+		expect(res.body.map((r: { name: string }) => r.name).sort()).toEqual(["Described but untagged", "Naamloze rit"]);
+		expect(res.headers["x-total-count"]).toBe("2");
+	});
+
 	it("paginates with limit and offset", async () => {
 		const { user } = await createTestUserWithAuth(app, { email: "alice@example.com" });
 		for (let i = 0; i < 3; i++) {
