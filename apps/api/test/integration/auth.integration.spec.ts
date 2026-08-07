@@ -71,6 +71,8 @@ describe("Auth Integration Tests", () => {
 			expect(response.body).toHaveProperty("accessToken");
 			expect(response.body).toHaveProperty("user");
 			expect(response.body.user.email).toBe("test@example.com");
+			// Drives the client's `user_registered` ProductEvent (#357).
+			expect(response.body.isNewUser).toBe(true);
 
 			// Verify user was created in database with a Google auth method.
 			// Provider-specific identifiers live on UserAuthMethod (not User) since
@@ -112,6 +114,8 @@ describe("Auth Integration Tests", () => {
 
 			expect(existingUserId).toBeDefined();
 			expect(response.body.user.id).toBe(existingUserId);
+			// Signing in to an existing account must not re-fire `user_registered`.
+			expect(response.body.isNewUser).toBe(false);
 
 			// Verify only one user exists
 			await withRequestContext(app, async () => {

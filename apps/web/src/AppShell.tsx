@@ -6,9 +6,10 @@ import { ResumeNavBanner } from "@/features/navigation/ResumeNavBanner";
 import { useRouteSurfaceSync } from "@/features/routing/services/useSurfaceBreakdown";
 import { useRouteDraftRehydration } from "@/features/routing/useRouteDraftRehydration";
 import { usePwaUpdateToast } from "@/hooks/usePwaUpdateToast";
+import { trackSignInEntry } from "@/lib/analytics/signup-funnel";
 import { apiService } from "@/lib/api";
 import { useAuthStatus } from "@/lib/api-queries";
-import { emitAppEvent, onAppEvent } from "@/lib/app-events";
+import { emitAppEvent, onAppEvent, type SignInEntryPoint } from "@/lib/app-events";
 import { hasStoredUser } from "@/lib/auth-state";
 import { type SupportedLanguage, t } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
@@ -258,11 +259,13 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 		const onOpenUserSettings = () => {
 			setDevScreen("user-settings");
 		};
-		const onOpenLogin = () => {
+		const onOpenLogin = ({ entryPoint }: { entryPoint: SignInEntryPoint }) => {
+			trackSignInEntry(entryPoint);
 			setSkippedAuth(false);
 			setAuthView("login");
 		};
-		const onOpenSignup = () => {
+		const onOpenSignup = ({ entryPoint }: { entryPoint: SignInEntryPoint }) => {
+			trackSignInEntry(entryPoint);
 			setSkippedAuth(false);
 			setAuthView("signup");
 		};

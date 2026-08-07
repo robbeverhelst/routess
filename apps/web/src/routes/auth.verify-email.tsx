@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { AUTH_CARD_STYLE, AuthBackdrop, AuthCardAccentBar, AuthLayout } from "@/components/auth-shared";
 import { Btn, RDS_COLORS } from "@/components/primitives";
+import { trackEvent } from "@/lib/analytics/track";
 import { apiService } from "@/lib/api";
 import { notifyAuthStateChange, storeUser } from "@/lib/auth-state";
 import { useT } from "@/lib/i18n";
@@ -43,6 +44,11 @@ function VerifyEmailPage() {
 				const result = await apiService.verifyEmail(token);
 				storeUser(result.user);
 				notifyAuthStateChange();
+				// Verifying the link is what creates the account on the email path.
+				if (result.isNewUser !== false) {
+					trackEvent({ name: "user_registered", properties: { provider: "email" } });
+				}
+				trackEvent({ name: "user_logged_in", properties: { provider: "email" } });
 				setState("success");
 				pushToast({ kind: "success", title: t("auth.verifyEmail.success"), body: result.user.email });
 				setTimeout(() => navigate({ to: "/" }), 1200);

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Bricolage_Grotesque, Inter, JetBrains_Mono } from "next/font/google";
 import Script from "next/script";
 import type { ReactNode } from "react";
+import { umamiScriptSrc } from "@/lib/analytics";
 import { getDict } from "@/lib/content";
 import { HTML_LANG, type Locale, REPO_URL, SELF_HOST, SISTER_HOST } from "@/lib/i18n";
 import { serializeJsonLd } from "@/lib/json-ld";
@@ -110,7 +111,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
 					dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd(locale)) }}
 				/>
 				{umamiUrl && umamiId ? (
-					<Script defer src={umamiUrl} data-website-id={umamiId} strategy="afterInteractive" />
+					<Script defer src={umamiScriptSrc(umamiUrl)} data-website-id={umamiId} strategy="afterInteractive" />
 				) : null}
 			</body>
 		</html>

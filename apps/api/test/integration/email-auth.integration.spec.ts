@@ -178,6 +178,8 @@ describe("Email Auth Integration Tests", () => {
 			expect(response.body.user.email).toBe(email);
 			expect(response.body.user.isEmailVerified).toBe(true);
 			expect(response.body.user.hasPassword).toBe(true);
+			// Verifying the link is account creation on the email path (#357).
+			expect(response.body.isNewUser).toBe(true);
 
 			await withRequestContext(app, async () => {
 				const orm = app.get(MikroORM);
@@ -262,6 +264,7 @@ describe("Email Auth Integration Tests", () => {
 			expect(response.body.accessToken).toBeTruthy();
 			expect(response.body.user.email).toBe(email);
 			expect(response.body.user.hasPassword).toBe(true);
+			expect(response.body.isNewUser).toBe(false);
 		});
 
 		it("returns 401 on wrong password with a generic error message", async () => {

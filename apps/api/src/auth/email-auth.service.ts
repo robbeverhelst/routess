@@ -176,6 +176,7 @@ export class EmailAuthService {
 		return {
 			accessToken,
 			user: toUserResponseDto(user, this.config.analytics.salt, true),
+			isNewUser: true,
 		};
 	}
 
@@ -234,6 +235,7 @@ export class EmailAuthService {
 		return {
 			accessToken,
 			user: toUserResponseDto(user, this.config.analytics.salt, true),
+			isNewUser: false,
 		};
 	}
 

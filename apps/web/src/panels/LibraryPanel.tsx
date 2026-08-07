@@ -119,7 +119,12 @@ export function LibraryPanel() {
 	if (!isAuthenticated) {
 		return (
 			<div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-				<SignInGate title={t("library.gate.title")} description={t("library.gate.body")} icon={I.library} />
+				<SignInGate
+					title={t("library.gate.title")}
+					description={t("library.gate.body")}
+					icon={I.library}
+					actionAttempted="view_library"
+				/>
 			</div>
 		);
 	}

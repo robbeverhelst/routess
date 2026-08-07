@@ -45,7 +45,7 @@ export function UserAvatar({ size = 30, onClick, title, compact = false }: UserA
 		if (isAuthenticated) {
 			emitAppEvent("routess:open-user-settings");
 		} else {
-			emitAppEvent("routess:open-login");
+			emitAppEvent("routess:open-login", { entryPoint: "header_avatar" });
 		}
 	};
 

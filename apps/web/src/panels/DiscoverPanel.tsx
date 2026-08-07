@@ -278,7 +278,12 @@ export function DiscoverPanel() {
 					</div>
 				)}
 				{empty && !isAuthenticated && (
-					<SignInGate title={t("discover.empty.title")} description={t("discover.empty.anonBody")} icon={I.explore} />
+					<SignInGate
+						title={t("discover.empty.title")}
+						description={t("discover.empty.anonBody")}
+						icon={I.explore}
+						actionAttempted="view_discover"
+					/>
 				)}
 				{empty && isAuthenticated && (
 					<div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: 40, height: "100%" }}>
