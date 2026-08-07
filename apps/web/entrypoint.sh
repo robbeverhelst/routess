@@ -78,6 +78,8 @@ echo "Environment variable replacement completed."
 # holds. The file must always exist because nginx.conf includes it.
 TUNNEL_CONF="/etc/nginx/snippets/tunnel.conf"
 DSN="${VITE_SENTRY_DSN:-}"
+# Set only when a DSN yields a usable report sink; gates the CSP directives.
+CSP_REPORT_ENDPOINT=""
 : > "$TUNNEL_CONF"
 case "$DSN" in
     __VITE_SENTRY_DSN__|"")
@@ -102,18 +104,39 @@ location = /__t {
     proxy_ssl_server_name on;
     add_header Cache-Control "no-store" always;
 }
+
+# CSP violation sink. Same-origin so ad-blockers and CORS can't silently
+# drop reports, mirroring the /__t tunnel. GlitchTip speaks Sentry's
+# security endpoint, which authenticates by query param rather than header.
+location = /__csp {
+    proxy_pass https://${SENTRY_HOST}/api/${SENTRY_PROJECT_ID}/security/?sentry_key=${SENTRY_PUBLIC_KEY};
+    proxy_set_header Host ${SENTRY_HOST};
+    proxy_set_header X-Forwarded-For "";
+    proxy_ssl_server_name on;
+    add_header Cache-Control "no-store" always;
+}
 EOF
+        CSP_REPORT_ENDPOINT="/__csp"
         echo "Tunnel: /__t -> https://${SENTRY_HOST}/api/${SENTRY_PROJECT_ID}/envelope/"
+        echo "CSP reports: /__csp -> https://${SENTRY_HOST}/api/${SENTRY_PROJECT_ID}/security/"
         ;;
     *)
         echo "Tunnel: VITE_SENTRY_DSN does not match expected shape; /__t will not be served."
         ;;
 esac
 
-# Content-Security-Policy, Report-Only for now: violations show in browser
-# consoles without breaking anything. Flip the header name to
-# Content-Security-Policy once prod shows no violations. Origins derive from
-# runtime env so the policy follows the deployment.
+# Content-Security-Policy, Report-Only for now: violations are collected
+# without breaking anything. Flip the header name to
+# Content-Security-Policy once the collected reports show nothing genuine.
+# Origins derive from runtime env so the policy follows the deployment.
+#
+# Report-only is inert without a reporting destination: browsers reject the
+# whole policy with "delivered in report-only mode, but does not specify a
+# 'report-to'; the policy will have no effect". Both directives are emitted,
+# report-uri for current browsers and report-to (with the accompanying
+# Reporting-Endpoints header) for the newer Reporting API. When no DSN is
+# configured there is nowhere to send reports, so the header is skipped
+# entirely rather than shipped inert.
 #
 # 'unsafe-inline' in script-src covers the two small inline scripts in
 # index.html (umami loader, theme flash guard); hash or externalize them
@@ -151,10 +174,17 @@ FRAME_SRC="https://accounts.google.com"
 
 CSP="default-src 'self'; script-src ${SCRIPT_SRC}; style-src ${STYLE_SRC}; font-src ${FONT_SRC}; img-src ${IMG_SRC}; connect-src ${CONNECT_SRC}; worker-src ${WORKER_SRC}; frame-src ${FRAME_SRC}; object-src 'none'; base-uri 'self'; manifest-src 'self'"
 
-cat > "$CSP_CONF" <<EOF
+: > "$CSP_CONF"
+if [ -n "${CSP_REPORT_ENDPOINT}" ]; then
+    CSP="${CSP}; report-uri ${CSP_REPORT_ENDPOINT}; report-to csp-endpoint"
+    cat > "$CSP_CONF" <<EOF
+add_header Reporting-Endpoints "csp-endpoint=\"${CSP_REPORT_ENDPOINT}\"" always;
 add_header Content-Security-Policy-Report-Only "${CSP}" always;
 EOF
-echo "CSP (Report-Only): ${CSP}"
+    echo "CSP (Report-Only, reporting to ${CSP_REPORT_ENDPOINT}): ${CSP}"
+else
+    echo "CSP: no report sink (VITE_SENTRY_DSN unset); Report-Only header omitted rather than shipped inert."
+fi
 
 # Start nginx
 echo "Starting nginx..."
