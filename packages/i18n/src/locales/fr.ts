@@ -106,4 +106,8 @@ export const fr: Record<string, string> = {
 	"discover.searchArea": "Chercher dans cette zone",
 	"discover.error.title": "Impossible de charger les routes",
 	"discover.error.retry": "Réessayer",
+
+	// First-run action bar over the empty map
+	"firstRun.drawItMyself": "Le tracer moi-même",
+	"firstRun.tapHint": "Touchez deux points sur la carte pour planifier un itinéraire",
 };

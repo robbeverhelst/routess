@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { FirstRunActions } from "@/components/FirstRunActions";
 import MapWithRouting from "@/components/MapWithRouting";
 import { ResumeNavBanner } from "@/features/navigation/ResumeNavBanner";
 import { useRouteSurfaceSync } from "@/features/routing/services/useSurfaceBreakdown";
@@ -156,6 +157,7 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 	const online = useOnlineStatus();
 	const hasRoute = useHasRoute();
 	const hasAnyWaypoint = useWaypoints().length > 0;
+	const firstRunActionsDismissed = useRedesignSettingsStore((state) => state.firstRunActionsDismissed);
 	const distance = useRouteDistance();
 	const duration = useRouteDuration();
 	const elevationGain = useElevationGain();
@@ -514,6 +516,10 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 	// solid docked bar instead of two stacked ones bleeding panel content
 	// through the gap). Closing the Plan sheet brings the tab bar back.
 	const showPlanActionBar = showApp && isMobile && context === "plan" && !panelCollapsed && hasAnyWaypoint;
+	// Nothing on the empty map says what to do, and the fastest path to a route
+	// (Generate a loop) is an unlabeled icon in the toolbar rail. Offer both
+	// named actions until the user has planned something or dismissed them.
+	const showFirstRunActions = showApp && isMobile && context === "plan" && !hasAnyWaypoint && !firstRunActionsDismissed;
 	const Chip =
 		hasRoute && !planPanelVisible ? (
 			<RouteChip distance={distance || "—"} time={duration || "—"} elevation={elevation} />
@@ -674,6 +680,7 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 			   would otherwise hide under the tab bar). Replaces the tab bar while a
 			   route is being planned. */}
 			{showPlanActionBar && <MobilePlanActionBar />}
+			{showFirstRunActions && <FirstRunActions />}
 			{/* Modals must render above the side panel/drawer; keeping them
 			   inside main would trap their z-index in main's stacking
 			   context and let the drawer or sidebar cover them. */}
