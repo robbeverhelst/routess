@@ -20,7 +20,12 @@ export function SocialPanel() {
 	if (!isAuthenticated) {
 		return (
 			<div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-				<SignInGate title={t("social.gate.title")} description={t("social.gate.body")} icon={I.social} />
+				<SignInGate
+					title={t("social.gate.title")}
+					description={t("social.gate.body")}
+					icon={I.social}
+					actionAttempted="view_social"
+				/>
 			</div>
 		);
 	}

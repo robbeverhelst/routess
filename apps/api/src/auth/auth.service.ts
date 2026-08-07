@@ -73,6 +73,7 @@ export class AuthService {
 		if (!user) {
 			user = await this.userRepository.findOne({ email }, { filters: { softDelete: false } });
 		}
+		const isNewUser = !user;
 
 		if (!user) {
 			user = this.userRepository.create({
@@ -144,6 +145,7 @@ export class AuthService {
 		return {
 			accessToken,
 			user: toUserResponseDto(user, this.config.analytics.salt),
+			isNewUser,
 		};
 	}
 

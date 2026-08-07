@@ -270,6 +270,9 @@ export interface AdminSeedRefreshResult {
 export interface AuthResponse {
 	accessToken: string;
 	user: ApiUser;
+	// Server truth for "this login created the account", so the client can fire
+	// `user_registered` exactly once. Optional: older API builds omit it.
+	isNewUser?: boolean;
 }
 
 // ========== Personal access tokens (PATs) ==========

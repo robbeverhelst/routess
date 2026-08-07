@@ -53,10 +53,16 @@ Umami captures these automatically from the request. Do not duplicate them as ev
 | `user_registered` | First-ever successful login for a user | `provider: "google" \| "email"` |
 | `user_logged_in` | Every successful login (including the first) | `provider: "google" \| "email"` |
 | `user_logged_out` | User clicks logout | — |
-| `auth_wall_hit` | Sign-in prompt shown because an action requires auth | `action_attempted: string` (e.g. `"save_route"`, `"share_route"`) |
-| `signup_started` | User clicks any sign-in / sign-up CTA | `entry_point: string` (e.g. `"auth_wall"`, `"header_cta"`) |
+| `auth_wall_hit` | Sign-in prompt shown because an action requires auth | `action_attempted: string` (e.g. `"view_library"`, `"view_social"`) |
+| `signup_started` | User clicks any sign-in / sign-up CTA | `entry_point: SignInEntryPoint` (e.g. `"auth_wall"`, `"save_modal"`) |
 
 `user_registered` and `user_logged_in` both fire on a first-time login — `_registered` is the funnel signal, `_logged_in` is the recurring engagement signal.
+
+**`user_registered` reads server truth.** The client cannot tell a first login from a repeat one, so `AuthResponseDto.isNewUser` carries it and the web fires the event only when it is true. Anything that mints an account must set it: Google auth sets it when it creates the `User`, and the email path sets it on `verify-email` (the step that creates the account), never on `login-email`.
+
+**`auth_wall_hit`** fires from a mount effect in `SignInGate`, not during render, so a re-render of the surrounding panel cannot double-count it.
+
+**`signup_started` excludes `session_ended`.** Logout and account deletion also land the user on the sign-in screen, but that is the end of a session rather than the start of a signup; counting it would inflate the top of the funnel with people who just left. `SignInEntryPoint` (in `apps/web/src/lib/app-events.ts`) is the bounded set of entry points, and `trackSignInEntry()` is the single fire site.
 
 ## Route lifecycle
 

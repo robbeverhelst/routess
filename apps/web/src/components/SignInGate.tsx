@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+import { trackEvent } from "@/lib/analytics/track";
 import { emitAppEvent } from "@/lib/app-events";
 import { useT } from "@/lib/i18n";
 import { I } from "./icons";
@@ -7,16 +9,25 @@ interface SignInGateProps {
 	title: string;
 	description: string;
 	icon?: React.ComponentType<{ size?: number }>;
+	// What the user was trying to reach, e.g. "view_library".
+	actionAttempted: string;
 }
 
-export function SignInGate({ title, description, icon: Icon = I.user }: SignInGateProps) {
+export function SignInGate({ title, description, icon: Icon = I.user, actionAttempted }: SignInGateProps) {
 	const t = useT();
+
+	// The gate replacing the panel body is the moment the wall is hit. Fired on
+	// mount rather than during render so a re-render never double-counts.
+	useEffect(() => {
+		trackEvent({ name: "auth_wall_hit", properties: { action_attempted: actionAttempted } });
+	}, [actionAttempted]);
+
 	const goToSignIn = () => {
-		emitAppEvent("routess:open-login");
+		emitAppEvent("routess:open-login", { entryPoint: "auth_wall" });
 	};
 
 	const goToSignUp = () => {
-		emitAppEvent("routess:open-signup");
+		emitAppEvent("routess:open-signup", { entryPoint: "auth_wall" });
 	};
 
 	return (

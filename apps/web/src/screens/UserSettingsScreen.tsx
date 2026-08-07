@@ -243,7 +243,7 @@ export function UserSettingsScreen() {
 		try {
 			await apiService.deleteAccount();
 			pushToast({ kind: "success", title: t("settings.account.deleteScheduled") });
-			emitAppEvent("routess:open-login");
+			emitAppEvent("routess:open-login", { entryPoint: "session_ended" });
 		} catch (error) {
 			Logger.error("Delete account failed", error);
 			pushToast({ kind: "danger", title: t("settings.account.deleteFailed") });
@@ -272,7 +272,7 @@ export function UserSettingsScreen() {
 		logout.mutate(undefined, {
 			onSuccess: () => {
 				pushToast({ kind: "success", title: t("common.signedOut") });
-				emitAppEvent("routess:open-login");
+				emitAppEvent("routess:open-login", { entryPoint: "session_ended" });
 			},
 		});
 	};
@@ -282,7 +282,7 @@ export function UserSettingsScreen() {
 		try {
 			await apiService.logoutEverywhere();
 			pushToast({ kind: "success", title: t("common.signedOut") });
-			emitAppEvent("routess:open-login");
+			emitAppEvent("routess:open-login", { entryPoint: "session_ended" });
 		} catch (error) {
 			Logger.error("Logout everywhere failed", error);
 			pushToast({ kind: "danger", title: t("settings.security.logoutEverywhereFailed") });
