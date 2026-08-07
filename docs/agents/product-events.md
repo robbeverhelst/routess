@@ -58,6 +58,16 @@ Umami captures these automatically from the request. Do not duplicate them as ev
 
 `user_registered` and `user_logged_in` both fire on a first-time login — `_registered` is the funnel signal, `_logged_in` is the recurring engagement signal.
 
+## First run
+
+| Event | When | Properties |
+|---|---|---|
+| `first_run_action_chosen` | User picks a starting path from the first-run action bar over the empty map | `choice: "generate" \| "draw"` |
+
+The bar shows only on mobile, in the Plan context, while there are no waypoints and the user has not dismissed it (`apps/web/src/components/FirstRunActions.tsx`). `"generate"` opens the loop generator and dismisses the bar permanently (per-device, `firstRunActionsDismissed` in the settings store). `"draw"` swaps the buttons for a tap hint and is deliberately *not* persisted, so a reload offers both paths again.
+
+There is no matching `first_run_actions_shown` event: the bar's visibility is derivable from `signed_in` plus the absence of any `route_created`, and firing on render would break the discrete-intent rule above.
+
 ## Route lifecycle
 
 | Event | When | Properties |

@@ -988,4 +988,8 @@ export const nl: Record<string, string> = {
 	"pwa.update.title": "Update beschikbaar",
 	"pwa.update.body": "Er staat een nieuwe versie van routess klaar.",
 	"pwa.update.reload": "Herladen",
+
+	// First-run action bar over the empty map
+	"firstRun.drawItMyself": "Zelf tekenen",
+	"firstRun.tapHint": "Tik twee punten op de kaart om een route te plannen",
 };
