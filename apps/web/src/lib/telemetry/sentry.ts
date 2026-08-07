@@ -105,6 +105,6 @@ function syncRouteDraftContext(): void {
 	});
 }
 
-export function captureException(error: unknown, context?: Sentry.ScopeContext): void {
+export function captureException(error: unknown, context?: Parameters<typeof Sentry.captureException>[1]): void {
 	Sentry.captureException(error, context);
 }

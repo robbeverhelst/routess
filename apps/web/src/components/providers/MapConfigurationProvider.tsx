@@ -145,12 +145,6 @@ export const MapConfigurationProvider: React.FC<MapConfigurationProviderProps> =
 		saveSunDirectionSettingToLocalStorage(showSunDirection);
 	}, [showSunDirection]);
 
-	useEffect(() => {
-		if (mapStyleKey === "dark" && currentLightPreset !== "night") {
-			setCurrentLightPreset("night");
-		}
-	}, [mapStyleKey, currentLightPreset]);
-
 	// Map lock toggle handler
 	const handleToggleLock = useCallback(() => {
 		const newLockedState = !isMapLocked;

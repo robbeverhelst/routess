@@ -1,7 +1,7 @@
 import React, { type CSSProperties, type ReactNode } from "react";
 import { Marker } from "react-map-gl/mapbox";
 import { I } from "@/components/icons";
-import { type SupportedLanguage, t } from "@/lib/i18n";
+import { type SupportedLanguage, tIn } from "@/lib/i18n";
 
 export interface PopupInfo {
 	longitude: number;
@@ -119,7 +119,7 @@ const MapPopupComponent: React.FC<MapPopupProps> = ({
 						<PopupButton
 							tone="accent"
 							icon={<I.flag size={13} />}
-							label={t("mapPopup.button.addDirectWaypoint", currentLanguage)}
+							label={tIn(currentLanguage, "mapPopup.button.addDirectWaypoint")}
 							onClick={onAddDirectWaypoint}
 						/>
 					</div>
@@ -130,7 +130,7 @@ const MapPopupComponent: React.FC<MapPopupProps> = ({
 						<PopupButton
 							tone="danger"
 							icon={<I.trash size={13} />}
-							label={t("mapPopup.button.removePoint", currentLanguage)}
+							label={tIn(currentLanguage, "mapPopup.button.removePoint")}
 							onClick={onRemoveWaypoint}
 						/>
 					</div>
@@ -141,7 +141,7 @@ const MapPopupComponent: React.FC<MapPopupProps> = ({
 						<PopupButton
 							tone="success"
 							icon={<I.plus size={13} />}
-							label={t("mapPopup.button.addWaypointHere", currentLanguage)}
+							label={tIn(currentLanguage, "mapPopup.button.addWaypointHere")}
 							onClick={onAddWaypointOnRoute}
 						/>
 					</div>

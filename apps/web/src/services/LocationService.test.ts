@@ -8,7 +8,7 @@ describe("LocationService", () => {
 		vi.spyOn(navigator.permissions, "query").mockResolvedValue({
 			state: "prompt",
 			addEventListener: vi.fn(),
-		} as PermissionStatus);
+		} as unknown as PermissionStatus);
 		vi.spyOn(navigator.geolocation, "watchPosition").mockReturnValue(1);
 		vi.spyOn(navigator.geolocation, "clearWatch").mockImplementation(() => {});
 		vi.spyOn(navigator.geolocation, "getCurrentPosition").mockImplementation(() => {});

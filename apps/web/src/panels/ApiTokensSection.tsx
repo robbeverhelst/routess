@@ -37,7 +37,7 @@ function TokenRow({ token }: { token: ApiPersonalAccessToken }) {
 		if (!ok) return;
 		revoke.mutate(token.id, {
 			onError: () => {
-				pushToast({ kind: "error", title: t("settings.tokens.revokeFailed") });
+				pushToast({ kind: "danger", title: t("settings.tokens.revokeFailed") });
 			},
 		});
 	};
@@ -98,7 +98,7 @@ function CreateForm({ onSecretRevealed, onCancel }: CreateFormProps) {
 					onSecretRevealed(result.token);
 				},
 				onError: () => {
-					pushToast({ kind: "error", title: t("settings.tokens.createFailed") });
+					pushToast({ kind: "danger", title: t("settings.tokens.createFailed") });
 				},
 			},
 		);

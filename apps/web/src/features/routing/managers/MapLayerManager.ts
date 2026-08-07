@@ -1,6 +1,6 @@
 import type { Waypoint } from "@routess/core";
 import { haversineDistance } from "@routess/core";
-import type { GeoJSONSource, Map as MapboxMap } from "mapbox-gl";
+import type { DataDrivenPropertyValueSpecification, GeoJSONSource, Map as MapboxMap } from "mapbox-gl";
 import type { SurfaceSegment } from "@/features/routing/services/SurfaceService";
 import { Logger } from "@/lib/logger";
 import type { Coordinate } from "@/types/map";
@@ -72,7 +72,10 @@ const LIFTED_SIZE_MULTIPLIER = 1.3;
 // "step", so we embed the state branches in each output value instead of
 // wrapping the whole interpolate in a "case". The `spawn` feature-state
 // (-1..0, animated by animateWaypointSpawn) scales a fresh waypoint in.
-const interpolateZoomStops = (column: 1 | 2 | 3 | 4, hoverMultiplier = 1): unknown[] => [
+const interpolateZoomStops = (
+	column: 1 | 2 | 3 | 4,
+	hoverMultiplier = 1,
+): DataDrivenPropertyValueSpecification<number> => [
 	"interpolate",
 	["linear"],
 	["zoom"],

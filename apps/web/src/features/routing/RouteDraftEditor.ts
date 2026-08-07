@@ -500,7 +500,7 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 		store.setCreationSource("imported");
 		trackEvent({
 			name: "route_loaded_into_editor",
-			properties: { creation_source: "external" },
+			properties: { creation_source: "imported" },
 		});
 		const waypoints: Waypoint[] = selectSmartWaypoints(route.geometry).map((coord) => ({
 			coord,

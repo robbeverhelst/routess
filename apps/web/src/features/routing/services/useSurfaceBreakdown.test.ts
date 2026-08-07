@@ -9,7 +9,7 @@ describe("buildSurfaceBreakdownKey", () => {
 				[4.4025, 51.2194],
 			],
 			true,
-			"bicycle",
+			"cycle",
 		);
 		const second = buildSurfaceBreakdownKey(
 			[
@@ -18,31 +18,31 @@ describe("buildSurfaceBreakdownKey", () => {
 				[4.4025, 51.2194],
 			],
 			true,
-			"bicycle",
+			"cycle",
 		);
 
 		expect(first).not.toBe(second);
 	});
 
-	it("changes when the costing mode changes and clears when disabled", () => {
-		const bicycle = buildSurfaceBreakdownKey(
+	it("changes when the activity changes and clears when disabled", () => {
+		const cycle = buildSurfaceBreakdownKey(
 			[
 				[4.3517, 50.8503],
 				[4.4025, 51.2194],
 			],
 			true,
-			"bicycle",
+			"cycle",
 		);
-		const auto = buildSurfaceBreakdownKey(
+		const walk = buildSurfaceBreakdownKey(
 			[
 				[4.3517, 50.8503],
 				[4.4025, 51.2194],
 			],
 			true,
-			"auto",
+			"walk",
 		);
 
-		expect(bicycle).not.toBe(auto);
-		expect(buildSurfaceBreakdownKey([[4.3517, 50.8503]], false, "bicycle")).toBe("");
+		expect(cycle).not.toBe(walk);
+		expect(buildSurfaceBreakdownKey([[4.3517, 50.8503]], false, "cycle")).toBe("");
 	});
 });

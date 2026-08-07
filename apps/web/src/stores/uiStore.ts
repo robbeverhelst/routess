@@ -36,7 +36,10 @@ interface UiState {
 	toggleFavourite: (routeId: number) => void;
 }
 
-type PersistedUiState = Partial<UiState> & {
+// context is widened to string on purpose: migrations compare against legacy
+// values ("activity", "explore") that the current union no longer contains.
+// Intersecting with Partial<UiState> would re-narrow it, so omit it first.
+type PersistedUiState = Omit<Partial<UiState>, "context"> & {
 	context?: string;
 	loadedRoute?: unknown;
 	welcomeCompleted?: unknown;

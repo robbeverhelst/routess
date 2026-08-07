@@ -29,7 +29,7 @@ describe("redesignSettingsStore", () => {
 				surface: false,
 				wind: false,
 				nodes: true,
-			} as unknown as Parameters<typeof normalizeRedesignSettings>[0]["overlays"],
+			} as unknown as NonNullable<Parameters<typeof normalizeRedesignSettings>[0]>["overlays"],
 		});
 
 		expect(settings.overlays.hikingNodes).toBe(true);
@@ -42,7 +42,7 @@ describe("redesignSettingsStore", () => {
 				nodes: true,
 				hikingNodes: false,
 				cyclingNodes: false,
-			} as unknown as Parameters<typeof normalizeRedesignSettings>[0]["overlays"],
+			} as unknown as NonNullable<Parameters<typeof normalizeRedesignSettings>[0]>["overlays"],
 		});
 
 		expect(settings.overlays.hikingNodes).toBe(false);

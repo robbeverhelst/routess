@@ -196,7 +196,7 @@ export function useUserPreferencesSync(auth: AuthStatusSnapshot | undefined) {
 				.catch((error) => {
 					Logger.error("[useUserPreferencesSync] Failed to sync user preferences:", error);
 					scheduleStatusReset("error", 4000);
-					pushToast({ kind: "error", title: t("settings.sync.failed") });
+					pushToast({ kind: "danger", title: t("settings.sync.failed") });
 				});
 		}, SAVE_DEBOUNCE_MS);
 

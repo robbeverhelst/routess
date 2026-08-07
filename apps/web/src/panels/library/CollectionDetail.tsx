@@ -289,6 +289,7 @@ export function CollectionDetail({
 						(editable ? (
 							<EditableLabel
 								value={detail.name}
+								placeholder={t("library.collections.namePlaceholder")}
 								onSave={(next) => {
 									const name = next?.trim();
 									if (name && name !== detail.name) updateCollection.mutate({ collectionId, updates: { name } });

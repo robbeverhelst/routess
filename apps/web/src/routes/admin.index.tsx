@@ -158,7 +158,7 @@ export function PageHeader({
 }: {
 	eyebrow?: string;
 	title: string;
-	subtitle?: string;
+	subtitle?: ReactNode;
 	right?: ReactNode;
 }) {
 	return (

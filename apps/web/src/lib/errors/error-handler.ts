@@ -18,6 +18,7 @@ const categoryForCode = (code: DomainErrorCode): ErrorCategory => {
 		case "NOT_FOUND":
 		case "CONFLICT":
 		case "RATE_LIMITED":
+		case "PRECONDITION_REQUIRED":
 		case "INTERNAL":
 			return "api" as ErrorCategory;
 	}
