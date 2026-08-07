@@ -45,8 +45,16 @@ export async function clearDatabase(app: INestApplication) {
 	});
 	// Rate-limit buckets are in-memory and would otherwise accumulate across
 	// tests within one app instance, making test outcomes order-dependent.
-	const throttlerStorage = app.get<{ storage: Map<string, unknown> }>(ThrottlerStorage, { strict: false });
-	throttlerStorage?.storage?.clear();
+	// reset() also cancels the pending decrement timers; clearing the map alone
+	// leaves them armed to throw later (see RedisThrottlerStorage.reset).
+	const throttlerStorage = app.get<{ storage: Map<string, unknown>; reset?: () => void }>(ThrottlerStorage, {
+		strict: false,
+	});
+	if (throttlerStorage?.reset) {
+		throttlerStorage.reset();
+	} else {
+		throttlerStorage?.storage?.clear();
+	}
 }
 
 export async function closeTestApp(app: INestApplication) {
