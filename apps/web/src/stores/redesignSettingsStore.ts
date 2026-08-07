@@ -95,6 +95,10 @@ interface SettingsState {
 	// First-run action bar over the empty map. Per-device: it teaches the UI,
 	// and a returning user on a new phone still needs it.
 	firstRunActionsDismissed: boolean;
+	// GDPR opt-out for ProductEvents (ADR-0019). On by default; analytics runs
+	// on legitimate interest and this is the objection mechanism. Per-device,
+	// because it must work before and without an account.
+	analyticsEnabled: boolean;
 
 	setUnits: (units: RedesignUnits) => void;
 	setShowPois: (showPois: boolean) => void;
@@ -113,6 +117,7 @@ interface SettingsState {
 	setShowNodeNetworkOverlays: (show: boolean) => void;
 	setNavigationEnabled: (enabled: boolean) => void;
 	setFirstRunActionsDismissed: (dismissed: boolean) => void;
+	setAnalyticsEnabled: (enabled: boolean) => void;
 	setRoutingDefaultsForActivity: (activity: RedesignActivity, prefs: Partial<RoutingPreferences>) => void;
 	replaceAllSettings: (settings: RedesignSettingsSnapshot) => void;
 }
@@ -161,6 +166,7 @@ const DEFAULT_SHOW_HEADING_CONE = true;
 const DEFAULT_SHOW_NODE_NETWORK_OVERLAYS = false;
 const DEFAULT_NAVIGATION_ENABLED = false;
 const DEFAULT_FIRST_RUN_ACTIONS_DISMISSED = false;
+const DEFAULT_ANALYTICS_ENABLED = true;
 
 function isActivity(value: unknown): value is RedesignActivity {
 	return value === "run" || value === "cycle" || value === "walk";
@@ -278,6 +284,7 @@ export const useRedesignSettingsStore = create<SettingsState>()(
 			showNodeNetworkOverlays: DEFAULT_SHOW_NODE_NETWORK_OVERLAYS,
 			navigationEnabled: DEFAULT_NAVIGATION_ENABLED,
 			firstRunActionsDismissed: DEFAULT_FIRST_RUN_ACTIONS_DISMISSED,
+			analyticsEnabled: DEFAULT_ANALYTICS_ENABLED,
 
 			setUnits: (units) => set({ units }),
 			setShowPois: (showPois) => set({ showPois }),
@@ -309,6 +316,7 @@ export const useRedesignSettingsStore = create<SettingsState>()(
 			setShowNodeNetworkOverlays: (showNodeNetworkOverlays) => set({ showNodeNetworkOverlays }),
 			setNavigationEnabled: (navigationEnabled) => set({ navigationEnabled }),
 			setFirstRunActionsDismissed: (firstRunActionsDismissed) => set({ firstRunActionsDismissed }),
+			setAnalyticsEnabled: (analyticsEnabled) => set({ analyticsEnabled }),
 			setRoutingDefaultsForActivity: (activity, prefs) =>
 				set((state) => ({
 					routingDefaults: mergeRoutingDefaults(state.routingDefaults, {
@@ -320,7 +328,10 @@ export const useRedesignSettingsStore = create<SettingsState>()(
 		}),
 		{
 			name: "routess.redesign.settings",
-			version: 10,
+			// v11 adds analyticsEnabled. v10 was claimed by firstRunActionsDismissed
+			// on main, so this has to move past it or migrate never reruns and the
+			// flag stays undefined.
+			version: 11,
 			migrate: (persisted, version) => {
 				const state = persisted as
 					| (Partial<RedesignSettingsSnapshot> & {
@@ -330,6 +341,7 @@ export const useRedesignSettingsStore = create<SettingsState>()(
 							showNodeNetworkOverlays?: boolean;
 							navigationEnabled?: boolean;
 							firstRunActionsDismissed?: boolean;
+							analyticsEnabled?: boolean;
 					  })
 					| null;
 				if (state && version < 4) {
@@ -362,6 +374,8 @@ export const useRedesignSettingsStore = create<SettingsState>()(
 					typeof state?.firstRunActionsDismissed === "boolean"
 						? state.firstRunActionsDismissed
 						: DEFAULT_FIRST_RUN_ACTIONS_DISMISSED;
+				const analyticsEnabled =
+					typeof state?.analyticsEnabled === "boolean" ? state.analyticsEnabled : DEFAULT_ANALYTICS_ENABLED;
 				return {
 					...normalizeRedesignSettings(state),
 					locationPermission,
@@ -370,6 +384,7 @@ export const useRedesignSettingsStore = create<SettingsState>()(
 					showNodeNetworkOverlays,
 					navigationEnabled,
 					firstRunActionsDismissed,
+					analyticsEnabled,
 				};
 			},
 		},

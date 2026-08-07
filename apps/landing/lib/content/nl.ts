@@ -189,6 +189,7 @@ export const nl: Dict = {
 				{ label: "Gidsen", href: "/gids" },
 				{ label: "Vergelijk", href: "/vergelijk" },
 				{ label: "Privacy", href: "/privacy" },
+				{ label: "Voorwaarden", href: "/terms" },
 				{ label: "Licentie (MIT)", href: "https://github.com/robbeverhelst/routess/blob/main/LICENSE" },
 			],
 		},

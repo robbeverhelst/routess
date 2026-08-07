@@ -3,23 +3,39 @@ title: Privacy
 description: What data routess stores and how to control it.
 ---
 
-routess is open source and built to keep your data yours. The full privacy policy lives on [routess.com/privacy](https://routess.com/privacy); this page is the short version for app users.
+routess is open source and built to keep your data yours. This page is the short version for app users. The full policy, including legal bases, recipients and retention periods, lives at [routess.com/privacy](https://routess.com/privacy).
 
 ## What routess stores
 
 - Your name and email address (from Google sign-in or email signup)
-- Your saved routes (waypoints and metadata such as name, activity, and visibility)
+- Your handle and avatar, which are the public face of your profile
+- Your saved routes and collections (waypoints, geometry, and metadata such as name, activity, tags, and visibility)
+- Your sessions, including the IP address and browser you signed in from, kept for 7 days
 
 ## Analytics
 
-routess uses Umami, a privacy-friendly, cookie-less analytics tool, self-hosted on routess infrastructure. Usage events are anonymous: they never include your email, your route names, or your raw account ID. There are no third-party trackers and no advertising profiles.
+routess uses Umami, a cookie-less analytics tool self-hosted on routess infrastructure. No third party receives it and it is never used for advertising.
+
+Alongside page views, the app records named product events such as creating a route or importing a GPX file, with context like distance, waypoint count, and the visibility you chose. Signed-in events carry a **pseudonymous** identifier: a salted hash of your account ID, computed on the server. It is not your raw account ID and it cannot be reversed from the browser, but it does link your sessions together, so we call it pseudonymous rather than anonymous.
+
+Search terms are recorded only as a length bucket, never as the text you typed.
+
+**To turn it off**: Settings → Privacy & sharing → Usage analytics. Nothing is sent after that, including page views. Your browser's Do Not Track setting is honoured automatically.
+
+## Error reporting
+
+Crash reports go to a self-hosted GlitchTip. They include the error, the page, and the shape of what you were editing (waypoint counts, distances), but never your coordinates, email, or name.
+
+## Administrator access
+
+Administrators can search accounts by name or email, see your active sessions and their IP addresses, and open any route including private ones. This is for support and abuse handling, and every action is audit-logged. Private means private from other users, not encrypted against us. Self-hosting is the answer if that matters to you.
 
 ## Your controls
 
 - **Export**: download a full copy of your account (JSON + GPX per route) from your profile settings.
-- **Visibility**: every route is private by default. You decide per route whether it's private, unlisted, or public.
-- **Delete**: deleting your account removes your routes and profile after a 30-day grace window. See [Deleting your account](/en/guide/account/deleting-account).
+- **Visibility**: every route is private by default. You decide per route whether it's private, unlisted, or public. A public route reveals where you have been, so consider trimming the start and end.
+- **Delete**: deleting your account removes your routes, profile, and analytics events after a 30-day grace window. See [Deleting your account](/en/guide/account/deleting-account).
 
 ## Self-hosting
 
-If you run your own routess instance, your data stays on your infrastructure. There is no phone-home built in.
+If you run your own routess instance, your data stays on your infrastructure. There is no phone-home built in, and analytics and error reporting are off unless you configure them.

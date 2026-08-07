@@ -186,6 +186,7 @@ export const en: Dict = {
 				{ label: "Guides", href: "/guides" },
 				{ label: "Compare", href: "/compare" },
 				{ label: "Privacy", href: "/privacy" },
+				{ label: "Terms", href: "/terms" },
 				{ label: "License (MIT)", href: "https://github.com/robbeverhelst/routess/blob/main/LICENSE" },
 			],
 		},

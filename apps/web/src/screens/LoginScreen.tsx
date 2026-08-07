@@ -5,6 +5,7 @@ import { emitAppEvent } from "@/lib/app-events";
 import { notifyAuthStateChange, storeUser } from "@/lib/auth-state";
 import { type GoogleCodeResponse, googleAuth, hasValidGoogleClientId } from "@/lib/google-auth";
 import { useT } from "@/lib/i18n";
+import { PRIVACY_URL, TERMS_URL } from "@/lib/links";
 import { Logger } from "@/lib/logger";
 import { useToastStore } from "@/stores/toastStore";
 import {
@@ -355,11 +356,16 @@ export function LoginScreen({ onSuccess }: { onSuccess?: () => void }) {
 					>
 						<I.compass size={11} style={{ verticalAlign: "middle", marginRight: 4 }} />
 						{t("login.legal")}{" "}
-						<a href="/terms" style={{ color: RDS_COLORS.fgMuted, fontWeight: 500 }}>
+						<a href={TERMS_URL} target="_blank" rel="noreferrer" style={{ color: RDS_COLORS.fgMuted, fontWeight: 500 }}>
 							{t("login.terms")}
 						</a>{" "}
 						&{" "}
-						<a href="/privacy" style={{ color: RDS_COLORS.fgMuted, fontWeight: 500 }}>
+						<a
+							href={PRIVACY_URL}
+							target="_blank"
+							rel="noreferrer"
+							style={{ color: RDS_COLORS.fgMuted, fontWeight: 500 }}
+						>
 							{t("login.privacy")}
 						</a>
 						.

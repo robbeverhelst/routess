@@ -313,6 +313,17 @@ validates the same production config, so it needs every value the api needs.
     secretKeyRef:
       name: {{ include "routess.fullname" . }}-api
       key: pat-pepper
+{{- if .Values.api.secrets.umamiDatabaseUrl }}
+- name: UMAMI_DATABASE_URL
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "routess.fullname" . }}-api
+      key: umami-database-url
+{{- end }}
+{{- with .Values.global.umami.websiteId }}
+- name: UMAMI_WEBSITE_ID
+  value: {{ . | quote }}
+{{- end }}
 - name: EMAIL_FROM
   value: {{ .Values.api.env.emailFrom | quote }}
 {{- with .Values.api.env.valhallaUrl }}

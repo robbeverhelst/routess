@@ -110,4 +110,12 @@ export const de: Record<string, string> = {
 	// First-run action bar over the empty map
 	"firstRun.drawItMyself": "Selbst zeichnen",
 	"firstRun.tapHint": "Tippe zwei Punkte auf der Karte, um eine Route zu planen",
+
+	// Privacy controls
+	"settings.privacy.analytics": "Nutzungsstatistiken",
+	"settings.privacy.analyticsSub":
+		"Anonyme, cookie-lose Produktstatistiken auf unseren eigenen Servern. Schalte dies aus und es wird nichts gesendet.",
+	"settings.privacy.policy": "Datenschutzerklärung",
+	"settings.privacy.policySub": "Was wir speichern, wer es erhält und wie du es löschen lässt",
+	"settings.privacy.policyLink": "Erklärung lesen",
 };

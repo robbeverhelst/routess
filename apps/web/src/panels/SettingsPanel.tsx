@@ -4,7 +4,7 @@ import { usePwaInstall } from "@/hooks/usePwaInstall";
 import { useUserProfile } from "@/lib/api-queries";
 import { emitAppEvent } from "@/lib/app-events";
 import { type SupportedLanguage, t, tIn } from "@/lib/i18n";
-import { AUTHOR_URL, DOCS_URL } from "@/lib/links";
+import { AUTHOR_URL, DOCS_URL, PRIVACY_URL } from "@/lib/links";
 import { getVersionDisplay } from "@/lib/version";
 import { usePreferencesSyncStore } from "@/stores/preferencesSyncStore";
 import {
@@ -330,6 +330,8 @@ export function SettingsPanel() {
 	const setShowNodeNetworkOverlays = useRedesignSettingsStore((s) => s.setShowNodeNetworkOverlays);
 	const navigationEnabled = useRedesignSettingsStore((s) => s.navigationEnabled);
 	const setNavigationEnabled = useRedesignSettingsStore((s) => s.setNavigationEnabled);
+	const analyticsEnabled = useRedesignSettingsStore((s) => s.analyticsEnabled);
+	const setAnalyticsEnabled = useRedesignSettingsStore((s) => s.setAnalyticsEnabled);
 
 	const defaultSport: RedesignActivity | null =
 		selectedSports.length === 0 ? null : selectedSports.includes(activityType) ? activityType : selectedSports[0];
@@ -762,6 +764,22 @@ export function SettingsPanel() {
 									</option>
 								))}
 							</Select>
+						}
+					/>
+					<SettingsRow
+						label={t("settings.privacy.analytics")}
+						sub={t("settings.privacy.analyticsSub")}
+						control={
+							<Toggle on={analyticsEnabled} onChange={setAnalyticsEnabled} label={t("settings.privacy.analytics")} />
+						}
+					/>
+					<SettingsRow
+						label={t("settings.privacy.policy")}
+						sub={t("settings.privacy.policySub")}
+						control={
+							<a href={PRIVACY_URL} target="_blank" rel="noreferrer" style={{ fontSize: 13, fontWeight: 500 }}>
+								{t("settings.privacy.policyLink")}
+							</a>
 						}
 					/>
 				</SettingsSection>

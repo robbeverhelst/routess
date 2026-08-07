@@ -3,6 +3,7 @@ import { InjectRepository } from "@mikro-orm/nestjs";
 import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import { isValidHandle, mergeUserPreferences } from "@routess/core";
+import { AnalyticsErasureService } from "../analytics/analytics-erasure.service";
 import { SessionService } from "../auth/session.service";
 import { Route } from "../entities/route.entity";
 import { User } from "../entities/user.entity";
@@ -24,6 +25,7 @@ export class UsersService {
 		private readonly routeRepository: EntityRepository<Route>,
 		private readonly em: EntityManager,
 		private readonly sessionService: SessionService,
+		private readonly analyticsErasure: AnalyticsErasureService,
 	) {}
 
 	async findOne(id: number): Promise<User> {
@@ -142,6 +144,17 @@ export class UsersService {
 		if (expired.length === 0) return 0;
 
 		const ids = expired.map((u) => u.id);
+
+		// Erase the behavioural trail before the row goes, since the hash is
+		// derived from the user id. Best-effort: a broken Umami must not strand
+		// accounts in the pending state forever (ADR-0020).
+		for (const id of ids) {
+			const erased = await this.analyticsErasure.eraseUserEvents(id);
+			if (erased !== null) {
+				this.logger.log(`Erased ${erased} ProductEvents for user ${id}`);
+			}
+		}
+
 		const conn = this.em.getConnection();
 		// Hard-delete in FK-safe order: routes → sessions → user. Bypasses the
 		// soft-delete filter by using raw SQL with explicit ids.
