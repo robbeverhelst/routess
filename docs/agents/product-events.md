@@ -64,6 +64,21 @@ Umami captures these automatically from the request. Do not duplicate them as ev
 
 **`signup_started` excludes `session_ended`.** Logout and account deletion also land the user on the sign-in screen, but that is the end of a session rather than the start of a signup; counting it would inflate the top of the funnel with people who just left. `SignInEntryPoint` (in `apps/web/src/lib/app-events.ts`) is the bounded set of entry points, and `trackSignInEntry()` is the single fire site.
 
+## First run and activation
+
+| Event | When | Properties |
+|---|---|---|
+| `first_run_action_chosen` | User picks a starting path from the first-run action bar over the empty map | `choice: "generate" \| "draw"` |
+| `route_draft_started` | A draft goes from zero to one waypoint | `creation_source: "manual" \| "generated" \| "imported"` |
+
+The action bar shows only on mobile, in the Plan context, while there are no waypoints and the user has not dismissed it (`apps/web/src/components/FirstRunActions.tsx`). `"generate"` opens the loop generator and dismisses the bar permanently (per-device, `firstRunActionsDismissed` in the settings store). `"draw"` swaps the buttons for a tap hint and is deliberately *not* persisted, so a reload offers both paths again.
+
+There is no matching `first_run_actions_shown` event: firing on render would break the discrete-intent rule above, and the bar's visibility is derivable from the absence of `route_draft_started`.
+
+**`route_draft_started` is the only signal that a signed-out user tried to plan anything.** `route_created` fires on `POST /routes` returning 2xx, which requires an account, so a guest who drops waypoints, gets a route and leaves without saving produces no other event. Without this, "never activated" cannot be split into *never tried* (a discovery problem) and *tried but didn't save* (an auth-wall or value problem).
+
+Fired once per draft from `addWaypoint` in `apps/web/src/features/routing/RouteDraftEditor.ts`, on the 0 to 1 transition only. Not per waypoint: that would be a firehose and would make session counts meaningless. `loadWaypoints` (GPX import, opening a saved route) deliberately does not fire it, since neither is the user starting to plan.
+
 ## Route lifecycle
 
 | Event | When | Properties |

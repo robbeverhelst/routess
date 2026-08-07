@@ -189,8 +189,20 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 		const prev = capturePreEditState();
 		saveSnapshot();
 
+		// Zero to one waypoint is the moment someone starts planning. route_created
+		// can't see it: that needs an account and a save, so a guest who draws a
+		// route and leaves without saving is otherwise invisible.
+		const startsDraft = getWaypoints().length === 0;
+
 		const resolved = await resolveAddCoord(coord, type, accessToken);
 		useRoutingStore.getState().addWaypoint(resolved.coord, resolved.type);
+
+		if (startsDraft) {
+			trackEvent({
+				name: "route_draft_started",
+				properties: { creation_source: useRoutingStore.getState().creationSource },
+			});
+		}
 
 		// Single Waypoint: nothing to route yet. The first Waypoint can't be
 		// validated against the road network until the second one arrives;

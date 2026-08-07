@@ -107,6 +107,10 @@ export const de: Record<string, string> = {
 	"discover.error.title": "Routen konnten nicht geladen werden",
 	"discover.error.retry": "Erneut versuchen",
 
+	// First-run action bar over the empty map
+	"firstRun.drawItMyself": "Selbst zeichnen",
+	"firstRun.tapHint": "Tippe zwei Punkte auf der Karte, um eine Route zu planen",
+
 	// Privacy controls
 	"settings.privacy.analytics": "Nutzungsstatistiken",
 	"settings.privacy.analyticsSub":

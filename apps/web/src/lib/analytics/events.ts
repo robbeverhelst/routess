@@ -23,6 +23,10 @@ export type ProductEvent =
 	| { name: "auth_wall_hit"; properties: { action_attempted: string } }
 	| { name: "signup_started"; properties: { entry_point: string } }
 
+	// First run
+	| { name: "first_run_action_chosen"; properties: { choice: "generate" | "draw" } }
+	| { name: "route_draft_started"; properties: { creation_source: CreationSource } }
+
 	// Route lifecycle
 	| {
 			name: "route_created";

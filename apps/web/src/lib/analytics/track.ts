@@ -41,7 +41,9 @@ function buildCommonContext(): Record<string, UmamiPropertyValue> {
 export function analyticsAllowed(): boolean {
 	if (typeof window === "undefined") return false;
 	if (navigator.doNotTrack === "1" || window.doNotTrack === "1") return false;
-	return useRedesignSettingsStore.getState().analyticsEnabled;
+	// Only an explicit false opts out, matching the loader gate in index.html.
+	// A missing value means "never chosen", not "opted out".
+	return useRedesignSettingsStore.getState().analyticsEnabled !== false;
 }
 
 export function trackEvent<E extends ProductEvent>(event: E): void {

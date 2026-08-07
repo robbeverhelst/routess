@@ -34,6 +34,9 @@ const HAS_INVALID_MAPBOX_TOKEN =
 	MAPBOX_TOKEN === "your-mapbox-access-token-here" ||
 	MAPBOX_TOKEN.length < 10;
 
+// Beyond this the camera jumps instead of flying. See onFlyTo.
+const FLY_TO_MAX_DISTANCE_KM = 200;
+
 if (import.meta.env.DEV && HAS_INVALID_MAPBOX_TOKEN) {
 	Logger.error(
 		`[MapWithRouting] Mapbox token issue:
@@ -147,11 +150,19 @@ const MapWithRoutingContent: React.FC<MapboxMapProps> = ({
 		};
 		const onFlyTo = (detail: { coordinates?: [number, number]; zoom?: number }) => {
 			if (!detail?.coordinates || !mapRef.current) return;
-			mapRef.current.flyTo({
-				center: detail.coordinates,
-				zoom: detail.zoom ?? 14,
-				essential: true,
-			});
+			const map = mapRef.current;
+			const center = map.getCenter();
+			const distanceKm = haversineDistance([center.lng, center.lat], detail.coordinates);
+			const target = { center: detail.coordinates, zoom: detail.zoom ?? 14 };
+
+			// flyTo arcs out to an apex that fits both endpoints and loads tiles for the
+			// whole corridor at every zoom on the way. Past a point that is thousands of
+			// tiles thrown away on arrival, so jump instead.
+			if (distanceKm > FLY_TO_MAX_DISTANCE_KM) {
+				map.jumpTo(target);
+				return;
+			}
+			map.flyTo({ ...target, essential: true });
 		};
 		const onLoadRoute = (detail: AppEventMap["routess:load-route"]) => {
 			if (!editor) {

@@ -7,6 +7,7 @@ const CACHE_NAMES = {
 	APP_SHELL: `${CACHE_VERSION}-app-shell`,
 	API_CACHE: `${CACHE_VERSION}-api-cache`,
 	MAP_ASSETS: `${CACHE_VERSION}-map-assets`,
+	MAP_TILES: `${CACHE_VERSION}-map-tiles`,
 	RUNTIME: `${CACHE_VERSION}-runtime`,
 	// Deliberately not version-keyed: offline routes are user data and must
 	// survive deploys (the activate cleanup keeps every name in CACHE_NAMES).
@@ -44,6 +45,18 @@ const MAP_ASSET_PATTERNS = [
 	/^https:\/\/api\.mapbox\.com\/v1\/sprite/,
 	// Map tiles (we'll cache these with special handling)
 	/^https:\/\/[a-z]\.tiles\.mapbox\.com/,
+];
+
+// Map tiles. mapbox-gl v3 serves every basemap tile from api.mapbox.com, not
+// from the legacy *.tiles.mapbox.com hosts, so matching on hostname alone sent
+// all of them to the 50-entry RUNTIME cache and thrashed it on every pan.
+const MAP_TILE_PATTERNS = [
+	/^https:\/\/api\.mapbox\.com\/v4\//, // vector tiles
+	/^https:\/\/api\.mapbox\.com\/raster\/v1\//, // terrain DEM
+	/^https:\/\/api\.mapbox\.com\/rasterarrays\/v1\//, // landmark icons
+	/^https:\/\/api\.mapbox\.com\/3dtiles\/v1\//, // 3D buildings
+	/^https:\/\/api\.mapbox\.com\/models\/v1\//, // 3D models
+	/^https:\/\/[a-z]\.tiles\.mapbox\.com\//, // legacy tile CDN
 ];
 
 // Cache expiration times (in milliseconds)
@@ -214,9 +227,10 @@ async function handleRequest(request) {
 			return await cacheFirstWithNetworkFallback(request, CACHE_NAMES.MAP_ASSETS);
 		}
 
-		// Map Tiles - Stale While Revalidate
+		// Map Tiles - Stale While Revalidate, in their own cache so tile churn
+		// never evicts the style/sprite/glyph entries the map needs to render.
 		if (isMapTileRequest(request)) {
-			return await staleWhileRevalidate(request, CACHE_NAMES.MAP_ASSETS);
+			return await staleWhileRevalidate(request, CACHE_NAMES.MAP_TILES);
 		}
 
 		// Runtime - Network First
@@ -269,7 +283,12 @@ function isMapAssetRequest(request) {
 }
 
 function isMapTileRequest(request) {
+	if (MAP_TILE_PATTERNS.some((pattern) => pattern.test(request.url))) return true;
+
 	const url = new URL(request.url);
+	// Self-hosted node-network tiles (go-pmtiles serves /nodes/{z}/{x}/{y}.mvt).
+	if (url.pathname.startsWith("/nodes/") && url.pathname.endsWith(".mvt")) return true;
+
 	return url.hostname.includes("tiles.mapbox.com") || url.pathname.includes("/tiles/");
 }
 
@@ -396,7 +415,7 @@ async function staleWhileRevalidate(request, cacheName) {
 		.then((networkResponse) => {
 			if (networkResponse.ok) {
 				cache.put(request, networkResponse.clone());
-				cleanupCache(cacheName); // Don't await this
+				maybeCleanupCache(cacheName); // Don't await this
 			}
 			return networkResponse;
 		})
@@ -432,10 +451,27 @@ async function isCacheEntryValid(response, cacheName) {
 
 function getCacheType(cacheName) {
 	if (cacheName.includes("api-cache")) return "API_CACHE";
+	if (cacheName.includes("map-tiles")) return "MAP_TILES";
 	if (cacheName.includes("map-assets")) return "MAP_ASSETS";
 	if (cacheName.includes("routes")) return "ROUTES";
 	if (cacheName.includes("runtime")) return "RUNTIME";
 	return "RUNTIME";
+}
+
+// cleanupCache enumerates every key in the cache, so calling it per stored tile
+// turns one pan into hundreds of full cache walks. Amortise it instead; the cap
+// is a soft ceiling, not a hard one.
+const CLEANUP_WRITE_INTERVAL = 25;
+const writesSinceCleanup = new Map();
+
+function maybeCleanupCache(cacheName) {
+	const writes = (writesSinceCleanup.get(cacheName) ?? 0) + 1;
+	if (writes < CLEANUP_WRITE_INTERVAL) {
+		writesSinceCleanup.set(cacheName, writes);
+		return;
+	}
+	writesSinceCleanup.set(cacheName, 0);
+	void cleanupCache(cacheName);
 }
 
 async function cleanupCache(cacheName) {

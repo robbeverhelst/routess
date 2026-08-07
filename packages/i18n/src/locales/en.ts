@@ -984,4 +984,8 @@ export const en: Record<string, string> = {
 	"pwa.update.title": "Update available",
 	"pwa.update.body": "A new version of routess is ready.",
 	"pwa.update.reload": "Reload",
+
+	// First-run action bar over the empty map
+	"firstRun.drawItMyself": "Draw it myself",
+	"firstRun.tapHint": "Tap two points on the map to plan a route",
 };
