@@ -6,6 +6,10 @@ import type { Coordinate } from "@/types/map";
 
 const ROUTESS_GPX_NS = "https://routess.app/gpx/1";
 
+// A waypoint as parsed from a GPX file. `type` is optional because it comes
+// from our own namespaced extension, which other writers do not emit.
+type ParsedGpxWaypoint = Omit<Waypoint, "type"> & { type?: WaypointType };
+
 const readWaypointType = (rtept: Element): WaypointType | undefined => {
 	const extensions = rtept.getElementsByTagName("extensions");
 	for (let i = 0; i < extensions.length; i++) {

@@ -1,5 +1,5 @@
 import { nodeNetworkColors } from "@routess/design-tokens";
-import type { MapLayerMouseEvent } from "mapbox-gl";
+import type { DataDrivenPropertyValueSpecification, FilterSpecification, MapLayerMouseEvent } from "mapbox-gl";
 import { useEffect, useState } from "react";
 import { Layer, Source, useMap } from "react-map-gl/mapbox";
 import { getRuntimeConfig } from "@/lib/runtime-config";
@@ -29,11 +29,63 @@ const ODBL_ATTRIBUTION = '© <a href="https://www.openstreetmap.org/copyright">O
 const LINE_MIN_ZOOM = 8;
 const NODE_MIN_ZOOM = 12;
 
-const LINE_WIDTH = ["interpolate", ["linear"], ["zoom"], 9, 1.2, 12, 2, 14, 2.6, 17, 3.6];
-const HIGHLIGHT_LINE_WIDTH = ["interpolate", ["linear"], ["zoom"], 12, 4, 14, 6, 17, 8];
-const NODE_RADIUS = ["interpolate", ["linear"], ["zoom"], 12, 8, 14, 10, 17, 13];
-const NODE_HALO_RADIUS = ["interpolate", ["linear"], ["zoom"], 12, 11, 14, 14, 17, 17];
-const NODE_TEXT_SIZE = ["interpolate", ["linear"], ["zoom"], 12, 10.5, 14, 11.5, 17, 13];
+const LINE_WIDTH: DataDrivenPropertyValueSpecification<number> = [
+	"interpolate",
+	["linear"],
+	["zoom"],
+	9,
+	1.2,
+	12,
+	2,
+	14,
+	2.6,
+	17,
+	3.6,
+];
+const HIGHLIGHT_LINE_WIDTH: DataDrivenPropertyValueSpecification<number> = [
+	"interpolate",
+	["linear"],
+	["zoom"],
+	12,
+	4,
+	14,
+	6,
+	17,
+	8,
+];
+const NODE_RADIUS: DataDrivenPropertyValueSpecification<number> = [
+	"interpolate",
+	["linear"],
+	["zoom"],
+	12,
+	8,
+	14,
+	10,
+	17,
+	13,
+];
+const NODE_HALO_RADIUS: DataDrivenPropertyValueSpecification<number> = [
+	"interpolate",
+	["linear"],
+	["zoom"],
+	12,
+	11,
+	14,
+	14,
+	17,
+	17,
+];
+const NODE_TEXT_SIZE: DataDrivenPropertyValueSpecification<number> = [
+	"interpolate",
+	["linear"],
+	["zoom"],
+	12,
+	10.5,
+	14,
+	11.5,
+	17,
+	13,
+];
 
 type ActiveNode = {
 	kind: NodeNetworkKind;
@@ -49,15 +101,15 @@ function kindColor(kind: NodeNetworkKind): string {
 	return kind === "hiking" ? HIKING_COLOR : CYCLING_COLOR;
 }
 
-function pointFilter(kind: NodeNetworkKind): unknown[] {
+function pointFilter(kind: NodeNetworkKind): FilterSpecification {
 	return ["all", ["==", ["geometry-type"], "Point"], ["==", ["get", "kind"], kind]];
 }
 
-function lineFilter(kind: NodeNetworkKind): unknown[] {
+function lineFilter(kind: NodeNetworkKind): FilterSpecification {
 	return ["all", ["==", ["geometry-type"], "LineString"], ["==", ["get", "kind"], kind]];
 }
 
-function activePointFilter(node: ActiveNode): unknown[] {
+function activePointFilter(node: ActiveNode): FilterSpecification {
 	return [
 		"all",
 		["==", ["geometry-type"], "Point"],
@@ -70,7 +122,7 @@ function sameNode(a: ActiveNode | null, b: ActiveNode | null): boolean {
 	return Boolean(a && b && a.kind === b.kind && a.ref === b.ref);
 }
 
-function connectedLineFilter(pair: ActiveNodePair): unknown[] {
+function connectedLineFilter(pair: ActiveNodePair): FilterSpecification {
 	const { from, to } = pair;
 	return [
 		"all",

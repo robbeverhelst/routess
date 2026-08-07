@@ -5,7 +5,7 @@
 // Managers
 export * from "./managers/MapInteractionManager";
 export * from "./managers/MapLayerManager";
-export * from "./managers/WaypointManager";
+export * from "./managers/WaypointCoordinator";
 
 // Services
 export * from "./services/GPXService";

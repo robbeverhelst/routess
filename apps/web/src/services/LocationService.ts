@@ -1,6 +1,6 @@
 import { haversineDistance } from "@routess/core";
 import { loadLanguageFromLocalStorage } from "@/features/routing/services/LocalStorageService";
-import { t } from "@/lib/i18n";
+import { tIn } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
 
 export interface LocationState {
@@ -189,7 +189,7 @@ export class LocationService {
 
 		if (!this.isGeolocationSupported()) {
 			const currentLanguage = loadLanguageFromLocalStorage();
-			const error = t("location.error.notSupported", currentLanguage);
+			const error = tIn(currentLanguage, "location.error.notSupported");
 			this.updateState({ error, isLoading: false });
 			throw new Error(error);
 		}
@@ -246,7 +246,7 @@ export class LocationService {
 		if (!this.isGeolocationSupported()) {
 			const currentLanguage = loadLanguageFromLocalStorage();
 			this.updateState({
-				error: t("location.error.notSupported", currentLanguage),
+				error: tIn(currentLanguage, "location.error.notSupported"),
 				isLoading: false,
 			});
 			return;
@@ -357,17 +357,17 @@ export class LocationService {
 
 		switch (error.code) {
 			case error.PERMISSION_DENIED:
-				errorMessage = t("location.error.permissionDenied", currentLanguage);
+				errorMessage = tIn(currentLanguage, "location.error.permissionDenied");
 				this.updateState({ permissionState: "denied" });
 				shouldStopTracking = true; // Stop tracking for permission denied
 				break;
 			case error.POSITION_UNAVAILABLE:
-				errorMessage = t("location.error.positionUnavailable", currentLanguage);
+				errorMessage = tIn(currentLanguage, "location.error.positionUnavailable");
 				shouldRetry = true;
 				// For position unavailable, we'll be more patient and try longer
 				break;
 			case error.TIMEOUT:
-				errorMessage = t("location.error.timeout", currentLanguage);
+				errorMessage = tIn(currentLanguage, "location.error.timeout");
 				shouldRetry = true;
 				break;
 			default:
