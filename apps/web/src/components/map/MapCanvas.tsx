@@ -25,6 +25,12 @@ import { useRoutingStore } from "@/stores/routingStore";
 // Map configuration constants
 const MAP_PITCH = 30; // Default pitch angle for the map
 
+// mapbox-gl sizes its in-memory tile cache from the viewport alone, which is
+// too small once a style carries several sources (basemap, terrain DEM, 3D
+// buildings, contours, node network). Too small a cache means panning back to
+// where you just were refetches everything.
+const MAX_TILE_CACHE_SIZE = 800;
+
 // Default Europe-centered view if user location unavailable
 const DEFAULT_VIEW_STATE = {
 	longitude: 10.5,
@@ -576,6 +582,7 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
 					attributionControl={false}
 					projection="globe"
 					antialias={true}
+					maxTileCacheSize={MAX_TILE_CACHE_SIZE}
 					minPitch={MAP_PITCH}
 					maxPitch={MAP_PITCH}
 					onLoad={(evt) => {
