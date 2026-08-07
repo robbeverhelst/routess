@@ -4,23 +4,39 @@ description: Welche Daten routess speichert und wie du sie kontrollierst.
 translationStatus: machine-draft
 ---
 
-routess ist quelloffen und so gebaut, dass deine Daten dir gehören. Die vollständige Datenschutzerklärung findest du unter [routess.com/privacy](https://routess.com/privacy); diese Seite ist die Kurzfassung für App-Nutzende.
+routess ist quelloffen und so gebaut, dass deine Daten dir gehören. Diese Seite ist die Kurzfassung für App-Nutzende. Die vollständige Erklärung mit Rechtsgrundlagen, Empfängern und Speicherfristen findest du unter [routess.com/privacy](https://routess.com/privacy).
 
 ## Was routess speichert
 
 - Deinen Namen und deine E-Mail-Adresse (aus der Google-Anmeldung oder der E-Mail-Registrierung)
-- Deine gespeicherten Routen (Wegpunkte und Metadaten wie Name, Aktivität und Sichtbarkeit)
+- Deinen Handle und dein Avatar, das öffentliche Gesicht deines Profils
+- Deine gespeicherten Routen und Sammlungen (Wegpunkte, Geometrie und Metadaten wie Name, Aktivität, Tags und Sichtbarkeit)
+- Deine Sitzungen, inklusive der IP-Adresse und des Browsers, mit dem du dich angemeldet hast, 7 Tage lang
 
 ## Analyse
 
-routess nutzt Umami, ein datenschutzfreundliches, cookieloses Analysewerkzeug, selbst gehostet auf der routess-Infrastruktur. Nutzungsereignisse sind anonym: Sie enthalten niemals deine E-Mail-Adresse, deine Routennamen oder deine rohe Konto-ID. Es gibt keine Tracker von Drittanbietern und keine Werbeprofile.
+routess nutzt Umami, ein cookieloses Analysewerkzeug, selbst gehostet auf der routess-Infrastruktur. Kein Drittanbieter erhält diese Daten und sie werden nie für Werbung genutzt.
+
+Neben Seitenaufrufen erfasst die App benannte Produktereignisse, etwa das Erstellen einer Route oder den Import einer GPX-Datei, mit Kontext wie Distanz, Anzahl der Wegpunkte und der gewählten Sichtbarkeit. Ereignisse angemeldeter Nutzender tragen eine **pseudonyme** Kennung: einen gesalzenen Hash deiner Konto-ID, serverseitig berechnet. Das ist nicht deine rohe Konto-ID und lässt sich vom Browser aus nicht umkehren, verknüpft aber deine Sitzungen miteinander. Deshalb nennen wir es pseudonym statt anonym.
+
+Suchbegriffe werden nur als Längenkategorie erfasst, nie als der Text, den du getippt hast.
+
+**Abschalten**: Einstellungen → Privatsphäre & Teilen → Nutzungsstatistiken. Danach wird nichts mehr gesendet, auch keine Seitenaufrufe. Die Do-Not-Track-Einstellung deines Browsers wird automatisch beachtet.
+
+## Fehlerberichte
+
+Absturzberichte gehen an ein selbst gehostetes GlitchTip. Sie enthalten den Fehler, die Seite und die Form dessen, was du bearbeitet hast (Anzahl Wegpunkte, Distanzen), aber nie deine Koordinaten, deine E-Mail-Adresse oder deinen Namen.
+
+## Zugriff durch Administratoren
+
+Administratoren können Konten nach Name oder E-Mail-Adresse durchsuchen, deine aktiven Sitzungen samt IP-Adressen einsehen und jede Route öffnen, auch private. Das dient dem Support und der Missbrauchsbearbeitung, und jede Aktion wird protokolliert. Privat heißt privat gegenüber anderen Nutzenden, nicht verschlüsselt gegenüber uns. Selbst hosten ist die Antwort, wenn dir das wichtig ist.
 
 ## Deine Kontrollmöglichkeiten
 
 - **Export**: Lade eine vollständige Kopie deines Kontos (JSON + GPX pro Route) aus deinen Profileinstellungen herunter.
-- **Sichtbarkeit**: Jede Route ist standardmäßig privat. Du entscheidest pro Route, ob sie privat, nicht gelistet oder öffentlich ist.
-- **Löschen**: Beim Löschen deines Kontos werden deine Routen und dein Profil nach einer 30-tägigen Kulanzfrist entfernt. Siehe [Konto löschen](/de/guide/account/deleting-account).
+- **Sichtbarkeit**: Jede Route ist standardmäßig privat. Du entscheidest pro Route, ob sie privat, nicht gelistet oder öffentlich ist. Eine öffentliche Route verrät, wo du warst, also kürze Anfang und Ende gegebenenfalls.
+- **Löschen**: Beim Löschen deines Kontos werden deine Routen, dein Profil und deine Analyse-Ereignisse nach einer 30-tägigen Kulanzfrist entfernt. Siehe [Konto löschen](/de/guide/account/deleting-account).
 
 ## Selbst hosten
 
-Wenn du deine eigene routess-Instanz betreibst, bleiben deine Daten auf deiner Infrastruktur. Es ist kein Nachhausetelefonieren eingebaut.
+Wenn du deine eigene routess-Instanz betreibst, bleiben deine Daten auf deiner Infrastruktur. Es ist kein Nachhausetelefonieren eingebaut, und Analyse sowie Fehlerberichte sind aus, sofern du sie nicht konfigurierst.

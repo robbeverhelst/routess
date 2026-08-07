@@ -4,23 +4,39 @@ description: Quelles données routess stocke et comment les contrôler.
 translationStatus: machine-draft
 ---
 
-routess est open source et conçu pour que vos données restent les vôtres. La politique de confidentialité complète se trouve sur [routess.com/privacy](https://routess.com/privacy) ; cette page en est la version courte pour les utilisateurs de l'application.
+routess est open source et conçu pour que vos données restent les vôtres. Cette page en est la version courte pour les utilisateurs de l'application. La politique complète, avec les bases légales, les destinataires et les durées de conservation, se trouve sur [routess.com/privacy](https://routess.com/privacy).
 
 ## Ce que routess stocke
 
 - Votre nom et votre adresse e-mail (depuis la connexion Google ou l'inscription par e-mail)
-- Vos itinéraires enregistrés (points de passage et métadonnées telles que le nom, l'activité et la visibilité)
+- Votre handle et votre avatar, le visage public de votre profil
+- Vos itinéraires et collections enregistrés (points de passage, géométrie, et métadonnées telles que le nom, l'activité, les tags et la visibilité)
+- Vos sessions, dont l'adresse IP et le navigateur utilisés pour vous connecter, conservées 7 jours
 
 ## Analyse d'usage
 
-routess utilise Umami, un outil d'analyse respectueux de la vie privée et sans cookies, auto-hébergé sur l'infrastructure de routess. Les événements d'usage sont anonymes : ils n'incluent jamais votre adresse e-mail, les noms de vos itinéraires ni votre identifiant de compte brut. Il n'y a aucun traceur tiers ni profil publicitaire.
+routess utilise Umami, un outil d'analyse sans cookies, auto-hébergé sur l'infrastructure de routess. Aucun tiers ne le reçoit et il n'est jamais utilisé à des fins publicitaires.
+
+Outre les pages vues, l'application enregistre des événements produit nommés, comme la création d'un itinéraire ou l'import d'un fichier GPX, avec un contexte tel que la distance, le nombre de points de passage et la visibilité choisie. Les événements des utilisateurs connectés portent un identifiant **pseudonyme** : un hachage salé de votre identifiant de compte, calculé côté serveur. Ce n'est pas votre identifiant brut et il ne peut pas être inversé depuis le navigateur, mais il relie vos sessions entre elles, d'où le terme pseudonyme plutôt qu'anonyme.
+
+Les termes de recherche ne sont enregistrés que sous forme de catégorie de longueur, jamais comme le texte que vous avez saisi.
+
+**Pour désactiver** : Paramètres → Confidentialité et partage → Statistiques d'utilisation. Plus rien n'est envoyé ensuite, pages vues comprises. Le réglage Do Not Track de votre navigateur est respecté automatiquement.
+
+## Rapports d'erreur
+
+Les rapports de plantage vont vers un GlitchTip auto-hébergé. Ils contiennent l'erreur, la page, et la forme de ce que vous éditiez (nombre de points de passage, distances), mais jamais vos coordonnées, votre e-mail ni votre nom.
+
+## Accès des administrateurs
+
+Les administrateurs peuvent rechercher des comptes par nom ou adresse e-mail, voir vos sessions actives et leurs adresses IP, et ouvrir n'importe quel itinéraire, y compris privé. C'est pour le support et le traitement des abus, et chaque action est journalisée. Privé signifie privé vis-à-vis des autres utilisateurs, pas chiffré vis-à-vis de nous. L'auto-hébergement est la réponse si cela compte pour vous.
 
 ## Vos contrôles
 
 - **Export** : téléchargez une copie complète de votre compte (JSON + GPX par itinéraire) depuis les paramètres de votre profil.
-- **Visibilité** : chaque itinéraire est privé par défaut. Vous décidez, itinéraire par itinéraire, s'il est privé, non répertorié ou public.
-- **Suppression** : supprimer votre compte retire vos itinéraires et votre profil après un délai de grâce de 30 jours. Consultez [Supprimer votre compte](/fr/guide/account/deleting-account).
+- **Visibilité** : chaque itinéraire est privé par défaut. Vous décidez, itinéraire par itinéraire, s'il est privé, non répertorié ou public. Un itinéraire public révèle où vous êtes passé, envisagez donc de rogner le début et la fin.
+- **Suppression** : supprimer votre compte retire vos itinéraires, votre profil et vos événements d'analyse après un délai de grâce de 30 jours. Consultez [Supprimer votre compte](/fr/guide/account/deleting-account).
 
 ## Auto-hébergement
 
-Si vous faites tourner votre propre instance routess, vos données restent sur votre infrastructure. Aucun renvoi d'informations n'est intégré.
+Si vous faites tourner votre propre instance routess, vos données restent sur votre infrastructure. Aucun renvoi d'informations n'est intégré, et l'analyse comme les rapports d'erreur sont désactivés tant que vous ne les configurez pas.

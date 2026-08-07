@@ -34,6 +34,13 @@ export async function GET() {
 			priority: 0.3,
 			alternates: localizedAlternates("/privacy", "/privacy"),
 		},
+		{
+			loc: `${base}/terms`,
+			lastModified: LAST_MODIFIED,
+			changeFrequency: "yearly",
+			priority: 0.3,
+			alternates: localizedAlternates("/terms", "/terms"),
+		},
 	];
 
 	const sectionEntries: SitemapUrl[] = (Object.keys(SECTION_PATHS) as ArticleSection[]).map((section) => ({
