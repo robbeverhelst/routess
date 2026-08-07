@@ -36,6 +36,11 @@ const HAS_INVALID_MAPBOX_TOKEN =
 
 // Beyond this the camera jumps instead of flying. See onFlyTo.
 const FLY_TO_MAX_DISTANCE_KM = 200;
+// A far jump lands this far out and eases in, so arrival still reads as camera
+// movement. Measured at ~188 tile requests against ~105 for a bare jump and
+// ~969 for the full flight; going deeper or slower costs sharply more.
+const ARRIVAL_SWOOP_ZOOM_OFFSET = 2;
+const ARRIVAL_SWOOP_DURATION_MS = 900;
 
 if (import.meta.env.DEV && HAS_INVALID_MAPBOX_TOKEN) {
 	Logger.error(
@@ -157,9 +162,12 @@ const MapWithRoutingContent: React.FC<MapboxMapProps> = ({
 
 			// flyTo arcs out to an apex that fits both endpoints and loads tiles for the
 			// whole corridor at every zoom on the way. Past a point that is thousands of
-			// tiles thrown away on arrival, so jump instead.
+			// tiles thrown away on arrival, so land at the target first and animate only
+			// the last couple of zoom levels. Not `essential`, so reduced-motion users
+			// get the plain jump.
 			if (distanceKm > FLY_TO_MAX_DISTANCE_KM) {
-				map.jumpTo(target);
+				map.jumpTo({ ...target, zoom: Math.max(0, target.zoom - ARRIVAL_SWOOP_ZOOM_OFFSET) });
+				map.easeTo({ ...target, duration: ARRIVAL_SWOOP_DURATION_MS });
 				return;
 			}
 			map.flyTo({ ...target, essential: true });
