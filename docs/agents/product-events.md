@@ -68,6 +68,14 @@ The bar shows only on mobile, in the Plan context, while there are no waypoints 
 
 There is no matching `first_run_actions_shown` event: the bar's visibility is derivable from `signed_in` plus the absence of any `route_created`, and firing on render would break the discrete-intent rule above.
 
+| Event | When | Properties |
+|---|---|---|
+| `route_draft_started` | A draft goes from zero to one waypoint | `creation_source: "manual" \| "generated" \| "imported"` |
+
+**`route_draft_started` is the only signal that a signed-out user tried to plan anything.** `route_created` fires on `POST /routes` returning 2xx, which requires an account, so a guest who drops waypoints, gets a route and leaves without saving produces no other event. Without this, "never activated" cannot be split into *never tried* (a discovery problem) and *tried but didn't save* (an auth-wall or value problem).
+
+Fired once per draft from `addWaypoint` in `apps/web/src/features/routing/RouteDraftEditor.ts`, on the 0 to 1 transition only. Not per waypoint: that would be a firehose and would make session counts meaningless. `loadWaypoints` (GPX import, opening a saved route) deliberately does not fire it, since neither is the user starting to plan.
+
 ## Route lifecycle
 
 | Event | When | Properties |

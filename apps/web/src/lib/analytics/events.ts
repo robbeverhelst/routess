@@ -25,6 +25,7 @@ export type ProductEvent =
 
 	// First run
 	| { name: "first_run_action_chosen"; properties: { choice: "generate" | "draw" } }
+	| { name: "route_draft_started"; properties: { creation_source: CreationSource } }
 
 	// Route lifecycle
 	| {
