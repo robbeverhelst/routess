@@ -242,8 +242,10 @@ export const capturePreEditState = (): PreEditState => {
 	return {
 		waypoints: state.waypoints.map((wp) => ({ ...wp })),
 		routePath: [...state.routePath],
-		distanceMeters: state.distanceMeters,
-		durationSeconds: state.durationSeconds,
+		// null means "no route yet"; 0 is the right pre-edit baseline and matches
+		// what the consuming arithmetic already produced from null.
+		distanceMeters: state.distanceMeters ?? 0,
+		durationSeconds: state.durationSeconds ?? 0,
 	};
 };
 

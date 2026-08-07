@@ -23,7 +23,8 @@ export function CommandPalette() {
 	const openModal = useModalsStore((s) => s.openModal);
 	const setContext = useUiStore((s) => s.setContext);
 	const toggleTheme = useUiStore((s) => s.toggleTheme);
-	const _language = useUiStore((s) => s.language);
+	// Subscribe (without binding) so the component re-renders on a language switch.
+	useUiStore((s) => s.language);
 	const mode = useDraftMode();
 	const { data: routes = [] } = useUserRoutes();
 	const [query, setQuery] = useState("");

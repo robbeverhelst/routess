@@ -101,7 +101,8 @@ function TargetTile({ label, icon, onClick, disabled, tint }: TargetTileProps) {
 
 export function ShareModal() {
 	const closeModal = useModalsStore((s) => s.closeModal);
-	const _language = useUiStore((s) => s.language);
+	// Subscribe (without binding) so the component re-renders on a language switch.
+	useUiStore((s) => s.language);
 	const activityType = useUiStore((s) => s.activityType);
 	const activityIconUrl = useMemo(() => {
 		const ActivityIcon = activityType === "cycle" ? I.bike : activityType === "walk" ? I.walk : I.run;

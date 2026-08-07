@@ -41,7 +41,7 @@ import { PublicRouteScreen } from "../PublicRouteScreen";
 
 describe("PublicRouteScreen", () => {
 	it("renders the route name, stats, tags, preview and a resolved GPX link", () => {
-		const { container } = render(<PublicRouteScreen slug="sunday-loop" routeId={123} />);
+		const { container } = render(<PublicRouteScreen slug="sunday-loop" routeRef={123} />);
 
 		// name + description
 		expect(screen.getByRole("heading", { level: 1, name: "Sunday Loop" })).toBeTruthy();

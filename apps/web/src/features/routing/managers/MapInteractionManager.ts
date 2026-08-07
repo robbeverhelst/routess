@@ -193,13 +193,9 @@ export const initializeMapInteractions = (
 	};
 
 	const getEventPoint = (event: MapMouseEvent | MapTouchEvent): PointerPoint | null => {
-		if ("point" in event) {
-			return event.point;
-		}
-		if ("points" in event && event.points.length > 0) {
-			return event.points[0];
-		}
-		return null;
+		// Both MapMouseEvent and MapTouchEvent carry `point` (for touch it is the
+		// centroid), so there is no second shape to fall back to.
+		return event.point ?? null;
 	};
 
 	const getHitTarget = (point: PointerPoint, padding = 0): HitTarget => {

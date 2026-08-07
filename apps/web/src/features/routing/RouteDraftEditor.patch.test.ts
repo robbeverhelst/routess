@@ -55,7 +55,7 @@ function straightLegRouting(routeCalls: Coordinate[][][]) {
 		const body = JSON.parse(init?.body ?? "{}") as { locations?: { lat: number; lon: number }[] };
 		const coords: Coordinate[] = (body.locations ?? []).map((l) => [l.lon, l.lat]);
 		routeCalls.push([coords]);
-		const legs = [];
+		const legs: { shape: string; summary: { length: number; time: number } }[] = [];
 		for (let i = 0; i < coords.length - 1; i++) {
 			legs.push({
 				shape: encodePolyline6([coords[i], coords[i + 1]]),

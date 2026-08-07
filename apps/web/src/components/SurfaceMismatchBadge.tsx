@@ -42,7 +42,7 @@ export function SurfaceMismatchBadge({ breakdown, preference }: Props) {
 					{t("routing.surface.mismatchTitle", { pref: t(`routing.surface.${preference}`) })}
 				</div>
 				<div style={{ fontSize: 11, color: RDS_COLORS.fgMuted, marginTop: 2 }}>
-					{t("routing.surface.mismatchBody", { pct })}
+					{t("routing.surface.mismatchBody", { pct: String(pct) })}
 				</div>
 			</div>
 		</div>

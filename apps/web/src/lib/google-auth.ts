@@ -159,6 +159,13 @@ interface GoogleButtonConfig {
 	locale?: string;
 }
 
+// Payload handed to the Google Identity Services credential callback.
+interface CredentialResponse {
+	credential: string;
+	select_by?: string;
+	clientId?: string;
+}
+
 // Google OAuth token client interface
 interface GoogleTokenClient {
 	callback: (response: { access_token: string }) => void;

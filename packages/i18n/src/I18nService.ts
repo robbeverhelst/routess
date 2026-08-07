@@ -3,13 +3,11 @@ import type { I18nConfig, I18nService as II18nService, SupportedLanguage, Transl
 
 export class I18nService implements II18nService {
 	private translations: Translations;
-	private defaultLanguage: SupportedLanguage;
 	private fallbackLanguage: SupportedLanguage;
 	private logger?: Logger;
 
 	constructor(config: I18nConfig) {
 		this.translations = config.translations;
-		this.defaultLanguage = config.defaultLanguage;
 		this.fallbackLanguage = config.fallbackLanguage;
 		this.logger = config.logger;
 	}

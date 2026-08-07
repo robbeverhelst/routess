@@ -1,7 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+// Keys are optional, not "present but undefined". With required keys the
+// router demands a `search` object on every navigation to "/", which is why
+// redirects and <Link to="/"> elsewhere had to be typed around.
+type HomeSearch = {
+	center?: [number, number];
+	zoom?: number;
+	route?: string;
+};
+
 export const Route = createFileRoute("/")({
-	validateSearch: (search: Record<string, unknown>) => {
+	validateSearch: (search: Record<string, unknown>): HomeSearch => {
 		return {
 			center: (() => {
 				const center = search.center as string | [number, number] | undefined;

@@ -79,7 +79,7 @@ type EventName = keyof AppEventMap;
 
 export function emitAppEvent<K extends EventName>(
 	type: K,
-	...args: AppEventMap[K] extends undefined ? [] : [detail: AppEventMap[K]]
+	...args: undefined extends AppEventMap[K] ? [detail?: AppEventMap[K]] : [detail: AppEventMap[K]]
 ): void {
 	const detail = args[0];
 	window.dispatchEvent(detail === undefined ? new CustomEvent(type) : new CustomEvent(type, { detail }));

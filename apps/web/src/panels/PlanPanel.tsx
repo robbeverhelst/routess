@@ -52,7 +52,7 @@ const LOOP_THRESHOLD_KM = 0.08;
 
 const ACTIVITIES: {
 	key: RedesignActivity;
-	icon: React.ComponentType<{ size?: number }>;
+	icon: React.ComponentType<{ size?: number; style?: React.CSSProperties }>;
 	labelKey: string;
 	titleKey: string;
 }[] = [

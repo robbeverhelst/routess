@@ -14,6 +14,7 @@ import type {
 	CreatePersonalAccessTokenRequest,
 	SendRouteShareRequest,
 	UpdateCollectionRequest,
+	UpdateRouteRequest,
 } from "@routess/api-client";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRoutingStore } from "@/stores/routingStore";
@@ -169,7 +170,7 @@ export function useUpdateRoute() {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: async ({ routeId, updates }: { routeId: number; updates: Partial<ApiRoute> }) => {
+		mutationFn: async ({ routeId, updates }: { routeId: number; updates: UpdateRouteRequest }) => {
 			Logger.info("Updating route:", routeId);
 			return apiService.updateRoute(routeId, updates);
 		},
