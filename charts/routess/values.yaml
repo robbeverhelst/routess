@@ -124,6 +124,10 @@ api:
     swaggerPath: "/api"
     # From address for transactional email. Must be a verified Resend sender.
     emailFrom: "routess <noreply@routess.app>"
+    # Retention window for ProductEvents, swept nightly against the Umami
+    # database. Must match the retention table in the privacy policy; 425 days
+    # is the 14 months stated there. Requires api.secrets.umamiDatabaseUrl.
+    umamiRetentionDays: 425
     # Canonical public-site origin (landing host). Emails embed
     # {publicSiteUrl}/r/{slugId}/og.png as the route preview image.
     publicSiteUrl: "https://routess.com"
