@@ -53,6 +53,11 @@ export interface AppConfig {
 		// exposed to the browser; the API hashes user.id with this salt and ships
 		// the hash on the profile response. See ADR-0020.
 		salt: string;
+		// Umami's own Postgres, used only to erase a user's ProductEvent trail on
+		// hard delete (ADR-0020). Umami exposes no delete-by-property API, so this
+		// is a direct DELETE against its schema. Empty disables erasure.
+		umamiDatabaseUrl: string;
+		umamiWebsiteId: string;
 	};
 	monitoring: {
 		grafanaUrls: Record<string, string>;
@@ -269,6 +274,8 @@ export function getAppConfig(): AppConfig {
 		},
 		analytics: {
 			salt: analyticsSalt,
+			umamiDatabaseUrl: (process.env.UMAMI_DATABASE_URL ?? "").trim(),
+			umamiWebsiteId: (process.env.UMAMI_WEBSITE_ID ?? "").trim(),
 		},
 		email: {
 			provider: process.env.RESEND_API_KEY ? "resend" : "console",

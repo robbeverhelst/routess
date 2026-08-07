@@ -106,4 +106,12 @@ export const fr: Record<string, string> = {
 	"discover.searchArea": "Chercher dans cette zone",
 	"discover.error.title": "Impossible de charger les routes",
 	"discover.error.retry": "Réessayer",
+
+	// Privacy controls
+	"settings.privacy.analytics": "Statistiques d'utilisation",
+	"settings.privacy.analyticsSub":
+		"Statistiques produit anonymes et sans cookies, sur nos propres serveurs. Désactive et plus rien n'est envoyé.",
+	"settings.privacy.policy": "Politique de confidentialité",
+	"settings.privacy.policySub": "Ce que nous stockons, qui le reçoit, et comment le faire supprimer",
+	"settings.privacy.policyLink": "Lire la politique",
 };

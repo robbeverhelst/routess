@@ -150,6 +150,12 @@ export const nl: Record<string, string> = {
 	"settings.routingDefaults": "Standaardinstellingen voor routes",
 	"settings.routingDefaults.visibility": "Standaardzichtbaarheid",
 	"settings.routingDefaults.visibilitySub": "Zichtbaarheid voor nieuwe routes die je opslaat",
+	"settings.privacy.analytics": "Gebruiksstatistieken",
+	"settings.privacy.analyticsSub":
+		"Anonieme, cookie-loze productstatistieken op onze eigen servers. Zet dit uit en er wordt niets verstuurd.",
+	"settings.privacy.policy": "Privacybeleid",
+	"settings.privacy.policySub": "Wat we bewaren, wie het ontvangt, en hoe je het laat verwijderen",
+	"settings.privacy.policyLink": "Lees het beleid",
 	"settings.experimental": "Experimenteel",
 	"settings.experimental.nodeNetworkOverlays": "Knooppunten-overlays",
 	"settings.experimental.nodeNetworkOverlaysSub": "Toon wandel- en fietsknooppunten in de kaartlaagkiezer.",

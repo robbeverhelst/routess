@@ -16,6 +16,7 @@ declare global {
 		umami?: {
 			track: (event: string, data?: Record<string, UmamiPropertyValue>) => void;
 		};
+		doNotTrack?: string | null;
 	}
 }
 
@@ -34,8 +35,17 @@ function buildCommonContext(): Record<string, UmamiPropertyValue> {
 	};
 }
 
+// Honours the per-device analytics opt-out and the browser's Do Not Track
+// signal. Both are objections under GDPR Art. 21, so this is a hard gate: no
+// event leaves the client once either is set.
+export function analyticsAllowed(): boolean {
+	if (typeof window === "undefined") return false;
+	if (navigator.doNotTrack === "1" || window.doNotTrack === "1") return false;
+	return useRedesignSettingsStore.getState().analyticsEnabled;
+}
+
 export function trackEvent<E extends ProductEvent>(event: E): void {
-	if (typeof window === "undefined") return;
+	if (!analyticsAllowed()) return;
 	const merged: Record<string, UmamiPropertyValue> = {
 		...buildCommonContext(),
 		...(event.properties as Record<string, UmamiPropertyValue>),

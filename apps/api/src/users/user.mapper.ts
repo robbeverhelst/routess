@@ -17,7 +17,9 @@ type SerializableUser = Pick<
 	| "deletionRequestedAt"
 >;
 
-function hashUserId(salt: string, userId: number): string {
+// Also used by the analytics erasure path, which must reproduce exactly the
+// hash the browser shipped as `user_id_hash`. Keep it the only implementation.
+export function hashUserId(salt: string, userId: number): string {
 	return createHash("sha256").update(`${salt}:${userId}`).digest("hex");
 }
 

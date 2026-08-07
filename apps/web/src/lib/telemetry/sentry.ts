@@ -83,7 +83,14 @@ function syncUserFromStorage(): void {
 		Sentry.setUser(null);
 		return;
 	}
-	Sentry.setUser({ id: String(user.id), segment: user.role });
+	// Pseudonymous id only, same posture as ProductEvents (ADR-0020): the raw
+	// primary key never leaves the app for an observability store. A stale
+	// pre-ADR-0020 profile snapshot has no idHash, so report it as anonymous.
+	if (!user.idHash) {
+		Sentry.setUser({ segment: user.role });
+		return;
+	}
+	Sentry.setUser({ id: user.idHash, segment: user.role });
 }
 
 function syncRouteDraftContext(): void {

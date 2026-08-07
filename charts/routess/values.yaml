@@ -179,6 +179,11 @@ api:
     dbUser: ""
     dbPassword: ""
     analyticsSalt: ""
+    # Postgres connection string for Umami's own database. Used only to erase a
+    # user's ProductEvent trail on account hard-delete (ADR-0020), since Umami
+    # exposes no delete-by-property API. Empty disables erasure; the API logs a
+    # warning and the deletion proceeds without it.
+    umamiDatabaseUrl: ""
     # Server-side pepper used to HMAC personal access tokens. Required when
     # NODE_ENV=production; the API refuses to start without it.
     patPepper: ""

@@ -148,6 +148,12 @@ export const en: Record<string, string> = {
 	"settings.routingDefaults": "Routing defaults",
 	"settings.routingDefaults.visibility": "Default visibility",
 	"settings.routingDefaults.visibilitySub": "Visibility applied to new routes you save",
+	"settings.privacy.analytics": "Usage analytics",
+	"settings.privacy.analyticsSub":
+		"Anonymous, cookie-less product analytics on our own servers. Turn this off and nothing is sent.",
+	"settings.privacy.policy": "Privacy policy",
+	"settings.privacy.policySub": "What we store, who receives it, and how to get it deleted",
+	"settings.privacy.policyLink": "Read the policy",
 	"settings.experimental": "Experimental",
 	"settings.experimental.nodeNetworkOverlays": "Node network overlays",
 	"settings.experimental.nodeNetworkOverlaysSub":

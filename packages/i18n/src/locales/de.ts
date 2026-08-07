@@ -106,4 +106,12 @@ export const de: Record<string, string> = {
 	"discover.searchArea": "In diesem Bereich suchen",
 	"discover.error.title": "Routen konnten nicht geladen werden",
 	"discover.error.retry": "Erneut versuchen",
+
+	// Privacy controls
+	"settings.privacy.analytics": "Nutzungsstatistiken",
+	"settings.privacy.analyticsSub":
+		"Anonyme, cookie-lose Produktstatistiken auf unseren eigenen Servern. Schalte dies aus und es wird nichts gesendet.",
+	"settings.privacy.policy": "Datenschutzerklärung",
+	"settings.privacy.policySub": "Was wir speichern, wer es erhält und wie du es löschen lässt",
+	"settings.privacy.policyLink": "Erklärung lesen",
 };

@@ -70,7 +70,12 @@
 
     <script src="/env-config.js"></script>
 
-    <!-- Umami analytics. Loader skips itself when env vars are missing or unsubstituted. -->
+    <!--
+      Umami analytics. Loader skips itself when env vars are missing or
+      unsubstituted, when the browser sends Do Not Track, or when the user has
+      opted out in settings. Opting out must also stop pageview autotracking,
+      so the gate lives here rather than only in trackEvent().
+    -->
     <script>
       (() => {
         const config = window.__ROUTESS_CONFIG__ || {};
@@ -78,6 +83,13 @@
         const id = config.VITE_UMAMI_WEBSITE_ID;
         const unresolved = (v) => !v || v.indexOf("%VITE_") === 0 || v.indexOf("__VITE_") === 0;
         if (unresolved(url) || unresolved(id)) return;
+        if (navigator.doNotTrack === "1" || window.doNotTrack === "1") return;
+        try {
+          const stored = localStorage.getItem("routess.redesign.settings");
+          if (stored && JSON.parse(stored)?.state?.analyticsEnabled === false) return;
+        } catch {
+          // Unreadable storage means no recorded opt-out; fall through and load.
+        }
         const s = document.createElement("script");
         s.defer = true;
         s.src = `${url.replace(/\/$/, "")}/script.js`;
