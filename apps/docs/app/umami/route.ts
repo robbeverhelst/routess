@@ -8,9 +8,12 @@ export function GET() {
 	const url = process.env.UMAMI_URL;
 	const id = process.env.UMAMI_WEBSITE_ID;
 
+	// UMAMI_URL is the tracker origin; the loadable script lives at /script.js on it.
+	const src = url ? `${url.replace(/\/+$/, "")}/script.js` : "";
+
 	const body =
 		url && id
-			? `(()=>{var s=document.createElement("script");s.defer=true;s.src=${JSON.stringify(url)};s.setAttribute("data-website-id",${JSON.stringify(id)});document.head.appendChild(s);})();`
+			? `(()=>{var s=document.createElement("script");s.defer=true;s.src=${JSON.stringify(src)};s.setAttribute("data-website-id",${JSON.stringify(id)});document.head.appendChild(s);})();`
 			: "";
 
 	return new Response(body, {
