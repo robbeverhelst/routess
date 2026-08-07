@@ -39,8 +39,11 @@ export function LoginScreen({ onSuccess }: { onSuccess?: () => void }) {
 	const handleSuccess = async (response: GoogleCodeResponse) => {
 		setIsLoading(true);
 		try {
-			const user = await googleAuth.handleGoogleSuccess(response);
+			const { user, isNewUser } = await googleAuth.handleGoogleSuccess(response);
 			Logger.info("Google login success", { email: user.email });
+			if (isNewUser) {
+				trackEvent({ name: "user_registered", properties: { provider: "google" } });
+			}
 			trackEvent({ name: "user_logged_in", properties: { provider: "google" } });
 			pushToast({ kind: "success", title: t("login.toast.welcomeBack"), body: user.name ?? user.email });
 			onSuccess?.();
@@ -66,6 +69,7 @@ export function LoginScreen({ onSuccess }: { onSuccess?: () => void }) {
 				const result = await apiService.loginEmail(email.trim(), password);
 				storeUser(result.user);
 				notifyAuthStateChange();
+				trackEvent({ name: "user_logged_in", properties: { provider: "email" } });
 				pushToast({ kind: "success", title: t("login.toast.welcomeBack"), body: result.user.email });
 				onSuccess?.();
 			} else {
@@ -297,7 +301,7 @@ export function LoginScreen({ onSuccess }: { onSuccess?: () => void }) {
 						{t("login.noAccount")}{" "}
 						<button
 							type="button"
-							onClick={() => emitAppEvent("routess:open-signup")}
+							onClick={() => emitAppEvent("routess:open-signup", { entryPoint: "login_screen" })}
 							style={{
 								background: "transparent",
 								border: 0,

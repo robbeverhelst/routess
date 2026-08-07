@@ -4,6 +4,14 @@ import type { ApiRoute, Waypoint } from "./api";
 
 type NoDetail = undefined;
 
+export type SignInEntryPoint =
+	| "auth_wall"
+	| "save_modal"
+	| "header_avatar"
+	| "settings_panel"
+	| "login_screen"
+	| "session_ended";
+
 export interface AppEventMap {
 	"routess:undo": NoDetail;
 	"routess:redo": NoDetail;
@@ -53,8 +61,11 @@ export interface AppEventMap {
 	"routess:set-pois": { visible: boolean };
 	"routess:open-user-settings": NoDetail;
 	"routess:open-profile": NoDetail;
-	"routess:open-login": NoDetail;
-	"routess:open-signup": NoDetail;
+	// `entryPoint` is where the CTA was clicked; AppShell turns it into the
+	// `signup_started` ProductEvent so the funnel has a single fire site.
+	// "session_ended" means we landed here by logout/deletion, not user intent.
+	"routess:open-login": { entryPoint: SignInEntryPoint };
+	"routess:open-signup": { entryPoint: SignInEntryPoint };
 	"routess:open-discover": NoDetail;
 	// Manual viewport re-report for Discover (panel "Search this area").
 	"routess:discover-search-area": NoDetail;

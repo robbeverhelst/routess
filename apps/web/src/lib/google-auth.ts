@@ -39,7 +39,7 @@ export interface GoogleCodeResponse {
 // Google Auth Service Class
 class GoogleAuthService {
 	// Handle successful Google login
-	async handleGoogleSuccess(codeResponse: GoogleCodeResponse): Promise<ApiUser> {
+	async handleGoogleSuccess(codeResponse: GoogleCodeResponse): Promise<{ user: ApiUser; isNewUser: boolean }> {
 		try {
 			if (!codeResponse.code) {
 				throw new Error("No authorization code received from Google");
@@ -58,7 +58,7 @@ class GoogleAuthService {
 			});
 
 			breadcrumb("auth", "login_succeeded", { role: authResponse.user.role });
-			return authResponse.user;
+			return { user: authResponse.user, isNewUser: authResponse.isNewUser === true };
 		} catch (error) {
 			Logger.error("Google login processing failed:", error);
 			breadcrumb("auth", "login_failed", undefined, "error");

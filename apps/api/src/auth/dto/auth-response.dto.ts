@@ -13,4 +13,13 @@ export class AuthResponseDto {
 		type: UserResponseDto,
 	})
 	user!: UserResponseDto;
+
+	// Lets the web client fire `user_registered` exactly once, on the login that
+	// created the account. Registration is server truth; the client cannot infer
+	// it from the user payload alone.
+	@ApiProperty({
+		description: "True when this response created the account rather than signing in to an existing one",
+		example: false,
+	})
+	isNewUser!: boolean;
 }

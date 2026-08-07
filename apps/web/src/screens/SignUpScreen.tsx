@@ -57,7 +57,10 @@ export function SignUpScreen({ onSwitchToLogin }: { onSwitchToLogin?: () => void
 	const handleGoogle = async (response: GoogleCodeResponse) => {
 		setIsLoading(true);
 		try {
-			const user = await googleAuth.handleGoogleSuccess(response);
+			const { user, isNewUser } = await googleAuth.handleGoogleSuccess(response);
+			if (isNewUser) {
+				trackEvent({ name: "user_registered", properties: { provider: "google" } });
+			}
 			trackEvent({ name: "user_logged_in", properties: { provider: "google" } });
 			pushToast({ kind: "success", title: t("signup.toast.created"), body: user.name ?? user.email });
 		} catch (e) {

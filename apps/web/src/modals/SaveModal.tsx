@@ -314,12 +314,12 @@ function SignInToSave({
 	const t = useT();
 	const goToSignIn = () => {
 		onClose();
-		emitAppEvent("routess:open-login");
+		emitAppEvent("routess:open-login", { entryPoint: "save_modal" });
 	};
 
 	const goToSignUp = () => {
 		onClose();
-		emitAppEvent("routess:open-signup");
+		emitAppEvent("routess:open-signup", { entryPoint: "save_modal" });
 	};
 
 	return (
