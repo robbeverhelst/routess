@@ -371,6 +371,7 @@ export function FilterChip({
 		<button
 			type="button"
 			onClick={onClick}
+			aria-pressed={active}
 			style={{
 				height: 28,
 				padding: "0 10px",

@@ -107,10 +107,14 @@ describe("Admin List Sorting & Filtering", () => {
 		});
 
 		it("puts users who were never active last, in both directions", async () => {
+			// Only the admin has a session, so only it has a lastActiveAt. It must
+			// lead in both directions; the two nulls sink regardless of dir.
 			for (const dir of ["asc", "desc"]) {
 				const res = await get(`/admin/users?sort=lastActiveAt&dir=${dir}`).expect(200);
-				const items = res.body.items as Array<{ lastActiveAt: string | null }>;
-				expect(items[items.length - 1].lastActiveAt).toBeNull();
+				const items = res.body.items as Array<{ email: string; lastActiveAt: string | null }>;
+				expect(items[0].email).toBe("zoe@example.com");
+				expect(items[0].lastActiveAt).not.toBeNull();
+				expect(items.slice(1).map((u) => u.lastActiveAt)).toEqual([null, null]);
 			}
 		});
 
