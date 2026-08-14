@@ -5,12 +5,15 @@ import type {
 	AdminOverview,
 	AdminRouteDetail,
 	AdminRouteList,
+	AdminRouteSort,
 	AdminRouteStats,
 	AdminSeedRefreshResult,
 	AdminSeedSources,
+	AdminSortDir,
 	AdminSystemHealth,
 	AdminUserDetail,
 	AdminUserList,
+	AdminUserSort,
 	AdminUserStats,
 	ApiClientConfig,
 	ApiCollection,
@@ -30,6 +33,7 @@ import type {
 	ApiRouteShare,
 	ApiRoutesPage,
 	ApiUser,
+	ApiUserRole,
 	AuthResponse,
 	CreateCollectionRequest,
 	CreatePersonalAccessTokenRequest,
@@ -469,13 +473,26 @@ export class ApiClient {
 	}
 
 	async adminListUsers(
-		params: { page?: number; pageSize?: number; search?: string; deletedOnly?: boolean } = {},
+		params: {
+			page?: number;
+			pageSize?: number;
+			search?: string;
+			deletedOnly?: boolean;
+			role?: ApiUserRole;
+			verified?: boolean;
+			sort?: AdminUserSort;
+			dir?: AdminSortDir;
+		} = {},
 	): Promise<AdminUserList> {
 		const query = new URLSearchParams();
 		if (params.page) query.set("page", params.page.toString());
 		if (params.pageSize) query.set("pageSize", params.pageSize.toString());
 		if (params.search) query.set("search", params.search);
 		if (params.deletedOnly) query.set("deleted", "true");
+		if (params.role) query.set("role", params.role);
+		if (params.verified !== undefined) query.set("verified", params.verified ? "true" : "false");
+		if (params.sort) query.set("sort", params.sort);
+		if (params.dir) query.set("dir", params.dir);
 		const qs = query.toString();
 		return this.request<AdminUserList>(`/admin/users${qs ? `?${qs}` : ""}`);
 	}
@@ -505,8 +522,11 @@ export class ApiClient {
 			search?: string;
 			userId?: number;
 			visibility?: string[];
+			activity?: string[];
 			problemsOnly?: boolean;
 			deletedOnly?: boolean;
+			sort?: AdminRouteSort;
+			dir?: AdminSortDir;
 		} = {},
 	): Promise<AdminRouteList> {
 		const query = new URLSearchParams();
@@ -515,8 +535,11 @@ export class ApiClient {
 		if (params.search) query.set("search", params.search);
 		if (params.userId !== undefined) query.set("userId", params.userId.toString());
 		if (params.visibility?.length) query.set("visibility", params.visibility.join(","));
+		if (params.activity?.length) query.set("activity", params.activity.join(","));
 		if (params.problemsOnly) query.set("problems", "true");
 		if (params.deletedOnly) query.set("deleted", "true");
+		if (params.sort) query.set("sort", params.sort);
+		if (params.dir) query.set("dir", params.dir);
 		const qs = query.toString();
 		return this.request<AdminRouteList>(`/admin/routes${qs ? `?${qs}` : ""}`);
 	}

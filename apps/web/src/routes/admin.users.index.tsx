@@ -1,10 +1,11 @@
+import type { AdminSortDir, AdminUserSort, ApiUserRole } from "@routess/api-client";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { I } from "@/components/icons";
 import { Badge, Btn, RDS_COLORS } from "@/components/primitives";
 import { apiService } from "@/lib/api";
-import { Card, PageError, PageHeader, PageSkeleton } from "./admin.index";
+import { Card, FilterChip, PageError, PageHeader, PageSkeleton, SortTh, Td } from "./admin.index";
 
 export const Route = createFileRoute("/admin/users/")({
 	component: AdminUsersPage,
@@ -16,14 +17,37 @@ function AdminUsersPage() {
 	const [search, setSearch] = useState("");
 	const [searchInput, setSearchInput] = useState("");
 	const [deletedOnly, setDeletedOnly] = useState(false);
+	const [role, setRole] = useState<ApiUserRole | undefined>();
+	const [verified, setVerified] = useState<boolean | undefined>();
+	const [sort, setSort] = useState<AdminUserSort>("createdAt");
+	const [dir, setDir] = useState<AdminSortDir>("desc");
 	const pageSize = 20;
 
 	const { data, isLoading, error } = useQuery({
-		queryKey: ["admin", "users", { page, pageSize, search, deletedOnly }],
+		queryKey: ["admin", "users", { page, pageSize, search, deletedOnly, role, verified, sort, dir }],
 		queryFn: () =>
-			apiService.adminListUsers({ page, pageSize, search: search || undefined, deletedOnly: deletedOnly || undefined }),
+			apiService.adminListUsers({
+				page,
+				pageSize,
+				search: search || undefined,
+				deletedOnly: deletedOnly || undefined,
+				role,
+				verified,
+				sort,
+				dir,
+			}),
 		staleTime: 30_000,
 	});
+
+	const onSort = (key: AdminUserSort, nextDir: AdminSortDir) => {
+		setSort(key);
+		setDir(nextDir);
+		setPage(1);
+	};
+	const setRoleFilter = (value: ApiUserRole | undefined) => {
+		setRole(value);
+		setPage(1);
+	};
 
 	if (isLoading) return <PageSkeleton title="Users" />;
 	if (error || !data) return <PageError title="Users" error={error} />;
@@ -38,25 +62,6 @@ function AdminUsersPage() {
 				subtitle="Search, drill in, and manage individual users."
 				right={
 					<div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-						<button
-							type="button"
-							onClick={() => {
-								setDeletedOnly((d) => !d);
-								setPage(1);
-							}}
-							style={{
-								height: 36,
-								padding: "0 12px",
-								fontSize: 12.5,
-								cursor: "pointer",
-								borderRadius: 8,
-								border: `1px solid ${deletedOnly ? RDS_COLORS.danger : RDS_COLORS.border}`,
-								background: deletedOnly ? `color-mix(in oklch, ${RDS_COLORS.danger} 16%, transparent)` : "transparent",
-								color: deletedOnly ? RDS_COLORS.danger : RDS_COLORS.fgMuted,
-							}}
-						>
-							Deleted
-						</button>
 						<form
 							onSubmit={(e) => {
 								e.preventDefault();
@@ -116,17 +121,68 @@ function AdminUsersPage() {
 				}
 			/>
 
-			<div style={{ marginTop: 22 }}>
+			<div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 22 }}>
+				<FilterChip
+					active={role === undefined && verified === undefined && !deletedOnly}
+					onClick={() => {
+						setRole(undefined);
+						setVerified(undefined);
+						setDeletedOnly(false);
+						setPage(1);
+					}}
+				>
+					All
+				</FilterChip>
+				<FilterChip active={role === "admin"} onClick={() => setRoleFilter(role === "admin" ? undefined : "admin")}>
+					Admins
+				</FilterChip>
+				<FilterChip active={role === "user"} onClick={() => setRoleFilter(role === "user" ? undefined : "user")}>
+					Members
+				</FilterChip>
+				<FilterChip
+					active={verified === false}
+					onClick={() => {
+						setVerified(verified === false ? undefined : false);
+						setPage(1);
+					}}
+				>
+					Unverified
+				</FilterChip>
+				<FilterChip
+					active={deletedOnly}
+					danger
+					onClick={() => {
+						setDeletedOnly((d) => !d);
+						setPage(1);
+					}}
+				>
+					Deleted
+				</FilterChip>
+			</div>
+
+			<div style={{ marginTop: 12 }}>
 				<Card padding={0}>
 					<table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
 						<thead>
 							<tr style={{ background: RDS_COLORS.bgPanelElev }}>
-								<HeaderCell>Email</HeaderCell>
-								<HeaderCell>Name</HeaderCell>
-								<HeaderCell>Role</HeaderCell>
-								<HeaderCell align="right">Routes</HeaderCell>
-								<HeaderCell>Joined</HeaderCell>
-								<HeaderCell>Last active</HeaderCell>
+								<SortTh sortKey="email" sort={sort} dir={dir} onSort={onSort} defaultDir="asc">
+									Email
+								</SortTh>
+								<SortTh sortKey="name" sort={sort} dir={dir} onSort={onSort} defaultDir="asc">
+									Name
+								</SortTh>
+								<SortTh sortKey="role" sort={sort} dir={dir} onSort={onSort} defaultDir="asc">
+									Role
+								</SortTh>
+								<SortTh sortKey="routeCount" sort={sort} dir={dir} onSort={onSort} align="right">
+									Routes
+								</SortTh>
+								<SortTh sortKey="createdAt" sort={sort} dir={dir} onSort={onSort}>
+									Joined
+								</SortTh>
+								<SortTh sortKey="lastActiveAt" sort={sort} dir={dir} onSort={onSort}>
+									Last active
+								</SortTh>
 							</tr>
 						</thead>
 						<tbody>
@@ -160,18 +216,18 @@ function AdminUsersPage() {
 										e.currentTarget.style.background = "transparent";
 									}}
 								>
-									<Cell>
+									<Td>
 										<span style={{ color: RDS_COLORS.fg, fontWeight: 500 }}>{user.email}</span>
-									</Cell>
-									<Cell muted>{user.name}</Cell>
-									<Cell>
+									</Td>
+									<Td muted>{user.name}</Td>
+									<Td>
 										<Badge variant={user.role === "admin" ? "accent" : "default"}>{user.role}</Badge>
-									</Cell>
-									<Cell align="right" muted>
+									</Td>
+									<Td align="right" muted>
 										{user.routeCount}
-									</Cell>
-									<Cell muted>{formatDate(user.createdAt)}</Cell>
-									<Cell muted>{user.lastActiveAt ? formatRelative(user.lastActiveAt) : "—"}</Cell>
+									</Td>
+									<Td muted>{formatDate(user.createdAt)}</Td>
+									<Td muted>{user.lastActiveAt ? formatRelative(user.lastActiveAt) : "—"}</Td>
 								</tr>
 							))}
 						</tbody>
@@ -212,40 +268,6 @@ function AdminUsersPage() {
 				</div>
 			</div>
 		</div>
-	);
-}
-
-function HeaderCell({ children, align }: { children: React.ReactNode; align?: "right" }) {
-	return (
-		<th
-			style={{
-				textAlign: align ?? "left",
-				padding: "10px 16px",
-				fontSize: 11,
-				fontWeight: 600,
-				textTransform: "uppercase",
-				letterSpacing: "0.06em",
-				color: RDS_COLORS.fgSubtle,
-				borderBottom: `1px solid ${RDS_COLORS.border}`,
-			}}
-		>
-			{children}
-		</th>
-	);
-}
-
-function Cell({ children, muted, align }: { children: React.ReactNode; muted?: boolean; align?: "right" }) {
-	return (
-		<td
-			style={{
-				padding: "12px 16px",
-				color: muted ? RDS_COLORS.fgMuted : RDS_COLORS.fg,
-				textAlign: align ?? "left",
-				verticalAlign: "middle",
-			}}
-		>
-			{children}
-		</td>
 	);
 }
 

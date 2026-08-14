@@ -128,6 +128,20 @@ export interface AdminRouteStats {
 	topCreators: AdminTopCreator[];
 }
 
+export type AdminSortDir = "asc" | "desc";
+
+export type AdminUserSort = "createdAt" | "email" | "name" | "role" | "routeCount" | "lastActiveAt";
+
+export type AdminRouteSort =
+	| "createdAt"
+	| "name"
+	| "activity"
+	| "visibility"
+	| "distance"
+	| "duration"
+	| "elevationGain"
+	| "owner";
+
 export interface AdminUserListItem {
 	id: number;
 	email: string;
