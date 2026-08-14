@@ -1,11 +1,29 @@
+import type { AdminRouteSort, AdminSortDir } from "@routess/api-client";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { I } from "@/components/icons";
 import { Badge, Btn, RDS_COLORS, SecTitle } from "@/components/primitives";
 import { apiService } from "@/lib/api";
-import { Card, MetricCard, PageError, PageHeader, PageSkeleton, TimeseriesCard } from "./admin.index";
+import {
+	Card,
+	FilterChip,
+	MetricCard,
+	PageError,
+	PageHeader,
+	PageSkeleton,
+	SortTh,
+	Td,
+	Th,
+	TimeseriesCard,
+} from "./admin.index";
 import { formatDate } from "./admin.users.index";
+
+const ACTIVITIES = [
+	{ value: "cycle", label: "Cycle" },
+	{ value: "run", label: "Run" },
+	{ value: "walk", label: "Walk" },
+] as const;
 
 export const Route = createFileRoute("/admin/routes/")({
 	component: AdminRoutesPage,
@@ -17,8 +35,11 @@ function AdminRoutesPage() {
 	const [searchInput, setSearchInput] = useState("");
 	const [search, setSearch] = useState("");
 	const [visibility, setVisibility] = useState<string[]>([]);
+	const [activity, setActivity] = useState<string[]>([]);
 	const [problemsOnly, setProblemsOnly] = useState(false);
 	const [deletedOnly, setDeletedOnly] = useState(false);
+	const [sort, setSort] = useState<AdminRouteSort>("createdAt");
+	const [dir, setDir] = useState<AdminSortDir>("desc");
 	const pageSize = 20;
 
 	const statsQ = useQuery({
@@ -27,15 +48,22 @@ function AdminRoutesPage() {
 		staleTime: 30_000,
 	});
 	const listQ = useQuery({
-		queryKey: ["admin", "routes", { page: routesPage, pageSize, search, visibility, problemsOnly, deletedOnly }],
+		queryKey: [
+			"admin",
+			"routes",
+			{ page: routesPage, pageSize, search, visibility, activity, problemsOnly, deletedOnly, sort, dir },
+		],
 		queryFn: () =>
 			apiService.adminListRoutes({
 				page: routesPage,
 				pageSize,
 				search: search || undefined,
 				visibility: visibility.length ? visibility : undefined,
+				activity: activity.length ? activity : undefined,
 				problemsOnly: problemsOnly || undefined,
 				deletedOnly: deletedOnly || undefined,
+				sort,
+				dir,
 			}),
 		staleTime: 30_000,
 	});
@@ -44,6 +72,15 @@ function AdminRoutesPage() {
 		setVisibility(value);
 		setProblemsOnly(false);
 		setDeletedOnly(false);
+		setRoutesPage(1);
+	};
+	const toggleActivity = (value: string) => {
+		setActivity((current) => (current.includes(value) ? current.filter((a) => a !== value) : [...current, value]));
+		setRoutesPage(1);
+	};
+	const onSort = (key: AdminRouteSort, nextDir: AdminSortDir) => {
+		setSort(key);
+		setDir(nextDir);
 		setRoutesPage(1);
 	};
 	const toggleProblems = () => {
@@ -191,6 +228,12 @@ function AdminRoutesPage() {
 						<FilterChip active={deletedOnly} danger onClick={toggleDeleted}>
 							Deleted
 						</FilterChip>
+						<span style={{ width: 1, height: 18, background: RDS_COLORS.border, margin: "0 4px" }} />
+						{ACTIVITIES.map(({ value, label }) => (
+							<FilterChip key={value} active={activity.includes(value)} onClick={() => toggleActivity(value)}>
+								{label}
+							</FilterChip>
+						))}
 					</div>
 					<form
 						onSubmit={(e) => {
@@ -252,12 +295,24 @@ function AdminRoutesPage() {
 					<table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
 						<thead>
 							<tr style={{ background: RDS_COLORS.bgPanelElev }}>
-								<Th>Name</Th>
-								<Th>Activity</Th>
-								<Th>Visibility</Th>
-								<Th align="right">Distance</Th>
-								<Th>Owner</Th>
-								<Th>Created</Th>
+								<SortTh sortKey="name" sort={sort} dir={dir} onSort={onSort} defaultDir="asc">
+									Name
+								</SortTh>
+								<SortTh sortKey="activity" sort={sort} dir={dir} onSort={onSort} defaultDir="asc">
+									Activity
+								</SortTh>
+								<SortTh sortKey="visibility" sort={sort} dir={dir} onSort={onSort} defaultDir="asc">
+									Visibility
+								</SortTh>
+								<SortTh sortKey="distance" sort={sort} dir={dir} onSort={onSort} align="right">
+									Distance
+								</SortTh>
+								<SortTh sortKey="owner" sort={sort} dir={dir} onSort={onSort} defaultDir="asc">
+									Owner
+								</SortTh>
+								<SortTh sortKey="createdAt" sort={sort} dir={dir} onSort={onSort}>
+									Created
+								</SortTh>
 							</tr>
 						</thead>
 						<tbody>
@@ -417,72 +472,6 @@ function AdminRoutesPage() {
 				</Card>
 			</section>
 		</div>
-	);
-}
-
-function FilterChip({
-	children,
-	active,
-	danger,
-	onClick,
-}: {
-	children: React.ReactNode;
-	active: boolean;
-	danger?: boolean;
-	onClick: () => void;
-}) {
-	const accent = danger ? RDS_COLORS.danger : RDS_COLORS.accent;
-	return (
-		<button
-			type="button"
-			onClick={onClick}
-			style={{
-				height: 28,
-				padding: "0 10px",
-				fontSize: 12,
-				cursor: "pointer",
-				borderRadius: 999,
-				border: `1px solid ${active ? accent : RDS_COLORS.border}`,
-				background: active ? `color-mix(in oklch, ${accent} 16%, transparent)` : "transparent",
-				color: active ? accent : RDS_COLORS.fgMuted,
-			}}
-		>
-			{children}
-		</button>
-	);
-}
-
-function Th({ children, align }: { children?: React.ReactNode; align?: "right" }) {
-	return (
-		<th
-			style={{
-				textAlign: align ?? "left",
-				padding: "10px 16px",
-				fontSize: 11,
-				fontWeight: 600,
-				textTransform: "uppercase",
-				letterSpacing: "0.06em",
-				color: RDS_COLORS.fgSubtle,
-				borderBottom: `1px solid ${RDS_COLORS.border}`,
-			}}
-		>
-			{children}
-		</th>
-	);
-}
-
-function Td({ children, muted, align }: { children: React.ReactNode; muted?: boolean; align?: "right" }) {
-	return (
-		<td
-			style={{
-				padding: "12px 16px",
-				color: muted ? RDS_COLORS.fgMuted : RDS_COLORS.fg,
-				textAlign: align ?? "left",
-				verticalAlign: "middle",
-			}}
-		>
-			{children}
-		</td>
 	);
 }
 

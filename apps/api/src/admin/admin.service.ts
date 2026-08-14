@@ -23,6 +23,38 @@ import type { AdminUserDetailDto, AdminUserListDto, AdminUserListItemDto } from 
 
 const CACHE_TTL_MS = 60_000;
 
+export type SortDir = "asc" | "desc";
+
+// Allowlists: the request only ever picks a key, never supplies SQL.
+const USER_SORT_COLUMNS: Record<string, string> = {
+	createdAt: `u."created_at"`,
+	email: `u."email"`,
+	name: `u."name"`,
+	role: `u."role"`,
+	routeCount: `"routeCount"`,
+	lastActiveAt: `"lastActiveAt"`,
+};
+
+const ROUTE_SORT_COLUMNS: Record<string, string> = {
+	createdAt: `r."created_at"`,
+	name: `r."name"`,
+	activity: `r."activity"`,
+	visibility: `r."visibility"`,
+	distance: `r."distance"`,
+	duration: `r."duration"`,
+	elevationGain: `r."elevation_gain"`,
+	owner: `u."email"`,
+};
+
+export const ADMIN_USER_SORTS = Object.keys(USER_SORT_COLUMNS);
+export const ADMIN_ROUTE_SORTS = Object.keys(ROUTE_SORT_COLUMNS);
+
+function orderBySql(columns: Record<string, string>, sort: string | undefined, dir: SortDir, tiebreak: string): string {
+	const column = (sort && columns[sort]) || columns.createdAt;
+	const direction = dir === "asc" ? "asc" : "desc";
+	return `order by ${column} ${direction} nulls last, ${tiebreak} desc`;
+}
+
 interface RawCount {
 	count: number | string;
 }
@@ -96,18 +128,31 @@ export class AdminService {
 		pageSize: number;
 		search?: string;
 		deletedOnly?: boolean;
+		role?: string;
+		verified?: boolean;
+		sort?: string;
+		dir?: SortDir;
 	}): Promise<AdminUserListDto> {
 		const page = Math.max(1, params.page);
 		const pageSize = Math.min(100, Math.max(1, params.pageSize));
 		const search = params.search?.trim();
 
 		const whereClauses: string[] = [params.deletedOnly ? `u."deleted_at" is not null` : `u."deleted_at" is null`];
-		const args: Array<string | number> = [];
+		const args: Array<string | number | boolean> = [];
 		if (search) {
 			whereClauses.push(`(u."email" ilike ? or u."name" ilike ?)`);
 			args.push(`%${search}%`, `%${search}%`);
 		}
+		if (params.role) {
+			whereClauses.push(`u."role" = ?`);
+			args.push(params.role);
+		}
+		if (params.verified !== undefined) {
+			whereClauses.push(`u."is_email_verified" = ?`);
+			args.push(params.verified);
+		}
 		const whereSql = whereClauses.join(" and ");
+		const orderSql = orderBySql(USER_SORT_COLUMNS, params.sort, params.dir ?? "desc", `u."id"`);
 
 		const totalRows = (await this.em
 			.getConnection()
@@ -122,7 +167,7 @@ export class AdminService {
 			        (select count(*)::int from "route" r where r."user_id" = u."id" and r."deleted_at" is null) as "routeCount"
 			 from "user" u
 			 where ${whereSql}
-			 order by u."created_at" desc
+			 ${orderSql}
 			 limit ? offset ?`,
 			[...args, pageSize, offset],
 		)) as Array<{
@@ -209,8 +254,11 @@ export class AdminService {
 		search?: string;
 		userId?: number;
 		visibility?: string[];
+		activity?: string[];
 		problemsOnly?: boolean;
 		deletedOnly?: boolean;
+		sort?: string;
+		dir?: SortDir;
 	}): Promise<AdminRouteListDto> {
 		const page = Math.max(1, params.page);
 		const pageSize = Math.min(100, Math.max(1, params.pageSize));
@@ -231,6 +279,11 @@ export class AdminService {
 			whereClauses.push(`r."visibility" in (${placeholders})`);
 			args.push(...params.visibility);
 		}
+		if (params.activity?.length) {
+			const placeholders = params.activity.map(() => "?").join(", ");
+			whereClauses.push(`r."activity" in (${placeholders})`);
+			args.push(...params.activity);
+		}
 		if (params.problemsOnly) {
 			// "Saved-while-broken": geometry never landed even though provenance
 			// implies a computed RoutePath should exist. ::text compare works for
@@ -240,6 +293,7 @@ export class AdminService {
 			);
 		}
 		const whereSql = whereClauses.join(" and ");
+		const orderSql = orderBySql(ROUTE_SORT_COLUMNS, params.sort, params.dir ?? "desc", `r."id"`);
 
 		const totalRows = (await this.em
 			.getConnection()
@@ -255,7 +309,7 @@ export class AdminService {
 			 from "route" r
 			 join "user" u on u."id" = r."user_id"
 			 where ${whereSql}
-			 order by r."created_at" desc
+			 ${orderSql}
 			 limit ? offset ?`,
 			[...args, pageSize, offset],
 		)) as Array<{

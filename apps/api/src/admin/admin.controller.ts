@@ -12,11 +12,12 @@ import {
 	UseInterceptors,
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { ROUTE_ACTIVITIES } from "@routess/core";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
 import { ExternalRoutesService } from "../external-routes/external-routes.service";
-import { AdminService } from "./admin.service";
+import { ADMIN_ROUTE_SORTS, ADMIN_USER_SORTS, AdminService, type SortDir } from "./admin.service";
 import { AuditInterceptor } from "./audit.interceptor";
 import { AdminRouteDetailDto, AdminRouteListDto } from "./dto/admin-route.dto";
 import { AdminSeedRefreshResultDto, AdminSeedSourcesDto } from "./dto/admin-seeding.dto";
@@ -25,6 +26,33 @@ import { AdminConfigSummaryDto, AdminSystemHealthDto } from "./dto/admin-system.
 import { AdminUserDetailDto, AdminUserListDto } from "./dto/admin-user.dto";
 
 const ROUTE_VISIBILITIES = new Set(["private", "unlisted", "public"]);
+const ROUTE_ACTIVITY_VALUES: ReadonlySet<string> = new Set(ROUTE_ACTIVITIES);
+const USER_ROLES = new Set(["user", "admin"]);
+
+function parseCsv(value: string | undefined, allowed: ReadonlySet<string>): string[] | undefined {
+	const values = value
+		?.split(",")
+		.map((v) => v.trim())
+		.filter((v) => allowed.has(v));
+	return values?.length ? values : undefined;
+}
+
+// An unrecognised column drops the requested direction too, so a bad `sort`
+// always lands on the documented default of newest first.
+function parseSort(
+	sort: string | undefined,
+	dir: string | undefined,
+	allowed: string[],
+): { sort?: string; dir: SortDir } {
+	if (!sort || !allowed.includes(sort)) return { dir: "desc" };
+	return { sort, dir: dir === "asc" ? "asc" : "desc" };
+}
+
+function parseBool(value: string | undefined): boolean | undefined {
+	if (value === "true" || value === "1") return true;
+	if (value === "false" || value === "0") return false;
+	return undefined;
+}
 
 @ApiTags("admin")
 @ApiBearerAuth("JWT-auth")
@@ -94,9 +122,9 @@ export class AdminController {
 
 	@Get("routes")
 	@ApiOperation({
-		summary: "Paginated, searchable route list",
+		summary: "Paginated, searchable, sortable route list",
 		description:
-			"Lists routes across all users with `page`/`pageSize` pagination, free-text `search`, and optional `userId`, `visibility` (comma-separated), and `problems` (geometry-less routes that should have a RoutePath) filters.",
+			"Lists routes across all users with `page`/`pageSize` pagination, free-text `search`, and optional `userId`, `visibility` (comma-separated), `activity` (comma-separated), and `problems` (geometry-less routes that should have a RoutePath) filters. Sort with `sort` (createdAt, name, activity, visibility, distance, duration, elevationGain, owner) and `dir` (asc, desc); unknown values fall back to newest first.",
 	})
 	listRoutes(
 		@Query("page") page = "1",
@@ -104,21 +132,22 @@ export class AdminController {
 		@Query("search") search?: string,
 		@Query("userId") userId?: string,
 		@Query("visibility") visibility?: string,
+		@Query("activity") activity?: string,
 		@Query("problems") problems?: string,
 		@Query("deleted") deleted?: string,
+		@Query("sort") sort?: string,
+		@Query("dir") dir?: string,
 	): Promise<AdminRouteListDto> {
-		const visibilities = visibility
-			?.split(",")
-			.map((v) => v.trim())
-			.filter((v) => ROUTE_VISIBILITIES.has(v));
 		return this.admin.listRoutes({
 			page: Number.parseInt(page, 10) || 1,
 			pageSize: Number.parseInt(pageSize, 10) || 20,
 			search,
 			userId: userId ? Number.parseInt(userId, 10) : undefined,
-			visibility: visibilities?.length ? visibilities : undefined,
+			visibility: parseCsv(visibility, ROUTE_VISIBILITIES),
+			activity: parseCsv(activity, ROUTE_ACTIVITY_VALUES),
 			problemsOnly: problems === "true" || problems === "1",
 			deletedOnly: deleted === "true" || deleted === "1",
+			...parseSort(sort, dir, ADMIN_ROUTE_SORTS),
 		});
 	}
 
@@ -163,20 +192,28 @@ export class AdminController {
 
 	@Get("users")
 	@ApiOperation({
-		summary: "Paginated, searchable user list",
-		description: "Lists users with `page`/`pageSize` pagination and free-text `search` over name and email.",
+		summary: "Paginated, searchable, sortable user list",
+		description:
+			"Lists users with `page`/`pageSize` pagination, free-text `search` over name and email, and optional `role` and `verified` filters. Sort with `sort` (createdAt, email, name, role, routeCount, lastActiveAt) and `dir` (asc, desc); unknown values fall back to newest first.",
 	})
 	listUsers(
 		@Query("page") page = "1",
 		@Query("pageSize") pageSize = "20",
 		@Query("search") search?: string,
 		@Query("deleted") deleted?: string,
+		@Query("role") role?: string,
+		@Query("verified") verified?: string,
+		@Query("sort") sort?: string,
+		@Query("dir") dir?: string,
 	): Promise<AdminUserListDto> {
 		return this.admin.listUsers({
 			page: Number.parseInt(page, 10) || 1,
 			pageSize: Number.parseInt(pageSize, 10) || 20,
 			search,
 			deletedOnly: deleted === "true" || deleted === "1",
+			role: role && USER_ROLES.has(role) ? role : undefined,
+			verified: parseBool(verified),
+			...parseSort(sort, dir, ADMIN_USER_SORTS),
 		});
 	}
 

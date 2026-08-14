@@ -1,6 +1,8 @@
+import type { AdminSortDir } from "@routess/api-client";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import type { ReactNode } from "react";
+import { I } from "@/components/icons";
 import { RDS_COLORS, SecTitle } from "@/components/primitives";
 import { apiService } from "@/lib/api";
 
@@ -268,6 +270,121 @@ export function TimeseriesCard({ title, series }: { title: string; series: Array
 				<span>{series.at(-1)?.date}</span>
 			</div>
 		</Card>
+	);
+}
+
+const TH_STYLE = {
+	padding: "10px 16px",
+	fontSize: 11,
+	fontWeight: 600,
+	textTransform: "uppercase",
+	letterSpacing: "0.06em",
+	color: RDS_COLORS.fgSubtle,
+	borderBottom: `1px solid ${RDS_COLORS.border}`,
+} as const;
+
+export function Th({ children, align }: { children?: ReactNode; align?: "right" }) {
+	return <th style={{ ...TH_STYLE, textAlign: align ?? "left" }}>{children}</th>;
+}
+
+export function SortTh<K extends string>({
+	children,
+	sortKey,
+	sort,
+	dir,
+	onSort,
+	align,
+	defaultDir = "desc",
+}: {
+	children: ReactNode;
+	sortKey: K;
+	sort: K;
+	dir: AdminSortDir;
+	onSort: (key: K, dir: AdminSortDir) => void;
+	align?: "right";
+	defaultDir?: AdminSortDir;
+}) {
+	const active = sort === sortKey;
+	return (
+		<th
+			style={{ ...TH_STYLE, textAlign: align ?? "left", padding: "4px 8px" }}
+			aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
+		>
+			<button
+				type="button"
+				onClick={() => onSort(sortKey, active ? (dir === "asc" ? "desc" : "asc") : defaultDir)}
+				style={{
+					display: "inline-flex",
+					alignItems: "center",
+					gap: 5,
+					padding: "6px 8px",
+					borderRadius: 6,
+					border: 0,
+					background: "transparent",
+					cursor: "pointer",
+					font: "inherit",
+					letterSpacing: "inherit",
+					textTransform: "inherit",
+					color: active ? RDS_COLORS.fg : RDS_COLORS.fgSubtle,
+					flexDirection: align === "right" ? "row-reverse" : "row",
+				}}
+			>
+				{children}
+				{active ? (
+					<I.arrowUp size={11} style={{ transform: dir === "desc" ? "rotate(180deg)" : undefined }} />
+				) : (
+					<I.swapVert size={11} style={{ opacity: 0.4 }} />
+				)}
+			</button>
+		</th>
+	);
+}
+
+export function Td({ children, muted, align }: { children: ReactNode; muted?: boolean; align?: "right" }) {
+	return (
+		<td
+			style={{
+				padding: "12px 16px",
+				color: muted ? RDS_COLORS.fgMuted : RDS_COLORS.fg,
+				textAlign: align ?? "left",
+				verticalAlign: "middle",
+			}}
+		>
+			{children}
+		</td>
+	);
+}
+
+export function FilterChip({
+	children,
+	active,
+	danger,
+	onClick,
+}: {
+	children: ReactNode;
+	active: boolean;
+	danger?: boolean;
+	onClick: () => void;
+}) {
+	const accent = danger ? RDS_COLORS.danger : RDS_COLORS.accent;
+	return (
+		<button
+			type="button"
+			onClick={onClick}
+			aria-pressed={active}
+			style={{
+				height: 28,
+				padding: "0 10px",
+				fontSize: 12,
+				cursor: "pointer",
+				borderRadius: 999,
+				border: `1px solid ${active ? accent : RDS_COLORS.border}`,
+				background: active ? `color-mix(in oklch, ${accent} 16%, transparent)` : "transparent",
+				color: active ? accent : RDS_COLORS.fgMuted,
+			}}
+		>
+			{children}
+		</button>
 	);
 }
 
