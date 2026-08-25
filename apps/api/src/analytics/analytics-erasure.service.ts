@@ -32,6 +32,9 @@ export class AnalyticsErasureService {
 
 		const idHash = hashUserId(this.config.analytics.salt, userId);
 		const client = new Client({ connectionString: this.config.analytics.umamiDatabaseUrl });
+		// A connection dropped outside a query emits 'error' on the client, which
+		// is fatal to the process without a listener.
+		client.on("error", (error: Error) => this.logger.warn(`Analytics erasure connection error: ${error.message}`));
 
 		try {
 			await client.connect();
