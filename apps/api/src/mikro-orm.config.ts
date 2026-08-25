@@ -1,5 +1,7 @@
 import { ReflectMetadataProvider } from "@mikro-orm/decorators/legacy";
 import { defineConfig } from "@mikro-orm/postgresql";
+import { Logger } from "@nestjs/common";
+import type { Pool, PoolClient } from "pg";
 import { getAppConfig } from "./config/app-config";
 import { Collection } from "./entities/collection.entity";
 import { CollectionRoute } from "./entities/collection-route.entity";
@@ -17,6 +19,23 @@ import { VerificationToken } from "./entities/verification-token.entity";
 import { MikroOrmMetricsLogger } from "./telemetry/mikro-orm-metrics.logger";
 
 const appConfig = getAppConfig();
+
+const poolLogger = new Logger("PostgresPool");
+
+// `pg` emits 'error' on the Pool when an idle connection dies and on the Client
+// when one dies mid-query. Neither has a listener by default, and an
+// EventEmitter 'error' with no listener is rethrown — under Bun that takes the
+// process down, so a brief network blip killed the pod instead of reconnecting.
+// Log and let the pool discard and replace the connection, the same way
+// CacheService does for Redis.
+function attachPoolErrorHandlers(pool: Pool): void {
+	pool.on("error", (error: Error) => poolLogger.warn(`Postgres pool error: ${error.message}`));
+	// The pool detaches its own idle listener while a client is checked out, so
+	// the mid-query case needs a listener of our own that outlives the checkout.
+	pool.on("connect", (client: PoolClient) => {
+		client.on("error", (error: Error) => poolLogger.warn(`Postgres client error: ${error.message}`));
+	});
+}
 
 const config = defineConfig({
 	metadataProvider: ReflectMetadataProvider,
@@ -47,6 +66,9 @@ const config = defineConfig({
 		path: "./dist/migrations",
 		...(appConfig.app.isProduction ? {} : { pathTs: "./src/migrations" }),
 	},
+	// MikroORM hands us the raw pg Pool it builds; the rest of driverOptions is
+	// forwarded to the pool as-is.
+	driverOptions: { onPoolCreated: attachPoolErrorHandlers },
 	debug: appConfig.database.debug,
 	loggerFactory: (options) => new MikroOrmMetricsLogger(options),
 	allowGlobalContext: appConfig.app.isTest,

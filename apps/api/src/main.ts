@@ -1,10 +1,12 @@
 import { NestFactory } from "@nestjs/core";
 import { Logger } from "nestjs-pino";
 import { configureApplication } from "./app/app-setup";
+import { installProcessGuards } from "./app/process-guards";
 import { getAppConfig, loadEnvironment } from "./config/app-config";
 import { initializeOpenTelemetry } from "./telemetry/tracing";
 
 export async function bootstrap() {
+	installProcessGuards();
 	loadEnvironment();
 	const config = getAppConfig();
 	initializeOpenTelemetry(config);
