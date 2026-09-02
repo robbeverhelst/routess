@@ -72,8 +72,7 @@ export interface ParsedGpxFile {
 	trackPoints?: Coordinate[];
 	name?: string;
 	// True when the file had no rtepts and waypoints were thinned out of the
-	// track. The draft flow then re-routes via the road-proximity heuristic
-	// instead of pinning the raw track as exact geometry.
+	// track, so they are synthetic control points rather than authored stops.
 	waypointsDerivedFromTrack?: boolean;
 	error?: string;
 }
@@ -136,10 +135,31 @@ export const parseGPXFile = async (gpxString: string): Promise<ParsedGpxFile> =>
 	}
 };
 
+// One Matching API request per waypoint, so a long rtept list would otherwise
+// fire hundreds of parallel fetches and get rate limited, which used to
+// degrade the whole import to direct (straight) legs.
+const ROAD_CHECK_CONCURRENCY = 6;
+
+const mapWithConcurrency = async <T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> => {
+	const results = new Array<R>(items.length);
+	let next = 0;
+	const worker = async () => {
+		while (next < items.length) {
+			const index = next++;
+			results[index] = await fn(items[index]);
+		}
+	};
+	await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+	return results;
+};
+
 /**
  * Materializes ParsedGpxWaypoint[] into Waypoint[]. Waypoints carrying a Type
  * from the source GPX (Routess extension) keep it; waypoints without Type fall
- * back to a road-proximity heuristic.
+ * back to a road-proximity heuristic. Only a definite off-road verdict yields
+ * "direct". When the road check cannot answer, the waypoint stays "routed":
+ * downgrading on an API failure turns a whole imported route into straight
+ * lines.
  */
 export const processGPXWaypoints = async (
 	parsed: ParsedGpxWaypoint[],
@@ -150,19 +170,18 @@ export const processGPXWaypoints = async (
 	}
 
 	try {
-		const finalWaypoints: Waypoint[] = await Promise.all(
-			parsed.map(async (wp) => {
-				if (wp.type) {
-					return { coord: wp.coord, type: wp.type, ...(wp.name ? { name: wp.name } : {}) };
-				}
-				const check = await checkNearRoad(wp.coord, accessToken);
-				return {
-					coord: wp.coord,
-					type: check?.isValid ? "routed" : "direct",
-					...(wp.name ? { name: wp.name } : {}),
-				};
-			}),
-		);
+		const finalWaypoints: Waypoint[] = await mapWithConcurrency(parsed, ROAD_CHECK_CONCURRENCY, async (wp) => {
+			if (wp.type) {
+				return { coord: wp.coord, type: wp.type, ...(wp.name ? { name: wp.name } : {}) };
+			}
+			const check = await checkNearRoad(wp.coord, accessToken);
+			const offRoad = check ? !check.isValid && !check.unavailable : false;
+			return {
+				coord: wp.coord,
+				type: offRoad ? "direct" : "routed",
+				...(wp.name ? { name: wp.name } : {}),
+			};
+		});
 
 		return { finalWaypoints };
 	} catch (error) {

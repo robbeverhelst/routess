@@ -9,13 +9,15 @@ import { Logger } from "@/lib/logger";
  * @param accessToken - The Mapbox API access token.
  * @param searchRadiusMeters - The search radius in meters (default is 49m).
  * @returns A promise that resolves to an object indicating if the point is valid (near a road)
- *          and the snapped coordinates if valid.
+ *          and the snapped coordinates if valid. `unavailable` separates "the API could not
+ *          answer" (network error, rate limit, bad response) from a definite off-road verdict,
+ *          so callers do not treat an outage as proof that a point is off-road.
  */
 export const checkNearRoad = async (
 	coords: Coordinate,
 	accessToken: string,
 	searchRadiusMeters: number = 49, // Reverted to 49m default
-): Promise<{ isValid: boolean; snappedCoords?: Coordinate }> => {
+): Promise<{ isValid: boolean; snappedCoords?: Coordinate; unavailable?: boolean }> => {
 	try {
 		const MAX_MATCHING_API_RADIUS = 49; // Max radius for Mapbox Matching API based on error
 		const effectiveRadius = Math.max(1, Math.min(searchRadiusMeters, MAX_MATCHING_API_RADIUS));
@@ -26,7 +28,7 @@ export const checkNearRoad = async (
 		const response = await fetch(url);
 		if (!response.ok) {
 			Logger.error("[checkNearRoad] Matching API request failed:", response.status, await response.text());
-			return { isValid: false };
+			return { isValid: false, unavailable: true };
 		}
 		const json = await response.json();
 
@@ -62,13 +64,13 @@ export const checkNearRoad = async (
 				json.code,
 				json.message,
 			);
-			return { isValid: false }; // No match or error
+			return { isValid: false, unavailable: true };
 		}
 	} catch (error) {
 		Logger.error("[checkNearRoad] Error calling Matching API:", error);
 		// If fetch itself fails, console.timeEnd might not be reached for the fetch timer.
 		// No specific timeEnd here, as the overall function duration might be more relevant for catch.
-		return { isValid: false }; // Network error or other exception
+		return { isValid: false, unavailable: true }; // Network error or other exception
 	}
 };
 

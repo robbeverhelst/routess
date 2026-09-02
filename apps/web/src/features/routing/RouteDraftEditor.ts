@@ -562,7 +562,11 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 
 		useRoutingStore.getState().setCreationSource("imported");
 
-		if (parsed.trackPoints && parsed.trackPoints.length >= 2 && !parsed.waypointsDerivedFromTrack) {
+		// A track is the route the file actually describes, so it becomes the
+		// draft's geometry verbatim. Re-routing between the sparse waypoints
+		// instead would replace the imported roads with shortest paths.
+		// ensureEditableShape densifies on the first edit.
+		if (parsed.trackPoints && parsed.trackPoints.length >= 2) {
 			const waypoints: Waypoint[] = parsed.waypoints.map((wp) => ({
 				coord: wp.coord,
 				type: wp.type ?? "routed",
