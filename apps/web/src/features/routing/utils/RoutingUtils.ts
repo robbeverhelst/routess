@@ -3,19 +3,26 @@ import { haversineDistance } from "@routess/core";
 import { LngLat, LngLatBounds, type Map as MapboxMap } from "mapbox-gl";
 import { Logger } from "@/lib/logger";
 
+// Matching API codes that mean "no road near this coordinate". They are a
+// verdict, unlike a transport error or an auth/quota rejection, which say
+// nothing about the point.
+const OFF_ROAD_CODES = new Set(["NoSegment", "NoMatch", "NoRoute"]);
+
 /**
  * Checks if a coordinate is near a road by querying the Mapbox Matching API.
  * @param coords - The coordinate to check [lon, lat].
  * @param accessToken - The Mapbox API access token.
  * @param searchRadiusMeters - The search radius in meters (default is 49m).
  * @returns A promise that resolves to an object indicating if the point is valid (near a road)
- *          and the snapped coordinates if valid.
+ *          and the snapped coordinates if valid. `unavailable` separates "the API could not
+ *          answer" (network error, rate limit, bad response) from a definite off-road verdict,
+ *          so callers do not treat an outage as proof that a point is off-road.
  */
 export const checkNearRoad = async (
 	coords: Coordinate,
 	accessToken: string,
 	searchRadiusMeters: number = 49, // Reverted to 49m default
-): Promise<{ isValid: boolean; snappedCoords?: Coordinate }> => {
+): Promise<{ isValid: boolean; snappedCoords?: Coordinate; unavailable?: boolean }> => {
 	try {
 		const MAX_MATCHING_API_RADIUS = 49; // Max radius for Mapbox Matching API based on error
 		const effectiveRadius = Math.max(1, Math.min(searchRadiusMeters, MAX_MATCHING_API_RADIUS));
@@ -26,7 +33,7 @@ export const checkNearRoad = async (
 		const response = await fetch(url);
 		if (!response.ok) {
 			Logger.error("[checkNearRoad] Matching API request failed:", response.status, await response.text());
-			return { isValid: false };
+			return { isValid: false, unavailable: true };
 		}
 		const json = await response.json();
 
@@ -56,19 +63,24 @@ export const checkNearRoad = async (
 				`[checkNearRoad] Point is on-road (Radius: ${effectiveRadius}m). Snapped from [${coords.join(",")}] to [${snappedCoords.join(",")}] Dist: ${dist.toFixed(3)}km`,
 			);
 			return { isValid: true, snappedCoords };
+		} else if (OFF_ROAD_CODES.has(json?.code)) {
+			// The API answered, and the answer is "nothing to snap to here".
+			// That is this function's whole job, not a failure to report.
+			Logger.info("[checkNearRoad] Point is off-road:", json.code);
+			return { isValid: false };
 		} else {
 			Logger.warn(
 				"[checkNearRoad] Matching API did not return a successful result or tracepoints:",
-				json.code,
-				json.message,
+				json?.code,
+				json?.message,
 			);
-			return { isValid: false }; // No match or error
+			return { isValid: false, unavailable: true };
 		}
 	} catch (error) {
 		Logger.error("[checkNearRoad] Error calling Matching API:", error);
 		// If fetch itself fails, console.timeEnd might not be reached for the fetch timer.
 		// No specific timeEnd here, as the overall function duration might be more relevant for catch.
-		return { isValid: false }; // Network error or other exception
+		return { isValid: false, unavailable: true }; // Network error or other exception
 	}
 };
 

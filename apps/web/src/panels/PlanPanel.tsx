@@ -683,9 +683,14 @@ export function PlanPanel() {
 								<div style={{ fontSize: 13.5, fontWeight: 600 }}>{t("plan.loopHeroTitle")}</div>
 								<div style={{ fontSize: 12, color: RDS_COLORS.fgMuted, lineHeight: 1.5 }}>{t("plan.loopHeroBody")}</div>
 							</div>
-							<Btn variant="primary" onClick={() => openModal("loop")} style={{ height: 32, fontSize: 12.5 }}>
-								<I.refresh size={13} /> {t("plan.generateLoop")}
-							</Btn>
+							<div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
+								<Btn variant="primary" onClick={() => openModal("loop")} style={{ height: 32, fontSize: 12.5 }}>
+									<I.refresh size={13} /> {t("plan.generateLoop")}
+								</Btn>
+								<Btn onClick={() => openModal("import")} style={{ height: 32, fontSize: 12.5 }}>
+									<I.upload size={13} /> {t("plan.importGpx")}
+								</Btn>
+							</div>
 						</div>
 						<div style={{ textAlign: "center", fontSize: 12, color: RDS_COLORS.fgSubtle, lineHeight: 1.55 }}>
 							{t("plan.orTapMap")} <Kbd>⌘</Kbd> <Kbd>K</Kbd>
@@ -942,12 +947,7 @@ export function PlanPanel() {
 					>
 						<I.share size={14} />
 					</Btn>
-					<Btn
-						title={t("plan.importGpx")}
-						disabled={routePath.length === 0 && waypoints.length === 0}
-						onClick={() => openModal("import")}
-						style={{ padding: "0 10px" }}
-					>
+					<Btn title={t("plan.importGpx")} onClick={() => openModal("import")} style={{ padding: "0 10px" }}>
 						<I.upload size={14} />
 					</Btn>
 					<div style={{ width: 1, alignSelf: "stretch", margin: "6px 2px", background: RDS_COLORS.border }} />

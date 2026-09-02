@@ -376,9 +376,15 @@ export class LocationService {
 				break;
 		}
 
-		// Log position unavailable as warning since it's common and often temporary
-		if (error.code === error.POSITION_UNAVAILABLE) {
-			Logger.warn("[LocationService] Position unavailable (common GPS issue):", {
+		// Denied permission is a choice, and an unavailable position or a
+		// timeout is the weather. None of the three is a defect, so they stay
+		// out of the error tracker; only an unrecognised code is a surprise.
+		const expected =
+			error.code === error.PERMISSION_DENIED ||
+			error.code === error.POSITION_UNAVAILABLE ||
+			error.code === error.TIMEOUT;
+		if (expected) {
+			Logger.info("[LocationService] Location unavailable:", {
 				code: error.code,
 				message: error.message,
 			});

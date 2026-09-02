@@ -5,7 +5,7 @@
 import { ApiDomainError } from "@routess/api-client";
 import { type DomainErrorCode, severityForCode } from "@routess/core";
 import * as Sentry from "@sentry/react";
-import { Logger } from "@/lib/logger";
+import { Logger, withoutTelemetry } from "@/lib/logger";
 import type { AppError, ErrorCategory, ErrorHandlerOptions, ErrorSeverity } from "./types";
 
 const categoryForCode = (code: DomainErrorCode): ErrorCategory => {
@@ -22,6 +22,11 @@ const categoryForCode = (code: DomainErrorCode): ErrorCategory => {
 		case "INTERNAL":
 			return "api" as ErrorCategory;
 	}
+};
+
+const isExpectedAuthOutcome = (appError: AppError): boolean => {
+	const code = (appError.originalError as ApiDomainError | undefined)?.payload?.code;
+	return code === "UNAUTHORIZED" || code === "FORBIDDEN";
 };
 
 const severityToSentryLevel = (severity: ErrorSeverity): Sentry.SeverityLevel => {
@@ -72,11 +77,16 @@ class ErrorHandlerService {
 
 		if (logError) {
 			const logLevel = this.getLogLevel(appError.severity);
-			Logger[logLevel](`[ErrorHandler] ${appError.category}:`, appError.message, {
-				context: appError.context,
-				metadata: appError.metadata,
-				originalError: appError.originalError,
-			});
+			// reportToSentry below already sends this failure with structured
+			// tags. Without the suppression the log line files a second,
+			// message-shaped issue for the same error.
+			withoutTelemetry(() =>
+				Logger[logLevel](`[ErrorHandler] ${appError.category}:`, appError.message, {
+					context: appError.context,
+					metadata: appError.metadata,
+					originalError: appError.originalError,
+				}),
+			);
 		}
 
 		this.reportToSentry(appError);
@@ -106,6 +116,11 @@ class ErrorHandlerService {
 	}
 
 	private reportToSentry(appError: AppError): void {
+		// A 401/403 is the API answering a question, not a defect: anonymous
+		// visitors and expired sessions hit authed endpoints constantly and
+		// the app already handles it by prompting for sign-in.
+		if (isExpectedAuthOutcome(appError)) return;
+
 		const captureTarget = appError.originalError ?? new Error(appError.message);
 		// ApiDomainError/ApiHttpError carry the X-Request-ID the API logged,
 		// joining this browser event to the server-side log line and trace.

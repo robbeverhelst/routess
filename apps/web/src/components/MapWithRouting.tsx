@@ -16,6 +16,8 @@ import { confirmDiscardIfDirty } from "@/features/routing/confirmDiscardIfDirty"
 import type { PopupInfo as MapPopupInfo } from "@/features/routing/managers/MapInteractionManager";
 import type { RouteDraftEditor } from "@/features/routing/RouteDraftEditor";
 import { RouteDraftEditorProvider } from "@/features/routing/RouteDraftEditorProvider";
+import { getCurrentRoutePath } from "@/features/routing/services/RouteCalculationService";
+import { zoomToRoute } from "@/features/routing/utils/RoutingUtils";
 import { type AppEventMap, onAppEvent } from "@/lib/app-events";
 import { ErrorBoundary } from "@/lib/errors";
 import { type SupportedLanguage, t } from "@/lib/i18n";
@@ -289,7 +291,12 @@ const MapWithRoutingContent: React.FC<MapboxMapProps> = ({
 			void editor.loadFromGpx(detail.gpxString).then((result) => {
 				if (!result.success) {
 					handleImportError(result.message ?? t("import.failed"));
+					return;
 				}
+				// An import can land anywhere, including on an empty map that
+				// is still parked at the default view, so frame it.
+				const coords = getCurrentRoutePath();
+				if (mapRef.current && coords.length > 0) zoomToRoute(mapRef.current, coords);
 			});
 		};
 
