@@ -24,7 +24,7 @@ export const PRIVACY: LegalContent = {
 				blocks: [
 					{
 						kind: "p",
-						text: `routess is operated by ${CONTROLLER.name}, ${CONTROLLER.registeredAddress}, ${CONTROLLER.country} (enterprise number ${CONTROLLER.enterpriseNumber}). We are the data controller for everything described below.`,
+						text: `routess is operated by ${CONTROLLER.name}, ${CONTROLLER.registeredAddress}, ${CONTROLLER.country.en} (enterprise number ${CONTROLLER.enterpriseNumber}). We are the data controller for everything described below.`,
 					},
 					{
 						kind: "p",
@@ -328,7 +328,7 @@ export const PRIVACY: LegalContent = {
 				blocks: [
 					{
 						kind: "p",
-						text: `routess wordt beheerd door ${CONTROLLER.name}, ${CONTROLLER.registeredAddress}, ${CONTROLLER.country} (ondernemingsnummer ${CONTROLLER.enterpriseNumber}). Wij zijn de verwerkingsverantwoordelijke voor alles wat hieronder staat.`,
+						text: `routess wordt beheerd door ${CONTROLLER.name}, ${CONTROLLER.registeredAddress}, ${CONTROLLER.country.nl} (ondernemingsnummer ${CONTROLLER.enterpriseNumber}). Wij zijn de verwerkingsverantwoordelijke voor alles wat hieronder staat.`,
 					},
 					{
 						kind: "p",
