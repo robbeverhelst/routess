@@ -15,6 +15,7 @@ vi.mock("@/lib/logger", () => ({
 		info: vi.fn(),
 		debug: vi.fn(),
 	},
+	withoutTelemetry: (fn: () => unknown) => fn(),
 }));
 
 // Mock the toast system

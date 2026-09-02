@@ -610,7 +610,9 @@ const MapCanvasComponent: React.FC<MapCanvasProps> = ({
 						onMapStyleLoaded();
 					}}
 					onError={(error) => {
-						Logger.error("[MapCanvas] Map error:", error);
+						// The event object is circular, so logging it whole reports
+						// "[object Object]" and nothing else. Send the message.
+						Logger.error("[MapCanvas] Map error:", error.error?.message ?? "unknown map error");
 
 						// Check if it's a Mapbox token error
 						if (

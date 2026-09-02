@@ -70,22 +70,58 @@ export function setLogLevelOverride(level: LogLevel | keyof typeof LOG_LEVEL_NAM
 }
 
 // WARN and ERROR logs also surface in GlitchTip so we get visibility on
-// caught failures that never bubble up to Sentry's GlobalHandlers (Mapbox
-// NoSegment, GPS timeouts, etc.). Decoupled from `currentLogLevel` so that
-// muting the console (e.g. in tests) does not mute Sentry; the test-mode
-// guard below is what keeps unit tests quiet.
+// caught failures that never bubble up to Sentry's GlobalHandlers. Decoupled
+// from `currentLogLevel` so that muting the console (e.g. in tests) does not
+// mute Sentry; the test-mode guard below is what keeps unit tests quiet.
+// Anything that is an expected outcome rather than a defect belongs at INFO,
+// not WARN: every WARN is an issue someone has to triage.
 function stringifyForSentry(value: unknown): string {
 	if (typeof value === "string") return value;
 	if (value instanceof Error) return value.message;
+	// Mapbox and DOM event objects are circular and stringify to a useless
+	// "[object Object]", so pull the message out before giving up on them.
+	if (value && typeof value === "object") {
+		const nested = (value as { error?: { message?: unknown }; message?: unknown }).error?.message;
+		const own = (value as { message?: unknown }).message;
+		if (typeof nested === "string") return nested;
+		if (typeof own === "string") return own;
+	}
 	try {
-		return JSON.stringify(value);
+		return JSON.stringify(value) ?? String(value);
 	} catch {
 		return String(value);
 	}
 }
 
+// Message events group on their text, so a log line that interpolates a URL,
+// a coordinate, or a code fragments one problem across many GlitchTip issues.
+// Callers put the stable part first ("[LocationService] Location error:") and
+// the varying part in later arguments, so the first argument is the fingerprint.
+function fingerprintFor(messages: unknown[]): string[] | undefined {
+	const head = messages[0];
+	return typeof head === "string" && head.length > 0 ? [head] : undefined;
+}
+
+// Set while ErrorHandler logs an error it is already reporting itself, so the
+// same failure does not land in GlitchTip twice as two unrelated issues.
+let suppressDepth = 0;
+
+export function withoutTelemetry<T>(fn: () => T): T {
+	suppressDepth++;
+	try {
+		return fn();
+	} finally {
+		suppressDepth--;
+	}
+}
+
+export function isTelemetrySuppressed(): boolean {
+	return suppressDepth > 0;
+}
+
 function reportToSentry(level: LogLevel, messages: unknown[]): void {
 	if (import.meta.env.MODE === "test") return;
+	if (suppressDepth > 0) return;
 	if (level !== LogLevel.WARN && level !== LogLevel.ERROR) return;
 	if (messages.length === 0) return;
 
@@ -102,7 +138,7 @@ function reportToSentry(level: LogLevel, messages: unknown[]): void {
 			extra: { logMessage: joined },
 		});
 	} else {
-		Sentry.captureMessage(joined, sentryLevel);
+		Sentry.captureMessage(joined, { level: sentryLevel, fingerprint: fingerprintFor(messages) });
 	}
 }
 

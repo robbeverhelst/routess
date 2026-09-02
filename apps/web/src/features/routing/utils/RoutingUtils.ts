@@ -3,6 +3,11 @@ import { haversineDistance } from "@routess/core";
 import { LngLat, LngLatBounds, type Map as MapboxMap } from "mapbox-gl";
 import { Logger } from "@/lib/logger";
 
+// Matching API codes that mean "no road near this coordinate". They are a
+// verdict, unlike a transport error or an auth/quota rejection, which say
+// nothing about the point.
+const OFF_ROAD_CODES = new Set(["NoSegment", "NoMatch", "NoRoute"]);
+
 /**
  * Checks if a coordinate is near a road by querying the Mapbox Matching API.
  * @param coords - The coordinate to check [lon, lat].
@@ -58,11 +63,16 @@ export const checkNearRoad = async (
 				`[checkNearRoad] Point is on-road (Radius: ${effectiveRadius}m). Snapped from [${coords.join(",")}] to [${snappedCoords.join(",")}] Dist: ${dist.toFixed(3)}km`,
 			);
 			return { isValid: true, snappedCoords };
+		} else if (OFF_ROAD_CODES.has(json?.code)) {
+			// The API answered, and the answer is "nothing to snap to here".
+			// That is this function's whole job, not a failure to report.
+			Logger.info("[checkNearRoad] Point is off-road:", json.code);
+			return { isValid: false };
 		} else {
 			Logger.warn(
 				"[checkNearRoad] Matching API did not return a successful result or tracepoints:",
-				json.code,
-				json.message,
+				json?.code,
+				json?.message,
 			);
 			return { isValid: false, unavailable: true };
 		}

@@ -3,6 +3,7 @@ import { getStoredUser } from "@/lib/auth-state";
 import { Logger } from "@/lib/logger";
 import { getRuntimeConfig } from "@/lib/runtime-config";
 import { useRoutingStore } from "@/stores/routingStore";
+import { isBotClient } from "./bots";
 import { rateLimitBeforeSend } from "./rate-limit";
 import { scrubBreadcrumb } from "./scrub";
 
@@ -25,6 +26,13 @@ export function initTelemetry(): void {
 	const dsn = getRuntimeConfig("VITE_SENTRY_DSN");
 	if (!dsn) {
 		Logger.debug("[telemetry] No Sentry DSN configured; telemetry disabled");
+		return;
+	}
+
+	// Crawlers generate errors nobody can act on and no user ever sees.
+	if (isBotClient()) {
+		Logger.debug("[telemetry] Crawler user agent; telemetry disabled");
+		initialized = true;
 		return;
 	}
 
