@@ -44,9 +44,11 @@ export const checkNearRoad = async (
 				Logger.info("[checkNearRoad] Point is off-road (tracepoint is null).");
 				return { isValid: false };
 			}
-			if (!snappedTracepoint.location) {
-				Logger.info("[checkNearRoad] Tracepoint has no location – treating as off-road.");
-				return { isValid: false };
+			// A tracepoint without a location is a response we do not understand,
+			// not the API telling us the point is off-road.
+			if (!Array.isArray(snappedTracepoint.location) || snappedTracepoint.location.length < 2) {
+				Logger.warn("[checkNearRoad] Tracepoint has no usable location; treating the check as unavailable.");
+				return { isValid: false, unavailable: true };
 			}
 			const snappedCoords = snappedTracepoint.location as Coordinate;
 			const dist = haversineDistance(coords, snappedCoords);
