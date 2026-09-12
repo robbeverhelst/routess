@@ -17,7 +17,7 @@ env:
 
 jobs:
   test:
-    runs-on: arc-routess
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || 'arc-routess' }}
     timeout-minutes: 15
     env:
       DB_HOST: localhost
@@ -74,7 +74,7 @@ jobs:
         run: bun run --filter './apps/*' build
 
   helm-validate:
-    runs-on: arc-routess
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || 'arc-routess' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
@@ -100,7 +100,7 @@ jobs:
     needs:
       - test
       - helm-validate
-    runs-on: arc-routess
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || 'arc-routess' }}
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     outputs:
       released: ${{ steps.release-meta.outputs.released }}
@@ -156,7 +156,7 @@ jobs:
 
   publish-images:
     needs: release
-    runs-on: arc-routess
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || 'arc-routess' }}
     if: needs.release.outputs.released == 'true'
     timeout-minutes: 30
     permissions:
@@ -315,7 +315,7 @@ jobs:
     needs:
       - release
       - publish-images
-    runs-on: arc-routess
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || 'arc-routess' }}
     if: needs.release.outputs.released == 'true'
     permissions:
       contents: write
