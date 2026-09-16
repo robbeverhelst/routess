@@ -19,7 +19,7 @@ export const TERMS: LegalContent = {
 				blocks: [
 					{
 						kind: "p",
-						text: `routess is operated by ${CONTROLLER.name}, ${CONTROLLER.registeredAddress}, ${CONTROLLER.country} (enterprise number ${CONTROLLER.enterpriseNumber}). By creating an account or using the service you accept these terms. If you do not, please do not use it.`,
+						text: `routess is operated by ${CONTROLLER.name}, ${CONTROLLER.registeredAddress}, ${CONTROLLER.country.en} (enterprise number ${CONTROLLER.enterpriseNumber}). By creating an account or using the service you accept these terms. If you do not, please do not use it.`,
 					},
 					{
 						kind: "p",
@@ -172,7 +172,7 @@ export const TERMS: LegalContent = {
 				blocks: [
 					{
 						kind: "p",
-						text: `These terms are governed by the law of ${CONTROLLER.country}, and disputes go to the courts with jurisdiction there. If you are a consumer, this does not deprive you of the protection of the mandatory law of the country you live in, nor of the right to bring proceedings there.`,
+						text: `These terms are governed by the law of ${CONTROLLER.country.en}, and disputes go to the courts with jurisdiction there. If you are a consumer, this does not deprive you of the protection of the mandatory law of the country you live in, nor of the right to bring proceedings there.`,
 					},
 				],
 			},
@@ -192,7 +192,7 @@ export const TERMS: LegalContent = {
 				blocks: [
 					{
 						kind: "p",
-						text: `routess wordt beheerd door ${CONTROLLER.name}, ${CONTROLLER.registeredAddress}, ${CONTROLLER.country} (ondernemingsnummer ${CONTROLLER.enterpriseNumber}). Door een account aan te maken of de dienst te gebruiken aanvaard je deze voorwaarden. Doe je dat niet, gebruik de dienst dan niet.`,
+						text: `routess wordt beheerd door ${CONTROLLER.name}, ${CONTROLLER.registeredAddress}, ${CONTROLLER.country.nl} (ondernemingsnummer ${CONTROLLER.enterpriseNumber}). Door een account aan te maken of de dienst te gebruiken aanvaard je deze voorwaarden. Doe je dat niet, gebruik de dienst dan niet.`,
 					},
 					{
 						kind: "p",
