@@ -1,7 +1,7 @@
-import Image from "next/image";
 import type { Dict } from "@/lib/content";
 import mobileShot from "../../public/app-mobile.webp";
 import { AccentInline } from "./AccentText";
+import { BakedImage } from "./BakedImage";
 
 // Phone-framed capture of the real mobile layout plus the GPX in/out story.
 export function TakeItOutside({ dict }: { dict: Dict }) {
@@ -25,13 +25,7 @@ export function TakeItOutside({ dict }: { dict: Dict }) {
 								background: "var(--ink)",
 							}}
 						>
-							<Image
-								src={mobileShot}
-								alt=""
-								placeholder="blur"
-								sizes="280px"
-								style={{ width: "100%", display: "block", borderRadius: 30 }}
-							/>
+							<BakedImage src={mobileShot} style={{ width: "100%", display: "block", borderRadius: 30 }} />
 						</div>
 						<span style={{ fontSize: 12, color: "var(--muted-color)", fontFamily: "var(--font-mono)" }}>
 							{dict.outside.phoneCaption}

@@ -1,6 +1,13 @@
 import { landingAccents, surfaceBucketColors } from "@routess/design-tokens";
-import Image from "next/image";
+import type { StaticImageData } from "next/image";
 import type { Dict } from "@/lib/content";
+import route1 from "../../public/previews/route-1.webp";
+import route2 from "../../public/previews/route-2.webp";
+import route3 from "../../public/previews/route-3.webp";
+import route4 from "../../public/previews/route-4.webp";
+import { BakedImage } from "./BakedImage";
+
+const ROUTE_PREVIEWS = [route1, route2, route3, route4];
 
 const SURFACE_FLEX = [46, 13, 38, 3];
 // Same surface-breakdown colors as the app's RouteProfileChart.
@@ -62,12 +69,8 @@ export function Sharing({ dict }: { dict: Dict }) {
 										>
 											{/* Real map tiles: Mapbox Static preview of actual Directions
 											   geometry, baked by `bun run screenshots`. */}
-											<Image
-												src={`/previews/route-${i + 1}.png`}
-												alt=""
-												width={400}
-												height={168}
-												sizes="240px"
+											<BakedImage
+												src={ROUTE_PREVIEWS[i % ROUTE_PREVIEWS.length] as StaticImageData}
 												style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
 											/>
 										</div>

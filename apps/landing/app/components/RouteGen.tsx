@@ -1,10 +1,11 @@
 "use client";
 
 import { landingAccents } from "@routess/design-tokens";
-import Image from "next/image";
 import { useEffect, useState } from "react";
 import type { Dict } from "@/lib/content";
+import routegenLoop from "../../public/previews/routegen-loop.webp";
 import { AccentInline } from "./AccentText";
+import { BakedImage } from "./BakedImage";
 
 export function RouteGen({ dict }: { dict: Dict }) {
 	const prompts = dict.routegen.prompts;
@@ -149,12 +150,8 @@ export function RouteGen({ dict }: { dict: Dict }) {
 							>
 								{/* Real map tiles: a loop routed via Mapbox Directions, baked
 								   by `bun run screenshots`. */}
-								<Image
-									src="/previews/routegen-loop.png"
-									alt=""
-									width={1280}
-									height={560}
-									sizes="(max-width: 900px) 100vw, 520px"
+								<BakedImage
+									src={routegenLoop}
 									style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
 								/>
 							</div>

@@ -1,7 +1,8 @@
 import { darkBrand, landingAccents, surfaceBucketColors } from "@routess/design-tokens";
-import Image from "next/image";
 import type { Dict } from "@/lib/content";
+import appPanel from "../../public/app-panel.webp";
 import { AccentInline } from "./AccentText";
+import { BakedImage } from "./BakedImage";
 
 // Same surface-breakdown colors as the app's RouteProfileChart.
 const BUCKET_COLORS = Object.values(surfaceBucketColors);
@@ -80,12 +81,8 @@ export function SurfaceSection({ dict }: { dict: Dict }) {
 								height: 460,
 							}}
 						>
-							<Image
-								src="/app-panel.png"
-								alt=""
-								width={720}
-								height={1120}
-								sizes="(max-width: 900px) 100vw, 380px"
+							<BakedImage
+								src={appPanel}
 								style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", display: "block" }}
 							/>
 						</div>
