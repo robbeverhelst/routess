@@ -11,15 +11,20 @@ const MAX_CLICK_DISTANCE_FROM_ROUTE_KM = 0.1;
 export interface PreAddSnap {
 	coord: Coordinate;
 	type: WaypointType;
+	// The road check gave a definite "not near a road" verdict. An outage
+	// leaves this false: we do not know where the point is, so callers must
+	// not tell the user it is too far from a road.
 	checkNearRoadFailed: boolean;
 }
 
 // Decide what coord/type to push when adding a Waypoint. For `direct` adds,
 // returns the input as-is. For `routed` adds (including the first one),
-// tries the fast pre-snap via checkNearRoad (49m). On failure returns the
-// raw coord with checkNearRoadFailed = true so the caller can react when
-// the next Directions call also can't snap. The first Waypoint has no
-// special-case here: snap policy is uniform across all routed Waypoints.
+// tries the fast pre-snap via checkNearRoad (49m). On a definite off-road
+// verdict returns the raw coord with checkNearRoadFailed = true so the caller
+// can react when the next Directions call also can't snap; when the check
+// itself was unavailable the flag stays false, since nothing was learned. The
+// first Waypoint has no special-case here: snap policy is uniform across all
+// routed Waypoints.
 export async function resolveAddCoord(coord: Coordinate, type: WaypointType, accessToken: string): Promise<PreAddSnap> {
 	if (type === "direct") {
 		return { coord, type, checkNearRoadFailed: false };
@@ -28,7 +33,7 @@ export async function resolveAddCoord(coord: Coordinate, type: WaypointType, acc
 	if (roadCheck.isValid && roadCheck.snappedCoords) {
 		return { coord: roadCheck.snappedCoords, type: "routed", checkNearRoadFailed: false };
 	}
-	return { coord, type: "routed", checkNearRoadFailed: true };
+	return { coord, type: "routed", checkNearRoadFailed: !roadCheck.unavailable };
 }
 
 // Reverse a waypoint sequence, preserving segment-leading-to-each-waypoint

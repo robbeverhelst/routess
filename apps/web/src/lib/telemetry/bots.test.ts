@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { isBotUserAgent } from "./bots";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { isBotClient, isBotUserAgent } from "./bots";
 
 // The single noisiest GlitchTip issue was Googlebot failing to register the
 // service worker, so that UA is the one that must not slip through.
@@ -33,5 +33,36 @@ describe("isBotUserAgent", () => {
 
 	it("treats a missing user agent as human", () => {
 		expect(isBotUserAgent(undefined)).toBe(false);
+	});
+});
+
+describe("isBotClient", () => {
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	const withNavigator = (nav: unknown) => vi.stubGlobal("navigator", nav);
+
+	it("reads the live user agent", () => {
+		withNavigator({ userAgent: GOOGLEBOT });
+		expect(isBotClient()).toBe(true);
+
+		withNavigator({ userAgent: REAL_BROWSERS[0] });
+		expect(isBotClient()).toBe(false);
+	});
+
+	it("treats an automated browser as a bot even with a human user agent", () => {
+		withNavigator({ userAgent: REAL_BROWSERS[0], webdriver: true });
+		expect(isBotClient()).toBe(true);
+	});
+
+	it("does not trip on webdriver being present but false", () => {
+		withNavigator({ userAgent: REAL_BROWSERS[0], webdriver: false });
+		expect(isBotClient()).toBe(false);
+	});
+
+	it("is false where there is no navigator at all", () => {
+		withNavigator(undefined);
+		expect(isBotClient()).toBe(false);
 	});
 });
