@@ -1,9 +1,15 @@
-import Image from "next/image";
 import type { Dict } from "@/lib/content";
+import dark from "../../public/previews/style-dark.webp";
+import outdoors from "../../public/previews/style-outdoors.webp";
+import satellite from "../../public/previews/style-satellite.webp";
+import streets from "../../public/previews/style-streets.webp";
 import { AccentInline } from "./AccentText";
+import { BakedImage } from "./BakedImage";
 
 // The same demo loop rendered across the app's map styles. Images are real
 // tiles with real routed geometry, baked by `bun run screenshots`.
+const STYLE_PREVIEWS = { streets, outdoors, satellite, dark } as const;
+
 export function MapStyles({ dict }: { dict: Dict }) {
 	return (
 		<section id="features">
@@ -22,12 +28,8 @@ export function MapStyles({ dict }: { dict: Dict }) {
 							className="card card-lift reveal"
 							style={{ overflow: "hidden", padding: 0, "--reveal-delay": `${i * 80}ms` } as React.CSSProperties}
 						>
-							<Image
-								src={`/previews/style-${s.key}.png`}
-								alt=""
-								width={840}
-								height={640}
-								sizes="(max-width: 900px) 100vw, 320px"
+							<BakedImage
+								src={STYLE_PREVIEWS[s.key]}
 								style={{ width: "100%", aspectRatio: "21 / 16", objectFit: "cover", display: "block" }}
 							/>
 							<div style={{ padding: "12px 16px 14px" }}>

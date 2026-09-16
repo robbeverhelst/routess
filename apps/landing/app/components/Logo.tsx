@@ -1,14 +1,12 @@
-import Image from "next/image";
+import logo from "../../public/logo-64.webp";
+import { BakedImage } from "./BakedImage";
 
 export function Logo({ size = 32 }: { size?: number }) {
 	return (
 		<div style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
-			<Image
-				src="/logo.png"
-				alt=""
-				width={size}
-				height={size}
-				priority
+			<BakedImage
+				src={logo}
+				eager
 				style={{
 					width: size,
 					height: size,

@@ -3,7 +3,6 @@
 import "mapbox-gl/dist/mapbox-gl.css";
 import { haversineDistance } from "@routess/core";
 import { landingAccents } from "@routess/design-tokens";
-import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Dict } from "@/lib/content";
 import {
@@ -14,7 +13,9 @@ import {
 	MINI_PLANNER_ZOOM,
 } from "@/lib/demo-routes";
 import { APP_HOST } from "@/lib/i18n";
+import plannerFallback from "../../public/previews/mini-planner-fallback.webp";
 import { AccentInline } from "./AccentText";
+import { BakedImage } from "./BakedImage";
 import { ArrowIcon, Dot } from "./Icons";
 
 type MapboxMap = import("mapbox-gl").Map;
@@ -291,12 +292,8 @@ export function MiniPlanner({ dict, mapboxToken }: { dict: Dict; mapboxToken?: s
 						) : (
 							// No token at build time: fall back to a baked static-tile
 							// preview of the same demo route.
-							<Image
-								src="/previews/mini-planner-fallback.png"
-								alt=""
-								width={1280}
-								height={840}
-								sizes="(max-width: 900px) 100vw, 640px"
+							<BakedImage
+								src={plannerFallback}
 								style={{ width: "100%", height: 420, objectFit: "cover", display: "block" }}
 							/>
 						)}

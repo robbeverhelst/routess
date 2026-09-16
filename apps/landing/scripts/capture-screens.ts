@@ -6,9 +6,9 @@ import { resolve } from "node:path";
  *
  *  1. hero-screenshot.webp     — Playwright shot of the live planner seeded
  *                                with the Sint-Amands loop via a ?route= link
- *  2. app-panel.png            — element shot of the plan panel (elevation +
+ *  2. app-panel.webp           — element shot of the plan panel (elevation +
  *                                surface breakdown) from the same session
- *  3. previews/*.png           — Mapbox Static Images of real Directions
+ *  3. previews/*.webp          — Mapbox Static Images of real Directions
  *                                geometry for the library cards, the routegen
  *                                loop, and the MiniPlanner fallback
  *
@@ -52,6 +52,19 @@ const MAP_TILE_CLIP = { x: 273, y: 112, width: 430, height: 348 };
 // The Mapbox token is URL-restricted; server-side calls need a Referer from
 // an allowed origin.
 const MAPBOX_HEADERS = { Referer: "https://app.routess.com/" };
+
+// Every capture ships as a static asset, so its encoded size is exactly what
+// the browser downloads. Each is resized to 2x the box it renders in, then
+// encoded once at q72/effort6; nothing re-encodes them at request time.
+const BAKED_WEBP = { quality: 72, effort: 6, smartSubsample: true } as const;
+
+async function writeWebp(path: string, input: Uint8Array | Buffer, width: number): Promise<void> {
+	const sharp = (await import("sharp")).default;
+	const image = sharp(input);
+	const meta = await image.metadata();
+	const sized = meta.width && meta.width > width ? image.resize({ width }) : image;
+	writeFileSync(path, await sized.webp(BAKED_WEBP).toBuffer());
+}
 
 function log(msg: string) {
 	process.stdout.write(`[capture-screens] ${msg}\n`);
@@ -119,8 +132,11 @@ function encodePolyline(points: [number, number][]): string {
 interface StaticShot {
 	route: DemoRoute;
 	file: string;
+	// Mapbox Static API request size; the response comes back at @2x.
 	width: number;
 	height: number;
+	// Width the .webp is encoded at, 2x the box it renders in on the page.
+	encodeWidth: number;
 	strokeWidth?: number;
 	showPins?: boolean;
 	style?: string;
@@ -140,7 +156,7 @@ async function downloadStaticPreview(shot: StaticShot, token: string): Promise<v
 	const url = `https://api.mapbox.com/styles/v1/${shot.style ?? STATIC_STYLE}/static/${overlays.join(",")}/auto/${shot.width}x${shot.height}@2x?access_token=${token}&padding=60&logo=false&attribution=false`;
 	const res = await fetch(url, { headers: MAPBOX_HEADERS });
 	if (!res.ok) throw new Error(`static ${shot.file}: HTTP ${res.status} ${await res.text()}`);
-	writeFileSync(resolve(PREVIEWS_DIR, shot.file), new Uint8Array(await res.arrayBuffer()));
+	await writeWebp(resolve(PREVIEWS_DIR, shot.file), new Uint8Array(await res.arrayBuffer()), shot.encodeWidth);
 	log(`wrote previews/${shot.file}`);
 }
 
@@ -212,7 +228,7 @@ async function captureAppShots(): Promise<void> {
 		const sharp = (await import("sharp")).default;
 		writeFileSync(
 			resolve(PUBLIC_DIR, "hero-screenshot.webp"),
-			await sharp(heroShot).resize(1840, 1120).webp({ quality: 82 }).toBuffer(),
+			await sharp(heroShot).resize(1840, 1120).webp(BAKED_WEBP).toBuffer(),
 		);
 		await heroCtx.close();
 		log("wrote hero-screenshot.webp");
@@ -224,7 +240,7 @@ async function captureAppShots(): Promise<void> {
 		await page.locator(byLabel("Collapse panel")).click();
 		const tile = async (file: string) => {
 			await page.waitForTimeout(12_000); // style/theme swap + tile fetch
-			await page.screenshot({ path: resolve(PREVIEWS_DIR, file), clip: MAP_TILE_CLIP });
+			await writeWebp(resolve(PREVIEWS_DIR, file), await page.screenshot({ clip: MAP_TILE_CLIP }), 700);
 			log(`wrote previews/${file}`);
 		};
 		// Click through the layer picker, then verify against the persisted
@@ -247,15 +263,15 @@ async function captureAppShots(): Promise<void> {
 		};
 		// The app's default style is outdoors, so shoot that first, then the
 		// dark theme on it, then switch to the others.
-		await tile("style-outdoors.png");
+		await tile("style-outdoors.webp");
 		await page.locator(byLabel("Toggle theme")).click();
-		await tile("style-dark.png");
+		await tile("style-dark.webp");
 		await page.locator(byLabel("Toggle theme")).click();
 		await page.waitForTimeout(3_000);
 		await pickStyle("Streets", "streets");
-		await tile("style-streets.png");
+		await tile("style-streets.webp");
 		await pickStyle("Satellite", "satellite");
-		await tile("style-satellite.png");
+		await tile("style-satellite.webp");
 
 		// The collapsed state persists, so re-expand the plan panel via the
 		// rail toggle before the next capture.
@@ -273,10 +289,10 @@ async function captureAppShots(): Promise<void> {
 		await page.waitForTimeout(6_000);
 		const panel = page.locator("aside").first();
 		if (await panel.isVisible()) {
-			await panel.screenshot({ path: resolve(PUBLIC_DIR, "app-panel.png") });
-			log("wrote app-panel.png");
+			await writeWebp(resolve(PUBLIC_DIR, "app-panel.webp"), await panel.screenshot(), 640);
+			log("wrote app-panel.webp");
 		} else {
-			log("WARN: plan panel not visible, skipped app-panel.png");
+			log("WARN: plan panel not visible, skipped app-panel.webp");
 		}
 
 		// Mobile layout for the "take it outside" section: same loop on a
@@ -301,7 +317,7 @@ async function captureAppShots(): Promise<void> {
 		await mobilePage.locator(byLabel("Zoom out")).first().click();
 		await mobilePage.waitForTimeout(8_000);
 		const mobileShot = await mobilePage.screenshot();
-		writeFileSync(resolve(PUBLIC_DIR, "app-mobile.webp"), await sharp(mobileShot).webp({ quality: 82 }).toBuffer());
+		await writeWebp(resolve(PUBLIC_DIR, "app-mobile.webp"), mobileShot, 560);
 		log("wrote app-mobile.webp");
 	} finally {
 		await browser.close();
@@ -317,17 +333,19 @@ async function main() {
 	if (only !== "app") {
 		const shots: StaticShot[] = SHARING_ROUTES.map((route, i) => ({
 			route,
-			file: `route-${i + 1}.png`,
+			file: `route-${i + 1}.webp`,
 			width: 400,
 			height: 168,
+			encodeWidth: 520,
 			strokeWidth: 3,
 		}));
-		shots.push({ route: ROUTEGEN_LOOP, file: "routegen-loop.png", width: 640, height: 280 });
+		shots.push({ route: ROUTEGEN_LOOP, file: "routegen-loop.webp", width: 640, height: 280, encodeWidth: 1040 });
 		shots.push({
 			route: SINT_AMANDS_LOOP,
-			file: "mini-planner-fallback.png",
+			file: "mini-planner-fallback.webp",
 			width: 640,
 			height: 420,
+			encodeWidth: 1280,
 		});
 		for (const shot of shots) {
 			await downloadStaticPreview(shot, token);
