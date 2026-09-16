@@ -53,6 +53,11 @@ const MAP_TILE_CLIP = { x: 273, y: 112, width: 430, height: 348 };
 // an allowed origin.
 const MAPBOX_HEADERS = { Referer: "https://app.routess.com/" };
 
+// The hero captures ship as static assets, so their encoded size is what the
+// browser downloads. q72/effort6 lands under what the image optimizer used to
+// return for the same picture.
+const HERO_WEBP = { quality: 72, effort: 6, smartSubsample: true } as const;
+
 function log(msg: string) {
 	process.stdout.write(`[capture-screens] ${msg}\n`);
 }
@@ -212,7 +217,7 @@ async function captureAppShots(): Promise<void> {
 		const sharp = (await import("sharp")).default;
 		writeFileSync(
 			resolve(PUBLIC_DIR, "hero-screenshot.webp"),
-			await sharp(heroShot).resize(1840, 1120).webp({ quality: 82 }).toBuffer(),
+			await sharp(heroShot).resize(1840, 1120).webp(HERO_WEBP).toBuffer(),
 		);
 		await heroCtx.close();
 		log("wrote hero-screenshot.webp");
@@ -301,7 +306,7 @@ async function captureAppShots(): Promise<void> {
 		await mobilePage.locator(byLabel("Zoom out")).first().click();
 		await mobilePage.waitForTimeout(8_000);
 		const mobileShot = await mobilePage.screenshot();
-		writeFileSync(resolve(PUBLIC_DIR, "app-mobile.webp"), await sharp(mobileShot).webp({ quality: 82 }).toBuffer());
+		writeFileSync(resolve(PUBLIC_DIR, "app-mobile.webp"), await sharp(mobileShot).webp(HERO_WEBP).toBuffer());
 		log("wrote app-mobile.webp");
 	} finally {
 		await browser.close();
