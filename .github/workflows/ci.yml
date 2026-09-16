@@ -216,7 +216,7 @@ jobs:
       # auth token is forwarded to buildx via the secret mount in
       # docker-bake.hcl and never enters image layers.
       - name: Load Sentry secrets from 1Password
-        uses: 1password/load-secrets-action@3a12b0ab99d9cd590a3e9b5a90ea017210ed9556 # v4
+        uses: 1password/load-secrets-action@eb2efd0703da22a93c467f2d1ffbb6826c11e19c # v4
         with:
           export-env: true
         env:
@@ -298,7 +298,7 @@ jobs:
           "
 
       - name: Load npm token from 1Password
-        uses: 1password/load-secrets-action@3a12b0ab99d9cd590a3e9b5a90ea017210ed9556 # v4
+        uses: 1password/load-secrets-action@eb2efd0703da22a93c467f2d1ffbb6826c11e19c # v4
         with:
           export-env: true
         env:
