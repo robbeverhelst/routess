@@ -2,8 +2,7 @@
 	"compilerOptions": {
 		"target": "es2020",
 		"module": "commonjs",
-		"moduleResolution": "node",
-		"ignoreDeprecations": "6.0",
+		"moduleResolution": "bundler",
 		"declaration": true,
 		"declarationMap": true,
 		"sourceMap": true,
