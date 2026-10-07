@@ -46,11 +46,7 @@ jobs:
         with:
           bun-version: "1.4.2"
 
-<<<<<<< HEAD
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
-=======
-      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
->>>>>>> origin/renovate/actions-setup-node-digest
         with:
           node-version: "24"
 
@@ -123,11 +119,7 @@ jobs:
         with:
           bun-version: "1.4.2"
 
-<<<<<<< HEAD
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
-=======
-      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
->>>>>>> origin/renovate/actions-setup-node-digest
         with:
           node-version: "24"
 
@@ -266,11 +258,7 @@ jobs:
         with:
           bun-version: "1.4.2"
 
-<<<<<<< HEAD
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
-=======
-      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
->>>>>>> origin/renovate/actions-setup-node-digest
         with:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
