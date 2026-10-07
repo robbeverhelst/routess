@@ -9,7 +9,7 @@ const PASSWORD_MAX_LENGTH = 128;
 // argon2id is the modern default. Parameters tuned for ~250–500ms per hash on
 // a typical API host; tune via env if you find them too aggressive on your
 // hardware.
-const ARGON2_OPTIONS: argon2.Options = {
+const ARGON2_OPTIONS: argon2.HashOptions = {
 	type: argon2.argon2id,
 	memoryCost: 19_456,
 	timeCost: 2,
