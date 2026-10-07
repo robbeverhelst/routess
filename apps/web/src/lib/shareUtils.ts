@@ -65,7 +65,7 @@ export function serializeAndCompress(waypoints: Waypoint[], isLocked: boolean): 
 export function decompressAndParse(encodedData: string): SharedRoute | null {
 	try {
 		const compressed = urlSafeBase64ToUint8Array(encodedData);
-		const jsonString = new TextDecoder().decode(inflate(compressed));
+		const jsonString = inflate(compressed, { toText: true });
 		const parsed = JSON.parse(jsonString) as unknown;
 
 		if (isV1(parsed)) {
