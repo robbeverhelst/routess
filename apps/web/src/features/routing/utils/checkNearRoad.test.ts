@@ -34,6 +34,18 @@ describe("checkNearRoad", () => {
 		expect(result.unavailable).toBeUndefined();
 	});
 
+	it.each([
+		["a tracepoint with no location", { code: "Ok", tracepoints: [{}] }],
+		["a truncated location", { code: "Ok", tracepoints: [{ location: [3.7174] }] }],
+	])("treats %s as unavailable, not as an off-road verdict", async (_label, body) => {
+		respond(body);
+
+		const result = await checkNearRoad([3.7174, 51.0543], "pk.test");
+
+		expect(result.isValid).toBe(false);
+		expect(result.unavailable).toBe(true);
+	});
+
 	it("reports a null tracepoint as off-road, not unavailable", async () => {
 		respond({ code: "Ok", tracepoints: [null, null] });
 
