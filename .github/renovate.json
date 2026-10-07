@@ -9,5 +9,13 @@
 	"vulnerabilityAlerts": {
 		"enabled": true,
 		"labels": ["security"]
-	}
+	},
+	"packageRules": [
+		{
+			"description": "@nestjs/cli needs the TypeScript compiler API, which TypeScript 7 does not ship yet; keep apps/api on TypeScript 6 until NestJS supports 7.",
+			"matchFileNames": ["apps/api/package.json"],
+			"matchPackageNames": ["typescript"],
+			"allowedVersions": "<7"
+		}
+	]
 }

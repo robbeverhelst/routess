@@ -2,8 +2,7 @@
 	"compilerOptions": {
 		"target": "es2021",
 		"module": "esnext",
-		"moduleResolution": "node",
-		"ignoreDeprecations": "6.0",
+		"moduleResolution": "bundler",
 		"declaration": true,
 		"declarationMap": true,
 		"sourceMap": true,
