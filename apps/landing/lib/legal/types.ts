@@ -24,17 +24,14 @@ export interface LegalDocument {
 
 export type LegalContent = Record<Locale, LegalDocument>;
 
-// The data controller. Named here once so the privacy policy, the terms, and
-// any future imprint stay in sync.
-//
-// TODO(legal): REGISTERED_ADDRESS and ENTERPRISE_NUMBER are placeholders. GDPR
-// Art. 13(1)(a) requires the controller's identity and contact details, so
-// these must be real before the page is linked from signup.
+// The data controller (GDPR Art. 13(1)(a)). Named here once so the privacy
+// policy, the terms, and any future imprint stay in sync. The registered seat
+// of an eenmanszaak is public in the KBO register either way.
 export const CONTROLLER = {
 	name: "Robbe Verhelst",
-	registeredAddress: "[[REGISTERED ADDRESS PENDING]]",
-	enterpriseNumber: "[[ENTERPRISE NUMBER PENDING]]",
-	country: "Belgium",
+	registeredAddress: "Buisstraat 45, 2890 Sint-Amands",
+	enterpriseNumber: "BE 1024.261.897",
+	country: { en: "Belgium", nl: "België" } satisfies Record<Locale, string>,
 	privacyEmail: "privacy@routess.com",
 	supportEmail: "hello@routess.com",
 } as const;
