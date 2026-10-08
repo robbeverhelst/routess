@@ -3,7 +3,7 @@ import { DocsBody, DocsDescription, DocsPage, DocsTitle } from "fumadocs-ui/page
 import { notFound } from "next/navigation";
 import { i18n } from "@/lib/i18n";
 import { openapi } from "@/lib/openapi";
-import { APIPage } from "@/lib/openapi-page";
+import { OpenAPIPage } from "@/lib/openapi-page";
 import { apiSource } from "@/lib/source";
 
 export default async function Page(props: { params: Promise<{ lang: string; slug?: string[] }> }) {
@@ -25,7 +25,7 @@ export default async function Page(props: { params: Promise<{ lang: string; slug
 				<MDX
 					components={{
 						...defaultMdxComponents,
-						APIPage: (props) => <APIPage preloaded={preloaded} {...props} />,
+						OpenAPIPage: (props) => <OpenAPIPage preloaded={preloaded} {...props} />,
 					}}
 				/>
 			</DocsBody>
