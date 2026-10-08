@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { USER_DELETION_STATUSES, USER_ROLES, type UserDeletionStatus, type UserRole } from "../../entities/user.entity";
 import { UserPreferencesDto } from "./user-preferences.dto";
 
 export class UserStatisticsDto {
@@ -48,9 +49,9 @@ export class UserResponseDto {
 
 	@ApiProperty({
 		example: "user",
-		enum: ["user", "admin"],
+		enum: USER_ROLES,
 	})
-	role!: "user" | "admin";
+	role!: UserRole;
 
 	@ApiPropertyOptional({
 		type: UserPreferencesDto,
@@ -66,11 +67,11 @@ export class UserResponseDto {
 
 	@ApiProperty({
 		example: "active",
-		enum: ["active", "pending_hard_delete"],
+		enum: USER_DELETION_STATUSES,
 		description:
 			"Deletion lifecycle. 'pending_hard_delete' means the user has requested self-deletion and is in the 30-day grace window before permanent erasure. The web app should redirect such users to a cancel screen.",
 	})
-	deletionStatus!: "active" | "pending_hard_delete";
+	deletionStatus!: UserDeletionStatus;
 
 	@ApiPropertyOptional({
 		example: "2026-05-09T08:00:00.000Z",

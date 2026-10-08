@@ -11,7 +11,13 @@ const ROUTE_PREVIEWS = [route1, route2, route3, route4];
 
 const SURFACE_FLEX = [46, 13, 38, 3];
 // Same surface-breakdown colors as the app's RouteProfileChart.
-const SURFACE_COLORS = Object.values(surfaceBucketColors);
+// Explicit order: paired by index with SURFACE_FLEX and dict.surface.buckets.
+const SURFACE_COLORS = [
+	surfaceBucketColors.paved,
+	surfaceBucketColors.compacted,
+	surfaceBucketColors.unpaved,
+	surfaceBucketColors.path,
+];
 
 export function Sharing({ dict }: { dict: Dict }) {
 	const routes = dict.sharing.routes;
