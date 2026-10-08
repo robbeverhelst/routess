@@ -43,17 +43,12 @@ export class RedisThrottlerStorage implements ThrottlerStorage {
 	}
 
 	// Clearing the bucket map alone is not enough. The stock in-memory storage
-	// arms a setTimeout per hit to decrement that counter later; those timers
-	// survive a `storage.clear()` and then destructure a record that is no
-	// longer there, throwing from inside the timer callback and failing
-	// whichever test happens to be running. Drop the timers with the buckets.
+	// keeps each hit's expiry in a second map and recounts a bucket from it on
+	// the next hit, so a `storage.clear()` would bring the old hits straight
+	// back. Its shutdown hook drops both maps and stops the idle sweep, which
+	// restarts on the next hit.
 	reset(): void {
-		const timers = (this.fallback as unknown as { timeoutIds: Map<string, NodeJS.Timeout[]> }).timeoutIds;
-		for (const ids of timers.values()) {
-			for (const id of ids) clearTimeout(id);
-		}
-		timers.clear();
-		this.fallback.storage.clear();
+		this.fallback.onApplicationShutdown();
 	}
 
 	async increment(
