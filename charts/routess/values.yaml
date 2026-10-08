@@ -34,7 +34,6 @@ web:
     VITE_SENTRY_DSN: ""
     VITE_SENTRY_ENVIRONMENT: "production"
     VITE_SENTRY_TRACES_SAMPLE_RATE: "0.1"
-    VITE_SENTRY_LOGS_ENABLED: "false"
     VITE_SENTRY_DEBUG: "false"
   service:
     type: ClusterIP
