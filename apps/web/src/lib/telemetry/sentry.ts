@@ -9,6 +9,8 @@ import { scrubBreadcrumb } from "./scrub";
 
 let initialized = false;
 
+const PII_DENYLIST = ["forwarded", "-ip", "remote-", "via", "-user"];
+
 function parseRate(raw: string | undefined, fallback: number): number {
 	if (!raw) return fallback;
 	const n = Number.parseFloat(raw);
@@ -40,7 +42,6 @@ export function initTelemetry(): void {
 	const release = getRuntimeConfig("VITE_APP_VERSION");
 	const tracesSampleRate = parseRate(getRuntimeConfig("VITE_SENTRY_TRACES_SAMPLE_RATE"), 0.1);
 	const debug = parseBool(getRuntimeConfig("VITE_SENTRY_DEBUG"), false);
-	const logsEnabled = parseBool(getRuntimeConfig("VITE_SENTRY_LOGS_ENABLED"), false);
 
 	Sentry.init({
 		dsn,
@@ -50,10 +51,26 @@ export function initTelemetry(): void {
 		environment,
 		release,
 		debug,
-		sendDefaultPii: false,
+		// SDK v11 dropped sendDefaultPii and leaving dataCollection unset now
+		// collects more. Pin the restrictive v10 baseline (ADR-0019: no PII).
+		dataCollection: {
+			userInfo: false,
+			cookies: false,
+			httpHeaders: {
+				request: { deny: PII_DENYLIST },
+				response: { deny: PII_DENYLIST },
+			},
+			httpBodies: [],
+			urlQueryParams: { deny: PII_DENYLIST },
+			genAI: { inputs: false, outputs: false },
+			databaseQueryData: false,
+			queues: false,
+			graphQL: { document: false, variables: false },
+		},
 		maxBreadcrumbs: 50,
 		tracesSampleRate,
-		_experiments: logsEnabled ? { enableLogs: true } : undefined,
+		// GlitchTip ingests transactions, not v11's default streamed spans.
+		traceLifecycle: "static",
 		integrations: [Sentry.browserTracingIntegration()],
 		ignoreErrors: [
 			/ResizeObserver loop/,

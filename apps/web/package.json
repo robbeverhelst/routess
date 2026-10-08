@@ -30,7 +30,7 @@
 		"@routess/core": "workspace:*",
 		"@routess/design-tokens": "workspace:*",
 		"@routess/i18n": "workspace:*",
-		"@sentry/react": "^10.53.1",
+		"@sentry/react": "^11.0.0",
 		"@tanstack/react-query": "^5.81.2",
 		"@tanstack/react-query-devtools": "^5.81.2",
 		"@tanstack/react-router": "^1.121.34",
