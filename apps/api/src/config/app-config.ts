@@ -53,11 +53,16 @@ export interface AppConfig {
 		// exposed to the browser; the API hashes user.id with this salt and ships
 		// the hash on the profile response. See ADR-0020.
 		salt: string;
-		// Umami's own Postgres, used only to erase a user's ProductEvent trail on
-		// hard delete (ADR-0020). Umami exposes no delete-by-property API, so this
-		// is a direct DELETE against its schema. Empty disables erasure.
+		// Umami's own Postgres, used to erase a user's ProductEvent trail on hard
+		// delete (ADR-0020) and to enforce the retention window. Umami exposes
+		// neither a delete-by-property API nor a retention setting, so both are
+		// direct DELETEs against its schema. Empty disables both.
 		umamiDatabaseUrl: string;
 		umamiWebsiteId: string;
+		// Retention window for ProductEvents. Must match what the privacy policy
+		// states (apps/landing/lib/legal/privacy.ts); changing one without the
+		// other makes the policy false.
+		umamiRetentionDays: number;
 	};
 	monitoring: {
 		grafanaUrls: Record<string, string>;
@@ -118,6 +123,8 @@ const DEFAULTS = {
 	sessionCookieName: "routess_session",
 	metricsPath: "/metrics",
 	metricsPort: 9464,
+	// 14 months, matching the retention table in the privacy policy.
+	umamiRetentionDays: 425,
 };
 
 let isEnvironmentLoaded = false;
@@ -276,6 +283,7 @@ export function getAppConfig(): AppConfig {
 			salt: analyticsSalt,
 			umamiDatabaseUrl: (process.env.UMAMI_DATABASE_URL ?? "").trim(),
 			umamiWebsiteId: (process.env.UMAMI_WEBSITE_ID ?? "").trim(),
+			umamiRetentionDays: parseInteger(process.env.UMAMI_RETENTION_DAYS, DEFAULTS.umamiRetentionDays),
 		},
 		email: {
 			provider: process.env.RESEND_API_KEY ? "resend" : "console",

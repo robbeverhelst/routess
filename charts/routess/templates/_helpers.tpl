@@ -324,6 +324,10 @@ validates the same production config, so it needs every value the api needs.
 - name: UMAMI_WEBSITE_ID
   value: {{ . | quote }}
 {{- end }}
+{{- with .Values.api.env.umamiRetentionDays }}
+- name: UMAMI_RETENTION_DAYS
+  value: {{ . | quote }}
+{{- end }}
 - name: EMAIL_FROM
   value: {{ .Values.api.env.emailFrom | quote }}
 {{- with .Values.api.env.valhallaUrl }}
