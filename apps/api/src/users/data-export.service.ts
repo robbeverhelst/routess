@@ -120,6 +120,7 @@ export class DataExportService {
 				name: user.name,
 				avatar: user.avatar ?? null,
 				role: user.role,
+				plan: user.plan,
 				preferences: user.preferences ? normalizeUserPreferences(user.preferences) : null,
 				createdAt: user.createdAt.toISOString(),
 				updatedAt: user.updatedAt.toISOString(),

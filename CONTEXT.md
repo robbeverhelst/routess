@@ -177,6 +177,18 @@ _Avoid_: token, login, device.
 A long-lived bearer credential a User mints for non-browser clients (the `routess` CLI, AI agents, scripts). Carries one of two scopes: `read` (list/get Routes, export GPX, get profile) or `write` (`read` plus metadata-only mutations on own Routes and own preferences). Presented as `Authorization: Bearer routess_pat_<random>`. Never valid against `/api/v1/admin/*` and cannot delete the User account regardless of the owner's role. Subject to a separate per-token rate-limit bucket so a runaway agent does not block the User's interactive session. Stored hashed with argon2id; the plaintext is shown to the User exactly once at creation.
 _Avoid_: API key, access token, bearer token (the term is **PAT** when discussing the domain shape; "Bearer token" is the HTTP transport detail).
 
+**Plan**:
+What a User has on the hosted product: `free` (the default) or `pro`. Written only by the billing webhook, never by the browser. A Plan includes a fixed set of **Features**; the code holds that mapping, not the database. With billing off (the default, and always on self-hosted instances) the Plan is ignored and every Feature is unlocked. See ADR 0039.
+_Avoid_: tier, subscription (a subscription is one way of paying for a Plan), license.
+
+**Feature** (billing sense):
+A named capability a Plan or an **Entitlement** can unlock, e.g. `route_generation` or `gpx_export`. The list is closed and typed in the API; every entry names something the app already does. The API is the source of truth for whether a User may use one (`can(user, feature)`).
+_Avoid_: perk, permission (that is RouteVisibility and roles), flag.
+
+**Entitlement**:
+A per-User grant of one Feature on top of the User's Plan, with a source (`manual` for comps and beta access, `billing` for things like a one-time purchase) and an optional expiry. An expired Entitlement stops counting; revoking deletes it.
+_Avoid_: license, grant (as a noun for the stored row), unlock.
+
 ## Social
 
 **Follow**:

@@ -11,6 +11,11 @@ export function randomHandle(): string {
 export const USER_ROLES = ["user", "admin"] as const;
 export type UserRole = (typeof USER_ROLES)[number];
 
+// CONTEXT.md "Plan". What a hosted User pays for; the Features each Plan
+// includes live in entitlements/features.ts (ADR 0039).
+export const USER_PLANS = ["free", "pro"] as const;
+export type UserPlan = (typeof USER_PLANS)[number];
+
 // 'active' is the normal state. 'pending_hard_delete' means the User has
 // requested self-deletion and is in the grace window before the hard-delete
 // cron purges them (ADR 0017). Distinct from admin-driven soft-delete (ADR 0016)
@@ -45,6 +50,10 @@ export class User extends BaseEntity {
 
 	@Property({ type: "string", default: "user" })
 	role: UserRole = "user";
+
+	// Written only by the billing webhook (ADR 0039), never by the browser.
+	@Property({ type: "string", default: "free" })
+	plan: UserPlan & Opt = "free";
 
 	@Property({ type: "json", nullable: true })
 	preferences?: UserPreferences | null;

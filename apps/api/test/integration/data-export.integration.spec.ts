@@ -65,6 +65,7 @@ describe("Data Export Integration Tests", () => {
 		expect(jsonText).toBeTruthy();
 		const payload = JSON.parse(jsonText ?? "{}");
 		expect(payload.user.email).toBe("alice@example.com");
+		expect(payload.user.plan).toBe("free");
 		expect(payload.routes).toHaveLength(1);
 		expect(payload.routes[0].name).toBe("Sunday loop");
 		expect(payload.routes[0].visibility).toBe("private");

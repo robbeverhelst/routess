@@ -111,6 +111,22 @@ export interface AppConfig {
 		// not bound daily provider spend. 0 disables the quota.
 		generationPerDay: number;
 	};
+	billing: {
+		// Payments switch (#135, ADR 0039). Off by default, and off is also the
+		// self-host story: every Feature is unlocked and the billing module
+		// refuses all work. Turning it on needs a provider implementation,
+		// which does not exist yet, so startup fails fast instead.
+		enabled: boolean;
+		provider: BillingProviderName | null;
+	};
+}
+
+export const BILLING_PROVIDER_NAMES = ["stripe", "mollie"] as const;
+export type BillingProviderName = (typeof BILLING_PROVIDER_NAMES)[number];
+
+function parseBillingProvider(value: string | undefined): BillingProviderName | null {
+	const name = value?.trim().toLowerCase();
+	return BILLING_PROVIDER_NAMES.find((candidate) => candidate === name) ?? null;
 }
 
 const DEFAULTS = {
@@ -303,6 +319,10 @@ export function getAppConfig(): AppConfig {
 		},
 		quotas: {
 			generationPerDay: parseInteger(process.env.GENERATION_QUOTA_PER_DAY, 50),
+		},
+		billing: {
+			enabled: parseBoolean(process.env.BILLING_ENABLED, false),
+			provider: parseBillingProvider(process.env.BILLING_PROVIDER),
 		},
 	};
 }

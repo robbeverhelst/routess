@@ -10,11 +10,13 @@ import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { AuthModule } from "./auth/auth.module";
 import { AuthAwareThrottlerGuard } from "./auth/guards/auth-aware-throttler.guard";
+import { BillingModule } from "./billing/billing.module";
 import { CacheModule } from "./cache/cache.module";
 import { RedisThrottlerStorage } from "./cache/redis-throttler.storage";
 import { CollectionsModule } from "./collections/collections.module";
 import type { AppConfig } from "./config/app-config";
 import { APP_CONFIG, ConfigModule } from "./config/config.module";
+import { EntitlementsModule } from "./entitlements/entitlements.module";
 import { ExternalRoutesModule } from "./external-routes/external-routes.module";
 import { GenerationModule } from "./generation/generation.module";
 import { HealthModule } from "./health/health.module";
@@ -103,6 +105,8 @@ import { UsersModule } from "./users/users.module";
 		HealthModule,
 		TelemetryModule,
 		AdminModule,
+		EntitlementsModule,
+		BillingModule,
 	],
 	controllers: [AppController],
 	providers: [

@@ -5,6 +5,8 @@ describe("getAppConfig", () => {
 	const originalFrontendUrl = process.env.FRONTEND_URL;
 	const originalFrontendUrls = process.env.FRONTEND_URLS;
 	const originalJwtSecret = process.env.JWT_SECRET;
+	const originalBillingEnabled = process.env.BILLING_ENABLED;
+	const originalBillingProvider = process.env.BILLING_PROVIDER;
 
 	afterEach(() => {
 		if (originalNodeEnv === undefined) {
@@ -29,6 +31,18 @@ describe("getAppConfig", () => {
 			delete process.env.JWT_SECRET;
 		} else {
 			process.env.JWT_SECRET = originalJwtSecret;
+		}
+
+		if (originalBillingEnabled === undefined) {
+			delete process.env.BILLING_ENABLED;
+		} else {
+			process.env.BILLING_ENABLED = originalBillingEnabled;
+		}
+
+		if (originalBillingProvider === undefined) {
+			delete process.env.BILLING_PROVIDER;
+		} else {
+			process.env.BILLING_PROVIDER = originalBillingProvider;
 		}
 	});
 
@@ -57,5 +71,21 @@ describe("getAppConfig", () => {
 		delete process.env.JWT_SECRET;
 
 		expect(() => getAppConfig()).toThrow("JWT_SECRET must be set when NODE_ENV=production");
+	});
+
+	it("keeps billing off unless BILLING_ENABLED is set", () => {
+		delete process.env.BILLING_ENABLED;
+		delete process.env.BILLING_PROVIDER;
+
+		expect(getAppConfig().billing).toEqual({ enabled: false, provider: null });
+	});
+
+	it("parses the billing flag and a known provider, ignoring unknown ones", () => {
+		process.env.BILLING_ENABLED = "true";
+		process.env.BILLING_PROVIDER = " Mollie ";
+		expect(getAppConfig().billing).toEqual({ enabled: true, provider: "mollie" });
+
+		process.env.BILLING_PROVIDER = "paypal";
+		expect(getAppConfig().billing.provider).toBeNull();
 	});
 });
