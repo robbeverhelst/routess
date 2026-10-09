@@ -297,13 +297,9 @@ jobs:
             fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
           "
 
-      - name: Load npm token from 1Password
-        uses: 1password/load-secrets-action@70062d7a876d3eb6334754fa26efd2fbd90c32f2 # v5
-        with:
-          export-env: true
-        env:
-          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
-          NODE_AUTH_TOKEN: op://Homelab/mpeqmgofuv57ilqpfukqocotk4/password
+      # Trusted publishing (OIDC, id-token: write above) needs npm >= 11.5.1;
+      # no token. Configured on npmjs.com: robbeverhelst/routess, ci.yml.
+      - run: npm install -g npm@latest
 
       - name: Publish CLI to npm
         working-directory: apps/cli
