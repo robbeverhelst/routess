@@ -23,7 +23,6 @@ export class Migration20261009000000 extends Migration {
 				constraint "entitlement_user_id_feature_unique" unique ("user_id", "feature")
 			);
 		`);
-		this.addSql(`create index "entitlement_user_id_index" on "entitlement" ("user_id");`);
 	}
 
 	override async down(): Promise<void> {

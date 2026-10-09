@@ -32,7 +32,3 @@ export const PLAN_FEATURES: PlanFeatureMatrix = {
 	free: FEATURES,
 	pro: FEATURES,
 };
-
-export function isFeature(value: string): value is Feature {
-	return (FEATURES as readonly string[]).includes(value);
-}

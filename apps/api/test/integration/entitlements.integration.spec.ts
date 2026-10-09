@@ -102,10 +102,19 @@ describe("Entitlements with billing enabled", () => {
 		expect(await can(null, "route_generation")).toBe(false);
 	});
 
-	it("lets admins use every feature regardless of plan", async () => {
+	it("treats an admin on the free plan like any free User, unlocking only through a manual grant", async () => {
 		const admin = await makeUser("admin@example.com");
+		await withRequestContext(app, async () => {
+			await orm.em.nativeUpdate(User, { id: admin.id }, { role: "admin" });
+		});
 		admin.role = "admin";
+
+		expect(await can(admin, "gpx_export")).toBe(true);
+		expect(await can(admin, "navigation")).toBe(false);
+
+		await grant(admin, "navigation");
 		expect(await can(admin, "navigation")).toBe(true);
+		expect(await can(admin, "route_generation")).toBe(false);
 	});
 
 	it("unlocks a feature through an unexpired grant, for that feature only", async () => {

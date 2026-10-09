@@ -1,5 +1,5 @@
 import { type Rel } from "@mikro-orm/core";
-import { Entity, Index, ManyToOne, PrimaryKey, Property, Unique } from "@mikro-orm/decorators/legacy";
+import { Entity, ManyToOne, PrimaryKey, Property, Unique } from "@mikro-orm/decorators/legacy";
 import type { Feature } from "../entitlements/features";
 import { BaseEntity } from "./base.entity";
 import { User } from "./user.entity";
@@ -14,7 +14,6 @@ export type EntitlementSource = (typeof ENTITLEMENT_SOURCES)[number];
 // an expired row simply stops counting.
 @Entity()
 @Unique({ properties: ["user", "feature"] })
-@Index({ properties: ["user"] })
 export class Entitlement extends BaseEntity {
 	@PrimaryKey()
 	id!: number;
