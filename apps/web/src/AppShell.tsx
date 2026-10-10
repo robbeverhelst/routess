@@ -671,7 +671,20 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 						}}
 					>
 						{PanelHeader}
-						<div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>{renderPanelContent()}</div>
+						{/* Keyed on context so switching tabs remounts with a short fade.
+						   Cheaper and snappier than View Transitions, which would snapshot
+						   the GL canvas behind the panel. */}
+						<div
+							key={context}
+							style={{
+								flex: 1,
+								minHeight: 0,
+								overflow: "hidden",
+								animation: "rds-fade-in var(--rds-dur-base) ease-out",
+							}}
+						>
+							{renderPanelContent()}
+						</div>
 					</aside>
 				))}
 			{showApp && isMobile && !showPlanActionBar && <BottomTabBar />}

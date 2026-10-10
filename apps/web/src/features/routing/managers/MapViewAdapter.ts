@@ -7,6 +7,7 @@ import { useRouteSurfaceStore } from "@/stores/routeSurfaceStore";
 import { useRoutingStore } from "@/stores/routingStore";
 import { useWaypointHoverStore } from "@/stores/waypointHoverStore";
 import {
+	animateRouteDrawIn,
 	clearKilometerMarkersLayer,
 	clearRouteLayer,
 	clearRouteScrubLayer,
@@ -123,6 +124,11 @@ export function attachMapViewAdapter(map: MapboxMap): () => void {
 		if (state.routePath !== prev.routePath) {
 			renderRoute(map, state.routePath);
 			renderScrub(map, state.routePath, useRouteScrubStore.getState().hoveredDistanceMeters);
+			// A route landing on an empty map (generation, library load, import,
+			// first segment) gets a draw-in; recalculations while editing do not.
+			if (prev.routePath.length < 2 && state.routePath.length >= 2) {
+				animateRouteDrawIn(map);
+			}
 		}
 	});
 
