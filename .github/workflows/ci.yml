@@ -18,7 +18,9 @@ env:
 jobs:
   test:
     runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || 'arc-routess' }}
-    timeout-minutes: 15
+    # The suite grew from ~5 to ~9 min with billing; at 15 the cache save after a
+    # green run got cut off, cancelling release and the npm publish.
+    timeout-minutes: 25
     env:
       DB_HOST: localhost
       DB_PORT: "5432"
