@@ -59,7 +59,7 @@ export class BillingService {
 
 		const user = await this.em.findOne(User, { id: userId });
 		if (!user) return base;
-		await this.grantOgPassIfEligible(user, now);
+		await this.applyOgGrant(user, now);
 		const plan = await this.entitlements.planStatus(user, now);
 		const [og] = await this.em.execute<{ expires_at: Date | null }[]>(
 			`select "expires_at" from "entitlement" where "user_id" = ? and "plan" = 'pro' and "source" = 'og-grant' and "deleted_at" is null`,
@@ -75,6 +75,19 @@ export class BillingService {
 				canBuy: !permanentPro && user.deletionStatus === "active",
 			},
 		};
+	}
+
+	// A billing hiccup must never fail the status read: log it and let the
+	// next read or login retry the grant.
+	private async applyOgGrant(user: User, now: Date): Promise<void> {
+		try {
+			await this.grantOgPassIfEligible(user, now);
+		} catch (error) {
+			this.logger.error(
+				`OG grant failed for user ${user.id}: ${error instanceof Error ? error.message : String(error)}`,
+				error instanceof Error ? error.stack : undefined,
+			);
+		}
 	}
 
 	async startCheckout(

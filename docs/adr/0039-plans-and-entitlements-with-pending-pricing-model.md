@@ -29,7 +29,7 @@ None of these is gated today. The only limits are throttles and the generation q
 
 | Feature (`features.ts`) | Where it lives | Today |
 |---|---|---|
-| `route_generation` | `POST /generation`, `apps/api/src/generation/generation.controller.ts:27` | Live for everyone, including anonymous users. Capped at 50/day per user or IP (`GENERATION_QUOTA_PER_DAY`, `generation-quota.guard.ts`) |
+| `route_generation` | `POST /generation`, `apps/api/src/generation/generation.controller.ts:27` | Live for everyone, including anonymous users. While billing is off, capped at 50/day per user or IP (`GENERATION_QUOTA_PER_DAY`, `generation-quota.guard.ts`). With billing on, the cap follows the tier: anonymous 1, free 3, Pro 50 (`GENERATION_QUOTA_PER_DAY_ANONYMOUS`, `_FREE`, `_PRO`) |
 | `node_network_generation` | `preferNodeNetworks`, `apps/api/src/generation/dto/generate.dto.ts:138` | Live, needs `NODE_TILES_URL` |
 | `navigation` | `POST /routing/cues`, `apps/api/src/routing/routing.controller.ts:59` | Experimental, hidden behind a per-device web flag (`apps/web/src/stores/redesignSettingsStore.ts:92`) |
 | `collections` | `/collections`, `apps/api/src/collections/collections.controller.ts:47` | Live, no count cap |
