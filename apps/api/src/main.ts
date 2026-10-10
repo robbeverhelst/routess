@@ -12,7 +12,9 @@ export async function bootstrap() {
 	initializeOpenTelemetry(config);
 	const { AppModule } = await import("./app.module");
 
-	const app = await NestFactory.create(AppModule, { bufferLogs: true });
+	// rawBody keeps the exact request bytes next to the parsed JSON: the Stripe
+	// webhook signature is computed over them (ADR 0039).
+	const app = await NestFactory.create(AppModule, { bufferLogs: true, rawBody: true });
 	app.useLogger(app.get(Logger));
 	configureApplication(app, config);
 

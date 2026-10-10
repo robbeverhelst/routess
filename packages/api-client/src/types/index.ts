@@ -311,6 +311,36 @@ export interface ApiPersonalAccessTokenWithSecret extends ApiPersonalAccessToken
 	token: string;
 }
 
+// Billing (ADR 0039): the Pro year pass. `enabled: false` on instances with
+// BILLING_ENABLED off (self-host); nothing else is sent then.
+export type ApiUserPlan = "free" | "pro";
+export type ApiBillingOffer = "pro_year_pass";
+
+export interface ApiBillingStatus {
+	enabled: boolean;
+	offer?: {
+		id: ApiBillingOffer;
+		plan: ApiUserPlan;
+		days: number;
+		// Minor units (cents), VAT-inclusive; null when Stripe could not be read.
+		price: { amount: number; currency: string } | null;
+	};
+	// Daily RouteGeneration allowance per tier; 0 means no cap.
+	generationPerDay?: { anonymous: number; free: number; pro: number };
+	// Null when signed out.
+	account?: {
+		plan: ApiUserPlan;
+		// Null with plan "pro" means Pro does not expire.
+		proExpiresAt: string | null;
+		ogGrantExpiresAt: string | null;
+		canBuy: boolean;
+	} | null;
+}
+
+export interface ApiCheckoutSession {
+	url: string;
+}
+
 export interface CreatePersonalAccessTokenRequest {
 	label: string;
 	scope: ApiPatScope;

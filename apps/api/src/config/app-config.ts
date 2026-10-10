@@ -108,9 +108,51 @@ export interface AppConfig {
 	quotas: {
 		// Per-User daily cap on RouteGeneration attempts. Each attempt fans out
 		// into many paid Valhalla calls, so the per-minute throttle alone does
-		// not bound daily provider spend. 0 disables the quota.
+		// not bound daily provider spend. 0 disables the quota. Applies to
+		// everyone while billing is off.
 		generationPerDay: number;
+		// The same cap per caller tier once billing is on (ADR 0039): anonymous
+		// callers (keyed by IP), the free Plan and the Pro Plan. 0 disables
+		// that tier's cap.
+		generationPerDayByTier: Record<GenerationQuotaTier, number>;
 	};
+	billing: {
+		// Payments switch (#135, ADR 0039). Off by default, and off is also the
+		// self-host story: every Feature is unlocked and the billing module
+		// refuses all work. On requires every Stripe value below, or startup
+		// fails fast.
+		enabled: boolean;
+		provider: BillingProviderName | null;
+		// Accounts created before this moment get the OG grant (3 months of Pro)
+		// on their next login. Null means nobody does.
+		launchedAt: Date | null;
+		stripe: {
+			secretKey: string;
+			webhookSecret: string;
+			// The Stripe Price of the Pro year pass (one-off, VAT-inclusive).
+			proYearPassPriceId: string;
+		};
+	};
+}
+
+export const GENERATION_QUOTA_TIERS = ["anonymous", "free", "pro"] as const;
+export type GenerationQuotaTier = (typeof GENERATION_QUOTA_TIERS)[number];
+
+export const BILLING_PROVIDER_NAMES = ["stripe"] as const;
+export type BillingProviderName = (typeof BILLING_PROVIDER_NAMES)[number];
+
+// Stripe is the decided provider (ADR 0039), so an unset BILLING_PROVIDER
+// means Stripe; an unknown value parses to null and blocks enabled billing.
+function parseBillingProvider(value: string | undefined): BillingProviderName | null {
+	const name = value?.trim().toLowerCase();
+	if (!name) return "stripe";
+	return BILLING_PROVIDER_NAMES.find((candidate) => candidate === name) ?? null;
+}
+
+function parseDate(value: string | undefined): Date | null {
+	if (!value?.trim()) return null;
+	const parsed = new Date(value.trim());
+	return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
 const DEFAULTS = {
@@ -303,6 +345,21 @@ export function getAppConfig(): AppConfig {
 		},
 		quotas: {
 			generationPerDay: parseInteger(process.env.GENERATION_QUOTA_PER_DAY, 50),
+			generationPerDayByTier: {
+				anonymous: parseInteger(process.env.GENERATION_QUOTA_PER_DAY_ANONYMOUS, 1),
+				free: parseInteger(process.env.GENERATION_QUOTA_PER_DAY_FREE, 3),
+				pro: parseInteger(process.env.GENERATION_QUOTA_PER_DAY_PRO, 50),
+			},
+		},
+		billing: {
+			enabled: parseBoolean(process.env.BILLING_ENABLED, false),
+			provider: parseBillingProvider(process.env.BILLING_PROVIDER),
+			launchedAt: parseDate(process.env.BILLING_LAUNCHED_AT),
+			stripe: {
+				secretKey: (process.env.STRIPE_SECRET_KEY ?? "").trim(),
+				webhookSecret: (process.env.STRIPE_WEBHOOK_SECRET ?? "").trim(),
+				proYearPassPriceId: (process.env.STRIPE_PRICE_PRO_YEAR_PASS ?? "").trim(),
+			},
 		},
 	};
 }

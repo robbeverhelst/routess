@@ -157,7 +157,9 @@ export class UsersService {
 
 		const conn = this.em.getConnection();
 		// Hard-delete in FK-safe order: routes → sessions → user. Bypasses the
-		// soft-delete filter by using raw SQL with explicit ids.
+		// soft-delete filter by using raw SQL with explicit ids. Entitlements
+		// (any remaining Pro time) cascade with the user; payment rows stay for
+		// bookkeeping with user_id cleared (ADR 0039).
 		await conn.execute(`delete from "route" where "user_id" in (${ids.map(() => "?").join(",")})`, ids);
 		await conn.execute(`delete from "session" where "user_id" in (${ids.map(() => "?").join(",")})`, ids);
 		await conn.execute(`delete from "user" where "id" in (${ids.map(() => "?").join(",")})`, ids);

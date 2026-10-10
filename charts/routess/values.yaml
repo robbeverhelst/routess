@@ -150,7 +150,23 @@ api:
     geocodingReferer: "https://routess.com"
     # Per-User daily cap on RouteGeneration attempts (each fans out into many
     # paid Valhalla calls). Empty uses the API default (50); "0" disables.
+    # Applies to everyone while billing is off.
     generationQuotaPerDay: ""
+    # Pro year pass (ADR 0039). Off by default; with "true" the API refuses to
+    # start unless launchedAt, stripePriceProYearPass and the two Stripe
+    # secrets below are set.
+    billing:
+      enabled: "false"
+      # ISO timestamp of the billing launch. Accounts created before it get
+      # three months of Pro (the OG grant) on their next login.
+      launchedAt: ""
+      # Stripe Price id (price_...) of the one-off Pro year pass.
+      stripePriceProYearPass: ""
+      # Daily RouteGeneration cap per tier once billing is on. Empty uses the
+      # API defaults (anonymous 1, free 3, pro 50); "0" disables a tier's cap.
+      generationQuotaPerDayAnonymous: ""
+      generationQuotaPerDayFree: ""
+      generationQuotaPerDayPro: ""
   # Scheduled ExternalRoute refresh (ADR 0035). Pulls green SeedSources with
   # a stable feedUrl when due per their refreshIntervalDays; idempotent.
   seedRefresh:
@@ -192,6 +208,11 @@ api:
     patPepper: ""
     # Empty disables Resend; the API falls back to a console transport (dev-only).
     resendApiKey: ""
+    # Stripe secret key (sk_live_... or a restricted rk_live_...) and the
+    # signing secret of the webhook endpoint (whsec_...). Only read when
+    # api.env.billing.enabled is "true".
+    stripeSecretKey: ""
+    stripeWebhookSecret: ""
   # Raised from 256Mi/512Mi during the #354 incident, when a single public
   # listing request could allocate ~700Mi and OOM-kill the pod. The listing is
   # bounded now, so this is headroom rather than a requirement; keep it until

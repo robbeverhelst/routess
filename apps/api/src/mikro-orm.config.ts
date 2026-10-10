@@ -5,9 +5,11 @@ import type { Pool, PoolClient } from "pg";
 import { getAppConfig } from "./config/app-config";
 import { Collection } from "./entities/collection.entity";
 import { CollectionRoute } from "./entities/collection-route.entity";
+import { Entitlement } from "./entities/entitlement.entity";
 import { ExternalRoute } from "./entities/external-route.entity";
 import { Follow } from "./entities/follow.entity";
 import { GeocodeCache } from "./entities/geocode-cache.entity";
+import { Payment } from "./entities/payment.entity";
 import { PersonalAccessToken } from "./entities/personal-access-token.entity";
 import { Route } from "./entities/route.entity";
 import { RouteShare } from "./entities/route-share.entity";
@@ -58,6 +60,8 @@ const config = defineConfig({
 		GeocodeCache,
 		SeedSource,
 		ExternalRoute,
+		Entitlement,
+		Payment,
 	],
 	migrations: {
 		// Production runs compiled JS migrations from dist, while local tooling still uses TS sources.

@@ -1,7 +1,7 @@
 import type { Coordinate } from "@routess/core";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { type GenerationCandidateView, useGenerationStore } from "@/stores/generationStore";
-import { candidateWaypoints } from "./generationService";
+import { candidateWaypoints, startGeneration } from "./generationService";
 
 const candidate = (bearingDeg: number): GenerationCandidateView => ({
 	bearingDeg,
@@ -101,7 +101,7 @@ describe("generationStore", () => {
 		useGenerationStore.getState().startLoading(request);
 		useGenerationStore.getState().setFailure({ code: "all_candidates_low_quality", bestOverlapPct: 61 });
 		expect(useGenerationStore.getState().status).toBe("failed");
-		expect(useGenerationStore.getState().failure?.bestOverlapPct).toBe(61);
+		expect(useGenerationStore.getState().failure).toEqual({ code: "all_candidates_low_quality", bestOverlapPct: 61 });
 
 		useGenerationStore.getState().dismiss();
 		expect(useGenerationStore.getState().status).toBe("idle");
@@ -114,5 +114,46 @@ describe("generationStore", () => {
 		useGenerationStore.getState().setCandidateElevation(1, 320);
 		expect(useGenerationStore.getState().candidates[0].elevationGainM).toBeNull();
 		expect(useGenerationStore.getState().candidates[1].elevationGainM).toBe(320);
+	});
+});
+
+describe("startGeneration on a 429", () => {
+	function respond(status: number, body: unknown) {
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(
+				async () => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } }),
+			),
+		);
+	}
+
+	beforeEach(() => {
+		useGenerationStore.getState().dismiss();
+	});
+
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	it("turns the daily generation quota into a quota failure carrying the upgrade path", async () => {
+		respond(429, {
+			statusCode: 429,
+			code: "RATE_LIMITED",
+			message: "Daily route generation limit of 3 reached. Try again tomorrow.",
+			details: { reason: "generation_quota", limit: 3, tier: "free", upgrade: "pro" },
+		});
+
+		await startGeneration([3.7174, 51.0543]);
+
+		expect(useGenerationStore.getState().status).toBe("failed");
+		expect(useGenerationStore.getState().failure).toEqual({ code: "quota_exceeded", limit: 3, upgrade: "pro" });
+	});
+
+	it("keeps a per-minute throttle 429 as an unavailable engine", async () => {
+		respond(429, { statusCode: 429, code: "RATE_LIMITED", message: "ThrottlerException: Too Many Requests" });
+
+		await startGeneration([3.7174, 51.0543]);
+
+		expect(useGenerationStore.getState().failure).toEqual({ code: "provider_unavailable" });
 	});
 });

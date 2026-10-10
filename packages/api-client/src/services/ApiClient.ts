@@ -15,6 +15,9 @@ import type {
 	AdminUserList,
 	AdminUserSort,
 	AdminUserStats,
+	ApiBillingOffer,
+	ApiBillingStatus,
+	ApiCheckoutSession,
 	ApiClientConfig,
 	ApiCollection,
 	ApiCollectionDetail,
@@ -258,6 +261,16 @@ export class ApiClient {
 		await this.request<{ success: boolean }>(`/auth/tokens/${id}`, {
 			method: "DELETE",
 		});
+	}
+
+	// Billing (ADR 0039). Checkout returns the Stripe URL to send the browser
+	// to; Pro time is written by the webhook, never by this client.
+	async getBillingStatus(): Promise<ApiBillingStatus> {
+		return this.request<ApiBillingStatus>("/billing");
+	}
+
+	async startCheckout(offer: ApiBillingOffer = "pro_year_pass"): Promise<ApiCheckoutSession> {
+		return this.request<ApiCheckoutSession>("/billing/checkout", { method: "POST", body: { offer } });
 	}
 
 	// Route management methods

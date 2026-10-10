@@ -76,7 +76,7 @@ routess generate ... --heading n --surface gravel --gpx-dir ./candidates
 routess generate ... --save 2 --name "Generated loop"
 ```
 
-Generation needs no auth and prints up to three scored candidates with bearing, distance, duration, overlap, and surface mix. `--gpx-dir` writes each candidate as `candidate-<n>.gpx`; `--save [n]` stores candidate `n` (default 1) as a private route in the library, which needs a write token. `--exclude-bearings` regenerates fresh shapes, mirroring the web app's "Show different loops".
+Generation needs no auth (with a token it counts against your account's daily generation allowance instead of the per-IP one) and prints up to three scored candidates with bearing, distance, duration, overlap, and surface mix. `--gpx-dir` writes each candidate as `candidate-<n>.gpx`; `--save [n]` stores candidate `n` (default 1) as a private route in the library, which needs a write token. `--exclude-bearings` regenerates fresh shapes, mirroring the web app's "Show different loops".
 
 ### Tokens and account export
 

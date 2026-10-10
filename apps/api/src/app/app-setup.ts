@@ -144,6 +144,7 @@ export function createOpenApiDocument(app: INestApplication, config: AppConfig =
 			.addTag("users", "User profile management")
 			.addTag("sessions", "Active session management")
 			.addTag("admin", "Admin dashboard endpoints (admin role, session cookie only)")
+			.addTag("billing", "Pro year pass checkout, Stripe webhook and billing status (ADR-0039)")
 			.addTag("app", "API root metadata")
 			.addTag("health", "Health and monitoring")
 			.addTag("metrics", "Prometheus metrics")

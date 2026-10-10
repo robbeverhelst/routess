@@ -10,7 +10,8 @@ export type SignInEntryPoint =
 	| "header_avatar"
 	| "settings_panel"
 	| "login_screen"
-	| "session_ended";
+	| "session_ended"
+	| "generation_quota";
 
 export interface AppEventMap {
 	"routess:undo": NoDetail;

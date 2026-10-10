@@ -5,6 +5,7 @@ import { Inject, Injectable, Logger } from "@nestjs/common";
 import { EventEmitter2 } from "@nestjs/event-emitter";
 import { JwtService } from "@nestjs/jwt";
 import { Cron, CronExpression } from "@nestjs/schedule";
+import { BillingService } from "../billing/billing.service";
 import type { AppConfig } from "../config/app-config";
 import { APP_CONFIG } from "../config/config.module";
 import { Session } from "../entities/session.entity";
@@ -32,6 +33,7 @@ export class SessionService {
 		@Inject(APP_CONFIG)
 		private readonly config: AppConfig,
 		private readonly events: EventEmitter2,
+		private readonly billing: BillingService,
 	) {}
 
 	@Cron(CronExpression.EVERY_HOUR)
@@ -73,8 +75,23 @@ export class SessionService {
 
 		await this.em.persist(session).flush();
 		this.events.emit(SESSION_ACTIVITY_CHANGED);
+		await this.applyOgGrant(user);
 
 		return this.jwtService.sign({ sub: userId, email: user.email, jti });
+	}
+
+	// Every login creates a session, so this is where a pre-launch account
+	// picks up its one-time OG grant (ADR 0039). A billing hiccup must never
+	// block a login: log it and let the next login or status read retry.
+	private async applyOgGrant(user: User): Promise<void> {
+		try {
+			await this.billing.grantOgPassIfEligible(user);
+		} catch (error) {
+			this.logger.error(
+				`OG grant failed for user ${user.id}: ${error instanceof Error ? error.message : String(error)}`,
+				error instanceof Error ? error.stack : undefined,
+			);
+		}
 	}
 
 	async validateSession(jti: string): Promise<Session | null> {

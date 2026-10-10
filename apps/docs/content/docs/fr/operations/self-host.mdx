@@ -119,6 +119,24 @@ Pour le conteneur web :
 
 Le logging de la console du navigateur est par défaut à `warn`. Pour déboguer un seul navigateur, mets `localStorage["routess:log-level"]` à `debug`, `info`, `warn`, `error` ou `none` et recharge.
 
+## Paiement (produit hébergé uniquement)
+
+Routess.com vend un pass Pro annuel (ADR 0039). Une instance auto-hébergée laisse le paiement désactivé, c'est le défaut : toutes les fonctionnalités restent débloquées, tout le monde a droit à `GENERATION_QUOTA_PER_DAY` routes générées par jour, et aucun prestataire de paiement n'est contacté. Laisse `BILLING_ENABLED=false`, ou ne le définis pas.
+
+Pour référence, voici les variables que définit le produit hébergé. Avec `BILLING_ENABLED=true`, l'API refuse de démarrer tant que le moment du lancement et les trois valeurs Stripe ne sont pas définis.
+
+| Variable                              | Défaut   | Rôle                                                                                         |
+| ------------------------------------- | -------- | -------------------------------------------------------------------------------------------- |
+| `BILLING_ENABLED`                     | `false`  | Active le pass Pro, le paywall et le quota de génération par niveau.                         |
+| `BILLING_PROVIDER`                    | `stripe` | Prestataire de paiement. Seul `stripe` est implémenté.                                       |
+| `BILLING_LAUNCHED_AT`                 | vide     | Horodatage ISO du lancement. Les comptes créés avant reçoivent 3 mois de Pro à leur prochaine connexion. |
+| `STRIPE_SECRET_KEY`                   | vide     | Clé secrète Stripe (`sk_live_…` ou une clé restreinte `rk_live_…`).                          |
+| `STRIPE_WEBHOOK_SECRET`               | vide     | Secret de signature (`whsec_…`) du endpoint webhook `<api>/api/v1/billing/webhook`.           |
+| `STRIPE_PRICE_PRO_YEAR_PASS`          | vide     | Identifiant de Price Stripe du pass Pro annuel (paiement unique).                            |
+| `GENERATION_QUOTA_PER_DAY_ANONYMOUS`  | `1`      | Routes générées par jour pour les visiteurs non connectés (par IP) quand le paiement est actif. `0` supprime la limite. |
+| `GENERATION_QUOTA_PER_DAY_FREE`       | `3`      | Pareil pour les utilisateurs connectés du plan gratuit.                                      |
+| `GENERATION_QUOTA_PER_DAY_PRO`        | `50`     | Pareil pour les utilisateurs Pro.                                                            |
+
 ## Le mettre derrière un reverse proxy
 
 Le compose par défaut expose les ports directement. Pour le TLS et un vrai domaine, place les services `web` et `api` derrière un reverse proxy (Caddy, Traefik, ingress-nginx, Cloudflare Tunnel) et surcharge les URL publiques dans `.env` :

@@ -119,6 +119,24 @@ For the web container:
 
 Browser console logging defaults to `warn`. To debug a single browser, set `localStorage["routess:log-level"]` to `debug`, `info`, `warn`, `error`, or `none` and reload.
 
+## Billing (hosted product only)
+
+Routess.com sells a Pro year pass (ADR 0039). A self-hosted instance leaves billing off, which is the default: every feature stays unlocked, everyone gets `GENERATION_QUOTA_PER_DAY` route generations a day, and no payment provider is contacted. Keep `BILLING_ENABLED=false`, or leave it unset.
+
+For reference, these are the variables the hosted product sets. With `BILLING_ENABLED=true` the API refuses to start unless the launch moment and all three Stripe values are set.
+
+| Variable                              | Default | Purpose                                                                                       |
+| ------------------------------------- | ------- | --------------------------------------------------------------------------------------------- |
+| `BILLING_ENABLED`                     | `false` | Switches the Pro pass, the paywall and the per-tier generation quota on.                      |
+| `BILLING_PROVIDER`                    | `stripe` | Payment provider. Only `stripe` is implemented.                                              |
+| `BILLING_LAUNCHED_AT`                 | empty   | ISO timestamp of the billing launch. Accounts created before it get 3 months of Pro on their next login. |
+| `STRIPE_SECRET_KEY`                   | empty   | Stripe secret key (`sk_live_…` or a restricted `rk_live_…`).                                  |
+| `STRIPE_WEBHOOK_SECRET`               | empty   | Signing secret (`whsec_…`) of the webhook endpoint `<api>/api/v1/billing/webhook`.             |
+| `STRIPE_PRICE_PRO_YEAR_PASS`          | empty   | Stripe Price id of the one-off Pro year pass.                                                 |
+| `GENERATION_QUOTA_PER_DAY_ANONYMOUS`  | `1`     | Daily route generations for signed-out visitors (per IP) while billing is on. `0` disables the cap. |
+| `GENERATION_QUOTA_PER_DAY_FREE`       | `3`     | Same for signed-in users on the free plan.                                                    |
+| `GENERATION_QUOTA_PER_DAY_PRO`        | `50`    | Same for Pro users.                                                                           |
+
 ## Put it behind a reverse proxy
 
 The default compose exposes ports directly. For TLS and a real domain, front the `web` and `api` services with a reverse proxy (Caddy, Traefik, ingress-nginx, Cloudflare Tunnel) and override the public URLs in `.env`:

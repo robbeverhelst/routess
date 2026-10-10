@@ -93,7 +93,7 @@ export type ProductEvent =
 			properties: {
 				activity: RouteActivity;
 				route_type: RouteType;
-				failure_reason: "no_route_found" | "timeout" | "provider_error" | "invalid_input";
+				failure_reason: "no_route_found" | "timeout" | "provider_error" | "invalid_input" | "quota_exceeded";
 			};
 	  }
 
@@ -122,9 +122,13 @@ export type ProductEvent =
 	| { name: "route_share_copied"; properties: EmptyProps }
 	| { name: "profile_handle_changed"; properties: EmptyProps }
 
-	// Payment (feature pending, see #135)
-	| { name: "payment_started"; properties: { plan: string; interval: "monthly" | "yearly" } }
-	| { name: "payment_completed"; properties: { plan: string; interval: "monthly" | "yearly" } }
-	| { name: "payment_cancelled"; properties: { plan: string; interval: "monthly" | "yearly" } };
+	// Payment: the Pro year pass (ADR 0039)
+	| { name: "payment_started"; properties: PaymentProps & { is_extension: boolean } }
+	| { name: "payment_completed"; properties: PaymentProps }
+	| { name: "payment_cancelled"; properties: PaymentProps };
+
+// The one thing for sale: a one-off Pro year pass (no subscription, so no
+// billing interval).
+type PaymentProps = { plan: "pro"; offer: "pro_year_pass" };
 
 export type ProductEventName = ProductEvent["name"];

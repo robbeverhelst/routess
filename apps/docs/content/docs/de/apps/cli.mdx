@@ -76,7 +76,7 @@ routess generate ... --heading n --surface gravel --gpx-dir ./candidates
 routess generate ... --save 2 --name "Generated loop"
 ```
 
-Die Generierung benötigt keine Authentifizierung und gibt bis zu drei bewertete Kandidaten mit Peilung, Distanz, Dauer, Überlappung und Untergrundmischung aus. `--gpx-dir` schreibt jeden Kandidaten als `candidate-<n>.gpx`; `--save [n]` speichert den Kandidaten `n` (Standard 1) als private Route in der Bibliothek, was ein write-Token erfordert. `--exclude-bearings` generiert frische Formen neu und spiegelt damit "Andere Rundstrecken zeigen" der Web-App.
+Die Generierung benötigt keine Authentifizierung (mit einem Token zählt sie gegen das tägliche Generierungskontingent deines Kontos statt gegen das pro IP) und gibt bis zu drei bewertete Kandidaten mit Peilung, Distanz, Dauer, Überlappung und Untergrundmischung aus. `--gpx-dir` schreibt jeden Kandidaten als `candidate-<n>.gpx`; `--save [n]` speichert den Kandidaten `n` (Standard 1) als private Route in der Bibliothek, was ein write-Token erfordert. `--exclude-bearings` generiert frische Formen neu und spiegelt damit "Andere Rundstrecken zeigen" der Web-App.
 
 ### Tokens und Kontoexport
 

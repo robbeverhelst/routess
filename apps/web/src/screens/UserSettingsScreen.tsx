@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { trackEvent } from "@/lib/analytics/track";
 import { apiService } from "@/lib/api";
-import { useAuthStatus, useLogout } from "@/lib/api-queries";
+import { useAuthStatus, useBillingStatus, useLogout } from "@/lib/api-queries";
 import { emitAppEvent } from "@/lib/app-events";
 import { storeUser } from "@/lib/auth-state";
 import { t } from "@/lib/i18n";
@@ -72,6 +72,10 @@ export function UserSettingsScreen() {
 	const [passwordError, setPasswordError] = useState<string | null>(null);
 
 	const [confirmingDelete, setConfirmingDelete] = useState(false);
+	// A remaining Pro pass is forfeited with the account (ADR 0039); say so
+	// before the User confirms.
+	const { data: billing } = useBillingStatus();
+	const proExpiresAt = billing?.account?.plan === "pro" ? billing.account.proExpiresAt : null;
 
 	const lastSyncedNameRef = useRef<string | null>(null);
 	useEffect(() => {
@@ -626,6 +630,7 @@ export function UserSettingsScreen() {
 								</div>
 								<div style={{ fontSize: 12.5, color: RDS_COLORS.fgMuted, marginBottom: 14, lineHeight: 1.5 }}>
 									{t("settings.account.deleteConfirm")}
+									{proExpiresAt ? ` ${t("billing.deleteForfeits")}` : ""}
 								</div>
 								<div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
 									<Btn variant="ghost" onClick={() => setConfirmingDelete(false)} disabled={deleting}>

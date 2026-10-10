@@ -76,7 +76,7 @@ routess generate ... --heading n --surface gravel --gpx-dir ./candidates
 routess generate ... --save 2 --name "Generated loop"
 ```
 
-Genereren vereist geen authenticatie en toont tot drie gescoorde kandidaten met richting, afstand, duur, overlap en de mix van ondergrond. `--gpx-dir` schrijft elke kandidaat weg als `candidate-<n>.gpx`; `--save [n]` slaat kandidaat `n` (standaard 1) op als privéroute in de bibliotheek, wat een write-token vereist. `--exclude-bearings` genereert opnieuw met verse vormen, naar het voorbeeld van "Andere lussen tonen" in de webapp.
+Genereren vereist geen authenticatie (met een token telt het mee voor de dagelijkse generatielimiet van je account in plaats van die per IP) en toont tot drie gescoorde kandidaten met richting, afstand, duur, overlap en de mix van ondergrond. `--gpx-dir` schrijft elke kandidaat weg als `candidate-<n>.gpx`; `--save [n]` slaat kandidaat `n` (standaard 1) op als privéroute in de bibliotheek, wat een write-token vereist. `--exclude-bearings` genereert opnieuw met verse vormen, naar het voorbeeld van "Andere lussen tonen" in de webapp.
 
 ### Tokens and account export
 

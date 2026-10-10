@@ -30,7 +30,7 @@ export async function createTestApp(options: TestAppOptions = {}): Promise<INest
 	const configuredBuilder = options.configure ? options.configure(builder) : builder;
 	const moduleFixture: TestingModule = await configuredBuilder.compile();
 
-	const app = moduleFixture.createNestApplication();
+	const app = moduleFixture.createNestApplication({ rawBody: true });
 	configureApplication(app, getAppConfig());
 
 	await app.init();

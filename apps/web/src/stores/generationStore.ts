@@ -9,6 +9,13 @@ import type {
 } from "@routess/core";
 import { create } from "zustand";
 
+// Why a run produced no candidates: a structured failure from the API, or the
+// daily generation quota (a 429), which the picker turns into a sign-in or
+// upgrade prompt (ADR 0039).
+export type GenerationFailureView =
+	| { code: GenerationFailureCode; bestOverlapPct?: number }
+	| { code: "quota_exceeded"; limit: number; upgrade: "sign_in" | "pro" | null };
+
 // Client-side view of one GenerationCandidate (geometry already decoded).
 export interface GenerationCandidateView {
 	bearingDeg: number;
@@ -51,14 +58,14 @@ interface GenerationState {
 	request: GenerationRequestSnapshot | null;
 	candidates: GenerationCandidateView[];
 	selectedIndex: number;
-	failure: { code: GenerationFailureCode; bestOverlapPct?: number } | null;
+	failure: GenerationFailureView | null;
 	/** Bearings shown across this session's runs; regenerate excludes them. */
 	shownBearings: number[];
 
 	startLoading: (request: GenerationRequestSnapshot) => void;
 	setCandidates: (candidates: GenerationCandidateView[]) => void;
 	setCandidateElevation: (index: number, gainMeters: number) => void;
-	setFailure: (failure: { code: GenerationFailureCode; bestOverlapPct?: number }) => void;
+	setFailure: (failure: GenerationFailureView) => void;
 	select: (index: number) => void;
 	dismiss: () => void;
 }
