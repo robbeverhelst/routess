@@ -1,6 +1,6 @@
 import { Body, Controller, HttpCode, HttpStatus, Post, UseGuards } from "@nestjs/common";
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { OptionalJwtAuthGuard } from "../auth/guards/optional-jwt-auth.guard";
+import { OptionalUnifiedAuthGuard } from "../auth/guards/optional-unified-auth.guard";
 import { ThrottleExpensive } from "../common/decorators/throttle.decorator";
 import { GenerateRequestDto, GenerateResponseDto } from "./dto/generate.dto";
 import { GenerationService } from "./generation.service";
@@ -22,9 +22,10 @@ export class GenerationController {
 	@ApiResponse({ status: 200, description: "Scored candidates or a structured failure", type: GenerateResponseDto })
 	@ApiResponse({ status: 429, description: "Daily route generation quota exceeded" })
 	@ApiResponse({ status: 503, description: "Valhalla is not configured or unreachable" })
-	// OptionalJwtAuthGuard populates req.user so the quota keys per-User when
-	// signed in (falling back to IP); the quota guard runs after it.
-	@UseGuards(OptionalJwtAuthGuard, GenerationQuotaGuard)
+	// OptionalUnifiedAuthGuard populates req.user from a session JWT or a PAT so
+	// the quota keys per-User when signed in (falling back to IP); the quota
+	// guard runs after it.
+	@UseGuards(OptionalUnifiedAuthGuard, GenerationQuotaGuard)
 	@ThrottleExpensive()
 	@HttpCode(HttpStatus.OK)
 	@Post()

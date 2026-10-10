@@ -432,6 +432,22 @@ describe("Billing with Stripe enabled", () => {
 			expect(response.body.details).toMatchObject({ tier: "free", upgrade: "pro", limit: QUOTAS.free });
 		});
 
+		it("keys PAT callers to their User and their Plan's allowance", async () => {
+			const { accessToken } = await createTestUserWithAuth(app, { email: "q-pat@example.com", googleId: "g-qpat" });
+			const minted = await supertest(app.getHttpServer())
+				.post("/api/v1/auth/tokens")
+				.set("Authorization", `Bearer ${accessToken}`)
+				.send({ label: "cli", scope: "read" })
+				.expect(201);
+
+			expect(await attempts(3, minted.body.token)).toEqual([400, 400, 429]);
+			const response = await supertest(app.getHttpServer())
+				.post("/api/v1/generation")
+				.set("Authorization", `Bearer ${minted.body.token}`)
+				.send({});
+			expect(response.body.details).toMatchObject({ tier: "free", upgrade: "pro", limit: QUOTAS.free });
+		});
+
 		it("gives Pass holders the Pro allowance", async () => {
 			const { user, accessToken } = await createTestUserWithAuth(app, { email: "q-pro@example.com", googleId: "g-qp" });
 			await postWebhook(completedEvent("evt_quota", user.id, secondsAgo(1)));
