@@ -1,8 +1,27 @@
-# Gate Features through Plan and Entitlement checks; choose the pricing model separately
+# Gate Features through Plan and Entitlement checks; sell a Pro year pass through Stripe
 
-**Status:** groundwork accepted, pricing model and provider **proposed, awaiting Robbe** (#135).
+**Status:** Decided by Robbe on 2026-10-10 (#135). The groundwork (Plan, Entitlement, `can()`, the provider seam) was accepted first; the pricing model, provider and Pro contents are now decided as recorded under [Decision](#decision). Everything still sits behind `BILLING_ENABLED`, which defaults to false.
 
-There is no payment code yet, and the pricing model is still open. This ADR fixes the part that does not depend on that choice. Every User gets a **Plan** (`free` by default). An **Entitlement** table holds per-User Feature grants on top of the Plan. The API answers `can(user, feature)` against a closed, typed **Feature** list (`apps/api/src/entitlements/features.ts`). A provider-neutral billing seam (`apps/api/src/billing/`) sits behind `BILLING_ENABLED`, which defaults to false. With billing off, every Feature is unlocked. That keeps self-hosted instances and today's hosted app ungated, so the MIT/self-host story stays intact. No endpoint calls `can()` yet. The trade-off is a little unused code until the questions at the end are answered.
+Every User gets a **Plan** (`free` by default). An **Entitlement** table holds per-User grants on top of the Plan: one Feature, or the whole Pro Plan for a while. The API answers `can(user, feature)` against a closed, typed **Feature** list (`apps/api/src/entitlements/features.ts`) and resolves the Plan in effect from the stored Plan plus any running Pro grant. A provider-neutral billing seam (`apps/api/src/billing/`) has one implementation, Stripe. With billing off, every Feature is unlocked and one generation quota applies to everyone. That keeps self-hosted instances ungated, so the MIT/self-host story stays intact.
+
+## Decision
+
+Decided on 2026-10-10:
+
+- **Model: B, a Pro year pass.** €29.99 incl. VAT, one-off payment, no subscription. A pass is a Pro Entitlement (`plan = 'pro'`, source `billing`) for 365 days from the payment. Buying again extends from the current Pro expiry, so no paid day is lost.
+- **Provider: Stripe** (Robbe already has an account). Stripe Checkout in payment mode, payment methods Bancontact, iDEAL and card. The seller is Robbe (robbeverhelst, under Robbe's own VAT number); there is no merchant of record.
+- **What Pro is:** a higher `route_generation` quota, nothing else for now. Free keeps `node_network_generation`, `collections`, saved routes and `personal_access_tokens`, so `PLAN_FEATURES.free` still equals `pro`. The daily RouteGeneration allowance per tier is config, not code: free signed-in **3/day** (`GENERATION_QUOTA_PER_DAY_FREE`), Pro **50/day** (`GENERATION_QUOTA_PER_DAY_PRO`, today's cap).
+- **Anonymous** (proposed in the PR, config `GENERATION_QUOTA_PER_DAY_ANONYMOUS`): **1/day per IP**. One try shows the feature; signing in, which is free, triples it. The quota is keyed by IP for signed-out callers, so a shared network shares that one attempt, which is acceptable because the free account is the way out.
+- **Existing users keep everything they have,** and every account created before the billing launch (`BILLING_LAUNCHED_AT`) gets **three months of Pro free on its next login**: the "OG user" grant. It is an Entitlement with source `og-grant` and an expiry, granted once per User (the row's existence is the marker, checked under a row lock) and extending any Pro time the User already holds. A User whose session outlives the launch gets it the next time the app reads the billing status.
+
+### How it works
+
+- `POST /billing/checkout` (session cookie only, so a PAT cannot spend money) creates a Checkout Session with the User id as `client_reference_id` and in metadata, and returns its URL. Stripe returns the browser to `/upgrade?checkout=success|cancelled`; that page only shows a message and fires the `payment_*` ProductEvent.
+- `POST /billing/webhook` verifies the `Stripe-Signature` header over the raw body (`rawBody: true` in `main.ts`; the async verifier, since the API runs on Bun). `checkout.session.completed` with `payment_status = 'paid'` is the source of truth. All three payment methods confirm immediately; a delayed method such as SEPA would also need `checkout.session.async_payment_succeeded`.
+- Idempotency: the `payment` table has unique provider event ids and checkout refs. The webhook takes the User row lock, inserts the payment with `on conflict do nothing`, and only extends the pass when the insert happened. A redelivered or concurrent event is acknowledged with 200 and changes nothing.
+- `GET /billing` (anonymous or signed in) reports whether billing is on, the offer with its Stripe price, the allowance per tier, and the account's Plan, Pro expiry and OG grant.
+- The generation quota guard answers 429 with `details: { reason: 'generation_quota', limit, tier, upgrade }`. The web turns that into a sign-in prompt for anonymous users and a link to `/upgrade` for free users.
+- **Cancel and account deletion:** a pass does not renew, so there is nothing to cancel at Stripe and no Stripe Customer is created. A cancelled checkout charges nothing. An account pending deletion cannot start a checkout. On hard delete, Entitlements cascade (remaining Pro time ends) and `payment` rows stay for bookkeeping with `user_id` cleared. A payment that arrives for a User who no longer exists is recorded without a grant and logged for a manual refund. Refunds are done by hand in the Stripe dashboard; revoking the matching Entitlement is a manual step for now.
 
 ## What the app has today that a Plan could gate
 
@@ -83,45 +102,34 @@ Fees per payment:
 
 Monthly pricing loses about 9% to fees under either provider, so yearly should be the headline price.
 
-## Recommendation
+## Recommendation (2026-10-09, superseded by the Decision)
 
-**B on Mollie: a €29.99 Pro year pass paid with Bancontact, iDEAL or card.**
-- Pro holds `node_network_generation`, `navigation` (once it leaves experimental) and a higher `route_generation` quota.
-- Existing users keep `collections`, saved routes and PATs.
-
-Why:
-- Bancontact is how Belgians pay online, and it is a plain one-off payment under B.
-- The Entitlement table already models a pass, so nothing extra is needed for it.
-- No mandates, no dunning and no portal means the shortest path to a first euro.
-- If passes sell, move to A on Mollie Subscriptions. Mollie's recurring flow starts with the same first Bancontact or iDEAL payment, and the Plan/Entitlement seam does not change.
-
-Pick Stripe instead only if an existing Stripe account, Stripe Tax or Managed Payments (to offload VAT OSS) matters more than native Bancontact recurring.
+The proposal was B on Mollie, for native Bancontact recurring if passes later turned into a subscription. Robbe chose B on Stripe because Robbe already has a Stripe account. For a one-off pass, Stripe's Bancontact, iDEAL and card fees are slightly lower than Mollie's (see the table above), and the native-recurring advantage only matters for model A.
 
 ## Consequences
 
 - **Positive:**
   - Every later gate is a one-line `can()` call plus a Feature moving out of `PLAN_FEATURES.free`.
   - Self-host can never hit a paywall.
-  - The Plan is written only by the billing webhook, so the API stays the source of truth (#135).
+  - Pro state is written only by the webhook, so the API stays the source of truth (#135).
+  - No mandates, dunning, portal or subscription state to keep in sync.
 - **Negative:**
-  - `PLAN_FEATURES.free` currently equals `pro`, and no endpoint calls `can()`. That is deliberate, but the code is unused until the decision lands.
-  - Turning `BILLING_ENABLED` on today stops the API from starting. This is on purpose: no provider implementation exists yet.
-- **Follow-ups once the questions are answered:**
-  - a provider implementation, plus checkout and webhook endpoints
-  - per-Plan generation quota
-  - a web paywall and billing settings page
-  - `payment_*` ProductEvents
-  - cancelling on account deletion
+  - Revenue does not renew on its own; a reminder before a pass expires needs the email system (#343).
+  - The API needs four more values to boot with billing on, and refuses to start without them.
+  - Anonymous generation drops from 50 to 1 a day per IP once billing is on.
+- **Follow-ups:**
+  - a pass-expiry reminder email (#343)
   - landing copy: drop the Pro features that do not exist, and fix the "generation not live" teaser
-  - terms and privacy (PR #372)
+  - terms and privacy naming the seller and Stripe as processor (PR #372)
+  - refunds through the `charge.refunded` webhook instead of by hand, if they become common
 
-## Questions for Robbe
+## Questions for Robbe (answered 2026-10-10)
 
-1. **Model:** A (subscription), B (year pass) or C (supporter only)?
-2. **What is Pro:** which of `route_generation` (and what free daily allowance), `node_network_generation`, `navigation`, `collections`, `personal_access_tokens`? Do existing users keep what they already use?
-3. **Price:** €29.99/year pass, or €3.99/month and €34.99/year? Both are VAT-inclusive.
-4. **Provider:** Mollie (native Bancontact recurring, no portal), or Stripe (do you already have an account with products? It has a portal and Tax)? Should a merchant of record take VAT OSS off your hands?
-5. **Seller:** which legal entity and VAT number sells, so that invoices, the terms and privacy (#372) and the landing copy can name it? Is the "save unlimited routes, free" promise permanent?
+1. **Model:** B, the year pass.
+2. **What is Pro:** a higher `route_generation` quota (free 3/day signed in, Pro 50/day). Existing users keep everything, plus three months of Pro as OG users.
+3. **Price:** €29.99 incl. VAT for 365 days.
+4. **Provider:** Stripe, no merchant of record.
+5. **Seller:** Robbe (robbeverhelst), under Robbe's VAT number.
 
 ## References
 

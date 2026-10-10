@@ -56,6 +56,11 @@ export const queryKeys = {
 		session: () => [...queryKeys.auth.all, "session"] as const,
 		tokens: () => [...queryKeys.auth.all, "tokens"] as const,
 	},
+	// Billing status (ADR 0039); the account part differs signed in and out.
+	billing: {
+		all: ["billing"] as const,
+		status: (signedIn: boolean) => [...queryKeys.billing.all, "status", signedIn] as const,
+	},
 	// Social queries (profiles, follows, feed, share inbox)
 	social: {
 		all: ["social"] as const,

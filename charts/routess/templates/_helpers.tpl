@@ -354,6 +354,38 @@ validates the same production config, so it needs every value the api needs.
 - name: GENERATION_QUOTA_PER_DAY
   value: {{ . | quote }}
 {{- end }}
+- name: BILLING_ENABLED
+  value: {{ .Values.api.env.billing.enabled | quote }}
+{{- with .Values.api.env.billing.launchedAt }}
+- name: BILLING_LAUNCHED_AT
+  value: {{ . | quote }}
+{{- end }}
+{{- with .Values.api.env.billing.stripePriceProYearPass }}
+- name: STRIPE_PRICE_PRO_YEAR_PASS
+  value: {{ . | quote }}
+{{- end }}
+{{- with .Values.api.env.billing.generationQuotaPerDayAnonymous }}
+- name: GENERATION_QUOTA_PER_DAY_ANONYMOUS
+  value: {{ . | quote }}
+{{- end }}
+{{- with .Values.api.env.billing.generationQuotaPerDayFree }}
+- name: GENERATION_QUOTA_PER_DAY_FREE
+  value: {{ . | quote }}
+{{- end }}
+{{- with .Values.api.env.billing.generationQuotaPerDayPro }}
+- name: GENERATION_QUOTA_PER_DAY_PRO
+  value: {{ . | quote }}
+{{- end }}
+- name: STRIPE_SECRET_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "routess.fullname" . }}-api
+      key: stripe-secret-key
+- name: STRIPE_WEBHOOK_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "routess.fullname" . }}-api
+      key: stripe-webhook-secret
 - name: RESEND_API_KEY
   valueFrom:
     secretKeyRef:

@@ -178,16 +178,28 @@ A long-lived bearer credential a User mints for non-browser clients (the `routes
 _Avoid_: API key, access token, bearer token (the term is **PAT** when discussing the domain shape; "Bearer token" is the HTTP transport detail).
 
 **Plan**:
-What a User has on the hosted product: `free` (the default) or `pro`. Written only by the billing webhook, never by the browser. A Plan includes a fixed set of **Features**; the code holds that mapping, not the database. With billing off (the default, and always on self-hosted instances) the Plan is ignored and every Feature is unlocked. See ADR 0039.
-_Avoid_: tier, subscription (a subscription is one way of paying for a Plan), license.
+What a User is on in the hosted product: `free` (the default) or `pro`. The Plan in effect is `pro` while the User holds an unexpired Pro grant (a **Pro pass** or the **OG grant**), or when an operator stored `pro` as a permanent comp. It is never written by the browser. A Plan includes a fixed set of **Features** and a daily RouteGeneration allowance; the code and config hold that mapping, not the database. Today Free and Pro include the same Features, and Pro differs only by the higher allowance. With billing off (the default, and always on self-hosted instances) the Plan is ignored and every Feature is unlocked. See ADR 0039.
+_Avoid_: tier (that is the quota tier: anonymous, free or pro), subscription (Routess sells no subscription), license.
 
 **Feature** (billing sense):
 A named capability a Plan or an **Entitlement** can unlock, e.g. `route_generation` or `gpx_export`. The list is closed and typed in the API; every entry names something the app already does. The API is the source of truth for whether a User may use one (`can(user, feature)`).
 _Avoid_: perk, permission (that is RouteVisibility and roles), flag.
 
 **Entitlement**:
-A per-User grant of one Feature on top of the User's Plan, with a source (`manual` for comps and beta access, `billing` for things like a one-time purchase) and an optional expiry. An expired Entitlement stops counting; revoking deletes it.
+A per-User grant on top of the User's Plan: either one Feature, or the whole Pro Plan for a while. Its source is `manual` (comps and beta access), `billing` (a paid **Pro pass**) or `og-grant` (the **OG grant**), and it may expire. An expired Entitlement stops counting; revoking deletes it.
 _Avoid_: license, grant (as a noun for the stored row), unlock.
+
+**Pro pass**:
+A one-off payment (€29.99 incl. VAT, Stripe Checkout with Bancontact, iDEAL or card) that gives a User the Pro Plan for 365 days from the payment. Buying again adds 365 days to the current Pro expiry, so no paid day is lost. Nothing renews, so there is nothing to cancel. The Stripe webhook, never the browser's return from checkout, writes it.
+_Avoid_: subscription, membership, year plan.
+
+**OG grant**:
+Three months of Pro, given once to every account created before the billing launch (`BILLING_LAUNCHED_AT`), on its next login. Stored as an Entitlement with source `og-grant`. It extends any Pro time the User already holds and never comes back after it expires or is revoked.
+_Avoid_: trial (nobody is asked to pay afterwards), free month.
+
+**Payment**:
+The record of one paid checkout for a Pro pass: provider event id, checkout reference, amount, and the Pro expiry it produced. It makes the webhook idempotent and is the bookkeeping trail, so it outlives a hard-deleted User (only the link to the User is cleared).
+_Avoid_: order, invoice (Stripe issues those), transaction.
 
 ## Social
 

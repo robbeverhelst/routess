@@ -107,7 +107,7 @@ Fired once per draft from `addWaypoint` in `apps/web/src/features/routing/RouteD
 |---|---|---|
 | `route_generation_started` | User submits the generation form | `activity`, `route_type`, `target_distance_m_bucket`, `surface_type`, `heading` |
 | `route_generation_succeeded` | Candidate(s) returned | `activity`, `route_type`, `candidate_count`, `duration_ms_bucket`, `delta_from_target_pct_bucket` |
-| `route_generation_failed` | Generation failed | `activity`, `route_type`, `failure_reason: "no_route_found" \| "timeout" \| "provider_error" \| "invalid_input"` |
+| `route_generation_failed` | Generation failed | `activity`, `route_type`, `failure_reason: "no_route_found" \| "timeout" \| "provider_error" \| "invalid_input" \| "quota_exceeded"` |
 
 A generated route that gets *saved* fires `route_created` with `creation_source: "generated"` — there is no separate `route_generation_accepted`.
 
@@ -141,15 +141,19 @@ Viewport moves deliberately do not fire events — panning is continuous, not di
 
 Membership changes (add/remove/reorder) are deliberately not events — too noisy, and `collection_created` + route counts in Postgres answer the adoption question.
 
-## Payment (feature pending — #135)
+## Payment (Pro year pass — #135, ADR 0039)
 
 | Event | When | Properties |
 |---|---|---|
-| `payment_started` | Stripe Checkout redirect | `plan`, `interval: "monthly" \| "yearly"` |
-| `payment_completed` | Success-return URL from Stripe | `plan`, `interval` |
-| `payment_cancelled` | Cancel-return URL from Stripe | `plan`, `interval` |
+| `payment_started` | Checkout Session created, right before the redirect to Stripe Checkout | `plan: "pro"`, `offer: "pro_year_pass"`, `is_extension: boolean` |
+| `payment_completed` | `/upgrade?checkout=success` loads (the success-return URL from Stripe) | `plan: "pro"`, `offer: "pro_year_pass"` |
+| `payment_cancelled` | `/upgrade?checkout=cancelled` loads (the cancel-return URL from Stripe) | `plan: "pro"`, `offer: "pro_year_pass"` |
 
-`payment_completed` fires web-side, not from the Stripe webhook. The webhook is the source of truth for entitlement state in the DB; ProductEvents only need the UI moment. Tab-close-before-return is acceptable loss for v1 (reconcile from Stripe if needed).
+The pass is a one-off payment, so there is no billing `interval`. `is_extension` is true when the User already had Pro when they started checkout (buying again extends from the current expiry); it answers the renewal question without a separate event.
+
+`payment_completed` fires web-side, not from the Stripe webhook. The webhook is the source of truth for entitlement state in the DB; ProductEvents only need the UI moment. Tab-close-before-return is acceptable loss for v1 (reconcile from Stripe if needed). The return page fires each event once per page load, guarded against React StrictMode's double mount, like `auth.verify-email`.
+
+Hitting the generation quota shows as `route_generation_failed` with `failure_reason: "quota_exceeded"`; a sign-in from that prompt carries `entry_point: "generation_quota"` on `signup_started`.
 
 ## Onboarding (feature pending)
 

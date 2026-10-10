@@ -164,6 +164,18 @@ export async function startGeneration(
 		return;
 	}
 
+	if (response.status === 429) {
+		const quota = await readQuotaDetails(response);
+		if (quota) {
+			useGenerationStore.getState().setFailure({ code: "quota_exceeded", ...quota });
+			trackEvent({
+				name: "route_generation_failed",
+				properties: { activity, route_type: routeType, failure_reason: "quota_exceeded" },
+			});
+			return;
+		}
+	}
+
 	if (!response.ok) {
 		Logger.warn(`[Generation] API returned ${response.status}`);
 		failWith(response.status === 400 ? "invalid_input" : "provider_unavailable", activity, routeType);
@@ -220,6 +232,22 @@ export async function startGeneration(
 			if (gain !== null) useGenerationStore.getState().setCandidateElevation(index, gain);
 		});
 	});
+}
+
+// The daily generation quota answers 429 with details naming the cap and what
+// lifts it (sign in, or Pro); a per-minute throttle 429 has no such details.
+async function readQuotaDetails(
+	response: Response,
+): Promise<{ limit: number; upgrade: "sign_in" | "pro" | null } | null> {
+	try {
+		const body = (await response.json()) as {
+			details?: { reason?: string; limit?: number; upgrade?: "sign_in" | "pro" | null };
+		};
+		if (body.details?.reason !== "generation_quota" || typeof body.details.limit !== "number") return null;
+		return { limit: body.details.limit, upgrade: body.details.upgrade ?? null };
+	} catch {
+		return null;
+	}
 }
 
 function failWith(code: GenerationFailureCode, activity: RouteActivity, routeType: "loop" | "a-to-b"): void {

@@ -3,6 +3,8 @@ import { InjectRepository } from "@mikro-orm/nestjs";
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { normalizeUserPreferences } from "@routess/core";
 import JSZip from "jszip";
+import { Entitlement } from "../entities/entitlement.entity";
+import { Payment } from "../entities/payment.entity";
 import { Route } from "../entities/route.entity";
 import { User } from "../entities/user.entity";
 
@@ -73,8 +75,8 @@ const README = `routess data export
 
 Files:
   routess-export.json
-    Authoritative dump of your account: profile, preferences, and every Route
-    you own with its full waypoint and geometry data. This is the file to keep
+    Authoritative dump of your account: profile, preferences, Pro passes and
+    payments, and every Route you own with its full waypoint and geometry data. This is the file to keep
     if you want to re-import your data into Routess later.
 
   routes/<id>-<slug>.gpx
@@ -95,6 +97,10 @@ export class DataExportService {
 		private readonly userRepository: EntityRepository<User>,
 		@InjectRepository(Route)
 		private readonly routeRepository: EntityRepository<Route>,
+		@InjectRepository(Entitlement)
+		private readonly entitlementRepository: EntityRepository<Entitlement>,
+		@InjectRepository(Payment)
+		private readonly paymentRepository: EntityRepository<Payment>,
 	) {}
 
 	async buildExportZip(userId: number): Promise<{ filename: string; bytes: Buffer }> {
@@ -111,6 +117,9 @@ export class DataExportService {
 			{ orderBy: { createdAt: "ASC" }, limit: MAX_EXPORT_ROUTES },
 		);
 
+		const entitlements = await this.entitlementRepository.find({ user: userId }, { orderBy: { createdAt: "ASC" } });
+		const payments = await this.paymentRepository.find({ user: userId }, { orderBy: { paidAt: "ASC" } });
+
 		const exportPayload = {
 			schemaVersion: 1,
 			exportedAt: new Date().toISOString(),
@@ -125,6 +134,23 @@ export class DataExportService {
 				createdAt: user.createdAt.toISOString(),
 				updatedAt: user.updatedAt.toISOString(),
 			},
+			// Plan and Feature grants (Pro passes, the OG grant, comps) and the
+			// payments behind them (ADR 0039).
+			entitlements: entitlements.map((e) => ({
+				feature: e.feature ?? null,
+				plan: e.plan ?? null,
+				source: e.source,
+				expiresAt: e.expiresAt?.toISOString() ?? null,
+				createdAt: e.createdAt.toISOString(),
+			})),
+			payments: payments.map((p) => ({
+				provider: p.provider,
+				offer: p.offer,
+				amountTotal: p.amountTotal ?? null,
+				currency: p.currency ?? null,
+				paidAt: p.paidAt.toISOString(),
+				passExpiresAt: p.passExpiresAt?.toISOString() ?? null,
+			})),
 			routes: routes.map((r) => ({
 				id: r.id,
 				name: r.name,

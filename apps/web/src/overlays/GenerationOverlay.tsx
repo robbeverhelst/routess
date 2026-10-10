@@ -1,8 +1,10 @@
 import { formatDistance, formatDuration, type GenerationFailureCode, type SurfaceBucket } from "@routess/core";
 import { surfaceBucketColors } from "@routess/design-tokens";
+import { useNavigate } from "@tanstack/react-router";
 import { candidateWaypoints, startGeneration } from "@/features/generation/generationService";
 import { useRouteDraftEditor } from "@/features/routing/RouteDraftEditorProvider";
 import { useIsMobile } from "@/hooks/useViewport";
+import { emitAppEvent } from "@/lib/app-events";
 import { useT } from "@/lib/i18n";
 import { type GenerationCandidateView, useGenerationStore } from "@/stores/generationStore";
 import { useLoopPreferencesStore } from "@/stores/loopPreferencesStore";
@@ -131,6 +133,7 @@ export function GenerationOverlay() {
 	const pushToast = useToastStore((s) => s.push);
 	const isMobile = useIsMobile();
 	const panelCollapsed = useUiStore((s) => s.panelCollapsed);
+	const navigate = useNavigate();
 
 	if (status === "idle") return null;
 
@@ -198,7 +201,34 @@ export function GenerationOverlay() {
 			void startGeneration(request.start, request.end ? { end: request.end } : undefined);
 		};
 		const chips: { key: string; label: string; onClick: () => void }[] = [];
-		if (request) {
+		let message: string;
+		if (failure.code === "quota_exceeded") {
+			// The daily generation quota (ADR 0039): signing in or Pro lifts it.
+			message = t("loop.failure.quota", { count: String(failure.limit) });
+			if (failure.upgrade === "sign_in") {
+				chips.push({
+					key: "sign-in",
+					label: t("loop.quota.signIn"),
+					onClick: () => {
+						dismiss();
+						emitAppEvent("routess:open-login", { entryPoint: "generation_quota" });
+					},
+				});
+			}
+			if (failure.upgrade === "pro") {
+				chips.push({
+					key: "upgrade",
+					label: t("loop.quota.upgrade"),
+					onClick: () => {
+						dismiss();
+						void navigate({ to: "/upgrade" });
+					},
+				});
+			}
+		} else {
+			message = t(FAILURE_MESSAGE_KEY[failure.code]);
+		}
+		if (request && failure.code !== "quota_exceeded") {
 			if (failure.code === "provider_unavailable") {
 				chips.push({ key: "retry", label: t("loop.retry"), onClick: retry });
 			}
@@ -230,7 +260,7 @@ export function GenerationOverlay() {
 			<div style={containerStyle}>
 				<div style={panelStyle}>
 					<div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-						<span style={{ fontSize: 12.5, color: RDS_COLORS.fg }}>{t(FAILURE_MESSAGE_KEY[failure.code])}</span>
+						<span style={{ fontSize: 12.5, color: RDS_COLORS.fg }}>{message}</span>
 						<div style={{ flex: 1 }} />
 						<button
 							type="button"

@@ -119,6 +119,24 @@ Für den Web-Container:
 
 Das Browser-Konsolen-Logging steht standardmäßig auf `warn`. Um einen einzelnen Browser zu debuggen, setze `localStorage["routess:log-level"]` auf `debug`, `info`, `warn`, `error` oder `none` und lade neu.
 
+## Bezahlung (nur das gehostete Produkt)
+
+Routess.com verkauft einen Pro-Jahrespass (ADR 0039). Eine selbst gehostete Instanz lässt die Bezahlung aus, das ist der Standard: Jede Funktion bleibt freigeschaltet, alle bekommen `GENERATION_QUOTA_PER_DAY` generierte Routen pro Tag, und kein Zahlungsanbieter wird kontaktiert. Lass `BILLING_ENABLED=false` stehen oder setze es nicht.
+
+Zur Referenz: Diese Variablen setzt das gehostete Produkt. Mit `BILLING_ENABLED=true` startet die API nur, wenn der Startzeitpunkt und alle drei Stripe-Werte gesetzt sind.
+
+| Variable                              | Standard | Zweck                                                                                        |
+| ------------------------------------- | -------- | -------------------------------------------------------------------------------------------- |
+| `BILLING_ENABLED`                     | `false`  | Schaltet den Pro-Pass, die Paywall und das Generierungskontingent pro Stufe ein.             |
+| `BILLING_PROVIDER`                    | `stripe` | Zahlungsanbieter. Nur `stripe` ist implementiert.                                            |
+| `BILLING_LAUNCHED_AT`                 | leer     | ISO-Zeitstempel des Starts. Konten, die davor angelegt wurden, bekommen beim nächsten Login 3 Monate Pro. |
+| `STRIPE_SECRET_KEY`                   | leer     | Geheimer Stripe-Schlüssel (`sk_live_…` oder ein eingeschränkter `rk_live_…`).                |
+| `STRIPE_WEBHOOK_SECRET`               | leer     | Signaturgeheimnis (`whsec_…`) des Webhook-Endpunkts `<api>/api/v1/billing/webhook`.          |
+| `STRIPE_PRICE_PRO_YEAR_PASS`          | leer     | Stripe-Price-ID des einmaligen Pro-Jahrespasses.                                             |
+| `GENERATION_QUOTA_PER_DAY_ANONYMOUS`  | `1`      | Generierte Routen pro Tag für nicht angemeldete Besucher (pro IP), solange die Bezahlung an ist. `0` hebt die Grenze auf. |
+| `GENERATION_QUOTA_PER_DAY_FREE`       | `3`      | Dasselbe für angemeldete Nutzer im kostenlosen Plan.                                         |
+| `GENERATION_QUOTA_PER_DAY_PRO`        | `50`     | Dasselbe für Pro-Nutzer.                                                                     |
+
 ## Hinter einen Reverse-Proxy stellen
 
 Das Standard-Compose exponiert die Ports direkt. Für TLS und eine echte Domain stelle den `web`- und `api`-Services einen Reverse-Proxy voran (Caddy, Traefik, ingress-nginx, Cloudflare Tunnel) und überschreibe die öffentlichen URLs in `.env`:

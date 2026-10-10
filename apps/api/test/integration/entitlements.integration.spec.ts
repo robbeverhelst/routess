@@ -25,7 +25,18 @@ const fakeProvider: BillingProvider = {
 		url: `https://checkout.example/${request.offer}`,
 		providerRef: `cs_${request.userId}`,
 	}),
-	parseWebhook: async (delivery) => JSON.parse(delivery.rawBody.toString("utf8")),
+	parseWebhook: async (delivery) => {
+		const event = JSON.parse(delivery.rawBody.toString("utf8"));
+		return { ...event, paidAt: new Date(event.paidAt) };
+	},
+	describeOffer: async () => ({ amount: 2999, currency: "eur" }),
+};
+
+const BILLING_ON = {
+	enabled: true,
+	provider: "stripe" as const,
+	launchedAt: new Date("2026-01-01T00:00:00Z"),
+	stripe: { secretKey: "sk_test_x", webhookSecret: "whsec_x", proYearPassPriceId: "price_x" },
 };
 
 describe("Entitlements with billing enabled", () => {
@@ -39,7 +50,7 @@ describe("Entitlements with billing enabled", () => {
 			configure: (builder) =>
 				builder
 					.overrideProvider(APP_CONFIG)
-					.useValue({ ...getAppConfig(), billing: { enabled: true, provider: "stripe" } })
+					.useValue({ ...getAppConfig(), billing: BILLING_ON })
 					.overrideProvider(BILLING_PROVIDER)
 					.useValue(fakeProvider)
 					.overrideProvider(PLAN_FEATURE_MATRIX)
@@ -142,33 +153,61 @@ describe("Entitlements with billing enabled", () => {
 		expect(await can(user, "collections")).toBe(false);
 	});
 
-	it("applies a plan change from the billing webhook, idempotently", async () => {
+	it("treats a running Pro grant as the pro plan, and an expired one as the stored plan", async () => {
+		const user = await makeUser("pass@example.com");
+		const expiresAt = new Date(Date.now() + 30 * DAY_MS);
+		await withRequestContext(app, async () => {
+			const row = orm.em.create(Entitlement, { user: user.id, plan: "pro", source: "billing", expiresAt });
+			await orm.em.persist(row).flush();
+		});
+
+		expect(await can(user, "route_generation")).toBe(true);
+		const status = await withRequestContext(app, () => entitlements.planStatus(user));
+		expect(status).toEqual({ plan: "pro", proExpiresAt: expiresAt });
+		expect(await withRequestContext(app, () => entitlements.quotaTier(user))).toBe("pro");
+
+		const later = new Date(Date.now() + 31 * DAY_MS);
+		expect(await withRequestContext(app, () => entitlements.planStatus(user, later))).toEqual({
+			plan: "free",
+			proExpiresAt: null,
+		});
+		expect(await withRequestContext(app, () => entitlements.quotaTier(null))).toBe("anonymous");
+	});
+
+	it("applies a pass purchase from the billing webhook, idempotently", async () => {
 		const user = await makeUser("upgrade@example.com");
+		const paidAt = new Date();
 		const delivery = {
 			rawBody: Buffer.from(
-				JSON.stringify({ kind: "plan_changed", userId: user.id, plan: "pro", providerRef: "sub_1" }),
+				JSON.stringify({
+					kind: "pass_purchased",
+					eventId: "evt_1",
+					userId: user.id,
+					offer: "pro_year_pass",
+					providerRef: "cs_1",
+					paidAt: paidAt.toISOString(),
+					amountTotal: 2999,
+					currency: "eur",
+				}),
 			),
 			headers: {},
 		};
 
-		await withRequestContext(app, () => billing.handleWebhook(delivery));
-		await withRequestContext(app, () => billing.handleWebhook(delivery));
+		expect(await withRequestContext(app, () => billing.handleWebhook(delivery))).toBe("applied");
+		expect(await withRequestContext(app, () => billing.handleWebhook(delivery))).toBe("duplicate");
 
-		const stored = await withRequestContext(app, () => orm.em.fork().findOneOrFail(User, { id: user.id }));
-		expect(stored.plan).toBe("pro");
-		expect(await can(stored, "route_generation")).toBe(true);
+		const status = await withRequestContext(app, () => entitlements.planStatus(user));
+		expect(status).toEqual({ plan: "pro", proExpiresAt: new Date(paidAt.getTime() + 365 * DAY_MS) });
+		expect(await can(user, "route_generation")).toBe(true);
 	});
 
-	it("delegates checkout to the provider", async () => {
+	it("delegates checkout to the provider with the upgrade page as return URLs", async () => {
+		const user = await makeUser("buyer@example.com");
 		expect(billing.enabled).toBe(true);
-		const session = await billing.startCheckout({
-			userId: 7,
-			email: "buyer@example.com",
-			offer: "pro_yearly",
-			successUrl: "https://app.example/billing/success",
-			cancelUrl: "https://app.example/billing/cancel",
-		});
-		expect(session).toEqual({ url: "https://checkout.example/pro_yearly", providerRef: "cs_7" });
+		const session = await withRequestContext(app, () =>
+			billing.startCheckout(user, "pro_year_pass", "https://app.example/"),
+		);
+		expect(session).toEqual({ url: "https://checkout.example/pro_year_pass", providerRef: `cs_${user.id}` });
 	});
 });
 
@@ -191,7 +230,7 @@ describe("Entitlements with billing disabled (default, self-host)", () => {
 	});
 
 	it("is the default configuration", () => {
-		expect(getAppConfig().billing).toEqual({ enabled: false, provider: null });
+		expect(getAppConfig().billing.enabled).toBe(false);
 	});
 
 	it("unlocks every feature for everyone", async () => {
@@ -204,15 +243,10 @@ describe("Entitlements with billing disabled (default, self-host)", () => {
 
 	it("refuses billing work with 503", async () => {
 		expect(billing.enabled).toBe(false);
-		await expect(
-			billing.startCheckout({
-				userId: 1,
-				email: "x@example.com",
-				offer: "pro_monthly",
-				successUrl: "https://app.example/s",
-				cancelUrl: "https://app.example/c",
-			}),
-		).rejects.toMatchObject({ status: 503 });
+		await expect(billing.startCheckout({ id: 1, email: "x@example.com" }, "pro_year_pass")).rejects.toMatchObject({
+			status: 503,
+		});
+		expect(await billing.status(null)).toEqual({ enabled: false });
 	});
 
 	it("ships a free plan that still includes every feature", () => {

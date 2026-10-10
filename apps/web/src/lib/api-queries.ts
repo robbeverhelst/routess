@@ -1,4 +1,5 @@
 import type {
+	ApiBillingStatus,
 	ApiCollection,
 	ApiCollectionDetail,
 	ApiDiscoverPage,
@@ -699,4 +700,45 @@ export function usePrefetchRoutes() {
 			});
 		}
 	};
+}
+
+// ============================================================================
+// BILLING (ADR 0039)
+// ============================================================================
+
+/**
+ * Billing status: whether this instance sells the Pro pass, its price, the
+ * daily generation allowance per tier and, when signed in, the account's Plan
+ * and Pro expiry. Self-hosted instances answer `{ enabled: false }`, which
+ * hides every billing surface.
+ */
+export function useBillingStatus(options: { refetchInterval?: number | false } = {}) {
+	const signedIn = hasStoredUser();
+	return useQuery<ApiBillingStatus>({
+		queryKey: queryKeys.billing.status(signedIn),
+		queryFn: () => apiService.getBillingStatus(),
+		staleTime: 60 * 1000,
+		retry: false,
+		refetchInterval: options.refetchInterval,
+	});
+}
+
+/**
+ * Start a Pro pass checkout and send the browser to Stripe. The webhook, not
+ * the return trip, grants the pass.
+ */
+export function useStartCheckout() {
+	return useMutation<void, Error, { isExtension: boolean }>({
+		mutationFn: async ({ isExtension }) => {
+			const { url } = await apiService.startCheckout("pro_year_pass");
+			trackEvent({
+				name: "payment_started",
+				properties: { plan: "pro", offer: "pro_year_pass", is_extension: isExtension },
+			});
+			window.location.assign(url);
+		},
+		onError: (error) => {
+			Logger.error("Failed to start checkout:", error);
+		},
+	});
 }

@@ -5,12 +5,14 @@ import config from "../../src/mikro-orm.config";
 
 // Migration20261009000000 (ADR 0039) must stay reversible: down() drops the
 // Plan column and the entitlement table without touching existing Users, and
-// up() after a down() restores them. Runs the real migrator against a
-// throwaway database, since the other integration tests build the schema from
-// entities and never exercise migrations.
+// up() after a down() restores them. Migration20261010000000 (the Pro pass)
+// adds Plan grants and the payment table on top, reversibly. Runs the real
+// migrator against a throwaway database, since the other integration tests
+// build the schema from entities and never exercise migrations.
 const DB_NAME = "routess_db_migration_test";
 const PREVIOUS = "Migration20260611000000";
 const MIGRATION = "Migration20261009000000";
+const PASS_MIGRATION = "Migration20261010000000";
 const MIGRATIONS_PATH = join(__dirname, "../../src/migrations");
 
 function adminClient(): Client {
@@ -105,5 +107,66 @@ describe("payments migration", () => {
 		await conn.execute(`delete from "user" where "id" = ?`, [user.id]);
 		const [left] = await conn.execute(`select count(*)::int as n from "entitlement"`);
 		expect(left.n).toBe(0);
+	});
+
+	it("adds Plan grants and the payment table, keeping payments past a hard delete, and reverses cleanly", async () => {
+		const conn = orm.em.getConnection();
+		await conn.execute(
+			`insert into "user" ("email", "name", "handle", "created_at", "updated_at") values ('pass@example.com', 'Pass', 'pass-user', now(), now())`,
+		);
+		const [user] = await conn.execute(`select "id" from "user" where "email" = 'pass@example.com'`);
+		await conn.execute(
+			`insert into "entitlement" ("user_id", "feature", "source") values (?, 'navigation', 'manual')`,
+			[user.id],
+		);
+
+		await orm.migrator.up({ to: PASS_MIGRATION });
+		expect(await tableExists("payment")).toBe(true);
+		expect(await columnExists("entitlement", "plan")).toBe(true);
+
+		await conn.execute(
+			`insert into "entitlement" ("user_id", "plan", "source", "expires_at") values (?, 'pro', 'billing', now() + interval '365 days')`,
+			[user.id],
+		);
+		// A row grants a Feature or a Plan, never both or neither.
+		await expect(
+			conn.execute(
+				`insert into "entitlement" ("user_id", "feature", "plan", "source") values (?, 'navigation', 'pro', 'og-grant')`,
+				[user.id],
+			),
+		).rejects.toThrow();
+		await expect(
+			conn.execute(`insert into "entitlement" ("user_id", "source") values (?, 'og-grant')`, [user.id]),
+		).rejects.toThrow();
+		// One Plan row per source.
+		await expect(
+			conn.execute(`insert into "entitlement" ("user_id", "plan", "source") values (?, 'pro', 'billing')`, [user.id]),
+		).rejects.toThrow();
+
+		await conn.execute(
+			`insert into "payment" ("user_id", "provider", "event_id", "checkout_ref", "offer", "paid_at") values (?, 'stripe', 'evt_1', 'cs_1', 'pro_year_pass', now())`,
+			[user.id],
+		);
+		await expect(
+			conn.execute(
+				`insert into "payment" ("user_id", "provider", "event_id", "checkout_ref", "offer", "paid_at") values (?, 'stripe', 'evt_1', 'cs_2', 'pro_year_pass', now())`,
+				[user.id],
+			),
+		).rejects.toThrow();
+
+		await orm.migrator.down({ to: MIGRATION });
+		expect(await tableExists("payment")).toBe(false);
+		expect(await columnExists("entitlement", "plan")).toBe(false);
+		const [kept] = await conn.execute(`select count(*)::int as n from "entitlement" where "user_id" = ?`, [user.id]);
+		expect(kept.n).toBe(1);
+
+		await orm.migrator.up({ to: PASS_MIGRATION });
+		await conn.execute(
+			`insert into "payment" ("user_id", "provider", "event_id", "checkout_ref", "offer", "paid_at") values (?, 'stripe', 'evt_2', 'cs_2', 'pro_year_pass', now())`,
+			[user.id],
+		);
+		await conn.execute(`delete from "user" where "id" = ?`, [user.id]);
+		const [payment] = await conn.execute(`select "user_id" from "payment" where "event_id" = 'evt_2'`);
+		expect(payment.user_id).toBeNull();
 	});
 });

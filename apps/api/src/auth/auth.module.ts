@@ -5,6 +5,7 @@ import type { JwtModuleOptions } from "@nestjs/jwt";
 import { JwtModule } from "@nestjs/jwt";
 import { PassportModule } from "@nestjs/passport";
 import { ScheduleModule } from "@nestjs/schedule";
+import { BillingModule } from "../billing/billing.module";
 import type { AppConfig } from "../config/app-config";
 import { APP_CONFIG, ConfigModule } from "../config/config.module";
 import { EmailModule } from "../email/email.module";
@@ -30,6 +31,7 @@ import { PatBearerStrategy } from "./strategies/pat-bearer.strategy";
 	imports: [
 		ConfigModule,
 		EmailModule,
+		BillingModule,
 		MikroOrmModule.forFeature([User, Session, UserAuthMethod, VerificationToken, PersonalAccessToken]),
 		PassportModule.register({ defaultStrategy: "jwt" }),
 		ScheduleModule.forRoot(),

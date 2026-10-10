@@ -119,6 +119,24 @@ Voor de web-container:
 
 Console-logging in de browser staat standaard op `warn`. Om één browser te debuggen, zet je `localStorage["routess:log-level"]` op `debug`, `info`, `warn`, `error` of `none` en herlaad je.
 
+## Betalingen (alleen het gehoste product)
+
+Routess.com verkoopt een Pro-jaarpas (ADR 0039). Een zelf gehoste installatie laat betalingen uit, wat de standaard is: elke functie blijft ontgrendeld, iedereen krijgt `GENERATION_QUOTA_PER_DAY` gegenereerde routes per dag, en er wordt geen betaalprovider gecontacteerd. Laat `BILLING_ENABLED=false` staan, of zet het niet.
+
+Ter referentie: dit zijn de variabelen die het gehoste product zet. Met `BILLING_ENABLED=true` weigert de API te starten tenzij het lanceermoment en alle drie de Stripe-waarden gezet zijn.
+
+| Variabele                             | Standaard | Doel                                                                                         |
+| ------------------------------------- | --------- | -------------------------------------------------------------------------------------------- |
+| `BILLING_ENABLED`                     | `false`   | Zet de Pro-pas, de paywall en het generatiequotum per niveau aan.                             |
+| `BILLING_PROVIDER`                    | `stripe`  | Betaalprovider. Alleen `stripe` is geïmplementeerd.                                          |
+| `BILLING_LAUNCHED_AT`                 | leeg      | ISO-tijdstip van de lancering. Accounts die daarvoor zijn aangemaakt, krijgen bij hun volgende aanmelding 3 maanden Pro. |
+| `STRIPE_SECRET_KEY`                   | leeg      | Geheime Stripe-sleutel (`sk_live_…` of een beperkte `rk_live_…`).                            |
+| `STRIPE_WEBHOOK_SECRET`               | leeg      | Ondertekeningsgeheim (`whsec_…`) van het webhook-endpoint `<api>/api/v1/billing/webhook`.     |
+| `STRIPE_PRICE_PRO_YEAR_PASS`          | leeg      | Stripe Price-id van de eenmalige Pro-jaarpas.                                                |
+| `GENERATION_QUOTA_PER_DAY_ANONYMOUS`  | `1`       | Gegenereerde routes per dag voor bezoekers die niet aangemeld zijn (per IP) als betalingen aan staan. `0` schakelt de limiet uit. |
+| `GENERATION_QUOTA_PER_DAY_FREE`       | `3`       | Hetzelfde voor aangemelde gebruikers op het gratis plan.                                     |
+| `GENERATION_QUOTA_PER_DAY_PRO`        | `50`      | Hetzelfde voor Pro-gebruikers.                                                               |
+
 ## Achter een reverse proxy zetten
 
 De standaard-compose stelt poorten rechtstreeks beschikbaar. Voor TLS en een echt domein zet je een reverse proxy (Caddy, Traefik, ingress-nginx, Cloudflare Tunnel) voor de `web`- en `api`-services en override je de publieke URL's in `.env`:
