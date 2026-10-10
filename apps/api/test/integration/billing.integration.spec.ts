@@ -391,6 +391,30 @@ describe("Billing with Stripe enabled", () => {
 			expect(og.body.account.ogGrantExpiresAt).toBe(og.body.account.proExpiresAt);
 			expect(og.body.account.canBuy).toBe(true);
 		});
+
+		it("still answers the status when the OG grant fails, and retries it on the next read", async () => {
+			const { user, accessToken } = await createTestUserWithAuth(app, {
+				email: "st-err@example.com",
+				googleId: "g-st-err",
+			});
+			await backdate(user.id, BEFORE_LAUNCH);
+			const grant = jest.spyOn(billing, "grantOgPassIfEligible").mockRejectedValueOnce(new Error("lock timeout"));
+			try {
+				const failed = await supertest(app.getHttpServer())
+					.get("/api/v1/billing")
+					.set("Authorization", `Bearer ${accessToken}`)
+					.expect(200);
+				expect(failed.body.account.plan).toBe("free");
+
+				const retried = await supertest(app.getHttpServer())
+					.get("/api/v1/billing")
+					.set("Authorization", `Bearer ${accessToken}`)
+					.expect(200);
+				expect(retried.body.account.plan).toBe("pro");
+			} finally {
+				grant.mockRestore();
+			}
+		});
 	});
 
 	describe("generation quota per tier", () => {
