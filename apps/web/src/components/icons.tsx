@@ -1,5 +1,6 @@
 import {
 	Activity,
+	AlertTriangle,
 	ArrowUp,
 	ArrowUpDown,
 	Bell,
@@ -23,6 +24,7 @@ import {
 	Globe,
 	GripVertical,
 	Heart,
+	Hexagon,
 	Layers,
 	LocateFixed,
 	Lock,
@@ -47,6 +49,7 @@ import {
 	Share2,
 	Shield,
 	SlidersHorizontal,
+	Sparkles,
 	Sun,
 	Tag,
 	Target,
@@ -127,6 +130,9 @@ export const I = {
 	walk: Footprints,
 	check: Check,
 	shield: Shield,
+	alert: AlertTriangle,
+	sparkles: Sparkles,
+	hexagon: Hexagon,
 };
 
 export type IconKey = keyof typeof I;

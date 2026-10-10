@@ -107,7 +107,7 @@ export function DropMenu({
 							border: `1px solid ${RDS_COLORS.border}`,
 							borderRadius: 8,
 							padding: 4,
-							boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
+							boxShadow: "var(--rds-shadow-md)",
 							zIndex: 80,
 							...style,
 						}}

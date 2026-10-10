@@ -29,14 +29,14 @@ export function SurfaceMismatchBadge({ breakdown, preference }: Props) {
 				gap: 8,
 				padding: "8px 10px",
 				borderRadius: 8,
-				background: "rgba(245, 158, 11, 0.12)",
-				border: "1px solid rgba(245, 158, 11, 0.35)",
+				background: `color-mix(in oklch, ${RDS_COLORS.warn} 14%, transparent)`,
+				border: `1px solid color-mix(in oklch, ${RDS_COLORS.warn} 32%, transparent)`,
 				color: RDS_COLORS.fg,
 				fontSize: 12,
 			}}
 			role="status"
 		>
-			<I.flag size={14} />
+			<I.alert size={14} style={{ color: RDS_COLORS.warn, flexShrink: 0 }} />
 			<div style={{ flex: 1 }}>
 				<div style={{ fontWeight: 500 }}>
 					{t("routing.surface.mismatchTitle", { pref: t(`routing.surface.${preference}`) })}

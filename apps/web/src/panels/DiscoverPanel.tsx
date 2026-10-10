@@ -147,7 +147,7 @@ export function DiscoverPanel() {
 							padding: "1px 7px",
 							borderRadius: 999,
 							background: RDS_COLORS.accentSoft,
-							color: RDS_COLORS.accent,
+							color: RDS_COLORS.accentDeep,
 							fontSize: 10,
 							fontWeight: 700,
 							letterSpacing: 0.6,

@@ -42,13 +42,13 @@ export function RailNav() {
 				flexDirection: "column",
 				alignItems: "center",
 				padding: "12px 0",
-				gap: 4,
+				gap: 6,
 				flexShrink: 0,
 				zIndex: 5,
 			}}
 		>
 			<div style={{ marginBottom: 12, marginTop: 2 }}>
-				<img src="/logo.png" alt="routess" width={28} height={28} style={{ borderRadius: 8, display: "block" }} />
+				<img src="/logo.png" alt="routess" width={30} height={30} style={{ borderRadius: 9, display: "block" }} />
 			</div>
 			<div
 				style={{
@@ -84,9 +84,9 @@ export function RailNav() {
 							style={{
 								width: 36,
 								height: 36,
-								borderRadius: 8,
+								borderRadius: 10,
 								background: open ? RDS_COLORS.accentSoft : on ? RDS_COLORS.bgActive : "transparent",
-								color: open ? RDS_COLORS.accent : on ? RDS_COLORS.fg : RDS_COLORS.fgMuted,
+								color: open ? RDS_COLORS.accentDeep : on ? RDS_COLORS.fg : RDS_COLORS.fgMuted,
 								border: 0,
 								position: "relative",
 								display: "flex",
