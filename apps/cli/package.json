@@ -26,7 +26,7 @@
 		"prepack": "bun run build",
 		"lint": "biome check .",
 		"check-types": "tsc --noEmit",
-		"test": "bun run check-types"
+		"test": "bun test"
 	},
 	"dependencies": {},
 	"devDependencies": {
