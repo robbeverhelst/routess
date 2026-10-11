@@ -1011,9 +1011,7 @@ export const en: Record<string, string> = {
 	"upgrade.subtitle":
 		"One payment, a full year of Pro. No subscription: nothing renews and there is nothing to cancel.",
 	"upgrade.priceSuffix": "incl. VAT · 365 days",
-	"upgrade.generationPerDay": "{count} generated routes a day",
 	"upgrade.free.everything": "Planning, saved routes, collections, node-network routing, GPX and API tokens",
-	"upgrade.pro.everything": "Everything in Free",
 	"upgrade.buy": "Buy a year of Pro",
 	"upgrade.extend": "Add a year of Pro",
 	"upgrade.signInToBuy": "Sign in to buy",

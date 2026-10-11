@@ -1022,9 +1022,7 @@ export const nl: Record<string, string> = {
 	"upgrade.subtitle":
 		"Eén betaling, een volledig jaar Pro. Geen abonnement: er wordt niets verlengd en er valt niets op te zeggen.",
 	"upgrade.priceSuffix": "incl. btw · 365 dagen",
-	"upgrade.generationPerDay": "{count} gegenereerde routes per dag",
 	"upgrade.free.everything": "Plannen, opgeslagen routes, collecties, knooppuntroutes, GPX en API-tokens",
-	"upgrade.pro.everything": "Alles van Gratis",
 	"upgrade.buy": "Koop een jaar Pro",
 	"upgrade.extend": "Voeg een jaar Pro toe",
 	"upgrade.signInToBuy": "Meld je aan om te kopen",

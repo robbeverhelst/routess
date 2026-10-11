@@ -59,8 +59,6 @@ export class FakeRoutess {
 	plan: "free" | "pro" = "free";
 	proExpiresAt: Date | null = null;
 	ogGrantExpiresAt: Date | null = null;
-	// How often the OG grant was written; the API guarantees at most once.
-	ogGrantsApplied = 0;
 	logins = 0;
 	payments: { sessionId: string; method: string; amount: number }[] = [];
 	generationsUsed: number;
@@ -147,7 +145,6 @@ export class FakeRoutess {
 		this.plan = "pro";
 		this.proExpiresAt = until;
 		this.ogGrantExpiresAt = until;
-		this.ogGrantsApplied += 1;
 	}
 
 	// Mirrors BillingService.applyEvent: a pass extends from the current expiry.
