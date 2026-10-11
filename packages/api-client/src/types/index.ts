@@ -274,6 +274,42 @@ export interface AdminEngagement {
 	topRegions: AdminRegion[];
 }
 
+export interface AdminGenerationPoint {
+	date: string;
+	started: number;
+	succeeded: number;
+	failed: number;
+}
+
+export interface AdminMetrics {
+	days: number;
+	signups: {
+		total: number;
+		today: number;
+		last7Days: number;
+		last30Days: number;
+		daily: AdminTimeseriesPoint[];
+	};
+	activeUsers: {
+		last24Hours: number;
+		last7Days: number;
+		last30Days: number;
+	};
+	generations: {
+		// False when Umami is not configured or could not be read; `daily` is then empty.
+		productEventsAvailable: boolean;
+		daily: AdminGenerationPoint[];
+		savedDaily: AdminTimeseriesPoint[];
+	};
+	payingUsers: {
+		billingEnabled: boolean;
+		active: number;
+		everPaid: number;
+		proUsers: number;
+		paymentsDaily: AdminTimeseriesPoint[];
+	};
+}
+
 export interface AdminSeedRefreshResult {
 	source: string;
 	skipped: "not-due" | "manual" | "blocked" | null;

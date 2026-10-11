@@ -1,6 +1,7 @@
 import { EntityManager, EntityRepository } from "@mikro-orm/core";
 import { InjectRepository } from "@mikro-orm/nestjs";
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { ProductEventStatsService } from "../analytics/product-event-stats.service";
 import { SessionService } from "../auth/session.service";
 import type { AppConfig } from "../config/app-config";
 import { APP_CONFIG } from "../config/config.module";
@@ -12,7 +13,10 @@ import type { AdminRouteDetailDto, AdminRouteListDto, AdminRouteListItemDto } fr
 import type {
 	AdminConversionDto,
 	AdminEngagementDto,
+	AdminGenerationPointDto,
+	AdminMetricsDto,
 	AdminOverviewDto,
+	AdminPayingUserMetricsDto,
 	AdminRouteStatsDto,
 	AdminTimeseriesPointDto,
 	AdminTopCreatorDto,
@@ -22,6 +26,15 @@ import type { AdminConfigSummaryDto, AdminSystemHealthDto } from "./dto/admin-sy
 import type { AdminUserDetailDto, AdminUserListDto, AdminUserListItemDto } from "./dto/admin-user.dto";
 
 const CACHE_TTL_MS = 60_000;
+
+// The window the metrics page charts, today included.
+export const METRICS_DAYS = 30;
+
+const GENERATION_EVENTS = {
+	started: "route_generation_started",
+	succeeded: "route_generation_succeeded",
+	failed: "route_generation_failed",
+} as const;
 
 export type SortDir = "asc" | "desc";
 
@@ -74,6 +87,7 @@ export class AdminService {
 		@InjectRepository(Session) private readonly sessions: EntityRepository<Session>,
 		private readonly em: EntityManager,
 		private readonly sessionService: SessionService,
+		private readonly productEventStats: ProductEventStatsService,
 		@Inject(APP_CONFIG) private readonly config: AppConfig,
 	) {}
 
@@ -121,6 +135,41 @@ export class AdminService {
 			]);
 			return { totalRoutes, byActivity, createdLast30Days, topCreators };
 		}) as Promise<AdminRouteStatsDto>;
+	}
+
+	// The launch metrics page: signups, active users, generations per day and
+	// paying users. Everything is Postgres except generation attempts, which
+	// only exist as ProductEvents in Umami (ADR 0014).
+	async getMetrics(): Promise<AdminMetricsDto> {
+		return this.statsCache.get("metrics", async () => {
+			const days = METRICS_DAYS;
+			const [totalUsers, signupsDaily, activeUsers, generationEvents, savedDaily, payingUsers] = await Promise.all([
+				this.users.count({}),
+				this.timeseries("user", days),
+				this.activeUserCounts(),
+				this.productEventStats.dailyCounts(Object.values(GENERATION_EVENTS), days),
+				this.timeseries("route", days, { where: `t."provenance" = 'generation'` }),
+				this.payingUsers(days),
+			]);
+			const sumLast = (n: number) => signupsDaily.slice(-n).reduce((acc, p) => acc + p.count, 0);
+			return {
+				days,
+				signups: {
+					total: totalUsers,
+					today: sumLast(1),
+					last7Days: sumLast(7),
+					last30Days: sumLast(30),
+					daily: signupsDaily,
+				},
+				activeUsers,
+				generations: {
+					productEventsAvailable: generationEvents !== null,
+					daily: generationEvents ? generationSeries(generationEvents, days) : [],
+					savedDaily,
+				},
+				payingUsers,
+			};
+		}) as Promise<AdminMetricsDto>;
 	}
 
 	async listUsers(params: {
@@ -546,7 +595,68 @@ export class AdminService {
 		return Number(rows[0]?.count ?? 0);
 	}
 
-	private async timeseries(table: "user" | "route", days: number): Promise<AdminTimeseriesPointDto[]> {
+	// Distinct non-deleted users whose sessions saw activity in each window.
+	// Logged-out sessions still count: they were activity in the window.
+	private async activeUserCounts(): Promise<{ last24Hours: number; last7Days: number; last30Days: number }> {
+		const rows = (await this.em.getConnection().execute(
+			`select count(distinct s."user_id") filter (where s."last_activity" >= now() - interval '1 day')::int as "last24Hours",
+			        count(distinct s."user_id") filter (where s."last_activity" >= now() - interval '7 days')::int as "last7Days",
+			        count(distinct s."user_id")::int as "last30Days"
+			 from "session" s
+			 join "user" u on u."id" = s."user_id" and u."deleted_at" is null
+			 where s."last_activity" >= now() - interval '30 days'`,
+		)) as Array<{ last24Hours: number | string; last7Days: number | string; last30Days: number | string }>;
+		const row = rows[0];
+		return {
+			last24Hours: Number(row?.last24Hours ?? 0),
+			last7Days: Number(row?.last7Days ?? 0),
+			last30Days: Number(row?.last30Days ?? 0),
+		};
+	}
+
+	// "Paying" means a paid Pro pass (Entitlement source 'billing', ADR 0039);
+	// OG grants and manual comps count toward proUsers only.
+	private async payingUsers(days: number): Promise<AdminPayingUserMetricsDto> {
+		const activePro = `e."plan" = 'pro' and e."deleted_at" is null and (e."expires_at" is null or e."expires_at" > now())`;
+		const [activeRows, everPaidRows, proRows, paymentsDaily] = await Promise.all([
+			this.em.getConnection().execute(
+				`select count(distinct e."user_id")::int as count
+				 from "entitlement" e
+				 join "user" u on u."id" = e."user_id" and u."deleted_at" is null
+				 where e."source" = 'billing' and ${activePro}`,
+			) as Promise<RawCount[]>,
+			this.em.getConnection().execute(
+				`select count(distinct p."user_id")::int as count
+				 from "payment" p
+				 join "user" u on u."id" = p."user_id" and u."deleted_at" is null
+				 where p."deleted_at" is null`,
+			) as Promise<RawCount[]>,
+			this.em.getConnection().execute(
+				`select count(*)::int as count
+				 from "user" u
+				 where u."deleted_at" is null
+				   and (u."plan" = 'pro' or exists (select 1 from "entitlement" e where e."user_id" = u."id" and ${activePro}))`,
+			) as Promise<RawCount[]>,
+			this.timeseries("payment", days, { column: "paid_at" }),
+		]);
+		return {
+			billingEnabled: this.config.billing.enabled,
+			active: Number(activeRows[0]?.count ?? 0),
+			everPaid: Number(everPaidRows[0]?.count ?? 0),
+			proUsers: Number(proRows[0]?.count ?? 0),
+			paymentsDaily,
+		};
+	}
+
+	// `where` is a fixed SQL fragment from a caller in this file, never request
+	// input; it may reference the counted table as `t`.
+	private async timeseries(
+		table: "user" | "route" | "payment",
+		days: number,
+		opts: { column?: "created_at" | "paid_at"; where?: string } = {},
+	): Promise<AdminTimeseriesPointDto[]> {
+		const column = opts.column ?? "created_at";
+		const where = opts.where ? ` and ${opts.where}` : "";
 		const rows = (await this.em.getConnection().execute(
 			`with days as (
 				select generate_series(
@@ -557,9 +667,9 @@ export class AdminService {
 			)
 			select d::text as d,
 			       (select count(*)::int from "${table}" t
-			        where t."created_at" >= days.d
-			          and t."created_at" < days.d + interval '1 day'
-			          and t."deleted_at" is null) as count
+			        where t."${column}" >= days.d
+			          and t."${column}" < days.d + interval '1 day'
+			          and t."deleted_at" is null${where}) as count
 			from days
 			order by d`,
 			[days],
@@ -596,4 +706,27 @@ export class AdminService {
 			routeCount: Number(r.routeCount),
 		}));
 	}
+}
+
+// Fills every UTC day in the window, oldest first, so a quiet day charts as
+// zero rather than vanishing.
+export function generationSeries(
+	rows: ReadonlyArray<{ date: string; eventName: string; count: number }>,
+	days: number,
+	now = new Date(),
+): AdminGenerationPointDto[] {
+	const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+	const points = new Map<string, AdminGenerationPointDto>();
+	for (let i = days - 1; i >= 0; i--) {
+		const date = new Date(today - i * 86_400_000).toISOString().slice(0, 10);
+		points.set(date, { date, started: 0, succeeded: 0, failed: 0 });
+	}
+	for (const row of rows) {
+		const point = points.get(row.date);
+		if (!point) continue;
+		if (row.eventName === GENERATION_EVENTS.started) point.started += row.count;
+		else if (row.eventName === GENERATION_EVENTS.succeeded) point.succeeded += row.count;
+		else if (row.eventName === GENERATION_EVENTS.failed) point.failed += row.count;
+	}
+	return [...points.values()];
 }
