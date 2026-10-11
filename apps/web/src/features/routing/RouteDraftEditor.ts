@@ -1,5 +1,5 @@
 import type { ApiExternalRoute } from "@routess/api-client";
-import type { Coordinate, RouteActivity, RouteBaseline, Waypoint, WaypointType } from "@routess/core";
+import type { Coordinate, RouteBaseline, Waypoint, WaypointType } from "@routess/core";
 import {
 	buildRouteGpx,
 	calculatePathDistance,
@@ -81,13 +81,6 @@ export interface RouteDraftEditor {
 	loadFromShareLink(encoded: string): Promise<EditResult>;
 	loadFromGpx(gpxString: string): Promise<EditResult>;
 	loadWaypoints(waypoints: Waypoint[], options?: LoadOptions): Promise<EditResult>;
-	unload(): void;
-	clearDraft(): Promise<EditResult>;
-	setActivity(activity: RouteActivity): void;
-	// Reset baseline + mode to a freshly-saved snapshot. Called by save/update
-	// flows on API success so the next dirty check compares against what the
-	// server has, not against the pre-save state.
-	applySaved(route: ApiRoute): void;
 	exportGpx(filename?: string): EditResult;
 	buildShareUrl(): ShareResult;
 }
@@ -509,36 +502,6 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 		return loadWaypoints(waypoints, { exactRoutePath: route.geometry, saveSnapshot: true });
 	};
 
-	const unload = (): void => {
-		useRoutingStore.getState().setMode({ kind: "unsaved" });
-	};
-
-	const clearDraft = async (): Promise<EditResult> => {
-		const store = useRoutingStore.getState();
-		store.clearWaypoints();
-		store.clearHistory();
-		clearCurrentRoutePath();
-		return ok();
-	};
-
-	const setActivity = (activity: RouteActivity): void => {
-		useRoutingStore.getState().setActivity(activity);
-	};
-
-	const applySaved = (route: ApiRoute): void => {
-		const baseline: RouteBaseline = {
-			name: route.name,
-			activity: route.activity,
-			visibility: route.visibility,
-			tags: route.tags,
-			description: route.description,
-			waypoints: route.waypoints.map((wp) => ({ ...wp })),
-		};
-		const store = useRoutingStore.getState();
-		store.setMode({ kind: "editing", routeId: route.id, name: route.name, baseline });
-		if (route.activity !== undefined) store.setActivity(route.activity);
-	};
-
 	const loadFromGpx = async (gpxString: string): Promise<EditResult> => {
 		const parsed = await parseGPXFile(gpxString);
 		if (parsed.error) return fail(parsed.error);
@@ -644,10 +607,6 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 		loadFromGpx,
 		loadFromExternalRoute,
 		loadWaypoints,
-		unload,
-		clearDraft,
-		setActivity,
-		applySaved,
 		exportGpx,
 		buildShareUrl,
 	};

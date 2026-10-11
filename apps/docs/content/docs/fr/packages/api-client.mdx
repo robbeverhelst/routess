@@ -1,39 +1,25 @@
 ---
 title: "@routess/api-client"
-description: Client HTTP avec adaptateurs web et mobile.
+description: Client HTTP pour l'API Routess.
 ---
 
-Un fin wrapper autour de `fetch` qui abstrait les différences entre les cookies du navigateur et les en-têtes d'authentification de React Native.
+Un fin wrapper autour de `fetch` avec des méthodes typées pour l'API Routess.
 
 ## Exports
 
-| Sous-chemin | À utiliser depuis |
+| Point d'entrée | À utiliser pour |
 | --- | --- |
-| `@routess/api-client` | Types communs et client de base |
-| `@routess/api-client/web` | Navigateur ; utilise les cookies pour l'authentification |
-| `@routess/api-client/mobile` | React Native ; utilise des tokens Bearer depuis le stockage sécurisé |
+| `@routess/api-client` | Factory du client, adaptateurs, services et types de l'API |
 
-## Utilisation (web)
+## Utilisation
 
 ```ts
-import { createApiClient } from "@routess/api-client/web";
+import { createApiClient } from "@routess/api-client";
 
-const api = createApiClient({ baseURL: import.meta.env.VITE_API_URL });
+const api = createApiClient({ baseUrl: import.meta.env.VITE_API_URL });
 
-const me = await api.auth.me();
-const routes = await api.routes.list();
-```
-
-## Utilisation (mobile)
-
-```ts
-import { createApiClient } from "@routess/api-client/mobile";
-import * as SecureStore from "expo-secure-store";
-
-const api = createApiClient({
-	baseURL: process.env.EXPO_PUBLIC_API_URL!,
-	getToken: () => SecureStore.getItemAsync("authToken"),
-});
+const me = await api.getProfile();
+const routes = await api.getRoutes();
 ```
 
 ## Gestion des erreurs

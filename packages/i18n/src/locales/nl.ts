@@ -1,6 +1,5 @@
 export const nl: Record<string, string> = {
 	// Sidebar translations
-	"sidebar.currentRoute": "Huidige Route",
 
 	// RouteControls translations
 
@@ -74,9 +73,6 @@ export const nl: Record<string, string> = {
 	"sport.short.run": "Loop",
 	"sport.short.cycle": "Fiets",
 	"sport.short.walk": "Wandel",
-	"sport.tag.run": "Tempo · splits",
-	"sport.tag.cycle": "Snelheid · routes",
-	"sport.tag.walk": "Afstand · POI's",
 
 	// Bottom / rail navigation
 	"nav.plan": "Plannen",
@@ -127,8 +123,6 @@ export const nl: Record<string, string> = {
 	"settings.map.streets": "Straten",
 	"settings.map.outdoors": "Buiten",
 	"settings.map.satellite": "Satelliet",
-	"settings.map.pois": "Bezienswaardigheden tonen",
-	"settings.map.terrain3d": "3D-terrein",
 	"settings.map.autoSnap": "Automatisch op wegen vastklikken",
 	"settings.map.offTrackGuide": "Hulplijn bij afwijken",
 	"settings.map.offTrackGuideSub":
@@ -399,11 +393,6 @@ export const nl: Record<string, string> = {
 	"discover.empty.publishCta": "Publiceer een van je routes",
 	"discover.empty.anonBody":
 		"Versleep de kaart of zoom uit om rond te kijken, of meld je aan om hier je eigen routes te publiceren.",
-
-	// Stub panels (Activity)
-	"stub.activity.title": "Je activiteitenfeed",
-	"stub.activity.body": "Je opgenomen sessies, afstandstrends en tempo-overzichten komen met de activiteitenbackend.",
-	"stub.activity.label": "Activiteit",
 
 	// SaveModal
 	"save.visibility.private": "Privé",
@@ -751,11 +740,7 @@ export const nl: Record<string, string> = {
 	"coach.docsLink": "Lees meer in de documentatie",
 
 	// LiveNavScreen (NavigationSession)
-	"nav.remaining": "Resterend",
-	"nav.eta": "ETA",
-	"nav.speed": "Snelheid",
 	"nav.then": "Daarna",
-	"nav.unmute": "Geluid aan",
 	"nav.mute": "Dempen",
 	"nav.reroute": "Herrouteren",
 	"nav.end": "Stoppen",
@@ -769,13 +754,11 @@ export const nl: Record<string, string> = {
 	"nav.startFailedBody": "Voor de afslaginstructies is een verbinding nodig. Probeer het opnieuw zodra je online bent.",
 	"nav.noGeometry": "Deze route heeft geen pad om te volgen.",
 	"nav.followRoute": "Volg de route",
-	"nav.degraded": "Afslaginstructies zijn nu niet beschikbaar; volg de routelijn.",
 	"nav.offRouteRejoining": "Van de route af, weg terug zoeken…",
 	"nav.offRouteOffline": "Van de route af. De route ligt in deze richting.",
 	"nav.rejoining": "Terug naar de route",
 	"nav.recenter": "Centreren",
 	"nav.arrived": "Je bent gearriveerd",
-	"nav.arrivedBody": "{distance} in {duration}. Tot de volgende rit.",
 	"nav.resumeTitle": "Navigatie hervatten?",
 	"nav.resume": "Hervatten",
 	"nav.dismissResume": "Sluiten",

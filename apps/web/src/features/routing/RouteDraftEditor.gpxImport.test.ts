@@ -2,9 +2,8 @@ import { emptyHistory, type Waypoint } from "@routess/core";
 import type { Map as MapboxMap } from "mapbox-gl";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { sampleAndComputeMock, getDirectionsMock, fetchMock } = vi.hoisted(() => ({
+const { sampleAndComputeMock, fetchMock } = vi.hoisted(() => ({
 	sampleAndComputeMock: vi.fn(async () => ({ gainMeters: 0, lossMeters: 0, profile: [] })),
-	getDirectionsMock: vi.fn(),
 	fetchMock: vi.fn(),
 }));
 
@@ -12,10 +11,6 @@ vi.mock("./services/elevation", () => ({
 	getDefaultElevationService: () => ({
 		sampleAndCompute: sampleAndComputeMock,
 	}),
-}));
-
-vi.mock("@/lib/utils/mapbox-api", () => ({
-	getDirections: getDirectionsMock,
 }));
 
 import { useRoutingStore } from "@/stores/routingStore";

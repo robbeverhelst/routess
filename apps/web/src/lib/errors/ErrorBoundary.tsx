@@ -139,25 +139,3 @@ const DefaultErrorFallback: React.FC<DefaultErrorFallbackProps> = ({ error, rese
 		</div>
 	);
 };
-
-/**
- * Higher-order component for wrapping components with error boundary
- */
-export const withErrorBoundary = <P extends object>(
-	Component: React.ComponentType<P>,
-	options?: {
-		fallback?: (error: AppError, resetError: () => void) => ReactNode;
-		context?: string;
-		onError?: (error: AppError) => void;
-	},
-) => {
-	const WrappedComponent = (props: P) => (
-		<ErrorBoundary {...options}>
-			<Component {...props} />
-		</ErrorBoundary>
-	);
-
-	WrappedComponent.displayName = `withErrorBoundary(${Component.displayName || Component.name})`;
-
-	return WrappedComponent;
-};

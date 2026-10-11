@@ -1,6 +1,5 @@
 export const de: Record<string, string> = {
 	// Sidebar translations
-	"sidebar.currentRoute": "Aktuelle Route",
 
 	// RouteControls translations
 

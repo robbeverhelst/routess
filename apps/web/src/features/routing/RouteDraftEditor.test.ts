@@ -3,9 +3,8 @@ import { emptyHistory, type Waypoint } from "@routess/core";
 import type { Map as MapboxMap } from "mapbox-gl";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { sampleAndComputeMock, getDirectionsMock, fetchMock, getRouteMock } = vi.hoisted(() => ({
+const { sampleAndComputeMock, fetchMock, getRouteMock } = vi.hoisted(() => ({
 	sampleAndComputeMock: vi.fn(async () => ({ gainMeters: 0, lossMeters: 0, profile: [] })),
-	getDirectionsMock: vi.fn(),
 	fetchMock: vi.fn(),
 	getRouteMock: vi.fn(),
 }));
@@ -21,26 +20,11 @@ vi.mock("./services/elevation", () => ({
 	}),
 }));
 
-vi.mock("@/lib/utils/mapbox-api", () => ({
-	getDirections: getDirectionsMock,
-}));
-
 import { serializeAndCompress } from "@/lib/shareUtils";
 import { useRoutingStore } from "@/stores/routingStore";
 import { createRouteDraftEditor } from "./RouteDraftEditor";
 
 const wp = (coord: Coordinate, type: "routed" | "direct" = "routed"): Waypoint => ({ coord, type });
-
-const stubDirectionsOk = (route: Coordinate[]) => {
-	getDirectionsMock.mockResolvedValue({
-		success: true,
-		data: {
-			routes: [{ geometry: { coordinates: route }, distance: 1000, duration: 600 }],
-			waypoints: [route[0], route[route.length - 1]].map((c) => ({ location: c })),
-			code: "Ok",
-		},
-	});
-};
 
 const flushMicrotasks = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
@@ -67,7 +51,6 @@ describe("RouteDraftEditor — undo behavior", () => {
 			canUndo: false,
 			canRedo: false,
 		});
-		getDirectionsMock.mockReset();
 		sampleAndComputeMock.mockReset();
 		sampleAndComputeMock.mockResolvedValue({ gainMeters: 0, lossMeters: 0, profile: [] });
 		fetchMock.mockReset();
@@ -90,11 +73,6 @@ describe("RouteDraftEditor — undo behavior", () => {
 		useRoutingStore.getState().setWaypoints([wp([0, 0], "direct"), wp([0.01, 0], "direct")]);
 		useRoutingStore.getState().saveSnapshot();
 
-		stubDirectionsOk([
-			[0, 0],
-			[0.01, 0],
-		]);
-
 		const editor = createRouteDraftEditor({ map: mapStub, accessToken });
 
 		await editor.removeWaypoint(0);
@@ -112,11 +90,6 @@ describe("RouteDraftEditor — undo behavior", () => {
 	it("undoes a moveWaypoint with a single undo press", async () => {
 		useRoutingStore.getState().setWaypoints([wp([0, 0], "direct"), wp([0.01, 0], "direct")]);
 		useRoutingStore.getState().saveSnapshot();
-
-		stubDirectionsOk([
-			[0, 0],
-			[0.01, 0],
-		]);
 
 		const editor = createRouteDraftEditor({ map: mapStub, accessToken });
 
@@ -142,7 +115,6 @@ describe("RouteDraftEditor — undo behavior", () => {
 		await editor.loadWaypoints([wp([0, 0], "direct"), wp([0.01, 0], "direct")], { exactRoutePath });
 		await flushMicrotasks();
 
-		expect(getDirectionsMock).not.toHaveBeenCalled();
 		expect(sampleAndComputeMock).toHaveBeenCalledWith(exactRoutePath, expect.anything());
 	});
 
@@ -150,11 +122,6 @@ describe("RouteDraftEditor — undo behavior", () => {
 		const original: Waypoint[] = [wp([0, 0], "direct"), wp([0.01, 0], "direct"), wp([0.02, 0], "direct")];
 		useRoutingStore.getState().setWaypoints(original);
 		useRoutingStore.getState().saveSnapshot();
-
-		stubDirectionsOk([
-			[0, 0],
-			[0.02, 0],
-		]);
 
 		const editor = createRouteDraftEditor({ map: mapStub, accessToken });
 
@@ -227,10 +194,6 @@ describe("RouteDraftEditor — undo behavior", () => {
 		it("still decodes legacy compressed payloads", async () => {
 			const encoded = serializeAndCompress([wp([0, 0], "direct"), wp([0.01, 0], "direct")], false);
 			if (!encoded) throw new Error("failed to build payload");
-			stubDirectionsOk([
-				[0, 0],
-				[0.01, 0],
-			]);
 			const editor = createRouteDraftEditor({ map: mapStub, accessToken });
 
 			const result = await editor.loadFromShareLink(encoded);

@@ -15,10 +15,6 @@ export function cancelMapPick(): void {
 	pendingPick = null;
 }
 
-export function hasPendingMapPick(): boolean {
-	return pendingPick !== null;
-}
-
 /** Returns true when the click was consumed by a pending pick. */
 export function consumeMapPick(coord: Coordinate): boolean {
 	if (!pendingPick) return false;

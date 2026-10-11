@@ -94,24 +94,6 @@ export class SessionService {
 		}
 	}
 
-	async validateSession(jti: string): Promise<Session | null> {
-		const session = await this.sessionRepository.findOne({
-			jti,
-			expiresAt: { $gt: new Date() },
-		});
-
-		if (session) {
-			const now = new Date();
-			const lastActivityAt = session.lastActivity?.getTime() ?? 0;
-			if (now.getTime() - lastActivityAt >= LAST_ACTIVITY_UPDATE_INTERVAL_MS) {
-				session.lastActivity = now;
-				await this.em.persist(session).flush();
-			}
-		}
-
-		return session;
-	}
-
 	// Single-query variant used on the auth-guard hot path: validates the
 	// session and returns the owning User (skipping soft-deleted users) in
 	// one populated load.

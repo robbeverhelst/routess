@@ -16,7 +16,7 @@ export class I18nService implements II18nService {
 	 * Retrieves a translated string for a given key and language.
 	 * Optionally replaces placeholders in the string.
 	 *
-	 * @param key The key for the desired string (e.g., "sidebar.currentRoute").
+	 * @param key The key for the desired string (e.g., "nav.plan").
 	 * @param lang The desired language code (e.g., "en", "nl").
 	 * @param replacements An optional object with key-value pairs for placeholder replacement.
 	 * @returns The translated string, or the key itself if not found.
