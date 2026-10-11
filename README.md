@@ -17,7 +17,7 @@ Route-planning app for cyclists, runners, and hikers. Interactive map editor, GP
 git clone https://github.com/robbeverhelst/routess.git
 cd routess
 cp docker/.env.selfhost.example .env
-# fill in the required secrets, VITE_MAPBOX_ACCESS_TOKEN and VALHALLA_URL
+# fill in the required secrets, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, VITE_MAPBOX_ACCESS_TOKEN and VALHALLA_URL
 docker compose -f docker/compose.selfhost.yaml --project-directory . up -d
 ```
 
@@ -32,8 +32,7 @@ Minimum to run routess:
 - A **Mapbox access token** (free tier is fine)
 - A **Valhalla** routing engine (`VALHALLA_URL`). Route calculation and surface analysis go through it; without it the routing endpoints return 503
 - **Secrets**: `JWT_SECRET`, `ANALYTICS_SALT`, `PAT_PEPPER` and `DB_PASSWORD` (long random strings)
-
-Email + password sign-in works out of the box. Google sign-in needs a **Google OAuth client** (`GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`).
+- A **Google OAuth client** (`GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`). The API also supports email + password sign-in, but the self-host compose file currently requires both Google variables to be set
 
 Optional services degrade gracefully when unset: Resend (email; without it verification links are logged to API stdout), Sentry/GlitchTip (error reporting), Umami (product analytics), Prometheus (metrics).
 
