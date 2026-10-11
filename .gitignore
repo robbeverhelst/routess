@@ -43,3 +43,7 @@ coverage/
 
 # TanStack Router dev cache (regenerated per run)
 apps/web/.tanstack/
+
+# Playwright E2E output
+apps/web/test-results/
+apps/web/playwright-report/

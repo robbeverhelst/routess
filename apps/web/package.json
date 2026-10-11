@@ -7,13 +7,14 @@
 		"dev": "vite --port ${WEB_PORT:-5173}",
 		"build": "vite build",
 		"lint": "biome check .",
-		"check-types": "bunx --bun tsr generate && tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.test.json --noEmit",
+		"check-types": "bunx --bun tsr generate && tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.test.json --noEmit && tsc -p tsconfig.e2e.json",
 		"preview": "vite preview",
 		"clean": "rm -rf dist && rm -rf node_modules/.vite",
 		"docker:build": "docker build -f Dockerfile -t routess-web ../..",
 		"test": "vitest run",
 		"test:watch": "vitest",
-		"test:coverage": "vitest run --coverage"
+		"test:coverage": "vitest run --coverage",
+		"test:e2e": "playwright test"
 	},
 	"dependencies": {
 		"@radix-ui/react-dialog": "^1.1.13",

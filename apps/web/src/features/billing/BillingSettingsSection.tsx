@@ -1,11 +1,13 @@
 import { useNavigate } from "@tanstack/react-router";
+import { I } from "@/components/icons";
 import { Btn, RDS_COLORS } from "@/components/primitives";
 import { SettingsBlock, SettingsRow, SettingsSection } from "@/components/settings";
 import { useBillingStatus, useStartCheckout } from "@/lib/api-queries";
 import { useT } from "@/lib/i18n";
 import { useToastStore } from "@/stores/toastStore";
 import { useUiStore } from "@/stores/uiStore";
-import { formatDay } from "./format";
+import { daysLeft, formatDay } from "./format";
+import { PaymentMethods } from "./PaymentMethods";
 
 // Settings → Plan & billing (ADR 0039): the Plan in effect, when Pro ends,
 // the daily generation allowance, and buying or extending the year pass.
@@ -23,17 +25,25 @@ export function BillingSettingsSection() {
 
 	const isPro = account.plan === "pro";
 	const allowance = status.generationPerDay?.[account.plan] ?? 0;
-	const planSub = isPro
-		? account.proExpiresAt
-			? t("billing.proUntil", { date: formatDay(account.proExpiresAt, language) })
-			: t("billing.proForever")
-		: t("billing.freeSub");
+	let planSub = t("billing.freeSub");
+	if (isPro && account.proExpiresAt) {
+		const left = daysLeft(account.proExpiresAt);
+		const remaining = left === 1 ? t("upgrade.dayLeft") : t("upgrade.daysLeft", { count: String(left) });
+		planSub = `${t("billing.proUntil", { date: formatDay(account.proExpiresAt, language) })} · ${remaining}`;
+	} else if (isPro) {
+		planSub = t("billing.proForever");
+	}
 
 	return (
 		<SettingsSection title={t("billing.title")} footer={account.canBuy ? t("billing.footer") : undefined}>
 			<SettingsRow
-				label={isPro ? t("billing.plan.pro") : t("billing.plan.free")}
-				sub={planSub}
+				label={
+					<span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontWeight: 600 }}>
+						{isPro ? <I.zap size={13} style={{ color: RDS_COLORS.accent }} aria-hidden /> : null}
+						{isPro ? t("billing.plan.pro") : t("billing.plan.free")}
+					</span>
+				}
+				sub={<span data-testid="billing-plan-sub">{planSub}</span>}
 				control={
 					<Btn variant="ghost" onClick={() => navigate({ to: "/upgrade" })}>
 						{t("billing.compare")}
@@ -50,7 +60,8 @@ export function BillingSettingsSection() {
 			/>
 			{account.ogGrantExpiresAt ? (
 				<SettingsBlock>
-					<div style={{ fontSize: 12.5, color: RDS_COLORS.fgMuted, lineHeight: 1.45 }}>
+					<div style={{ display: "flex", gap: 8, fontSize: 12.5, color: RDS_COLORS.fgMuted, lineHeight: 1.45 }}>
+						<I.gift size={14} style={{ color: RDS_COLORS.accent, flexShrink: 0, marginTop: 1 }} aria-hidden />
 						{t("billing.ogNote", { date: formatDay(account.ogGrantExpiresAt, language) })}
 					</div>
 				</SettingsBlock>
@@ -70,6 +81,19 @@ export function BillingSettingsSection() {
 					>
 						{isPro ? t("upgrade.extend") : t("upgrade.buy")}
 					</Btn>
+					<div
+						style={{
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "space-between",
+							flexWrap: "wrap",
+							gap: 8,
+							marginTop: 10,
+						}}
+					>
+						<span style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle }}>{t("billing.paymentMethods")}</span>
+						<PaymentMethods />
+					</div>
 				</SettingsBlock>
 			) : null}
 		</SettingsSection>
