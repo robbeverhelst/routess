@@ -394,11 +394,6 @@ export const nl: Record<string, string> = {
 	"discover.empty.anonBody":
 		"Versleep de kaart of zoom uit om rond te kijken, of meld je aan om hier je eigen routes te publiceren.",
 
-	// Stub panels (Activity)
-	"stub.activity.title": "Je activiteitenfeed",
-	"stub.activity.body": "Je opgenomen sessies, afstandstrends en tempo-overzichten komen met de activiteitenbackend.",
-	"stub.activity.label": "Activiteit",
-
 	// SaveModal
 	"save.visibility.private": "Privé",
 	"save.visibility.privateSub": "Alleen ik",

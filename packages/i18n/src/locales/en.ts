@@ -418,12 +418,6 @@ export const en: Record<string, string> = {
 	"discover.empty.publishCta": "Publish one of your routes",
 	"discover.empty.anonBody": "Pan or zoom out to look around, or sign in to publish your own routes here.",
 
-	// Stub panels (Activity)
-	"stub.activity.title": "Your activity feed",
-	"stub.activity.body":
-		"Your recorded sessions, distance trends, and pace summaries arrive with the activities backend.",
-	"stub.activity.label": "Activity",
-
 	// SaveModal
 	"save.visibility.private": "Private",
 	"save.visibility.privateSub": "Only me",
