@@ -10,12 +10,12 @@ This walkthrough gets a routess instance running on your own machine or server i
 - **Docker** and **Docker Compose v2** (modern Docker Desktop or Docker Engine ships with both).
 - A **Google OAuth client** for Google sign-in (the compose file requires it). Users can also sign in with email + password once the stack is up.
 - A **Mapbox access token**; the free tier is fine.
+- A **Valhalla** routing engine (`VALHALLA_URL`). Route calculation and surface analysis go through it; without it the routing endpoints return 503.
 - Long random strings for `JWT_SECRET`, `ANALYTICS_SALT`, `PAT_PEPPER`, and `DB_PASSWORD`. Generate with `openssl rand -base64 32`.
 
 Optional, gracefully disabled when unset:
 
 - **Resend** for transactional email (without it, verification URLs are logged to stdout).
-- **Valhalla** for surface-type analysis on planned routes.
 - **Sentry / GlitchTip** for browser error reporting.
 - **Umami** for product analytics.
 - **Admin role** for accessing the in-app admin panel.
@@ -84,7 +84,7 @@ The `.env` file in `docker/.env.selfhost.example` is the source of truth. The va
 | `ADMIN_EMAILS`                 | no       | empty                            | Comma-separated emails granted the admin role on login. Empty disables the admin panel. |
 | `RESEND_API_KEY`               | no       | empty                            | Resend API key. Empty falls back to logging verification URLs to stdout.                 |
 | `EMAIL_FROM`                   | no       | `routess <noreply@routess.app>`  | Sender address used by Resend.                                                           |
-| `VALHALLA_URL`                 | no       | empty                            | Base URL of a self-hosted Valhalla instance for surface analysis. Empty disables it.     |
+| `VALHALLA_URL`                 | yes      | empty                            | Base URL of a self-hosted Valhalla instance for routing and surface analysis. Empty makes the routing endpoints return 503. |
 | `VITE_UMAMI_URL` / `_WEBSITE_ID` | no     | empty                            | Umami endpoint and site ID for the web app. Empty disables product analytics.            |
 | `UMAMI_URL` / `_WEBSITE_ID`    | no       | empty                            | Same Umami endpoint and site ID for the docs site (Next reads them server-side).         |
 | `VITE_SENTRY_DSN`              | no       | empty                            | Sentry / GlitchTip DSN for browser error reporting.                                      |

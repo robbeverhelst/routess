@@ -4,12 +4,12 @@ This directory captures decisions that are **hard to reverse**, **surprising wit
 
 Use the [template](0000-template.md) when adding a new one. Number sequentially from the highest existing ADR; do not reuse a number even if you see historical collisions in this index.
 
-> **Note:** ADRs 0014, 0017, 0018, 0019, and 0021 each have two records under the same number. These are historical artefacts from parallel work and have not been renumbered to preserve permalinks. Treat each pair as two independent records sharing a prefix.
+> **Note:** ADRs 0014, 0018, 0019, 0022 and 0023 each have two records under the same number, and 0017 and 0021 each have three. These are historical artefacts from parallel work and have not been renumbered to preserve permalinks. Treat records sharing a prefix as independent.
 
 ## Index by topic
 
 ### Repository & tooling
-- [0001 — Monorepo with Turborepo and Bun workspaces](0001-monorepo-with-turborepo-and-bun-workspaces.md)
+- [0001 — Monorepo with Bun workspaces](0001-monorepo-with-turborepo-and-bun-workspaces.md) (Turborepo since removed; see the amendment)
 - [0004 — Biome for linting and formatting](0004-biome-instead-of-eslint-prettier.md)
 - [0003 — Shared design tokens package using OKLCH colors](0003-shared-design-tokens-package-with-oklch-colors.md)
 
@@ -32,11 +32,24 @@ Use the [template](0000-template.md) when adding a new one. Number sequentially 
 - [0014 — Uniform Waypoint snap policy, no silent Type downgrade](0014-uniform-waypoint-snap-policy.md)
 - [0017 — RouteDraft `unsaved | editing` mode lifecycle](0017-routedraft-mode-lifecycle.md)
 - [0021 — Shared routing logic, dual-credential execution](0021-shared-routing-logic-dual-credential-execution.md) (superseded by 0034)
+- [0021 — Valhalla via Stadia Maps for routing](0021-valhalla-via-stadia-for-routing.md) (hosting plan since executed; see 0034)
+- [0022 — Routing preferences speak Routess's vocabulary, not Valhalla's](0022-routing-preferences-domain-vocabulary.md)
+- [0023 — RoutingPreferences live on the Route; legacy routes carry a Provenance](0023-routing-preferences-on-route-with-provenance.md)
 - [0029 — Route generation is a scored candidate pipeline](0029-route-generation-as-scored-candidate-pipeline.md)
 - [0031 — Strict surface preferences steer candidate placement, not just costing](0031-surface-first-generation-for-strict-surface-preferences.md)
 - [0034 — Centralize routing in the API; share only pure costing logic in core](0034-centralize-routing-in-the-api.md)
 - [0035 — Seeded routes: ExternalRoute as an independent ODbL Collective Database](0035-external-route-layer-and-seeding.md)
 - [0037 — Server-side knooppunt anchor fill from the node tiles](0037-server-side-knooppunt-anchor-fill-from-node-tiles.md)
+- [0038 — Navigation follows geometry with server-derived cues](0038-navigation-follows-geometry-with-server-derived-cues.md)
+
+### Library & social
+- [0024 — Collections are ordered many-to-many; favourites are a boolean on the Route](0024-collections-and-server-side-favourites.md)
+- [0026 — Tags are the flat cross-cutting filter primitive, complementary to Collections](0026-tags-not-folders-in-library-v1.md)
+- [0027 — RouteVisibility stays the only access-control concept; social grants nothing](0027-routevisibility-stays-the-only-access-control.md)
+
+### Landing & SEO
+- [0017 — ccTLD-based locale split for the marketing landing](0017-cctld-locale-split.md)
+- [0025 — Public route page URL shape and SEO](0025-public-route-page-url-and-seo.md)
 
 ### Frontend state
 - [0002 — Zustand for RouteDraft state](0002-zustand-for-routedraft-state.md)

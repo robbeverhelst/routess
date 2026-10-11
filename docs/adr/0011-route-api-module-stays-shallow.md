@@ -10,3 +10,7 @@ When real invariants appear (e.g., "first Waypoint must be Type=routed", "RouteT
 
 - **Pull a RouteAggregate now with placeholder invariants** — rejected: shape-validation invariants live correctly at the DTO layer; duplicating them in the service is busywork that creates maintenance overhead with no behavioural change.
 - **Inline the entire service into the controller** — rejected: NestJS conventions and metric emission (currently `recordRouteCreated` / `recordRouteDeleted`) make a service worth its own line. It's thin but earns its existence.
+
+## Amendment (2026-10-11): `route.mapper.ts` is back
+
+The inlining described above was later reverted. `apps/api/src/routes/route.mapper.ts` exists again and exports `toRouteResponseDto` (plus the public-summary mapper), because collections, social and external routes need the same Route response shape. It imports `toPublicUserDto` from `users/user.mapper` so the embedded owner is the PII-free public shape. `RoutesService.toResponseDto` is now a thin wrapper that passes the analytics salt. The rest of this ADR (no RouteAggregate until real invariants exist) still holds.

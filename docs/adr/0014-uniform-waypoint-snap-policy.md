@@ -12,3 +12,12 @@ ElevationGain staleness is judged against `routePath`, not `waypoints`. Snapping
 - **Auto-downgrade `routed → direct` on snap failure (no rejection at all)** — considered and rejected mid-design. Lenient but wrong: a click in the ocean would silently produce a 500 km direct segment. The user picked the Type for a reason; the engine doesn't get to silently reinterpret it.
 - **Move all snapping to Directions (drop `checkNearRoad`)** — rejected for now: `checkNearRoad` is a 49 m latency optimisation that gives the dragging UX immediate feedback before the next Directions call lands. Removing it would slow the visible snap on every Waypoint add. Worth revisiting if/when Directions latency drops or batched calls become available.
 - **Compare elevation staleness against waypoint identity instead of routePath** — rejected: waypoints can be rewritten by the snap-writeback after `getRoute` has already kicked off elevation sampling for the (correct) routePath. RoutePath is the actual input the elevation was computed for; that's the right invariant to guard.
+
+## Amendment (2026-10-11): no Mapbox Directions fallback
+
+Routes are no longer computed with Mapbox Directions. All routing goes through the API to Valhalla ([ADR-0034](0034-centralize-routing-in-the-api.md)), so the 150 m Directions fallback described above is gone. What remains:
+
+- **Adding a Waypoint** still pre-snaps with `checkNearRoad` (`apps/web/src/features/routing/utils/RoutingUtils.ts`), a 49 m Mapbox Matching call from the browser. A snapped result replaces the clicked coordinate. An off-road verdict or an unavailable API keeps the raw coordinate. The Valhalla route call is then the authority: if it fails, the editor rolls back the new Waypoint. The error says "too far from any road" only when the pre-snap gave a definite off-road verdict, so an outage is not reported as an off-road point.
+- **Moving a Waypoint** skips the pre-snap. The Valhalla recompute snaps it through the returned leg shapes, and a failed recompute restores the old coordinate.
+
+The no-silent-Type-downgrade rule and the routePath-based elevation staleness check still hold.

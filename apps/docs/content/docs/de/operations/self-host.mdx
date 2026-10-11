@@ -10,12 +10,12 @@ Diese Anleitung bringt eine routess-Instanz in etwa fünf Minuten auf deiner eig
 - **Docker** und **Docker Compose v2** (modernes Docker Desktop oder Docker Engine bringt beides mit).
 - Einen **Google-OAuth-Client** für die Google-Anmeldung (das Compose-File benötigt ihn). Nutzer können sich außerdem mit E-Mail + Passwort anmelden, sobald der Stack läuft.
 - Ein **Mapbox-Access-Token**; die kostenlose Stufe reicht.
+- Eine **Valhalla**-Routing-Engine (`VALHALLA_URL`). Routenberechnung und Belagsanalyse laufen darüber; ohne sie antworten die Routing-Endpunkte mit 503.
 - Lange zufällige Strings für `JWT_SECRET`, `ANALYTICS_SALT`, `PAT_PEPPER` und `DB_PASSWORD`. Erzeuge sie mit `openssl rand -base64 32`.
 
 Optional, sauber deaktiviert, wenn nicht gesetzt:
 
 - **Resend** für transaktionale E-Mails (ohne werden Verifizierungs-URLs auf stdout geloggt).
-- **Valhalla** für die Belagstyp-Analyse geplanter Routen.
 - **Sentry / GlitchTip** für Browser-Fehlerberichte.
 - **Umami** für Produktanalysen.
 - **Admin-Rolle** für den Zugriff auf das In-App-Admin-Panel.
@@ -84,7 +84,7 @@ Die `.env`-Datei in `docker/.env.selfhost.example` ist die maßgebliche Quelle. 
 | `ADMIN_EMAILS`                 | nein       | leer                            | Kommagetrennte E-Mails, denen bei der Anmeldung die Admin-Rolle gewährt wird. Leer deaktiviert das Admin-Panel. |
 | `RESEND_API_KEY`               | nein       | leer                            | Resend-API-Key. Leer fällt darauf zurück, Verifizierungs-URLs auf stdout zu loggen.                 |
 | `EMAIL_FROM`                   | nein       | `routess <noreply@routess.app>`  | Absenderadresse, die Resend nutzt.                                                           |
-| `VALHALLA_URL`                 | nein       | leer                            | Basis-URL einer selbst gehosteten Valhalla-Instanz für die Belagsanalyse. Leer deaktiviert sie.     |
+| `VALHALLA_URL`                 | ja         | leer                            | Basis-URL einer selbst gehosteten Valhalla-Instanz für Routing und Belagsanalyse. Leer antworten die Routing-Endpunkte mit 503. |
 | `VITE_UMAMI_URL` / `_WEBSITE_ID` | nein     | leer                            | Umami-Endpunkt und Site-ID für die Web-App. Leer deaktiviert die Produktanalyse.            |
 | `UMAMI_URL` / `_WEBSITE_ID`    | nein       | leer                            | Derselbe Umami-Endpunkt und dieselbe Site-ID für die Docs-Seite (Next liest sie serverseitig).         |
 | `VITE_SENTRY_DSN`              | nein       | leer                            | Sentry-/GlitchTip-DSN für Browser-Fehlerberichte.                                      |

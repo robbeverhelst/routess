@@ -17,13 +17,15 @@ If a specific file doesn't exist yet, proceed silently. The producer skill (`/gr
 /
 ├── CONTEXT.md
 ├── docs/adr/
-│   ├── 0001-monorepo-with-turborepo.md
-│   ├── 0002-zustand-for-state-management.md
+│   ├── 0001-monorepo-with-turborepo-and-bun-workspaces.md
+│   ├── 0002-zustand-for-routedraft-state.md
 │   └── …
 ├── apps/
 │   ├── api/
 │   ├── web/
-│   └── docs/
+│   ├── cli/
+│   ├── docs/
+│   └── landing/
 └── packages/
     ├── core/
     ├── api-client/

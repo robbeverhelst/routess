@@ -17,7 +17,7 @@ Route-planning app for cyclists, runners, and hikers. Interactive map editor, GP
 git clone https://github.com/robbeverhelst/routess.git
 cd routess
 cp docker/.env.selfhost.example .env
-# fill in JWT_SECRET, GOOGLE_CLIENT_ID/SECRET, VITE_MAPBOX_ACCESS_TOKEN
+# fill in the required secrets, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, VITE_MAPBOX_ACCESS_TOKEN and VALHALLA_URL
 docker compose -f docker/compose.selfhost.yaml --project-directory . up -d
 ```
 
@@ -29,11 +29,12 @@ See [`docs/operations/self-host`](https://docs.routess.com/docs/operations/self-
 
 Minimum to run routess:
 
-- A **Google OAuth client** (the only login provider today)
 - A **Mapbox access token** (free tier is fine)
-- A **JWT secret** (any long random string)
+- A **Valhalla** routing engine (`VALHALLA_URL`). Route calculation and surface analysis go through it; without it the routing endpoints return 503
+- **Secrets**: `JWT_SECRET`, `ANALYTICS_SALT`, `PAT_PEPPER` and `DB_PASSWORD` (long random strings)
+- A **Google OAuth client** (`GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`). The API also supports email + password sign-in, but the self-host compose file currently requires both Google variables to be set
 
-Optional services degrade gracefully when unset: Resend (email), Stadia Maps (surface analysis), Sentry/GlitchTip (error reporting), Umami (product analytics), Prometheus (metrics).
+Optional services degrade gracefully when unset: Resend (email; without it verification links are logged to API stdout), Sentry/GlitchTip (error reporting), Umami (product analytics), Prometheus (metrics).
 
 ## Develop on routess
 
@@ -62,7 +63,8 @@ routess/
 │   ├── web/            # React + Vite + Tailwind + Mapbox
 │   ├── api/            # NestJS + PostgreSQL + MikroORM
 │   ├── cli/            # `routess` CLI (npm)
-│   └── docs/           # Next.js (Fumadocs)
+│   ├── docs/           # Next.js (Fumadocs)
+│   └── landing/        # Next.js marketing site and public route pages
 ├── packages/
 │   ├── core/           # @routess/core           — shared business logic & state
 │   ├── api-client/     # @routess/api-client     — type-safe API client
@@ -81,6 +83,22 @@ routess/
 | Docs     | Next.js, Fumadocs                                       |
 | Build    | Bun workspaces, Biome, Docker Buildx Bake               |
 | Deploy   | Helm, Kubernetes, GitHub Actions, semantic-release      |
+
+## Architecture
+
+The domain glossary lives in [`CONTEXT.md`](CONTEXT.md), and the decisions behind the current shape are recorded as ADRs in [`docs/adr/`](docs/adr/README.md). In short: all routing goes through the API to a Valhalla engine, and `@routess/core` holds the shared fetch-free logic (costing, geometry, generation, GPX) used by the API, web app and CLI. Longer write-up: [`docs/architecture/overview`](https://docs.routess.com/docs/architecture/overview).
+
+## Testing
+
+```bash
+bun run test   # every workspace: bun test (api, core, packages, landing), vitest (web)
+```
+
+The API's integration tests need Postgres. `bun run ci` starts it through `docker/compose.yaml` before running the full pipeline.
+
+## Deploy
+
+CI builds the Docker images with `docker/docker-bake.hcl`, releases with semantic-release, and publishes the Helm chart in [`charts/routess`](charts/routess) to GHCR. The `routess` CLI is published to npm. See [`docs/operations/ci-cd`](https://docs.routess.com/docs/operations/ci-cd) for the pipeline and [`docs/operations/kubernetes`](https://docs.routess.com/docs/operations/kubernetes) for the Helm path.
 
 ## Contributing
 
