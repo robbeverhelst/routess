@@ -10,6 +10,7 @@ De repo heeft een testsuite die bij elke PR draait.
 | Onderdeel | Framework |
 | --- | --- |
 | Web (`apps/web`) | Vitest + React Testing Library + MSW |
+| Web-E2E (`apps/web/e2e`) | Playwright, API en Stripe nagebootst in de browser |
 | API (`apps/api`) | Vitest + Postgres-testcontainer |
 | Packages | Vitest |
 
@@ -19,6 +20,7 @@ De repo heeft een testsuite die bij elke PR draait.
 bun run test                    # All tests across the workspace
 bun run --filter './apps/web' test
 bun run --filter './packages/*' test
+bun run test:e2e                # Playwright browser E2E (apps/web)
 ```
 
 ## Conventies

@@ -10,6 +10,7 @@ Das Repo hat eine Test-Suite, die bei jedem PR läuft.
 | Bereich | Framework |
 | --- | --- |
 | Web (`apps/web`) | Vitest + React Testing Library + MSW |
+| Web-E2E (`apps/web/e2e`) | Playwright, API und Stripe im Browser gefälscht |
 | API (`apps/api`) | Vitest + Postgres-Test-Container |
 | Pakete | Vitest |
 
@@ -19,6 +20,7 @@ Das Repo hat eine Test-Suite, die bei jedem PR läuft.
 bun run test                    # All tests across the workspace
 bun run --filter './apps/web' test
 bun run --filter './packages/*' test
+bun run test:e2e                # Playwright browser E2E (apps/web)
 ```
 
 ## Konventionen

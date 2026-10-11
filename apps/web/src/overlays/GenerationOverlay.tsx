@@ -221,7 +221,7 @@ export function GenerationOverlay() {
 					label: t("loop.quota.upgrade"),
 					onClick: () => {
 						dismiss();
-						void navigate({ to: "/upgrade" });
+						void navigate({ to: "/upgrade", search: { from: "quota" } });
 					},
 				});
 			}

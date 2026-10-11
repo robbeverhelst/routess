@@ -13,6 +13,7 @@ import {
 	Compass,
 	Copy,
 	CornerDownLeft,
+	CreditCard,
 	Download,
 	Expand,
 	ExternalLink,
@@ -20,6 +21,7 @@ import {
 	Folder,
 	FolderPlus,
 	Footprints,
+	Gift,
 	Globe,
 	GripVertical,
 	Heart,
@@ -127,6 +129,8 @@ export const I = {
 	walk: Footprints,
 	check: Check,
 	shield: Shield,
+	gift: Gift,
+	creditCard: CreditCard,
 };
 
 export type IconKey = keyof typeof I;
