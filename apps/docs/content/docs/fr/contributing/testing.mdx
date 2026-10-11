@@ -10,6 +10,7 @@ Le repo a une suite de tests qui s'exécute à chaque PR.
 | Surface | Framework |
 | --- | --- |
 | Web (`apps/web`) | Vitest + React Testing Library + MSW |
+| E2E web (`apps/web/e2e`) | Playwright, API et Stripe simulés dans le navigateur |
 | API (`apps/api`) | Vitest + conteneur de test Postgres |
 | Packages | Vitest |
 
@@ -19,6 +20,7 @@ Le repo a une suite de tests qui s'exécute à chaque PR.
 bun run test                    # All tests across the workspace
 bun run --filter './apps/web' test
 bun run --filter './packages/*' test
+bun run test:e2e                # Playwright browser E2E (apps/web)
 ```
 
 ## Conventions

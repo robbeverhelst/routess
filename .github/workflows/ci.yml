@@ -76,7 +76,7 @@ jobs:
         run: bun run --filter './apps/*' build
 
   e2e:
-    # Browser E2E against the Vite dev server with the API and Stripe faked
+    # Browser E2E against a `vite preview` build with the API and Stripe faked
     # (apps/web/e2e). Hosted runner: Playwright installs Chromium's system
     # libraries with apt, which needs sudo.
     runs-on: ubuntu-latest

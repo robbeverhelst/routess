@@ -10,6 +10,7 @@ The repo has a test suite that runs on every PR.
 | Surface | Framework |
 | --- | --- |
 | Web (`apps/web`) | Vitest + React Testing Library + MSW |
+| Web E2E (`apps/web/e2e`) | Playwright, API and Stripe faked in the browser |
 | API (`apps/api`) | Vitest + Postgres test container |
 | Packages | Vitest |
 
@@ -19,6 +20,7 @@ The repo has a test suite that runs on every PR.
 bun run test                    # All tests across the workspace
 bun run --filter './apps/web' test
 bun run --filter './packages/*' test
+bun run test:e2e                # Playwright browser E2E (apps/web)
 ```
 
 ## Conventions
