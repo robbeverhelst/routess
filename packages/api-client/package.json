@@ -1,7 +1,7 @@
 {
 	"name": "@routess/api-client",
 	"version": "0.1.0",
-	"description": "Platform-agnostic API client for Routess with web and mobile adapters",
+	"description": "Platform-agnostic API client for Routess",
 	"main": "dist/index.js",
 	"module": "dist/index.js",
 	"types": "dist/index.d.ts",
@@ -24,14 +24,6 @@
 		".": {
 			"types": "./dist/index.d.ts",
 			"default": "./dist/index.js"
-		},
-		"./web": {
-			"types": "./dist/adapters/web.d.ts",
-			"default": "./dist/adapters/web.js"
-		},
-		"./mobile": {
-			"types": "./dist/adapters/mobile.d.ts",
-			"default": "./dist/adapters/mobile.js"
 		}
 	}
 }

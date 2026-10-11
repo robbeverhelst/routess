@@ -1,6 +1,5 @@
 export const fr: Record<string, string> = {
 	// Sidebar translations
-	"sidebar.currentRoute": "Itinéraire Actuel",
 
 	// RouteControls translations
 

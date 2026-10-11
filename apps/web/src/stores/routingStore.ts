@@ -13,7 +13,6 @@ export const useDurationSeconds = () => useRoutingStore((s) => s.durationSeconds
 export const useIsOfflineRoute = () => useRoutingStore((s) => s.isOfflineRoute);
 export const useHasRoute = () => useRoutingStore((s) => s.hasRoute);
 export const useElevationGain = () => useRoutingStore((s) => s.elevationGain);
-export const useElevationLoss = () => useRoutingStore((s) => s.elevationLoss);
 export const useElevationProfile = () => useRoutingStore((s) => s.elevationProfile);
 export const useIsComputingElevation = () => useRoutingStore((s) => s.isComputingElevation);
 export const useIsComputingRoute = () => useRoutingStore((s) => s.isComputingRoute);
@@ -46,26 +45,15 @@ export const useRouteDuration = (): string => {
 };
 
 // Action selectors (Zustand action references are stable across renders)
-export const useAddWaypoint = () => useRoutingStore((s) => s.addWaypoint);
 export const useRemoveWaypoint = () => useRoutingStore((s) => s.removeWaypoint);
 export const useSetWaypoints = () => useRoutingStore((s) => s.setWaypoints);
 export const useSetWaypointType = () => useRoutingStore((s) => s.setWaypointType);
 export const useSetWaypointName = () => useRoutingStore((s) => s.setWaypointName);
-export const useUpdateWaypointCoords = () => useRoutingStore((s) => s.updateWaypointCoords);
 export const useClearWaypoints = () => useRoutingStore((s) => s.clearWaypoints);
-export const useSetRoutePath = () => useRoutingStore((s) => s.setRoutePath);
-export const useClearRoutePath = () => useRoutingStore((s) => s.clearRoutePath);
-export const useSetRouteMetrics = () => useRoutingStore((s) => s.setRouteMetrics);
-export const useClearRouteMetrics = () => useRoutingStore((s) => s.clearRouteMetrics);
-export const useSetHasRoute = () => useRoutingStore((s) => s.setHasRoute);
 export const useSetIsMapLocked = () => useRoutingStore((s) => s.setIsMapLocked);
 export const useSaveSnapshot = () => useRoutingStore((s) => s.saveSnapshot);
-export const useUndo = () => useRoutingStore((s) => s.undo);
-export const useRedo = () => useRoutingStore((s) => s.redo);
-export const useClearHistory = () => useRoutingStore((s) => s.clearHistory);
 export const useSetMode = () => useRoutingStore((s) => s.setMode);
 export const useSetEditingName = () => useRoutingStore((s) => s.setEditingName);
-export const useSetBaseline = () => useRoutingStore((s) => s.setBaseline);
 export const useSetActivity = () => useRoutingStore((s) => s.setActivity);
 
 export type {

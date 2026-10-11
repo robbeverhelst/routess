@@ -56,11 +56,3 @@ export function useIsAuthenticated(): boolean {
 	const authState = useAuthState();
 	return authState.isAuthenticated;
 }
-
-/**
- * Hook that returns current user or null
- */
-export function useCurrentUser() {
-	const authState = useAuthState();
-	return authState.user;
-}

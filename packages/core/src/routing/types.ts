@@ -20,11 +20,3 @@ export type RoutingDefaults = Record<RouteActivity, RoutingPreferences>;
 export function isSurfaceType(value: unknown): value is SurfaceType {
 	return SURFACE_TYPES.includes(value as SurfaceType);
 }
-
-export function isSurfaceBucket(value: unknown): value is SurfaceBucket {
-	return SURFACE_BUCKETS.includes(value as SurfaceBucket);
-}
-
-export function isProvenance(value: unknown): value is Provenance {
-	return PROVENANCES.includes(value as Provenance);
-}

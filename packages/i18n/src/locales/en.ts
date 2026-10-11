@@ -1,6 +1,5 @@
 export const en: Record<string, string> = {
 	// Sidebar translations
-	"sidebar.currentRoute": "Current Route",
 
 	// RouteControls translations
 
@@ -74,9 +73,6 @@ export const en: Record<string, string> = {
 	"sport.short.run": "Run",
 	"sport.short.cycle": "Cycle",
 	"sport.short.walk": "Walk",
-	"sport.tag.run": "Pace · splits",
-	"sport.tag.cycle": "Speed · routes",
-	"sport.tag.walk": "Distance · POIs",
 
 	// Bottom / rail navigation
 	"nav.plan": "Plan",
@@ -127,8 +123,6 @@ export const en: Record<string, string> = {
 	"settings.map.streets": "Streets",
 	"settings.map.outdoors": "Outdoors",
 	"settings.map.satellite": "Satellite",
-	"settings.map.pois": "Show points of interest",
-	"settings.map.terrain3d": "3D terrain",
 	"settings.map.autoSnap": "Auto-snap to roads",
 	"settings.map.offTrackGuide": "Off-track guide line",
 	"settings.map.offTrackGuideSub": "Show a dashed line to the nearest point on your route when you stray off it",
@@ -773,11 +767,7 @@ export const en: Record<string, string> = {
 	"coach.docsLink": "Learn more in the docs",
 
 	// LiveNavScreen (NavigationSession)
-	"nav.remaining": "Remaining",
-	"nav.eta": "ETA",
-	"nav.speed": "Speed",
 	"nav.then": "Then",
-	"nav.unmute": "Unmute",
 	"nav.mute": "Mute",
 	"nav.reroute": "Reroute",
 	"nav.end": "End",
@@ -791,13 +781,11 @@ export const en: Record<string, string> = {
 	"nav.startFailedBody": "Preparing turn instructions needs a connection. Try again once you are online.",
 	"nav.noGeometry": "This route has no path to follow.",
 	"nav.followRoute": "Follow the route",
-	"nav.degraded": "Turn instructions are unavailable right now; follow the route line.",
 	"nav.offRouteRejoining": "Off route, finding a way back…",
 	"nav.offRouteOffline": "Off route. The route is in this direction.",
 	"nav.rejoining": "Returning to the route",
 	"nav.recenter": "Recenter",
 	"nav.arrived": "You have arrived",
-	"nav.arrivedBody": "{distance} in {duration}. See you on the next one.",
 	"nav.resumeTitle": "Resume navigation?",
 	"nav.resume": "Resume",
 	"nav.dismissResume": "Dismiss",

@@ -685,23 +685,6 @@ export function useRevokePersonalAccessToken() {
 	});
 }
 
-/**
- * Hook to prefetch routes for better UX
- */
-export function usePrefetchRoutes() {
-	const queryClient = useQueryClient();
-
-	return () => {
-		if (hasStoredUser()) {
-			queryClient.prefetchQuery({
-				queryKey: queryKeys.routes.list(),
-				queryFn: apiService.getRoutes,
-				staleTime: 2 * 60 * 1000,
-			});
-		}
-	};
-}
-
 // ============================================================================
 // BILLING (ADR 0039)
 // ============================================================================

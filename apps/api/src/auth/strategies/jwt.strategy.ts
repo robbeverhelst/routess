@@ -51,7 +51,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 		}
 
 		// Single populated lookup: validates the session and resolves the
-		// owning user in one query (was two: validateSession + validateUserById).
+		// owning user in one query.
 		const user = await this.sessionService.resolveAuthenticatedUser(payload.jti);
 		if (!user) {
 			throw new UnauthorizedException("Session expired or user not found");
