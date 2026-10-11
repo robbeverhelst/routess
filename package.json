@@ -12,7 +12,9 @@
 		"dev": "bun ./scripts/dev.ts",
 		"build": "bun run --filter './packages/*' build && bun run --filter './apps/*' build",
 		"lint": "biome check .",
+		"lint:fix": "biome check --write .",
 		"check-types": "bun run --filter '*' check-types",
+		"check": "bun run lint && bun run check-types",
 		"test": "bun run --filter '*' test",
 		"test:e2e": "bun run --filter './apps/web' test:e2e",
 		"format": "biome format --write .",
@@ -24,7 +26,7 @@
 		"docs:sync-translations": "bun run --filter './apps/docs' guide:sync-translations"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.4.8",
+		"@biomejs/biome": "^2.5.1",
 		"@semantic-release/commit-analyzer": "^13.0.0",
 		"@semantic-release/git": "^11.0.0",
 		"@semantic-release/github": "^12.0.0",
@@ -41,76 +43,6 @@
 		"ajv": "^8.18.0",
 		"brace-expansion": "^5.0.0",
 		"postcss": "^8.5.10"
-	},
-	"release": {
-		"branches": [
-			"main"
-		],
-		"tagFormat": "${version}",
-		"plugins": [
-			[
-				"@semantic-release/commit-analyzer",
-				{
-					"preset": "angular",
-					"releaseRules": [
-						{
-							"type": "refactor",
-							"release": "patch"
-						},
-						{
-							"type": "perf",
-							"release": "patch"
-						}
-					],
-					"parserOpts": {
-						"noteKeywords": [
-							"BREAKING CHANGE",
-							"BREAKING CHANGES"
-						]
-					}
-				}
-			],
-			[
-				"@semantic-release/release-notes-generator",
-				{
-					"preset": "angular",
-					"parserOpts": {
-						"noteKeywords": [
-							"BREAKING CHANGE",
-							"BREAKING CHANGES"
-						]
-					},
-					"writerOpts": {
-						"commitsSort": [
-							"subject",
-							"scope"
-						]
-					}
-				}
-			],
-			[
-				"@semantic-release/npm",
-				{
-					"npmPublish": false
-				}
-			],
-			[
-				"@semantic-release/github",
-				{
-					"successComment": false,
-					"failComment": false
-				}
-			],
-			[
-				"@semantic-release/git",
-				{
-					"assets": [
-						"package.json"
-					],
-					"message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
-				}
-			]
-		]
 	},
 	"dependencies": {
 		"@tanstack/router-cli": "^1.167.24"
