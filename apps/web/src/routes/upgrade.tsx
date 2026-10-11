@@ -322,7 +322,9 @@ function ProStatus({
 				<div style={{ color: RDS_COLORS.fgMuted }}>
 					{until ? `${labels.until(formatDay(until, language))} · ${labels.daysLeft(daysLeft(until))}` : labels.forever}
 				</div>
-				{ogUntil ? <div style={{ color: RDS_COLORS.fgSubtle, fontSize: 12 }}>{labels.ogIncluded}</div> : null}
+				{ogUntil && new Date(ogUntil).getTime() > Date.now() ? (
+					<div style={{ color: RDS_COLORS.fgSubtle, fontSize: 12 }}>{labels.ogIncluded}</div>
+				) : null}
 			</div>
 		</div>
 	);
