@@ -101,7 +101,7 @@ export function LayerPicker() {
 							boxShadow: "var(--rds-shadow-lg)",
 							zIndex: 60,
 							overflow: "auto",
-							animation: "rds-sheet-in 200ms cubic-bezier(0.32, 0.72, 0, 1)",
+							animation: "rds-sheet-in var(--rds-dur-slow) var(--rds-ease-spring)",
 						}
 					: {
 							position: "absolute",
@@ -114,6 +114,8 @@ export function LayerPicker() {
 							boxShadow: "var(--rds-shadow-lg)",
 							zIndex: 60,
 							overflow: "hidden",
+							transformOrigin: "top right",
+							animation: "rds-pop-in var(--rds-dur-base) var(--rds-ease-out)",
 						}
 			}
 		>

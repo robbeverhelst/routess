@@ -64,6 +64,7 @@ export function ToastStack() {
 							boxShadow: "var(--rds-shadow-md)",
 							pointerEvents: "auto",
 							width: "min(340px, 100%)",
+							animation: "rds-rise-in var(--rds-dur-base) var(--rds-ease-out)",
 						}}
 					>
 						<div
