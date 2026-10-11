@@ -1,8 +1,16 @@
 # @routess/design-tokens
 
-Simple shared design tokens for Routess - colors and basic typography only.
+Shared design tokens for Routess: colors, typography, spacing, radii, breakpoints, z-index and animation durations.
 
 ## Usage
+
+The Next.js apps (`apps/landing`, `apps/docs`) consume the CSS custom properties:
+
+```css
+@import "@routess/design-tokens/css/tokens.css";
+```
+
+The TypeScript exports carry the same values for code that needs them:
 
 ```typescript
 import { lightColors, darkColors, fontSize, fontWeight } from "@routess/design-tokens";
@@ -21,7 +29,8 @@ const boldWeight = fontWeight.semibold;
 - **Colors**: Light and dark theme color tokens (OKLCH color space)
 - **Font sizes**: xs, sm, base, lg, xl, 2xl
 - **Font weights**: normal, medium, semibold, bold
-- **Font family**: System font stack
+- **Font families**: `display` (Bricolage Grotesque), `body` (Inter) and `mono` (JetBrains Mono), each with system fallbacks
+- **Layout**: `spacing`, `borderRadius`, `breakpoints`, `zIndex`, `animationDuration`
 
 ## Cross-platform
 

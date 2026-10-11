@@ -8,6 +8,8 @@ Route-planning app for cyclists, runners, and hikers. See `CONTEXT.md` for the d
 - `apps/api`: NestJS + PostgreSQL + MikroORM
 - `apps/web`: React + Vite + Tailwind + Mapbox
 - `apps/docs`: Next.js (Fumadocs)
+- `apps/landing`: Next.js marketing site and public route pages
+- `apps/cli`: `routess` CLI, published to npm
 - `packages/*`: `core`, `api-client`, `i18n`, `design-tokens`
 - Deploy: Docker images via `docker/docker-bake.hcl` → Helm chart in `charts/routess`
 
