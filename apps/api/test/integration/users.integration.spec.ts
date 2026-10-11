@@ -111,6 +111,25 @@ describe("Users Integration Tests", () => {
 			});
 		});
 
+		it("sums distances that are not exact in float4 without float4 rounding", async () => {
+			const waypoints = [{ coord: [13.405, 52.52] as [number, number], type: "routed" as const }];
+			orm.em.create(Route, { name: "A", user: testUser, waypoints, distance: 1234.56 });
+			orm.em.create(Route, { name: "B", user: testUser, waypoints, distance: 10.1 });
+			orm.em.create(Route, { name: "C", user: testUser, waypoints, distance: 42195.7 });
+			await orm.em.flush();
+			orm.em.clear();
+
+			const response = await supertest(app.getHttpServer())
+				.get("/api/v1/users/me")
+				.set("Authorization", `Bearer ${authToken}`)
+				.expect(200);
+
+			expect(response.body.statistics).toEqual({
+				totalRoutes: 3,
+				totalDistance: 43440.36,
+			});
+		});
+
 		it("should fail without authentication", async () => {
 			await supertest(app.getHttpServer()).get("/api/v1/users/me").expect(401);
 		});
