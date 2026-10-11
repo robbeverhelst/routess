@@ -10,12 +10,12 @@ Ce guide pas à pas met une instance routess en route sur ta propre machine ou t
 - **Docker** et **Docker Compose v2** (un Docker Desktop moderne ou Docker Engine est livré avec les deux).
 - Un **client Google OAuth** pour la connexion Google (le fichier compose l'exige). Les utilisateurs peuvent aussi se connecter avec e-mail + mot de passe une fois la stack en place.
 - Un **token d'accès Mapbox** ; le tier gratuit suffit.
+- Un moteur de routage **Valhalla** (`VALHALLA_URL`). Le calcul d'itinéraire et l'analyse de surface passent par lui ; sans lui, les endpoints de routage renvoient 503.
 - Des chaînes aléatoires longues pour `JWT_SECRET`, `ANALYTICS_SALT`, `PAT_PEPPER` et `DB_PASSWORD`. Génère-les avec `openssl rand -base64 32`.
 
 Optionnels, désactivés proprement quand non définis :
 
 - **Resend** pour les e-mails transactionnels (sans lui, les URL de vérification sont écrites sur stdout).
-- **Valhalla** pour l'analyse du type de surface sur les itinéraires planifiés.
 - **Sentry / GlitchTip** pour le reporting d'erreurs du navigateur.
 - **Umami** pour l'analytics produit.
 - **Rôle admin** pour accéder au panneau d'administration intégré à l'application.
@@ -84,7 +84,7 @@ Le fichier `.env` dans `docker/.env.selfhost.example` fait foi. Les variables qu
 | `ADMIN_EMAILS`                 | non      | vide                             | E-mails (séparés par des virgules) auxquels le rôle admin est accordé à la connexion. Vide désactive le panneau d'administration. |
 | `RESEND_API_KEY`               | non      | vide                             | Clé d'API Resend. Vide se rabat sur l'écriture des URL de vérification sur stdout.                 |
 | `EMAIL_FROM`                   | non      | `routess <noreply@routess.app>`  | Adresse d'expéditeur utilisée par Resend.                                                           |
-| `VALHALLA_URL`                 | non      | vide                             | URL de base d'une instance Valhalla auto-hébergée pour l'analyse de surface. Vide la désactive.     |
+| `VALHALLA_URL`                 | oui      | vide                             | URL de base d'une instance Valhalla auto-hébergée pour le routage et l'analyse de surface. Vide, les endpoints de routage renvoient 503. |
 | `VITE_UMAMI_URL` / `_WEBSITE_ID` | non    | vide                             | Endpoint et site ID Umami pour l'application web. Vide désactive l'analytics produit.            |
 | `UMAMI_URL` / `_WEBSITE_ID`    | non      | vide                             | Mêmes endpoint et site ID Umami pour le site de documentation (Next les lit côté serveur).         |
 | `VITE_SENTRY_DSN`              | non      | vide                             | DSN Sentry / GlitchTip pour le reporting d'erreurs du navigateur.                                       |

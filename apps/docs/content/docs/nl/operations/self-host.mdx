@@ -10,12 +10,12 @@ Deze handleiding krijgt een routess-instantie op je eigen machine of server draa
 - **Docker** en **Docker Compose v2** (een moderne Docker Desktop of Docker Engine komt met allebei).
 - Een **Google OAuth-client** voor Google-aanmelding (het compose-bestand vereist het). Gebruikers kunnen ook met e-mail + wachtwoord aanmelden zodra de stack draait.
 - Een **Mapbox access token**; de gratis tier volstaat.
+- Een **Valhalla**-routing-engine (`VALHALLA_URL`). Routeberekening en wegdekanalyse lopen erlangs; zonder geven de routing-endpoints 503 terug.
 - Lange willekeurige strings voor `JWT_SECRET`, `ANALYTICS_SALT`, `PAT_PEPPER` en `DB_PASSWORD`. Genereer ze met `openssl rand -base64 32`.
 
 Optioneel, netjes uitgeschakeld wanneer niet gezet:
 
 - **Resend** voor transactionele e-mail (zonder dit worden verificatie-URL's naar stdout gelogd).
-- **Valhalla** voor analyse van het wegdektype op geplande routes.
 - **Sentry / GlitchTip** voor het rapporteren van browserfouten.
 - **Umami** voor productanalytics.
 - **Adminrol** voor toegang tot het ingebouwde adminpaneel.
@@ -84,7 +84,7 @@ Het `.env`-bestand in `docker/.env.selfhost.example` is de bron van waarheid. De
 | `ADMIN_EMAILS`                 | nee       | leeg                            | Kommagescheiden e-mailadressen die bij login de adminrol krijgen. Leeg schakelt het adminpaneel uit. |
 | `RESEND_API_KEY`               | nee       | leeg                            | Resend API-key. Leeg valt terug op het loggen van verificatie-URL's naar stdout.                 |
 | `EMAIL_FROM`                   | nee       | `routess <noreply@routess.app>`  | Afzenderadres gebruikt door Resend.                                                           |
-| `VALHALLA_URL`                 | nee       | leeg                            | Base-URL van een self-hosted Valhalla-instantie voor wegdekanalyse. Leeg schakelt het uit.     |
+| `VALHALLA_URL`                 | ja        | leeg                            | Base-URL van een self-hosted Valhalla-instantie voor routing en wegdekanalyse. Leeg geven de routing-endpoints 503 terug. |
 | `VITE_UMAMI_URL` / `_WEBSITE_ID` | nee     | leeg                            | Umami-endpoint en site-ID voor de webapp. Leeg schakelt productanalytics uit.            |
 | `UMAMI_URL` / `_WEBSITE_ID`    | nee       | leeg                            | Hetzelfde Umami-endpoint en site-ID voor de docs-site (Next leest ze aan serverzijde).         |
 | `VITE_SENTRY_DSN`              | nee       | leeg                            | Sentry / GlitchTip DSN voor het rapporteren van browserfouten.                                      |
