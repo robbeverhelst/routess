@@ -6,7 +6,6 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 // The decided Checkout methods (ADR 0039), in the order the paywall shows them.
 export const PAYMENT_METHODS = ["bancontact", "ideal", "card"] as const;
-export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
 // "€29.99" in the UI language; Stripe reports minor units.
 export function formatPrice(price: OfferPrice, language: string): string {

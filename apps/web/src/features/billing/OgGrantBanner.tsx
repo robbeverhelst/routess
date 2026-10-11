@@ -38,9 +38,11 @@ export function OgGrantBanner() {
 	const [dismissedFor, setDismissedFor] = useState<number | null>(null);
 
 	const ogUntil = status?.account?.ogGrantExpiresAt ?? null;
+	const proUntil = status?.account?.proExpiresAt ?? null;
 	if (!user || !ogUntil || dismissedFor === user.id || hasSeen(user.id)) return null;
 	// An OG grant that already ran out is old news.
 	if (new Date(ogUntil).getTime() <= Date.now()) return null;
+	if (proUntil && new Date(proUntil).getTime() > new Date(ogUntil).getTime()) return null;
 
 	const close = () => {
 		markSeen(user.id);
