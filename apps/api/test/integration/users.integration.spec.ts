@@ -84,6 +84,52 @@ describe("Users Integration Tests", () => {
 			});
 		});
 
+		it("counts every visibility, treats a missing distance as zero and skips deleted and foreign routes", async () => {
+			const otherUser = orm.em.create(User, {
+				email: "other@example.com",
+				name: "Other User",
+				googleId: "google-other-456",
+				isEmailVerified: true,
+			});
+			const waypoints = [{ coord: [13.405, 52.52] as [number, number], type: "routed" as const }];
+			orm.em.create(Route, { name: "Public", user: testUser, waypoints, distance: 1234.5, visibility: "public" });
+			orm.em.create(Route, { name: "Unlisted", user: testUser, waypoints, distance: 0.25, visibility: "unlisted" });
+			orm.em.create(Route, { name: "No distance", user: testUser, waypoints });
+			orm.em.create(Route, { name: "Deleted", user: testUser, waypoints, distance: 9999, deletedAt: new Date() });
+			orm.em.create(Route, { name: "Not mine", user: otherUser, waypoints, distance: 7777 });
+			await orm.em.flush();
+			orm.em.clear();
+
+			const response = await supertest(app.getHttpServer())
+				.get("/api/v1/users/me")
+				.set("Authorization", `Bearer ${authToken}`)
+				.expect(200);
+
+			expect(response.body.statistics).toEqual({
+				totalRoutes: 3,
+				totalDistance: 1234.75,
+			});
+		});
+
+		it("sums distances that are not exact in float4 without float4 rounding", async () => {
+			const waypoints = [{ coord: [13.405, 52.52] as [number, number], type: "routed" as const }];
+			orm.em.create(Route, { name: "A", user: testUser, waypoints, distance: 1234.56 });
+			orm.em.create(Route, { name: "B", user: testUser, waypoints, distance: 10.1 });
+			orm.em.create(Route, { name: "C", user: testUser, waypoints, distance: 42195.7 });
+			await orm.em.flush();
+			orm.em.clear();
+
+			const response = await supertest(app.getHttpServer())
+				.get("/api/v1/users/me")
+				.set("Authorization", `Bearer ${authToken}`)
+				.expect(200);
+
+			expect(response.body.statistics).toEqual({
+				totalRoutes: 3,
+				totalDistance: 43440.36,
+			});
+		});
+
 		it("should fail without authentication", async () => {
 			await supertest(app.getHttpServer()).get("/api/v1/users/me").expect(401);
 		});
