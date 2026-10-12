@@ -87,7 +87,7 @@ export const en: Dict = {
 		body: "Pick a start point, a distance and a direction, and Routess builds a real route for you, on surfaces you'd actually want to ride or run on.",
 		bullets: [
 			"Loop or A→B, your call",
-			"Target distance, give or take, in the direction you pick",
+			"Target distance, give or take; pick a direction for loops",
 			"Surface preference: paved · mixed · unpaved",
 			"Prefer knooppunten: follow numbered node networks where they exist",
 		],

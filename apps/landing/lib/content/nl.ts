@@ -90,7 +90,7 @@ export const nl: Dict = {
 		body: "Kies een startpunt, een afstand en een richting, en Routess stippelt een echte route voor je uit, op een ondergrond waar je effectief op wil rijden of lopen.",
 		bullets: [
 			"Lus of A→B, jij kiest",
-			"Doelafstand, ongeveer, in de richting die je kiest",
+			"Doelafstand, ongeveer; bij een lus kies je ook de richting",
 			"Voorkeur ondergrond: verhard · gemengd · onverhard",
 			"Volg knooppunten: langs genummerde knooppuntnetwerken waar die bestaan",
 		],
