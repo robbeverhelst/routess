@@ -1,6 +1,6 @@
 import { darkBrand, landingAccents, lightBrand } from "@routess/design-tokens";
 import type { Dict } from "@/lib/content";
-import { APP_HOST, REPO_URL } from "@/lib/i18n";
+import { APP_HOST } from "@/lib/i18n";
 import { AccentInline } from "./AccentText";
 import { ArrowIcon } from "./Icons";
 
@@ -180,7 +180,7 @@ export function Pricing({ dict }: { dict: Dict }) {
 							</div>
 							<div style={{ color: landingAccents.lavender, fontSize: 14 }}>{dict.pricing.proTagline}</div>
 						</div>
-						<div style={{ position: "relative", display: "flex", alignItems: "baseline", gap: 6 }}>
+						<div style={{ position: "relative", display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: 6 }}>
 							<span className="display" style={{ fontSize: 56, color: "var(--paper)" }}>
 								{dict.pricing.proPrice}
 							</span>
@@ -203,7 +203,7 @@ export function Pricing({ dict }: { dict: Dict }) {
 						</div>
 						<a
 							className="btn"
-							href={`${REPO_URL}/issues`}
+							href={`https://${APP_HOST}/upgrade`}
 							style={{
 								background: "var(--sun)",
 								color: lightBrand.ink,
@@ -218,9 +218,21 @@ export function Pricing({ dict }: { dict: Dict }) {
 					</div>
 				</div>
 
+				<p
+					style={{
+						maxWidth: 920,
+						margin: "28px auto 0",
+						textAlign: "center",
+						color: landingAccents.lavender,
+						fontSize: 15,
+					}}
+				>
+					{dict.pricing.ogNote}
+				</p>
+
 				<div
 					style={{
-						marginTop: 32,
+						marginTop: 20,
 						textAlign: "center",
 						color: landingAccents.mutedOnDark,
 						fontSize: 13,

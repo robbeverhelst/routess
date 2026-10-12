@@ -97,6 +97,7 @@ export interface Dict {
 		proPerks: ReadonlyArray<string>;
 		proCta: string;
 		proBadge: string;
+		ogNote: string;
 		selfHostNote: string;
 		selfHostLink: string;
 	};
