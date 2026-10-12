@@ -20,42 +20,42 @@
 	"linter": {
 		"enabled": true,
 		"rules": {
-			"recommended": true,
+			"preset": "recommended",
 			"a11y": {
-				"recommended": true
+				"preset": "recommended"
 			},
 			"complexity": {
-				"recommended": true,
+				"preset": "recommended",
 				"noUselessFragments": "error"
 			},
 			"correctness": {
-				"recommended": true,
+				"preset": "recommended",
 				"noUnusedVariables": "error",
 				"noUnusedImports": "error"
 			},
 			"performance": {
-				"recommended": true,
+				"preset": "recommended",
 				"noAccumulatingSpread": "error"
 			},
 			"security": {
-				"recommended": true
+				"preset": "recommended"
 			},
 			"style": {
-				"recommended": true,
+				"preset": "recommended",
 				"noNonNullAssertion": "error",
 				"noParameterAssign": "error",
 				"useConst": "error",
 				"useTemplate": "error"
 			},
 			"suspicious": {
-				"recommended": true,
+				"preset": "recommended",
 				"noExplicitAny": "error",
 				"noConsole": "error",
 				"noDebugger": "error",
 				"noEmptyBlockStatements": "error"
 			},
 			"nursery": {
-				"recommended": true
+				"preset": "recommended"
 			}
 		}
 	},
