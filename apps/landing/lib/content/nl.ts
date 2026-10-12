@@ -85,9 +85,9 @@ export const nl: Dict = {
 		elevationStats: "Hallerbos-wandeling · 5,4 km · ↑ 68 m",
 	},
 	routegen: {
-		eyebrow: "Komt eraan · Route-generatie",
+		eyebrow: "Route-generatie",
 		title: [{ text: "Geen idee waarheen? " }, { text: "Vraag het.", accent: true }],
-		body: "Binnenkort typ je wat je wil doen, en maakt Routess er een echte route van, met een ondergrond waar je effectief op wil rijden of lopen. In de maak, nog niet live.",
+		body: "Typ wat je wil doen, en Routess maakt er een echte route van, met een ondergrond waar je effectief op wil rijden of lopen.",
 		bullets: [
 			"Lus of A→B, jij kiest",
 			"Doel-afstand, ongeveer",

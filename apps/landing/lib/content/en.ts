@@ -82,9 +82,9 @@ export const en: Dict = {
 		elevationStats: "Hallerbos walk · 5.4 km · ↑ 68 m",
 	},
 	routegen: {
-		eyebrow: "Coming soon · Route generation",
+		eyebrow: "Route generation",
 		title: [{ text: "Don't know where to go? " }, { text: "Ask.", accent: true }],
-		body: "Soon you'll type what you feel like doing, and Routess will turn it into a real route, with surfaces you'd actually want to ride or run on. In the works, not live yet.",
+		body: "Type what you feel like doing, and Routess turns it into a real route, with surfaces you'd actually want to ride or run on.",
 		bullets: [
 			"Loop or A→B, your call",
 			"Target distance, give or take",
