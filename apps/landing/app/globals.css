@@ -374,11 +374,6 @@ section.tight {
 		transform: translateY(-6px);
 	}
 }
-@keyframes blink {
-	50% {
-		opacity: 0;
-	}
-}
 
 .float {
 	animation: float 4s ease-in-out infinite;

@@ -101,7 +101,7 @@ export const komootAlternative: Article = {
 				{
 					kind: "p",
 					content: [
-						"Yes. The planner, saving, GPX import and export, and surface and elevation data are free, worldwide. A Pro plan with heavier extras is planned, but the planner stays free. And because it is MIT-licensed, you can always run it yourself.",
+						"Yes. The planner, saving, GPX import and export, and surface and elevation data are free, worldwide. Free includes 3 generated routes a day when you're signed in. Pro is a €29.99 year pass for 50 generated routes a day: a one-off payment, no subscription. The planner stays free. And because it is MIT-licensed, you can always run it yourself.",
 					],
 				},
 				{ kind: "h3", text: "Can I import my Komoot routes?" },
@@ -218,7 +218,7 @@ export const komootAlternative: Article = {
 				{
 					kind: "p",
 					content: [
-						"Ja. De planner, opslaan, GPX-import en -export en ondergrond- en hoogtedata zijn gratis, wereldwijd. Er komt een Pro-plan met zwaardere extra's, maar de planner blijft gratis. En omdat alles MIT-gelicentieerd is, kan je het altijd zelf draaien.",
+						"Ja. De planner, opslaan, GPX-import en -export en ondergrond- en hoogtedata zijn gratis, wereldwijd. Gratis krijg je 3 gegenereerde routes per dag als je aangemeld bent. Pro is een jaarpas van €29,99 voor 50 gegenereerde routes per dag: één betaling, geen abonnement. De planner blijft gratis. En omdat alles MIT-gelicentieerd is, kan je het altijd zelf draaien.",
 					],
 				},
 				{ kind: "h3", text: "Kan ik mijn Komoot-routes importeren?" },

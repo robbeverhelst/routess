@@ -61,8 +61,8 @@ export interface Dict {
 		title: ReadonlyArray<{ text: string; accent?: boolean }>;
 		body: string;
 		bullets: ReadonlyArray<string>;
-		promptLabel: string;
-		prompts: ReadonlyArray<string>;
+		formTitle: string;
+		formFields: ReadonlyArray<{ label: string; value: string }>;
 		generateBtn: string;
 	};
 	sharing: {

@@ -24,7 +24,7 @@ export const routePlannersCompared: Article = {
 						[
 							[{ text: "routess", strong: true }],
 							["Free web-first planning with surface data"],
-							["Free, Pro planned"],
+							["Free, Pro €29.99/year, no subscription"],
 							["Free, unlimited"],
 							["Yes, MIT"],
 						],
@@ -123,7 +123,7 @@ export const routePlannersCompared: Article = {
 						[
 							[{ text: "routess", strong: true }],
 							["Gratis web-eerst plannen met ondergronddata"],
-							["Gratis, Pro gepland"],
+							["Gratis, Pro €29,99/jaar, geen abonnement"],
 							["Gratis, onbeperkt"],
 							["Ja, MIT"],
 						],
