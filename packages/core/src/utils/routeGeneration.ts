@@ -1,5 +1,5 @@
 import type { Coordinate, Waypoint } from "../types";
-import { haversineDistance } from "./geospatial";
+import { calculateBearing, haversineDistance } from "./geospatial";
 
 // Heuristic strategy for compressing a dense track of GPS points down
 // to a small set of "smart" waypoints. Detects significant direction
@@ -26,16 +26,6 @@ export const DEFAULT_SMART_WAYPOINT_THRESHOLDS: SmartWaypointThresholds = {
 	minDistanceBetweenWaypointsKm: 0.1,
 	maxWaypoints: 15,
 };
-
-function calculateBearing(a: Coordinate, b: Coordinate): number {
-	const lat1 = (a[1] * Math.PI) / 180;
-	const lat2 = (b[1] * Math.PI) / 180;
-	const deltaLon = ((b[0] - a[0]) * Math.PI) / 180;
-	const y = Math.sin(deltaLon) * Math.cos(lat2);
-	const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(deltaLon);
-	const bearing = (Math.atan2(y, x) * 180) / Math.PI;
-	return (bearing + 360) % 360;
-}
 
 function angleDifference(a: number, b: number): number {
 	let diff = Math.abs(a - b);

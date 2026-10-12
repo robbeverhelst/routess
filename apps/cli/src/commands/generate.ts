@@ -1,6 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+	buildRouteGpx,
 	decodePolyline6,
 	HEADINGS,
 	type Heading,
@@ -12,7 +13,6 @@ import {
 import type { Command } from "commander";
 import { request } from "../client";
 import { loadConfig, requireToken } from "../config";
-import { buildGpx } from "../gpx";
 import { CliError, EXIT_CODES, type RunOptions, renderResult } from "../output";
 import { runWithProgram } from "../run";
 import type { RouteResponse } from "./routes";
@@ -221,7 +221,7 @@ export function registerGenerateCommand(program: Command): void {
 				if (options.gpxDir) {
 					mkdirSync(options.gpxDir, { recursive: true });
 					response.candidates.forEach((candidate, index) => {
-						const gpx = buildGpx({
+						const gpx = buildRouteGpx({
 							name: `Generated ${activity} loop, candidate ${index + 1}`,
 							waypoints: candidateWaypoints(start, candidate),
 							geometry: decodePolyline6(candidate.shape),

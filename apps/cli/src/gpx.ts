@@ -15,15 +15,6 @@ function unescapeXml(value: string): string {
 		.replace(/&amp;/g, "&");
 }
 
-function escapeXml(value: string): string {
-	return value
-		.replace(/&/g, "&amp;")
-		.replace(/</g, "&lt;")
-		.replace(/>/g, "&gt;")
-		.replace(/"/g, "&quot;")
-		.replace(/'/g, "&apos;");
-}
-
 function attrCoord(attrs: string): Coordinate | null {
 	const lat = attrs.match(/\blat="([-\d.]+)"/);
 	const lon = attrs.match(/\blon="([-\d.]+)"/);
@@ -48,7 +39,9 @@ function parsePoint(attrs: string, inner: string): Waypoint | null {
 
 // Regex-based GPX reader covering the subset Routess emits plus plain
 // exports from other tools (trk-only files, standalone wpt elements).
-// Node has no DOMParser, hence no reuse of the web GPXService.
+// Unlike core's parseGpxTracks it also reads Waypoint names and the
+// routess:type extension, which `routes import` needs. Writing goes through
+// core's buildRouteGpx.
 export function parseGpx(xml: string): ParsedGpx {
 	const metaName = xml.match(/<metadata>[\s\S]*?<name>([^<]*)<\/name>[\s\S]*?<\/metadata>/);
 	const blockName = xml.match(/<(?:rte|trk)>\s*<name>([^<]*)<\/name>/);
@@ -71,42 +64,4 @@ export function parseGpx(xml: string): ParsedGpx {
 	}
 
 	return { ...(name ? { name: unescapeXml(name) } : {}), waypoints, trackPoints };
-}
-
-// Mirrors the GPX 1.1 shape the API serves on GET /routes/:ref/gpx.
-export function buildGpx(args: { name: string; waypoints: Waypoint[]; geometry?: Coordinate[] }): string {
-	const parts: string[] = [];
-	parts.push(`<?xml version="1.0" encoding="UTF-8"?>`);
-	parts.push(
-		`<gpx version="1.1" creator="Routess CLI" xmlns="http://www.topografix.com/GPX/1/1" xmlns:routess="https://routess.app/gpx/1">`,
-	);
-	parts.push("  <metadata>");
-	parts.push(`    <name>${escapeXml(args.name)}</name>`);
-	parts.push("  </metadata>");
-	if (args.waypoints.length > 0) {
-		parts.push("  <rte>");
-		parts.push(`    <name>${escapeXml(args.name)}</name>`);
-		for (const w of args.waypoints) {
-			const [lng, lat] = w.coord;
-			parts.push(`    <rtept lat="${lat}" lon="${lng}">`);
-			if (w.name) parts.push(`      <name>${escapeXml(w.name)}</name>`);
-			parts.push("      <extensions>");
-			parts.push(`        <routess:type>${w.type}</routess:type>`);
-			parts.push("      </extensions>");
-			parts.push("    </rtept>");
-		}
-		parts.push("  </rte>");
-	}
-	if (args.geometry && args.geometry.length > 0) {
-		parts.push("  <trk>");
-		parts.push(`    <name>${escapeXml(args.name)}</name>`);
-		parts.push("    <trkseg>");
-		for (const [lng, lat] of args.geometry) {
-			parts.push(`      <trkpt lat="${lat}" lon="${lng}"></trkpt>`);
-		}
-		parts.push("    </trkseg>");
-		parts.push("  </trk>");
-	}
-	parts.push("</gpx>");
-	return parts.join("\n");
 }
