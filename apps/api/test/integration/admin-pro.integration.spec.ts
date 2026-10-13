@@ -420,6 +420,24 @@ describe("Admin Pro (users list, user detail, grant/extend/revoke, metrics)", ()
 			expect(entry.details).toMatchObject({ storedPlanCleared: true });
 		});
 
+		it("keeps the real end of an admin grant that lapsed before the revoke", async () => {
+			const lapsedAt = daysAgo(5);
+			orm.em.create(Entitlement, {
+				user: orm.em.getReference(User, ids.ending),
+				plan: "pro",
+				source: "admin",
+				expiresAt: lapsedAt,
+				createdAt: daysAgo(15),
+			});
+			await orm.em.flush();
+
+			const { body } = await action(ids.ending, "revoke", { reason: "Refunded in Stripe" }).expect(200);
+			expect(body).toMatchObject({ kind: "pro_expired", plan: "free" });
+			const admin = body.grants.find((g: { source: string }) => g.source === "admin");
+			expect(admin).toMatchObject({ active: false, expiresAt: lapsedAt.toISOString() });
+			expect(admin.revokedAt).not.toBeNull();
+		});
+
 		it("refuses to revoke a User who is not on Pro", async () => {
 			await action(ids.free, "revoke", { reason: "nothing to revoke" }).expect(409);
 			expect(await auditEntries()).toHaveLength(0);
