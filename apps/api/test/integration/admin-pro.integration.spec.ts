@@ -435,7 +435,7 @@ describe("Admin Pro (users list, user detail, grant/extend/revoke, metrics)", ()
 			expect(body).toMatchObject({ kind: "pro_expired", plan: "free" });
 			const admin = body.grants.find((g: { source: string }) => g.source === "admin");
 			expect(admin).toMatchObject({ active: false, expiresAt: lapsedAt.toISOString() });
-			expect(admin.revokedAt).not.toBeNull();
+			expect(admin.revokedAt).toBeNull();
 		});
 
 		it("refuses to revoke a User who is not on Pro", async () => {

@@ -147,7 +147,7 @@ export class AdminProService {
 				values (?, 'pro', 'admin', ?, ?, ?, ?)
 				on conflict ("user_id", "plan", "source")
 				do update set "expires_at" = least(coalesce("entitlement"."expires_at", excluded."expires_at"), excluded."expires_at"),
-					"deleted_at" = coalesce("entitlement"."deleted_at", excluded."deleted_at"), "updated_at" = excluded."updated_at"`,
+					"updated_at" = excluded."updated_at"`,
 				[userId, now, now, now, now],
 			);
 			const storedPlanCleared = user.plan === "pro";
