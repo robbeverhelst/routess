@@ -124,3 +124,99 @@ export class AdminEngagementDto {
 	@ApiProperty({ type: [AdminRegionDto], description: "Top regions by route count (from derived Place)" })
 	topRegions!: AdminRegionDto[];
 }
+
+export class AdminSignupMetricsDto {
+	@ApiProperty({ example: 1342, description: "Non-deleted users" })
+	total!: number;
+
+	@ApiProperty({ example: 8 })
+	today!: number;
+
+	@ApiProperty({ example: 61 })
+	last7Days!: number;
+
+	@ApiProperty({ example: 240 })
+	last30Days!: number;
+
+	@ApiProperty({ type: [AdminTimeseriesPointDto] })
+	daily!: AdminTimeseriesPointDto[];
+}
+
+export class AdminActiveUserMetricsDto {
+	@ApiProperty({ example: 42, description: "Users with session activity in the last 24 hours" })
+	last24Hours!: number;
+
+	@ApiProperty({ example: 87, description: "Users with session activity in the last 7 days" })
+	last7Days!: number;
+
+	@ApiProperty({ example: 260, description: "Users with session activity in the last 30 days" })
+	last30Days!: number;
+}
+
+export class AdminGenerationPointDto {
+	@ApiProperty({ example: "2026-05-01" })
+	date!: string;
+
+	@ApiProperty({ example: 40, description: "route_generation_started ProductEvents" })
+	started!: number;
+
+	@ApiProperty({ example: 36, description: "route_generation_succeeded ProductEvents" })
+	succeeded!: number;
+
+	@ApiProperty({ example: 4, description: "route_generation_failed ProductEvents" })
+	failed!: number;
+}
+
+export class AdminGenerationMetricsDto {
+	@ApiProperty({
+		example: true,
+		description: "False when Umami is not configured or could not be read; `daily` is then empty",
+	})
+	productEventsAvailable!: boolean;
+
+	@ApiProperty({ type: [AdminGenerationPointDto], description: "Generation attempts per day, from Umami" })
+	daily!: AdminGenerationPointDto[];
+
+	@ApiProperty({
+		type: [AdminTimeseriesPointDto],
+		description: "Routes saved from a GenerationCandidate per day, from Postgres",
+	})
+	savedDaily!: AdminTimeseriesPointDto[];
+}
+
+export class AdminPayingUserMetricsDto {
+	@ApiProperty({ example: true })
+	billingEnabled!: boolean;
+
+	@ApiProperty({ example: 18, description: "Users holding an unexpired paid Pro pass" })
+	active!: number;
+
+	@ApiProperty({ example: 25, description: "Users who have ever completed a Payment" })
+	everPaid!: number;
+
+	@ApiProperty({ example: 140, description: "Users on Pro right now from any source (paid, OG grant, manual)" })
+	proUsers!: number;
+
+	@ApiProperty({
+		type: [AdminTimeseriesPointDto],
+		description: "Payments per day, including from since-deleted accounts",
+	})
+	paymentsDaily!: AdminTimeseriesPointDto[];
+}
+
+export class AdminMetricsDto {
+	@ApiProperty({ example: 30 })
+	days!: number;
+
+	@ApiProperty({ type: AdminSignupMetricsDto })
+	signups!: AdminSignupMetricsDto;
+
+	@ApiProperty({ type: AdminActiveUserMetricsDto })
+	activeUsers!: AdminActiveUserMetricsDto;
+
+	@ApiProperty({ type: AdminGenerationMetricsDto })
+	generations!: AdminGenerationMetricsDto;
+
+	@ApiProperty({ type: AdminPayingUserMetricsDto })
+	payingUsers!: AdminPayingUserMetricsDto;
+}

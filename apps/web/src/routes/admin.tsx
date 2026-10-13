@@ -21,6 +21,7 @@ export const Route = createFileRoute("/admin")({
 
 const NAV: { to: string; label: string; icon: keyof typeof I; exact?: boolean }[] = [
 	{ to: "/admin", label: "Overview", icon: "trend", exact: true },
+	{ to: "/admin/metrics", label: "Metrics", icon: "zap" },
 	{ to: "/admin/users", label: "Users", icon: "social" },
 	{ to: "/admin/routes", label: "Routes", icon: "route" },
 	{ to: "/admin/seeding", label: "Seeding", icon: "globe" },

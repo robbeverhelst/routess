@@ -2,6 +2,7 @@ import { ApiDomainError, ApiHttpError } from "../errors";
 import type {
 	AdminConfigSummary,
 	AdminEngagement,
+	AdminMetrics,
 	AdminOverview,
 	AdminRouteDetail,
 	AdminRouteList,
@@ -571,6 +572,10 @@ export class ApiClient {
 
 	async adminGetEngagement(): Promise<AdminEngagement> {
 		return this.request<AdminEngagement>("/admin/stats/engagement");
+	}
+
+	async adminGetMetrics(): Promise<AdminMetrics> {
+		return this.request<AdminMetrics>("/admin/stats/metrics");
 	}
 
 	async adminRefreshSeedSource(key: string): Promise<AdminSeedRefreshResult> {

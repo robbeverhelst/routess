@@ -21,7 +21,13 @@ import { ADMIN_ROUTE_SORTS, ADMIN_USER_SORTS, AdminService, type SortDir } from 
 import { AuditInterceptor } from "./audit.interceptor";
 import { AdminRouteDetailDto, AdminRouteListDto } from "./dto/admin-route.dto";
 import { AdminSeedRefreshResultDto, AdminSeedSourcesDto } from "./dto/admin-seeding.dto";
-import { AdminEngagementDto, AdminOverviewDto, AdminRouteStatsDto, AdminUserStatsDto } from "./dto/admin-stats.dto";
+import {
+	AdminEngagementDto,
+	AdminMetricsDto,
+	AdminOverviewDto,
+	AdminRouteStatsDto,
+	AdminUserStatsDto,
+} from "./dto/admin-stats.dto";
 import { AdminConfigSummaryDto, AdminSystemHealthDto } from "./dto/admin-system.dto";
 import { AdminUserDetailDto, AdminUserListDto } from "./dto/admin-user.dto";
 
@@ -83,6 +89,16 @@ export class AdminController {
 	})
 	getUserStats(): Promise<AdminUserStatsDto> {
 		return this.admin.getUserStats();
+	}
+
+	@Get("stats/metrics")
+	@ApiOperation({
+		summary: "Launch metrics: signups, active users, generations per day, paying users",
+		description:
+			"Backs the admin metrics page. Signups, active users, saved generated routes, and paying users come from Postgres; generation attempts per day come from route_generation_* ProductEvents in Umami and are reported unavailable when Umami is not configured.",
+	})
+	getMetrics(): Promise<AdminMetricsDto> {
+		return this.admin.getMetrics();
 	}
 
 	@Get("stats/seed-sources")
