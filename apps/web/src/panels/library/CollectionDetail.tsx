@@ -1,6 +1,7 @@
 import type { ApiRoute } from "@routess/api-client";
 import type { RouteVisibility } from "@routess/core";
 import { useState } from "react";
+import { ProLock, useProGates, useProGateToast } from "@/features/billing/proGates";
 import { trackEvent } from "@/lib/analytics/track";
 import {
 	useCollection,
@@ -163,6 +164,8 @@ export function CollectionDetail({
 	const deleteCollection = useDeleteCollection();
 	const setCollectionRoutes = useSetCollectionRoutes();
 	const pushToast = useToastStore((s) => s.push);
+	const { locked } = useProGates();
+	const proGateToast = useProGateToast();
 	const setContext = useUiStore((s) => s.setContext);
 	const selectedRoute = useLibraryStore((s) => s.selectedRoute);
 	const selectRoute = useLibraryStore((s) => s.selectRoute);
@@ -184,7 +187,12 @@ export function CollectionDetail({
 	const setRouteIds = (routeIds: number[]) => {
 		setCollectionRoutes.mutate(
 			{ collectionId, routeIds },
-			{ onError: () => pushToast({ kind: "danger", title: t("library.collections.updateFailed") }) },
+			{
+				onError: (error) => {
+					if (proGateToast(error)) return;
+					pushToast({ kind: "danger", title: t("library.collections.updateFailed") });
+				},
+			},
 		);
 	};
 
@@ -383,7 +391,9 @@ export function CollectionDetail({
 					/>
 				))}
 
-				{editable && detail && (
+				{/* Free keeps its collections and may take Routes out, not add them. */}
+				{editable && detail && locked("collections") && <ProLock feature="collections" style={{ marginTop: 10 }} />}
+				{editable && detail && !locked("collections") && (
 					<AddRoutesSection
 						open={addingRoutes}
 						onToggle={() => setAddingRoutes((v) => !v)}

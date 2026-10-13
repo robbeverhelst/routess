@@ -351,6 +351,14 @@ export interface ApiPersonalAccessTokenWithSecret extends ApiPersonalAccessToken
 // BILLING_ENABLED off (self-host); nothing else is sent then.
 export type ApiUserPlan = "free" | "pro";
 export type ApiBillingOffer = "pro_year_pass";
+export type ApiFeature =
+	| "route_generation"
+	| "node_network_generation"
+	| "unlimited_saved_routes"
+	| "collections"
+	| "gpx_export"
+	| "navigation"
+	| "personal_access_tokens";
 
 export interface ApiBillingStatus {
 	enabled: boolean;
@@ -370,6 +378,11 @@ export interface ApiBillingStatus {
 		proExpiresAt: string | null;
 		ogGrantExpiresAt: string | null;
 		canBuy: boolean;
+		// The Features this account may use now; a missing one answers 403
+		// with a Pro gate (proGateOf in @routess/core).
+		features: ApiFeature[];
+		// Saved Routes against the free cap; a null limit means unlimited.
+		savedRoutes: { count: number; limit: number | null };
 	} | null;
 }
 

@@ -101,7 +101,7 @@ export const komootAlternative: Article = {
 				{
 					kind: "p",
 					content: [
-						"Yes. The planner, saving, GPX import and export, and surface and elevation data are free, worldwide. Free includes 3 generated routes a day when you're signed in. Pro is a €29.99 year pass for 50 generated routes a day: a one-off payment, no subscription. The planner stays free. And because it is MIT-licensed, you can always run it yourself.",
+						"Yes. The planner, GPX import and export, public sharing, and surface and elevation data are free, worldwide. Free includes 3 generated routes a day when you're signed in and saves up to 5 routes. Pro is a €29.99 year pass for 50 generated routes a day, unlimited saved routes, knooppunt route generation, turn-by-turn navigation, collections and CLI access: a one-off payment, no subscription. The planner stays free. And because it is MIT-licensed, you can always run it yourself.",
 					],
 				},
 				{ kind: "h3", text: "Can I import my Komoot routes?" },
@@ -218,7 +218,7 @@ export const komootAlternative: Article = {
 				{
 					kind: "p",
 					content: [
-						"Ja. De planner, opslaan, GPX-import en -export en ondergrond- en hoogtedata zijn gratis, wereldwijd. Gratis krijg je 3 gegenereerde routes per dag als je aangemeld bent. Pro is een jaarpas van €29,99 voor 50 gegenereerde routes per dag: één betaling, geen abonnement. De planner blijft gratis. En omdat alles MIT-gelicentieerd is, kan je het altijd zelf draaien.",
+						"Ja. De planner, GPX-import en -export, publiek delen en ondergrond- en hoogtedata zijn gratis, wereldwijd. Gratis krijg je 3 gegenereerde routes per dag als je aangemeld bent en bewaar je tot 5 routes. Pro is een jaarpas van €29,99 voor 50 gegenereerde routes per dag, onbeperkt routes bewaren, knooppuntroutes genereren, navigatie met afslag-instructies, collecties en CLI-toegang: één betaling, geen abonnement. De planner blijft gratis. En omdat alles MIT-gelicentieerd is, kan je het altijd zelf draaien.",
 					],
 				},
 				{ kind: "h3", text: "Kan ik mijn Komoot-routes importeren?" },

@@ -1,3 +1,4 @@
+import { useProGatePrompt, useProGates } from "@/features/billing/proGates";
 import { startNavigation } from "@/features/navigation/startNavigation";
 import { useIsAuthenticated } from "@/hooks/useAuthState";
 import { emitAppEvent } from "@/lib/app-events";
@@ -15,6 +16,8 @@ import { RDS_COLORS } from "./primitives";
 // same app-events / modals the in-panel footer uses on desktop.
 export function MobilePlanActionBar() {
 	const t = useT();
+	const { locked } = useProGates();
+	const promptPro = useProGatePrompt();
 	const isAuthenticated = useIsAuthenticated();
 	const navigationEnabled = useRedesignSettingsStore((s) => s.navigationEnabled);
 	const openModal = useModalsStore((s) => s.openModal);
@@ -79,16 +82,20 @@ export function MobilePlanActionBar() {
 
 			{navigationEnabled && (
 				<ActionIcon
-					icon="play"
+					icon={locked("navigation") ? "lock" : "play"}
 					title={t("nav.navigate")}
 					disabled={!canNavigate}
-					onClick={() =>
+					onClick={() => {
+						if (locked("navigation")) {
+							promptPro("navigation");
+							return;
+						}
 						void startNavigation({
 							routeName: editingName ?? t("nav.currentRoute"),
 							geometry: routePath,
 							activity: activity ?? "cycle",
-						})
-					}
+						});
+					}}
 				/>
 			)}
 			<ActionIcon icon="share" title={t("plan.shareRoute")} disabled={!hasRoute} onClick={() => openModal("share")} />
@@ -111,7 +118,7 @@ function ActionIcon({
 	danger,
 	onClick,
 }: {
-	icon: "play" | "share" | "upload" | "trash";
+	icon: "play" | "lock" | "share" | "upload" | "trash";
 	title: string;
 	disabled: boolean;
 	danger?: boolean;

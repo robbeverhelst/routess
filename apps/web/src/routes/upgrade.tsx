@@ -1,3 +1,4 @@
+import { FREE_SAVED_ROUTE_LIMIT } from "@routess/core";
 import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { type ReactNode, useEffect, useRef, useState } from "react";
@@ -158,7 +159,16 @@ function UpgradePage() {
 							pro: allowance(quotas?.pro),
 							highlight: true,
 						},
-						{ label: t("upgrade.free.everything"), free: true, pro: true },
+						{ label: t("upgrade.compare.planning"), free: true, pro: true },
+						{
+							label: t("upgrade.compare.savedRoutes"),
+							free: String(FREE_SAVED_ROUTE_LIMIT),
+							pro: t("billing.unlimited"),
+						},
+						{ label: t("upgrade.compare.nodeNetworks"), free: false, pro: true },
+						{ label: t("upgrade.compare.navigation"), free: false, pro: true },
+						{ label: t("upgrade.compare.collections"), free: false, pro: true },
+						{ label: t("upgrade.compare.cli"), free: false, pro: true },
 					]}
 					labels={{
 						feature: t("upgrade.compare.feature"),
@@ -224,7 +234,10 @@ function UpgradePage() {
 					items={[
 						{ q: t("upgrade.faq.renewQ"), a: t("upgrade.faq.renewA") },
 						{ q: t("upgrade.faq.extendQ"), a: t("upgrade.extendNote") },
-						{ q: t("upgrade.faq.endQ"), a: t("upgrade.faq.endA", { count: allowance(quotas?.free) }) },
+						{
+							q: t("upgrade.faq.endQ"),
+							a: t("upgrade.faq.endA", { count: allowance(quotas?.free), limit: String(FREE_SAVED_ROUTE_LIMIT) }),
+						},
 					]}
 				/>
 			</>

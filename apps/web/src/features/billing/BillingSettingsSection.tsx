@@ -1,3 +1,4 @@
+import { FREE_SAVED_ROUTE_LIMIT } from "@routess/core";
 import { useNavigate } from "@tanstack/react-router";
 import { I } from "@/components/icons";
 import { Btn, RDS_COLORS } from "@/components/primitives";
@@ -25,7 +26,7 @@ export function BillingSettingsSection() {
 
 	const isPro = account.plan === "pro";
 	const allowance = status.generationPerDay?.[account.plan] ?? 0;
-	let planSub = t("billing.freeSub");
+	let planSub = t("billing.freeSub", { limit: String(account.savedRoutes.limit ?? FREE_SAVED_ROUTE_LIMIT) });
 	if (isPro && account.proExpiresAt) {
 		const left = daysLeft(account.proExpiresAt);
 		const remaining = left === 1 ? t("upgrade.dayLeft") : t("upgrade.daysLeft", { count: String(left) });

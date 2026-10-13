@@ -1,6 +1,7 @@
 import { formatDistance, formatDuration, type GenerationFailureCode, type SurfaceBucket } from "@routess/core";
 import { surfaceBucketColors } from "@routess/design-tokens";
 import { useNavigate } from "@tanstack/react-router";
+import { useGoPro, useProGateReason } from "@/features/billing/proGates";
 import { candidateWaypoints, startGeneration } from "@/features/generation/generationService";
 import { useRouteDraftEditor } from "@/features/routing/RouteDraftEditorProvider";
 import { useIsMobile } from "@/hooks/useViewport";
@@ -134,6 +135,8 @@ export function GenerationOverlay() {
 	const isMobile = useIsMobile();
 	const panelCollapsed = useUiStore((s) => s.panelCollapsed);
 	const navigate = useNavigate();
+	const goPro = useGoPro();
+	const proReason = useProGateReason();
 
 	if (status === "idle") return null;
 
@@ -225,10 +228,28 @@ export function GenerationOverlay() {
 					},
 				});
 			}
+		} else if (failure.code === "pro_required") {
+			// A Pro gate (ADR 0039): knooppunt routes are part of Pro.
+			message = proReason(failure.feature);
+			chips.push({
+				key: "go-pro",
+				label: t("pro.goPro"),
+				onClick: () => {
+					dismiss();
+					goPro();
+				},
+			});
+			if (request && failure.feature === "node_network_generation") {
+				chips.push({
+					key: "without-nodes",
+					label: t("loop.withoutNodes"),
+					onClick: retryWith(() => useLoopPreferencesStore.getState().setPreferNodeNetworks(false)),
+				});
+			}
 		} else {
 			message = t(FAILURE_MESSAGE_KEY[failure.code]);
 		}
-		if (request && failure.code !== "quota_exceeded") {
+		if (request && failure.code !== "quota_exceeded" && failure.code !== "pro_required") {
 			if (failure.code === "provider_unavailable") {
 				chips.push({ key: "retry", label: t("loop.retry"), onClick: retry });
 			}

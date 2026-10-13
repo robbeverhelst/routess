@@ -1,6 +1,6 @@
 # Gate Features through Plan and Entitlement checks; sell a Pro year pass through Stripe
 
-**Status:** Decided by Robbe on 2026-10-10 (#135). The groundwork (Plan, Entitlement, `can()`, the provider seam) was accepted first; the pricing model, provider and Pro contents are now decided as recorded under [Decision](#decision). Everything still sits behind `BILLING_ENABLED`, which defaults to false.
+**Status:** Decided by Robbe on 2026-10-10 (#135). The groundwork (Plan, Entitlement, `can()`, the provider seam) was accepted first; the pricing model, provider and Pro contents are now decided as recorded under [Decision](#decision). On 2026-10-13 Robbe decided what Pro includes beyond the quota and the gates went live; see [What Pro includes (2026-10-13)](#what-pro-includes-2026-10-13). Everything still sits behind `BILLING_ENABLED`, which defaults to false.
 
 Every User gets a **Plan** (`free` by default). An **Entitlement** table holds per-User grants on top of the Plan: one Feature, or the whole Pro Plan for a while. The API answers `can(user, feature)` against a closed, typed **Feature** list (`apps/api/src/entitlements/features.ts`) and resolves the Plan in effect from the stored Plan plus any running Pro grant. A provider-neutral billing seam (`apps/api/src/billing/`) has one implementation, Stripe. With billing off, every Feature is unlocked and one generation quota applies to everyone. That keeps self-hosted instances ungated, so the MIT/self-host story stays intact.
 
@@ -10,9 +10,32 @@ Decided on 2026-10-10:
 
 - **Model: B, a Pro year pass.** €29.99 incl. VAT, one-off payment, no subscription. A pass is a Pro Entitlement (`plan = 'pro'`, source `billing`) for 365 days from the payment. Buying again extends from the current Pro expiry, so no paid day is lost.
 - **Provider: Stripe** (Robbe already has an account). Stripe Checkout in payment mode, payment methods Bancontact, iDEAL and card. The seller is Robbe (robbeverhelst, under Robbe's own VAT number); there is no merchant of record.
-- **What Pro is:** a higher `route_generation` quota, nothing else for now. Free keeps `node_network_generation`, `collections`, saved routes and `personal_access_tokens`, so `PLAN_FEATURES.free` still equals `pro`. The daily RouteGeneration allowance per tier is config, not code: free signed-in **3/day** (`GENERATION_QUOTA_PER_DAY_FREE`), Pro **50/day** (`GENERATION_QUOTA_PER_DAY_PRO`, today's cap).
+- **What Pro is:** at launch, a higher `route_generation` quota and nothing else (superseded on 2026-10-13, see below). The daily RouteGeneration allowance per tier is config, not code: free signed-in **3/day** (`GENERATION_QUOTA_PER_DAY_FREE`), Pro **50/day** (`GENERATION_QUOTA_PER_DAY_PRO`, today's cap).
 - **Anonymous** (proposed in the PR, config `GENERATION_QUOTA_PER_DAY_ANONYMOUS`): **1/day per IP**. One try shows the feature; signing in, which is free, triples it. The quota is keyed by IP for signed-out callers, so a shared network shares that one attempt, which is acceptable because the free account is the way out.
 - **Existing users keep everything they have,** and every account created before the billing launch (`BILLING_LAUNCHED_AT`) gets **three months of Pro free on its next login**: the "OG user" grant. It is an Entitlement with source `og-grant` and an expiry, granted once per User (the row's existence is the marker, checked under a row lock) and extending any Pro time the User already holds. A User whose session outlives the launch gets it the next time the app reads the billing status.
+
+### What Pro includes (2026-10-13)
+
+Billing launched on 2026-10-12 (`BILLING_LAUNCHED_AT` 07:00 UTC). On 2026-10-13 Robbe decided the split, and `PLAN_FEATURES` now says it:
+
+| | Free | Pro |
+|---|---|---|
+| `route_generation` | yes, at the free quota (3/day signed in) | yes, 50/day |
+| `gpx_export` | yes | yes |
+| Saved routes (`unlimited_saved_routes`) | up to **5** (`FREE_SAVED_ROUTE_LIMIT`) | unlimited |
+| `node_network_generation` | no | yes |
+| `navigation` (`POST /routing/cues`) | no | yes |
+| `collections` | no new ones, no adding routes | yes |
+| `personal_access_tokens` (CLI and agent access) | no | yes |
+
+Rules:
+
+- **Who keeps everything:** the Plan in effect decides, so a User whose stored `user.plan` is `pro` (a permanent comp an operator sets) or who holds a running Pro Entitlement (a paid pass, the OG grant, or a manual Pro grant) gets every Feature. The early-access grant in the data model is the **OG grant**: an Entitlement with source `og-grant` that runs three months, not a permanent stored Plan. No migration ever set `user.plan = 'pro'`, so OG users keep everything while their OG grant runs and then fall back to Free like an expired pass. A single-Feature Entitlement still unlocks just that Feature.
+- **Saved-route cap:** a free User with 5 or more saved Routes cannot save another (`POST /routes`, a GPX import, which is the same call, and "save a copy" of a shared Route). Routes they already have stay viewable, editable, exportable and deletable, however many there are; dropping under 5 or going Pro lets them save again. The count and the insert run in one transaction holding the User row lock, so concurrent saves cannot overshoot.
+- **Collections on free:** existing collections stay readable, can be renamed, reordered and deleted, and routes can be taken out. Creating a collection or adding a route to one needs Pro.
+- **PATs on free:** minting is refused, and every request made with an existing token answers 403, also on endpoints that otherwise allow anonymous callers. Tokens are not deleted, so they work again once the User is on Pro.
+- **Knooppunt generation and navigation:** `preferNodeNetworks: true` on `POST /generation` (checked before the quota guard, so a refused call spends no quota) and `POST /routing/cues` answer 403 for free and anonymous callers.
+- **Wire shape:** every gate answers `403 FORBIDDEN` with `details: { reason: "pro_required", feature, upgrade: "pro" }`, or `details: { reason: "saved_route_limit", feature: "unlimited_saved_routes", limit, upgrade: "pro" }` for the cap. `proGateOf` in `@routess/core` reads it for the web and the CLI. `GET /billing` lists the account's unlocked `features` and its `savedRoutes` count and limit, so the web shows each gated control's Pro state (a lock, one line why, Go Pro) instead of a failing button, and "4 of 5 saved" on free.
 
 ### How it works
 
@@ -23,9 +46,9 @@ Decided on 2026-10-10:
 - The generation quota guard answers 429 with `details: { reason: 'generation_quota', limit, tier, upgrade }`. The web turns that into a sign-in prompt for anonymous users and a link to `/upgrade` for free users.
 - **Cancel and account deletion:** a pass does not renew, so there is nothing to cancel at Stripe and no Stripe Customer is created. A cancelled checkout charges nothing. An account pending deletion cannot start a checkout. On hard delete, Entitlements cascade (remaining Pro time ends) and `payment` rows stay for bookkeeping with `user_id` cleared. A payment that arrives for a User who no longer exists is recorded without a grant and logged for a manual refund. Refunds are done by hand in the Stripe dashboard; revoking the matching Entitlement is a manual step for now.
 
-## What the app has today that a Plan could gate
+## What the app has that a Plan could gate
 
-None of these is gated today. The only limits are throttles and the generation quota.
+Written before the gates went live (2026-10-09); the "Today" column describes the app then. Since 2026-10-13 every row except `route_generation` and `gpx_export` is Pro, as above.
 
 | Feature (`features.ts`) | Where it lives | Today |
 |---|---|---|
@@ -39,7 +62,7 @@ None of these is gated today. The only limits are throttles and the generation q
 
 Some things should stay free whatever the model:
 - **Cannot be enforced server-side:** elevation is computed in the browser, and the knooppunten overlay is public PMTiles.
-- **Promised free on the landing page** (`apps/landing/lib/content/en.ts:123`): planning, GPX in/out, unlimited saved routes, public sharing, and surface and elevation data.
+- **Promised free on the landing page** (`apps/landing/lib/content/en.ts:123`): planning, GPX in/out, unlimited saved routes, public sharing, and surface and elevation data. Since 2026-10-13 the landing page promises up to 5 saved routes on Free instead.
 - **Required by GDPR:** the data export.
 
 "Heatmaps & advanced layers" and AI prompt generation, both listed as Pro on the landing page, do not exist in code. Route generation, also listed there as Pro, is already free and live.

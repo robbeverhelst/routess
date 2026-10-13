@@ -379,7 +379,14 @@ describe("Billing with Stripe enabled", () => {
 				.get("/api/v1/billing")
 				.set("Authorization", `Bearer ${accessToken}`)
 				.expect(200);
-			expect(free.body.account).toEqual({ plan: "free", proExpiresAt: null, ogGrantExpiresAt: null, canBuy: true });
+			expect(free.body.account).toEqual({
+				plan: "free",
+				proExpiresAt: null,
+				ogGrantExpiresAt: null,
+				canBuy: true,
+				features: ["route_generation", "gpx_export"],
+				savedRoutes: { count: 0, limit: 5 },
+			});
 
 			// Reading the status hands a pending OG grant to a pre-launch account.
 			await backdate(user.id, BEFORE_LAUNCH);
@@ -457,7 +464,16 @@ describe("Billing with Stripe enabled", () => {
 		});
 
 		it("keys PAT callers to their User and their Plan's allowance", async () => {
-			const { accessToken } = await createTestUserWithAuth(app, { email: "q-pat@example.com", googleId: "g-qpat" });
+			const { user, accessToken } = await createTestUserWithAuth(app, {
+				email: "q-pat@example.com",
+				googleId: "g-qpat",
+			});
+			// PATs are Pro; a single-Feature grant keeps this User on the free
+			// tier while letting their token in.
+			await withRequestContext(app, async () => {
+				orm.em.create(Entitlement, { user: user.id, feature: "personal_access_tokens", source: "manual" });
+				await orm.em.flush();
+			});
 			const minted = await supertest(app.getHttpServer())
 				.post("/api/v1/auth/tokens")
 				.set("Authorization", `Bearer ${accessToken}`)

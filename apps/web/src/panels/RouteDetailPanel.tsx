@@ -6,6 +6,7 @@ import {
 	type RouteVisibility,
 } from "@routess/core";
 import { type KeyboardEvent, useEffect, useMemo, useState } from "react";
+import { useProGatePrompt, useProGates, useProGateToast } from "@/features/billing/proGates";
 import { startNavigation } from "@/features/navigation/startNavigation";
 import { useComputedElevationProfile } from "@/features/routing/services/elevation";
 import {
@@ -222,6 +223,9 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 	const paceUnit = speedParts ? speedParts.unit : "";
 
 	const saveRoute = useSaveRoute();
+	const { atSavedRouteLimit, locked } = useProGates();
+	const promptPro = useProGatePrompt();
+	const proGateToast = useProGateToast();
 	const updateRoute = useUpdateRoute();
 	const openDelete = useModalsStore((s) => s.openDelete);
 	const openShareModal = useModalsStore((s) => s.openShare);
@@ -346,6 +350,10 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 	};
 
 	const dispatchNavigate = () => {
+		if (locked("navigation")) {
+			promptPro("navigation");
+			return;
+		}
 		void startNavigation({
 			routeName: route.name,
 			geometry: elevationGeometry,
@@ -358,6 +366,10 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 	};
 
 	const dispatchDuplicate = () => {
+		if (atSavedRouteLimit) {
+			promptPro("unlimited_saved_routes");
+			return;
+		}
 		saveRoute.mutate(
 			{
 				name: `${route.name} (copy)`,
@@ -383,7 +395,8 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 						body: newRoute.name,
 					});
 				},
-				onError: () => {
+				onError: (error) => {
+					if (proGateToast(error)) return;
 					pushToast({
 						kind: "danger",
 						title: t("route.duplicateFailed"),
@@ -467,7 +480,7 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 					onClick={dispatchDuplicate}
 					disabled={saveRoute.isPending}
 				>
-					<I.copy size={14} />
+					{atSavedRouteLimit ? <I.lock size={14} /> : <I.copy size={14} />}
 				</IconBtn>
 			</div>
 
@@ -783,7 +796,7 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 			>
 				{navigationEnabled && (
 					<Btn variant="primary" style={{ flex: 1 }} onClick={dispatchNavigate}>
-						<I.play size={13} /> {t("nav.navigate")}
+						{locked("navigation") ? <I.lock size={13} /> : <I.play size={13} />} {t("nav.navigate")}
 					</Btn>
 				)}
 				<Btn variant={navigationEnabled ? undefined : "primary"} style={{ flex: 1 }} onClick={dispatchLoadRoute}>

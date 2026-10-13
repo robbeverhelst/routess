@@ -1,5 +1,6 @@
 import type { ApiPatScope, ApiPersonalAccessToken } from "@routess/api-client";
 import { useState } from "react";
+import { ProLock, useProGates, useProGateToast } from "@/features/billing/proGates";
 import { useCreatePersonalAccessToken, usePersonalAccessTokens, useRevokePersonalAccessToken } from "@/lib/api-queries";
 import { t } from "@/lib/i18n";
 import { API_REFERENCE_URL } from "@/lib/links";
@@ -78,6 +79,7 @@ interface CreateFormProps {
 function CreateForm({ onSecretRevealed, onCancel }: CreateFormProps) {
 	const create = useCreatePersonalAccessToken();
 	const pushToast = useToastStore((s) => s.push);
+	const proGateToast = useProGateToast();
 	const [label, setLabel] = useState("");
 	const [scope, setScope] = useState<ApiPatScope>("read");
 	const [expiresAt, setExpiresAt] = useState("");
@@ -97,7 +99,11 @@ function CreateForm({ onSecretRevealed, onCancel }: CreateFormProps) {
 				onSuccess: (result) => {
 					onSecretRevealed(result.token);
 				},
-				onError: () => {
+				onError: (error) => {
+					if (proGateToast(error)) {
+						onCancel();
+						return;
+					}
 					pushToast({ kind: "danger", title: t("settings.tokens.createFailed") });
 				},
 			},
@@ -199,6 +205,10 @@ export function ApiTokensSection() {
 	const [mode, setMode] = useState<"list" | "creating" | { reveal: string }>("list");
 
 	const tokens = tokensQuery.data ?? [];
+	// CLI and agent access is Pro: a free account's tokens stay listed (and
+	// revocable) but answer 403 until the account is on Pro again.
+	const { locked } = useProGates();
+	const tokensLocked = locked("personal_access_tokens");
 
 	return (
 		<SettingsSection
@@ -226,7 +236,17 @@ export function ApiTokensSection() {
 				<CreateForm onSecretRevealed={(token) => setMode({ reveal: token })} onCancel={() => setMode("list")} />
 			)}
 			{typeof mode === "object" && "reveal" in mode && <Reveal token={mode.reveal} onDone={() => setMode("list")} />}
-			{mode === "list" && (
+			{mode === "list" && tokensLocked && (
+				<div style={{ padding: "10px 14px", display: "flex", flexDirection: "column", gap: 8 }}>
+					<ProLock feature="personal_access_tokens" />
+					{tokens.length > 0 && (
+						<div data-testid="tokens-paused" style={{ fontSize: 12, color: RDS_COLORS.fgSubtle, lineHeight: 1.45 }}>
+							{t("settings.tokens.paused")}
+						</div>
+					)}
+				</div>
+			)}
+			{mode === "list" && !tokensLocked && (
 				<div style={{ padding: "10px 14px" }}>
 					<Btn variant="ghost" onClick={() => setMode("creating")}>
 						{t("settings.tokens.create")}

@@ -1,6 +1,7 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, ParseIntPipe, Post, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiHeader, ApiOperation, ApiParam, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { ThrottleStrict } from "../common/decorators/throttle.decorator";
+import { EntitlementsService } from "../entitlements/entitlements.service";
 import type { AuthenticatedUser } from "./authenticated-user";
 import { CurrentUser } from "./decorators/current-user.decorator";
 import { RequireConfirmation } from "./decorators/require-confirmation.decorator";
@@ -24,7 +25,10 @@ import { PersonalAccessTokensService } from "./personal-access-tokens.service";
 @ApiTags("auth")
 @Controller("auth/tokens")
 export class PersonalAccessTokensController {
-	constructor(private readonly tokensService: PersonalAccessTokensService) {}
+	constructor(
+		private readonly tokensService: PersonalAccessTokensService,
+		private readonly entitlements: EntitlementsService,
+	) {}
 
 	@ApiBearerAuth("JWT-auth")
 	@UseGuards(JwtAuthGuard)
@@ -36,12 +40,14 @@ export class PersonalAccessTokensController {
 	@ApiBody({ type: CreatePersonalAccessTokenDto })
 	@ApiResponse({ status: 201, description: "Token created", type: CreatePersonalAccessTokenResponseDto })
 	@ApiResponse({ status: 401, description: "Unauthorized" })
+	@ApiResponse({ status: 403, description: "CLI and agent access is part of Pro (details.reason: pro_required)" })
 	@ThrottleStrict()
 	@Post()
-	create(
+	async create(
 		@Body() dto: CreatePersonalAccessTokenDto,
 		@CurrentUser() user: AuthenticatedUser,
 	): Promise<CreatePersonalAccessTokenResponseDto> {
+		await this.entitlements.assertCan(user, "personal_access_tokens");
 		return this.tokensService.mint(user.id, dto.label, dto.scope, dto.expiresAt ? new Date(dto.expiresAt) : undefined);
 	}
 

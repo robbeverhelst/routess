@@ -1,6 +1,9 @@
+import type { ApiBillingStatus, ApiFeature } from "@routess/api-client";
 import type { Coordinate } from "@routess/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { queryClient, queryKeys } from "@/lib/query-client";
 import { type GenerationCandidateView, useGenerationStore } from "@/stores/generationStore";
+import { useLoopPreferencesStore } from "@/stores/loopPreferencesStore";
 import { candidateWaypoints, startGeneration } from "./generationService";
 
 const candidate = (bearingDeg: number): GenerationCandidateView => ({
@@ -155,5 +158,81 @@ describe("startGeneration on a 429", () => {
 		await startGeneration([3.7174, 51.0543]);
 
 		expect(useGenerationStore.getState().failure).toEqual({ code: "provider_unavailable" });
+	});
+});
+
+describe("startGeneration and the knooppunt Pro gate (ADR 0039)", () => {
+	const freeStatus = (features: ApiFeature[]): ApiBillingStatus => ({
+		enabled: true,
+		account: {
+			plan: "free",
+			proExpiresAt: null,
+			ogGrantExpiresAt: null,
+			canBuy: true,
+			features,
+			savedRoutes: { count: 0, limit: 5 },
+		},
+	});
+
+	beforeEach(() => {
+		useGenerationStore.getState().dismiss();
+		useLoopPreferencesStore.setState({ preferNodeNetworks: true });
+	});
+
+	afterEach(() => {
+		vi.unstubAllGlobals();
+		queryClient.clear();
+		useLoopPreferencesStore.setState({ preferNodeNetworks: false });
+	});
+
+	function sentBody(fetchMock: ReturnType<typeof vi.fn>): Record<string, unknown> {
+		const init = fetchMock.mock.calls[0][1] as RequestInit;
+		return JSON.parse(init.body as string);
+	}
+
+	function stubFetch(status: number, body: unknown) {
+		const fetchMock = vi.fn(
+			async () => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } }),
+		);
+		vi.stubGlobal("fetch", fetchMock);
+		return fetchMock;
+	}
+
+	it("does not send a kept knooppunt preference while the Feature is locked", async () => {
+		queryClient.setQueryData(queryKeys.billing.status(false), freeStatus(["route_generation", "gpx_export"]));
+		const fetchMock = stubFetch(200, { candidates: [] });
+
+		await startGeneration([3.7174, 51.0543]);
+
+		expect(sentBody(fetchMock).preferNodeNetworks).toBeUndefined();
+		expect(useGenerationStore.getState().request?.preferNodeNetworks).toBe(false);
+	});
+
+	it("sends it when the account has the Feature", async () => {
+		queryClient.setQueryData(
+			queryKeys.billing.status(false),
+			freeStatus(["route_generation", "gpx_export", "node_network_generation"]),
+		);
+		const fetchMock = stubFetch(200, { candidates: [] });
+
+		await startGeneration([3.7174, 51.0543]);
+
+		expect(sentBody(fetchMock).preferNodeNetworks).toBe(true);
+	});
+
+	it("turns a Pro gate 403 into a pro_required failure", async () => {
+		stubFetch(403, {
+			statusCode: 403,
+			code: "FORBIDDEN",
+			message: "Knooppunt routes are part of Pro.",
+			details: { reason: "pro_required", feature: "node_network_generation", upgrade: "pro" },
+		});
+
+		await startGeneration([3.7174, 51.0543]);
+
+		expect(useGenerationStore.getState().failure).toEqual({
+			code: "pro_required",
+			feature: "node_network_generation",
+		});
 	});
 });

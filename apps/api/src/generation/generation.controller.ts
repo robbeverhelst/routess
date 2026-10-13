@@ -5,6 +5,7 @@ import { ThrottleExpensive } from "../common/decorators/throttle.decorator";
 import { GenerateRequestDto, GenerateResponseDto } from "./dto/generate.dto";
 import { GenerationService } from "./generation.service";
 import { GenerationQuotaGuard } from "./generation-quota.guard";
+import { NodeNetworkGenerationGuard } from "./node-network-generation.guard";
 
 @ApiTags("generation")
 @Controller("generation")
@@ -20,12 +21,16 @@ export class GenerationController {
 	})
 	@ApiBody({ type: GenerateRequestDto })
 	@ApiResponse({ status: 200, description: "Scored candidates or a structured failure", type: GenerateResponseDto })
+	@ApiResponse({
+		status: 403,
+		description: "preferNodeNetworks without Pro: knooppunt routes are part of Pro (details.reason: pro_required)",
+	})
 	@ApiResponse({ status: 429, description: "Daily route generation quota exceeded" })
 	@ApiResponse({ status: 503, description: "Valhalla is not configured or unreachable" })
 	// OptionalUnifiedAuthGuard populates req.user from a session JWT or a PAT so
-	// the quota keys per-User when signed in (falling back to IP); the quota
-	// guard runs after it.
-	@UseGuards(OptionalUnifiedAuthGuard, GenerationQuotaGuard)
+	// the quota keys per-User when signed in (falling back to IP); the Pro
+	// gate on preferNodeNetworks and then the quota guard run after it.
+	@UseGuards(OptionalUnifiedAuthGuard, NodeNetworkGenerationGuard, GenerationQuotaGuard)
 	@ThrottleExpensive()
 	@HttpCode(HttpStatus.OK)
 	@Post()

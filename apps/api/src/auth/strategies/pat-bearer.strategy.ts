@@ -3,6 +3,7 @@ import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { PassportStrategy } from "@nestjs/passport";
 import { Strategy } from "passport-http-bearer";
 import type { User } from "../../entities/user.entity";
+import { EntitlementsService } from "../../entitlements/entitlements.service";
 import type { AuthenticatedUser } from "../authenticated-user";
 import { PAT_TOKEN_PREFIX, PersonalAccessTokensService } from "../personal-access-tokens.service";
 
@@ -15,7 +16,10 @@ type SerializableUser = Pick<User, "id" | "email" | "name" | "avatar" | "isEmail
 // cookie-authenticated browser session still works on the same endpoints.
 @Injectable()
 export class PatBearerStrategy extends PassportStrategy(Strategy, "pat-bearer") {
-	constructor(private readonly tokensService: PersonalAccessTokensService) {
+	constructor(
+		private readonly tokensService: PersonalAccessTokensService,
+		private readonly entitlements: EntitlementsService,
+	) {
 		super();
 	}
 
@@ -35,6 +39,9 @@ export class PatBearerStrategy extends PassportStrategy(Strategy, "pat-bearer") 
 		// `verifyAndTouch` populated `user`. Unwrapping a Ref is cheap;
 		// we are reading fields already loaded into the identity map.
 		const user = wrap(record.user).toJSON() as SerializableUser;
+		// CLI and agent access is Pro (ADR 0039). A free User's tokens stay
+		// stored and work again once they are on Pro.
+		await this.entitlements.assertCan({ id: user.id }, "personal_access_tokens");
 
 		return {
 			id: user.id,

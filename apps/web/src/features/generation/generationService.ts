@@ -3,10 +3,14 @@ import {
 	decodePolyline6,
 	defaultPreferencesForActivity,
 	type GenerationFailureCode,
+	isDomainErrorPayload,
+	type ProGateDetails,
+	proGateOf,
 	type RouteActivity,
 	type RoutingPreferences,
 	type Waypoint,
 } from "@routess/core";
+import { isFeatureLocked } from "@/features/billing/featureLocks";
 import { trackEvent } from "@/lib/analytics/track";
 import { Logger } from "@/lib/logger";
 import { getRuntimeConfig } from "@/lib/runtime-config";
@@ -103,6 +107,10 @@ export async function startGeneration(
 	const end = options?.regenerate ? store.request?.end : options?.end;
 	const routeType = end ? ("a-to-b" as const) : ("loop" as const);
 
+	// Knooppunt routes are Pro (ADR 0039): a preference kept from before the
+	// gate is not sent while the account is off Pro.
+	const preferNodeNetworks = loopPrefs.preferNodeNetworks && !isFeatureLocked("node_network_generation");
+
 	const request: GenerationRequestSnapshot = {
 		routeType,
 		start,
@@ -111,7 +119,7 @@ export async function startGeneration(
 		targetDistanceKm: loopPrefs.distanceKm,
 		heading: loopPrefs.heading,
 		surface: loopPrefs.surface,
-		preferNodeNetworks: loopPrefs.preferNodeNetworks,
+		preferNodeNetworks,
 		landmarks: loopPrefs.landmarks.map((l) => ({ coord: l.coord, name: l.name })),
 		preferences: requestPreferences,
 	};
@@ -144,7 +152,7 @@ export async function startGeneration(
 				targetDistanceKm: loopPrefs.distanceKm,
 				heading: loopPrefs.heading,
 				preferences: requestPreferences,
-				...(loopPrefs.preferNodeNetworks ? { preferNodeNetworks: true } : {}),
+				...(preferNodeNetworks ? { preferNodeNetworks: true } : {}),
 				...(request.landmarks.length > 0
 					? {
 							anchors: request.landmarks.map((l) => ({
@@ -172,6 +180,14 @@ export async function startGeneration(
 				name: "route_generation_failed",
 				properties: { activity, route_type: routeType, failure_reason: "quota_exceeded" },
 			});
+			return;
+		}
+	}
+
+	if (response.status === 403) {
+		const gate = await readProGate(response);
+		if (gate) {
+			useGenerationStore.getState().setFailure({ code: "pro_required", feature: gate.feature });
 			return;
 		}
 	}
@@ -245,6 +261,16 @@ async function readQuotaDetails(
 		};
 		if (body.details?.reason !== "generation_quota" || typeof body.details.limit !== "number") return null;
 		return { limit: body.details.limit, upgrade: body.details.upgrade ?? null };
+	} catch {
+		return null;
+	}
+}
+
+// A Pro gate (ADR 0039) answers 403 with details naming the Feature.
+async function readProGate(response: Response): Promise<ProGateDetails | null> {
+	try {
+		const body: unknown = await response.json();
+		return isDomainErrorPayload(body) ? proGateOf(body) : null;
 	} catch {
 		return null;
 	}

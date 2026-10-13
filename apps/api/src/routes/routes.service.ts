@@ -7,6 +7,7 @@ import type { AppConfig } from "../config/app-config";
 import { APP_CONFIG } from "../config/config.module";
 import { Route } from "../entities/route.entity";
 import { User } from "../entities/user.entity";
+import { EntitlementsService } from "../entitlements/entitlements.service";
 import { ExternalRoutesService } from "../external-routes/external-routes.service";
 import { PlacesService } from "../places/places.service";
 import {
@@ -69,6 +70,7 @@ export class RoutesService {
 		private readonly places: PlacesService,
 		private readonly surfaces: SurfaceCompositionService,
 		private readonly externalRoutes: ExternalRoutesService,
+		private readonly entitlements: EntitlementsService,
 	) {}
 
 	private toResponseDto(route: Route): RouteResponseDto {
@@ -89,19 +91,24 @@ export class RoutesService {
 	async create(createRouteDto: CreateRouteDto, userId: number): Promise<RouteResponseDto> {
 		const owner = await this.userRepository.findOneOrFail({ id: userId });
 		const ownerDefault = owner.preferences?.defaultRouteVisibility ?? "private";
-		const route = this.routeRepository.create({
-			...createRouteDto,
-			visibility: createRouteDto.visibility ?? ownerDefault,
-			tags: createRouteDto.tags ?? [],
-			favourite: createRouteDto.favourite ?? false,
-			provenance: createRouteDto.provenance ?? "valhalla",
-			user: userId,
+		// Free saves up to FREE_SAVED_ROUTE_LIMIT Routes (ADR 0039). The Route
+		// is built inside the gate so the count never sees it.
+		const route = await this.entitlements.saveWithinRouteAllowance({ id: userId }, async (em) => {
+			const route = em.create(Route, {
+				...createRouteDto,
+				visibility: createRouteDto.visibility ?? ownerDefault,
+				tags: createRouteDto.tags ?? [],
+				favourite: createRouteDto.favourite ?? false,
+				provenance: createRouteDto.provenance ?? "valhalla",
+				user: userId,
+			});
+			if (route.visibility === "public") {
+				route.publishedAt = new Date();
+			}
+			this.applyBbox(route);
+			await em.persist(route).flush();
+			return route;
 		});
-		if (route.visibility === "public") {
-			route.publishedAt = new Date();
-		}
-		this.applyBbox(route);
-		await this.em.persist(route).flush();
 		await this.em.populate(route, ["user"]);
 		this.events.emit(ROUTE_CREATED, { userId } satisfies RouteCreatedEvent);
 		// Fire-and-forget: Place is async and fail-open (CONTEXT.md "Place").

@@ -7,6 +7,7 @@ import { Collection } from "../entities/collection.entity";
 import { CollectionRoute } from "../entities/collection-route.entity";
 import { Route } from "../entities/route.entity";
 import type { User } from "../entities/user.entity";
+import { EntitlementsService } from "../entitlements/entitlements.service";
 import { toRouteResponseDto } from "../routes/route.mapper";
 import { toPublicUserDto } from "../users/user.mapper";
 import type { CollectionDetailResponseDto, CollectionResponseDto } from "./dto/collection-response.dto";
@@ -24,6 +25,7 @@ export class CollectionsService {
 		private readonly em: EntityManager,
 		@Inject(APP_CONFIG)
 		private readonly config: AppConfig,
+		private readonly entitlements: EntitlementsService,
 	) {}
 
 	// Pivot rows ordered by position; non-owners never see private routes,
@@ -69,7 +71,11 @@ export class CollectionsService {
 		return collections.map((c) => this.toResponseDto(c, true));
 	}
 
+	// Collections are Pro (ADR 0039): a free User keeps reading, renaming and
+	// deleting the ones they have and may take Routes out, but not create one
+	// or add a Route.
 	async create(dto: CreateCollectionDto, userId: number): Promise<CollectionResponseDto> {
+		await this.entitlements.assertCan({ id: userId }, "collections");
 		const collection = this.collectionRepository.create({
 			name: dto.name,
 			description: dto.description,
@@ -143,6 +149,9 @@ export class CollectionsService {
 		// for a kept route would insert before the orphan delete flushes and
 		// trip the (collection, route) unique constraint.
 		const existingByRouteId = new Map(collection.routes.getItems().map((cr) => [cr.route.id, cr]));
+		if (dto.routeIds.some((routeId) => !existingByRouteId.has(routeId))) {
+			await this.entitlements.assertCan({ id: userId }, "collections");
+		}
 		const keep = new Set(dto.routeIds);
 		for (const cr of collection.routes.getItems()) {
 			if (!keep.has(cr.route.id)) collection.routes.remove(cr);

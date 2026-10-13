@@ -1,5 +1,6 @@
 import type { Heading, RouteGenerationType, SurfaceType } from "@routess/core";
 import { useEffect, useRef, useState } from "react";
+import { ProLock, useProGates } from "@/features/billing/proGates";
 import { emitAppEvent } from "@/lib/app-events";
 import { useT } from "@/lib/i18n";
 import { getRuntimeConfig } from "@/lib/runtime-config";
@@ -316,6 +317,7 @@ export function LoopModal() {
 		setEnd,
 		setPreferNodeNetworks,
 	} = useLoopPreferencesStore();
+	const nodeNetworksLocked = useProGates().locked("node_network_generation");
 
 	const [isLocatingStart, setIsLocatingStart] = useState(false);
 	const [isLocatingEnd, setIsLocatingEnd] = useState(false);
@@ -513,42 +515,46 @@ export function LoopModal() {
 					</div>
 				</div>
 
-				<button
-					type="button"
-					onClick={() => setPreferNodeNetworks(!preferNodeNetworks)}
-					style={{
-						display: "flex",
-						alignItems: "center",
-						gap: 10,
-						padding: "10px 12px",
-						borderRadius: 8,
-						background: preferNodeNetworks ? RDS_COLORS.accentSoft : RDS_COLORS.bgInput,
-						border: preferNodeNetworks ? `1px solid ${RDS_COLORS.accent}` : `1px solid ${RDS_COLORS.border}`,
-						cursor: "pointer",
-						textAlign: "left",
-					}}
-				>
-					<div
+				{nodeNetworksLocked ? (
+					<ProLock feature="node_network_generation" />
+				) : (
+					<button
+						type="button"
+						onClick={() => setPreferNodeNetworks(!preferNodeNetworks)}
 						style={{
-							width: 16,
-							height: 16,
-							borderRadius: 4,
-							flexShrink: 0,
-							display: "inline-flex",
+							display: "flex",
 							alignItems: "center",
-							justifyContent: "center",
-							background: preferNodeNetworks ? RDS_COLORS.accent : "transparent",
-							border: `1px solid ${preferNodeNetworks ? RDS_COLORS.accent : RDS_COLORS.border}`,
-							color: "#fff",
+							gap: 10,
+							padding: "10px 12px",
+							borderRadius: 8,
+							background: preferNodeNetworks ? RDS_COLORS.accentSoft : RDS_COLORS.bgInput,
+							border: preferNodeNetworks ? `1px solid ${RDS_COLORS.accent}` : `1px solid ${RDS_COLORS.border}`,
+							cursor: "pointer",
+							textAlign: "left",
 						}}
 					>
-						{preferNodeNetworks ? <I.check size={11} /> : null}
-					</div>
-					<div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-						<span style={{ fontSize: 12.5, fontWeight: 600, color: RDS_COLORS.fg }}>{t("loop.preferNodes")}</span>
-						<span style={{ fontSize: 11, color: RDS_COLORS.fgSubtle }}>{t("loop.preferNodesSub")}</span>
-					</div>
-				</button>
+						<div
+							style={{
+								width: 16,
+								height: 16,
+								borderRadius: 4,
+								flexShrink: 0,
+								display: "inline-flex",
+								alignItems: "center",
+								justifyContent: "center",
+								background: preferNodeNetworks ? RDS_COLORS.accent : "transparent",
+								border: `1px solid ${preferNodeNetworks ? RDS_COLORS.accent : RDS_COLORS.border}`,
+								color: "#fff",
+							}}
+						>
+							{preferNodeNetworks ? <I.check size={11} /> : null}
+						</div>
+						<div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+							<span style={{ fontSize: 12.5, fontWeight: 600, color: RDS_COLORS.fg }}>{t("loop.preferNodes")}</span>
+							<span style={{ fontSize: 11, color: RDS_COLORS.fgSubtle }}>{t("loop.preferNodesSub")}</span>
+						</div>
+					</button>
+				)}
 
 				<LandmarkPicker />
 			</div>

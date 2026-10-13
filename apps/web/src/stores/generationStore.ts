@@ -2,6 +2,7 @@ import type {
 	Coordinate,
 	GenerationFailureCode,
 	Heading,
+	ProGatedFeature,
 	RouteActivity,
 	RouteGenerationType,
 	RoutingPreferences,
@@ -9,12 +10,13 @@ import type {
 } from "@routess/core";
 import { create } from "zustand";
 
-// Why a run produced no candidates: a structured failure from the API, or the
+// Why a run produced no candidates: a structured failure from the API, the
 // daily generation quota (a 429), which the picker turns into a sign-in or
-// upgrade prompt (ADR 0039).
+// upgrade prompt, or a Pro gate (a 403, knooppunt routes off Pro) (ADR 0039).
 export type GenerationFailureView =
 	| { code: GenerationFailureCode; bestOverlapPct?: number }
-	| { code: "quota_exceeded"; limit: number; upgrade: "sign_in" | "pro" | null };
+	| { code: "quota_exceeded"; limit: number; upgrade: "sign_in" | "pro" | null }
+	| { code: "pro_required"; feature: ProGatedFeature };
 
 // Client-side view of one GenerationCandidate (geometry already decoded).
 export interface GenerationCandidateView {

@@ -74,3 +74,5 @@ export const severityForCode = (code: DomainErrorCode): DomainErrorSeverity => {
 			return "critical";
 	}
 };
+
+export * from "./pro-gates";

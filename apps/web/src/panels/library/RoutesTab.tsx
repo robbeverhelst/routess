@@ -1,6 +1,7 @@
 import type { ApiRoute } from "@routess/api-client";
 import type { RouteActivity, RouteVisibility } from "@routess/core";
 import { useMemo, useState } from "react";
+import { ProLock, useProGates } from "@/features/billing/proGates";
 import { useT } from "@/lib/i18n";
 import { useUnits } from "@/lib/units";
 import { useLibraryStore } from "@/stores/libraryStore";
@@ -94,6 +95,7 @@ export function RoutesTab({
 	const selectedRoute = useLibraryStore((s) => s.selectedRoute);
 	const selectRoute = useLibraryStore((s) => s.selectRoute);
 
+	const { savedRoutes, atSavedRouteLimit } = useProGates();
 	const [sort, setSort] = useState<RouteSort>("recent");
 	const [sortOpen, setSortOpen] = useState(false);
 	const [filtersOpen, setFiltersOpen] = useState(false);
@@ -198,6 +200,16 @@ export function RoutesTab({
 						<I.heart size={13} style={favouritesOnly ? { fill: "currentColor" } : undefined} />
 					</Chip>
 				</div>
+				{savedRoutes?.limit != null && (
+					<div
+						data-testid="saved-route-count"
+						className="rds-mono"
+						style={{ marginTop: 8, fontSize: 11.5, color: RDS_COLORS.fgSubtle, fontVariantNumeric: "tabular-nums" }}
+					>
+						{t("pro.savedCount", { count: String(savedRoutes.count), limit: String(savedRoutes.limit) })}
+					</div>
+				)}
+				{atSavedRouteLimit && <ProLock feature="unlimited_saved_routes" style={{ marginTop: 8 }} />}
 				<div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8 }}>
 					<div style={{ position: "relative" }}>
 						<Chip on={sortOpen} onClick={() => setSortOpen((v) => !v)} title={t("library.sort.label")}>
