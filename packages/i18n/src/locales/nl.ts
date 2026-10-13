@@ -1064,5 +1064,4 @@ export const nl: Record<string, string> = {
 	"upgrade.compare.navigation": "Navigatie met afslag-instructies",
 	"upgrade.compare.collections": "Collecties",
 	"upgrade.compare.cli": "Toegang via CLI en agents (API-tokens)",
-	"loop.withoutNodes": "Genereer zonder knooppunten",
 };

@@ -1051,5 +1051,4 @@ export const en: Record<string, string> = {
 	"upgrade.compare.navigation": "Turn-by-turn navigation",
 	"upgrade.compare.collections": "Collections",
 	"upgrade.compare.cli": "CLI and agent access (API tokens)",
-	"loop.withoutNodes": "Generate without knooppunten",
 };

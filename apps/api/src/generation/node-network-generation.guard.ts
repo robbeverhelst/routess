@@ -13,7 +13,7 @@ export class NodeNetworkGenerationGuard implements CanActivate {
 		const request = context
 			.switchToHttp()
 			.getRequest<Request & { user?: AuthenticatedUser | null; body?: { preferNodeNetworks?: unknown } }>();
-		if (request.body?.preferNodeNetworks !== true) return true;
+		if (!request.body?.preferNodeNetworks) return true;
 		const user = request.user?.id ? { id: request.user.id } : null;
 		await this.entitlements.assertCan(user, "node_network_generation");
 		return true;

@@ -239,13 +239,6 @@ export function GenerationOverlay() {
 					goPro();
 				},
 			});
-			if (request && failure.feature === "node_network_generation") {
-				chips.push({
-					key: "without-nodes",
-					label: t("loop.withoutNodes"),
-					onClick: retryWith(() => useLoopPreferencesStore.getState().setPreferNodeNetworks(false)),
-				});
-			}
 		} else {
 			message = t(FAILURE_MESSAGE_KEY[failure.code]);
 		}

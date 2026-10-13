@@ -370,6 +370,18 @@ describe("Pro gates with billing enabled", () => {
 			expect(res.body).toMatchObject(PRO_REQUIRED("node_network_generation"));
 		});
 
+		it.each([1, "true"])("refuses a free and an anonymous caller sending preferNodeNetworks: %p", async (value) => {
+			const { token } = await makeAccount("free");
+			const free = await api()
+				.post("/api/v1/generation")
+				.set("Authorization", `Bearer ${token}`)
+				.send({ preferNodeNetworks: value })
+				.expect(403);
+			expect(free.body).toMatchObject(PRO_REQUIRED("node_network_generation"));
+			const anonymous = await api().post("/api/v1/generation").send({ preferNodeNetworks: value }).expect(403);
+			expect(anonymous.body).toMatchObject(PRO_REQUIRED("node_network_generation"));
+		});
+
 		it.each(PRO_ACCOUNTS)("%s: passes the gate (and reaches validation)", async (account) => {
 			const { token } = await makeAccount(account);
 			// An otherwise empty body fails validation, which runs after the gate.
