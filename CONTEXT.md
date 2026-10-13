@@ -163,11 +163,11 @@ _Avoid_: username (that suggests a login credential — login stays email-based)
 
 **Admin**:
 A User with `role = 'admin'`, authorised to view aggregate user/route data and perform destructive actions (revoke session, soft-delete user, grant or revoke Pro) via the admin API. Admin status is reconciled from the `ADMIN_EMAILS` env var on every login; the env var is the source of truth, the DB column is a cache.
+_Avoid_: superuser, staff, operator, root.
 
 **AdminAuditEntry**:
 The durable record of one admin action that changed a User's Plan (grant, extend or revoke Pro): who acted, when, what changed, and the reason the Admin gave. Written in the same transaction as the change and kept after either account is deleted. See ADR 0040.
 _Avoid_: audit log line (that is the Pino log every admin request writes).
-_Avoid_: superuser, staff, operator, root.
 
 **UserAuthMethod**:
 A way a User can prove their identity. A User has one or more, each with a `provider` (`google` or `email`) and provider-specific data. Email is the identity key across providers; signing up with an email already in use is rejected. Adding a password to a Google-authenticated User happens from settings while signed in (OAuth already proves email control); fresh email+password signups require email verification before the password becomes active.

@@ -10,7 +10,7 @@ Admins can now grant, extend and revoke Pro from the admin panel. Those changes 
 
 ## Consequences
 
-- Revoking marks the User's running Pro grants deleted (their rows stay, so history and the once-only OG marker survive) and resets a stored Pro Plan to free. Refunds stay in Stripe; the panel only links to the payment's event in the Stripe dashboard, built from the stored event id.
+- Revoking marks the User's running Pro grants deleted (their rows stay, so history and the once-only OG marker survive), leaves a `source = admin` row ending now (an already-lapsed admin grant keeps its real end), and resets a stored Pro Plan to free. Refunds stay in Stripe; the panel only links to the payment's event in the Stripe dashboard, built from the stored event id.
 - The metrics page's limit-to-Pro conversion hashes each payer's id (ADR 0020) to match Payments against `saved_route_limit_hit` and `generation_quota_hit` ProductEvents. It reports counts only, never which User converted.
 - Audit entries outlive both Users: deleting either account clears the link and keeps the actor's email.
 - Follow-up: other state-changing admin actions (soft-delete, session revoke) could move onto the same table if their trail ever needs a reason.
