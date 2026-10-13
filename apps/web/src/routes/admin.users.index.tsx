@@ -1,11 +1,11 @@
-import type { AdminSortDir, AdminUserSort, ApiUserRole } from "@routess/api-client";
+import type { AdminPlanKind, AdminSortDir, AdminUserPlan, AdminUserSort, ApiUserRole } from "@routess/api-client";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { I } from "@/components/icons";
 import { Badge, Btn, RDS_COLORS } from "@/components/primitives";
 import { apiService } from "@/lib/api";
-import { Card, FilterChip, PageError, PageHeader, PageSkeleton, SortTh, Td } from "./admin.index";
+import { Card, FilterChip, PageError, PageHeader, PageSkeleton, SortTh, Td, Th } from "./admin.index";
 
 export const Route = createFileRoute("/admin/users/")({
 	component: AdminUsersPage,
@@ -19,12 +19,13 @@ function AdminUsersPage() {
 	const [deletedOnly, setDeletedOnly] = useState(false);
 	const [role, setRole] = useState<ApiUserRole | undefined>();
 	const [verified, setVerified] = useState<boolean | undefined>();
+	const [plan, setPlan] = useState<AdminPlanKind | undefined>();
 	const [sort, setSort] = useState<AdminUserSort>("createdAt");
 	const [dir, setDir] = useState<AdminSortDir>("desc");
 	const pageSize = 20;
 
 	const { data, isLoading, error } = useQuery({
-		queryKey: ["admin", "users", { page, pageSize, search, deletedOnly, role, verified, sort, dir }],
+		queryKey: ["admin", "users", { page, pageSize, search, deletedOnly, role, verified, plan, sort, dir }],
 		queryFn: () =>
 			apiService.adminListUsers({
 				page,
@@ -33,6 +34,7 @@ function AdminUsersPage() {
 				deletedOnly: deletedOnly || undefined,
 				role,
 				verified,
+				plan: plan ? [plan] : undefined,
 				sort,
 				dir,
 			}),
@@ -46,6 +48,10 @@ function AdminUsersPage() {
 	};
 	const setRoleFilter = (value: ApiUserRole | undefined) => {
 		setRole(value);
+		setPage(1);
+	};
+	const setPlanFilter = (value: AdminPlanKind | undefined) => {
+		setPlan(value);
 		setPage(1);
 	};
 
@@ -123,10 +129,11 @@ function AdminUsersPage() {
 
 			<div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 22 }}>
 				<FilterChip
-					active={role === undefined && verified === undefined && !deletedOnly}
+					active={role === undefined && verified === undefined && plan === undefined && !deletedOnly}
 					onClick={() => {
 						setRole(undefined);
 						setVerified(undefined);
+						setPlan(undefined);
 						setDeletedOnly(false);
 						setPage(1);
 					}}
@@ -160,6 +167,15 @@ function AdminUsersPage() {
 				</FilterChip>
 			</div>
 
+			<div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
+				<span style={{ fontSize: 12, color: RDS_COLORS.fgSubtle, marginRight: 2 }}>Plan</span>
+				{PLAN_KIND_ORDER.map((kind) => (
+					<FilterChip key={kind} active={plan === kind} onClick={() => setPlanFilter(plan === kind ? undefined : kind)}>
+						{PLAN_LABELS[kind]}
+					</FilterChip>
+				))}
+			</div>
+
 			<div style={{ marginTop: 12 }}>
 				<Card padding={0}>
 					<table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
@@ -173,6 +189,10 @@ function AdminUsersPage() {
 								</SortTh>
 								<SortTh sortKey="role" sort={sort} dir={dir} onSort={onSort} defaultDir="asc">
 									Role
+								</SortTh>
+								<Th>Plan</Th>
+								<SortTh sortKey="proUntil" sort={sort} dir={dir} onSort={onSort}>
+									Pro until
 								</SortTh>
 								<SortTh sortKey="routeCount" sort={sort} dir={dir} onSort={onSort} align="right">
 									Routes
@@ -189,7 +209,7 @@ function AdminUsersPage() {
 							{data.items.length === 0 && (
 								<tr>
 									<td
-										colSpan={6}
+										colSpan={8}
 										style={{
 											padding: "32px 18px",
 											textAlign: "center",
@@ -223,6 +243,10 @@ function AdminUsersPage() {
 									<Td>
 										<Badge variant={user.role === "admin" ? "accent" : "default"}>{user.role}</Badge>
 									</Td>
+									<Td>
+										<PlanBadge plan={user.plan} />
+									</Td>
+									<Td muted>{formatProUntil(user.plan)}</Td>
 									<Td align="right" muted>
 										{user.routeCount}
 									</Td>
@@ -269,6 +293,35 @@ function AdminUsersPage() {
 			</div>
 		</div>
 	);
+}
+
+export const PLAN_LABELS: Record<AdminPlanKind, string> = {
+	free: "Free",
+	pro_paid: "Pro paid",
+	pro_og: "Pro OG",
+	pro_admin: "Pro admin",
+	pro_expired: "Pro expired",
+};
+
+const PLAN_KIND_ORDER: AdminPlanKind[] = ["free", "pro_paid", "pro_og", "pro_admin", "pro_expired"];
+
+const PLAN_BADGE_VARIANT: Record<AdminPlanKind, "default" | "accent" | "success" | "warn"> = {
+	free: "default",
+	pro_paid: "success",
+	pro_og: "accent",
+	pro_admin: "accent",
+	pro_expired: "warn",
+};
+
+export function PlanBadge({ plan }: { plan: Pick<AdminUserPlan, "kind"> }) {
+	return <Badge variant={PLAN_BADGE_VARIANT[plan.kind]}>{PLAN_LABELS[plan.kind]}</Badge>;
+}
+
+// "Pro until" as the list and the detail show it: a date, "Never expires"
+// for permanent Pro, a dash when there is none.
+export function formatProUntil(plan: AdminUserPlan): string {
+	if (plan.permanent) return "Never expires";
+	return plan.proUntil ? formatDate(plan.proUntil) : "—";
 }
 
 export function formatDate(iso: string): string {

@@ -8,7 +8,16 @@ import { APP_CONFIG } from "../config/config.module";
 import { Route } from "../entities/route.entity";
 import { Session } from "../entities/session.entity";
 import { User } from "../entities/user.entity";
+import {
+	PLAN_KIND_SQL,
+	PLAN_SUMMARY_JOINS_SQL,
+	type PlanKind,
+	PRO_PERMANENT_SQL,
+	PRO_UNTIL_SORT_SQL,
+	PRO_UNTIL_SQL,
+} from "../entitlements/plan-status";
 import { TtlCache } from "./admin-cache";
+import { AdminProService } from "./admin-pro.service";
 import type { AdminRouteDetailDto, AdminRouteListDto, AdminRouteListItemDto } from "./dto/admin-route.dto";
 import type {
 	AdminConversionDto,
@@ -46,6 +55,7 @@ const USER_SORT_COLUMNS: Record<string, string> = {
 	role: `u."role"`,
 	routeCount: `"routeCount"`,
 	lastActiveAt: `"lastActiveAt"`,
+	proUntil: PRO_UNTIL_SORT_SQL,
 };
 
 const ROUTE_SORT_COLUMNS: Record<string, string> = {
@@ -88,8 +98,14 @@ export class AdminService {
 		private readonly em: EntityManager,
 		private readonly sessionService: SessionService,
 		private readonly productEventStats: ProductEventStatsService,
+		private readonly adminPro: AdminProService,
 		@Inject(APP_CONFIG) private readonly config: AppConfig,
 	) {}
+
+	// After an admin action changes state the cached stats describe.
+	invalidateStats(): void {
+		this.statsCache.invalidate();
+	}
 
 	async getOverview(): Promise<AdminOverviewDto> {
 		return this.statsCache.get("overview", async () => {
@@ -143,14 +159,17 @@ export class AdminService {
 	async getMetrics(): Promise<AdminMetricsDto> {
 		return this.statsCache.get("metrics", async () => {
 			const days = METRICS_DAYS;
-			const [totalUsers, signupsDaily, activeUsers, generationEvents, savedDaily, payingUsers] = await Promise.all([
-				this.users.count({}),
-				this.timeseries("user", days),
-				this.activeUserCounts(),
-				this.productEventStats.dailyCounts(Object.values(GENERATION_EVENTS), days),
-				this.timeseries("route", days, { where: `t."provenance" = 'generation'` }),
-				this.payingUsers(days),
-			]);
+			const [totalUsers, signupsDaily, activeUsers, generationEvents, savedDaily, payingUsers, pro] = await Promise.all(
+				[
+					this.users.count({}),
+					this.timeseries("user", days),
+					this.activeUserCounts(),
+					this.productEventStats.dailyCounts(Object.values(GENERATION_EVENTS), days),
+					this.timeseries("route", days, { where: `t."provenance" = 'generation'` }),
+					this.payingUsers(days),
+					this.adminPro.metrics(days),
+				],
+			);
 			const sumLast = (n: number) => signupsDaily.slice(-n).reduce((acc, p) => acc + p.count, 0);
 			return {
 				days,
@@ -168,6 +187,7 @@ export class AdminService {
 					savedDaily,
 				},
 				payingUsers,
+				pro,
 			};
 		}) as Promise<AdminMetricsDto>;
 	}
@@ -179,6 +199,7 @@ export class AdminService {
 		deletedOnly?: boolean;
 		role?: string;
 		verified?: boolean;
+		plan?: PlanKind[];
 		sort?: string;
 		dir?: SortDir;
 	}): Promise<AdminUserListDto> {
@@ -187,7 +208,8 @@ export class AdminService {
 		const search = params.search?.trim();
 
 		const whereClauses: string[] = [params.deletedOnly ? `u."deleted_at" is not null` : `u."deleted_at" is null`];
-		const args: Array<string | number | boolean> = [];
+		// PLAN_SUMMARY_JOINS_SQL comes before the where clause and binds `now`.
+		const args: Array<string | number | boolean | Date> = [new Date()];
 		if (search) {
 			whereClauses.push(`(u."email" ilike ? or u."name" ilike ?)`);
 			args.push(`%${search}%`, `%${search}%`);
@@ -200,12 +222,19 @@ export class AdminService {
 			whereClauses.push(`u."is_email_verified" = ?`);
 			args.push(params.verified);
 		}
+		if (params.plan?.length) {
+			whereClauses.push(`${PLAN_KIND_SQL} in (${params.plan.map(() => "?").join(", ")})`);
+			args.push(...params.plan);
+		}
 		const whereSql = whereClauses.join(" and ");
 		const orderSql = orderBySql(USER_SORT_COLUMNS, params.sort, params.dir ?? "desc", `u."id"`);
 
 		const totalRows = (await this.em
 			.getConnection()
-			.execute(`select count(*)::int as count from "user" u where ${whereSql}`, args)) as RawCount[];
+			.execute(
+				`select count(*)::int as count from "user" u ${PLAN_SUMMARY_JOINS_SQL} where ${whereSql}`,
+				args,
+			)) as RawCount[];
 		const total = Number(totalRows[0]?.count ?? 0);
 
 		const offset = (page - 1) * pageSize;
@@ -213,8 +242,10 @@ export class AdminService {
 			`select u."id", u."email", u."name", u."role", u."is_email_verified" as "isEmailVerified",
 			        u."created_at" as "createdAt", u."deleted_at" as "deletedAt",
 			        (select max(s."last_activity") from "session" s where s."user_id" = u."id") as "lastActiveAt",
-			        (select count(*)::int from "route" r where r."user_id" = u."id" and r."deleted_at" is null) as "routeCount"
+			        (select count(*)::int from "route" r where r."user_id" = u."id" and r."deleted_at" is null) as "routeCount",
+			        ${PLAN_KIND_SQL} as "planKind", ${PRO_UNTIL_SQL} as "proUntil", ${PRO_PERMANENT_SQL} as "proPermanent"
 			 from "user" u
+			 ${PLAN_SUMMARY_JOINS_SQL}
 			 where ${whereSql}
 			 ${orderSql}
 			 limit ? offset ?`,
@@ -229,6 +260,9 @@ export class AdminService {
 			deletedAt: Date | string | null;
 			lastActiveAt: Date | string | null;
 			routeCount: number | string;
+			planKind: PlanKind;
+			proUntil: Date | string | null;
+			proPermanent: boolean;
 		}>;
 
 		const items: AdminUserListItemDto[] = rows.map((row) => ({
@@ -241,6 +275,12 @@ export class AdminService {
 			createdAt: new Date(row.createdAt).toISOString(),
 			lastActiveAt: row.lastActiveAt ? new Date(row.lastActiveAt).toISOString() : null,
 			deletedAt: row.deletedAt ? new Date(row.deletedAt).toISOString() : null,
+			plan: {
+				kind: row.planKind,
+				plan: row.planKind === "free" || row.planKind === "pro_expired" ? "free" : "pro",
+				proUntil: row.proUntil ? new Date(row.proUntil).toISOString() : null,
+				permanent: Boolean(row.proPermanent),
+			},
 		}));
 
 		return { items, total, page, pageSize };
@@ -250,7 +290,7 @@ export class AdminService {
 		const user = await this.users.findOne({ id }, { filters: { softDelete: false } });
 		if (!user) throw new NotFoundException(`User ${id} not found`);
 
-		const [activeSessions, recentRoutes, routeCount, lastActivity] = await Promise.all([
+		const [activeSessions, recentRoutes, routeCount, lastActivity, billing] = await Promise.all([
 			this.sessionService.getUserActiveSessions(id),
 			this.routes.find({ user: id }, { orderBy: { createdAt: "DESC" }, limit: 20 }),
 			this.routes.count({ user: id }),
@@ -261,6 +301,7 @@ export class AdminService {
 					const r = (rows as Array<{ lastActivity: Date | string | null }>)[0];
 					return r?.lastActivity ? new Date(r.lastActivity).toISOString() : null;
 				}),
+			this.adminPro.userBilling(id),
 		]);
 
 		return {
@@ -273,6 +314,13 @@ export class AdminService {
 			createdAt: user.createdAt.toISOString(),
 			lastActiveAt: lastActivity,
 			deletedAt: user.deletedAt ? user.deletedAt.toISOString() : null,
+			plan: {
+				kind: billing.pro.kind,
+				plan: billing.pro.plan,
+				proUntil: billing.pro.proUntil,
+				permanent: billing.pro.permanent,
+			},
+			billing,
 			activeSessions: activeSessions.map((s) => ({
 				id: s.jti,
 				userAgent: s.userAgent ?? null,

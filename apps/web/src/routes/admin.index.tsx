@@ -230,14 +230,26 @@ export function MetricCard({ label, value, hint }: { label: string; value: numbe
 	);
 }
 
-export function TimeseriesCard({ title, series }: { title: string; series: Array<{ date: string; count: number }> }) {
+export function TimeseriesCard({
+	title,
+	series,
+	format = String,
+	summary,
+}: {
+	title: string;
+	series: Array<{ date: string; count: number }>;
+	// How a value reads in the tooltip and the default summary.
+	format?: (value: number) => string;
+	// Replaces "N total", for series that are levels rather than counts.
+	summary?: string;
+}) {
 	const max = Math.max(1, ...series.map((p) => p.count));
 	const total = series.reduce((acc, p) => acc + p.count, 0);
 	return (
 		<Card>
 			<div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
 				<div style={{ fontSize: 13, fontWeight: 500, color: RDS_COLORS.fg }}>{title}</div>
-				<div style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle }}>{total} total</div>
+				<div style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle }}>{summary ?? `${format(total)} total`}</div>
 			</div>
 			<div style={{ display: "flex", alignItems: "flex-end", gap: 2, height: 84, marginTop: 14 }}>
 				{series.map((point) => {
@@ -245,7 +257,7 @@ export function TimeseriesCard({ title, series }: { title: string; series: Array
 					return (
 						<div
 							key={point.date}
-							title={`${point.date}: ${point.count}`}
+							title={`${point.date}: ${format(point.count)}`}
 							style={{
 								flex: 1,
 								height: `${Math.max(3, heightPct)}%`,

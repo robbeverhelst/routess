@@ -1,10 +1,12 @@
 import type { AdminMetrics } from "@routess/api-client";
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { RDS_COLORS, SecTitle } from "@/components/primitives";
 import { apiService } from "@/lib/api";
-import { MetricCard, PageError, PageHeader, PageSkeleton, TimeseriesCard } from "./admin.index";
+import { formatMoney } from "./-admin-user-pro";
+import { Card, MetricCard, PageError, PageHeader, PageSkeleton, Td, Th, TimeseriesCard } from "./admin.index";
+import { formatDate, PlanBadge } from "./admin.users.index";
 
 export const Route = createFileRoute("/admin/metrics")({
 	component: AdminMetricsPage,
@@ -31,6 +33,9 @@ function AdminMetricsPage() {
 			<ActiveUsersSection data={data} />
 			<GenerationsSection data={data} />
 			<PayingUsersSection data={data} />
+			<ProSection data={data} />
+			<LimitsSection data={data} />
+			<ProEndingSection data={data} />
 		</div>
 	);
 }
@@ -121,11 +126,150 @@ function PayingUsersSection({ data }: { data: AdminMetrics }) {
 			<TileGrid>
 				<MetricCard label="Paying now" value={payingUsers.active} hint="Unexpired paid Pro pass" />
 				<MetricCard label="Ever paid" value={payingUsers.everPaid} />
-				<MetricCard label="Pro users" value={payingUsers.proUsers} hint="Paid, OG grant or manual" />
+				<MetricCard label="Pro users" value={payingUsers.proUsers} hint="Paid, OG grant or admin" />
 			</TileGrid>
 			<ChartGrid>
 				<TimeseriesCard title="Payments per day" series={payingUsers.paymentsDaily} />
 			</ChartGrid>
+		</Section>
+	);
+}
+
+function ProSection({ data }: { data: AdminMetrics }) {
+	const { pro, payingUsers } = data;
+	const proNow = pro.proUsersDaily.at(-1)?.count ?? 0;
+	const purchases = payingUsers.paymentsDaily.reduce((acc, p) => acc + p.count, 0);
+	const primary = pro.revenueTotals.find((t) => t.currency === pro.currency);
+	const others = pro.revenueTotals.filter((t) => t.currency !== pro.currency);
+	const money = (amount: number) => formatMoney(amount, pro.currency);
+	return (
+		<Section title="Pro" note="Postgres: Entitlements and Payments">
+			<TileGrid>
+				<MetricCard label="Pro users now" value={proNow} hint="Paid, OG grant or admin" />
+				<MetricCard label="Purchases" value={purchases} hint={`Last ${data.days} days`} />
+				<MetricCard
+					label="Revenue"
+					value={primary ? money(primary.amount) : "–"}
+					hint={
+						others.length
+							? `Plus ${others.map((t) => formatMoney(t.amount, t.currency)).join(", ")}`
+							: `Last ${data.days} days, VAT incl.`
+					}
+				/>
+				<MetricCard label="Pro ending" value={pro.endingSoon.count} hint="In the next 30 days" />
+			</TileGrid>
+			<ChartGrid>
+				<TimeseriesCard title="Pro users per day" series={pro.proUsersDaily} summary={`${proNow} now`} />
+				<TimeseriesCard title="Pro purchases per day" series={payingUsers.paymentsDaily} />
+				<TimeseriesCard
+					title={`Revenue per day${pro.currency ? ` (${pro.currency.toUpperCase()})` : ""}`}
+					series={pro.revenueDaily.map((p) => ({ date: p.date, count: p.amount }))}
+					format={money}
+				/>
+			</ChartGrid>
+		</Section>
+	);
+}
+
+function LimitsSection({ data }: { data: AdminMetrics }) {
+	const { limits } = data.pro;
+	return (
+		<Section title="Free limits" note="Umami ProductEvents, matched to Payments">
+			{limits.productEventsAvailable ? (
+				<>
+					{limits.conversion && (
+						<TileGrid>
+							<MetricCard
+								label="Hit a limit"
+								value={limits.conversion.hitUsers}
+								hint={`Free users, last ${data.days} days`}
+							/>
+							<MetricCard
+								label="Bought Pro"
+								value={limits.conversion.converted}
+								hint="Within 7 days of their first hit"
+							/>
+							<MetricCard
+								label="Conversion"
+								value={`${limits.conversion.conversionPct}%`}
+								hint="Bought / hit a limit"
+							/>
+							<MetricCard
+								label="Still deciding"
+								value={limits.conversion.pending}
+								hint="Hit under 7 days ago, not bought yet"
+							/>
+						</TileGrid>
+					)}
+					<ChartGrid>
+						<TimeseriesCard
+							title="Free users at the 5 saved routes cap per day"
+							series={limits.daily.map((p) => ({ date: p.date, count: p.savedRoutes }))}
+						/>
+						<TimeseriesCard
+							title="Free users at the daily generation quota per day"
+							series={limits.daily.map((p) => ({ date: p.date, count: p.generationQuota }))}
+						/>
+					</ChartGrid>
+				</>
+			) : (
+				<Notice>
+					Limit hits come from Umami (saved_route_limit_hit and generation_quota_hit ProductEvents), which is not
+					configured or could not be reached. Set UMAMI_DATABASE_URL and UMAMI_WEBSITE_ID to see them.
+				</Notice>
+			)}
+		</Section>
+	);
+}
+
+function ProEndingSection({ data }: { data: AdminMetrics }) {
+	const { endingSoon } = data.pro;
+	return (
+		<Section title={`Pro ending in the next 30 days (${endingSoon.count})`}>
+			<div style={{ marginTop: 12 }}>
+				<Card padding={0}>
+					<table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+						<thead>
+							<tr style={{ background: RDS_COLORS.bgPanelElev }}>
+								<Th>User</Th>
+								<Th>Plan</Th>
+								<Th>Pro until</Th>
+							</tr>
+						</thead>
+						<tbody>
+							{endingSoon.users.length === 0 && (
+								<tr>
+									<td colSpan={3} style={{ padding: "24px 16px", textAlign: "center", color: RDS_COLORS.fgSubtle }}>
+										No Pro ends in the next 30 days.
+									</td>
+								</tr>
+							)}
+							{endingSoon.users.map((u, idx) => (
+								<tr key={u.id} style={{ borderTop: idx === 0 ? "none" : `1px solid ${RDS_COLORS.border}` }}>
+									<Td>
+										<Link
+											to="/admin/users/$userId"
+											params={{ userId: u.id.toString() }}
+											style={{ color: RDS_COLORS.fg, fontWeight: 500, textDecoration: "none" }}
+										>
+											{u.email}
+										</Link>
+									</Td>
+									<Td>
+										<PlanBadge plan={u} />
+									</Td>
+									<Td muted>{formatDate(u.proUntil)}</Td>
+								</tr>
+							))}
+						</tbody>
+					</table>
+				</Card>
+			</div>
+			{endingSoon.count > endingSoon.users.length && (
+				<div style={{ marginTop: 8, fontSize: 12, color: RDS_COLORS.fgSubtle }}>
+					Showing the {endingSoon.users.length} soonest.
+				</div>
+			)}
 		</Section>
 	);
 }

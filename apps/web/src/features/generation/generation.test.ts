@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { queryClient, queryKeys } from "@/lib/query-client";
 import { type GenerationCandidateView, useGenerationStore } from "@/stores/generationStore";
 import { useLoopPreferencesStore } from "@/stores/loopPreferencesStore";
+import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 import { candidateWaypoints, startGeneration } from "./generationService";
 
 const candidate = (bearingDeg: number): GenerationCandidateView => ({
@@ -150,6 +151,40 @@ describe("startGeneration on a 429", () => {
 
 		expect(useGenerationStore.getState().status).toBe("failed");
 		expect(useGenerationStore.getState().failure).toEqual({ code: "quota_exceeded", limit: 3, upgrade: "pro" });
+	});
+
+	it("fires generation_quota_hit for a free User offered Pro, not for an anonymous one offered sign-in", async () => {
+		const track = vi.fn();
+		window.umami = { track };
+		useRedesignSettingsStore.setState({ analyticsEnabled: true });
+		vi.spyOn(navigator, "doNotTrack", "get").mockReturnValue(null);
+		try {
+			respond(429, {
+				statusCode: 429,
+				code: "RATE_LIMITED",
+				message: "Daily route generation limit of 3 reached. Try again tomorrow.",
+				details: { reason: "generation_quota", limit: 3, tier: "free", upgrade: "pro" },
+			});
+			await startGeneration([3.7174, 51.0543]);
+			const quotaHits = () => track.mock.calls.filter(([name]) => name === "generation_quota_hit");
+			expect(quotaHits()).toHaveLength(1);
+			expect(quotaHits()[0][1]).toMatchObject({ limit: 3 });
+
+			track.mockClear();
+			useGenerationStore.getState().dismiss();
+			respond(429, {
+				statusCode: 429,
+				code: "RATE_LIMITED",
+				message: "Daily route generation limit of 1 reached. Try again tomorrow.",
+				details: { reason: "generation_quota", limit: 1, tier: "anonymous", upgrade: "sign_in" },
+			});
+			await startGeneration([3.7174, 51.0543]);
+			expect(quotaHits()).toHaveLength(0);
+			expect(track.mock.calls.some(([name]) => name === "route_generation_failed")).toBe(true);
+		} finally {
+			window.umami = undefined;
+			vi.restoreAllMocks();
+		}
 	});
 
 	it("keeps a per-minute throttle 429 as an unavailable engine", async () => {

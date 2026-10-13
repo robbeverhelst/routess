@@ -180,6 +180,8 @@ export async function startGeneration(
 				name: "route_generation_failed",
 				properties: { activity, route_type: routeType, failure_reason: "quota_exceeded" },
 			});
+			// A signed-in free User (anonymous callers are offered sign-in instead).
+			if (quota.upgrade === "pro") trackEvent({ name: "generation_quota_hit", properties: { limit: quota.limit } });
 			return;
 		}
 	}

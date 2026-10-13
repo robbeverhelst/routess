@@ -122,6 +122,11 @@ export type ProductEvent =
 	| { name: "route_share_copied"; properties: EmptyProps }
 	| { name: "profile_handle_changed"; properties: EmptyProps }
 
+	// Free-Plan limits (ADR 0039): a signed-in free User ran into a cap Pro
+	// lifts. The admin metrics count these per day and match them to Payments.
+	| { name: "saved_route_limit_hit"; properties: { limit: number } }
+	| { name: "generation_quota_hit"; properties: { limit: number } }
+
 	// Payment: the Pro year pass (ADR 0039)
 	| { name: "payment_started"; properties: PaymentProps & { is_extension: boolean } }
 	| { name: "payment_completed"; properties: PaymentProps }

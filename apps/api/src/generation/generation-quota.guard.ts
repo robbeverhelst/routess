@@ -9,6 +9,19 @@ import { EntitlementsService } from "../entitlements/entitlements.service";
 
 const SECONDS_PER_DAY = 24 * 60 * 60;
 
+export const GENERATION_QUOTA_COUNTER = "generation-quota";
+
+// The quota counter's key: one per subject per UTC day.
+export function generationQuotaKey(subject: string, now = new Date()): string {
+	return `${now.toISOString().slice(0, 10)}:${subject}`;
+}
+
+// The daily cap for a tier (null tier: billing off, one cap for everyone).
+// 0 means no cap.
+export function generationQuotaLimit(config: AppConfig, tier: GenerationQuotaTier | null): number {
+	return tier ? config.quotas.generationPerDayByTier[tier] : config.quotas.generationPerDay;
+}
+
 // What the web offers when a tier runs out: signing in lifts anonymous to the
 // free allowance, Pro lifts free to the Pro allowance (ADR 0039).
 const UPGRADE_FOR_TIER: Record<GenerationQuotaTier, "sign_in" | "pro" | null> = {
@@ -36,12 +49,11 @@ export class GenerationQuotaGuard implements CanActivate {
 		const request = context.switchToHttp().getRequest<Request & { user?: AuthenticatedUser | null }>();
 		const user = request.user?.id ? { id: request.user.id } : null;
 		const tier = this.config.billing.enabled ? await this.entitlements.quotaTier(user) : null;
-		const limit = tier ? this.config.quotas.generationPerDayByTier[tier] : this.config.quotas.generationPerDay;
+		const limit = generationQuotaLimit(this.config, tier);
 		if (limit <= 0) return true;
 
 		const subject = user ? `user:${user.id}` : `ip:${request.ip ?? "unknown"}`;
-		const day = new Date().toISOString().slice(0, 10);
-		const count = await this.cache.increment("generation-quota", `${day}:${subject}`, SECONDS_PER_DAY);
+		const count = await this.cache.increment(GENERATION_QUOTA_COUNTER, generationQuotaKey(subject), SECONDS_PER_DAY);
 
 		if (count > limit) {
 			const payload: DomainErrorPayload = {

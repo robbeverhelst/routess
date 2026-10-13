@@ -162,7 +162,11 @@ A unique, URL-safe identifier for a Profile (e.g. `/u/robbe`). Matches `[a-z0-9]
 _Avoid_: username (that suggests a login credential — login stays email-based), slug, alias.
 
 **Admin**:
-A User with `role = 'admin'`, authorised to view aggregate user/route data and perform destructive actions (revoke session, soft-delete user) via the admin API. Admin status is reconciled from the `ADMIN_EMAILS` env var on every login; the env var is the source of truth, the DB column is a cache.
+A User with `role = 'admin'`, authorised to view aggregate user/route data and perform destructive actions (revoke session, soft-delete user, grant or revoke Pro) via the admin API. Admin status is reconciled from the `ADMIN_EMAILS` env var on every login; the env var is the source of truth, the DB column is a cache.
+
+**AdminAuditEntry**:
+The durable record of one admin action that changed a User's Plan (grant, extend or revoke Pro): who acted, when, what changed, and the reason the Admin gave. Written in the same transaction as the change and kept after either account is deleted. See ADR 0040.
+_Avoid_: audit log line (that is the Pino log every admin request writes).
 _Avoid_: superuser, staff, operator, root.
 
 **UserAuthMethod**:
@@ -186,7 +190,7 @@ A named capability a Plan or an **Entitlement** can unlock, e.g. `route_generati
 _Avoid_: perk, permission (that is RouteVisibility and roles), flag.
 
 **Entitlement**:
-A per-User grant on top of the User's Plan: either one Feature, or the whole Pro Plan for a while. Its source is `manual` (comps and beta access), `billing` (a paid **Pro pass**) or `og-grant` (the **OG grant**), and it may expire. An expired Entitlement stops counting; revoking deletes it.
+A per-User grant on top of the User's Plan: either one Feature, or the whole Pro Plan for a while. Its source is `manual` (an operator's comp or beta access, made outside the app), `admin` (a Pro grant made from the admin panel, always with an **AdminAuditEntry**), `billing` (a paid **Pro pass**) or `og-grant` (the **OG grant**), and it may expire. An expired Entitlement stops counting; revoking deletes it (soft-delete: the row stays as history).
 _Avoid_: license, grant (as a noun for the stored row), unlock.
 
 **Pro pass**:

@@ -3,6 +3,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { I } from "@/components/icons";
 import { Badge, Btn, RDS_COLORS, SecTitle } from "@/components/primitives";
 import { apiService } from "@/lib/api";
+import { UserProSection } from "./-admin-user-pro";
 import { Card, PageError, PageHeader, PageSkeleton } from "./admin.index";
 import { formatDate, formatRelative } from "./admin.users.index";
 
@@ -145,6 +146,8 @@ function AdminUserDetailPage() {
 					<KV label="Total routes" value={data.routeCount.toString()} />
 				</Card>
 			</div>
+
+			<UserProSection userId={id} billing={data.billing} />
 
 			<section style={{ marginTop: 28 }}>
 				<div

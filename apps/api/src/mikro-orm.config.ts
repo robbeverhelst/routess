@@ -3,6 +3,7 @@ import { defineConfig } from "@mikro-orm/postgresql";
 import { Logger } from "@nestjs/common";
 import type { Pool, PoolClient } from "pg";
 import { getAppConfig } from "./config/app-config";
+import { AdminAuditEntry } from "./entities/admin-audit-entry.entity";
 import { Collection } from "./entities/collection.entity";
 import { CollectionRoute } from "./entities/collection-route.entity";
 import { Entitlement } from "./entities/entitlement.entity";
@@ -62,6 +63,7 @@ const config = defineConfig({
 		ExternalRoute,
 		Entitlement,
 		Payment,
+		AdminAuditEntry,
 	],
 	migrations: {
 		// Production runs compiled JS migrations from dist, while local tooling still uses TS sources.

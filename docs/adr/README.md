@@ -24,6 +24,7 @@ Use the [template](0000-template.md) when adding a new one. Number sequentially 
 - [0033 — Node networks as self-hosted vector tiles, not a live Overpass proxy](0033-node-network-tiles-from-self-hosted-pmtiles.md)
 - [0036 — Auth guard stacks stay explicit per endpoint](0036-guard-stacks-stay-explicit.md)
 - [0039 — Plans and Entitlements gate Features; Pro year pass through Stripe (#135)](0039-plans-and-entitlements-with-pending-pricing-model.md)
+- [0040 — Admin Plan changes are audited in Postgres, not only in logs](0040-admin-plan-changes-are-audited-in-postgres.md)
 
 ### Routing & domain
 - [0007 — Single canonical Waypoint type](0007-single-canonical-waypoint-type.md)
