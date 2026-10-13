@@ -155,6 +155,15 @@ The pass is a one-off payment, so there is no billing `interval`. `is_extension`
 
 Hitting the generation quota shows as `route_generation_failed` with `failure_reason: "quota_exceeded"`; a sign-in from that prompt carries `entry_point: "generation_quota"` on `signup_started`.
 
+## Free-Plan limits (ADR 0039)
+
+| Event | When | Properties |
+|---|---|---|
+| `saved_route_limit_hit` | A signed-in free User at the saved-Route cap presses something that saves a Route (Save on an unsaved draft, Duplicate, saving a shared Route, or the API refusing a save) | `limit` |
+| `generation_quota_hit` | A signed-in free User's generation is refused by the daily quota (the 429 offers Pro, not sign-in) | `limit` |
+
+Both fire from the press, never on render, and only for signed-in free Users, so `user_id_hash` is always set. The admin metrics page counts distinct `user_id_hash` per day for each and matches them to Payments (by hashing each payer's id) to report how many bought Pro within 7 days of their first hit. `generation_quota_hit` fires alongside `route_generation_failed` with `failure_reason: "quota_exceeded"`, which still counts every quota hit including anonymous ones.
+
 ## Onboarding (feature pending)
 
 | Event | When | Properties |

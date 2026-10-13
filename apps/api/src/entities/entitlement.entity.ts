@@ -5,10 +5,11 @@ import { BaseEntity } from "./base.entity";
 import type { UserPlan } from "./user.entity";
 import { User } from "./user.entity";
 
-// 'manual' is an operator grant (comp, beta access); 'billing' is written by
-// the billing webhook (a paid Pro pass); 'og-grant' is the one-time Pro grant
-// for accounts that predate the billing launch (ADR 0039).
-export const ENTITLEMENT_SOURCES = ["manual", "billing", "og-grant"] as const;
+// 'manual' is an operator grant (comp, beta access); 'admin' is a Pro grant
+// made from the admin panel (always audited, see AdminAuditEntry); 'billing'
+// is written by the billing webhook (a paid Pro pass); 'og-grant' is the
+// one-time Pro grant for accounts that predate the billing launch (ADR 0039).
+export const ENTITLEMENT_SOURCES = ["manual", "admin", "billing", "og-grant"] as const;
 export type EntitlementSource = (typeof ENTITLEMENT_SOURCES)[number];
 
 // CONTEXT.md "Entitlement": a per-User grant on top of the User's Plan (ADR

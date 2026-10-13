@@ -8,6 +8,7 @@ import { Route } from "../entities/route.entity";
 import type { UserPlan } from "../entities/user.entity";
 import { FEATURES, type Feature, type PlanFeatureMatrix } from "./features";
 import { extendExpiry, type GrantLength } from "./grant-length";
+import { type PlanStatus, PRO_GRANTS_SQL, type ProGrantsRow, resolvePlanStatus } from "./plan-status";
 import { ProRequiredException, SavedRouteLimitException } from "./pro-gate.exception";
 
 export const PLAN_FEATURE_MATRIX = Symbol("PLAN_FEATURE_MATRIX");
@@ -16,21 +17,6 @@ export const PLAN_FEATURE_MATRIX = Symbol("PLAN_FEATURE_MATRIX");
 // The stored Plan is read from the database, so any object with the User id
 // will do.
 export type EntitlementSubject = { id: number } | null;
-
-export interface PlanStatus {
-	// The Plan in effect now: the stored Plan, or Pro while a Plan grant runs.
-	plan: UserPlan;
-	// When the Pro time from Plan grants ends. Null with plan 'pro' means Pro
-	// does not expire (stored Plan or an open-ended grant).
-	proExpiresAt: Date | null;
-}
-
-interface PlanStatusRow {
-	stored_plan: UserPlan;
-	latest: Date | null;
-	open_ended: boolean | null;
-	count: number;
-}
 
 // The API's single answer to "may this User use this Feature?" and "which
 // Plan is this User on right now?" (#135, ADR 0039).
@@ -109,28 +95,36 @@ export class EntitlementsService {
 	}
 
 	async planStatus(user: NonNullable<EntitlementSubject>, now = new Date()): Promise<PlanStatus> {
-		const [row] = await this.em.execute<PlanStatusRow[]>(
-			`select u."plan" as "stored_plan",
-				max(e."expires_at") as "latest",
-				bool_or(e."id" is not null and e."expires_at" is null) as "open_ended",
-				count(e."id")::int as "count"
+		const [row] = await this.em.execute<ProGrantsRow[]>(
+			`select u."plan" as "stored_plan", pro."latest", pro."open_ended", pro."count"
 			from "user" u
-			left join "entitlement" e on e."user_id" = u."id" and e."plan" = 'pro' and e."deleted_at" is null
-				and (e."expires_at" is null or e."expires_at" > ?)
-			where u."id" = ?
-			group by u."plan"`,
+			${PRO_GRANTS_SQL}
+			where u."id" = ?`,
 			[now, user.id],
 		);
-		if (!row) return { plan: "free", proExpiresAt: null };
-		if (row.stored_plan === "pro" || row.open_ended) return { plan: "pro", proExpiresAt: null };
-		if (row.count === 0) return { plan: row.stored_plan, proExpiresAt: null };
-		return { plan: "pro", proExpiresAt: new Date(row.latest as Date) };
+		return resolvePlanStatus(row);
 	}
 
 	// Which generation quota applies (ADR 0039): anonymous, or the Plan in effect.
 	async quotaTier(user: EntitlementSubject, now = new Date()): Promise<GenerationQuotaTier> {
 		if (!user) return "anonymous";
 		return (await this.planStatus(user, now)).plan;
+	}
+
+	// Sets the User's Plan grant from `source` to end at `expiresAt` (null:
+	// never), replacing that source's row and reviving a revoked one. Same
+	// locking rule as extendPlanGrant.
+	async setPlanGrant(
+		em: EntityManager,
+		grant: { userId: number; plan: UserPlan; source: EntitlementSource; expiresAt: Date | null },
+	): Promise<void> {
+		await em.execute(
+			`insert into "entitlement" ("user_id", "plan", "source", "expires_at", "created_at", "updated_at")
+			values (?, ?, ?, ?, now(), now())
+			on conflict ("user_id", "plan", "source")
+			do update set "expires_at" = excluded."expires_at", "deleted_at" = null, "updated_at" = now()`,
+			[grant.userId, grant.plan, grant.source, grant.expiresAt],
+		);
 	}
 
 	// Starts or extends the User's Plan grant from `source` and returns its new
@@ -148,13 +142,7 @@ export class EntitlementsService {
 			[grant.userId, grant.plan],
 		);
 		const expiresAt = extendExpiry(current?.latest ? new Date(current.latest) : null, grant.from, grant.length);
-		await em.execute(
-			`insert into "entitlement" ("user_id", "plan", "source", "expires_at", "created_at", "updated_at")
-			values (?, ?, ?, ?, now(), now())
-			on conflict ("user_id", "plan", "source")
-			do update set "expires_at" = excluded."expires_at", "deleted_at" = null, "updated_at" = now()`,
-			[grant.userId, grant.plan, grant.source, expiresAt],
-		);
+		await this.setPlanGrant(em, { userId: grant.userId, plan: grant.plan, source: grant.source, expiresAt });
 		return expiresAt;
 	}
 }

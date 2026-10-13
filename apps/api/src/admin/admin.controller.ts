@@ -1,4 +1,5 @@
 import {
+	Body,
 	Controller,
 	Delete,
 	Get,
@@ -13,12 +14,17 @@ import {
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { ROUTE_ACTIVITIES } from "@routess/core";
+import type { AuthenticatedUser } from "../auth/authenticated-user";
+import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
+import { PLAN_KINDS, type PlanKind } from "../entitlements/plan-status";
 import { ExternalRoutesService } from "../external-routes/external-routes.service";
 import { ADMIN_ROUTE_SORTS, ADMIN_USER_SORTS, AdminService, type SortDir } from "./admin.service";
+import { AdminProService } from "./admin-pro.service";
 import { AuditInterceptor } from "./audit.interceptor";
+import { AdminGrantProDto, AdminProReasonDto, AdminUserProDto } from "./dto/admin-pro.dto";
 import { AdminRouteDetailDto, AdminRouteListDto } from "./dto/admin-route.dto";
 import { AdminSeedRefreshResultDto, AdminSeedSourcesDto } from "./dto/admin-seeding.dto";
 import {
@@ -34,6 +40,7 @@ import { AdminUserDetailDto, AdminUserListDto } from "./dto/admin-user.dto";
 const ROUTE_VISIBILITIES = new Set(["private", "unlisted", "public"]);
 const ROUTE_ACTIVITY_VALUES: ReadonlySet<string> = new Set(ROUTE_ACTIVITIES);
 const USER_ROLES = new Set(["user", "admin"]);
+const PLAN_KIND_VALUES: ReadonlySet<string> = new Set(PLAN_KINDS);
 
 function parseCsv(value: string | undefined, allowed: ReadonlySet<string>): string[] | undefined {
 	const values = value
@@ -69,6 +76,7 @@ function parseBool(value: string | undefined): boolean | undefined {
 export class AdminController {
 	constructor(
 		private readonly admin: AdminService,
+		private readonly adminPro: AdminProService,
 		private readonly externalRoutes: ExternalRoutesService,
 	) {}
 
@@ -210,7 +218,7 @@ export class AdminController {
 	@ApiOperation({
 		summary: "Paginated, searchable, sortable user list",
 		description:
-			"Lists users with `page`/`pageSize` pagination, free-text `search` over name and email, and optional `role` and `verified` filters. Sort with `sort` (createdAt, email, name, role, routeCount, lastActiveAt) and `dir` (asc, desc); unknown values fall back to newest first.",
+			"Lists users with `page`/`pageSize` pagination, free-text `search` over name and email, and optional `role`, `verified` and `plan` (comma-separated: free, pro_paid, pro_admin, pro_og, pro_expired) filters. Each item carries its Plan from the same resolution the Pro gates use. Sort with `sort` (createdAt, email, name, role, routeCount, lastActiveAt, proUntil) and `dir` (asc, desc); unknown values fall back to newest first. Sorting by proUntil puts Pro that does not expire after every date and Users without a date last.",
 	})
 	listUsers(
 		@Query("page") page = "1",
@@ -219,6 +227,7 @@ export class AdminController {
 		@Query("deleted") deleted?: string,
 		@Query("role") role?: string,
 		@Query("verified") verified?: string,
+		@Query("plan") plan?: string,
 		@Query("sort") sort?: string,
 		@Query("dir") dir?: string,
 	): Promise<AdminUserListDto> {
@@ -229,17 +238,70 @@ export class AdminController {
 			deletedOnly: deleted === "true" || deleted === "1",
 			role: role && USER_ROLES.has(role) ? role : undefined,
 			verified: parseBool(verified),
+			plan: parseCsv(plan, PLAN_KIND_VALUES) as PlanKind[] | undefined,
 			...parseSort(sort, dir, ADMIN_USER_SORTS),
 		});
 	}
 
 	@Get("users/:id")
 	@ApiOperation({
-		summary: "User detail: profile, sessions, recent routes",
-		description: "Full admin view of one user: profile fields, active sessions, and their most recent routes.",
+		summary: "User detail: profile, sessions, recent routes, Plan and payments",
+		description:
+			"Full admin view of one user: profile fields, active sessions, their most recent routes, and `billing`: the Plan in effect with its source and end date, every Pro grant, the Payments (each linking to its event in the Stripe dashboard), saved Routes against the free cap, today's generation usage against the quota, and the admin actions taken on the account.",
 	})
 	getUserDetail(@Param("id", ParseIntPipe) id: number): Promise<AdminUserDetailDto> {
 		return this.admin.getUserDetail(id);
+	}
+
+	@Post("users/:id/pro/grant")
+	@HttpCode(HttpStatus.OK)
+	@ApiOperation({
+		summary: "Grant Pro for N days from now, or permanently (a comp)",
+		description:
+			"Sets the User's admin Pro grant (Entitlement source 'admin') to `days` from now, or to never expire with `permanent: true`; give exactly one. It replaces an earlier admin grant; time from other sources is kept and the latest end wins. Refused with 409 when the stored Plan is already Pro. Writes an audit entry with the `reason`.",
+	})
+	grantPro(
+		@CurrentUser() actor: AuthenticatedUser,
+		@Param("id", ParseIntPipe) id: number,
+		@Body() body: AdminGrantProDto,
+	): Promise<AdminUserProDto> {
+		return this.afterProChange(this.adminPro.grant(actor, id, body));
+	}
+
+	@Post("users/:id/pro/extend")
+	@HttpCode(HttpStatus.OK)
+	@ApiOperation({
+		summary: "Extend Pro by a year",
+		description:
+			"Adds 365 days to the end of the User's Pro time (or to now when it already ended) through their admin grant, the way buying another pass does. Refused with 409 when Pro does not expire. Writes an audit entry with the `reason`.",
+	})
+	extendPro(
+		@CurrentUser() actor: AuthenticatedUser,
+		@Param("id", ParseIntPipe) id: number,
+		@Body() body: AdminProReasonDto,
+	): Promise<AdminUserProDto> {
+		return this.afterProChange(this.adminPro.extend(actor, id, body.reason));
+	}
+
+	@Post("users/:id/pro/revoke")
+	@HttpCode(HttpStatus.OK)
+	@ApiOperation({
+		summary: "Revoke Pro now",
+		description:
+			"Revokes every running Pro grant (paid, OG and admin; the rows are kept, marked revoked), writes the `admin` Entitlement ending now (written revoked, so it never puts the User back on Pro) and resets a stored Pro Plan to free. Refunds are not done here: refund the payment in the Stripe dashboard. Refused with 409 when the User is not on Pro. Writes an audit entry with the `reason`.",
+	})
+	revokePro(
+		@CurrentUser() actor: AuthenticatedUser,
+		@Param("id", ParseIntPipe) id: number,
+		@Body() body: AdminProReasonDto,
+	): Promise<AdminUserProDto> {
+		return this.afterProChange(this.adminPro.revoke(actor, id, body.reason));
+	}
+
+	private async afterProChange(change: Promise<AdminUserProDto>): Promise<AdminUserProDto> {
+		const result = await change;
+		this.admin.invalidateStats();
+		return result;
 	}
 
 	@Delete("users/:id/sessions/:sessionId")

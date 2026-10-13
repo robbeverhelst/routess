@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { USER_ROLES, type UserRole } from "../../entities/user.entity";
+import { AdminUserBillingDto, AdminUserPlanDto } from "./admin-pro.dto";
 
 export class AdminUserListItemDto {
 	@ApiProperty({ example: 42 })
@@ -28,6 +29,9 @@ export class AdminUserListItemDto {
 
 	@ApiPropertyOptional({ nullable: true, description: "When soft-deleted, if applicable" })
 	deletedAt!: string | null;
+
+	@ApiProperty({ type: AdminUserPlanDto })
+	plan!: AdminUserPlanDto;
 }
 
 export class AdminUserListDto {
@@ -84,4 +88,7 @@ export class AdminUserDetailDto extends AdminUserListItemDto {
 
 	@ApiProperty({ type: [AdminUserRouteDto] })
 	recentRoutes!: AdminUserRouteDto[];
+
+	@ApiProperty({ type: AdminUserBillingDto, description: "Plan, grants, payments, allowances and admin actions" })
+	billing!: AdminUserBillingDto;
 }

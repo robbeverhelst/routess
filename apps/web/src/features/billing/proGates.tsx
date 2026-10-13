@@ -1,9 +1,10 @@
 import { ApiDomainError } from "@routess/api-client";
-import { type ProGatedFeature, proGateOf } from "@routess/core";
+import { FREE_SAVED_ROUTE_LIMIT, type ProGatedFeature, proGateOf } from "@routess/core";
 import { useNavigate } from "@tanstack/react-router";
 import type { CSSProperties } from "react";
 import { I } from "@/components/icons";
 import { Btn, RDS_COLORS } from "@/components/primitives";
+import { trackEvent } from "@/lib/analytics/track";
 import { useBillingStatus, useStartCheckout } from "@/lib/api-queries";
 import { useT } from "@/lib/i18n";
 import { useToastStore } from "@/stores/toastStore";
@@ -21,6 +22,12 @@ export function useProGates() {
 	const savedRoutes = enabled && account ? account.savedRoutes : null;
 	const atSavedRouteLimit = savedRoutes?.limit != null && savedRoutes.count >= savedRoutes.limit;
 	return { locked, savedRoutes, atSavedRouteLimit };
+}
+
+// The ProductEvent for a free User trying to save past the cap, fired from
+// the press that ran into it (never on render).
+export function trackSavedRouteLimitHit(limit?: number | null): void {
+	trackEvent({ name: "saved_route_limit_hit", properties: { limit: limit ?? FREE_SAVED_ROUTE_LIMIT } });
 }
 
 // "Go Pro": straight to checkout for a signed-in account that can buy,
@@ -60,6 +67,7 @@ export function useProGatePrompt() {
 	const reason = useProGateReason();
 	const { savedRoutes } = useProGates();
 	return (feature: ProGatedFeature, limit = savedRoutes?.limit ?? undefined) => {
+		if (feature === "unlimited_saved_routes") trackSavedRouteLimitHit(limit);
 		pushToast({
 			kind: "warn",
 			title: reason(feature, limit),

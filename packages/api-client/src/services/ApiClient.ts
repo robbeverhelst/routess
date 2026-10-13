@@ -4,6 +4,7 @@ import type {
 	AdminEngagement,
 	AdminMetrics,
 	AdminOverview,
+	AdminPlanKind,
 	AdminRouteDetail,
 	AdminRouteList,
 	AdminRouteSort,
@@ -14,6 +15,7 @@ import type {
 	AdminSystemHealth,
 	AdminUserDetail,
 	AdminUserList,
+	AdminUserPro,
 	AdminUserSort,
 	AdminUserStats,
 	ApiBillingOffer,
@@ -494,6 +496,7 @@ export class ApiClient {
 			deletedOnly?: boolean;
 			role?: ApiUserRole;
 			verified?: boolean;
+			plan?: AdminPlanKind[];
 			sort?: AdminUserSort;
 			dir?: AdminSortDir;
 		} = {},
@@ -505,6 +508,7 @@ export class ApiClient {
 		if (params.deletedOnly) query.set("deleted", "true");
 		if (params.role) query.set("role", params.role);
 		if (params.verified !== undefined) query.set("verified", params.verified ? "true" : "false");
+		if (params.plan?.length) query.set("plan", params.plan.join(","));
 		if (params.sort) query.set("sort", params.sort);
 		if (params.dir) query.set("dir", params.dir);
 		const qs = query.toString();
@@ -513,6 +517,22 @@ export class ApiClient {
 
 	async adminGetUserDetail(userId: number): Promise<AdminUserDetail> {
 		return this.request<AdminUserDetail>(`/admin/users/${userId}`);
+	}
+
+	// Admin Pro actions (audited server-side; the reason lands in the audit log).
+	async adminGrantPro(
+		userId: number,
+		grant: { days: number; reason: string } | { permanent: true; reason: string },
+	): Promise<AdminUserPro> {
+		return this.request<AdminUserPro>(`/admin/users/${userId}/pro/grant`, { method: "POST", body: grant });
+	}
+
+	async adminExtendPro(userId: number, reason: string): Promise<AdminUserPro> {
+		return this.request<AdminUserPro>(`/admin/users/${userId}/pro/extend`, { method: "POST", body: { reason } });
+	}
+
+	async adminRevokePro(userId: number, reason: string): Promise<AdminUserPro> {
+		return this.request<AdminUserPro>(`/admin/users/${userId}/pro/revoke`, { method: "POST", body: { reason } });
 	}
 
 	async adminRevokeSession(userId: number, sessionId: string): Promise<void> {

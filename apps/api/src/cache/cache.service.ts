@@ -148,4 +148,19 @@ export class CacheService implements OnModuleDestroy {
 		});
 		return next;
 	}
+
+	// A counter's current value without touching it: 0 when unset, expired,
+	// or on Redis failure.
+	async readCounter(counter: string, key: string): Promise<number> {
+		const fullKey = `counter:${counter}:${key}`;
+		if (this.redis) {
+			try {
+				return Number((await this.redis.get(fullKey)) ?? 0) || 0;
+			} catch {
+				return 0;
+			}
+		}
+		const entry = this.memory.get(fullKey);
+		return entry && entry.expiresAt > Date.now() ? Number(entry.value) : 0;
+	}
 }

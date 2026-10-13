@@ -1,6 +1,6 @@
 import { calculatePathDistance, haversineDistance } from "@routess/core";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useProGatePrompt, useProGates, useProGateToast } from "@/features/billing/proGates";
+import { trackSavedRouteLimitHit, useProGatePrompt, useProGates, useProGateToast } from "@/features/billing/proGates";
 import { startNavigation } from "@/features/navigation/startNavigation";
 import { applySavedRoute } from "@/features/routing/applySavedRoute";
 import { isDraftDirty } from "@/features/routing/draftDirty";
@@ -214,6 +214,8 @@ export function PlanPanel() {
 
 	const handleSaveClick = () => {
 		if (mode.kind === "unsaved") {
+			// The save modal shows the cap in place of the form.
+			if (atSavedRouteLimit) trackSavedRouteLimitHit();
 			openModal("save");
 			return;
 		}

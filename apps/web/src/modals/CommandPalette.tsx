@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
+import { trackSavedRouteLimitHit, useProGates } from "@/features/billing/proGates";
 import type { ApiRoute } from "@/lib/api";
 import { useUserRoutes } from "@/lib/api-queries";
 import { emitAppEvent, routeToLoadDetail } from "@/lib/app-events";
@@ -27,6 +28,7 @@ export function CommandPalette() {
 	useUiStore((s) => s.language);
 	const mode = useDraftMode();
 	const { data: routes = [] } = useUserRoutes();
+	const { atSavedRouteLimit } = useProGates();
 	const [query, setQuery] = useState("");
 	const [activeIndex, setActiveIndex] = useState(0);
 
@@ -45,9 +47,11 @@ export function CommandPalette() {
 			setContext("plan");
 			emitAppEvent("routess:save-draft");
 		} else {
+			// The save modal shows the cap in place of the form.
+			if (atSavedRouteLimit) trackSavedRouteLimitHit();
 			openModal("save");
 		}
-	}, [mode, setContext, openModal]);
+	}, [mode, setContext, openModal, atSavedRouteLimit]);
 
 	const groups = useMemo<{ title: string; items: CmdItem[] }[]>(
 		() => [

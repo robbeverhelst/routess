@@ -130,7 +130,94 @@ export interface AdminRouteStats {
 
 export type AdminSortDir = "asc" | "desc";
 
-export type AdminUserSort = "createdAt" | "email" | "name" | "role" | "routeCount" | "lastActiveAt";
+export type AdminUserSort = "createdAt" | "email" | "name" | "role" | "routeCount" | "lastActiveAt" | "proUntil";
+
+// The admin panel's Plan label (apps/api/src/entitlements/plan-status.ts): a
+// paid pass wins over a comp, a comp over the OG grant; pro_expired is a
+// free User who held Pro before.
+export type AdminPlanKind = "free" | "pro_paid" | "pro_admin" | "pro_og" | "pro_expired";
+
+export interface AdminUserPlan {
+	kind: AdminPlanKind;
+	// The Plan in effect now, as the Pro gates see it.
+	plan: "free" | "pro";
+	// When Pro ends (or ended, for pro_expired); null for free and for Pro
+	// that does not expire.
+	proUntil: string | null;
+	permanent: boolean;
+}
+
+export type AdminEntitlementSource = "manual" | "admin" | "billing" | "og-grant";
+
+export interface AdminProGrant {
+	source: AdminEntitlementSource;
+	expiresAt: string | null;
+	active: boolean;
+	revokedAt: string | null;
+	createdAt: string;
+	updatedAt: string;
+}
+
+export interface AdminUserPro extends AdminUserPlan {
+	storedPlan: "free" | "pro";
+	grants: AdminProGrant[];
+}
+
+export interface AdminPayment {
+	id: number;
+	provider: string;
+	offer: string;
+	amountTotal: number | null;
+	currency: string | null;
+	paidAt: string;
+	passExpiresAt: string | null;
+	// The payment's event in the Stripe dashboard; null for other providers.
+	dashboardUrl: string | null;
+}
+
+export type AdminAuditAction = "pro.grant" | "pro.extend" | "pro.revoke";
+
+export interface AdminAuditEntry {
+	id: number;
+	action: AdminAuditAction;
+	actorId: number | null;
+	actorEmail: string;
+	reason: string;
+	details: Record<string, unknown>;
+	createdAt: string;
+}
+
+export interface AdminUserBilling {
+	pro: AdminUserPro;
+	payments: AdminPayment[];
+	savedRoutes: { count: number; limit: number | null };
+	generationToday: { used: number; limit: number | null; tier: "anonymous" | "free" | "pro" | null };
+	auditLog: AdminAuditEntry[];
+}
+
+export interface AdminLimitHitPoint {
+	date: string;
+	savedRoutes: number;
+	generationQuota: number;
+}
+
+export interface AdminProMetrics {
+	proUsersDaily: AdminTimeseriesPoint[];
+	// The currency revenueDaily is in; null when nothing was paid.
+	currency: string | null;
+	revenueDaily: Array<{ date: string; amount: number }>;
+	revenueTotals: Array<{ currency: string; amount: number; payments: number }>;
+	limits: {
+		// False when Umami is not configured or could not be read.
+		productEventsAvailable: boolean;
+		daily: AdminLimitHitPoint[];
+		conversion: { hitUsers: number; converted: number; conversionPct: number; pending: number } | null;
+	};
+	endingSoon: {
+		count: number;
+		users: Array<{ id: number; email: string; name: string; kind: AdminPlanKind; proUntil: string }>;
+	};
+}
 
 export type AdminRouteSort =
 	| "createdAt"
@@ -152,6 +239,7 @@ export interface AdminUserListItem {
 	createdAt: string;
 	lastActiveAt: string | null;
 	deletedAt: string | null;
+	plan: AdminUserPlan;
 }
 
 export interface AdminUserList {
@@ -180,6 +268,7 @@ export interface AdminUserRoute {
 export interface AdminUserDetail extends AdminUserListItem {
 	activeSessions: AdminUserSession[];
 	recentRoutes: AdminUserRoute[];
+	billing: AdminUserBilling;
 }
 
 export interface AdminRouteOwner {
@@ -308,6 +397,7 @@ export interface AdminMetrics {
 		proUsers: number;
 		paymentsDaily: AdminTimeseriesPoint[];
 	};
+	pro: AdminProMetrics;
 }
 
 export interface AdminSeedRefreshResult {

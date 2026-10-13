@@ -1,4 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
+import { AdminProMetricsDto } from "./admin-pro.dto";
 
 export class AdminTimeseriesPointDto {
 	@ApiProperty({ example: "2026-05-01" })
@@ -219,4 +220,7 @@ export class AdminMetricsDto {
 
 	@ApiProperty({ type: AdminPayingUserMetricsDto })
 	payingUsers!: AdminPayingUserMetricsDto;
+
+	@ApiProperty({ type: AdminProMetricsDto })
+	pro!: AdminProMetricsDto;
 }
