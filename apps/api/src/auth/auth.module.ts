@@ -14,6 +14,7 @@ import { Session } from "../entities/session.entity";
 import { User } from "../entities/user.entity";
 import { UserAuthMethod } from "../entities/user-auth-method.entity";
 import { VerificationToken } from "../entities/verification-token.entity";
+import { EntitlementsModule } from "../entitlements/entitlements.module";
 import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
 import { EmailAuthService } from "./email-auth.service";
@@ -32,6 +33,7 @@ import { PatBearerStrategy } from "./strategies/pat-bearer.strategy";
 		ConfigModule,
 		EmailModule,
 		BillingModule,
+		EntitlementsModule,
 		MikroOrmModule.forFeature([User, Session, UserAuthMethod, VerificationToken, PersonalAccessToken]),
 		PassportModule.register({ defaultStrategy: "jwt" }),
 		ScheduleModule.forRoot(),

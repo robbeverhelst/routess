@@ -50,13 +50,16 @@ test("free quota hit → paywall → Stripe Checkout → Pro active with its end
 
 	// The paywall: why it shows, the price, the comparison, the methods.
 	await expect(page).toHaveURL(/\/upgrade\?from=quota/);
-	await expect(page.getByRole("heading", { name: "More generated routes, every day" })).toBeVisible();
+	await expect(
+		page.getByRole("heading", { name: "Unlimited saves, knooppunt routes, navigation and more" }),
+	).toBeVisible();
 	await expect(page.getByText("You've used today's 3 generated routes. Pro gives you 50 a day.")).toBeVisible();
 	await expect(page.getByTestId("upgrade-price")).toHaveText("€29.99");
 	await expect(page.getByText("No subscription", { exact: true })).toBeVisible();
 	const comparison = page.getByRole("table");
 	await expect(comparison.getByRole("columnheader", { name: /Your plan\s*Free/ })).toBeVisible();
 	await expect(comparison.getByRole("row", { name: /Generated routes a day\s*3\s*50/ })).toBeVisible();
+	await expect(comparison.getByRole("row", { name: /Saved routes\s*5\s*Unlimited/ })).toBeVisible();
 	const methods = page.getByRole("list", { name: "Pay with" });
 	await expect(methods.getByRole("listitem")).toHaveText(["Bancontact", "iDEAL", "Card"]);
 
@@ -165,7 +168,9 @@ test("the paywall speaks Dutch", async ({ page }) => {
 	await page.getByRole("button", { name: "Meld je aan om te kopen" }).click();
 	await signIn(page);
 
-	await expect(page.getByRole("heading", { name: "Elke dag meer gegenereerde routes" })).toBeVisible();
+	await expect(
+		page.getByRole("heading", { name: "Onbeperkt bewaren, knooppuntroutes, navigatie en meer" }),
+	).toBeVisible();
 	await expect(page.getByText("Geen abonnement", { exact: true })).toBeVisible();
 	await expect(page.getByTestId("upgrade-price")).toHaveText(/€\s?29,99/);
 	await expect(page.getByRole("list", { name: "Betaal met" }).getByRole("listitem")).toHaveText([
@@ -175,4 +180,19 @@ test("the paywall speaks Dutch", async ({ page }) => {
 	]);
 	await expect(page.getByRole("button", { name: /^Koop een jaar Pro/ })).toBeVisible();
 	await expect(page.getByRole("button", { name: "Verder met Gratis" })).toBeVisible();
+});
+
+test("a free account sees each gate's Pro state, and Go Pro opens checkout", async ({ page }) => {
+	await setUp(page, { savedRoutes: 4 });
+	await page.goto("/");
+	await signIn(page);
+
+	await page.getByRole("button", { name: "Library", exact: true }).first().click();
+	await expect(page.getByTestId("saved-route-count")).toHaveText("4 of 5 saved");
+	await page.getByRole("tab", { name: "Collections" }).click();
+	const lock = page.getByTestId("pro-lock-collections");
+	await expect(lock).toContainText("Creating collections and adding routes to them is part of Pro.");
+
+	await lock.getByRole("button", { name: "Go Pro" }).click();
+	await expect(page.getByText("TEST MODE")).toBeVisible();
 });

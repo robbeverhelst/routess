@@ -10,6 +10,7 @@ import { Follow } from "../entities/follow.entity";
 import { Route } from "../entities/route.entity";
 import { RouteShare } from "../entities/route-share.entity";
 import { User } from "../entities/user.entity";
+import { EntitlementsService } from "../entitlements/entitlements.service";
 import type { ProfileSummaryDto } from "../profiles/dto/profile-response.dto";
 import { toProfileRouteDto } from "../profiles/profiles.service";
 import type { RouteResponseDto } from "../routes/dto/route-response.dto";
@@ -47,6 +48,7 @@ export class SocialService {
 		private readonly emailService: EmailService,
 		@Inject(APP_CONFIG)
 		private readonly config: AppConfig,
+		private readonly entitlements: EntitlementsService,
 	) {}
 
 	private async findUserByHandle(handle: string): Promise<User> {
@@ -214,34 +216,39 @@ export class SocialService {
 				reason: "route_unavailable",
 			});
 		}
-		const copy = this.routeRepository.create({
-			name: source.name,
-			description: source.description,
-			activity: source.activity,
-			visibility: "private",
-			tags: [...source.tags],
-			favourite: false,
-			waypoints: structuredClone(source.waypoints),
-			geometry: source.geometry ? structuredClone(source.geometry) : undefined,
-			distance: source.distance,
-			duration: source.duration,
-			elevationGain: source.elevationGain,
-			bboxMinLat: source.bboxMinLat,
-			bboxMaxLat: source.bboxMaxLat,
-			bboxMinLng: source.bboxMinLng,
-			bboxMaxLng: source.bboxMaxLng,
-			placeCity: source.placeCity,
-			placeRegion: source.placeRegion,
-			placeCountryCode: source.placeCountryCode,
-			startAddress: source.startAddress,
-			endAddress: source.endAddress,
-			routingPreferences: source.routingPreferences ?? null,
-			provenance: source.provenance,
-			copiedFromRouteId: source.id,
-			copiedFromUserId: source.user.id,
-			user: userId,
+		// A copy is a saved Route, so it counts toward the free cap (ADR 0039);
+		// it is built inside the gate so the count never sees it.
+		const copy = await this.entitlements.saveWithinRouteAllowance({ id: userId }, async (em) => {
+			const copy = em.create(Route, {
+				name: source.name,
+				description: source.description,
+				activity: source.activity,
+				visibility: "private",
+				tags: [...source.tags],
+				favourite: false,
+				waypoints: structuredClone(source.waypoints),
+				geometry: source.geometry ? structuredClone(source.geometry) : undefined,
+				distance: source.distance,
+				duration: source.duration,
+				elevationGain: source.elevationGain,
+				bboxMinLat: source.bboxMinLat,
+				bboxMaxLat: source.bboxMaxLat,
+				bboxMinLng: source.bboxMinLng,
+				bboxMaxLng: source.bboxMaxLng,
+				placeCity: source.placeCity,
+				placeRegion: source.placeRegion,
+				placeCountryCode: source.placeCountryCode,
+				startAddress: source.startAddress,
+				endAddress: source.endAddress,
+				routingPreferences: source.routingPreferences ?? null,
+				provenance: source.provenance,
+				copiedFromRouteId: source.id,
+				copiedFromUserId: source.user.id,
+				user: userId,
+			});
+			await em.persist(copy).flush();
+			return copy;
 		});
-		await this.em.persist(copy).flush();
 		await this.em.populate(copy, ["user"]);
 		return toRouteResponseDto(copy, this.config.analytics.salt);
 	}

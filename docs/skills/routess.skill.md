@@ -168,7 +168,7 @@ All errors come back as `{ statusCode, code, message, details? }`. Branch on `co
 | `VALIDATION_FAILED` | Read `details` for field paths; correct the input and retry. |
 | `NOT_FOUND` | The id does not exist or belongs to another user. Do not retry. |
 | `UNAUTHORIZED` | Token is missing, expired, or revoked. Stop and ask the user to mint a new one. |
-| `FORBIDDEN` | Token scope is insufficient, or the endpoint is not PAT-accessible. Stop. |
+| `FORBIDDEN` | Token scope is insufficient, or the endpoint is not PAT-accessible. Stop. With `details.reason: "pro_required"` the account is not on Pro (`details.feature` names what is locked; for `personal_access_tokens` every call fails until the account is on Pro again). With `details.reason: "saved_route_limit"` a free account already has `details.limit` saved routes. Either way, stop and tell the user they can go Pro at app.routess.com/upgrade; do not retry. |
 | `CONFLICT` | A concurrent edit lost. Re-fetch the route and decide whether to retry. |
 | `PRECONDITION_REQUIRED` | Surface `details.impact` to the user and retry with `X-Routess-Confirm: true`. |
 | `RATE_LIMITED` | Wait and retry. The bucket is per-token, so this is your own loop, not someone else's traffic. |

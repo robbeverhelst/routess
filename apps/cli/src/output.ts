@@ -1,5 +1,5 @@
 import type { DomainErrorCode, DomainErrorPayload } from "@routess/core";
-import { isDomainErrorPayload } from "@routess/core";
+import { isDomainErrorPayload, proGateOf } from "@routess/core";
 
 // Exit code mapping. Documented in docs/skills/routess.skill.md so agents
 // can branch on them reliably. Keep in sync with the skill file.
@@ -51,6 +51,23 @@ export function renderResult<T>(options: RunOptions, data: T, humanRenderer: (da
 	}
 }
 
+// Where a hosted account goes Pro (ADR 0039). Self-hosted instances have
+// billing off and never answer with a Pro gate.
+export const UPGRADE_URL = "https://app.routess.com/upgrade";
+
+// The readable lines for a domain error: its message, plus what to do when
+// it is a Pro gate.
+export function humanErrorLines(payload: DomainErrorPayload): string[] {
+	const gate = proGateOf(payload);
+	if (!gate) return [`error: ${payload.message}`];
+	const lines = [`error: ${payload.message}`];
+	if (gate.feature === "personal_access_tokens") {
+		lines.push("Your tokens are kept and work again once the account is on Pro.");
+	}
+	lines.push(`Go Pro: ${UPGRADE_URL}`);
+	return lines;
+}
+
 // Renders an error. JSON mode emits the DomainErrorPayload verbatim when
 // available so agents can parse it; human mode prints a single readable
 // line to stderr. Returns the exit code the caller should pass to
@@ -65,7 +82,8 @@ export function renderError(options: RunOptions, error: unknown): number {
 			const body = error.payload ?? { exitCode: error.exitCode, message: error.message };
 			process.stderr.write(`${JSON.stringify(body, null, 2)}\n`);
 		} else {
-			process.stderr.write(`error: ${error.message}\n`);
+			const lines = error.payload ? humanErrorLines(error.payload) : [`error: ${error.message}`];
+			process.stderr.write(`${lines.join("\n")}\n`);
 		}
 		return error.exitCode;
 	}
@@ -73,7 +91,7 @@ export function renderError(options: RunOptions, error: unknown): number {
 		if (options.json) {
 			process.stderr.write(`${JSON.stringify(error, null, 2)}\n`);
 		} else {
-			process.stderr.write(`error: ${error.message}\n`);
+			process.stderr.write(`${humanErrorLines(error).join("\n")}\n`);
 		}
 		return EXIT_CODES[error.code];
 	}

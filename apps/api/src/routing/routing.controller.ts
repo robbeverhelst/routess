@@ -1,6 +1,10 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from "@nestjs/common";
+import { Body, Controller, HttpCode, HttpStatus, Post, UseGuards } from "@nestjs/common";
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
+import type { AuthenticatedUser } from "../auth/authenticated-user";
+import { OptionalCurrentUser } from "../auth/decorators/current-user.decorator";
+import { OptionalUnifiedAuthGuard } from "../auth/guards/optional-unified-auth.guard";
 import { ThrottleModerate } from "../common/decorators/throttle.decorator";
+import { EntitlementsService } from "../entitlements/entitlements.service";
 import { CuesService } from "./cues.service";
 import { CuesRequestDto, CuesResponseDto } from "./dto/cues.dto";
 import { RouteRequestDto, RoutingRouteResponseDto } from "./dto/route.dto";
@@ -13,6 +17,7 @@ export class RoutingController {
 	constructor(
 		private readonly routingService: RoutingService,
 		private readonly cuesService: CuesService,
+		private readonly entitlements: EntitlementsService,
 	) {}
 
 	@ApiOperation({
@@ -55,11 +60,18 @@ export class RoutingController {
 	@ApiBody({ type: CuesRequestDto })
 	@ApiResponse({ status: 200, description: "Ordered cues along the RoutePath", type: CuesResponseDto })
 	@ApiResponse({ status: 400, description: "Invalid geometry selector" })
+	@ApiResponse({ status: 403, description: "Navigation is part of Pro (details.reason: pro_required)" })
 	@ApiResponse({ status: 404, description: "Route not found or not navigable anonymously" })
+	@UseGuards(OptionalUnifiedAuthGuard)
 	@ThrottleModerate()
 	@HttpCode(HttpStatus.OK)
 	@Post("cues")
-	cues(@Body() body: CuesRequestDto): Promise<CuesResponseDto> {
+	async cues(
+		@Body() body: CuesRequestDto,
+		@OptionalCurrentUser() user: AuthenticatedUser | null,
+	): Promise<CuesResponseDto> {
+		// Turn-by-turn navigation is Pro (ADR 0039).
+		await this.entitlements.assertCan(user, "navigation");
 		return this.cuesService.cues(body);
 	}
 }

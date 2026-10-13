@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { ProLock, useProGates, useProGateToast } from "@/features/billing/proGates";
 import { parseGPXFile } from "@/features/routing/services/GPXService";
 import { buildLibraryRoutePayload } from "@/features/routing/services/importToLibrary";
 import { useIsAuthenticated } from "@/hooks/useAuthState";
@@ -30,6 +31,8 @@ export function ImportModal() {
 	const t = useT();
 	const isAuthenticated = useIsAuthenticated();
 	const saveRoute = useSaveRoute();
+	const { atSavedRouteLimit } = useProGates();
+	const proGateToast = useProGateToast();
 	const inputRef = useRef<HTMLInputElement>(null);
 	const [file, setFile] = useState<File | null>(null);
 	const [activity, setActivity] = useState<ActivityKey>("auto");
@@ -95,6 +98,7 @@ export function ImportModal() {
 			}
 			closeModal();
 		} catch (err) {
+			if (proGateToast(err)) return;
 			pushToast({
 				kind: "danger",
 				title: t("import.toast.failed"),
@@ -120,11 +124,13 @@ export function ImportModal() {
 							{t("import.choose")}
 						</Btn>
 					)}
-					{file && (
+					{file && target === "library" && atSavedRouteLimit ? (
+						<ProLock feature="unlimited_saved_routes" style={{ flex: "0 1 auto" }} />
+					) : file ? (
 						<Btn variant="primary" onClick={onImport} disabled={isImporting}>
 							<I.zap size={14} /> {isImporting ? t("import.importing") : t("import.import1")}
 						</Btn>
-					)}
+					) : null}
 				</>
 			}
 		>

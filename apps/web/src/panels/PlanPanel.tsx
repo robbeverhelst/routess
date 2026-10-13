@@ -1,5 +1,6 @@
 import { calculatePathDistance, haversineDistance } from "@routess/core";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useProGatePrompt, useProGates, useProGateToast } from "@/features/billing/proGates";
 import { startNavigation } from "@/features/navigation/startNavigation";
 import { applySavedRoute } from "@/features/routing/applySavedRoute";
 import { isDraftDirty } from "@/features/routing/draftDirty";
@@ -171,6 +172,9 @@ export function PlanPanel() {
 	const isComputingRoute = useIsComputingRoute();
 	const { formatElevationParts, units } = useUnits();
 	const saveRoute = useSaveRoute();
+	const { atSavedRouteLimit, locked } = useProGates();
+	const promptPro = useProGatePrompt();
+	const proGateToast = useProGateToast();
 	const updateRoute = useUpdateRoute();
 
 	const isDirty = useMemo(
@@ -253,6 +257,10 @@ export function PlanPanel() {
 
 	const handleDuplicate = () => {
 		if (mode.kind !== "editing" || !editingBaseline || waypoints.length < 2) return;
+		if (atSavedRouteLimit) {
+			promptPro("unlimited_saved_routes");
+			return;
+		}
 		const baseName = (editingName ?? editingBaseline.name) || t("save.title");
 		saveRoute.mutate(
 			{
@@ -277,7 +285,8 @@ export function PlanPanel() {
 					});
 					applySavedRoute(newRoute);
 				},
-				onError: () => {
+				onError: (error) => {
+					if (proGateToast(error)) return;
 					pushToast({
 						kind: "danger",
 						title: t("route.duplicateFailed"),
@@ -920,7 +929,7 @@ export function PlanPanel() {
 							onClick={handleDuplicate}
 							style={{ padding: "0 10px" }}
 						>
-							<I.copy size={14} />
+							{atSavedRouteLimit ? <I.lock size={14} /> : <I.copy size={14} />}
 						</Btn>
 					)}
 					{navigationEnabled && (
@@ -928,6 +937,10 @@ export function PlanPanel() {
 							title={t("nav.navigate")}
 							disabled={!hasRoute || routePath.length < 2}
 							onClick={() => {
+								if (locked("navigation")) {
+									promptPro("navigation");
+									return;
+								}
 								void startNavigation({
 									routeName: editingName ?? t("nav.currentRoute"),
 									geometry: routePath,
@@ -936,7 +949,7 @@ export function PlanPanel() {
 							}}
 							style={{ padding: "0 10px" }}
 						>
-							<I.play size={14} />
+							{locked("navigation") ? <I.lock size={14} /> : <I.play size={14} />}
 						</Btn>
 					)}
 					<Btn

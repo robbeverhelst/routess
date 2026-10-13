@@ -1,11 +1,14 @@
 import { EntityManager } from "@mikro-orm/postgresql";
 import { Inject, Injectable } from "@nestjs/common";
+import { FREE_SAVED_ROUTE_LIMIT, type ProGatedFeature } from "@routess/core";
 import type { AppConfig, GenerationQuotaTier } from "../config/app-config";
 import { APP_CONFIG } from "../config/config.module";
 import { Entitlement, type EntitlementSource } from "../entities/entitlement.entity";
+import { Route } from "../entities/route.entity";
 import type { UserPlan } from "../entities/user.entity";
-import type { Feature, PlanFeatureMatrix } from "./features";
+import { FEATURES, type Feature, type PlanFeatureMatrix } from "./features";
 import { extendExpiry, type GrantLength } from "./grant-length";
+import { ProRequiredException, SavedRouteLimitException } from "./pro-gate.exception";
 
 export const PLAN_FEATURE_MATRIX = Symbol("PLAN_FEATURE_MATRIX");
 
@@ -53,6 +56,56 @@ export class EntitlementsService {
 			$or: [{ expiresAt: null }, { expiresAt: { $gt: now } }],
 		});
 		return grants > 0;
+	}
+
+	// can(), as a gate: throws the typed 403 the web and the CLI recognise.
+	async assertCan(
+		user: EntitlementSubject,
+		feature: Exclude<ProGatedFeature, "unlimited_saved_routes">,
+		now = new Date(),
+	): Promise<void> {
+		if (!(await this.can(user, feature, now))) throw new ProRequiredException(feature);
+	}
+
+	// Every Feature can() would allow the User now, in one plan read and one
+	// grant read, for the web to draw its Pro states from.
+	async unlockedFeatures(user: NonNullable<EntitlementSubject>, now = new Date()): Promise<Feature[]> {
+		if (!this.config.billing.enabled) return [...FEATURES];
+		const { plan } = await this.planStatus(user, now);
+		const grants = await this.em.find(
+			Entitlement,
+			{ user: user.id, feature: { $ne: null }, $or: [{ expiresAt: null }, { expiresAt: { $gt: now } }] },
+			{ fields: ["feature"] },
+		);
+		const granted = new Set(grants.map((grant) => grant.feature));
+		return FEATURES.filter((feature) => this.planFeatures[plan].includes(feature) || granted.has(feature));
+	}
+
+	// How many Routes the User has saved and how many they may save; a null
+	// limit means unlimited (Pro, or billing off).
+	async savedRouteAllowance(
+		user: NonNullable<EntitlementSubject>,
+		unlimited: boolean,
+	): Promise<{ count: number; limit: number | null }> {
+		const count = await this.em.count(Route, { user: user.id });
+		return { count, limit: unlimited ? null : FREE_SAVED_ROUTE_LIMIT };
+	}
+
+	// Gate for anything that creates a saved Route: runs `save` unless a free
+	// User is at the cap. A free User past the cap keeps every Route; only a
+	// new one is refused. The count and the insert share one transaction
+	// holding the User row lock, so two concurrent saves cannot both pass.
+	async saveWithinRouteAllowance<T>(
+		user: NonNullable<EntitlementSubject>,
+		save: (em: EntityManager) => Promise<T>,
+	): Promise<T> {
+		if (await this.can(user, "unlimited_saved_routes")) return save(this.em);
+		return this.em.transactional(async (em) => {
+			await em.execute(`select "id" from "user" where "id" = ? for update`, [user.id]);
+			const count = await em.count(Route, { user: user.id });
+			if (count >= FREE_SAVED_ROUTE_LIMIT) throw new SavedRouteLimitException(FREE_SAVED_ROUTE_LIMIT);
+			return save(em);
+		});
 	}
 
 	async planStatus(user: NonNullable<EntitlementSubject>, now = new Date()): Promise<PlanStatus> {

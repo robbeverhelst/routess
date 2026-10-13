@@ -66,6 +66,7 @@ export class BillingService {
 			[user.id],
 		);
 		const permanentPro = plan.plan === "pro" && plan.proExpiresAt === null;
+		const features = await this.entitlements.unlockedFeatures(user, now);
 		return {
 			...base,
 			account: {
@@ -73,6 +74,8 @@ export class BillingService {
 				proExpiresAt: plan.proExpiresAt?.toISOString() ?? null,
 				ogGrantExpiresAt: og?.expires_at ? new Date(og.expires_at).toISOString() : null,
 				canBuy: !permanentPro && user.deletionStatus === "active",
+				features,
+				savedRoutes: await this.entitlements.savedRouteAllowance(user, features.includes("unlimited_saved_routes")),
 			},
 		};
 	}

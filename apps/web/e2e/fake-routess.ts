@@ -14,6 +14,15 @@ const PASS_DAYS = 365;
 const OG_GRANT_MONTHS = 3;
 const PRICE = { amount: 2999, currency: "eur" };
 const QUOTA = { anonymous: 1, free: 3, pro: 50 };
+const FREE_FEATURES = ["route_generation", "gpx_export"];
+const PRO_FEATURES = [
+	...FREE_FEATURES,
+	"node_network_generation",
+	"unlimited_saved_routes",
+	"collections",
+	"navigation",
+	"personal_access_tokens",
+];
 
 export const E2E_USER = {
 	id: 42,
@@ -46,6 +55,8 @@ interface FakeOptions {
 	// Status reads that still answer Free after payment, like a webhook that
 	// lands a moment after the browser returns from Stripe.
 	webhookDelayReads?: number;
+	// Routes already in the library, counted against the free cap.
+	savedRoutes?: number;
 }
 
 interface CheckoutSession {
@@ -65,6 +76,7 @@ export class FakeRoutess {
 	private readonly preLaunchAccount: boolean;
 	private pendingWebhookReads = 0;
 	private readonly webhookDelayReads: number;
+	private readonly savedRoutes: number;
 	private readonly sessions = new Map<string, CheckoutSession>();
 	private sessionCounter = 0;
 
@@ -75,6 +87,7 @@ export class FakeRoutess {
 		this.preLaunchAccount = options.preLaunchAccount ?? false;
 		this.generationsUsed = options.generationsUsed ?? 0;
 		this.webhookDelayReads = options.webhookDelayReads ?? 0;
+		this.savedRoutes = options.savedRoutes ?? 0;
 	}
 
 	async install(context: BrowserContext): Promise<void> {
@@ -111,6 +124,27 @@ export class FakeRoutess {
 		if (url.pathname.startsWith("/styles/v1/")) return route.fulfill({ json: MAP_STYLE });
 		if (/\.(png|webp|jpg)$/.test(url.pathname)) return route.fulfill({ contentType: "image/png", body: EMPTY_PNG });
 		return route.fulfill({ status: 204, body: "" });
+	}
+
+	private libraryRoutes() {
+		return Array.from({ length: this.savedRoutes }, (_, i) => ({
+			id: i + 1,
+			name: `Saved ride ${i + 1}`,
+			activity: "cycle",
+			visibility: "private",
+			tags: [],
+			favourite: false,
+			waypoints: [
+				{ coord: [3.72, 51.05], type: "routed" },
+				{ coord: [3.73, 51.06], type: "routed" },
+			],
+			distance: 1500,
+			provenance: "valhalla",
+			shareToken: `${String(i + 1).padStart(32, "0")}`,
+			user: { id: E2E_USER.id, name: E2E_USER.name, handle: E2E_USER.handle },
+			createdAt: new Date(2026, 9, 1 + i).toISOString(),
+			updatedAt: new Date(2026, 9, 1 + i).toISOString(),
+		}));
 	}
 
 	private apiUser() {
@@ -179,6 +213,9 @@ export class FakeRoutess {
 				proExpiresAt: proExpiresAt?.toISOString() ?? null,
 				ogGrantExpiresAt: this.ogGrantExpiresAt?.toISOString() ?? null,
 				canBuy: true,
+				// The decided split (ADR 0039): free keeps generation and GPX.
+				features: plan === "pro" ? PRO_FEATURES : FREE_FEATURES,
+				savedRoutes: { count: this.savedRoutes, limit: plan === "pro" ? null : 5 },
 			},
 		};
 	}
@@ -239,7 +276,7 @@ export class FakeRoutess {
 			return reply(503, { statusCode: 503, message: "No routing engine in the e2e fake" });
 		}
 		// The rest of the signed-in shell, all empty.
-		if (path === "/routes" && method === "GET") return reply(200, []);
+		if (path === "/routes" && method === "GET") return reply(200, this.libraryRoutes());
 		if (path === "/collections" && method === "GET") return reply(200, []);
 		if (path === "/social/shares/unread-count") return reply(200, { unread: 0 });
 		if (path === "/social/notifications/unseen-count") return reply(200, { unseen: 0 });

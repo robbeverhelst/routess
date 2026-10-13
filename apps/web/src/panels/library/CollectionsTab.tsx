@@ -1,6 +1,7 @@
 import type { ApiCollection, ApiRoute } from "@routess/api-client";
 import type { RouteVisibility } from "@routess/core";
 import { useState } from "react";
+import { ProLock, useProGates, useProGateToast } from "@/features/billing/proGates";
 import { useCollections, useCreateCollection } from "@/lib/api-queries";
 import { useT } from "@/lib/i18n";
 import { I, type IconKey } from "../../components/icons";
@@ -100,6 +101,8 @@ export function CollectionsTab({
 	const t = useT();
 	const { data: collections = [], isLoading } = useCollections();
 	const createCollection = useCreateCollection();
+	const { locked } = useProGates();
+	const proGateToast = useProGateToast();
 	const [creating, setCreating] = useState(false);
 	const [name, setName] = useState("");
 
@@ -121,6 +124,9 @@ export function CollectionsTab({
 					setName("");
 					setCreating(false);
 					onOpenCollection(collection.id);
+				},
+				onError: (error) => {
+					if (proGateToast(error)) setCreating(false);
 				},
 			},
 		);
@@ -165,6 +171,8 @@ export function CollectionsTab({
 						}}
 					/>
 				</div>
+			) : locked("collections") ? (
+				<ProLock feature="collections" style={{ marginBottom: 8 }} />
 			) : (
 				<Btn
 					variant="ghost"

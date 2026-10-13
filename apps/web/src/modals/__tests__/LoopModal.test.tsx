@@ -1,16 +1,64 @@
+import type { ApiBillingStatus, ApiFeature } from "@routess/api-client";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TooltipProvider } from "@/components/Tooltip";
+import { queryKeys } from "@/lib/query-client";
 import { LocationService } from "@/services/LocationService";
 import { useLoopPreferencesStore } from "@/stores/loopPreferencesStore";
 import { LoopModal } from "../LoopModal";
 
-const renderModal = () =>
-	render(
-		<TooltipProvider>
-			<LoopModal />
-		</TooltipProvider>,
+// ProLock's Go Pro navigates; no router is mounted here.
+vi.mock("@tanstack/react-router", () => ({ useNavigate: () => vi.fn() }));
+
+const renderModal = (billing?: ApiBillingStatus) => {
+	const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+	client.setQueryData(queryKeys.billing.status(false), billing ?? { enabled: false });
+	return render(
+		<QueryClientProvider client={client}>
+			<TooltipProvider>
+				<LoopModal />
+			</TooltipProvider>
+		</QueryClientProvider>,
 	);
+};
+
+const freeAccount = (features: ApiFeature[]) =>
+	({
+		enabled: true,
+		account: {
+			plan: "free",
+			proExpiresAt: null,
+			ogGrantExpiresAt: null,
+			canBuy: true,
+			features,
+			savedRoutes: { count: 0, limit: 5 },
+		},
+	}) satisfies ApiBillingStatus;
+
+describe("LoopModal knooppunt toggle (ADR 0039)", () => {
+	beforeEach(() => {
+		localStorage.clear();
+	});
+
+	it("shows the Pro state instead of the toggle when knooppunt routes are locked", () => {
+		renderModal(freeAccount(["route_generation", "gpx_export"]));
+		expect(screen.getByTestId("pro-lock-node_network_generation")).toHaveTextContent(
+			"Knooppunt routes are part of Pro.",
+		);
+		expect(screen.getByRole("button", { name: "Go Pro" })).toBeEnabled();
+	});
+
+	it("shows the toggle when the account has the Feature", () => {
+		renderModal(freeAccount(["route_generation", "gpx_export", "node_network_generation"]));
+		expect(screen.queryByTestId("pro-lock-node_network_generation")).toBeNull();
+	});
+
+	it("shows the toggle on instances without billing", () => {
+		renderModal();
+		expect(screen.queryByTestId("pro-lock-node_network_generation")).toBeNull();
+	});
+});
 
 // setup.ts installs vi.fn() stubs for navigator.geolocation; swap implementations.
 function mockGeolocation(getCurrentPosition: typeof navigator.geolocation.getCurrentPosition) {

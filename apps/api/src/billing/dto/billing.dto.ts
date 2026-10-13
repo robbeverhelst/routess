@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { IsIn, IsOptional } from "class-validator";
 import { USER_PLANS, type UserPlan } from "../../entities/user.entity";
+import { FEATURES, type Feature } from "../../entitlements/features";
 import { BILLING_OFFERS, type BillingOffer } from "../offers";
 
 export class OfferPriceDto {
@@ -40,6 +41,19 @@ export class GenerationQuotaDto {
 	pro!: number;
 }
 
+export class SavedRoutesAllowanceDto {
+	@ApiProperty({ example: 4, description: "Routes the account has saved" })
+	count!: number;
+
+	@ApiProperty({
+		type: Number,
+		nullable: true,
+		example: 5,
+		description: "How many Routes the account may save; null means unlimited (Pro)",
+	})
+	limit!: number | null;
+}
+
 export class BillingAccountDto {
 	@ApiProperty({ enum: USER_PLANS, example: "pro", description: "The Plan in effect now" })
 	plan!: UserPlan;
@@ -61,6 +75,16 @@ export class BillingAccountDto {
 
 	@ApiProperty({ description: "Whether a pass can be bought (or extended) now" })
 	canBuy!: boolean;
+
+	@ApiProperty({
+		enum: FEATURES,
+		isArray: true,
+		description: "The Features this account may use now; the rest answer 403 with details.reason pro_required",
+	})
+	features!: Feature[];
+
+	@ApiProperty({ type: SavedRoutesAllowanceDto })
+	savedRoutes!: SavedRoutesAllowanceDto;
 }
 
 export class BillingStatusDto {

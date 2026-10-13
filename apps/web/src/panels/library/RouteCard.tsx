@@ -1,6 +1,7 @@
 import type { ApiRoute } from "@routess/api-client";
 import type { RouteActivity, RouteVisibility } from "@routess/core";
 import { useState } from "react";
+import { ProBadge, useProGatePrompt, useProGates, useProGateToast } from "@/features/billing/proGates";
 import { exportRouteGpx } from "@/features/routing/services/exportRouteGpx";
 import {
 	useCollections,
@@ -198,6 +199,9 @@ export function RouteCard({
 	const toggleFavourite = useToggleFavourite();
 	const updateRoute = useUpdateRoute();
 	const saveRoute = useSaveRoute();
+	const { atSavedRouteLimit, locked } = useProGates();
+	const promptPro = useProGatePrompt();
+	const proGateToast = useProGateToast();
 	const setCollectionRoutes = useSetCollectionRoutes();
 	const { data: collections = [] } = useCollections();
 	const openDelete = useModalsStore((s) => s.openDelete);
@@ -247,6 +251,10 @@ export function RouteCard({
 
 	const duplicate = () => {
 		closeMenu();
+		if (atSavedRouteLimit) {
+			promptPro("unlimited_saved_routes");
+			return;
+		}
 		saveRoute.mutate(
 			{
 				name: `${route.name} (copy)`,
@@ -265,7 +273,10 @@ export function RouteCard({
 			},
 			{
 				onSuccess: (newRoute) => pushToast({ kind: "success", title: t("route.duplicated"), body: newRoute.name }),
-				onError: () => pushToast({ kind: "danger", title: t("route.duplicateFailed"), body: t("common.tryAgain") }),
+				onError: (error) => {
+					if (proGateToast(error)) return;
+					pushToast({ kind: "danger", title: t("route.duplicateFailed"), body: t("common.tryAgain") });
+				},
 			},
 		);
 	};
@@ -287,11 +298,20 @@ export function RouteCard({
 	};
 
 	const toggleInCollection = (collectionId: number, routeIds: number[]) => {
-		const next = routeIds.includes(route.id) ? routeIds.filter((id) => id !== route.id) : [...routeIds, route.id];
+		const adding = !routeIds.includes(route.id);
+		// Free keeps its collections and may take Routes out, not add them.
+		if (adding && locked("collections")) {
+			promptPro("collections");
+			return;
+		}
+		const next = adding ? [...routeIds, route.id] : routeIds.filter((id) => id !== route.id);
 		setCollectionRoutes.mutate(
 			{ collectionId, routeIds: next },
 			{
-				onError: () => pushToast({ kind: "danger", title: t("library.collections.updateFailed") }),
+				onError: (error) => {
+					if (proGateToast(error)) return;
+					pushToast({ kind: "danger", title: t("library.collections.updateFailed") });
+				},
 			},
 		);
 	};
@@ -408,6 +428,7 @@ export function RouteCard({
 										label={saveRoute.isPending ? t("route.duplicating") : t("route.duplicate")}
 										onClick={duplicate}
 										disabled={saveRoute.isPending}
+										trailing={atSavedRouteLimit ? <ProBadge /> : undefined}
 									/>
 									<MenuDivider />
 									<MenuItem
@@ -458,6 +479,7 @@ export function RouteCard({
 											checked={c.routeIds.includes(route.id)}
 											disabled={setCollectionRoutes.isPending}
 											onClick={() => toggleInCollection(c.id, c.routeIds)}
+											trailing={locked("collections") && !c.routeIds.includes(route.id) ? <ProBadge /> : undefined}
 										/>
 									))}
 								</>

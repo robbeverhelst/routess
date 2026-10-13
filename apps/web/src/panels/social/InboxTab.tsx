@@ -1,4 +1,5 @@
 import type { ApiRouteShare } from "@routess/api-client";
+import { useProGatePrompt, useProGates, useProGateToast } from "@/features/billing/proGates";
 import { useCopySharedRoute, useDismissShare, useMarkShareRead, useShareInbox } from "@/lib/api-queries";
 import { useT } from "@/lib/i18n";
 import { useToastStore } from "@/stores/toastStore";
@@ -17,8 +18,15 @@ function ShareCard({ share, onOpenProfile }: { share: ApiRouteShare; onOpenProfi
 	const pushToast = useToastStore((s) => s.push);
 	const setContext = useUiStore((s) => s.setContext);
 	const unread = !share.readAt;
+	const { atSavedRouteLimit } = useProGates();
+	const promptPro = useProGatePrompt();
+	const proGateToast = useProGateToast();
 
 	const saveCopy = () => {
+		if (atSavedRouteLimit) {
+			promptPro("unlimited_saved_routes");
+			return;
+		}
 		copy.mutate(share.id, {
 			onSuccess: (newRoute) => {
 				pushToast({
@@ -27,6 +35,9 @@ function ShareCard({ share, onOpenProfile }: { share: ApiRouteShare; onOpenProfi
 					body: newRoute.name,
 					action: { label: t("social.inbox.viewInLibrary"), onClick: () => setContext("library") },
 				});
+			},
+			onError: (error) => {
+				proGateToast(error);
 			},
 		});
 		if (unread) markRead.mutate(share.id);
@@ -127,7 +138,8 @@ function ShareCard({ share, onOpenProfile }: { share: ApiRouteShare; onOpenProfi
 			footer={
 				<div style={{ display: "flex", gap: 8 }}>
 					<Btn variant="ghost" disabled={copy.isPending || copy.isSuccess} onClick={saveCopy}>
-						<I.copy size={13} /> {copy.isSuccess ? t("social.inbox.copied") : t("social.inbox.saveCopy")}
+						{atSavedRouteLimit && !copy.isSuccess ? <I.lock size={13} /> : <I.copy size={13} />}{" "}
+						{copy.isSuccess ? t("social.inbox.copied") : t("social.inbox.saveCopy")}
 					</Btn>
 					{unread && (
 						<Btn variant="ghost" onClick={() => markRead.mutate(share.id)}>

@@ -102,6 +102,8 @@ export function useSaveRoute() {
 			const isFirstRoute = !existingRoutes || existingRoutes.length === 0;
 
 			queryClient.invalidateQueries({ queryKey: queryKeys.routes.list() });
+			// The saved-route count against the free cap lives on the billing status.
+			queryClient.invalidateQueries({ queryKey: queryKeys.billing.all });
 			queryClient.setQueryData(queryKeys.routes.detail(newRoute.id.toString()), newRoute);
 
 			trackEvent({
@@ -143,6 +145,7 @@ export function useDeleteRoute() {
 		onSuccess: (_, routeId) => {
 			// Remove from routes list cache
 			queryClient.invalidateQueries({ queryKey: queryKeys.routes.list() });
+			queryClient.invalidateQueries({ queryKey: queryKeys.billing.all });
 
 			// Remove specific route from cache
 			queryClient.removeQueries({ queryKey: queryKeys.routes.detail(routeId.toString()) });
@@ -530,6 +533,7 @@ export function useCopySharedRoute() {
 		mutationFn: (id: number) => apiService.copySharedRoute(id),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: queryKeys.routes.list() });
+			queryClient.invalidateQueries({ queryKey: queryKeys.billing.all });
 			trackEvent({ name: "route_share_copied", properties: {} });
 		},
 		onError: (error) => {

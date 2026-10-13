@@ -1,4 +1,12 @@
-import { type Coordinate, encodePolyline6, type NavCue, type RouteActivity } from "@routess/core";
+import {
+	type Coordinate,
+	encodePolyline6,
+	isDomainErrorPayload,
+	type NavCue,
+	type ProGateDetails,
+	proGateOf,
+	type RouteActivity,
+} from "@routess/core";
 import { getRuntimeConfig } from "@/lib/runtime-config";
 
 // Cues come from the API (ADR 0038): map-matching needs Valhalla, which the
@@ -6,6 +14,13 @@ import { getRuntimeConfig } from "@/lib/runtime-config";
 // sessions run on the snapshot persisted by the navigation store.
 const API_BASE_URL = getRuntimeConfig("VITE_API_URL") ?? "";
 const CUES_URL = `${API_BASE_URL.replace(/\/+$/, "")}/api/v1/routing/cues`;
+
+// Navigation is Pro (ADR 0039): the API answers 403 with a Pro gate.
+export class CuesProRequiredError extends Error {
+	constructor(readonly gate: ProGateDetails) {
+		super("cues API 403: navigation is part of Pro");
+	}
+}
 
 export interface CuesResult {
 	cues: NavCue[];
@@ -29,6 +44,11 @@ export async function fetchCues(args: {
 		}),
 		signal: args.signal,
 	});
+	if (response.status === 403) {
+		const body: unknown = await response.json().catch(() => null);
+		const gate = isDomainErrorPayload(body) ? proGateOf(body) : null;
+		if (gate) throw new CuesProRequiredError(gate);
+	}
 	if (!response.ok) {
 		throw new Error(`cues API ${response.status}`);
 	}

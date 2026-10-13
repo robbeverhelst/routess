@@ -4,7 +4,7 @@ import { Logger } from "@/lib/logger";
 import { loadNavigationSnapshot, snapshotToSession, useNavigationStore } from "@/stores/navigationStore";
 import { useToastStore } from "@/stores/toastStore";
 import { useUiStore } from "@/stores/uiStore";
-import { fetchCues } from "./cuesClient";
+import { CuesProRequiredError, fetchCues } from "./cuesClient";
 import { primeSpeech } from "./speech";
 
 // Session entry: called from a user gesture (the Navigate button), which is
@@ -38,6 +38,11 @@ export async function startNavigation(args: {
 		return true;
 	} catch (err) {
 		Logger.warn("[Navigation] Could not start:", err);
+		if (err instanceof CuesProRequiredError) {
+			// Callers show the Pro state up front; this covers a stale status.
+			pushToast({ kind: "warn", title: t("pro.gate.navigation") });
+			return false;
+		}
 		pushToast({ kind: "danger", title: t("nav.startFailed"), body: t("nav.startFailedBody") });
 		return false;
 	}

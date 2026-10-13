@@ -12,8 +12,8 @@ import { clearDatabase, closeTestApp, createTestApp, createTestUserWithAuth, wit
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-// A matrix where the plans actually differ, so the can() rules are observable.
-// The shipped PLAN_FEATURES puts everything in free (ADR 0039).
+// A matrix that keeps route_generation out of free too, so a grant of it is
+// observable. The shipped PLAN_FEATURES is checked at the end (ADR 0039).
 const TEST_MATRIX: PlanFeatureMatrix = {
 	free: ["gpx_export"],
 	pro: FEATURES,
@@ -249,7 +249,8 @@ describe("Entitlements with billing disabled (default, self-host)", () => {
 		expect(await billing.status(null)).toEqual({ enabled: false });
 	});
 
-	it("ships a free plan that still includes every feature", () => {
-		expect([...PLAN_FEATURES.free]).toEqual([...FEATURES]);
+	it("ships a free plan with only route generation and GPX export (decided 2026-10-13)", () => {
+		expect([...PLAN_FEATURES.free]).toEqual(["route_generation", "gpx_export"]);
+		expect([...PLAN_FEATURES.pro]).toEqual([...FEATURES]);
 	});
 });

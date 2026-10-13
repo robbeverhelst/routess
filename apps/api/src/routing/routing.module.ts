@@ -2,13 +2,14 @@ import { MikroOrmModule } from "@mikro-orm/nestjs";
 import { Module } from "@nestjs/common";
 import { ExternalRoute } from "../entities/external-route.entity";
 import { Route } from "../entities/route.entity";
+import { EntitlementsModule } from "../entitlements/entitlements.module";
 import { NodeNetworksService } from "../generation/node-networks.service";
 import { CuesService } from "./cues.service";
 import { RoutingController } from "./routing.controller";
 import { RoutingService } from "./routing.service";
 
 @Module({
-	imports: [MikroOrmModule.forFeature([Route, ExternalRoute])],
+	imports: [MikroOrmModule.forFeature([Route, ExternalRoute]), EntitlementsModule],
 	controllers: [RoutingController],
 	// NodeNetworksService is provided here (not in GenerationModule) because
 	// both generation anchor-fill and cue decoration read the node tiles, and

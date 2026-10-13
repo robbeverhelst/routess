@@ -1,5 +1,6 @@
 import type { RouteVisibility } from "@routess/core";
 import { useEffect, useMemo, useState } from "react";
+import { ProLock, useProGates, useProGateToast } from "@/features/billing/proGates";
 import { applySavedRoute } from "@/features/routing/applySavedRoute";
 import { useIsAuthenticated } from "@/hooks/useAuthState";
 import { useSaveRoute } from "@/lib/api-queries";
@@ -54,6 +55,8 @@ export function SaveModal() {
 	const saveRoute = useSaveRoute();
 	const pushToast = useToastStore((s) => s.push);
 	const isAuthenticated = useIsAuthenticated();
+	const { atSavedRouteLimit } = useProGates();
+	const proGateToast = useProGateToast();
 
 	const availableActivities = useMemo(
 		() => (selectedSports.length > 0 ? ACTIVITIES.filter((a) => selectedSports.includes(a.key)) : ACTIVITIES),
@@ -109,7 +112,8 @@ export function SaveModal() {
 					});
 					closeModal();
 				},
-				onError: () => {
+				onError: (error) => {
+					if (proGateToast(error)) return;
 					pushToast({
 						kind: "danger",
 						title: t("save.toast.failed"),
@@ -138,13 +142,20 @@ export function SaveModal() {
 			width={520}
 			onClose={closeModal}
 			footer={
-				<>
-					<div style={{ flex: 1 }} />
-					<Btn onClick={closeModal}>{t("common.cancel")}</Btn>
-					<Btn variant="primary" onClick={handleSave} disabled={!name.trim() || wpCount < 2 || saveRoute.isPending}>
-						<I.save size={14} /> {saveRoute.isPending ? t("save.saving") : t("save.title")}
-					</Btn>
-				</>
+				atSavedRouteLimit ? (
+					<>
+						<ProLock feature="unlimited_saved_routes" style={{ flex: 1 }} />
+						<Btn onClick={closeModal}>{t("common.cancel")}</Btn>
+					</>
+				) : (
+					<>
+						<div style={{ flex: 1 }} />
+						<Btn onClick={closeModal}>{t("common.cancel")}</Btn>
+						<Btn variant="primary" onClick={handleSave} disabled={!name.trim() || wpCount < 2 || saveRoute.isPending}>
+							<I.save size={14} /> {saveRoute.isPending ? t("save.saving") : t("save.title")}
+						</Btn>
+					</>
+				)
 			}
 		>
 			<div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
