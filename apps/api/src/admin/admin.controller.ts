@@ -288,7 +288,7 @@ export class AdminController {
 	@ApiOperation({
 		summary: "Revoke Pro now",
 		description:
-			"Revokes every running Pro grant (paid, OG and admin; the rows are kept, marked revoked) and resets a stored Pro Plan to free. Refunds are not done here: refund the payment in the Stripe dashboard. Refused with 409 when the User is not on Pro. Writes an audit entry with the `reason`.",
+			"Revokes every running Pro grant (paid, OG and admin; the rows are kept, marked revoked), writes the `admin` Entitlement ending now (written revoked, so it never puts the User back on Pro) and resets a stored Pro Plan to free. Refunds are not done here: refund the payment in the Stripe dashboard. Refused with 409 when the User is not on Pro. Writes an audit entry with the `reason`.",
 	})
 	revokePro(
 		@CurrentUser() actor: AuthenticatedUser,

@@ -129,7 +129,8 @@ export class AdminProService {
 	}
 
 	// Ends Pro now: every running Pro grant is revoked (the rows stay, marked
-	// deleted, so the history and the once-only OG marker survive) and a
+	// deleted, so the history and the once-only OG marker survive), the admin
+	// grant is set to end now (written revoked, so it never runs), and a
 	// stored Pro Plan goes back to free. Refunds happen in Stripe, not here.
 	async revoke(actor: AuthenticatedUser, userId: number, reason: string): Promise<AdminUserProDto> {
 		return this.act(actor, userId, "pro.revoke", reason, async (em, user, before, now) => {
@@ -140,6 +141,13 @@ export class AdminProService {
 					and ("expires_at" is null or "expires_at" > ?)
 				returning "source"`,
 				[now, now, userId, now],
+			);
+			await em.execute(
+				`insert into "entitlement" ("user_id", "plan", "source", "expires_at", "deleted_at", "created_at", "updated_at")
+				values (?, 'pro', 'admin', ?, ?, ?, ?)
+				on conflict ("user_id", "plan", "source")
+				do update set "expires_at" = excluded."expires_at", "deleted_at" = excluded."deleted_at", "updated_at" = excluded."updated_at"`,
+				[userId, now, now, now, now],
 			);
 			const storedPlanCleared = user.plan === "pro";
 			if (storedPlanCleared) {
@@ -326,7 +334,9 @@ export class AdminProService {
 
 	// Users on Pro at the end of each day (now, for today), rebuilt from the
 	// Entitlement rows. A stored Pro Plan has no start date and counts from
-	// signup.
+	// signup. Approximate: each (User, Plan, source) keeps one row that a new
+	// grant or purchase overwrites, so a re-grant after a lapse or revocation
+	// also counts the User on the days in between.
 	private async proUsersDaily(windowStart: Date, now: Date): Promise<AdminProMetricsDto["proUsersDaily"]> {
 		const rows = await this.em.execute<{ d: string; count: number }[]>(
 			`with days as (

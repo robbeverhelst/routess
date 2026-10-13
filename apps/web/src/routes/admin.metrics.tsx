@@ -159,7 +159,7 @@ function ProSection({ data }: { data: AdminMetrics }) {
 				<MetricCard label="Pro ending" value={pro.endingSoon.count} hint="In the next 30 days" />
 			</TileGrid>
 			<ChartGrid>
-				<TimeseriesCard title="Pro users per day" series={pro.proUsersDaily} summary={`${proNow} now`} />
+				<TimeseriesCard title="Pro users per day (approximate)" series={pro.proUsersDaily} summary={`${proNow} now`} />
 				<TimeseriesCard title="Pro purchases per day" series={payingUsers.paymentsDaily} />
 				<TimeseriesCard
 					title={`Revenue per day${pro.currency ? ` (${pro.currency.toUpperCase()})` : ""}`}
@@ -167,6 +167,10 @@ function ProSection({ data }: { data: AdminMetrics }) {
 					format={money}
 				/>
 			</ChartGrid>
+			<div style={{ marginTop: 8, fontSize: 12, color: RDS_COLORS.fgSubtle }}>
+				Pro users per day is reconstructed from the current Entitlement rows, which keep only their latest grant. A User
+				granted Pro again after a lapse or revocation also counts on the days in between, so past days can over-count.
+			</div>
 		</Section>
 	);
 }

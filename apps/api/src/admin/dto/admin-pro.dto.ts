@@ -266,7 +266,7 @@ export class AdminProMetricsDto {
 	@ApiProperty({
 		type: [AdminProUsersPointDto],
 		description:
-			"Users on Pro at the end of each day (now, for today). Rebuilt from Entitlement rows, which keep only their latest expiry, so a User who let Pro lapse and then extended counts through the gap.",
+			"Approximate: Users on Pro at the end of each day (now, for today), reconstructed from the current Entitlement rows. Each row keeps only its latest grant, so a User granted Pro again after a lapse or revocation also counts on the days in between and past days can over-count.",
 	})
 	proUsersDaily!: AdminProUsersPointDto[];
 

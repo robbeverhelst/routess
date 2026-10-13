@@ -376,15 +376,22 @@ describe("Admin Pro (users list, user detail, grant/extend/revoke, metrics)", ()
 			await action(ids.comp, "extend", { reason: "pointless" }).expect(409);
 		});
 
-		it("revokes every running Pro grant, keeps the rows, and records it", async () => {
+		it("revokes every running Pro grant, keeps the rows, writes an ended admin Entitlement, and records it", async () => {
+			const before = Date.now();
 			const { body } = await action(ids.paid, "revoke", { reason: "Refunded in Stripe" }).expect(200);
 			expect(body).toMatchObject({ kind: "pro_expired", plan: "free" });
 			expect((await planStatus(ids.paid)).plan).toBe("free");
-			expect(body.grants.map((g: { source: string; active: boolean; revokedAt: string | null }) => g.active)).toEqual([
-				false,
-				false,
+			expect(
+				body.grants.map((g: { source: string; active: boolean; revokedAt: string | null }) => [g.source, g.active]),
+			).toEqual([
+				["billing", false],
+				["og-grant", false],
+				["admin", false],
 			]);
 			expect(body.grants.every((g: { revokedAt: string | null }) => g.revokedAt !== null)).toBe(true);
+			const admin = body.grants.find((g: { source: string }) => g.source === "admin");
+			expect(new Date(admin.expiresAt).getTime()).toBeGreaterThanOrEqual(before);
+			expect(admin.expiresAt).toBe(admin.revokedAt);
 
 			const [entry] = await auditEntries();
 			expect(entry).toMatchObject({ action: "pro.revoke", reason: "Refunded in Stripe" });
@@ -406,8 +413,9 @@ describe("Admin Pro (users list, user detail, grant/extend/revoke, metrics)", ()
 		});
 
 		it("revokes a stored Pro Plan by resetting it to free", async () => {
-			await action(ids.comp, "revoke", { reason: "Comp ended" }).expect(200);
+			const { body } = await action(ids.comp, "revoke", { reason: "Comp ended" }).expect(200);
 			expect((await planStatus(ids.comp)).plan).toBe("free");
+			expect(body.grants).toEqual([expect.objectContaining({ source: "admin", active: false })]);
 			const [entry] = await auditEntries();
 			expect(entry.details).toMatchObject({ storedPlanCleared: true });
 		});
