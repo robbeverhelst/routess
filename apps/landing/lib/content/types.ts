@@ -61,8 +61,8 @@ export interface Dict {
 		title: ReadonlyArray<{ text: string; accent?: boolean }>;
 		body: string;
 		bullets: ReadonlyArray<string>;
-		promptLabel: string;
-		prompts: ReadonlyArray<string>;
+		formTitle: string;
+		formFields: ReadonlyArray<{ label: string; value: string }>;
 		generateBtn: string;
 	};
 	sharing: {
@@ -97,6 +97,7 @@ export interface Dict {
 		proPerks: ReadonlyArray<string>;
 		proCta: string;
 		proBadge: string;
+		ogNote: string;
 		selfHostNote: string;
 		selfHostLink: string;
 	};

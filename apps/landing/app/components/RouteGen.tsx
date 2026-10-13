@@ -1,50 +1,10 @@
-"use client";
-
 import { landingAccents } from "@routess/design-tokens";
-import { useEffect, useState } from "react";
 import type { Dict } from "@/lib/content";
 import routegenLoop from "../../public/previews/routegen-loop.webp";
 import { AccentInline } from "./AccentText";
 import { BakedImage } from "./BakedImage";
 
 export function RouteGen({ dict }: { dict: Dict }) {
-	const prompts = dict.routegen.prompts;
-	// Typewriter: hold the current prompt, delete it, type the next one.
-	const [text, setText] = useState(prompts[0] ?? "");
-	useEffect(() => {
-		const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-		if (reduce || prompts.length < 2) return;
-		let idx = 0;
-		let pos = (prompts[0] ?? "").length;
-		let deleting = true;
-		let timer: ReturnType<typeof setTimeout>;
-		const tick = () => {
-			const full = prompts[idx] ?? "";
-			if (deleting) {
-				pos = Math.max(0, pos - 3);
-				setText(full.slice(0, pos));
-				if (pos === 0) {
-					deleting = false;
-					idx = (idx + 1) % prompts.length;
-					timer = setTimeout(tick, 350);
-					return;
-				}
-				timer = setTimeout(tick, 20);
-			} else {
-				pos += 1;
-				setText((prompts[idx] ?? "").slice(0, pos));
-				if (pos >= (prompts[idx] ?? "").length) {
-					deleting = true;
-					timer = setTimeout(tick, 2400);
-					return;
-				}
-				timer = setTimeout(tick, 34);
-			}
-		};
-		timer = setTimeout(tick, 2400);
-		return () => clearTimeout(timer);
-	}, [prompts]);
-
 	return (
 		<section style={{ background: "var(--paper-2)" }}>
 			<div className="container-x">
@@ -88,48 +48,38 @@ export function RouteGen({ dict }: { dict: Dict }) {
 					<div className="reveal" style={{ position: "relative", "--reveal-delay": "120ms" } as React.CSSProperties}>
 						<div className="card" style={{ padding: 28, position: "relative", overflow: "hidden" }}>
 							<div className="eyebrow" style={{ marginBottom: 14 }}>
-								{dict.routegen.promptLabel}
+								{dict.routegen.formTitle}
 							</div>
-							<div
+							<dl
 								style={{
-									fontFamily: "var(--font-mono)",
-									fontSize: 17,
-									lineHeight: 1.5,
-									padding: 18,
+									margin: 0,
+									padding: "6px 18px",
 									borderRadius: 12,
 									background: "var(--paper-2)",
 									border: "1px dashed var(--line)",
-									minHeight: 80,
-									color: "var(--ink)",
 								}}
 							>
-								<span>{text}</span>
-								<span
-									style={{
-										display: "inline-block",
-										width: 8,
-										height: 18,
-										background: "var(--indigo)",
-										marginLeft: 4,
-										verticalAlign: "middle",
-										animation: "blink 1s steps(2) infinite",
-									}}
-								/>
-							</div>
-							<div style={{ display: "flex", gap: 8, marginTop: 14, flexWrap: "wrap" }}>
-								<span className="chip" style={{ background: "var(--moss-soft)", borderColor: "transparent" }}>
-									~30 km
-								</span>
-								<span className="chip" style={{ background: "var(--terracotta-soft)", borderColor: "transparent" }}>
-									gravel
-								</span>
-								<span className="chip" style={{ background: "var(--indigo-soft)", borderColor: "transparent" }}>
-									loop
-								</span>
-								<span className="chip" style={{ background: "var(--sun-soft)", borderColor: "transparent" }}>
-									low traffic
-								</span>
-							</div>
+								{dict.routegen.formFields.map((f) => (
+									<div
+										key={f.label}
+										style={{
+											display: "flex",
+											justifyContent: "space-between",
+											alignItems: "center",
+											gap: 12,
+											padding: "8px 0",
+										}}
+									>
+										<dt style={{ color: "var(--ink-soft)" }}>{f.label}</dt>
+										<dd
+											className="chip"
+											style={{ margin: 0, background: "var(--moss-soft)", borderColor: "transparent" }}
+										>
+											{f.value}
+										</dd>
+									</div>
+								))}
+							</dl>
 							<button
 								type="button"
 								className="btn btn-indigo"
