@@ -58,7 +58,7 @@ describe("PlacesService.reverseGeocodePlace", () => {
 	it("sends the URL-restricted token's referer header", async () => {
 		let referer: string | undefined;
 		stubFetch((_url, init) => {
-			referer = (init?.headers as Record<string, string>).Referer;
+			referer = (init?.headers as Record<string, string> | undefined)?.Referer;
 			return new Response(JSON.stringify({ features: [] }));
 		});
 		await makeService().reverseGeocodePlace([3.72, 51.05]);
