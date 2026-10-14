@@ -18,14 +18,12 @@ describe("isBotUserAgent", () => {
 		expect(isBotUserAgent(GOOGLEBOT)).toBe(true);
 	});
 
-	it.each([
-		"Bingbot/2.0",
-		"facebookexternalhit/1.1",
-		"Chrome-Lighthouse",
-		"HeadlessChrome/140.0.0.0",
-	])("catches %s", (ua) => {
-		expect(isBotUserAgent(ua)).toBe(true);
-	});
+	it.each(["Bingbot/2.0", "facebookexternalhit/1.1", "Chrome-Lighthouse", "HeadlessChrome/140.0.0.0"])(
+		"catches %s",
+		(ua) => {
+			expect(isBotUserAgent(ua)).toBe(true);
+		},
+	);
 
 	it.each(REAL_BROWSERS)("leaves real browsers alone: %s", (ua) => {
 		expect(isBotUserAgent(ua)).toBe(false);

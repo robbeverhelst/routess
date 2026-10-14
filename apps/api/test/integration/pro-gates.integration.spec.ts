@@ -247,34 +247,35 @@ describe("Pro gates with billing enabled", () => {
 			});
 		}
 
-		it.each(
-			FREE_ACCOUNTS,
-		)("%s: keeps reading and trimming existing collections but cannot create one or add a Route", async (account) => {
-			const { user, token } = await makeAccount(account);
-			const routes = await seedRoutes(user, 3);
-			const collectionId = await seedCollection(user, routes.slice(0, 2));
-			const auth = { Authorization: `Bearer ${token}` };
+		it.each(FREE_ACCOUNTS)(
+			"%s: keeps reading and trimming existing collections but cannot create one or add a Route",
+			async (account) => {
+				const { user, token } = await makeAccount(account);
+				const routes = await seedRoutes(user, 3);
+				const collectionId = await seedCollection(user, routes.slice(0, 2));
+				const auth = { Authorization: `Bearer ${token}` };
 
-			const created = await api().post("/api/v1/collections").set(auth).send({ name: "New" }).expect(403);
-			expect(created.body).toMatchObject(PRO_REQUIRED("collections"));
+				const created = await api().post("/api/v1/collections").set(auth).send({ name: "New" }).expect(403);
+				expect(created.body).toMatchObject(PRO_REQUIRED("collections"));
 
-			await api().get("/api/v1/collections").set(auth).expect(200);
-			await api().get(`/api/v1/collections/${collectionId}`).set(auth).expect(200);
+				await api().get("/api/v1/collections").set(auth).expect(200);
+				await api().get(`/api/v1/collections/${collectionId}`).set(auth).expect(200);
 
-			const added = await api()
-				.put(`/api/v1/collections/${collectionId}/routes`)
-				.set(auth)
-				.send({ routeIds: routes.map((r) => r.id) })
-				.expect(403);
-			expect(added.body).toMatchObject(PRO_REQUIRED("collections"));
+				const added = await api()
+					.put(`/api/v1/collections/${collectionId}/routes`)
+					.set(auth)
+					.send({ routeIds: routes.map((r) => r.id) })
+					.expect(403);
+				expect(added.body).toMatchObject(PRO_REQUIRED("collections"));
 
-			const trimmed = await api()
-				.put(`/api/v1/collections/${collectionId}/routes`)
-				.set(auth)
-				.send({ routeIds: [routes[1].id] })
-				.expect(200);
-			expect(trimmed.body.routes).toHaveLength(1);
-		});
+				const trimmed = await api()
+					.put(`/api/v1/collections/${collectionId}/routes`)
+					.set(auth)
+					.send({ routeIds: [routes[1].id] })
+					.expect(200);
+				expect(trimmed.body.routes).toHaveLength(1);
+			},
+		);
 
 		it.each(PRO_ACCOUNTS)("%s: creates collections and adds Routes", async (account) => {
 			const { user, token } = await makeAccount(account);
@@ -298,33 +299,34 @@ describe("Pro gates with billing enabled", () => {
 			return minted.token;
 		}
 
-		it.each(
-			FREE_ACCOUNTS,
-		)("%s: existing tokens answer a typed 403 and stay stored; minting is refused", async (account) => {
-			const { user, token } = await makeAccount(account);
-			const pat = await seedToken(user);
+		it.each(FREE_ACCOUNTS)(
+			"%s: existing tokens answer a typed 403 and stay stored; minting is refused",
+			async (account) => {
+				const { user, token } = await makeAccount(account);
+				const pat = await seedToken(user);
 
-			const refused = await api().get("/api/v1/routes").set("Authorization", `Bearer ${pat}`).expect(403);
-			expect(refused.body).toMatchObject({
-				...PRO_REQUIRED("personal_access_tokens"),
-				message: "CLI and agent access is part of Pro.",
-			});
-			// Endpoints that also serve anonymous callers refuse it too, rather
-			// than quietly treating the caller as signed out.
-			await api().post("/api/v1/generation").set("Authorization", `Bearer ${pat}`).send({}).expect(403);
+				const refused = await api().get("/api/v1/routes").set("Authorization", `Bearer ${pat}`).expect(403);
+				expect(refused.body).toMatchObject({
+					...PRO_REQUIRED("personal_access_tokens"),
+					message: "CLI and agent access is part of Pro.",
+				});
+				// Endpoints that also serve anonymous callers refuse it too, rather
+				// than quietly treating the caller as signed out.
+				await api().post("/api/v1/generation").set("Authorization", `Bearer ${pat}`).send({}).expect(403);
 
-			const stored = await withRequestContext(app, () =>
-				orm.em.fork().count(PersonalAccessToken, { user: user.id, revokedAt: null }),
-			);
-			expect(stored).toBe(1);
+				const stored = await withRequestContext(app, () =>
+					orm.em.fork().count(PersonalAccessToken, { user: user.id, revokedAt: null }),
+				);
+				expect(stored).toBe(1);
 
-			const minted = await api()
-				.post("/api/v1/auth/tokens")
-				.set("Authorization", `Bearer ${token}`)
-				.send({ label: "agent", scope: "read" })
-				.expect(403);
-			expect(minted.body).toMatchObject(PRO_REQUIRED("personal_access_tokens"));
-		});
+				const minted = await api()
+					.post("/api/v1/auth/tokens")
+					.set("Authorization", `Bearer ${token}`)
+					.send({ label: "agent", scope: "read" })
+					.expect(403);
+				expect(minted.body).toMatchObject(PRO_REQUIRED("personal_access_tokens"));
+			},
+		);
 
 		it.each(PRO_ACCOUNTS)("%s: tokens work and can be minted", async (account) => {
 			const { user, token } = await makeAccount(account);

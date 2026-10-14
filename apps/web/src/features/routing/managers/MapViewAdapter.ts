@@ -1,5 +1,6 @@
 import type { Coordinate, Waypoint } from "@routess/core";
 import { haversineDistance } from "@routess/core";
+import type * as GeoJSON from "geojson";
 import type { Map as MapboxMap } from "mapbox-gl";
 import { Logger } from "@/lib/logger";
 import { useRouteScrubStore } from "@/stores/routeScrubStore";
