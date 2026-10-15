@@ -1,0 +1,3 @@
+# bun fmt replaced Biome as the formatter and reformatted the repo (#439).
+# Use with: git config blame.ignoreRevsFile .git-blame-ignore-revs
+e55fcbc9006c46855cb88e4ed653c0cdd2ded433
