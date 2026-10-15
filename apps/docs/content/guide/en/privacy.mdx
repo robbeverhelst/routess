@@ -18,6 +18,8 @@ routess uses Umami, a cookie-less analytics tool self-hosted on routess infrastr
 
 Alongside page views, the app records named product events such as creating a route or importing a GPX file, with context like distance, waypoint count, and the visibility you chose. Signed-in events carry a **pseudonymous** identifier: a salted hash of your account ID, computed on the server. It is not your raw account ID and it cannot be reversed from the browser, but it does link your sessions together, so we call it pseudonymous rather than anonymous.
 
+Every event also carries a random device identifier kept in your browser's local storage, so we can tell whether someone who planned a route without an account came back. Once you sign in on a device, its earlier events are linked to your account and erased with it. Signing out or turning analytics off deletes the device identifier.
+
 Search terms are recorded only as a length bucket, never as the text you typed.
 
 **To turn it off**: Settings → Privacy & sharing → Usage analytics. Nothing is sent after that, including page views. Your browser's Do Not Track setting is honoured automatically.

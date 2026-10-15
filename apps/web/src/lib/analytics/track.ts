@@ -7,6 +7,7 @@ import { getStoredUser } from "@/lib/auth-state";
 import { getRuntimeConfig } from "@/lib/runtime-config";
 import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 import { useUiStore } from "@/stores/uiStore";
+import { getAnonymousId } from "./anonymous-id";
 import type { ProductEvent } from "./events";
 
 type UmamiPropertyValue = string | number | boolean | null;
@@ -28,6 +29,7 @@ function buildCommonContext(): Record<string, UmamiPropertyValue> {
 	return {
 		signed_in: user !== null,
 		user_id_hash: user?.idHash ?? null,
+		anon_id: getAnonymousId(),
 		app_version: getRuntimeConfig("VITE_APP_VERSION") ?? null,
 		locale: ui.language,
 		theme: ui.theme,

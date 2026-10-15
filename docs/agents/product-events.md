@@ -20,6 +20,7 @@ The typed source of truth is **`apps/web/src/lib/analytics/events.ts`**. This do
 Every event automatically carries:
 - `signed_in: boolean`
 - `user_id_hash?: string` (when signed in; pseudonymous server-salted SHA-256 of the user ID — see ADR-0020)
+- `anon_id: string` (random per-device UUID in `localStorage["routess.anon_id"]`, present signed in or out; see below)
 - `app_version?: string`
 - `locale: string`
 - `theme: "light" | "dark"`
@@ -185,6 +186,13 @@ Both fire from the press, never on render, and only for signed-in free Users, so
 - **Add a property**: extend the type in `events.ts`. No migration needed.
 - **Remove a property**: dashboards depending on it silently return empty in Umami. Treat as a breaking change for any consumer; coordinate before removing.
 
-## Cross-session identity caveat
+## Anonymous id and cross-session identity
 
-Umami does not natively support identify-and-merge across anonymous and authenticated sessions. A user who visits signed-out on day 1 and signs up on day 2 appears as two distinct Umami visitors. Within a single session (signed up on first visit), the funnel stitches because the anonymous ID is shared and `user_id_hash` attaches from the first authenticated event onward. Accept this for v1; revisit if cross-session conversion becomes a critical blocker.
+Umami's own visitor ID rotates daily, so on its own a guest who plans on day 1 and signs up on day 2 is two unrelated visitors. `anon_id` (`apps/web/src/lib/analytics/anonymous-id.ts`) fixes that: a random UUID minted on the first event once analytics is allowed, kept in `localStorage`, and attached to every event.
+
+- **Counting anonymous users**: distinct `anon_id` on events with `signed_in = false`, e.g. guests who fired `route_draft_started` or `local_route_saved`.
+- **Merging into the user hash**: signed-in events carry both `anon_id` and `user_id_hash`, so the first `user_registered` / `user_logged_in` on a device links its whole anonymous history to the account. Map `anon_id → user_id_hash` from any event that has both.
+- **Rotation**: sign-out, account deletion and the analytics opt-out delete it. A shared device does not chain the next person to the previous account, and an opted-out device keeps no identifier.
+- **Erasure**: `AnalyticsErasureService` deletes the user's hashed events plus every event whose `anon_id` appeared on one of them (ADR-0020).
+
+A guest who never signs in on any device stays an `anon_id` only; one person on two devices is two `anon_id`s until they sign in on both.

@@ -38,10 +38,22 @@ export class AnalyticsErasureService {
 
 		return this.withTransaction(`erasure for user ${userId}`, async (client) => {
 			// event_data holds one row per property per event; the join back to
-			// website_event is by website_event_id.
+			// website_event is by website_event_id. Any anon_id seen on the user's
+			// signed-in events marks a device of theirs, so its anonymous events go too.
 			const { rows } = await client.query<{ website_event_id: string }>(
-				`select distinct website_event_id from event_data
-				 where website_id = $1 and data_key = 'user_id_hash' and string_value = $2`,
+				`with own as (
+				   select website_event_id from event_data
+				   where website_id = $1 and data_key = 'user_id_hash' and string_value = $2
+				 ), devices as (
+				   select distinct string_value from event_data
+				   where website_id = $1 and data_key = 'anon_id'
+				     and website_event_id in (select website_event_id from own)
+				 )
+				 select website_event_id from own
+				 union
+				 select website_event_id from event_data
+				 where website_id = $1 and data_key = 'anon_id'
+				   and string_value in (select string_value from devices)`,
 				[this.config.analytics.umamiWebsiteId, idHash],
 			);
 			const eventIds = rows.map((row) => row.website_event_id);
