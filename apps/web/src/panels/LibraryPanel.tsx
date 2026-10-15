@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { DeviceRoutesPanel } from "@/features/localRoutes/DeviceRoutesPanel";
+import { DeviceRoutesPanel, SignedInDeviceRoutes } from "@/features/localRoutes/DeviceRoutesPanel";
 import { useLocalRoutes } from "@/features/localRoutes/localRoutesStore";
 import { useIsAuthenticated } from "@/hooks/useAuthState";
 import { useBackfillRouteGeometry } from "@/hooks/useBackfillRouteGeometry";
@@ -174,6 +174,7 @@ function LibraryPanelInner() {
 					onLoop={() => openModal("loop")}
 					onImport={() => openModal("import")}
 				/>
+				<SignedInDeviceRoutes />
 			</div>
 		);
 	}
@@ -254,6 +255,7 @@ function LibraryPanelInner() {
 			) : (
 				<CollectionsTab routes={routes} query={query} onOpenCollection={(id) => setOpenedCollectionId(id)} />
 			)}
+			<SignedInDeviceRoutes />
 		</div>
 	);
 }

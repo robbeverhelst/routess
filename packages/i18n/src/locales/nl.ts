@@ -409,6 +409,8 @@ export const nl: Record<string, string> = {
 	"library.device.keepTitle": "Je routes ook op je telefoon?",
 	"library.device.keepBody":
 		"Routes in een gratis account staan op elk toestel waarop je aanmeldt, en je kan ze publiceren en delen.",
+	"library.device.signedInTitle": "Op dit toestel",
+	"library.device.signedInSubtitle": "Opgeslagen in deze browser voordat je inlogde. Ze staan nog niet in je account.",
 	"library.device.exportGpx": "GPX exporteren",
 	"library.device.delete": "Verwijderen van dit toestel",
 	"library.device.deleteConfirm": '"{name}" verwijderen van dit toestel?',

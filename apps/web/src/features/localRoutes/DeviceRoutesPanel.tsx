@@ -9,7 +9,7 @@ import { useUnits } from "@/lib/units";
 import { useToastStore } from "@/stores/toastStore";
 import { useUiStore } from "@/stores/uiStore";
 import type { LocalRoute } from "./localRouteDb";
-import { useLocalRoutesStore } from "./localRoutesStore";
+import { useLocalRoutes, useLocalRoutesStore } from "./localRoutesStore";
 
 const ACTIVITY_ICON: Record<RouteActivity, IconKey> = { cycle: "bike", run: "run", walk: "walk" };
 
@@ -19,17 +19,7 @@ export function DeviceRoutesPanel({ routes }: { routes: LocalRoute[] }) {
 	const t = useT();
 	return (
 		<div style={{ display: "flex", flexDirection: "column", height: "100%", overflowY: "auto" }}>
-			<div style={{ padding: "16px 20px 8px" }}>
-				<h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>{t("library.device.title")}</h3>
-				<p style={{ margin: "4px 0 0", fontSize: 12.5, color: RDS_COLORS.fgMuted, lineHeight: 1.5 }}>
-					{t("library.device.subtitle")}
-				</p>
-			</div>
-			<div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "8px 20px" }}>
-				{routes.map((route) => (
-					<DeviceRouteRow key={route.localId} localRoute={route} />
-				))}
-			</div>
+			<DeviceRoutesList routes={routes} title={t("library.device.title")} subtitle={t("library.device.subtitle")} />
 			<div
 				style={{
 					margin: "12px 20px 20px",
@@ -53,6 +43,39 @@ export function DeviceRoutesPanel({ routes }: { routes: LocalRoute[] }) {
 				</div>
 			</div>
 		</div>
+	);
+}
+
+// Signed in, routes saved on this device before signing in stay reachable
+// (open, export, delete) until they are imported into the account.
+export function SignedInDeviceRoutes() {
+	const t = useT();
+	const { routes } = useLocalRoutes();
+	if (routes.length === 0) return null;
+	return (
+		<div style={{ maxHeight: "40%", overflowY: "auto", borderTop: `1px solid ${RDS_COLORS.border}`, flexShrink: 0 }}>
+			<DeviceRoutesList
+				routes={routes}
+				title={t("library.device.signedInTitle")}
+				subtitle={t("library.device.signedInSubtitle")}
+			/>
+		</div>
+	);
+}
+
+function DeviceRoutesList({ routes, title, subtitle }: { routes: LocalRoute[]; title: string; subtitle: string }) {
+	return (
+		<>
+			<div style={{ padding: "16px 20px 8px" }}>
+				<h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>{title}</h3>
+				<p style={{ margin: "4px 0 0", fontSize: 12.5, color: RDS_COLORS.fgMuted, lineHeight: 1.5 }}>{subtitle}</p>
+			</div>
+			<div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "8px 20px" }}>
+				{routes.map((route) => (
+					<DeviceRouteRow key={route.localId} localRoute={route} />
+				))}
+			</div>
+		</>
 	);
 }
 

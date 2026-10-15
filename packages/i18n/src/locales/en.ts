@@ -433,6 +433,8 @@ export const en: Record<string, string> = {
 	"library.device.keepTitle": "Want your routes on your phone too?",
 	"library.device.keepBody":
 		"Routes saved to a free account are on every device you sign in on, and you can publish and share them.",
+	"library.device.signedInTitle": "On this device",
+	"library.device.signedInSubtitle": "Saved in this browser before you signed in. They are not in your account yet.",
 	"library.device.exportGpx": "Export GPX",
 	"library.device.delete": "Delete from this device",
 	"library.device.deleteConfirm": 'Delete "{name}" from this device?',

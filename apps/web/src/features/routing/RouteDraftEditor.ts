@@ -11,6 +11,7 @@ import {
 } from "@routess/core";
 import type { GeoJSONSource, Map as MapboxMap } from "mapbox-gl";
 import type { LocalRoute } from "@/features/localRoutes/localRouteDb";
+import { useLocalRoutesStore } from "@/features/localRoutes/localRoutesStore";
 import { trackEvent } from "@/lib/analytics/track";
 import { type ApiRoute, apiService } from "@/lib/api";
 import { Logger } from "@/lib/logger";
@@ -403,6 +404,7 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 
 		if (!routeHasValidShape(waypoints)) return fail("The route data is invalid or corrupted.");
 
+		useLocalRoutesStore.getState().bind(null);
 		const store = useRoutingStore.getState();
 		if (snapshot) store.saveSnapshot();
 		store.setIsMapLocked(isMapLocked ?? store.isMapLocked);
@@ -505,7 +507,8 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 	};
 
 	// Opens a LocalRoute (saved on this device without an account) as an
-	// unsaved draft; the caller binds the draft to it so saving updates it.
+	// unsaved draft; loading unbinds, so the caller binds the draft to it
+	// afterwards to make saving update it.
 	const loadFromLocalRoute = async ({ route, creationSource }: LocalRoute): Promise<EditResult> => {
 		const store = useRoutingStore.getState();
 		store.setMode({ kind: "unsaved" });

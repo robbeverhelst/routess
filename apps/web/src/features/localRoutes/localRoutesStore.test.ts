@@ -1,9 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "bun:test";
 import type { Waypoint } from "@routess/core";
+import type { Map as MapboxMap } from "mapbox-gl";
 
 const trackEventMock = vi.fn();
 vi.mock("@/lib/analytics/track", () => ({ trackEvent: trackEventMock }));
+vi.mock("@/features/routing/services/elevation", () => ({
+	getDefaultElevationService: () => ({
+		sampleAndCompute: async () => ({ gainMeters: 0, lossMeters: 0, profile: [] }),
+	}),
+}));
 
+import { createRouteDraftEditor } from "@/features/routing/RouteDraftEditor";
 import type { CreateRouteRequest } from "@/lib/api";
 import { useRoutingStore } from "@/stores/routingStore";
 import { createMemoryBackend, type LocalRouteBackend } from "./localRouteDb";
@@ -71,6 +78,25 @@ describe("LocalRoutes (saving without an account)", () => {
 
 		expect(second.isUpdate).toBe(false);
 		expect(useLocalRoutesStore.getState().routes.map((r) => r.route.name)).toEqual(["Second", "First"]);
+	});
+
+	it("saves a new route after another route is loaded over a bound one", async () => {
+		const first = await saveLocalRoute(route("Morning loop"), "manual");
+		const other: Waypoint[] = [
+			{ coord: [4.4, 50.85], type: "routed" },
+			{ coord: [4.41, 50.86], type: "routed" },
+		];
+		const editor = createRouteDraftEditor({
+			map: { getSource: () => undefined } as unknown as MapboxMap,
+			accessToken: "test-token",
+		});
+		await editor.loadWaypoints(other, { exactRoutePath: other.map((wp) => wp.coord), saveSnapshot: true });
+		const second = await saveLocalRoute(route("Discover route", other), "imported");
+
+		expect(second.isUpdate).toBe(false);
+		const stored = await backend.list();
+		expect(stored).toHaveLength(2);
+		expect(stored.find((r) => r.localId === first.localRoute.localId)?.route.waypoints).toEqual(WAYPOINTS);
 	});
 
 	it("deletes a route from the device", async () => {
