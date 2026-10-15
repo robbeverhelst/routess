@@ -56,6 +56,10 @@ export type ProductEvent =
 				local_route_count: number;
 			};
 	  }
+	| {
+			name: "local_routes_claimed";
+			properties: { claimed_count: number; left_on_device_count: number; hit_route_limit: boolean };
+	  }
 	| { name: "route_updated"; properties: { changed: string[] } }
 	| { name: "route_deleted"; properties: EmptyProps }
 	| { name: "route_loaded_into_editor"; properties: { creation_source: CreationSource | "unknown" } }

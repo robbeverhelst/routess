@@ -3,6 +3,7 @@ import { type ReactNode, useCallback, useEffect, useRef, useState } from "react"
 import { FirstRunActions } from "@/components/FirstRunActions";
 import MapWithRouting from "@/components/MapWithRouting";
 import { OgGrantBanner } from "@/features/billing/OgGrantBanner";
+import { useClaimLocalRoutes } from "@/features/localRoutes/claimLocalRoutes";
 import { ResumeNavBanner } from "@/features/navigation/ResumeNavBanner";
 import { useRouteSurfaceSync } from "@/features/routing/services/useSurfaceBreakdown";
 import { useRouteDraftRehydration } from "@/features/routing/useRouteDraftRehydration";
@@ -193,6 +194,7 @@ export function AppShell({ initialCenter, initialZoom, routeId }: AppShellProps)
 	const wasMobileRef = useRef<boolean | null>(null);
 
 	useUserPreferencesSync(auth);
+	useClaimLocalRoutes(auth?.isAuthenticated ? (auth.user?.id ?? null) : null);
 
 	useEffect(() => {
 		if (wasMobileRef.current === null) {

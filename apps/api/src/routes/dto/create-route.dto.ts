@@ -20,6 +20,7 @@ import {
 	IsNumber,
 	IsOptional,
 	IsString,
+	IsUUID,
 	Matches,
 	MaxLength,
 	Validate,
@@ -282,4 +283,13 @@ export class CreateRouteDto {
 	@IsOptional()
 	@IsIn(PROVENANCES)
 	provenance?: Provenance;
+
+	@ApiPropertyOptional({
+		description:
+			"Client-chosen idempotency key (a UUID), unique per user. Creating a route with a clientRef the user already has returns that route unchanged instead of a duplicate; the web uses it to claim routes saved on a device into the account.",
+		format: "uuid",
+	})
+	@IsOptional()
+	@IsUUID()
+	clientRef?: string;
 }

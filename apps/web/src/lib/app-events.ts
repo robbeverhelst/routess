@@ -9,6 +9,7 @@ export type SignInEntryPoint =
 	| "auth_wall"
 	| "save_modal"
 	| "device_routes"
+	| "local_save_prompt"
 	| "header_avatar"
 	| "settings_panel"
 	| "login_screen"

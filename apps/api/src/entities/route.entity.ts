@@ -1,5 +1,5 @@
 import { type Opt, type Rel } from "@mikro-orm/core";
-import { Entity, Index, ManyToOne, PrimaryKey, Property } from "@mikro-orm/decorators/legacy";
+import { Entity, Index, ManyToOne, PrimaryKey, Property, Unique } from "@mikro-orm/decorators/legacy";
 import type {
 	Provenance,
 	RouteActivity,
@@ -20,6 +20,7 @@ export type { Provenance, RouteActivity, RouteVisibility, RoutingPreferences, Wa
 @Index({ properties: ["user", "createdAt"] })
 @Index({ properties: ["visibility", "publishedAt"] })
 @Index({ properties: ["placeCity"] })
+@Unique({ properties: ["user", "clientRef"] })
 export class Route extends BaseEntity {
 	@PrimaryKey()
 	id!: number;
@@ -120,6 +121,12 @@ export class Route extends BaseEntity {
 
 	@Property({ nullable: true })
 	copiedFromUserId?: number;
+
+	// Idempotency key a client chose for this Route, unique per User. A
+	// LocalRoute claimed into the account on sign-in carries its device id
+	// here, so a repeated claim returns this Route instead of a duplicate.
+	@Property({ type: "string", nullable: true })
+	clientRef?: string;
 
 	@ManyToOne(() => User)
 	user!: Rel<User>;

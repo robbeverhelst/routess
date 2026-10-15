@@ -426,15 +426,24 @@ export const en: Record<string, string> = {
 	"save.visibility.public": "Public",
 	"save.visibility.publicSub": "Discoverable",
 	"save.toast.saved": "Route saved",
-	"save.local.note": "Saved in this browser on this device. Publishing a route needs a free account.",
+	"save.local.note":
+		"Saved in this browser on this device. Create a free account and your routes here move into it, so they are on your phone too.",
 	"save.local.toast.saved": "Saved on this device",
+	"save.local.prompt.title": "Keep this route on your phone too",
+	"save.local.prompt.body":
+		"It is saved in this browser for now. Create a free account and your routes on this device move into it, so they are on your phone and on every device you sign in on.",
+	"save.local.prompt.notNow": "Not now",
+	"library.device.claimed": "Routes from this device moved to your account: {count}",
+	"library.device.claimLeftLimit": "{count} stay on this device: free saves up to 5 routes. Go Pro for unlimited.",
+	"library.device.claimLeftRetry": "{count} stay on this device for now and move the next time you sign in.",
 	"library.device.title": "Your routes on this device",
 	"library.device.subtitle": "Saved in this browser, no account needed.",
-	"library.device.keepTitle": "Want your routes on your phone too?",
+	"library.device.keepTitle": "Keep these routes on your phone too",
 	"library.device.keepBody":
-		"Routes saved to a free account are on every device you sign in on, and you can publish and share them.",
+		"Create a free account and the routes on this device move into it, so they are on your phone and on every device you sign in on.",
 	"library.device.signedInTitle": "On this device",
-	"library.device.signedInSubtitle": "Saved in this browser before you signed in. They are not in your account yet.",
+	"library.device.signedInSubtitle":
+		"Saved in this browser and not in your account yet. They move in the next time you sign in, if your plan has room.",
 	"library.device.exportGpx": "Export GPX",
 	"library.device.delete": "Delete from this device",
 	"library.device.deleteConfirm": 'Delete "{name}" from this device?',

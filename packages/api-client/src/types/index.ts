@@ -563,6 +563,9 @@ export interface CreateRouteRequest {
 	endAddress?: string;
 	routingPreferences?: RoutingPreferences;
 	provenance?: Provenance;
+	// Idempotency key (a UUID), unique per user: creating with one the user
+	// already has returns that Route instead of a duplicate.
+	clientRef?: string;
 }
 
 export interface UpdateRouteRequest {

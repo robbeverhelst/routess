@@ -7,6 +7,7 @@ import { applySavedRoute } from "@/features/routing/applySavedRoute";
 import { useIsAuthenticated } from "@/hooks/useAuthState";
 import type { CreateRouteRequest } from "@/lib/api";
 import { useBillingStatus, useSaveRoute } from "@/lib/api-queries";
+import { emitAppEvent } from "@/lib/app-events";
 import { useT } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
 import { useModalsStore } from "@/stores/modalsStore";
@@ -89,6 +90,9 @@ export function SaveModal() {
 	const [visibility, setVisibility] = useState<RouteVisibility>(defaultRouteVisibility);
 	const [tags, setTags] = useState<string[]>([]);
 	const [tagDraft, setTagDraft] = useState("");
+	// Set once a new route is saved on the device: the modal turns into the
+	// sign-up offer.
+	const [savedLocally, setSavedLocally] = useState<string | null>(null);
 
 	// Saving a LocalRoute again keeps its name and tags unless the user changes
 	// them. The routes can finish loading from storage after the modal opens.
@@ -122,7 +126,13 @@ export function SaveModal() {
 		if (!isAuthenticated) {
 			saveLocal
 				.mutate(route, creationSource)
-				.then(() => {
+				.then(({ isUpdate }) => {
+					// The moment a route exists is the moment to offer an account.
+					// Updates of a route already offered just confirm.
+					if (!isUpdate) {
+						setSavedLocally(trimmedName);
+						return;
+					}
 					pushToast({
 						kind: "success",
 						title: t("save.local.toast.saved"),
@@ -159,6 +169,8 @@ export function SaveModal() {
 			},
 		);
 	};
+
+	if (savedLocally) return <KeepOnPhonePrompt routeName={savedLocally} onClose={closeModal} />;
 
 	const addTag = () => {
 		const tag = tagDraft.trim();
@@ -350,6 +362,38 @@ export function SaveModal() {
 					</div>
 				</div>
 			</div>
+		</ModalShell>
+	);
+}
+
+// After a first save on the device: the case for an account, framed around
+// the route that now exists. Signing up or in claims it into the account.
+function KeepOnPhonePrompt({ routeName, onClose }: { routeName: string; onClose: () => void }) {
+	const t = useT();
+	const open = (event: "routess:open-signup" | "routess:open-login") => {
+		onClose();
+		emitAppEvent(event, { entryPoint: "local_save_prompt" });
+	};
+	return (
+		<ModalShell
+			title={t("save.local.prompt.title")}
+			sub={routeName}
+			width={420}
+			onClose={onClose}
+			footer={
+				<>
+					<Btn onClick={onClose}>{t("save.local.prompt.notNow")}</Btn>
+					<div style={{ flex: 1 }} />
+					<Btn onClick={() => open("routess:open-login")}>
+						<I.user size={14} /> {t("common.signIn")}
+					</Btn>
+					<Btn variant="primary" onClick={() => open("routess:open-signup")}>
+						{t("save.createAccount")}
+					</Btn>
+				</>
+			}
+		>
+			<p style={{ margin: 0, fontSize: 13.5, color: RDS_COLORS.fg, lineHeight: 1.5 }}>{t("save.local.prompt.body")}</p>
 		</ModalShell>
 	);
 }

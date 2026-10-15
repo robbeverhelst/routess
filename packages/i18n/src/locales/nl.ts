@@ -402,15 +402,26 @@ export const nl: Record<string, string> = {
 	"save.visibility.public": "Openbaar",
 	"save.visibility.publicSub": "Vindbaar",
 	"save.toast.saved": "Route opgeslagen",
-	"save.local.note": "Opgeslagen in deze browser op dit toestel. Een route publiceren vraagt een gratis account.",
+	"save.local.note":
+		"Opgeslagen in deze browser op dit toestel. Maak een gratis account en je routes hier verhuizen mee, zodat je ze ook op je telefoon hebt.",
 	"save.local.toast.saved": "Opgeslagen op dit toestel",
+	"save.local.prompt.title": "Hou deze route ook op je telefoon",
+	"save.local.prompt.body":
+		"Ze staat voorlopig in deze browser. Maak een gratis account en je routes op dit toestel verhuizen mee, zodat je ze op je telefoon en op elk toestel waarop je aanmeldt hebt.",
+	"save.local.prompt.notNow": "Niet nu",
+	"library.device.claimed": "Routes van dit toestel naar je account verhuisd: {count}",
+	"library.device.claimLeftLimit":
+		"{count} blijven op dit toestel: gratis bewaart tot 5 routes. Ga Pro voor onbeperkt.",
+	"library.device.claimLeftRetry":
+		"{count} blijven voorlopig op dit toestel en verhuizen de volgende keer dat je aanmeldt.",
 	"library.device.title": "Je routes op dit toestel",
 	"library.device.subtitle": "Opgeslagen in deze browser, geen account nodig.",
-	"library.device.keepTitle": "Je routes ook op je telefoon?",
+	"library.device.keepTitle": "Hou deze routes ook op je telefoon",
 	"library.device.keepBody":
-		"Routes in een gratis account staan op elk toestel waarop je aanmeldt, en je kan ze publiceren en delen.",
+		"Maak een gratis account en de routes op dit toestel verhuizen mee, zodat je ze op je telefoon en op elk toestel waarop je aanmeldt hebt.",
 	"library.device.signedInTitle": "Op dit toestel",
-	"library.device.signedInSubtitle": "Opgeslagen in deze browser voordat je inlogde. Ze staan nog niet in je account.",
+	"library.device.signedInSubtitle":
+		"Opgeslagen in deze browser en nog niet in je account. Ze verhuizen mee de volgende keer dat je aanmeldt, als je abonnement plaats heeft.",
 	"library.device.exportGpx": "GPX exporteren",
 	"library.device.delete": "Verwijderen van dit toestel",
 	"library.device.deleteConfirm": '"{name}" verwijderen van dit toestel?',
