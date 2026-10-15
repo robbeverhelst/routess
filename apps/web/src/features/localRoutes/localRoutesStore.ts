@@ -97,8 +97,9 @@ export const useLocalRoutesStore = create<LocalRoutesState>()(
 		{
 			name: "routess-local-routes",
 			// The routes live in IndexedDB; only the draft binding is small
-			// enough (and synchronous enough) for localStorage.
-			partialize: (s) => ({ boundLocalId: s.boundLocalId }),
+			// enough (and synchronous enough) for localStorage. The undo depth
+			// persists with it because the undo history does too.
+			partialize: (s) => ({ boundLocalId: s.boundLocalId, loadedAtUndoDepth: s.loadedAtUndoDepth }),
 		},
 	),
 );
@@ -106,7 +107,14 @@ export const useLocalRoutesStore = create<LocalRoutesState>()(
 // A cleared draft, one bound to a saved account Route, or one undone back
 // to before the last load is no longer the LocalRoute it came from.
 useRoutingStore.subscribe((state, prev) => {
-	const undoDepth = state.history.past.length;
+	const { past } = state.history;
+	const undoDepth = past.length;
+	// At the history cap the oldest snapshots are dropped, shifting the
+	// depth the last load sits at.
+	const dropped = undoDepth > 0 ? prev.history.past.indexOf(past[0]) : -1;
+	if (dropped > 0) {
+		useLocalRoutesStore.setState((s) => ({ loadedAtUndoDepth: Math.max(0, s.loadedAtUndoDepth - dropped) }));
+	}
 	if (undoDepth < useLocalRoutesStore.getState().loadedAtUndoDepth) {
 		useLocalRoutesStore.setState({ boundLocalId: null, loadedAtUndoDepth: undoDepth });
 		return;

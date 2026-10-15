@@ -46,6 +46,14 @@ const openLocalRoute = async (localRoute: LocalRoute) => {
 	useLocalRoutesStore.getState().bind(localRoute.localId);
 };
 
+// The draft binding as a page reload restores it from localStorage.
+const reloadBinding = async () => {
+	const persisted = localStorage.getItem("routess-local-routes");
+	useLocalRoutesStore.setState({ boundLocalId: null, loadedAtUndoDepth: 0 });
+	if (persisted) localStorage.setItem("routess-local-routes", persisted);
+	await useLocalRoutesStore.persist.rehydrate();
+};
+
 // A fresh store over the same storage, like a page reload.
 const reload = async () => {
 	useLocalRoutesStore.setState({ routes: [], hydrated: false });
@@ -112,12 +120,13 @@ describe("LocalRoutes (saving without an account)", () => {
 		expect(stored.find((r) => r.localId === first.localRoute.localId)?.route.waypoints).toEqual(WAYPOINTS);
 	});
 
-	it("saves a new route after undoing back to the draft from before opening a device route", async () => {
+	it("saves a new route after a reload and undoing back to the draft from before opening a device route", async () => {
 		const opened = await saveLocalRoute(route("Morning loop", OTHER), "manual");
 		useRoutingStore.setState({ waypoints: [] });
 		useRoutingStore.setState({ waypoints: WAYPOINTS });
 
 		await openLocalRoute(opened.localRoute);
+		await reloadBinding();
 		useRoutingStore.getState().undo();
 		expect(useRoutingStore.getState().waypoints).toEqual(WAYPOINTS);
 		const saved = await saveLocalRoute(route("Draft A"), "manual");
@@ -139,6 +148,22 @@ describe("LocalRoutes (saving without an account)", () => {
 		expect(saved.isUpdate).toBe(true);
 		expect(saved.localRoute.localId).toBe(opened.localRoute.localId);
 		expect(await backend.list()).toHaveLength(1);
+	});
+
+	it("keeps the binding when undoing an edit made after opening a device route at the history cap", async () => {
+		const opened = await saveLocalRoute(route("Morning loop", OTHER), "manual");
+		for (let i = 0; i < 50; i++) {
+			useRoutingStore.setState({ waypoints: [{ coord: [3 + i / 100, 51], type: "routed" }, ...WAYPOINTS] });
+			useRoutingStore.getState().saveSnapshot();
+		}
+		await openLocalRoute(opened.localRoute);
+		useRoutingStore.getState().saveSnapshot();
+		useRoutingStore.getState().setWaypoints([...OTHER, { coord: [4.42, 50.87], type: "routed" }]);
+		useRoutingStore.getState().undo();
+		expect(useLocalRoutesStore.getState().boundLocalId).toBe(opened.localRoute.localId);
+
+		useRoutingStore.getState().undo();
+		expect(useLocalRoutesStore.getState().boundLocalId).toBeNull();
 	});
 
 	it("deletes a route from the device", async () => {
