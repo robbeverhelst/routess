@@ -13,7 +13,7 @@ Chaque push sur `main` déclenche le job `release`. S'il n'y a aucun commit dign
 
 1. `semantic-release` analyse les commits, décide la prochaine version (ou saute)
 2. Crée un tag git (par ex. `2.3.4`) et une GitHub Release avec des notes auto-générées
-3. Met à jour les versions de `package.json` dans chaque app/package
+3. Inscrit la version dans le `package.json` racine
 4. Pousse un commit `chore(release): X.Y.Z [skip ci]` de retour sur main
 
 Puis, en parallèle :
