@@ -13,6 +13,10 @@ sortTailwindcss = true
 # templates, and docs/config formats Biome never formatted. CHANGELOG.md is
 # written by semantic-release.
 ignorePatterns = [
+	# Ignored by nested .gitignore files, which bun fmt does not read.
+	"apps/docs/.source/**",
+	"**/.next/**",
+	"apps/landing/next-env.d.ts",
 	"**/routeTree.gen.ts",
 	".agents/**",
 	".claude/**",
@@ -27,7 +31,14 @@ ignorePatterns = [
 ]
 
 [lint]
-ignorePatterns = ["**/routeTree.gen.ts", ".agents/**", ".claude/**"]
+ignorePatterns = [
+	"apps/docs/.source/**",
+	"**/.next/**",
+	"apps/landing/next-env.d.ts",
+	"**/routeTree.gen.ts",
+	".agents/**",
+	".claude/**",
+]
 
 # Each rule carries the Biome rule it replaces. Biome's recommended rules
 # are errors, so these are too.
