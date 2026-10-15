@@ -10,7 +10,7 @@ Use the [template](0000-template.md) when adding a new one. Number sequentially 
 
 ### Repository & tooling
 - [0001 — Monorepo with Bun workspaces](0001-monorepo-with-turborepo-and-bun-workspaces.md) (Turborepo since removed; see the amendment)
-- [0004 — Biome for linting and formatting](0004-biome-instead-of-eslint-prettier.md)
+- [0004 — Biome for linting and formatting](0004-biome-instead-of-eslint-prettier.md) (formatting since moved to bun fmt; see the amendment)
 - [0003 — Shared design tokens package using OKLCH colors](0003-shared-design-tokens-package-with-oklch-colors.md)
 
 ### API & backend
