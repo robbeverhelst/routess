@@ -2,12 +2,18 @@
 	"name": "@routess/api-client",
 	"version": "0.1.0",
 	"description": "Platform-agnostic API client for Routess",
-	"main": "dist/index.js",
-	"module": "dist/index.js",
-	"types": "dist/index.d.ts",
 	"files": [
 		"dist"
 	],
+	"main": "dist/index.js",
+	"module": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"default": "./dist/index.js"
+		}
+	},
 	"scripts": {
 		"build": "tsc -b --force tsconfig.json",
 		"clean": "rm -rf dist tsconfig.tsbuildinfo",
@@ -18,11 +24,5 @@
 	},
 	"devDependencies": {
 		"typescript": "~7.0.0"
-	},
-	"exports": {
-		".": {
-			"types": "./dist/index.d.ts",
-			"default": "./dist/index.js"
-		}
 	}
 }

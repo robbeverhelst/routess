@@ -1,4 +1,5 @@
 import { buildExternalRouteSlugId, downsampleCoordinates } from "@routess/core";
+
 import type { ExternalRoute } from "../entities/external-route.entity";
 import type { SeedSource } from "../entities/seed-source.entity";
 import {

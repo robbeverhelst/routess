@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+
 import { Logger } from "@/lib/logger";
-import { type LocationOptions, LocationService, type LocationState, locationService } from "@/services/LocationService";
+import { type LocationOptions, LocationService, locationService, type LocationState } from "@/services/LocationService";
 
 export interface UseEnhancedLocationOptions {
 	autoStart?: boolean;

@@ -1,10 +1,12 @@
 import { randomUUID } from "node:crypto";
+
 import { MikroOrmModule } from "@mikro-orm/nestjs";
 import { type MiddlewareConsumer, Module, type NestModule } from "@nestjs/common";
 import { APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
 import { EventEmitterModule } from "@nestjs/event-emitter";
 import { ThrottlerModule } from "@nestjs/throttler";
 import { LoggerModule } from "nestjs-pino";
+
 import { AdminModule } from "./admin/admin.module";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
@@ -26,7 +28,7 @@ import { RoutesModule } from "./routes/routes.module";
 import { RoutingModule } from "./routing/routing.module";
 import { SocialModule } from "./social/social.module";
 import { MetricsInterceptor } from "./telemetry/metrics.interceptor";
-import { RequestIdMiddleware, requestIdFromHeaders } from "./telemetry/request-id.middleware";
+import { requestIdFromHeaders, RequestIdMiddleware } from "./telemetry/request-id.middleware";
 import { TelemetryModule } from "./telemetry/telemetry.module";
 import { TracingInterceptor } from "./telemetry/tracing.interceptor";
 import { UsersModule } from "./users/users.module";

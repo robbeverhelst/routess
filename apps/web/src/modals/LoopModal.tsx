@@ -1,5 +1,6 @@
 import type { Heading, RouteGenerationType, SurfaceType } from "@routess/core";
 import { useEffect, useRef, useState } from "react";
+
 import { ProLock, useProGates } from "@/features/billing/proGates";
 import { emitAppEvent } from "@/lib/app-events";
 import { useT } from "@/lib/i18n";
@@ -8,6 +9,7 @@ import { LocationService } from "@/services/LocationService";
 import { type LoopStart, MAX_LANDMARKS, useLoopPreferencesStore } from "@/stores/loopPreferencesStore";
 import { useModalsStore } from "@/stores/modalsStore";
 import { useToastStore } from "@/stores/toastStore";
+
 import { I } from "../components/icons";
 import { ModalShell } from "../components/ModalShell";
 import { Btn, RDS_COLORS, SecTitle } from "../components/primitives";

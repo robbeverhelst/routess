@@ -1,15 +1,7 @@
 import { create } from "zustand";
 
 export type RedesignModal =
-	| "save"
-	| "loop"
-	| "routing"
-	| "share"
-	| "import"
-	| "confirm-delete"
-	| "palette"
-	| "search"
-	| null;
+	"save" | "loop" | "routing" | "share" | "import" | "confirm-delete" | "palette" | "search" | null;
 
 export type RedesignOverlay = "layers" | "notifications" | null;
 

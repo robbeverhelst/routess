@@ -1,11 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
+
 import type { ApiBillingStatus, ApiFeature } from "@routess/api-client";
 import type { Coordinate } from "@routess/core";
+
 import { queryClient, queryKeys } from "@/lib/query-client";
 import { type GenerationCandidateView, useGenerationStore } from "@/stores/generationStore";
 import { useLoopPreferencesStore } from "@/stores/loopPreferencesStore";
 import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 import { stubGlobal, stubProperty, unstubAll } from "@/test/helpers";
+
 import { candidateWaypoints, startGeneration } from "./generationService";
 
 const candidate = (bearingDeg: number): GenerationCandidateView => ({

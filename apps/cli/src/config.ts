@@ -1,6 +1,7 @@
 import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+
 import { CliError, EXIT_CODES } from "./output";
 
 // Token storage matches the convention used by gh / aws / kubectl: a plain

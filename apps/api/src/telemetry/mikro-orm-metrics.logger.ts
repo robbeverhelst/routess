@@ -1,4 +1,5 @@
 import { DefaultLogger, type LogContext } from "@mikro-orm/core";
+
 import { recordDbQueryIfEnabled } from "./db-metrics-recorder";
 
 const OPERATIONS = new Set(["select", "insert", "update", "delete", "begin", "commit", "rollback", "savepoint"]);

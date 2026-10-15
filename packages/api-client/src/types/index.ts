@@ -9,8 +9,8 @@ import type {
 	UserPreferenceMapStyle,
 	UserPreferenceOverlayKey,
 	UserPreferenceOverlays,
-	UserPreferenceSportSpeeds,
 	UserPreferences,
+	UserPreferenceSportSpeeds,
 	UserPreferenceUnits,
 	Waypoint,
 } from "@routess/core";
@@ -220,14 +220,7 @@ export interface AdminProMetrics {
 }
 
 export type AdminRouteSort =
-	| "createdAt"
-	| "name"
-	| "activity"
-	| "visibility"
-	| "distance"
-	| "duration"
-	| "elevationGain"
-	| "owner";
+	"createdAt" | "name" | "activity" | "visibility" | "distance" | "duration" | "elevationGain" | "owner";
 
 export interface AdminUserListItem {
 	id: number;

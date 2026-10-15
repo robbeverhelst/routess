@@ -3,6 +3,7 @@ import { InjectRepository } from "@mikro-orm/nestjs";
 import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import { isValidHandle, mergeUserPreferences } from "@routess/core";
+
 import { AnalyticsErasureService } from "../analytics/analytics-erasure.service";
 import { SessionService } from "../auth/session.service";
 import { Route } from "../entities/route.entity";

@@ -3,6 +3,7 @@ import MapGL, { type MapRef } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
 import type { Map as MapboxMap } from "mapbox-gl";
 import type { Dispatch, SetStateAction } from "react";
+
 import { useMapInitialization } from "@/components/hooks/useMapInitialization";
 import { useMapPositioning } from "@/components/hooks/useMapPositioning";
 import { useMapRecovery } from "@/components/hooks/useMapRecovery";

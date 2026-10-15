@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+
 import { locationService } from "@/services/LocationService";
 
 export type LocateUnavailableReason = "denied" | "unsupported" | null;

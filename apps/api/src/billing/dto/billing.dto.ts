@@ -1,7 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { IsIn, IsOptional } from "class-validator";
+
 import { USER_PLANS, type UserPlan } from "../../entities/user.entity";
-import { FEATURES, type Feature } from "../../entitlements/features";
+import { type Feature, FEATURES } from "../../entitlements/features";
 import { BILLING_OFFERS, type BillingOffer } from "../offers";
 
 export class OfferPriceDto {

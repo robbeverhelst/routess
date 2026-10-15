@@ -1,5 +1,6 @@
 import { getDict } from "@/lib/content";
 import { getLocale } from "@/lib/locale";
+
 import { Footer } from "./components/Footer";
 import { Hero } from "./components/Hero";
 import { MapStyles } from "./components/MapStyles";

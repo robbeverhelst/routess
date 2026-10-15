@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+
 import { localizedAlternates, sitemapIndexXml, urlsetXml, xmlEscape } from "./sitemap-xml";
 
 describe("xmlEscape", () => {

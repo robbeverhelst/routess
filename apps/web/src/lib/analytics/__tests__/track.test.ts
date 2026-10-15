@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
+
 import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 import { stubProperty, unstubAll } from "@/test/helpers";
+
 import { trackEvent } from "../track";
 
 describe("trackEvent opt-out gate", () => {

@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto";
+
 import { normalizeUserPreferences } from "@routess/core";
+
 import type { User } from "../entities/user.entity";
 import { PublicUserDto, UserProfileDto, UserResponseDto } from "./dto/user-response.dto";
 

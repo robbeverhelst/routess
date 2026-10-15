@@ -2,12 +2,14 @@ import { formatDistance } from "@routess/core";
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import Script from "next/script";
+
 import { getDict } from "@/lib/content";
 import { fetchHub, fetchHubRoutes } from "@/lib/hub-api";
 import { type HubActivity, hubPath, isLiveHub } from "@/lib/hubs";
 import { APP_HOST, HTML_LANG, type Locale, SELF_HOST } from "@/lib/i18n";
 import { serializeJsonLd } from "@/lib/json-ld";
 import { getLocale } from "@/lib/locale";
+
 import { Footer } from "./Footer";
 import { Nav } from "./Nav";
 

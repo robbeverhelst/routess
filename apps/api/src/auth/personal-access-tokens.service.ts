@@ -1,7 +1,9 @@
 import { createHmac, randomBytes } from "node:crypto";
+
 import { EntityManager, EntityRepository } from "@mikro-orm/core";
 import { InjectRepository } from "@mikro-orm/nestjs";
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
+
 import type { AppConfig } from "../config/app-config";
 import { APP_CONFIG } from "../config/config.module";
 import { type PatScope, PersonalAccessToken } from "../entities/personal-access-token.entity";

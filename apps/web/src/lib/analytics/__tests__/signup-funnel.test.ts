@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "bun:test";
+
 import { mocked } from "@/test/helpers";
+
 import { trackSignInEntry } from "../signup-funnel";
 import { trackEvent } from "../track";
 

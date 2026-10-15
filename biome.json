@@ -111,9 +111,7 @@
 	},
 	"overrides": [
 		{
-			"includes": [
-				"apps/api/**"
-			],
+			"includes": ["apps/api/**"],
 			"javascript": {
 				"parser": {
 					"unsafeParameterDecoratorsEnabled": true
@@ -128,11 +126,7 @@
 			}
 		},
 		{
-			"includes": [
-				"apps/web/**",
-				"apps/landing/**",
-				"apps/docs/**"
-			],
+			"includes": ["apps/web/**", "apps/landing/**", "apps/docs/**"],
 			"linter": {
 				"rules": {
 					"correctness": {

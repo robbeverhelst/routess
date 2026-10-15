@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, type Mock, vi } from "bun:test";
+
 import { act, render, screen, waitFor } from "@testing-library/react";
 import React from "react";
+
 import { useMapInitialization } from "@/components/hooks/useMapInitialization";
 import { useMapPositioning } from "@/components/hooks/useMapPositioning";
 import { useMapViewBindings } from "@/components/hooks/useMapViewBindings";
@@ -12,6 +14,7 @@ import { useMapViewStore } from "@/stores/mapViewStore";
 import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 import { useRoutingStore } from "@/stores/routingStore";
 import { automock } from "@/test/helpers";
+
 import { MapCanvas } from "../MapCanvas";
 
 vi.mock("react-map-gl/mapbox", () => ({

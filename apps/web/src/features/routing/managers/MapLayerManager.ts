@@ -1,9 +1,11 @@
 import type { Waypoint } from "@routess/core";
 import { haversineDistance } from "@routess/core";
 import type { DataDrivenPropertyValueSpecification, GeoJSONSource, Map as MapboxMap } from "mapbox-gl";
+
 import type { SurfaceSegment } from "@/features/routing/services/SurfaceService";
 import { Logger } from "@/lib/logger";
 import type { Coordinate } from "@/types/map";
+
 import { type MapPalette, readMapPalette } from "./mapPalette";
 
 export const ROUTE_SOURCE_ID = "route";

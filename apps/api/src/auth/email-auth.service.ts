@@ -1,13 +1,15 @@
 import { randomBytes } from "node:crypto";
+
 import { EntityManager, EntityRepository } from "@mikro-orm/core";
 import { InjectRepository } from "@mikro-orm/nestjs";
 import { BadRequestException, ConflictException, Inject, Injectable, UnauthorizedException } from "@nestjs/common";
 import { EventEmitter2 } from "@nestjs/event-emitter";
+
 import type { AppConfig } from "../config/app-config";
 import { APP_CONFIG } from "../config/config.module";
 import { EmailService } from "../email/email.service";
-import { randomHandle, User } from "../entities/user.entity";
 import { UserAuthMethod } from "../entities/user-auth-method.entity";
+import { randomHandle, User } from "../entities/user.entity";
 import { VerificationToken } from "../entities/verification-token.entity";
 import {
 	AUTH_LOGIN_ATTEMPTED,

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+
 import { DEFAULT_CYCLE_PREFERENCES, DEFAULT_RUN_PREFERENCES, DEFAULT_WALK_PREFERENCES } from "./preferences";
 import type { SurfaceType } from "./types";
 import { valhallaCostingFromPreferences, valhallaCostingModelForActivity } from "./valhalla-costing";

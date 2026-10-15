@@ -1,4 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
+
 import { CHECKOUT_ORIGIN, E2E_USER, FakeRoutess } from "./fake-routess";
 
 // The Pro year pass journey (ADR 0039) in a real browser: daily quota →

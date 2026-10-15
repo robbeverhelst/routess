@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+
 import { createQuotaSafeStorage } from "./routing";
 
 // A localStorage with a byte budget: setItem throws QuotaExceededError for

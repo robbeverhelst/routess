@@ -12,6 +12,7 @@ import {
 	IsString,
 	ValidateNested,
 } from "class-validator";
+
 import { RoutingDefaultsDto, UpdateRoutingDefaultsDto } from "../../common/routing-preferences.dto";
 
 export class UserPreferenceSportSpeedsDto {

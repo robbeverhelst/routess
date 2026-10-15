@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+
 import { getDict } from "@/lib/content";
 import { HTML_LANG, type Locale, SELF_HOST, SISTER_HOST } from "@/lib/i18n";
 import { PRIVACY } from "@/lib/legal/privacy";
 import { getLocale } from "@/lib/locale";
+
 import { Footer } from "../components/Footer";
 import { LegalDoc } from "../components/LegalDoc";
 import { Nav } from "../components/Nav";

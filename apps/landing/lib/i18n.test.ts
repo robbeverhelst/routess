@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+
 import { getDict } from "./content";
 import { DEFAULT_LOCALE, localeFromHost, SELF_HOST, SISTER_HOST } from "./i18n";
 

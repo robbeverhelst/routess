@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+
 import type { Coordinate } from "../types";
 import { haversineDistance } from "../utils/geospatial";
 import { destinationPoint } from "./fan";

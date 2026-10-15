@@ -1,11 +1,12 @@
 import type { Map as MapboxMap } from "mapbox-gl";
 import type { Dispatch, SetStateAction } from "react";
 import { useCallback, useEffect, useRef } from "react";
+
 import type { PopupInfo as MIMPopupInfo } from "@/features/routing/managers/MapInteractionManager";
 import { initializeMapInteractions } from "@/features/routing/managers/MapInteractionManager";
 import { applyMapPalette, initializeSourcesAndLayers } from "@/features/routing/managers/MapLayerManager";
-import { attachMapViewAdapter } from "@/features/routing/managers/MapViewAdapter";
 import { readMapPalette, subscribeMapPalette } from "@/features/routing/managers/mapPalette";
+import { attachMapViewAdapter } from "@/features/routing/managers/MapViewAdapter";
 import { createRouteDraftEditor, type RouteDraftEditor } from "@/features/routing/RouteDraftEditor";
 import { getCurrentRoutePath } from "@/features/routing/services/RouteCalculationService";
 import { zoomToRoute } from "@/features/routing/utils/RoutingUtils";

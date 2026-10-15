@@ -1,5 +1,6 @@
 import { HttpStatus } from "@nestjs/common";
 import { PRO_GATE_MESSAGES, type ProGateDetails, type ProGatedFeature } from "@routess/core";
+
 import { DomainException } from "../common/exceptions/domain.exception";
 
 // 403 for a Pro-only Feature (ADR 0039). The web and the CLI read

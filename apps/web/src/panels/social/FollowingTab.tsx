@@ -1,6 +1,8 @@
 import { useState } from "react";
+
 import { useFollows, useFollowUser, useUnfollowUser, useUserSearch } from "@/lib/api-queries";
 import { useT } from "@/lib/i18n";
+
 import { I } from "../../components/icons";
 import { Btn, RDS_COLORS, SecTitle } from "../../components/primitives";
 import { Avatar } from "./Avatar";

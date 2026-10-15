@@ -1,5 +1,6 @@
 import type { Waypoint, WaypointType } from "@routess/core";
 import { selectSmartWaypoints } from "@routess/core";
+
 import { checkNearRoad } from "@/features/routing/utils/RoutingUtils";
 import { Logger } from "@/lib/logger";
 import type { Coordinate } from "@/types/map";

@@ -4,6 +4,7 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import { haversineDistance } from "@routess/core/utils";
 import { landingAccents } from "@routess/design-tokens";
 import { useCallback, useEffect, useRef, useState } from "react";
+
 import type { Dict } from "@/lib/content";
 import {
 	encodeShareRoute,
@@ -13,6 +14,7 @@ import {
 	MINI_PLANNER_ZOOM,
 } from "@/lib/demo-routes";
 import { APP_HOST } from "@/lib/i18n";
+
 import plannerFallback from "../../public/previews/mini-planner-fallback.webp";
 import { AccentInline } from "./AccentText";
 import { BakedImage } from "./BakedImage";

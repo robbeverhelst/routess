@@ -1,5 +1,6 @@
 import type { I18nConfig } from "fumadocs-core/i18n";
 import { type AdvancedIndex, createI18nSearchAPI } from "fumadocs-core/search/server";
+
 import { i18n } from "@/lib/i18n";
 import { apiSource, docsSource, guideSource } from "@/lib/source";
 

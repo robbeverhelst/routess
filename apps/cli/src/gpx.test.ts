@@ -1,5 +1,7 @@
 import { describe, expect, it } from "bun:test";
+
 import { buildRouteGpx, type Coordinate, type Waypoint } from "@routess/core";
+
 import { parseGpx } from "./gpx";
 
 const waypoints: Waypoint[] = [

@@ -2,22 +2,23 @@ import { ReflectMetadataProvider } from "@mikro-orm/decorators/legacy";
 import { defineConfig } from "@mikro-orm/postgresql";
 import { Logger } from "@nestjs/common";
 import type { Pool, PoolClient } from "pg";
+
 import { getAppConfig } from "./config/app-config";
 import { AdminAuditEntry } from "./entities/admin-audit-entry.entity";
-import { Collection } from "./entities/collection.entity";
 import { CollectionRoute } from "./entities/collection-route.entity";
+import { Collection } from "./entities/collection.entity";
 import { Entitlement } from "./entities/entitlement.entity";
 import { ExternalRoute } from "./entities/external-route.entity";
 import { Follow } from "./entities/follow.entity";
 import { GeocodeCache } from "./entities/geocode-cache.entity";
 import { Payment } from "./entities/payment.entity";
 import { PersonalAccessToken } from "./entities/personal-access-token.entity";
-import { Route } from "./entities/route.entity";
 import { RouteShare } from "./entities/route-share.entity";
+import { Route } from "./entities/route.entity";
 import { SeedSource } from "./entities/seed-source.entity";
 import { Session } from "./entities/session.entity";
-import { User } from "./entities/user.entity";
 import { UserAuthMethod } from "./entities/user-auth-method.entity";
+import { User } from "./entities/user.entity";
 import { VerificationToken } from "./entities/verification-token.entity";
 import { MikroOrmMetricsLogger } from "./telemetry/mikro-orm-metrics.logger";
 

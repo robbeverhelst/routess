@@ -1,5 +1,6 @@
 import { wrap } from "@mikro-orm/core";
 import { buildRouteSlugId, downsampleCoordinates } from "@routess/core";
+
 import type { Route } from "../entities/route.entity";
 import type { User } from "../entities/user.entity";
 import { toPublicUserDto } from "../users/user.mapper";

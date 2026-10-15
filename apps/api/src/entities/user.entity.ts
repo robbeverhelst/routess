@@ -1,7 +1,9 @@
 import { randomBytes } from "node:crypto";
+
 import { type Opt } from "@mikro-orm/core";
 import { Entity, Index, PrimaryKey, Property } from "@mikro-orm/decorators/legacy";
 import type { UserPreferences } from "@routess/core";
+
 import { BaseEntity } from "./base.entity";
 
 export function randomHandle(): string {

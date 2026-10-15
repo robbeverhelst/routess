@@ -1,4 +1,5 @@
 import { Global, Module } from "@nestjs/common";
+
 import { getAppConfig } from "./app-config";
 
 export const APP_CONFIG = Symbol("APP_CONFIG");

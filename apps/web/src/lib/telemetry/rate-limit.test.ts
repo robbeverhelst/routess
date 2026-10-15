@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, setSystemTime, vi } from "bun:test";
+
 import type { ErrorEvent } from "@sentry/react";
+
 import { __resetRateLimit, rateLimitBeforeSend } from "./rate-limit";
 
 function eventWithMessage(message: string): ErrorEvent {

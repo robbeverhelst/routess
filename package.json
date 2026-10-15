@@ -1,13 +1,12 @@
 {
 	"name": "routess-monorepo",
-	"private": true,
 	"version": "1.174.0",
-	"type": "module",
-	"packageManager": "bun@1.4.3",
+	"private": true,
 	"workspaces": [
 		"apps/*",
 		"packages/*"
 	],
+	"type": "module",
 	"scripts": {
 		"dev": "bun ./scripts/dev.ts",
 		"build": "bun run --filter './packages/*' build && bun run --filter './apps/*' build",
@@ -26,15 +25,18 @@
 		"docs:generate-api": "bun run --filter './apps/api' openapi:generate && bun run --filter './apps/docs' openapi:generate",
 		"docs:sync-translations": "bun run --filter './apps/docs' guide:sync-translations"
 	},
+	"dependencies": {
+		"@tanstack/router-cli": "^1.167.24"
+	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.1",
+		"@playwright/test": "1.64.1",
 		"@semantic-release/commit-analyzer": "^13.0.0",
 		"@semantic-release/git": "^11.0.0",
 		"@semantic-release/github": "^12.0.0",
 		"@semantic-release/release-notes-generator": "^14.0.1",
 		"@types/node": "^26.0.0",
 		"landing": "workspace:*",
-		"@playwright/test": "1.64.1",
 		"playwright": "^1.59.1",
 		"semantic-release": "^25.0.0",
 		"typescript": "~7.0.0"
@@ -44,7 +46,5 @@
 		"brace-expansion": "^5.0.0",
 		"postcss": "^8.5.10"
 	},
-	"dependencies": {
-		"@tanstack/router-cli": "^1.167.24"
-	}
+	"packageManager": "bun@1.4.3"
 }

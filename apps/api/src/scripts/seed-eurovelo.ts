@@ -1,9 +1,11 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, join } from "node:path";
+
 import { MikroORM, RequestContext } from "@mikro-orm/core";
 import { Logger } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { EUROVELO_ROUTE_LABELS, EUROVELO_SOURCE, euroVeloAdapter, type SeedRoute } from "@routess/core";
+
 import { AppModule } from "../app.module";
 import { loadEnvironment } from "../config/app-config";
 import { ExternalRoutesService } from "../external-routes/external-routes.service";

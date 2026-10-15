@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+
 import { localeFromHost, SELF_HOST } from "@/lib/i18n";
 import { SITEMAP_SEGMENTS, sitemapIndexXml, xmlResponse } from "@/lib/sitemap-xml";
 

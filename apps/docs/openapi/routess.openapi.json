@@ -3497,7 +3497,10 @@
 					},
 					"geometry": {
 						"description": "Routed polyline as an array of [lng, lat] coordinate pairs",
-						"example": [[-74.006, 40.7128], [-74.0055, 40.7135]],
+						"example": [
+							[-74.006, 40.7128],
+							[-74.0055, 40.7135]
+						],
 						"type": "array",
 						"items": {
 							"type": "string"
@@ -3838,7 +3841,10 @@
 					},
 					"geometry": {
 						"description": "Routed polyline as an array of [lng, lat] coordinate pairs",
-						"example": [[-74.006, 40.7128], [-74.0055, 40.7135]],
+						"example": [
+							[-74.006, 40.7128],
+							[-74.0055, 40.7135]
+						],
 						"type": "array",
 						"items": {
 							"type": "string"

@@ -10,6 +10,7 @@ import {
 	type RoutingPreferences,
 	type Waypoint,
 } from "@routess/core";
+
 import { isFeatureLocked } from "@/features/billing/featureLocks";
 import { trackEvent } from "@/lib/analytics/track";
 import { Logger } from "@/lib/logger";
@@ -23,6 +24,7 @@ import { useLoopPreferencesStore } from "@/stores/loopPreferencesStore";
 import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 import { useRoutingStore } from "@/stores/routingStore";
 import { useUiStore } from "@/stores/uiStore";
+
 import { computeElevationForCandidate } from "./candidateElevation";
 
 // Generation requests go through the API like routing does (ADR-0021 spirit,

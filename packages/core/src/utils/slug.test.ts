@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+
 import { buildExternalRouteSlugId, buildRouteSlugId, parseRouteSlugId, toRouteSlug } from "./slug";
 
 describe("toRouteSlug", () => {

@@ -1,7 +1,9 @@
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { type ReactNode, useEffect, useState } from "react";
 import { Drawer } from "vaul";
+
 import { t } from "@/lib/i18n";
+
 import { MOBILE_DRAWER_SNAPS, useMobileDrawerStore } from "../stores/mobileDrawerStore";
 import { I } from "./icons";
 import { IconBtn, RDS_COLORS } from "./primitives";

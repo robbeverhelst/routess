@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+
 import { canPromptInstall, isAppInstalled, isIosSafari, promptInstall, subscribeInstallState } from "@/lib/pwa";
 
 export type PwaInstallAvailability = "installed" | "promptable" | "ios-manual" | "unavailable";

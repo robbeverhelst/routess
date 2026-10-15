@@ -1,5 +1,6 @@
 import type { RouteVisibility } from "@routess/core";
 import { type ComponentType, useEffect, useState } from "react";
+
 import { BillingSettingsSection } from "@/features/billing/BillingSettingsSection";
 import { usePwaInstall } from "@/hooks/usePwaInstall";
 import { useUserProfile } from "@/lib/api-queries";
@@ -18,6 +19,7 @@ import {
 } from "@/stores/redesignSettingsStore";
 import { useToastStore } from "@/stores/toastStore";
 import { type RedesignAccent, type RedesignActivity, useUiStore } from "@/stores/uiStore";
+
 import { I } from "../components/icons";
 import { Btn, RDS_COLORS, Toggle } from "../components/primitives";
 import {

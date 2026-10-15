@@ -1,5 +1,6 @@
 import type { Map as MapboxMap } from "mapbox-gl";
 import { useEffect } from "react";
+
 import { saveLastMapViewToLocalStorage } from "@/features/routing/services/LocalStorageService";
 
 // isMapReady must flip to true once the map has loaded; mapRef.current is

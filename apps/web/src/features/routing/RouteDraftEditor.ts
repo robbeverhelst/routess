@@ -10,12 +10,14 @@ import {
 	selectSmartWaypoints,
 } from "@routess/core";
 import type { GeoJSONSource, Map as MapboxMap } from "mapbox-gl";
+
 import { trackEvent } from "@/lib/analytics/track";
 import { type ApiRoute, apiService } from "@/lib/api";
 import { Logger } from "@/lib/logger";
 import { decompressAndParse, serializeAndCompress } from "@/lib/shareUtils";
 import { validateCoordinate } from "@/lib/utils/route-validation";
 import { useRoutingStore } from "@/stores/routingStore";
+
 import {
 	insertWaypointOnRoute as insertWaypointOnRouteDecision,
 	resolveAddCoord,
@@ -29,8 +31,8 @@ import {
 	computeElevationInBackground,
 	getCurrentRoutePath,
 	getRoute as getRouteFromService,
-	type PreEditState,
 	patchRoute,
+	type PreEditState,
 	setCurrentRoutePath,
 } from "./services/RouteCalculationService";
 

@@ -1,6 +1,8 @@
 import { landingAccents } from "@routess/design-tokens";
+
 import type { Dict } from "@/lib/content";
 import { APP_HOST } from "@/lib/i18n";
+
 import { AccentLines } from "./AccentText";
 import { HeroAppScreenshot } from "./HeroAppScreenshot";
 import { ArrowIcon, CheckIcon, Dot } from "./Icons";

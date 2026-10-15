@@ -1,4 +1,5 @@
 import type { Command } from "commander";
+
 import { request } from "../client";
 import { clearToken, configFileLocation, loadConfig, requireToken, saveToken } from "../config";
 import { CliError, EXIT_CODES, renderResult } from "../output";

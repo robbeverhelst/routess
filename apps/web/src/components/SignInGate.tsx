@@ -1,7 +1,9 @@
 import { useEffect } from "react";
+
 import { trackEvent } from "@/lib/analytics/track";
 import { emitAppEvent } from "@/lib/app-events";
 import { useT } from "@/lib/i18n";
+
 import { I } from "./icons";
 import { Btn, RDS_COLORS } from "./primitives";
 

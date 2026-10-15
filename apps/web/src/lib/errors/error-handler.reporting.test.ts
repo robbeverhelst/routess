@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "bun:test";
+
 import { ApiDomainError } from "@routess/api-client";
 import * as Sentry from "@sentry/react";
+
 import { handleAPIError, handleRoutingError } from "@/lib/errors/error-handler";
 import { isTelemetrySuppressed, Logger, withoutTelemetry } from "@/lib/logger";
 import { mocked } from "@/test/helpers";

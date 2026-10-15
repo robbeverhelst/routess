@@ -1,7 +1,9 @@
 import type { ApiRoute } from "@routess/api-client";
 import { useMemo, useState } from "react";
+
 import { buildMapboxStaticPreviewUrl } from "@/lib/utils/mapboxStaticPreview";
 import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
+
 import { RDS_COLORS } from "../../components/primitives";
 
 // Only the fields the thumb reads, so geometry-only summaries (Discover)

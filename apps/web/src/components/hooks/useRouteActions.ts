@@ -1,5 +1,6 @@
 import type { Map as MapboxMap } from "mapbox-gl";
 import { useCallback } from "react";
+
 import type { PopupInfo as MapPopupInfo } from "@/features/routing/managers/MapInteractionManager";
 import type { RouteDraftEditor } from "@/features/routing/RouteDraftEditor";
 import { getCurrentRoutePath } from "@/features/routing/services/RouteCalculationService";

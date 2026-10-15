@@ -1,5 +1,6 @@
 import type { RouteVisibility } from "@routess/core";
 import { useEffect, useMemo, useState } from "react";
+
 import { ProLock, useProGates, useProGateToast } from "@/features/billing/proGates";
 import { applySavedRoute } from "@/features/routing/applySavedRoute";
 import { useIsAuthenticated } from "@/hooks/useAuthState";
@@ -21,6 +22,7 @@ import {
 } from "@/stores/routingStore";
 import { useToastStore } from "@/stores/toastStore";
 import { type RedesignActivity, useUiStore } from "@/stores/uiStore";
+
 import { I } from "../components/icons";
 import { ModalShell } from "../components/ModalShell";
 import { Btn, RDS_COLORS, SecTitle } from "../components/primitives";

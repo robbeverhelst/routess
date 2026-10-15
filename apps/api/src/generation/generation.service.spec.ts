@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from "bun:test";
+
 import { EventEmitter2 } from "@nestjs/event-emitter";
 import { Test, type TestingModule } from "@nestjs/testing";
 import {
@@ -9,6 +10,7 @@ import {
 	haversineDistance,
 	loopRadiusKm,
 } from "@routess/core";
+
 import { RoutingService } from "../routing/routing.service";
 import { ROUTE_GENERATION_COMPLETED, type RouteGenerationCompletedEvent } from "../telemetry/domain-events";
 import type { GenerateRequestDto } from "./dto/generate.dto";

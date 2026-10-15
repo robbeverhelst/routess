@@ -1,6 +1,8 @@
 import { darkBrand, landingAccents, lightBrand } from "@routess/design-tokens";
+
 import type { Dict } from "@/lib/content";
 import { APP_HOST } from "@/lib/i18n";
+
 import { AccentInline } from "./AccentText";
 import { ArrowIcon } from "./Icons";
 

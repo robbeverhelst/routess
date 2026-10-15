@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+
 import { fetchHubs } from "@/lib/hub-api";
 import { HUB_ACTIVITIES, hubPath } from "@/lib/hubs";
 import { localeFromHost, SELF_HOST } from "@/lib/i18n";

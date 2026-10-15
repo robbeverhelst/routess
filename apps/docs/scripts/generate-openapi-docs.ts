@@ -1,5 +1,6 @@
 import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
+
 import type { OpenAPIV3_2 } from "fumadocs-openapi";
 import { generateFiles } from "fumadocs-openapi";
 import { createOpenAPI } from "fumadocs-openapi/server";

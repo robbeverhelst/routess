@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+
 import { AnalyticsErasureService } from "./analytics-erasure.service";
 import { ProductEventStatsService } from "./product-event-stats.service";
 

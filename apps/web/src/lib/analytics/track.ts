@@ -7,6 +7,7 @@ import { getStoredUser } from "@/lib/auth-state";
 import { getRuntimeConfig } from "@/lib/runtime-config";
 import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 import { useUiStore } from "@/stores/uiStore";
+
 import type { ProductEvent } from "./events";
 
 type UmamiPropertyValue = string | number | boolean | null;

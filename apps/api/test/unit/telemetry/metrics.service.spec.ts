@@ -1,6 +1,7 @@
 import { getRepositoryToken } from "@mikro-orm/nestjs";
 import { EntityManager } from "@mikro-orm/postgresql";
 import { Test, type TestingModule } from "@nestjs/testing";
+
 import { Route } from "../../../src/entities/route.entity";
 import { User } from "../../../src/entities/user.entity";
 import { MetricsService } from "../../../src/telemetry/metrics.service";

@@ -1,6 +1,7 @@
 import defaultMdxComponents from "fumadocs-ui/mdx";
 import { DocsBody, DocsDescription, DocsPage, DocsTitle } from "fumadocs-ui/page";
 import { notFound } from "next/navigation";
+
 import { i18n } from "@/lib/i18n";
 import { ScreenshotImage } from "@/lib/screenshot-image";
 import { guideSource } from "@/lib/source";

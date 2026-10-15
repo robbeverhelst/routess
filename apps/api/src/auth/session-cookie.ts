@@ -1,4 +1,5 @@
 import type { Response } from "express";
+
 import type { AppConfig } from "../config/app-config";
 
 // Single source of truth for the session cookie attributes. Both the auth

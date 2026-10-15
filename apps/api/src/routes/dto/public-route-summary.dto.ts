@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { ROUTE_ACTIVITIES, type RouteActivity } from "@routess/core";
+
 import { PublicUserDto } from "../../users/dto/user-response.dto";
 
 // Cards and map previews don't need the full RoutePath; this keeps a 50-item

@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
+
 import { Injectable } from "@nestjs/common";
 import { ThrottlerGuard } from "@nestjs/throttler";
+
 import { PAT_TOKEN_PREFIX } from "../personal-access-tokens.service";
 
 // Drop-in ThrottlerGuard replacement that isolates PAT-authenticated

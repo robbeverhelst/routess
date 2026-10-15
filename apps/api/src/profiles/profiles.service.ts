@@ -2,6 +2,7 @@ import { EntityManager, EntityRepository } from "@mikro-orm/core";
 import { InjectRepository } from "@mikro-orm/nestjs";
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { buildRouteSlugId, INDEXABLE_MIN_DISTANCE_METERS, isRouteIndexable } from "@routess/core";
+
 import { Follow } from "../entities/follow.entity";
 import { Route } from "../entities/route.entity";
 import { User } from "../entities/user.entity";

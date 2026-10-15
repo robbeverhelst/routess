@@ -189,7 +189,11 @@
 	--rds-bottom-tab-h: 0px;
 	--rds-panel-anim: 240ms cubic-bezier(0.2, 0, 0, 1);
 
-	font-family: "Inter", system-ui, -apple-system, sans-serif;
+	font-family:
+		"Inter",
+		system-ui,
+		-apple-system,
+		sans-serif;
 	font-feature-settings: "ss01", "cv11";
 	-webkit-font-smoothing: antialiased;
 	color: var(--rds-fg);

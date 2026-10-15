@@ -1,9 +1,11 @@
 import type { Coordinate, RouteActivity } from "@routess/core";
 import { useEffect, useMemo } from "react";
+
 import { Logger } from "@/lib/logger";
 import { useRouteSurfaceStore } from "@/stores/routeSurfaceStore";
 import { useDraftActivity, useHasRoute, useRoutePath } from "@/stores/routingStore";
 import { useUiStore } from "@/stores/uiStore";
+
 import { fetchSurfaceBreakdown, type SurfaceBreakdown } from "./SurfaceService";
 
 interface SurfaceState {

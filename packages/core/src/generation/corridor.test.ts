@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+
 import type { Coordinate } from "../types";
 import { calculateBearing, calculatePathDistance, haversineDistance } from "../utils/geospatial";
 import { corridorSanity, planAtoBCandidates, singleDetourOffsetKm } from "./corridor";

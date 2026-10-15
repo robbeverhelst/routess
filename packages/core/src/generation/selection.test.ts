@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+
 import type { SurfaceBucket } from "../routing/types";
 import {
 	CANDIDATE_SIMILARITY_LIMIT,

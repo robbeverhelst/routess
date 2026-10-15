@@ -6,6 +6,7 @@ import { RuntimeNodeInstrumentation } from "@opentelemetry/instrumentation-runti
 import { resourceFromAttributes } from "@opentelemetry/resources";
 import { MeterProvider } from "@opentelemetry/sdk-metrics";
 import { NodeSDK } from "@opentelemetry/sdk-node";
+
 import type { AppConfig } from "../config/app-config";
 
 let sdk: NodeSDK | null = null;

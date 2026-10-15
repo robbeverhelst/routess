@@ -1,6 +1,8 @@
 import { join } from "node:path";
+
 import { MikroORM } from "@mikro-orm/postgresql";
 import { Client } from "pg";
+
 import config from "../../src/mikro-orm.config";
 
 // Migration20261013000000 adds admin_audit_entry, the trail of admin Pro

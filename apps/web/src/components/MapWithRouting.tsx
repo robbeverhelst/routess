@@ -1,5 +1,6 @@
 import { haversineDistance } from "@routess/core";
 import { useEffect } from "react";
+
 import { useLocalStorageInit } from "@/components/hooks/useLocalStorageInit";
 import { useMapWithRoutingState } from "@/components/hooks/useMapWithRoutingState";
 import { DiscoverMapBindings } from "@/components/map/DiscoverMapBindings";
@@ -384,7 +385,7 @@ const MapConfigurationContent: React.FC<MapConfigurationContentProps> = (props) 
 	return (
 		<>
 			<MapShortcutBindings onImportError={props.onImportError} />
-			<div className="w-full h-full relative">
+			<div className="relative h-full w-full">
 				<GenerationOverlay />
 				<MapCanvas
 					mapRef={props.mapRef}

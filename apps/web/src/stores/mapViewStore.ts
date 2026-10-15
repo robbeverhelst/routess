@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+
 import type { SolarPosition } from "@/lib/solar";
 
 export type TimeOfDay = "dawn" | "day" | "dusk" | "night";

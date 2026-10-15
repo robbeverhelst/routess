@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+
 import { ProfileRouteDto, ProfileSummaryDto } from "../../profiles/dto/profile-response.dto";
 
 // An inbox entry (CONTEXT.md "RouteShare"). The route is a live reference:

@@ -1,6 +1,8 @@
 import { useState } from "react";
+
 import { useT } from "@/lib/i18n";
 import { clearNavigationSnapshot, loadNavigationSnapshot } from "@/stores/navigationStore";
+
 import { I } from "../../components/icons";
 import { Btn, RDS_COLORS } from "../../components/primitives";
 import { resumeNavigation } from "./startNavigation";

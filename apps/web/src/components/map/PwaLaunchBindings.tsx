@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+
 import { emitAppEvent } from "@/lib/app-events";
 import { setGpxImportHandler } from "@/lib/pwa";
 

@@ -1,5 +1,6 @@
 import { MikroOrmModule } from "@mikro-orm/nestjs";
 import { Module } from "@nestjs/common";
+
 import { ExternalRoute } from "../entities/external-route.entity";
 import { SeedSource } from "../entities/seed-source.entity";
 import { ExternalRoutesController } from "./external-routes.controller";

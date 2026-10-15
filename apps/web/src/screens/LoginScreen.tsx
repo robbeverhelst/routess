@@ -1,13 +1,15 @@
 import { useState } from "react";
+
 import { trackEvent } from "@/lib/analytics/track";
 import { apiService } from "@/lib/api";
 import { emitAppEvent } from "@/lib/app-events";
 import { notifyAuthStateChange, storeUser } from "@/lib/auth-state";
-import { type GoogleCodeResponse, googleAuth, hasValidGoogleClientId } from "@/lib/google-auth";
+import { googleAuth, type GoogleCodeResponse, hasValidGoogleClientId } from "@/lib/google-auth";
 import { useT } from "@/lib/i18n";
 import { PRIVACY_URL, TERMS_URL } from "@/lib/links";
 import { Logger } from "@/lib/logger";
 import { useToastStore } from "@/stores/toastStore";
+
 import {
 	AUTH_CARD_STYLE,
 	AuthBackdrop,

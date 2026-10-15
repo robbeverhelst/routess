@@ -3,6 +3,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
+
 import { errorHandler } from "./error-handler";
 import type { AppError, ErrorHandlerOptions } from "./types";
 import { ErrorCategory, ErrorSeverity } from "./types";

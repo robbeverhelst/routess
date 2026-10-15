@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+
 import { TOERISME_VLAANDEREN_ICOONROUTES_SOURCE, toerismeVlaanderenIcoonroutesAdapter } from "./toerisme-vlaanderen";
 
 // WFS-shaped fixture: legs out of order, one stored in reverse direction, and

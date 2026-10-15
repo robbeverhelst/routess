@@ -1,6 +1,8 @@
 import { useState } from "react";
+
 import { useT } from "@/lib/i18n";
 import { DOCS_URL } from "@/lib/links";
+
 import { I } from "../components/icons";
 import { MapBackdrop } from "../components/MapBackdrop";
 import { Badge, Btn, RDS_COLORS } from "../components/primitives";

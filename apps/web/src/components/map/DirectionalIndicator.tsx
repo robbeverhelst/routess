@@ -50,7 +50,7 @@ export function DirectionalIndicator({
 
 			{/* Circular button */}
 			<div
-				className="relative flex items-center justify-center backdrop-blur-sm border-2 border-white/90 dark:border-gray-200/90"
+				className="relative flex items-center justify-center border-2 border-white/90 backdrop-blur-sm dark:border-gray-200/90"
 				style={{
 					width: `${size}px`,
 					height: `${size}px`,

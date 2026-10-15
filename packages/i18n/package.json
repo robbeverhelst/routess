@@ -2,6 +2,10 @@
 	"name": "@routess/i18n",
 	"version": "0.1.0",
 	"description": "Internationalization package for Routess with support for web and mobile",
+	"files": [
+		"src",
+		"dist"
+	],
 	"type": "module",
 	"main": "src/index.ts",
 	"module": "src/index.ts",
@@ -12,10 +16,6 @@
 			"default": "./src/index.ts"
 		}
 	},
-	"files": [
-		"src",
-		"dist"
-	],
 	"scripts": {
 		"build": "tsc -b --force tsconfig.json",
 		"clean": "rm -rf dist tsconfig.tsbuildinfo",
