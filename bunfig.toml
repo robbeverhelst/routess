@@ -1,5 +1,7 @@
-# bun fmt replaces Biome's formatter. It is not in a stable Bun yet:
-# package.json runs it from the pinned canary bunx bun@1.4.3-canary.20261014.1.
+# bun fmt and bun lint replace Biome's formatter and most of its linter. They
+# are not in a stable Bun yet: package.json runs them from the pinned canary
+# (bunx bun@1.4.3-canary.20261014.1). Biome keeps the rules bun lint lacks
+# (biome.json).
 
 [fmt]
 printWidth = 120
@@ -27,3 +29,192 @@ ignorePatterns = [
 	"**/*.yaml",
 	"**/*.toml",
 ]
+
+[lint]
+ignorePatterns = [
+	"apps/docs/.source/**",
+	"**/.next/**",
+	"apps/landing/next-env.d.ts",
+	"**/routeTree.gen.ts",
+	".agents/**",
+	".claude/**",
+]
+
+# Each rule carries the Biome rule it replaces. Biome's recommended rules
+# are errors, so these are too.
+[lint.rules]
+"@typescript-eslint/no-array-constructor" = "error" # style/useArrayLiterals
+"@typescript-eslint/no-explicit-any" = "error" # suspicious/noExplicitAny
+"@typescript-eslint/no-extra-non-null-assertion" = "error" # suspicious/noExtraNonNullAssertion
+"@typescript-eslint/no-misused-new" = "error" # suspicious/noMisleadingInstantiator
+"@typescript-eslint/no-this-alias" = "error" # complexity/noUselessThisAlias
+"@typescript-eslint/no-unnecessary-type-constraint" = "error" # complexity/noUselessTypeConstraint
+"@typescript-eslint/no-unsafe-declaration-merging" = "error" # suspicious/noUnsafeDeclarationMerging
+"@typescript-eslint/no-unused-vars" = "error" # correctness/noUnusedVariables
+"@typescript-eslint/prefer-namespace-keyword" = "error" # suspicious/useNamespaceKeyword
+"eslint/constructor-super" = "error" # correctness/noInvalidConstructorSuper
+"eslint/default-case-last" = "error" # suspicious/useDefaultSwitchClauseLast
+"eslint/dot-notation" = "error" # complexity/useLiteralKeys
+"eslint/eqeqeq" = ["error", "always", { null = "ignore" }] # suspicious/noDoubleEquals
+"eslint/getter-return" = "error" # suspicious/useGetterReturn
+"eslint/no-class-assign" = "error" # suspicious/noClassAssign
+"eslint/no-console" = "error" # suspicious/noConsole
+"eslint/no-const-assign" = "error" # correctness/noConstAssign
+"eslint/no-constructor-return" = "error" # correctness/noConstructorReturn
+"eslint/no-dupe-args" = "error" # suspicious/noDuplicateParameters
+"eslint/no-dupe-class-members" = "error" # suspicious/noDuplicateClassMembers
+"eslint/no-dupe-keys" = "error" # suspicious/noDuplicateObjectKeys
+"eslint/no-eval" = "error" # security/noGlobalEval
+"eslint/no-extra-label" = "error" # complexity/noUselessLabel
+"eslint/no-func-assign" = "error" # suspicious/noFunctionAssign
+"eslint/no-import-assign" = "error" # suspicious/noImportAssign
+"eslint/no-inner-declarations" = "error" # correctness/noInnerDeclarations
+"eslint/no-label-var" = "error" # suspicious/noLabelVar
+"eslint/no-labels" = "error" # suspicious/noConfusingLabels
+"eslint/no-lone-blocks" = "error" # complexity/noUselessLoneBlockStatements
+"eslint/no-new-native-nonconstructor" = "error" # correctness/noInvalidBuiltinInstantiation
+"eslint/no-obj-calls" = "error" # correctness/noGlobalObjectCalls
+"eslint/no-octal-escape" = "error" # suspicious/noOctalEscape
+"eslint/no-param-reassign" = "error" # style/noParameterAssign
+"eslint/no-redeclare" = "error" # suspicious/noRedeclare
+"eslint/no-self-compare" = "error" # suspicious/noSelfCompare
+"eslint/no-sequences" = "error" # complexity/noCommaOperator
+"eslint/no-setter-return" = "error" # correctness/noSetterReturn
+"eslint/no-template-curly-in-string" = "error" # suspicious/noTemplateCurlyInString
+"eslint/no-this-before-super" = "error" # correctness/noUnreachableSuper
+"eslint/no-undef-init" = "error" # complexity/noUselessUndefinedInitialization
+"eslint/no-unneeded-ternary" = "error" # complexity/noUselessTernary
+"eslint/no-unreachable" = "error" # correctness/noUnreachable
+"eslint/no-unsafe-negation" = "error" # suspicious/noUnsafeNegation
+"eslint/no-use-before-define" = ["error", { functions = false, classes = false, variables = false }] # correctness/noInvalidUseBeforeDeclaration
+"eslint/no-useless-constructor" = "error" # complexity/noUselessConstructor
+"eslint/no-useless-rename" = "error" # complexity/noUselessRename
+"eslint/no-with" = "error" # suspicious/noWith
+"eslint/prefer-arrow-callback" = ["error", { allowNamedFunctions = true }] # complexity/useArrowFunction
+"eslint/prefer-exponentiation-operator" = "error" # style/useExponentiationOperator
+"eslint/prefer-numeric-literals" = "error" # complexity/useNumericLiterals
+"eslint/prefer-regex-literals" = "error" # complexity/useRegexLiterals
+"for-direction" = "error" # correctness/useValidForDirection
+"no-async-promise-executor" = "error" # suspicious/noAsyncPromiseExecutor
+"no-case-declarations" = "error" # correctness/noSwitchDeclarations
+"no-compare-neg-zero" = "error" # suspicious/noCompareNegZero
+"no-cond-assign" = "error" # suspicious/noAssignInExpressions
+"no-constant-condition" = "error" # correctness/noConstantCondition
+"no-control-regex" = "error" # suspicious/noControlCharactersInRegex
+"no-debugger" = "error" # suspicious/noDebugger
+"no-dupe-else-if" = "error" # suspicious/noDuplicateElseIf
+"no-duplicate-case" = "error" # suspicious/noDuplicateCase
+"no-empty" = "error" # suspicious/noEmptyBlockStatements
+"no-empty-character-class" = "error" # correctness/noEmptyCharacterClassInRegex
+"no-empty-pattern" = "error" # correctness/noEmptyPattern
+"no-ex-assign" = "error" # suspicious/noCatchAssign
+"no-extra-boolean-cast" = "error" # complexity/noExtraBooleanCast
+"no-fallthrough" = "error" # suspicious/noFallthroughSwitchClause
+"no-global-assign" = "error" # suspicious/noGlobalAssign
+"no-irregular-whitespace" = "error" # suspicious/noIrregularWhitespace
+"no-loss-of-precision" = "error" # correctness/noPrecisionLoss
+"no-misleading-character-class" = "error" # suspicious/noMisleadingCharacterClass
+"no-nonoctal-decimal-escape" = "error" # correctness/noNonoctalDecimalEscape
+"no-prototype-builtins" = "error" # suspicious/noPrototypeBuiltins
+"no-self-assign" = "error" # correctness/noSelfAssign
+"no-shadow-restricted-names" = "error" # suspicious/noShadowRestrictedNames
+"no-sparse-arrays" = "error" # suspicious/noSparseArray
+"no-unsafe-finally" = "error" # correctness/noUnsafeFinally
+"no-unsafe-optional-chaining" = "error" # correctness/noUnsafeOptionalChaining
+"no-unused-labels" = "error" # correctness/noUnusedLabels
+"no-unused-private-class-members" = "error" # correctness/noUnusedPrivateClassMembers
+"no-useless-catch" = "error" # complexity/noUselessCatch
+"no-useless-escape" = "error" # complexity/noUselessEscapeInRegex
+"prefer-const" = "error" # style/useConst
+"prefer-rest-params" = "error" # complexity/noArguments
+"react/jsx-no-comment-textnodes" = "error" # suspicious/noCommentText
+"react/jsx-no-duplicate-props" = "error" # suspicious/noDuplicateJsxProps
+"react/jsx-no-target-blank" = "error" # security/noBlankTarget
+"react/jsx-no-useless-fragment" = ["error", { allowExpressions = true }] # complexity/noUselessFragments
+"react/void-dom-elements-no-children" = "error" # correctness/noVoidElementsWithChildren
+"require-yield" = "error" # correctness/useYield
+"typescript/adjacent-overload-signatures" = "error" # suspicious/useAdjacentOverloadSignatures
+"typescript/ban-types" = "error" # complexity/noBannedTypes
+"typescript/consistent-type-imports" = ["error", { disallowTypeAnnotations = false }] # style/useImportType
+"typescript/no-empty-interface" = ["error", { allowSingleExtends = true }] # suspicious/noEmptyInterface
+"typescript/no-non-null-assertion" = "error" # style/noNonNullAssertion
+"typescript/no-useless-empty-export" = "error" # complexity/noUselessEmptyExport
+"typescript/prefer-function-type" = "error" # style/useShorthandFunctionType
+"typescript/prefer-literal-enum-member" = "error" # style/useLiteralEnumMembers
+"unicorn/no-document-cookie" = "error" # suspicious/noDocumentCookie
+"unicorn/no-instanceof-array" = "error" # suspicious/useIsArray
+"unicorn/no-static-only-class" = "error" # complexity/noStaticOnlyClass
+"unicorn/no-thenable" = "error" # suspicious/noThenProperty
+"unicorn/no-useless-switch-case" = "error" # complexity/noUselessSwitchCase
+"unicorn/prefer-array-flat-map" = "error" # complexity/useFlatMap
+"unicorn/prefer-date-now" = "error" # complexity/useDateNow
+"unicorn/prefer-node-protocol" = "error" # style/useNodejsImportProtocol
+"use-isnan" = "error" # correctness/useIsNan
+"valid-typeof" = "error" # correctness/useValidTypeof
+
+# Biome's test domain (on wherever a test runner is a dependency).
+"bun:test/no-duplicate-hooks" = "error" # suspicious/noDuplicateTestHooks
+"bun:test/no-export" = "error" # suspicious/noExportsInTest
+"bun:test/no-focused-tests" = "error" # suspicious/noFocusedTests
+"bun:test/no-identical-title" = "error" # nursery/noIdenticalTestTitle
+
+# Kept in Biome because bun's version reports more than Biome does; off here
+# so nothing reports twice.
+"prefer-template" = "off" # style/useTemplate: also flags multi-line concatenations
+"react-hooks/exhaustive-deps" = "off" # correctness/useExhaustiveDependencies: different deps analysis
+"typescript/no-invalid-void-type" = "off" # suspicious/noConfusingVoidType: rejects request<void>
+
+# Biome overrides (biome.json) carried over. Overrides for the same rule
+# replace each other, so each rule is set in one place per file set.
+[[lint.overrides]]
+files = ["apps/api/**"]
+[lint.overrides.rules]
+"typescript/consistent-type-imports" = "off"
+
+[[lint.overrides]]
+files = [
+	"scripts/**",
+	"**/*.spec.ts",
+	"**/*.spec.tsx",
+	"**/*.test.ts",
+	"**/*.test.tsx",
+	"**/test/**",
+	"**/__tests__/**",
+]
+[lint.overrides.rules]
+"@typescript-eslint/no-explicit-any" = "off"
+"eslint/no-console" = "off"
+"no-empty" = "off"
+
+[[lint.overrides]]
+files = ["**/public/sw.js", "**/public/sw.*.js"]
+[lint.overrides.rules]
+"no-empty" = "off"
+
+[[lint.overrides]]
+files = ["apps/web/src/lib/logger.ts"]
+[lint.overrides.rules]
+"eslint/no-console" = "off"
+
+# Biome's react domain: on in the workspaces that depend on react.
+[[lint.overrides]]
+files = ["apps/web/**", "apps/landing/**", "apps/docs/**"]
+[lint.overrides.rules]
+"react/jsx-key" = "error" # correctness/useJsxKeyInIterable
+"react/no-array-index-key" = "error" # suspicious/noArrayIndexKey
+"react/no-children-prop" = "error" # correctness/noChildrenProp
+"react/no-danger-with-children" = "error" # security/noDangerouslySetInnerHtmlWithChildren
+"react/no-render-return-value" = "error" # correctness/noRenderReturnValue
+"react/rules-of-hooks" = "error" # correctness/useHookAtTopLevel
+
+# Biome's next domain: on in the workspaces that depend on next.
+[[lint.overrides]]
+files = ["apps/landing/**", "apps/docs/**"]
+[lint.overrides.rules]
+"nextjs/google-font-preconnect" = "error" # performance/useGoogleFontPreconnect
+"nextjs/inline-script-id" = "error" # correctness/useInlineScriptId
+"nextjs/no-document-import-in-page" = "error" # suspicious/noDocumentImportInPage
+"nextjs/no-head-element" = "error" # style/noHeadElement
+"nextjs/no-head-import-in-document" = "error" # suspicious/noHeadImportInDocument
+"nextjs/no-img-element" = "error" # performance/noImgElement
+"nextjs/no-unwanted-polyfillio" = "error" # performance/noUnwantedPolyfillio

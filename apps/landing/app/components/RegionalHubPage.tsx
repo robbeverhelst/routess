@@ -157,7 +157,7 @@ export async function RegionalHubPage({
 									}
 								>
 									{/* Each route's first-party map preview (the og.png proxy). */}
-									{/* biome-ignore lint/performance/noImgElement: proxied remote image, next/image adds nothing here */}
+									{/* eslint-disable-next-line @next/next/no-img-element -- proxied remote image, next/image adds nothing here */}
 									<img
 										src={`/r/${route.slugId}/og.png`}
 										alt=""

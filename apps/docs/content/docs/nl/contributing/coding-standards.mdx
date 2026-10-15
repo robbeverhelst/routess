@@ -5,7 +5,7 @@ description: Hoe code eruit moet zien en zich moet gedragen in deze repo.
 
 ## Tooling
 
-- **bun fmt** is de formatter en **Biome** de linter. Draai `bun run format` en `bun run lint`.
+- **bun fmt** formatteert en **bun lint** lint, met **Biome** voor de regels die bun lint mist (a11y en een paar andere). Draai `bun run lint:check` en `bun run format`.
 - **TypeScript strict mode**. `any` is toegestaan maar geeft een waarschuwing. Ongebruikte variabelen/imports zijn fouten.
 - **Geen discussie over tabs vs spaces**: bun fmt dwingt tabs en een regelbreedte van 120 tekens af (`bunfig.toml`).
 

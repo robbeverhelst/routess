@@ -5,7 +5,7 @@ description: À quoi le code doit ressembler et comment il doit se comporter dan
 
 ## Outillage
 
-- **bun fmt** est le formateur et **Biome** le linter. Lance `bun run format` et `bun run lint`.
+- **bun fmt** formate et **bun lint** analyse le code, avec **Biome** pour les règles que bun lint n'a pas (a11y et quelques autres). Lance `bun run lint:check` et `bun run format`.
 - **Mode strict TypeScript**. `any` est autorisé mais signalé par un avertissement. Les variables/imports inutilisés sont des erreurs.
 - **Pas de débat tabulations vs espaces** : bun fmt impose les tabulations et une largeur de ligne de 120 caractères (`bunfig.toml`).
 

@@ -92,7 +92,7 @@ export default async function PublicProfilePage({ params }: { params: Promise<Pa
 							</p>
 							<div style={{ display: "flex", alignItems: "center", gap: 18, marginBottom: 18 }}>
 								{profile.avatar ? (
-									// biome-ignore lint/performance/noImgElement: remote avatar, next/image adds nothing here
+									// eslint-disable-next-line @next/next/no-img-element -- remote avatar, next/image adds nothing here
 									<img
 										src={profile.avatar}
 										alt={profile.name}

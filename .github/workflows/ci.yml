@@ -56,12 +56,13 @@ jobs:
 
       - run: bun install --frozen-lockfile
 
-      # bun fmt comes from a pinned canary until a stable Bun ships it.
+      # bun fmt / bun lint come from a pinned canary until a stable Bun ships
+      # them; Biome still runs the rules bun lint lacks (a11y and the rest).
       - name: Format
         run: bun run format:check
 
       - name: Lint
-        run: bunx biome check .
+        run: bun run lint:check
 
       # Fails when a workspace depends on a package Bun already replaces
       # (CLAUDE.md, Bun-native rule).

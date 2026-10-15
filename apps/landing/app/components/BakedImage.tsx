@@ -22,7 +22,7 @@ export function BakedImage({
 	style?: CSSProperties;
 }) {
 	return (
-		// biome-ignore lint/performance/noImgElement: pre-encoded at its render size, next/image only adds an uncacheable round trip
+		// eslint-disable-next-line @next/next/no-img-element -- pre-encoded at its render size, next/image only adds an uncacheable round trip
 		<img
 			src={src.src}
 			width={src.width}

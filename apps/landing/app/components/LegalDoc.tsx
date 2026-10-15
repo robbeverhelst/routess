@@ -86,7 +86,7 @@ export function LegalDoc({ doc }: { doc: LegalDocument }) {
 								{s.h}
 							</h2>
 							{s.blocks.map((block, i) => (
-								// biome-ignore lint/suspicious/noArrayIndexKey: blocks are static content, never reordered
+								// eslint-disable-next-line react/no-array-index-key -- blocks are static content, never reordered
 								<Block key={i} block={block} />
 							))}
 						</div>

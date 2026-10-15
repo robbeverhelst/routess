@@ -9,4 +9,8 @@ The repo uses Biome (`biome.json` at the root) as the single tool for linting an
 
 ## Amendment (2026-10-15): formatting moved to bun fmt
 
-Biome no longer formats. `bun fmt` (configured in the root `bunfig.toml`, run from a pinned Bun canary until a stable release ships it) formats the repo and sorts imports; `biome.json` has its formatter and import organizing turned off. Biome is still the linter.
+Biome no longer formats. `bun fmt` (configured in the root `bunfig.toml`, run from a pinned Bun canary until a stable release ships it) formats the repo and sorts imports; `biome.json` has its formatter and import organizing turned off.
+
+## Amendment (2026-10-15): most linting moved to bun lint
+
+`bun lint` (rules in the root `bunfig.toml` under `[lint.rules]`, run from the same pinned canary) now runs the Biome rules it has an equivalent for. Biome keeps only what bun lint lacks or reports differently: the a11y group, rules with no bun equivalent, and a few rules whose bun versions flag more or less than Biome's. `bun run lint:check` runs both.
