@@ -146,7 +146,7 @@ export class WeeklyDigestService {
 	async unsubscribe(userId: number): Promise<void> {
 		const user = await this.em.findOne(User, { id: userId });
 		if (!user?.weeklyDigestOptInAt) return;
-		user.weeklyDigestOptInAt = null;
+		user.withdrawWeeklyDigest();
 		await this.em.flush();
 	}
 }

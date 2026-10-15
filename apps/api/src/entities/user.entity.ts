@@ -83,4 +83,11 @@ export class User extends BaseEntity {
 	// slugIds already mailed, so next week's picks are new routes.
 	@Property({ type: "json", nullable: true })
 	weeklyDigestSentSlugIds?: string[] | null;
+
+	// Withdrawal drops the send history along with the consent.
+	withdrawWeeklyDigest(): void {
+		this.weeklyDigestOptInAt = null;
+		this.weeklyDigestLastSentAt = null;
+		this.weeklyDigestSentSlugIds = null;
+	}
 }

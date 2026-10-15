@@ -64,7 +64,7 @@ export class UsersService {
 			user.preferences = mergeUserPreferences(user.preferences, updateUserDto.preferences);
 		}
 		if (updateUserDto.weeklyDigest === false) {
-			user.weeklyDigestOptInAt = null;
+			user.withdrawWeeklyDigest();
 		} else if (updateUserDto.weeklyDigest === true && !user.weeklyDigestOptInAt) {
 			user.weeklyDigestOptInAt = new Date();
 		}

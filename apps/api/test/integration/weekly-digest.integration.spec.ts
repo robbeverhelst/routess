@@ -165,7 +165,11 @@ describe("WeeklyDigest", () => {
 
 	it("unsubscribes with one click via the signed link, and rejects a forged one", async () => {
 		const { user } = await createTestUserWithAuth(app);
-		await setUser(user.id, { weeklyDigestOptInAt: new Date() });
+		await setUser(user.id, {
+			weeklyDigestOptInAt: new Date(),
+			weeklyDigestLastSentAt: new Date(),
+			weeklyDigestSentSlugIds: ["a-1"],
+		});
 		const token = createUnsubscribeToken("test-secret-key", user.id);
 		const forged = createUnsubscribeToken("wrong-secret", user.id);
 
@@ -183,5 +187,7 @@ describe("WeeklyDigest", () => {
 			.expect(200);
 		stored = await withRequestContext(app, () => orm.em.fork().findOneOrFail(User, { id: user.id }));
 		expect(stored.weeklyDigestOptInAt).toBeNull();
+		expect(stored.weeklyDigestLastSentAt).toBeNull();
+		expect(stored.weeklyDigestSentSlugIds).toBeNull();
 	});
 });
