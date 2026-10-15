@@ -22,14 +22,14 @@ function adminClient(): Client {
 	});
 }
 
-async function recreateDatabase(drop: boolean): Promise<void> {
+// Only recreated up front: dropping it again in afterAll waits on an immediate
+// checkpoint, which can outlast the hook timeout on a slow CI disk.
+async function recreateDatabase(): Promise<void> {
 	const client = adminClient();
 	await client.connect();
 	try {
 		await client.query(`drop database if exists "${DB_NAME}" with (force)`);
-		if (!drop) {
-			await client.query(`create database "${DB_NAME}"`);
-		}
+		await client.query(`create database "${DB_NAME}"`);
 	} finally {
 		await client.end();
 	}
@@ -39,7 +39,7 @@ describe("admin audit migration", () => {
 	let orm: MikroORM;
 
 	beforeAll(async () => {
-		await recreateDatabase(false);
+		await recreateDatabase();
 		orm = await MikroORM.init({
 			...config,
 			dbName: DB_NAME,
@@ -51,7 +51,6 @@ describe("admin audit migration", () => {
 
 	afterAll(async () => {
 		await orm?.close(true);
-		await recreateDatabase(true);
 	});
 
 	async function tableExists(table: string): Promise<boolean> {
