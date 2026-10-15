@@ -1,4 +1,4 @@
-import { type Rel } from "@mikro-orm/core";
+import { type Opt, type Rel } from "@mikro-orm/core";
 import { Entity, Index, ManyToOne, PrimaryKey, Property } from "@mikro-orm/decorators/legacy";
 import { BaseEntity } from "./base.entity";
 import { User } from "./user.entity";
@@ -33,6 +33,10 @@ export class VerificationToken extends BaseEntity {
 	// arrives with the consume request, not stored ahead of time).
 	@Property({ type: "string", hidden: true, nullable: true })
 	passwordHash?: string;
+
+	// pending_signup only: the signup form's WeeklyDigest consent checkbox.
+	@Property({ default: false })
+	weeklyDigestOptIn: boolean & Opt = false;
 
 	@Property({ type: "timestamp" })
 	expiresAt!: Date;

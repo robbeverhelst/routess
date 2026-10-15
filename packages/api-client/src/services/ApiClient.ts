@@ -128,10 +128,10 @@ export class ApiClient {
 	}
 
 	// Auth methods
-	async googleAuth(code: string): Promise<AuthResponse> {
+	async googleAuth(code: string, options: { weeklyDigest?: boolean } = {}): Promise<AuthResponse> {
 		const response = await this.request<AuthResponse>("/auth/google", {
 			method: "POST",
-			body: { code },
+			body: { code, ...options },
 		});
 
 		this.config.authStateManager.setToken(response.accessToken);
@@ -167,7 +167,7 @@ export class ApiClient {
 
 	// Email + password auth (issue #134)
 
-	async signupEmail(args: { email: string; name?: string; password: string }): Promise<void> {
+	async signupEmail(args: { email: string; name?: string; password: string; weeklyDigest?: boolean }): Promise<void> {
 		await this.request<{ success: true }>("/auth/signup-email", { method: "POST", body: args });
 	}
 

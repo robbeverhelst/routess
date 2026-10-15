@@ -177,6 +177,8 @@ describe("Email Auth Integration Tests", () => {
 			expect(response.body.user.hasPassword).toBe(true);
 			// Verifying the link is account creation on the email path (#357).
 			expect(response.body.isNewUser).toBe(true);
+			// No consent unless the signup checkbox was ticked.
+			expect(response.body.user.weeklyDigest).toBe(false);
 
 			await withRequestContext(app, async () => {
 				const orm = app.get(MikroORM);
@@ -190,6 +192,17 @@ describe("Email Auth Integration Tests", () => {
 				const tokenRow = await orm.em.findOne(VerificationToken, { token });
 				expect(tokenRow?.usedAt).not.toBeNull();
 			});
+		});
+
+		it("carries the signup form's weekly digest consent through to the new account", async () => {
+			const optedIn = "digest@example.com";
+			await request(app.getHttpServer())
+				.post("/api/v1/auth/signup-email")
+				.send({ email: optedIn, password: SAFE_PASSWORD, weeklyDigest: true })
+				.expect(200);
+			const token = await freshVerificationToken(app, optedIn);
+			const response = await request(app.getHttpServer()).post("/api/v1/auth/verify-email").send({ token }).expect(200);
+			expect(response.body.user.weeklyDigest).toBe(true);
 		});
 
 		it("rejects an already-used token with 400 and does not create a duplicate user", async () => {

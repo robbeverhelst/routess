@@ -84,6 +84,7 @@ export class AuthService {
 				isEmailVerified: true,
 				role: desiredRole ?? "user",
 				deletionStatus: "active",
+				weeklyDigestOptInAt: googleAuthDto.weeklyDigest ? new Date() : null,
 			});
 			try {
 				await this.entityManager.persist(user).flush();

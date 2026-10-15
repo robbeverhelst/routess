@@ -616,6 +616,8 @@ export const nl: Record<string, string> = {
 	"signup.toast.failed": "Aanmelden mislukt",
 	"signup.title": "Maak je account aan.",
 	"signup.subtitle": "Voor altijd gratis. Tot 50 opgeslagen routes.",
+	"signup.weeklyDigest":
+		"Mail me één keer per week een paar nieuwe routes in mijn buurt. Optioneel, altijd af te melden.",
 	"signup.googleNotConfigured": "Google-aanmelding niet geconfigureerd",
 	"signup.orWithEmail": "of met e-mail",
 	"signup.name": "Naam",
