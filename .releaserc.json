@@ -33,12 +33,7 @@
 				}
 			}
 		],
-		[
-			"@semantic-release/npm",
-			{
-				"npmPublish": false
-			}
-		],
+		"./scripts/release-version.ts",
 		[
 			"@semantic-release/github",
 			{
