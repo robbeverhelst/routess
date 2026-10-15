@@ -13,7 +13,7 @@ Elke push naar `main` triggert de `release`-job. Als er sinds de laatste tag gee
 
 1. `semantic-release` analyseert commits, bepaalt de volgende versie (of slaat over)
 2. Maakt een git-tag (bv. `2.3.4`) en een GitHub Release met automatisch gegenereerde notes
-3. Werkt de `package.json`-versies in elke app/package bij
+3. Schrijft de versie in de root-`package.json`
 4. Pusht een `chore(release): X.Y.Z [skip ci]`-commit terug naar main
 
 Daarna, parallel:

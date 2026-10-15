@@ -48,10 +48,6 @@ jobs:
         with:
           bun-version: "1.4.3"
 
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
-        with:
-          node-version: "24"
-
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.bun/install/cache
@@ -63,17 +59,19 @@ jobs:
       - name: Format & lint
         run: bunx biome check .
 
+      # `bun --bun` runs every script's `node` (tsc, nest, vitest, next) on Bun,
+      # so a Node.js on the runner image is never picked up.
       - name: Build packages
-        run: bun run --filter './packages/*' build
+        run: bun --bun run --filter './packages/*' build
 
       - name: Type-check
-        run: bun run --filter '*' check-types
+        run: bun --bun run --filter '*' check-types
 
       - name: Test
-        run: bun run --filter './apps/api' --filter './apps/web' --filter './packages/*' test
+        run: bun --bun run --filter './apps/api' --filter './apps/web' --filter './packages/*' test
 
       - name: Build apps
-        run: bun run --filter './apps/*' build
+        run: bun --bun run --filter './apps/*' build
 
   e2e:
     # Browser E2E against a `vite preview` build with the API and Stripe faked
@@ -88,10 +86,6 @@ jobs:
         with:
           bun-version: "1.4.3"
 
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
-        with:
-          node-version: "24"
-
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.bun/install/cache
@@ -105,7 +99,7 @@ jobs:
 
       # Failures print to the job log (list reporter); CI stores no artifacts.
       - name: Billing E2E
-        run: bun run test:e2e
+        run: bun --bun run test:e2e
 
   helm-validate:
     runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || 'arc-routess' }}
@@ -154,10 +148,6 @@ jobs:
         with:
           bun-version: "1.4.3"
 
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
-        with:
-          node-version: "24"
-
       - run: bun install --frozen-lockfile --ignore-scripts
 
       - name: Capture current release tag
@@ -172,7 +162,7 @@ jobs:
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
-          bunx semantic-release
+          bunx --bun semantic-release
 
       - name: Detect released version
         id: release-meta
@@ -293,6 +283,8 @@ jobs:
         with:
           bun-version: "1.4.3"
 
+      # Node is here only for `npm publish`: bun publish cannot do npm trusted
+      # publishing (OIDC) or provenance yet (oven-sh/bun#22423, #15601).
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: "24"
@@ -319,9 +311,8 @@ jobs:
         env:
           VERSION: ${{ needs.release.outputs.version }}
         run: |
-          node -e "
-            const fs = require('fs');
-            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          bun -e "
+            const pkg = await Bun.file('package.json').json();
             pkg.version = process.env.VERSION;
             // Bun build inlines every dependency into dist/index.js, so the
             // published tarball has no runtime deps. Strip dev/workspace deps
@@ -329,7 +320,7 @@ jobs:
             delete pkg.devDependencies;
             delete pkg.dependencies;
             delete pkg.scripts;
-            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+            await Bun.write('package.json', JSON.stringify(pkg, null, 2) + '\n');
           "
 
       # Trusted publishing (OIDC, id-token: write above) needs npm >= 11.5.1;

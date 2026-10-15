@@ -13,7 +13,7 @@ Jeder Push auf `main` löst den `release`-Job aus. Gibt es seit dem letzten Tag 
 
 1. `semantic-release` analysiert die Commits, entscheidet die nächste Version (oder überspringt)
 2. Erstellt einen Git-Tag (z. B. `2.3.4`) und einen GitHub Release mit automatisch generierten Notes
-3. Aktualisiert die `package.json`-Versionen in jeder App/jedem Paket
+3. Schreibt die Version in die Root-`package.json`
 4. Pusht einen `chore(release): X.Y.Z [skip ci]`-Commit zurück auf main
 
 Dann parallel:

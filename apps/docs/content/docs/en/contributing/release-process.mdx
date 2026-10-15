@@ -13,7 +13,7 @@ Every push to `main` triggers the `release` job. If there are no release-worthy 
 
 1. `semantic-release` analyzes commits, decides the next version (or skips)
 2. Creates a git tag (e.g. `2.3.4`) and a GitHub Release with auto-generated notes
-3. Updates `package.json` versions in each app/package
+3. Stamps the version into the root `package.json`
 4. Pushes a `chore(release): X.Y.Z [skip ci]` commit back to main
 
 Then, in parallel:
