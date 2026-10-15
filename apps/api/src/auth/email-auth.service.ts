@@ -190,7 +190,7 @@ export class EmailAuthService {
 			this.emitLoginAttempt("invalid_token");
 			// Do hash comparison work to avoid leaking timing differences between
 			// "no such email" and "wrong password".
-			await this.passwordService.verify("$argon2id$v=19$m=19456,t=2,p=1$AAAA$AAAA", password);
+			await this.passwordService.verifyDummy(password);
 			throw new UnauthorizedException("Email or password is incorrect.");
 		}
 
@@ -200,7 +200,7 @@ export class EmailAuthService {
 		// so neither the response nor its timing reveals the lock.
 		if (method.lockedUntil && method.lockedUntil.getTime() > Date.now()) {
 			this.emitLoginAttempt("invalid_token");
-			await this.passwordService.verify("$argon2id$v=19$m=19456,t=2,p=1$AAAA$AAAA", password);
+			await this.passwordService.verifyDummy(password);
 			throw new UnauthorizedException("Email or password is incorrect.");
 		}
 

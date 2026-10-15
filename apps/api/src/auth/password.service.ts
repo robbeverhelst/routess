@@ -14,6 +14,12 @@ const ARGON2_OPTIONS = {
 	timeCost: 2,
 } as const;
 
+// A real argon2id hash at ARGON2_OPTIONS' cost (of a random, discarded
+// password), so verifying against it does the same work as a wrong-password
+// check on a stored hash.
+const DUMMY_HASH =
+	"$argon2id$v=19$m=19456,t=2,p=1$72VpDGFLIZw2p4EmIPGSW/qq2fRRQIYWySKClAkOcUI$LOXk3N0LNNn1wyzHBGI8Y3I0oflHce2esVKfpJNguq4";
+
 // Bun.password only parses an argon2 hash whose parameters are in the PHC
 // order m,t,p. Hashes written before the move to Bun.password came from the
 // argon2 npm package, which orders them m,p,t: same parameters, same digest,
@@ -43,6 +49,12 @@ export class PasswordService {
 		} catch {
 			return false;
 		}
+	}
+
+	// Burns one argon2 verify so failures without a stored hash take as long
+	// as a wrong password. Always resolves false.
+	async verifyDummy(plain: string): Promise<boolean> {
+		return this.verify(DUMMY_HASH, plain);
 	}
 
 	// Validates a candidate password before hashing. Length-only per NIST

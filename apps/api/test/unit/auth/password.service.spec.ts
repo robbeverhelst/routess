@@ -31,6 +31,26 @@ describe("PasswordService", () => {
 		expect(await passwords.verify("not-a-hash", LEGACY_PASSWORD)).toBe(false);
 		expect(await passwords.verify("$argon2id$v=19$m=19456,t=2,p=1$AAAA$AAAA", LEGACY_PASSWORD)).toBe(false);
 	});
+
+	it("never matches any password against the timing dummy", async () => {
+		for (const plain of ["", LEGACY_PASSWORD, "something else entirely"]) {
+			expect(await passwords.verifyDummy(plain)).toBe(false);
+		}
+	});
+
+	it("spends real argon2 work on the timing dummy", async () => {
+		const real = await passwords.hash(LEGACY_PASSWORD);
+		const timeOf = async (run: () => Promise<boolean>) => {
+			const start = performance.now();
+			await run();
+			return performance.now() - start;
+		};
+		await timeOf(() => passwords.verifyDummy(LEGACY_PASSWORD));
+		const wrongPassword = await timeOf(() => passwords.verify(real, "wrong password"));
+		const dummy = await timeOf(() => passwords.verifyDummy(LEGACY_PASSWORD));
+
+		expect(dummy).toBeGreaterThan(wrongPassword / 2);
+	});
 });
 
 describe("toCanonicalArgon2Hash", () => {
