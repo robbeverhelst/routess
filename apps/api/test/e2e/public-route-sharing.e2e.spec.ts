@@ -1,7 +1,7 @@
 import type { INestApplication } from "@nestjs/common";
 import { buildRouteSlugId, parseRouteSlugId } from "@routess/core";
-import supertest from "supertest";
 import { clearDatabase, closeTestApp, createTestApp, createTestUserWithAuth } from "../utils";
+import request from "../utils/http";
 
 const waypoints = [
 	{ coord: [13.405, 52.52], timestamp: new Date().toISOString(), type: "routed" },
@@ -27,7 +27,7 @@ describe("Public route sharing E2E", () => {
 	});
 
 	async function createRoute(token: string, overrides: Record<string, unknown>) {
-		const res = await supertest(app.getHttpServer())
+		const res = await request(app.getHttpServer())
 			.post("/api/v1/routes")
 			.set("Authorization", `Bearer ${token}`)
 			.send({
@@ -55,7 +55,7 @@ describe("Public route sharing E2E", () => {
 		expect(created.visibility).toBe("public");
 
 		// the public page's data path: GET with NO auth header
-		const anon = await supertest(app.getHttpServer()).get(`/api/v1/routes/${created.id}`).expect(200);
+		const anon = await request(app.getHttpServer()).get(`/api/v1/routes/${created.id}`).expect(200);
 		expect(anon.body.name).toBe("Sunday Loop");
 		expect(anon.body.tags).toEqual(["hilly", "weekend-loop", "scenic"]);
 		expect(anon.body.geometry?.length).toBe(3);
@@ -69,7 +69,7 @@ describe("Public route sharing E2E", () => {
 		const { accessToken } = await createTestUserWithAuth(app, { email: "gpx@example.com", googleId: "g-gpx" });
 		const created = await createRoute(accessToken, { visibility: "public" });
 
-		const res = await supertest(app.getHttpServer()).get(`/api/v1/routes/${created.id}/gpx`).expect(200);
+		const res = await request(app.getHttpServer()).get(`/api/v1/routes/${created.id}/gpx`).expect(200);
 		expect(res.headers["content-type"]).toContain("application/gpx+xml");
 		expect(res.headers["content-disposition"]).toContain(".gpx");
 		expect(res.text).toContain("<gpx");
@@ -84,13 +84,11 @@ describe("Public route sharing E2E", () => {
 		const pub = await createRoute(accessToken, { visibility: "public" });
 
 		// Unlisted GPX is anonymous-only via the share token; numeric id 404s.
-		await supertest(app.getHttpServer()).get(`/api/v1/routes/${unlisted.id}/gpx`).expect(404);
-		const unlistedRes = await supertest(app.getHttpServer())
-			.get(`/api/v1/routes/${unlisted.shareToken}/gpx`)
-			.expect(200);
+		await request(app.getHttpServer()).get(`/api/v1/routes/${unlisted.id}/gpx`).expect(404);
+		const unlistedRes = await request(app.getHttpServer()).get(`/api/v1/routes/${unlisted.shareToken}/gpx`).expect(200);
 		expect(unlistedRes.headers["x-robots-tag"]).toBe("noindex");
 
-		const pubRes = await supertest(app.getHttpServer()).get(`/api/v1/routes/${pub.id}/gpx`).expect(200);
+		const pubRes = await request(app.getHttpServer()).get(`/api/v1/routes/${pub.id}/gpx`).expect(200);
 		expect(pubRes.headers["x-robots-tag"]).toBeUndefined();
 	});
 
@@ -99,7 +97,7 @@ describe("Public route sharing E2E", () => {
 		const unlisted = await createRoute(accessToken, { visibility: "unlisted" });
 		expect(unlisted.shareToken).toMatch(/^[0-9a-f]{32}$/);
 
-		const anon = await supertest(app.getHttpServer()).get(`/api/v1/routes/${unlisted.shareToken}`).expect(200);
+		const anon = await request(app.getHttpServer()).get(`/api/v1/routes/${unlisted.shareToken}`).expect(200);
 		expect(anon.body.id).toBe(unlisted.id);
 
 		const slugId = buildRouteSlugId(anon.body.name, unlisted.shareToken);
@@ -110,7 +108,7 @@ describe("Public route sharing E2E", () => {
 		const { accessToken } = await createTestUserWithAuth(app, { email: "p@example.com", googleId: "g-p" });
 		const priv = await createRoute(accessToken, { visibility: "private" });
 
-		await supertest(app.getHttpServer()).get(`/api/v1/routes/${priv.id}`).expect(404);
-		await supertest(app.getHttpServer()).get(`/api/v1/routes/${priv.id}/gpx`).expect(404);
+		await request(app.getHttpServer()).get(`/api/v1/routes/${priv.id}`).expect(404);
+		await request(app.getHttpServer()).get(`/api/v1/routes/${priv.id}/gpx`).expect(404);
 	});
 });

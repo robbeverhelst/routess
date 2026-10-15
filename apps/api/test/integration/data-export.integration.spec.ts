@@ -2,8 +2,8 @@ import { MikroORM } from "@mikro-orm/core";
 import type { INestApplication } from "@nestjs/common";
 import JSZip from "jszip";
 import { Route } from "src/entities/route.entity";
-import supertest from "supertest";
 import { clearDatabase, closeTestApp, createTestApp, createTestUserWithAuth, withRequestContext } from "../utils";
+import request from "../utils/http";
 
 describe("Data Export Integration Tests", () => {
 	let app: INestApplication;
@@ -21,7 +21,7 @@ describe("Data Export Integration Tests", () => {
 	});
 
 	it("requires authentication", async () => {
-		await supertest(app.getHttpServer()).get("/api/v1/users/me/export").expect(401);
+		await request(app.getHttpServer()).get("/api/v1/users/me/export").expect(401);
 	});
 
 	it("returns a ZIP containing JSON dump, README, and one GPX per route", async () => {
@@ -46,7 +46,7 @@ describe("Data Export Integration Tests", () => {
 			await orm.em.persist(route).flush();
 		});
 
-		const response = await supertest(app.getHttpServer())
+		const response = await request(app.getHttpServer())
 			.get("/api/v1/users/me/export")
 			.set("Authorization", `Bearer ${accessToken}`)
 			.responseType("blob")
@@ -84,13 +84,13 @@ describe("Data Export Integration Tests", () => {
 
 	it("is reachable with a read PAT (ADR-0022: read covers export)", async () => {
 		const { accessToken } = await createTestUserWithAuth(app, { email: "alice@example.com" });
-		const minted = await supertest(app.getHttpServer())
+		const minted = await request(app.getHttpServer())
 			.post("/api/v1/auth/tokens")
 			.set("Authorization", `Bearer ${accessToken}`)
 			.send({ label: "backup", scope: "read" })
 			.expect(201);
 
-		const response = await supertest(app.getHttpServer())
+		const response = await request(app.getHttpServer())
 			.get("/api/v1/users/me/export")
 			.set("Authorization", `Bearer ${minted.body.token}`)
 			.responseType("blob")
@@ -101,7 +101,7 @@ describe("Data Export Integration Tests", () => {
 
 	it("returns an empty routes array (still a valid ZIP) for accounts with no routes", async () => {
 		const { accessToken } = await createTestUserWithAuth(app, { email: "alice@example.com" });
-		const response = await supertest(app.getHttpServer())
+		const response = await request(app.getHttpServer())
 			.get("/api/v1/users/me/export")
 			.set("Authorization", `Bearer ${accessToken}`)
 			.responseType("blob")

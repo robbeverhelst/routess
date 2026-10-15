@@ -7,8 +7,8 @@ import {
 } from "src/auth/google-identity-verifier";
 import { User } from "src/entities/user.entity";
 import { UserAuthMethod } from "src/entities/user-auth-method.entity";
-import supertest from "supertest";
 import { clearDatabase, closeTestApp, createTestApp, createTestUserWithAuth, withRequestContext } from "../utils";
+import request from "../utils/http";
 
 class FakeGoogleVerifier implements GoogleIdentityVerifier {
 	private next: GoogleIdentity | Error | null = null;
@@ -63,7 +63,7 @@ describe("Auth Integration Tests", () => {
 				picture: "https://example.com/picture.jpg",
 			});
 
-			const response = await supertest(app.getHttpServer())
+			const response = await request(app.getHttpServer())
 				.post("/api/v1/auth/google")
 				.send({ code: "mock-google-code" })
 				.expect(201);
@@ -107,7 +107,7 @@ describe("Auth Integration Tests", () => {
 				picture: "https://example.com/existing.jpg",
 			});
 
-			const response = await supertest(app.getHttpServer())
+			const response = await request(app.getHttpServer())
 				.post("/api/v1/auth/google")
 				.send({ code: "mock-google-code" })
 				.expect(201);
@@ -127,13 +127,13 @@ describe("Auth Integration Tests", () => {
 		it("should fail with invalid Google token", async () => {
 			verifier.rejectNext(new UnauthorizedException("Failed to authenticate with Google"));
 
-			const response = await supertest(app.getHttpServer()).post("/api/v1/auth/google").send({ code: "invalid-code" });
+			const response = await request(app.getHttpServer()).post("/api/v1/auth/google").send({ code: "invalid-code" });
 
 			expect(response.status).toBe(401);
 		});
 
 		it("should fail without code", async () => {
-			await supertest(app.getHttpServer()).post("/api/v1/auth/google").send({}).expect(400);
+			await request(app.getHttpServer()).post("/api/v1/auth/google").send({}).expect(400);
 		});
 	});
 
@@ -153,18 +153,18 @@ describe("Auth Integration Tests", () => {
 		});
 
 		it("should access protected route with valid JWT", async () => {
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.get("/api/v1/users/me")
 				.set("Authorization", `Bearer ${validToken}`)
 				.expect(200);
 		});
 
 		it("should fail to access protected route without JWT", async () => {
-			await supertest(app.getHttpServer()).get("/api/v1/users/me").expect(401);
+			await request(app.getHttpServer()).get("/api/v1/users/me").expect(401);
 		});
 
 		it("should fail to access protected route with invalid JWT", async () => {
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.get("/api/v1/users/me")
 				.set("Authorization", "Bearer invalid-token")
 				.expect(401);

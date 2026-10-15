@@ -4,8 +4,8 @@ import { Session } from "src/entities/session.entity";
 import { User } from "src/entities/user.entity";
 import { UserAuthMethod } from "src/entities/user-auth-method.entity";
 import { VerificationToken } from "src/entities/verification-token.entity";
-import supertest from "supertest";
 import { clearDatabase, closeTestApp, createTestApp, withRequestContext } from "../utils";
+import request from "../utils/http";
 
 // A password that's almost certainly not in HIBP (random-looking 18 chars).
 // Used everywhere a "valid" password is needed in these tests.
@@ -61,7 +61,7 @@ describe("Email Auth Integration Tests", () => {
 
 	describe("POST /auth/signup-email", () => {
 		it("creates a pending_signup token and does not create a User row", async () => {
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.post("/api/v1/auth/signup-email")
 				.send({ email: "alice@example.com", password: SAFE_PASSWORD })
 				.expect(200);
@@ -80,7 +80,7 @@ describe("Email Auth Integration Tests", () => {
 		});
 
 		it("rejects passwords under 12 characters with 400", async () => {
-			const response = await supertest(app.getHttpServer())
+			const response = await request(app.getHttpServer())
 				.post("/api/v1/auth/signup-email")
 				.send({ email: "alice@example.com", password: "short" })
 				.expect(400);
@@ -88,7 +88,7 @@ describe("Email Auth Integration Tests", () => {
 		});
 
 		it("rejects passwords found in HIBP breach corpus with 400", async () => {
-			const response = await supertest(app.getHttpServer())
+			const response = await request(app.getHttpServer())
 				.post("/api/v1/auth/signup-email")
 				.send({ email: "alice@example.com", password: BREACHED_PASSWORD });
 			// HIBP fails open if the network is unreachable, so accept either 400
@@ -121,7 +121,7 @@ describe("Email Auth Integration Tests", () => {
 			// Same status as a fresh signup so the endpoint can't be used to
 			// probe which emails are registered; the account gets a "you
 			// already have an account" email instead of a verification link.
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.post("/api/v1/auth/signup-email")
 				.send({ email: "alice@example.com", password: SAFE_PASSWORD })
 				.expect(200);
@@ -138,13 +138,13 @@ describe("Email Auth Integration Tests", () => {
 		});
 
 		it("invalidates the previous pending_signup token when called twice", async () => {
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.post("/api/v1/auth/signup-email")
 				.send({ email: "alice@example.com", password: SAFE_PASSWORD })
 				.expect(200);
 			const firstToken = await freshVerificationToken(app, "alice@example.com");
 
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.post("/api/v1/auth/signup-email")
 				.send({ email: "alice@example.com", password: SAFE_PASSWORD })
 				.expect(200);
@@ -161,7 +161,7 @@ describe("Email Auth Integration Tests", () => {
 		const email = "alice@example.com";
 
 		beforeEach(async () => {
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.post("/api/v1/auth/signup-email")
 				.send({ email, password: SAFE_PASSWORD })
 				.expect(200);
@@ -169,10 +169,7 @@ describe("Email Auth Integration Tests", () => {
 
 		it("creates the user + email auth method and returns a session", async () => {
 			const token = await freshVerificationToken(app, email);
-			const response = await supertest(app.getHttpServer())
-				.post("/api/v1/auth/verify-email")
-				.send({ token })
-				.expect(200);
+			const response = await request(app.getHttpServer()).post("/api/v1/auth/verify-email").send({ token }).expect(200);
 
 			expect(response.body.accessToken).toBeTruthy();
 			expect(response.body.user.email).toBe(email);
@@ -197,9 +194,9 @@ describe("Email Auth Integration Tests", () => {
 
 		it("rejects an already-used token with 400 and does not create a duplicate user", async () => {
 			const token = await freshVerificationToken(app, email);
-			await supertest(app.getHttpServer()).post("/api/v1/auth/verify-email").send({ token }).expect(200);
+			await request(app.getHttpServer()).post("/api/v1/auth/verify-email").send({ token }).expect(200);
 
-			await supertest(app.getHttpServer()).post("/api/v1/auth/verify-email").send({ token }).expect(400);
+			await request(app.getHttpServer()).post("/api/v1/auth/verify-email").send({ token }).expect(400);
 
 			await withRequestContext(app, async () => {
 				const orm = app.get(MikroORM);
@@ -208,7 +205,7 @@ describe("Email Auth Integration Tests", () => {
 		});
 
 		it("rejects an unknown token with 400", async () => {
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.post("/api/v1/auth/verify-email")
 				.send({ token: "deadbeef".repeat(8) })
 				.expect(400);
@@ -222,8 +219,8 @@ describe("Email Auth Integration Tests", () => {
 		it("handles two concurrent requests for the same token without 500ing", async () => {
 			const token = await freshVerificationToken(app, email);
 			const [resA, resB] = await Promise.all([
-				supertest(app.getHttpServer()).post("/api/v1/auth/verify-email").send({ token }),
-				supertest(app.getHttpServer()).post("/api/v1/auth/verify-email").send({ token }),
+				request(app.getHttpServer()).post("/api/v1/auth/verify-email").send({ token }),
+				request(app.getHttpServer()).post("/api/v1/auth/verify-email").send({ token }),
 			]);
 
 			const statuses = [resA.status, resB.status];
@@ -248,16 +245,16 @@ describe("Email Auth Integration Tests", () => {
 		const email = "alice@example.com";
 
 		beforeEach(async () => {
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.post("/api/v1/auth/signup-email")
 				.send({ email, password: SAFE_PASSWORD })
 				.expect(200);
 			const token = await freshVerificationToken(app, email);
-			await supertest(app.getHttpServer()).post("/api/v1/auth/verify-email").send({ token }).expect(200);
+			await request(app.getHttpServer()).post("/api/v1/auth/verify-email").send({ token }).expect(200);
 		});
 
 		it("returns a session on correct credentials", async () => {
-			const response = await supertest(app.getHttpServer())
+			const response = await request(app.getHttpServer())
 				.post("/api/v1/auth/login-email")
 				.send({ email, password: SAFE_PASSWORD })
 				.expect(200);
@@ -268,7 +265,7 @@ describe("Email Auth Integration Tests", () => {
 		});
 
 		it("returns 401 on wrong password with a generic error message", async () => {
-			const response = await supertest(app.getHttpServer())
+			const response = await request(app.getHttpServer())
 				.post("/api/v1/auth/login-email")
 				.send({ email, password: `${SAFE_PASSWORD}-wrong` })
 				.expect(401);
@@ -276,7 +273,7 @@ describe("Email Auth Integration Tests", () => {
 		});
 
 		it("returns 401 on non-existent email with the same generic error (no enumeration)", async () => {
-			const response = await supertest(app.getHttpServer())
+			const response = await request(app.getHttpServer())
 				.post("/api/v1/auth/login-email")
 				.send({ email: "ghost@example.com", password: SAFE_PASSWORD })
 				.expect(401);
@@ -294,14 +291,14 @@ describe("Email Auth Integration Tests", () => {
 			});
 
 			// The 10th failure trips the lock.
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.post("/api/v1/auth/login-email")
 				.send({ email, password: `${SAFE_PASSWORD}-wrong` })
 				.expect(401);
 
 			// While locked, even the correct password gets the same generic 401
 			// (no oracle for "this account exists and is locked").
-			const locked = await supertest(app.getHttpServer())
+			const locked = await request(app.getHttpServer())
 				.post("/api/v1/auth/login-email")
 				.send({ email, password: SAFE_PASSWORD })
 				.expect(401);
@@ -316,7 +313,7 @@ describe("Email Auth Integration Tests", () => {
 				await orm.em.persist(method).flush();
 			});
 
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.post("/api/v1/auth/login-email")
 				.send({ email, password: SAFE_PASSWORD })
 				.expect(200);
@@ -333,7 +330,7 @@ describe("Email Auth Integration Tests", () => {
 
 	describe("POST /auth/request-password-reset", () => {
 		it("always returns 200 even when no user exists (no enumeration)", async () => {
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.post("/api/v1/auth/request-password-reset")
 				.send({ email: "ghost@example.com" })
 				.expect(200);
@@ -351,14 +348,14 @@ describe("Email Auth Integration Tests", () => {
 
 		it("creates a password_reset token when a user with an email method exists", async () => {
 			const email = "alice@example.com";
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.post("/api/v1/auth/signup-email")
 				.send({ email, password: SAFE_PASSWORD })
 				.expect(200);
 			const verifyToken = await freshVerificationToken(app, email);
-			await supertest(app.getHttpServer()).post("/api/v1/auth/verify-email").send({ token: verifyToken }).expect(200);
+			await request(app.getHttpServer()).post("/api/v1/auth/verify-email").send({ token: verifyToken }).expect(200);
 
-			await supertest(app.getHttpServer()).post("/api/v1/auth/request-password-reset").send({ email }).expect(200);
+			await request(app.getHttpServer()).post("/api/v1/auth/request-password-reset").send({ email }).expect(200);
 
 			await withRequestContext(app, async () => {
 				const orm = app.get(MikroORM);
@@ -392,7 +389,7 @@ describe("Email Auth Integration Tests", () => {
 				await orm.em.persist(method).flush();
 			});
 
-			await supertest(app.getHttpServer()).post("/api/v1/auth/request-password-reset").send({ email }).expect(200);
+			await request(app.getHttpServer()).post("/api/v1/auth/request-password-reset").send({ email }).expect(200);
 
 			await withRequestContext(app, async () => {
 				const orm = app.get(MikroORM);
@@ -410,19 +407,19 @@ describe("Email Auth Integration Tests", () => {
 		const email = "alice@example.com";
 
 		beforeEach(async () => {
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.post("/api/v1/auth/signup-email")
 				.send({ email, password: SAFE_PASSWORD })
 				.expect(200);
 			const verifyToken = await freshVerificationToken(app, email);
-			await supertest(app.getHttpServer()).post("/api/v1/auth/verify-email").send({ token: verifyToken }).expect(200);
-			await supertest(app.getHttpServer()).post("/api/v1/auth/request-password-reset").send({ email }).expect(200);
+			await request(app.getHttpServer()).post("/api/v1/auth/verify-email").send({ token: verifyToken }).expect(200);
+			await request(app.getHttpServer()).post("/api/v1/auth/request-password-reset").send({ email }).expect(200);
 		});
 
 		it("updates the password and invalidates ALL sessions", async () => {
 			// Two active sessions for this user: the one from verify-email plus a
 			// second login. Both should be invalidated after reset.
-			const second = await supertest(app.getHttpServer())
+			const second = await request(app.getHttpServer())
 				.post("/api/v1/auth/login-email")
 				.send({ email, password: SAFE_PASSWORD })
 				.expect(200);
@@ -431,17 +428,17 @@ describe("Email Auth Integration Tests", () => {
 
 			const resetToken = await freshResetToken(app, email);
 			const newPassword = "Newly-chosen-23-char-pass";
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.post("/api/v1/auth/reset-password")
 				.send({ token: resetToken, password: newPassword })
 				.expect(200);
 
 			expect(await countSessions(app, userId)).toBe(0);
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.post("/api/v1/auth/login-email")
 				.send({ email, password: SAFE_PASSWORD })
 				.expect(401);
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.post("/api/v1/auth/login-email")
 				.send({ email, password: newPassword })
 				.expect(200);
@@ -450,11 +447,11 @@ describe("Email Auth Integration Tests", () => {
 		it("rejects a reused token with 400", async () => {
 			const resetToken = await freshResetToken(app, email);
 			const newPassword = "Another-fresh-pass-15-chars";
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.post("/api/v1/auth/reset-password")
 				.send({ token: resetToken, password: newPassword })
 				.expect(200);
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.post("/api/v1/auth/reset-password")
 				.send({ token: resetToken, password: `${newPassword}-2` })
 				.expect(400);
@@ -470,12 +467,12 @@ describe("Email Auth Integration Tests", () => {
 		}
 
 		beforeEach(async () => {
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.post("/api/v1/auth/signup-email")
 				.send({ email, password: SAFE_PASSWORD })
 				.expect(200);
 			const verifyToken = await freshVerificationToken(app, email);
-			const verifyRes = await supertest(app.getHttpServer())
+			const verifyRes = await request(app.getHttpServer())
 				.post("/api/v1/auth/verify-email")
 				.send({ token: verifyToken })
 				.expect(200);
@@ -484,20 +481,20 @@ describe("Email Auth Integration Tests", () => {
 
 		it("changes the password when the current one is supplied", async () => {
 			const newPassword = "Brand-new-strong-pass-22";
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.post("/api/v1/users/me/password")
 				.set("Authorization", await authHeader())
 				.send({ currentPassword: SAFE_PASSWORD, newPassword })
 				.expect(200);
 
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.post("/api/v1/auth/login-email")
 				.send({ email, password: newPassword })
 				.expect(200);
 		});
 
 		it("requires the current password when one already exists (400 without it)", async () => {
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.post("/api/v1/users/me/password")
 				.set("Authorization", await authHeader())
 				.send({ newPassword: "Brand-new-strong-pass-22" })
@@ -505,7 +502,7 @@ describe("Email Auth Integration Tests", () => {
 		});
 
 		it("rejects a wrong current password with 401", async () => {
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.post("/api/v1/users/me/password")
 				.set("Authorization", await authHeader())
 				.send({ currentPassword: "wrong-current", newPassword: "Brand-new-strong-pass-22" })
@@ -539,13 +536,13 @@ describe("Email Auth Integration Tests", () => {
 			);
 			token = await sessionService.createSession(userId, { userAgent: "test", ipAddress: "127.0.0.1" });
 
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.post("/api/v1/users/me/password")
 				.set("Authorization", `Bearer ${token}`)
 				.send({ newPassword: "First-password-set-22ch" })
 				.expect(200);
 
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.post("/api/v1/auth/login-email")
 				.send({ email: "google@example.com", password: "First-password-set-22ch" })
 				.expect(200);

@@ -1,12 +1,10 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import type { Coordinate } from "@routess/core";
 import { emptyHistory, type Waypoint } from "@routess/core";
 import type { Map as MapboxMap } from "mapbox-gl";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { sampleAndComputeMock, computeRouteMock } = vi.hoisted(() => ({
-	sampleAndComputeMock: vi.fn(),
-	computeRouteMock: vi.fn(),
-}));
+const sampleAndComputeMock = vi.fn();
+const computeRouteMock = vi.fn();
 
 vi.mock("./elevation", () => ({
 	getDefaultElevationService: () => ({

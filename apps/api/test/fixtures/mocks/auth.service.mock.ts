@@ -1,3 +1,5 @@
+import { jest } from "bun:test";
+
 interface JwtPayload {
 	userId: string;
 	email: string;

@@ -1,3 +1,4 @@
+import { afterEach, describe, expect, it } from "bun:test";
 import type { EntityRepository } from "@mikro-orm/core";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { type Coordinate, encodePolyline6 } from "@routess/core";
@@ -62,7 +63,7 @@ function stubTraceRoute(maneuvers: { type?: number; instruction: string; begin_s
 		return new Response(JSON.stringify({ trip: { legs: [{ shape: encodePolyline6(PATH), maneuvers }] } }), {
 			status: 200,
 		});
-	}) as typeof fetch;
+	}) as unknown as typeof fetch;
 }
 
 function stubValhallaDown(): void {
@@ -70,7 +71,7 @@ function stubValhallaDown(): void {
 	globalThis.fetch = (async () => {
 		calls++;
 		return new Response("boom", { status: 500 });
-	}) as typeof fetch;
+	}) as unknown as typeof fetch;
 }
 
 afterEach(() => {

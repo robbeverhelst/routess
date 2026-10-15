@@ -1,5 +1,5 @@
+import { describe, expect, it, vi } from "bun:test";
 import { render, screen } from "@testing-library/react";
-import { vi } from "vitest";
 
 const route = {
 	id: 123,

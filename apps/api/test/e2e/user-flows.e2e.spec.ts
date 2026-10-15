@@ -1,7 +1,7 @@
 import type { INestApplication } from "@nestjs/common";
-import supertest from "supertest";
 import type { User } from "../../src/entities/user.entity";
 import { clearDatabase, closeTestApp, createTestApp, createTestUserWithAuth } from "../utils";
+import request from "../utils/http";
 
 describe("User Flows E2E Tests", () => {
 	let app: INestApplication;
@@ -47,7 +47,7 @@ describe("User Flows E2E Tests", () => {
 				endAddress: "Brandenburg Gate, Berlin",
 			};
 
-			const createRouteResponse = await supertest(app.getHttpServer())
+			const createRouteResponse = await request(app.getHttpServer())
 				.post("/api/v1/routes")
 				.set("Authorization", `Bearer ${accessToken}`)
 				.send(routeData)
@@ -58,7 +58,7 @@ describe("User Flows E2E Tests", () => {
 			expect(createdRoute.user.id).toBe(user.id);
 
 			// Step 3: User views their routes
-			const routesListResponse = await supertest(app.getHttpServer())
+			const routesListResponse = await request(app.getHttpServer())
 				.get("/api/v1/routes")
 				.set("Authorization", `Bearer ${accessToken}`)
 				.expect(200);
@@ -67,7 +67,7 @@ describe("User Flows E2E Tests", () => {
 			expect(routesListResponse.body[0].id).toBe(createdRoute.id);
 
 			// Step 4: User views specific route details
-			const routeDetailResponse = await supertest(app.getHttpServer())
+			const routeDetailResponse = await request(app.getHttpServer())
 				.get(`/api/v1/routes/${createdRoute.id}`)
 				.set("Authorization", `Bearer ${accessToken}`)
 				.expect(200);
@@ -80,7 +80,7 @@ describe("User Flows E2E Tests", () => {
 				description: "Changed to evening schedule",
 			};
 
-			const updateResponse = await supertest(app.getHttpServer())
+			const updateResponse = await request(app.getHttpServer())
 				.patch(`/api/v1/routes/${createdRoute.id}`)
 				.set("Authorization", `Bearer ${accessToken}`)
 				.send(updateData)
@@ -89,13 +89,13 @@ describe("User Flows E2E Tests", () => {
 			expect(updateResponse.body.name).toBe("My Evening Run");
 
 			// Step 6: User deletes their route
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.delete(`/api/v1/routes/${createdRoute.id}`)
 				.set("Authorization", `Bearer ${accessToken}`)
 				.expect(200);
 
 			// Step 7: Verify route is deleted (soft delete)
-			const finalRoutesResponse = await supertest(app.getHttpServer())
+			const finalRoutesResponse = await request(app.getHttpServer())
 				.get("/api/v1/routes")
 				.set("Authorization", `Bearer ${accessToken}`)
 				.expect(200);
@@ -125,7 +125,7 @@ describe("User Flows E2E Tests", () => {
 			const routeIds = [];
 
 			for (let i = 0; i < 2; i++) {
-				const routeResponse = await supertest(app.getHttpServer())
+				const routeResponse = await request(app.getHttpServer())
 					.post("/api/v1/routes")
 					.set("Authorization", `Bearer ${tokens[i]}`)
 					.send({
@@ -144,7 +144,7 @@ describe("User Flows E2E Tests", () => {
 
 			// Verify each user can only see their own routes
 			for (let i = 0; i < 2; i++) {
-				const routesResponse = await supertest(app.getHttpServer())
+				const routesResponse = await request(app.getHttpServer())
 					.get("/api/v1/routes")
 					.set("Authorization", `Bearer ${tokens[i]}`)
 					.expect(200);
@@ -154,12 +154,12 @@ describe("User Flows E2E Tests", () => {
 			}
 
 			// Verify users cannot access each other's routes
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.get(`/api/v1/routes/${routeIds[0]}`)
 				.set("Authorization", `Bearer ${tokens[1]}`)
 				.expect(404);
 
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.get(`/api/v1/routes/${routeIds[1]}`)
 				.set("Authorization", `Bearer ${tokens[0]}`)
 				.expect(404);
@@ -169,9 +169,9 @@ describe("User Flows E2E Tests", () => {
 	describe("Error Recovery Flow", () => {
 		it("should handle various error scenarios gracefully", async () => {
 			// Attempt to access protected endpoints without auth
-			await supertest(app.getHttpServer()).get("/api/v1/routes").expect(401);
+			await request(app.getHttpServer()).get("/api/v1/routes").expect(401);
 
-			await supertest(app.getHttpServer()).post("/api/v1/routes").send({ name: "Unauthorized Route" }).expect(401);
+			await request(app.getHttpServer()).post("/api/v1/routes").send({ name: "Unauthorized Route" }).expect(401);
 
 			// Create a user and get token
 			const { accessToken } = await createTestUserWithAuth(app, {
@@ -193,7 +193,7 @@ describe("User Flows E2E Tests", () => {
 			];
 
 			for (const invalidRoute of invalidRoutes) {
-				await supertest(app.getHttpServer())
+				await request(app.getHttpServer())
 					.post("/api/v1/routes")
 					.set("Authorization", `Bearer ${accessToken}`)
 					.send(invalidRoute)
@@ -201,18 +201,18 @@ describe("User Flows E2E Tests", () => {
 			}
 
 			// Try to access non-existent resources
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.get("/api/v1/routes/999999")
 				.set("Authorization", `Bearer ${accessToken}`)
 				.expect(404);
 
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.patch("/api/v1/routes/999999")
 				.set("Authorization", `Bearer ${accessToken}`)
 				.send({ name: "Updated" })
 				.expect(404);
 
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.delete("/api/v1/routes/999999")
 				.set("Authorization", `Bearer ${accessToken}`)
 				.expect(404);
@@ -243,7 +243,7 @@ describe("User Flows E2E Tests", () => {
 					duration: 600 + i * 60,
 				};
 
-				const result = await supertest(app.getHttpServer())
+				const result = await request(app.getHttpServer())
 					.post("/api/v1/routes")
 					.set("Authorization", `Bearer ${accessToken}`)
 					.send(routeData)
@@ -254,7 +254,7 @@ describe("User Flows E2E Tests", () => {
 
 			// Retrieve all routes
 			const startTime = Date.now();
-			const routesResponse = await supertest(app.getHttpServer())
+			const routesResponse = await request(app.getHttpServer())
 				.get("/api/v1/routes")
 				.set("Authorization", `Bearer ${accessToken}`)
 				.expect(200);

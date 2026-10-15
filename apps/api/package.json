@@ -20,9 +20,9 @@
 		"test:unit": "bun test test/unit/ src/",
 		"test:integration": "bun test --timeout 30000 --max-concurrency 1 test/integration/",
 		"test:e2e": "bun test --timeout 30000 --max-concurrency 1 test/e2e/",
-		"test:watch": "jest --watch",
-		"test:cov": "jest --coverage",
-		"test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
+		"test:watch": "bun test --watch --timeout 30000 --max-concurrency 1",
+		"test:cov": "bun test --coverage --timeout 30000 --max-concurrency 1",
+		"test:debug": "bun test --inspect-brk --timeout 0 --max-concurrency 1",
 		"check-types": "tsc --noEmit",
 		"ci": "bun run check-types && bun run lint:check && bun run build && bun run test",
 		"clean": "rimraf dist coverage .nest node_modules/.cache tsconfig.build.tsbuildinfo tsconfig.tsbuildinfo",
@@ -93,64 +93,17 @@
 		"@nestjs/cli": "^12.0.0",
 		"@nestjs/schematics": "^12.0.0",
 		"@nestjs/testing": "^12.0.0",
+		"@types/bun": "^1.4.3",
 		"@types/compression": "^1.8.1",
 		"@types/express": "^5.0.3",
-		"@types/jest": "30.0.0",
 		"@types/node": "^26.0.0",
 		"@types/passport-http-bearer": "^1.0.42",
 		"@types/passport-jwt": "^4.0.1",
 		"@types/pg": "^8.15.4",
-		"@types/supertest": "^7.0.0",
 		"@types/uuid": "^11.0.0",
-		"jest": "30.5.2",
 		"source-map-support": "^0.5.20",
-		"supertest": "^7.1.1",
-		"ts-jest": "29.4.15",
 		"ts-loader": "^9.2.3",
-		"ts-node": "^10.0.0",
 		"tsconfig-paths": "4.2.0",
 		"typescript": "~6.0.0"
-	},
-	"jest": {
-		"moduleFileExtensions": [
-			"js",
-			"json",
-			"ts"
-		],
-		"rootDir": ".",
-		"testRegex": "(test/.*/.*\\.(spec|e2e\\.spec)\\.ts$|src/.*\\.spec\\.ts$)",
-		"transform": {
-			"^.+\\.(t|j)s$": [
-				"ts-jest",
-				{
-					"tsconfig": "tsconfig.test.json"
-				}
-			]
-		},
-		"collectCoverageFrom": [
-			"src/**/*.(t|j)s",
-			"!src/**/*.spec.ts",
-			"!src/**/*.e2e-spec.ts",
-			"!src/main.ts",
-			"!src/**/index.ts"
-		],
-		"coverageDirectory": "./coverage",
-		"testEnvironment": "node",
-		"coverageReporters": [
-			"text",
-			"lcov",
-			"html"
-		],
-		"coveragePathIgnorePatterns": [
-			"/node_modules/",
-			"/test/",
-			"/dist/"
-		],
-		"moduleNameMapper": {
-			"^src/(.*)$": "<rootDir>/src/$1"
-		},
-		"setupFilesAfterEnv": [
-			"<rootDir>/jest.setup.ts"
-		]
 	}
 }

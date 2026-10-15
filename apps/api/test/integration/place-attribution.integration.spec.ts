@@ -3,8 +3,8 @@ import type { INestApplication } from "@nestjs/common";
 import { Route } from "src/entities/route.entity";
 import { User } from "src/entities/user.entity";
 import { PlacesService } from "src/places/places.service";
-import supertest from "supertest";
 import { clearDatabase, closeTestApp, createTestApp, generateTestJWT, withRequestContext } from "../utils";
+import request from "../utils/http";
 
 // Place attribution (#233): saving a Route persists its bbox synchronously and
 // derives the Place asynchronously through the (stubbed) geocoder.
@@ -75,7 +75,7 @@ describe("Place attribution on save", () => {
 
 	it("persists the bbox synchronously and the Place asynchronously on create", async () => {
 		stubMapboxGeocoder("Gent", "Oost-Vlaanderen", "BE");
-		const res = await supertest(app.getHttpServer())
+		const res = await request(app.getHttpServer())
 			.post("/api/v1/routes")
 			.set("Authorization", `Bearer ${authToken}`)
 			.send({
@@ -103,7 +103,7 @@ describe("Place attribution on save", () => {
 		expect(route?.placeCountryCode).toBe("BE");
 
 		// #233: route API responses include the place.
-		const getRes = await supertest(app.getHttpServer())
+		const getRes = await request(app.getHttpServer())
 			.get(`/api/v1/routes/${res.body.id}`)
 			.set("Authorization", `Bearer ${authToken}`)
 			.expect(200);
@@ -112,7 +112,7 @@ describe("Place attribution on save", () => {
 
 	it("re-derives the Place when the start moves on update", async () => {
 		stubMapboxGeocoder("Gent", "Oost-Vlaanderen", "BE");
-		const created = await supertest(app.getHttpServer())
+		const created = await request(app.getHttpServer())
 			.post("/api/v1/routes")
 			.set("Authorization", `Bearer ${authToken}`)
 			.send({
@@ -131,7 +131,7 @@ describe("Place attribution on save", () => {
 		await pollForPlace(app, created.body.id);
 
 		stubMapboxGeocoder("Brugge", "West-Vlaanderen", "BE");
-		await supertest(app.getHttpServer())
+		await request(app.getHttpServer())
 			.patch(`/api/v1/routes/${created.body.id}`)
 			.set("Authorization", `Bearer ${authToken}`)
 			.send({
@@ -201,7 +201,7 @@ describe("Place attribution on save", () => {
 			return originalFetch(input, init);
 		}) as typeof fetch;
 
-		const res = await supertest(app.getHttpServer())
+		const res = await request(app.getHttpServer())
 			.post("/api/v1/routes")
 			.set("Authorization", `Bearer ${authToken}`)
 			.send({

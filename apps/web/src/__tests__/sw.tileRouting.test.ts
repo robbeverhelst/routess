@@ -1,14 +1,13 @@
+import { describe, expect, it } from "bun:test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { describe, expect, it } from "vitest";
 
 // sw.js is a service worker script, not a module, so it cannot be imported.
 // Lift the two matchers out of the shipped source instead: this test exists
 // because mapbox-gl v3 moved every basemap tile to api.mapbox.com, which
 // silently stopped matching the old hostname-based check and dumped the whole
 // basemap into the 50-entry RUNTIME cache.
-// jsdom gives import.meta.url an http scheme, so resolve from the vitest root.
-const SW_SOURCE = readFileSync(resolve(process.cwd(), "src/sw.js"), "utf8");
+const SW_SOURCE = readFileSync(resolve(import.meta.dir, "../sw.js"), "utf8");
 
 function extractPatterns(name: string): RegExp[] {
 	const match = SW_SOURCE.match(new RegExp(`const ${name} = (\\[[\\s\\S]*?\\n\\];)`));

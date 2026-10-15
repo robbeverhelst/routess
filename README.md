@@ -91,7 +91,7 @@ The domain glossary lives in [`CONTEXT.md`](CONTEXT.md), and the decisions behin
 ## Testing
 
 ```bash
-bun run test   # every workspace: bun test (api, core, packages, landing), vitest (web)
+bun run test   # bun test in every workspace
 ```
 
 The API's integration tests need Postgres. `bun run ci` starts it through `docker/compose.yaml` before running the full pipeline.

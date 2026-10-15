@@ -1,8 +1,10 @@
+import { describe, expect, it } from "bun:test";
 import { fetchSurfaceBreakdown } from "@/features/routing/services/SurfaceService";
+import { mocked } from "@/test/helpers";
 
 describe("SurfaceService", () => {
 	it("sends cycle activity to the trace-attributes proxy as bicycle costing", async () => {
-		vi.mocked(fetch).mockResolvedValue({
+		mocked(fetch).mockResolvedValue({
 			ok: true,
 			json: async () => ({
 				edges: [
@@ -21,7 +23,7 @@ describe("SurfaceService", () => {
 		);
 
 		expect(fetch).toHaveBeenCalledTimes(1);
-		const [url, init] = vi.mocked(fetch).mock.calls[0] ?? [];
+		const [url, init] = mocked(fetch).mock.calls[0] ?? [];
 		const body = JSON.parse(String(init?.body));
 
 		expect(String(url)).toContain("/api/v1/routing/trace-attributes");
@@ -40,7 +42,7 @@ describe("SurfaceService", () => {
 	});
 
 	it("maps run and walk to pedestrian costing", async () => {
-		vi.mocked(fetch).mockResolvedValue({
+		mocked(fetch).mockResolvedValue({
 			ok: true,
 			json: async () => ({ edges: [{ surface: "paved", length: 1.0 }] }),
 		} as Response);
@@ -52,11 +54,11 @@ describe("SurfaceService", () => {
 			],
 			"run",
 		);
-		const [, runInit] = vi.mocked(fetch).mock.calls[0] ?? [];
+		const [, runInit] = mocked(fetch).mock.calls[0] ?? [];
 		expect(JSON.parse(String(runInit?.body)).costing).toBe("pedestrian");
 
-		vi.mocked(fetch).mockClear();
-		vi.mocked(fetch).mockResolvedValue({
+		mocked(fetch).mockClear();
+		mocked(fetch).mockResolvedValue({
 			ok: true,
 			json: async () => ({ edges: [{ surface: "paved", length: 1.0 }] }),
 		} as Response);
@@ -67,7 +69,7 @@ describe("SurfaceService", () => {
 			],
 			"walk",
 		);
-		const [, walkInit] = vi.mocked(fetch).mock.calls[0] ?? [];
+		const [, walkInit] = mocked(fetch).mock.calls[0] ?? [];
 		expect(JSON.parse(String(walkInit?.body)).costing).toBe("pedestrian");
 	});
 });

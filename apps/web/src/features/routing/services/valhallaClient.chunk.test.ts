@@ -1,5 +1,5 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { encodePolyline6, type Waypoint } from "@routess/core";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { computeRoute } from "./valhallaClient";
 
 const fetchMock = vi.fn();

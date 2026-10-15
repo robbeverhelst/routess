@@ -1,3 +1,4 @@
+import { describe, expect, it, jest } from "bun:test";
 import type { INestApplication } from "@nestjs/common";
 import { configureApplication } from "../../../src/app/app-setup";
 import { getAppConfig } from "../../../src/config/app-config";

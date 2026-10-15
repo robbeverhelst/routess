@@ -1,3 +1,4 @@
+import { afterAll, beforeAll, beforeEach, describe, expect, it, jest } from "bun:test";
 import { MikroORM } from "@mikro-orm/core";
 import type { INestApplication } from "@nestjs/common";
 
@@ -14,8 +15,8 @@ import { Entitlement } from "src/entities/entitlement.entity";
 import { Payment } from "src/entities/payment.entity";
 import { User } from "src/entities/user.entity";
 import { EntitlementsService } from "src/entitlements/entitlements.service";
-import supertest from "supertest";
 import { clearDatabase, closeTestApp, createTestApp, createTestUserWithAuth, withRequestContext } from "../utils";
+import request from "../utils/http";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const STRIPE = { secretKey: "sk_test_dummy", webhookSecret: "whsec_test_secret", proYearPassPriceId: "price_pass" };
@@ -110,7 +111,7 @@ describe("Billing with Stripe enabled", () => {
 	async function postWebhook(payload: unknown, secret = STRIPE.webhookSecret) {
 		const body = JSON.stringify(payload);
 		const signature = await stripe.webhooks.generateTestHeaderStringAsync({ payload: body, secret });
-		return supertest(app.getHttpServer())
+		return request(app.getHttpServer())
 			.post("/api/v1/billing/webhook")
 			.set("Content-Type", "application/json")
 			.set("Stripe-Signature", signature)
@@ -167,7 +168,7 @@ describe("Billing with Stripe enabled", () => {
 			const forged = await postWebhook(completedEvent("evt_forged", user.id, secondsAgo(1)), "whsec_attacker");
 			expect(forged.status).toBe(400);
 
-			const unsigned = await supertest(app.getHttpServer())
+			const unsigned = await request(app.getHttpServer())
 				.post("/api/v1/billing/webhook")
 				.set("Content-Type", "application/json")
 				.send(JSON.stringify(completedEvent("evt_unsigned", user.id, secondsAgo(1))));
@@ -330,7 +331,7 @@ describe("Billing with Stripe enabled", () => {
 		it("starts a checkout for a signed-in User with the upgrade page as return URLs", async () => {
 			const { user, accessToken } = await createTestUserWithAuth(app, { email: "co@example.com", googleId: "g-co" });
 
-			const response = await supertest(app.getHttpServer())
+			const response = await request(app.getHttpServer())
 				.post("/api/v1/billing/checkout")
 				.set("Authorization", `Bearer ${accessToken}`)
 				.send({});
@@ -345,10 +346,10 @@ describe("Billing with Stripe enabled", () => {
 		});
 
 		it("requires a session and a known offer, and refuses accounts pending deletion", async () => {
-			await supertest(app.getHttpServer()).post("/api/v1/billing/checkout").send({}).expect(401);
+			await request(app.getHttpServer()).post("/api/v1/billing/checkout").send({}).expect(401);
 
 			const { user, accessToken } = await createTestUserWithAuth(app, { email: "co2@example.com", googleId: "g-co2" });
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.post("/api/v1/billing/checkout")
 				.set("Authorization", `Bearer ${accessToken}`)
 				.send({ offer: "pro_lifetime" })
@@ -357,7 +358,7 @@ describe("Billing with Stripe enabled", () => {
 			await withRequestContext(app, () =>
 				orm.em.nativeUpdate(User, { id: user.id }, { deletionStatus: "pending_hard_delete" }),
 			);
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.post("/api/v1/billing/checkout")
 				.set("Authorization", `Bearer ${accessToken}`)
 				.send({})
@@ -366,7 +367,7 @@ describe("Billing with Stripe enabled", () => {
 		});
 
 		it("reports the offer and quotas to anyone, and the account to its owner", async () => {
-			const anonymous = await supertest(app.getHttpServer()).get("/api/v1/billing").expect(200);
+			const anonymous = await request(app.getHttpServer()).get("/api/v1/billing").expect(200);
 			expect(anonymous.body).toEqual({
 				enabled: true,
 				offer: { id: "pro_year_pass", plan: "pro", days: 365, price: { amount: 2999, currency: "eur" } },
@@ -375,7 +376,7 @@ describe("Billing with Stripe enabled", () => {
 			});
 
 			const { user, accessToken } = await createTestUserWithAuth(app, { email: "st@example.com", googleId: "g-st" });
-			const free = await supertest(app.getHttpServer())
+			const free = await request(app.getHttpServer())
 				.get("/api/v1/billing")
 				.set("Authorization", `Bearer ${accessToken}`)
 				.expect(200);
@@ -390,7 +391,7 @@ describe("Billing with Stripe enabled", () => {
 
 			// Reading the status hands a pending OG grant to a pre-launch account.
 			await backdate(user.id, BEFORE_LAUNCH);
-			const og = await supertest(app.getHttpServer())
+			const og = await request(app.getHttpServer())
 				.get("/api/v1/billing")
 				.set("Authorization", `Bearer ${accessToken}`)
 				.expect(200);
@@ -407,13 +408,13 @@ describe("Billing with Stripe enabled", () => {
 			await backdate(user.id, BEFORE_LAUNCH);
 			const grant = jest.spyOn(billing, "grantOgPassIfEligible").mockRejectedValueOnce(new Error("lock timeout"));
 			try {
-				const failed = await supertest(app.getHttpServer())
+				const failed = await request(app.getHttpServer())
 					.get("/api/v1/billing")
 					.set("Authorization", `Bearer ${accessToken}`)
 					.expect(200);
 				expect(failed.body.account.plan).toBe("free");
 
-				const retried = await supertest(app.getHttpServer())
+				const retried = await request(app.getHttpServer())
 					.get("/api/v1/billing")
 					.set("Authorization", `Bearer ${accessToken}`)
 					.expect(200);
@@ -436,16 +437,16 @@ describe("Billing with Stripe enabled", () => {
 		async function attempts(count: number, token?: string): Promise<number[]> {
 			const statuses: number[] = [];
 			for (let i = 0; i < count; i++) {
-				const request = supertest(app.getHttpServer()).post("/api/v1/generation");
-				if (token) request.set("Authorization", `Bearer ${token}`);
-				statuses.push((await request.send({})).status);
+				const attempt = request(app.getHttpServer()).post("/api/v1/generation");
+				if (token) attempt.set("Authorization", `Bearer ${token}`);
+				statuses.push((await attempt.send({})).status);
 			}
 			return statuses;
 		}
 
 		it("caps anonymous callers at the anonymous allowance and points them to sign in", async () => {
 			expect(await attempts(2)).toEqual([400, 429]);
-			const response = await supertest(app.getHttpServer()).post("/api/v1/generation").send({});
+			const response = await request(app.getHttpServer()).post("/api/v1/generation").send({});
 			expect(response.body).toMatchObject({
 				statusCode: 429,
 				code: "RATE_LIMITED",
@@ -456,7 +457,7 @@ describe("Billing with Stripe enabled", () => {
 		it("caps free Users at the free allowance and offers Pro", async () => {
 			const { accessToken } = await createTestUserWithAuth(app, { email: "q-free@example.com", googleId: "g-qf" });
 			expect(await attempts(3, accessToken)).toEqual([400, 400, 429]);
-			const response = await supertest(app.getHttpServer())
+			const response = await request(app.getHttpServer())
 				.post("/api/v1/generation")
 				.set("Authorization", `Bearer ${accessToken}`)
 				.send({});
@@ -474,14 +475,14 @@ describe("Billing with Stripe enabled", () => {
 				orm.em.create(Entitlement, { user: user.id, feature: "personal_access_tokens", source: "manual" });
 				await orm.em.flush();
 			});
-			const minted = await supertest(app.getHttpServer())
+			const minted = await request(app.getHttpServer())
 				.post("/api/v1/auth/tokens")
 				.set("Authorization", `Bearer ${accessToken}`)
 				.send({ label: "cli", scope: "read" })
 				.expect(201);
 
 			expect(await attempts(3, minted.body.token)).toEqual([400, 400, 429]);
-			const response = await supertest(app.getHttpServer())
+			const response = await request(app.getHttpServer())
 				.post("/api/v1/generation")
 				.set("Authorization", `Bearer ${minted.body.token}`)
 				.send({});
@@ -509,16 +510,16 @@ describe("Billing disabled (default, self-host)", () => {
 	});
 
 	it("keeps every billing route inert", async () => {
-		const status = await supertest(app.getHttpServer()).get("/api/v1/billing").expect(200);
+		const status = await request(app.getHttpServer()).get("/api/v1/billing").expect(200);
 		expect(status.body).toEqual({ enabled: false });
 
 		const { accessToken } = await createTestUserWithAuth(app, { email: "off@example.com", googleId: "g-off" });
-		await supertest(app.getHttpServer())
+		await request(app.getHttpServer())
 			.post("/api/v1/billing/checkout")
 			.set("Authorization", `Bearer ${accessToken}`)
 			.send({})
 			.expect(503);
-		await supertest(app.getHttpServer())
+		await request(app.getHttpServer())
 			.post("/api/v1/billing/webhook")
 			.set("Content-Type", "application/json")
 			.set("Stripe-Signature", "t=1,v1=abc")

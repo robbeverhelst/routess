@@ -1,13 +1,11 @@
+import { beforeEach, describe, expect, it, vi } from "bun:test";
 import type { Coordinate } from "@routess/core";
 import { emptyHistory, type Waypoint } from "@routess/core";
 import type { Map as MapboxMap } from "mapbox-gl";
-import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { sampleAndComputeMock, fetchMock, trackEventMock } = vi.hoisted(() => ({
-	sampleAndComputeMock: vi.fn(async () => ({ gainMeters: 0, lossMeters: 0, profile: [] })),
-	fetchMock: vi.fn(),
-	trackEventMock: vi.fn(),
-}));
+const sampleAndComputeMock = vi.fn(async () => ({ gainMeters: 0, lossMeters: 0, profile: [] }));
+const fetchMock = vi.fn();
+const trackEventMock = vi.fn();
 
 vi.mock("./services/elevation", () => ({
 	getDefaultElevationService: () => ({ sampleAndCompute: sampleAndComputeMock }),

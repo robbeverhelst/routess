@@ -1,8 +1,9 @@
+import { beforeEach, describe, expect, it, vi } from "bun:test";
 import { ApiDomainError } from "@routess/api-client";
 import * as Sentry from "@sentry/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import { handleAPIError, handleRoutingError } from "@/lib/errors/error-handler";
 import { isTelemetrySuppressed, Logger, withoutTelemetry } from "@/lib/logger";
+import { mocked } from "@/test/helpers";
 
 vi.mock("@sentry/react", () => ({
 	captureException: vi.fn(),
@@ -11,8 +12,8 @@ vi.mock("@sentry/react", () => ({
 
 vi.mock("@/lib/errors/ErrorToast", () => ({ showErrorToast: vi.fn() }));
 
-const captureException = vi.mocked(Sentry.captureException);
-const captureMessage = vi.mocked(Sentry.captureMessage);
+const captureException = mocked(Sentry.captureException);
+const captureMessage = mocked(Sentry.captureMessage);
 
 const domainError = (code: "UNAUTHORIZED" | "FORBIDDEN" | "INTERNAL", message: string) =>
 	new ApiDomainError({ code, message, statusCode: code === "INTERNAL" ? 500 : 401 });
@@ -55,7 +56,7 @@ describe("ErrorHandler reporting", () => {
 		handleRoutingError(new Error("routing blew up"), "recalculate");
 
 		expect(spy).toHaveBeenCalled();
-		expect(suppressedWhileLogging).toBe(true);
+		expect<boolean | null>(suppressedWhileLogging).toBe(true);
 		expect(captureException).toHaveBeenCalledTimes(1);
 		spy.mockRestore();
 	});

@@ -1,10 +1,11 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import type { ApiBillingStatus, ApiFeature } from "@routess/api-client";
 import type { Coordinate } from "@routess/core";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { queryClient, queryKeys } from "@/lib/query-client";
 import { type GenerationCandidateView, useGenerationStore } from "@/stores/generationStore";
 import { useLoopPreferencesStore } from "@/stores/loopPreferencesStore";
 import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
+import { stubGlobal, stubProperty, unstubAll } from "@/test/helpers";
 import { candidateWaypoints, startGeneration } from "./generationService";
 
 const candidate = (bearingDeg: number): GenerationCandidateView => ({
@@ -123,7 +124,7 @@ describe("generationStore", () => {
 
 describe("startGeneration on a 429", () => {
 	function respond(status: number, body: unknown) {
-		vi.stubGlobal(
+		stubGlobal(
 			"fetch",
 			vi.fn(
 				async () => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } }),
@@ -136,7 +137,7 @@ describe("startGeneration on a 429", () => {
 	});
 
 	afterEach(() => {
-		vi.unstubAllGlobals();
+		unstubAll();
 	});
 
 	it("turns the daily generation quota into a quota failure carrying the upgrade path", async () => {
@@ -157,7 +158,7 @@ describe("startGeneration on a 429", () => {
 		const track = vi.fn();
 		window.umami = { track };
 		useRedesignSettingsStore.setState({ analyticsEnabled: true });
-		vi.spyOn(navigator, "doNotTrack", "get").mockReturnValue(null);
+		stubProperty(navigator, "doNotTrack", null);
 		try {
 			respond(429, {
 				statusCode: 429,
@@ -183,7 +184,7 @@ describe("startGeneration on a 429", () => {
 			expect(track.mock.calls.some(([name]) => name === "route_generation_failed")).toBe(true);
 		} finally {
 			window.umami = undefined;
-			vi.restoreAllMocks();
+			unstubAll();
 		}
 	});
 
@@ -215,7 +216,7 @@ describe("startGeneration and the knooppunt Pro gate (ADR 0039)", () => {
 	});
 
 	afterEach(() => {
-		vi.unstubAllGlobals();
+		unstubAll();
 		queryClient.clear();
 		useLoopPreferencesStore.setState({ preferNodeNetworks: false });
 	});
@@ -229,7 +230,7 @@ describe("startGeneration and the knooppunt Pro gate (ADR 0039)", () => {
 		const fetchMock = vi.fn(
 			async () => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } }),
 		);
-		vi.stubGlobal("fetch", fetchMock);
+		stubGlobal("fetch", fetchMock);
 		return fetchMock;
 	}
 

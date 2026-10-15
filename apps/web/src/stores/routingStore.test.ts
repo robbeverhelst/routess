@@ -1,5 +1,5 @@
+import { beforeEach, describe, expect, it, vi } from "bun:test";
 import { emptyHistory, type Waypoint } from "@routess/core";
-import { vi } from "vitest";
 import { useRoutingStore } from "@/stores/routingStore";
 
 const mockCoordinates = {

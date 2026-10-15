@@ -9,10 +9,10 @@ Le repo a une suite de tests qui s'exécute à chaque PR.
 
 | Surface | Framework |
 | --- | --- |
-| Web (`apps/web`) | Vitest + React Testing Library + MSW |
+| Web (`apps/web`) | bun test + happy-dom + React Testing Library + MSW |
 | E2E web (`apps/web/e2e`) | Playwright, API et Stripe simulés dans le navigateur |
-| API (`apps/api`) | Vitest + conteneur de test Postgres |
-| Packages | Vitest |
+| API (`apps/api`) | bun test + conteneur de test Postgres |
+| Packages | bun test |
 
 ## Les lancer
 
@@ -31,4 +31,4 @@ bun run test:e2e                # Playwright browser E2E (apps/web)
 
 ## Couverture
 
-Le web a `vitest --coverage` câblé. La CI ne bloque pas sur la couverture ; c'est une recommandation, pas une règle.
+Le web a `bun test --coverage` (`bun run test:coverage`) câblé. La CI ne bloque pas sur la couverture ; c'est une recommandation, pas une règle.

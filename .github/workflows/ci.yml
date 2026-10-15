@@ -59,7 +59,7 @@ jobs:
       - name: Format & lint
         run: bunx biome check .
 
-      # `bun --bun` runs every script's `node` (tsc, nest, vitest, next) on Bun,
+      # `bun --bun` runs every script's `node` (tsc, nest, next) on Bun,
       # so a Node.js on the runner image is never picked up.
       - name: Build packages
         run: bun --bun run --filter './packages/*' build
