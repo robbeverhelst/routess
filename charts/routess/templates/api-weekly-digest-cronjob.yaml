@@ -1,0 +1,49 @@
+{{- if .Values.api.weeklyDigest.enabled }}
+# Weekly "routes near you" email (CONTEXT.md "WeeklyDigest"). Mails only Users
+# who opted in, and skips anyone mailed in the last 6 days, so an extra or
+# overlapping run sends nothing twice. Off by default, including self-hosts.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "routess.fullname" . }}-weekly-digest
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "routess.api.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.api.weeklyDigest.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      # A failed run is not retried: a retry could double-mail anyone the
+      # first attempt reached before its sent-at write.
+      backoffLimit: 0
+      activeDeadlineSeconds: 3600
+      template:
+        metadata:
+          labels:
+            {{- include "routess.api.selectorLabels" . | nindent 12 }}
+            routess.app/job: weekly-digest
+        spec:
+          restartPolicy: Never
+          serviceAccountName: {{ include "routess.api.serviceAccountName" . }}
+          automountServiceAccountToken: false
+          {{- with .Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          securityContext:
+            {{- toYaml .Values.api.securityContext | nindent 12 }}
+          containers:
+            - name: weekly-digest
+              image: "{{ .Values.api.image.repository }}:{{ .Values.api.image.tag }}"
+              imagePullPolicy: {{ .Values.api.image.pullPolicy }}
+              command: ["bun", "dist/scripts/send-weekly-digest.js"]
+              env:
+                {{- include "routess.api.env" . | nindent 16 }}
+              securityContext:
+                {{- toYaml .Values.api.containerSecurityContext | nindent 16 }}
+              resources:
+                {{- toYaml .Values.api.weeklyDigest.resources | nindent 16 }}
+{{- end }}
