@@ -6,8 +6,7 @@ import { persist } from "zustand/middleware";
 // generate time; a `point` was explicitly chosen (geolocation or map pick).
 // Session-only: a stale coordinate from last week is worse than the default.
 export type LoopStart =
-	| { kind: "center" }
-	| { kind: "point"; coord: [number, number]; source: "geolocation" | "picked" };
+	{ kind: "center" } | { kind: "point"; coord: [number, number]; source: "geolocation" | "picked" };
 
 /** A pinned must-pass landmark (generation v2 slice: POI anchors). */
 export interface GenerationLandmark {

@@ -1,6 +1,7 @@
 import { Body, Controller, Delete, Get, HttpCode, Inject, Patch, Post, Res, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiProduces, ApiResponse, ApiTags } from "@nestjs/swagger";
 import type { Response } from "express";
+
 import type { AuthenticatedUser } from "../auth/authenticated-user";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import { RequireScope } from "../auth/decorators/require-scope.decorator";

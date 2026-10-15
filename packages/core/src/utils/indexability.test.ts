@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+
 import { isRouteIndexable } from "./indexability";
 
 const base = {

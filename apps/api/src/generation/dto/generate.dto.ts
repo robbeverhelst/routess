@@ -2,8 +2,8 @@ import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import {
 	GENERATION_FAILURE_CODES,
 	type GenerationFailureCode,
-	HEADINGS,
 	type Heading,
+	HEADINGS,
 	ROUTE_ACTIVITIES,
 	ROUTE_GENERATION_TYPES,
 	type RouteActivity,
@@ -24,6 +24,7 @@ import {
 	Min,
 	ValidateNested,
 } from "class-validator";
+
 import { RoutingPreferencesDto } from "../../common/routing-preferences.dto";
 import { RouteLocationDto } from "../../routing/dto/route.dto";
 

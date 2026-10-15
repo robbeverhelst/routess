@@ -1,6 +1,7 @@
 import { EntityManager } from "@mikro-orm/core";
 import { Injectable } from "@nestjs/common";
 import { OnEvent } from "@nestjs/event-emitter";
+
 import {
 	AUTH_LOGIN_ATTEMPTED,
 	AUTH_SESSION_REVOKED,

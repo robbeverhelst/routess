@@ -1,5 +1,6 @@
 import type { OpenAPIV3_2 } from "fumadocs-openapi";
 import { createOpenAPI } from "fumadocs-openapi/server";
+
 import spec from "@/openapi/routess.openapi.json";
 
 export const openapi = createOpenAPI({

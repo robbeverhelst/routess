@@ -1,8 +1,10 @@
 import { useState } from "react";
+
 import { trackEvent } from "@/lib/analytics/track";
 import { useT } from "@/lib/i18n";
 import { useModalsStore } from "@/stores/modalsStore";
 import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
+
 import { I } from "./icons";
 import { RDS_COLORS } from "./primitives";
 

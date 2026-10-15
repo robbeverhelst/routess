@@ -1,5 +1,6 @@
 import { type Rel } from "@mikro-orm/core";
 import { Check, Entity, ManyToOne, PrimaryKey, Property, Unique } from "@mikro-orm/decorators/legacy";
+
 import type { Feature } from "../entitlements/features";
 import { BaseEntity } from "./base.entity";
 import type { UserPlan } from "./user.entity";

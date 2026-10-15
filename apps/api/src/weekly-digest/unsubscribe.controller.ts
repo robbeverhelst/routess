@@ -1,6 +1,7 @@
 import { Controller, Get, HttpCode, Inject, Post, Query, Res } from "@nestjs/common";
 import { ApiExcludeController } from "@nestjs/swagger";
 import type { Response } from "express";
+
 import { ThrottleModerate } from "../common/decorators/throttle.decorator";
 import type { AppConfig } from "../config/app-config";
 import { APP_CONFIG } from "../config/config.module";

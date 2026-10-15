@@ -1,4 +1,5 @@
 import type { SignInEntryPoint } from "@/lib/app-events";
+
 import { trackEvent } from "./track";
 
 // Logout and account deletion land the user on the sign-in screen too, but

@@ -1,9 +1,10 @@
 import { MikroORM } from "@mikro-orm/core";
 import type { INestApplication } from "@nestjs/common";
 import { Session } from "src/entities/session.entity";
-import { User } from "src/entities/user.entity";
 import { UserAuthMethod } from "src/entities/user-auth-method.entity";
+import { User } from "src/entities/user.entity";
 import { VerificationToken } from "src/entities/verification-token.entity";
+
 import { clearDatabase, closeTestApp, createTestApp, withRequestContext } from "../utils";
 import request from "../utils/http";
 

@@ -19,7 +19,7 @@ PR / push  ──▶  helm-validate  ┘                                        
 
 | Stage | Wat het doet |
 | --- | --- |
-| **test** | `bun install` → Biome → type-check → tests draaien met een Postgres service container → alles bouwen |
+| **test** | `bun install` → bun fmt → Biome → type-check → tests draaien met een Postgres service container → alles bouwen |
 | **helm-validate** | `helm lint` + `helm template` om chart-fouten op te vangen |
 | **release** | Draait alleen bij een push naar `main`. `semantic-release` leest conventional commits, bepaalt de versie, maakt tag + release notes |
 | **publish-images** | Matrix-builds van de web/api/docs/landing Docker-images, pusht naar GHCR met `version`-, `minor`-, `major`- en `sha`-tags |

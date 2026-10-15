@@ -1,6 +1,7 @@
 import { Controller, Get, Req, Res, VERSION_NEUTRAL } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { Request, Response } from "express";
+
 import { getPrometheusExporter } from "./tracing";
 
 @ApiTags("metrics")

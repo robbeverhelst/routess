@@ -1,6 +1,7 @@
 import { EntityManager } from "@mikro-orm/core";
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { routeBoundingBox } from "@routess/core";
+
 import type { AppConfig } from "../config/app-config";
 import { APP_CONFIG } from "../config/config.module";
 import { ExternalRoute } from "../entities/external-route.entity";

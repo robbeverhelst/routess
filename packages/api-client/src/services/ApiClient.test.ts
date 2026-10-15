@@ -1,4 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
+
 import { ApiDomainError, ApiHttpError } from "../errors";
 import type { AuthStateManager, HttpClient } from "../types";
 import { ApiClient } from "./ApiClient";

@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
-import { ARTICLES, articlePath, SECTION_PATHS } from "@/lib/articles";
+
+import { articlePath, ARTICLES, SECTION_PATHS } from "@/lib/articles";
 import type { ArticleSection } from "@/lib/articles/types";
 import { localeFromHost, SELF_HOST } from "@/lib/i18n";
 import { localizedAlternates, type SitemapUrl, urlsetXml, xmlResponse } from "@/lib/sitemap-xml";

@@ -3,6 +3,7 @@ import { InjectRepository } from "@mikro-orm/nestjs";
 import { EntityManager } from "@mikro-orm/postgresql";
 import { Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
 import type { Counter, Histogram, UpDownCounter } from "@opentelemetry/api";
+
 import { Route } from "../entities/route.entity";
 import { User } from "../entities/user.entity";
 import { setDbMetricsRecorder } from "./db-metrics-recorder";

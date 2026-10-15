@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
+
 import type { Coordinate } from "@routess/core";
 import { emptyHistory, type Waypoint } from "@routess/core";
 import type { Map as MapboxMap } from "mapbox-gl";
@@ -17,6 +18,7 @@ vi.mock("./valhallaClient", () => ({
 }));
 
 import { useRoutingStore } from "@/stores/routingStore";
+
 import { capturePreEditState, getRoute, patchRoute } from "./RouteCalculationService";
 
 const flushMicrotasks = () => new Promise<void>((resolve) => setTimeout(resolve, 0));

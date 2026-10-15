@@ -1,5 +1,6 @@
 import type { Command } from "commander";
-import { type RunOptions, renderError } from "./output";
+
+import { renderError, type RunOptions } from "./output";
 
 // Resolves the global flags off the root program and translates thrown
 // errors into the exit-code mapping documented in

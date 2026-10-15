@@ -1,4 +1,5 @@
 import { buildMapboxStaticPreviewUrl as buildWithToken, type StaticPreviewOptions as CoreOptions } from "@routess/core";
+
 import { getRuntimeConfig } from "@/lib/runtime-config";
 
 type Coordinate = [number, number];

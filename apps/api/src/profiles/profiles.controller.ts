@@ -1,5 +1,6 @@
 import { Controller, Get, Header, Param, UseGuards } from "@nestjs/common";
 import { ApiOperation, ApiParam, ApiResponse, ApiTags } from "@nestjs/swagger";
+
 import type { AuthenticatedUser } from "../auth/authenticated-user";
 import { OptionalCurrentUser } from "../auth/decorators/current-user.decorator";
 import { OptionalJwtAuthGuard } from "../auth/guards/optional-jwt-auth.guard";

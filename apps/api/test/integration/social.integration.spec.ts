@@ -1,8 +1,9 @@
 import { MikroORM } from "@mikro-orm/core";
 import type { INestApplication } from "@nestjs/common";
-import { Route } from "src/entities/route.entity";
 import { RouteShare } from "src/entities/route-share.entity";
+import { Route } from "src/entities/route.entity";
 import { User } from "src/entities/user.entity";
+
 import { clearDatabase, closeTestApp, createTestApp, generateTestJWT } from "../utils";
 import request from "../utils/http";
 

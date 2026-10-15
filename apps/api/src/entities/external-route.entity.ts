@@ -1,6 +1,7 @@
 import { type Ref } from "@mikro-orm/core";
 import { Entity, Index, ManyToOne, PrimaryKey, Property, Unique } from "@mikro-orm/decorators/legacy";
 import type { RouteActivity } from "@routess/core";
+
 import { BaseEntity } from "./base.entity";
 import { SeedSource } from "./seed-source.entity";
 

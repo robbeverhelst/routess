@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger, UnauthorizedException } from "@nestjs/common";
 import { OAuth2Client, type TokenPayload } from "google-auth-library";
+
 import type { AppConfig } from "../config/app-config";
 import { APP_CONFIG } from "../config/config.module";
 import { MetricsService } from "../telemetry/metrics.service";

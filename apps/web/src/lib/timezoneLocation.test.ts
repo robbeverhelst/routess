@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "bun:test";
+
 import { getLocationForTimezone, getTimezoneFallbackLocation } from "@/lib/timezoneLocation";
 
 describe("getLocationForTimezone", () => {

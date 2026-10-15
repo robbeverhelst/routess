@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { type HomeLane, homeCopy } from "@/lib/home-content";
+
+import { homeCopy, type HomeLane } from "@/lib/home-content";
 import { i18n } from "@/lib/i18n";
 import { SITE_URL } from "@/lib/site";
 

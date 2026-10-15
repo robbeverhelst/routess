@@ -1,5 +1,6 @@
 import { type GeoJSONSource, LngLatBounds, type Map as MapboxMap, type MapMouseEvent } from "mapbox-gl";
 import { useEffect } from "react";
+
 import { ROUTE_PREVIEW_COLOR } from "@/components/map/colors";
 import { type GenerationCandidateView, useGenerationStore } from "@/stores/generationStore";
 

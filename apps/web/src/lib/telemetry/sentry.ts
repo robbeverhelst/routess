@@ -1,8 +1,10 @@
 import * as Sentry from "@sentry/react";
+
 import { getStoredUser } from "@/lib/auth-state";
 import { Logger } from "@/lib/logger";
 import { getRuntimeConfig } from "@/lib/runtime-config";
 import { useRoutingStore } from "@/stores/routingStore";
+
 import { isBotClient } from "./bots";
 import { rateLimitBeforeSend } from "./rate-limit";
 import { scrubBreadcrumb } from "./scrub";

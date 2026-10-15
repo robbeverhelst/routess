@@ -2,11 +2,13 @@ import type { Coordinate, Waypoint } from "@routess/core";
 import { haversineDistance } from "@routess/core";
 import type * as GeoJSON from "geojson";
 import type { Map as MapboxMap } from "mapbox-gl";
+
 import { Logger } from "@/lib/logger";
 import { useRouteScrubStore } from "@/stores/routeScrubStore";
 import { useRouteSurfaceStore } from "@/stores/routeSurfaceStore";
 import { useRoutingStore } from "@/stores/routingStore";
 import { useWaypointHoverStore } from "@/stores/waypointHoverStore";
+
 import {
 	clearKilometerMarkersLayer,
 	clearRouteLayer,

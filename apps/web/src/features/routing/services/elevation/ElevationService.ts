@@ -1,5 +1,6 @@
 import type { Coordinate } from "@routess/core";
 import { haversineDistance } from "@routess/core";
+
 import type { ElevationProvider, ElevationResult, ProfilePoint } from "./types";
 
 const DEFAULT_TARGET_SPACING_METERS = 50;

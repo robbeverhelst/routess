@@ -1,0 +1,29 @@
+# bun fmt replaces Biome's formatter. It is not in a stable Bun yet:
+# package.json runs it from the pinned canary bunx bun@1.4.3-canary.20261014.1.
+
+[fmt]
+printWidth = 120
+useTabs = true
+sortImports = true
+sortPackageJson = true
+sortTailwindcss = true
+# Same files Biome left alone: generated files, agent skills, Helm (Go)
+# templates, and docs/config formats Biome never formatted. CHANGELOG.md is
+# written by semantic-release.
+ignorePatterns = [
+	# Ignored by nested .gitignore files, which bun fmt does not read.
+	"apps/docs/.source/**",
+	"**/.next/**",
+	"apps/landing/next-env.d.ts",
+	"**/routeTree.gen.ts",
+	".agents/**",
+	".claude/**",
+	"skills-lock.json",
+	"charts/**/templates/**",
+	"**/*.md",
+	"**/*.mdx",
+	"**/*.html",
+	"**/*.yml",
+	"**/*.yaml",
+	"**/*.toml",
+]

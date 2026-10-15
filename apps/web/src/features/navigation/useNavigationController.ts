@@ -9,13 +9,15 @@ import {
 	remainingMeters,
 } from "@routess/core";
 import { useCallback, useEffect, useMemo, useRef } from "react";
+
 import { computeRoute } from "@/features/routing/services/valhallaClient";
 import { useWakeLock } from "@/hooks/useWakeLock";
 import { t } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
-import { type LocationState, locationService } from "@/services/LocationService";
+import { locationService, type LocationState } from "@/services/LocationService";
 import { useNavigationStore } from "@/stores/navigationStore";
 import { useUiStore } from "@/stores/uiStore";
+
 import { speak, stopSpeech } from "./speech";
 
 // Hosts the dirty edges around the pure engine (ADR 0038): geolocation in,

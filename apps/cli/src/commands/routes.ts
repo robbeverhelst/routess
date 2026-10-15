@@ -1,6 +1,8 @@
 import { readFileSync, writeFileSync } from "node:fs";
+
 import { calculatePathDistance, ROUTE_ACTIVITIES, type RouteActivity, type Waypoint } from "@routess/core";
 import type { Command } from "commander";
+
 import { request, requestRaw, requestWithHeaders } from "../client";
 import { loadConfig, requireToken } from "../config";
 import { parseGpx } from "../gpx";

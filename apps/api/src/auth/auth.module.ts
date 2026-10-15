@@ -5,14 +5,15 @@ import type { JwtModuleOptions } from "@nestjs/jwt";
 import { JwtModule } from "@nestjs/jwt";
 import { PassportModule } from "@nestjs/passport";
 import { ScheduleModule } from "@nestjs/schedule";
+
 import { BillingModule } from "../billing/billing.module";
 import type { AppConfig } from "../config/app-config";
 import { APP_CONFIG, ConfigModule } from "../config/config.module";
 import { EmailModule } from "../email/email.module";
 import { PersonalAccessToken } from "../entities/personal-access-token.entity";
 import { Session } from "../entities/session.entity";
-import { User } from "../entities/user.entity";
 import { UserAuthMethod } from "../entities/user-auth-method.entity";
+import { User } from "../entities/user.entity";
 import { VerificationToken } from "../entities/verification-token.entity";
 import { EntitlementsModule } from "../entitlements/entitlements.module";
 import { AuthController } from "./auth.controller";

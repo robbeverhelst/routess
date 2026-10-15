@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
+
 import { useT } from "@/lib/i18n";
+
 import { I } from "../components/icons";
 import { MapBackdrop } from "../components/MapBackdrop";
 import { Badge, Btn, RDS_COLORS, SecTitle } from "../components/primitives";

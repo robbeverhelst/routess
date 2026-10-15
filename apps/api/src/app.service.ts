@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+
 import { getAppConfig } from "./config/app-config";
 
 @Injectable()

@@ -3,6 +3,7 @@ import { JwtService } from "@nestjs/jwt";
 import type { Request, Response } from "express";
 import type { Observable } from "rxjs";
 import { tap } from "rxjs/operators";
+
 import type { AppConfig } from "../../config/app-config";
 import { APP_CONFIG } from "../../config/config.module";
 import type { AuthenticatedUser } from "../authenticated-user";

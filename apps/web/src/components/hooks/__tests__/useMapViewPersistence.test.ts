@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "bun:test";
+
 import { act, renderHook } from "@testing-library/react";
 import type { Map as MapboxMap } from "mapbox-gl";
+
 import { useMapViewPersistence } from "../useMapViewPersistence";
 
 type MoveEndHandler = () => void;

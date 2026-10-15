@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+
 import type { SurfaceBucket } from "../routing/types";
 import type { Coordinate } from "../types";
 import { destinationPoint } from "./fan";
@@ -8,9 +9,9 @@ import {
 	generationScoreWeights,
 	overlapFraction,
 	QUIETNESS_WEIGHT,
-	STRICT_SURFACE_SCORE_WEIGHTS,
 	scoreCandidate,
 	shapeCompactness,
+	STRICT_SURFACE_SCORE_WEIGHTS,
 	surfaceFitScore,
 } from "./scoring";
 import type { CandidateEdge, RoutedCandidate } from "./types";

@@ -1,7 +1,7 @@
 {
 	"name": "landing",
-	"private": true,
 	"version": "0.1.0",
+	"private": true,
 	"type": "module",
 	"scripts": {
 		"dev": "next dev --turbopack --port ${LANDING_PORT:-3002}",
@@ -16,13 +16,13 @@
 	"dependencies": {
 		"@routess/core": "workspace:*",
 		"@routess/design-tokens": "workspace:*",
-		"mapbox-gl": "^3.13.0",
 		"@tailwindcss/postcss": "^4.1.7",
-		"tailwindcss": "^4.1.7",
-		"postcss": "^8.4.47",
+		"mapbox-gl": "^3.13.0",
 		"next": "^16.4.0",
+		"postcss": "^8.4.47",
 		"react": "^19.2.0",
-		"react-dom": "^19.2.0"
+		"react-dom": "^19.2.0",
+		"tailwindcss": "^4.1.7"
 	},
 	"devDependencies": {
 		"@types/bun": "^1.3.0",

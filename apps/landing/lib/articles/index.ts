@@ -1,4 +1,5 @@
 import type { Locale } from "@/lib/i18n";
+
 import { gpxFileCreate } from "./gpx-file-create";
 import { komootAlternative } from "./komoot-alternative";
 import { planCyclingRoute } from "./plan-cycling-route";

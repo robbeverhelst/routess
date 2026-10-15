@@ -1,4 +1,5 @@
 import { Sun } from "lucide-react";
+
 import { DirectionalIndicator } from "./DirectionalIndicator";
 
 interface SunPositionIndicatorProps {
@@ -58,7 +59,7 @@ export function SunPositionIndicator({
 
 	return (
 		<div
-			className="absolute z-30 pointer-events-auto group"
+			className="group pointer-events-auto absolute z-30"
 			style={{
 				...position,
 				transform,
@@ -74,12 +75,7 @@ export function SunPositionIndicator({
 			/>
 
 			{/* Enhanced tooltip */}
-			<div
-				className="absolute top-full left-1/2 transform -translate-x-1/2 mt-3 
-                      bg-gray-900/90 text-white text-sm px-3 py-2 rounded-lg shadow-xl backdrop-blur-sm
-                      opacity-0 group-hover:opacity-100 transition-all duration-200 
-                      pointer-events-none whitespace-nowrap border border-gray-700/50"
-			>
+			<div className="pointer-events-none absolute top-full left-1/2 mt-3 -translate-x-1/2 transform rounded-lg border border-gray-700/50 bg-gray-900/90 px-3 py-2 text-sm whitespace-nowrap text-white opacity-0 shadow-xl backdrop-blur-sm transition-all duration-200 group-hover:opacity-100">
 				<div className="flex items-center gap-2">
 					<span>☀️</span>
 					<div>
@@ -88,11 +84,7 @@ export function SunPositionIndicator({
 					</div>
 				</div>
 				{/* Tooltip arrow */}
-				<div
-					className="absolute -top-1 left-1/2 transform -translate-x-1/2 
-                        w-0 h-0 border-l-[4px] border-r-[4px] border-b-[4px] 
-                        border-l-transparent border-r-transparent border-b-gray-900/90"
-				/>
+				<div className="absolute -top-1 left-1/2 h-0 w-0 -translate-x-1/2 transform border-r-[4px] border-b-[4px] border-l-[4px] border-r-transparent border-b-gray-900/90 border-l-transparent" />
 			</div>
 		</div>
 	);

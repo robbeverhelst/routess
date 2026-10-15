@@ -1,6 +1,7 @@
 import { I } from "@/components/icons";
 import { RDS_COLORS } from "@/components/primitives";
 import { useT } from "@/lib/i18n";
+
 import { PAYMENT_METHODS } from "./format";
 
 // The Checkout payment methods (ADR 0039) as plain labelled chips, so buyers

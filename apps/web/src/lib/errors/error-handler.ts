@@ -5,7 +5,9 @@
 import { ApiDomainError } from "@routess/api-client";
 import { type DomainErrorCode, severityForCode } from "@routess/core";
 import * as Sentry from "@sentry/react";
+
 import { Logger, withoutTelemetry } from "@/lib/logger";
+
 import type { AppError, ErrorCategory, ErrorHandlerOptions, ErrorSeverity } from "./types";
 
 const categoryForCode = (code: DomainErrorCode): ErrorCategory => {

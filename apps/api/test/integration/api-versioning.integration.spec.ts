@@ -1,5 +1,6 @@
 import { MikroORM } from "@mikro-orm/core";
 import type { INestApplication } from "@nestjs/common";
+
 import { User } from "../../src/entities/user.entity";
 import request from "../utils/http";
 import { setupMocks } from "../utils/setup-mocks";

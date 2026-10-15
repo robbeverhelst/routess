@@ -1,14 +1,16 @@
 import { toRouteSlug } from "@routess/core";
 import { useEffect, useMemo } from "react";
+
 import { type ApiRoute, apiService } from "@/lib/api";
 import { useRoute } from "@/lib/api-queries";
 import { useT } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
 import { useUnits } from "@/lib/units";
 import { buildMapboxStaticPreviewUrl } from "@/lib/utils/mapboxStaticPreview";
+
 import { I } from "../components/icons";
 import { Btn, RDS_COLORS } from "../components/primitives";
-import { PublicPageShell, StatBlock, setCanonical, setMetaTag } from "./public-page";
+import { PublicPageShell, setCanonical, setMetaTag, StatBlock } from "./public-page";
 
 const HERO_WIDTH = 1200;
 const HERO_HEIGHT = 480;

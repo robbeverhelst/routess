@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { JetBrains_Mono, Manrope, Space_Grotesk } from "next/font/google";
 import Script from "next/script";
 import type { ReactNode } from "react";
+
 import { SITE_URL } from "@/lib/site";
 import "./global.css";
 

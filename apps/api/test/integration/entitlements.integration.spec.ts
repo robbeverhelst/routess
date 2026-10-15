@@ -1,13 +1,14 @@
 import { MikroORM } from "@mikro-orm/core";
 import type { INestApplication } from "@nestjs/common";
-import { BillingService } from "src/billing/billing.service";
 import { BILLING_PROVIDER, type BillingProvider } from "src/billing/billing-provider";
+import { BillingService } from "src/billing/billing.service";
 import { getAppConfig } from "src/config/app-config";
 import { APP_CONFIG } from "src/config/config.module";
 import { Entitlement, type EntitlementSource } from "src/entities/entitlement.entity";
 import { User, type UserPlan } from "src/entities/user.entity";
 import { EntitlementsService, PLAN_FEATURE_MATRIX } from "src/entitlements/entitlements.service";
-import { FEATURES, type Feature, PLAN_FEATURES, type PlanFeatureMatrix } from "src/entitlements/features";
+import { type Feature, FEATURES, PLAN_FEATURES, type PlanFeatureMatrix } from "src/entitlements/features";
+
 import { clearDatabase, closeTestApp, createTestApp, createTestUserWithAuth, withRequestContext } from "../utils";
 
 const DAY_MS = 24 * 60 * 60 * 1000;

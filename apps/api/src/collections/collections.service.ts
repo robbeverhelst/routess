@@ -1,10 +1,11 @@
 import { EntityManager, EntityRepository, wrap } from "@mikro-orm/core";
 import { InjectRepository } from "@mikro-orm/nestjs";
 import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
+
 import type { AppConfig } from "../config/app-config";
 import { APP_CONFIG } from "../config/config.module";
-import { Collection } from "../entities/collection.entity";
 import { CollectionRoute } from "../entities/collection-route.entity";
+import { Collection } from "../entities/collection.entity";
 import { Route } from "../entities/route.entity";
 import type { User } from "../entities/user.entity";
 import { EntitlementsService } from "../entitlements/entitlements.service";

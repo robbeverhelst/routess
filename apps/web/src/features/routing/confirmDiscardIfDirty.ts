@@ -1,6 +1,8 @@
 import type { RouteActivity, RouteDraftMode, Waypoint } from "@routess/core";
+
 import { isDraftSavedLocally } from "@/features/localRoutes/localRoutesStore";
 import { t } from "@/lib/i18n";
+
 import { isDraftDirty } from "./draftDirty";
 
 // Guards a destructive load (replacing the current draft with a different

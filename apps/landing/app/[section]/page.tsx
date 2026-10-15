@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
+
 import { articlePath, articlesFor, SECTION_PATHS, sectionFromPath } from "@/lib/articles";
 import type { ArticleSection } from "@/lib/articles/types";
 import { getDict } from "@/lib/content";
 import { HTML_LANG, type Locale, SELF_HOST, SISTER_HOST } from "@/lib/i18n";
 import { getLocale } from "@/lib/locale";
+
 import { Footer } from "../components/Footer";
 import { Nav } from "../components/Nav";
 

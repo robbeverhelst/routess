@@ -1,6 +1,8 @@
 import type { Coordinate } from "@routess/core";
+
 import { Logger } from "@/lib/logger";
 import { getRuntimeConfig } from "@/lib/runtime-config";
+
 import { getDefaultElevationService } from "../routing/services/elevation";
 
 const MAPBOX_TOKEN = getRuntimeConfig("VITE_MAPBOX_ACCESS_TOKEN") ?? "";

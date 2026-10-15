@@ -1,10 +1,11 @@
 import { Module } from "@nestjs/common";
+
 import type { AppConfig } from "../config/app-config";
 import { APP_CONFIG, ConfigModule } from "../config/config.module";
 import { EntitlementsModule } from "../entitlements/entitlements.module";
+import { BILLING_PROVIDER, type BillingProvider } from "./billing-provider";
 import { BillingController } from "./billing.controller";
 import { BillingService } from "./billing.service";
-import { BILLING_PROVIDER, type BillingProvider } from "./billing-provider";
 import { StripeBillingProvider } from "./stripe-billing.provider";
 
 // Billing off (the default, and always on self-hosted instances) means no

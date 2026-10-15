@@ -3,6 +3,7 @@ import { SpanStatusCode } from "@opentelemetry/api";
 import type { Request } from "express";
 import type { Observable } from "rxjs";
 import { tap } from "rxjs/operators";
+
 import type { RequestWithId } from "./request-id.middleware";
 import { getTracer } from "./tracing";
 

@@ -1,5 +1,6 @@
 import type { Waypoint } from "@routess/core";
 import mapboxgl, { LngLatBounds } from "mapbox-gl";
+
 import {
 	initializeSourcesAndLayers,
 	updateRouteLayer,

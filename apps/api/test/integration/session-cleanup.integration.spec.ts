@@ -2,6 +2,7 @@ import { MikroORM } from "@mikro-orm/core";
 import type { INestApplication } from "@nestjs/common";
 import { SessionService } from "src/auth/session.service";
 import { Session } from "src/entities/session.entity";
+
 import { clearDatabase, closeTestApp, createTestApp, createTestUserWithAuth, withRequestContext } from "../utils";
 
 // The hourly cleanup used to hydrate every expired Session and flush a

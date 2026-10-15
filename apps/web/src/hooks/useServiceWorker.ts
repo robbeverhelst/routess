@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+
 import { Logger } from "@/lib/logger";
 import serviceWorkerManager, {
 	type CacheStatus,

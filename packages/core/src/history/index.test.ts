@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+
 import { canRedo, canUndo, emptyHistory, recordSnapshot, redoStep, undoStep } from "./index";
 
 describe("history", () => {

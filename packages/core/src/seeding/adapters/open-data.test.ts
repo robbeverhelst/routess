@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+
 import { brusselsIcrAdapter } from "./brussels-icr";
 import { osmBelgiumAdapter } from "./osm-routes";
 import { ravelAdapter } from "./ravel";

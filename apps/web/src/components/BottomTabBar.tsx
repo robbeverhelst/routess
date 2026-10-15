@@ -1,7 +1,9 @@
 import type { CSSProperties } from "react";
+
 import { useShareUnreadCount } from "@/lib/api-queries";
 import { useT } from "@/lib/i18n";
 import { type RedesignContext, useUiStore } from "@/stores/uiStore";
+
 import { I } from "./icons";
 import { RDS_COLORS } from "./primitives";
 

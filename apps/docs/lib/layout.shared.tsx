@@ -1,5 +1,6 @@
 import type { BaseLayoutProps } from "fumadocs-ui/layouts/shared";
 import Image from "next/image";
+
 import { i18n, localeLabels } from "@/lib/i18n";
 
 export function baseOptions(locale: string = "en", options: { languageSwitch?: boolean } = {}): BaseLayoutProps {

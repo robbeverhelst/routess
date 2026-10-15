@@ -1,4 +1,5 @@
 import { useT } from "@/lib/i18n";
+
 import { ComingSoonState } from "../components/ComingSoonState";
 import { RDS_COLORS } from "../components/primitives";
 

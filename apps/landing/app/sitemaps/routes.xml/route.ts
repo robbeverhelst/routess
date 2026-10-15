@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+
 import { localeFromHost, SELF_HOST } from "@/lib/i18n";
 import { fetchIndexablePublicRoutes } from "@/lib/route-api";
 import { localizedAlternates, type SitemapUrl, urlsetXml, xmlResponse } from "@/lib/sitemap-xml";

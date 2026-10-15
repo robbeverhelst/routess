@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+
 import { isDev } from "@/lib/utils/env";
 
 interface SettingsState {

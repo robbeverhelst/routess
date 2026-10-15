@@ -16,6 +16,7 @@ import {
 import { ApiBearerAuth, ApiBody, ApiHeader, ApiOperation, ApiParam, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { buildRouteGpx } from "@routess/core";
 import type { Response } from "express";
+
 import type { AuthenticatedUser } from "../auth/authenticated-user";
 import { CurrentUser, OptionalCurrentUser } from "../auth/decorators/current-user.decorator";
 import { RequireConfirmation } from "../auth/decorators/require-confirmation.decorator";

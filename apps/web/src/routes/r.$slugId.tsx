@@ -1,5 +1,6 @@
 import { parseRouteSlugId } from "@routess/core";
 import { createFileRoute, notFound } from "@tanstack/react-router";
+
 import { ExternalRouteScreen } from "@/screens/ExternalRouteScreen";
 import { PublicRouteScreen } from "@/screens/PublicRouteScreen";
 

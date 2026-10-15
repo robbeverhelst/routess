@@ -1,13 +1,15 @@
 import type { Coordinate, RouteActivity, RoutingPreferences, Waypoint } from "@routess/core";
 import { calculatePathDistance, defaultPreferencesForActivity, haversineDistance } from "@routess/core";
 import type { Map as MapboxMap } from "mapbox-gl";
+
 import { Logger } from "@/lib/logger";
 import serviceWorkerManager from "@/lib/serviceWorker";
 import { getSpeedForActivity, useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 import { useRoutingStore } from "@/stores/routingStore";
 import { useUiStore } from "@/stores/uiStore";
+
 import { getDefaultElevationService } from "./elevation";
-import { type ComputeRouteOptions, computeRoute } from "./valhallaClient";
+import { computeRoute, type ComputeRouteOptions } from "./valhallaClient";
 
 const sameCoord = (a: Coordinate, b: Coordinate) => a[0] === b[0] && a[1] === b[1];
 

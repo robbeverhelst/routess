@@ -1,12 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
+
 import type { ApiBillingStatus, ApiFeature } from "@routess/api-client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+
 import { TooltipProvider } from "@/components/Tooltip";
 import { queryKeys } from "@/lib/query-client";
 import { LocationService } from "@/services/LocationService";
 import { useLoopPreferencesStore } from "@/stores/loopPreferencesStore";
 import { mocked } from "@/test/helpers";
+
 import { LoopModal } from "../LoopModal";
 
 // ProLock's Go Pro navigates; no router is mounted here.

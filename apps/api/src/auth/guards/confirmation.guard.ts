@@ -1,6 +1,7 @@
 import { type CanActivate, type ExecutionContext, HttpStatus, Injectable } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import type { Request } from "express";
+
 import { DomainException } from "../../common/exceptions/domain.exception";
 import type { AuthenticatedUser } from "../authenticated-user";
 import { CONFIRMATION_CHECK_KEY, type ConfirmationCheck } from "../decorators/require-confirmation.decorator";

@@ -52,12 +52,7 @@ export interface AuthLoginAttemptedEvent {
 }
 
 export type SessionRevocationReason =
-	| "logout"
-	| "admin_revoked"
-	| "expired"
-	| "invalidated"
-	| "revoked"
-	| "logout_everywhere";
+	"logout" | "admin_revoked" | "expired" | "invalidated" | "revoked" | "logout_everywhere";
 
 export interface AuthSessionRevokedEvent {
 	reason: SessionRevocationReason;

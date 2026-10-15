@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "bun:test";
+
 import { useRoutingStore } from "@/stores/routingStore";
 
 vi.mock("@/lib/logger", () => ({
@@ -21,6 +22,7 @@ vi.mock("./MapLayerManager", () => ({
 }));
 
 import { Logger } from "@/lib/logger";
+
 import { updateRouteLayer } from "./MapLayerManager";
 import { syncMapView } from "./MapViewAdapter";
 

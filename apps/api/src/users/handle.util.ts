@@ -1,5 +1,6 @@
 import { type EntityManager, UniqueConstraintViolationException } from "@mikro-orm/core";
 import { handleBaseFromName } from "@routess/core";
+
 import { randomHandle } from "../entities/user.entity";
 
 // Generate a unique Handle for a new User (CONTEXT.md "Handle"): slugified

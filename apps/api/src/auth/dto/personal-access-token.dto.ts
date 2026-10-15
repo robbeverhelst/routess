@@ -1,5 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { IsIn, IsISO8601, IsNotEmpty, IsOptional, IsString, MaxLength } from "class-validator";
+
 import type { PatScope } from "../../entities/personal-access-token.entity";
 
 const PAT_SCOPES: PatScope[] = ["read", "write"];

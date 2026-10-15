@@ -13,10 +13,11 @@ import {
 	routeBoundingBox,
 	valhallaCostingModelForActivity,
 } from "@routess/core";
+
 import { CacheService } from "../cache/cache.service";
 import { ExternalRoute } from "../entities/external-route.entity";
 import { Route } from "../entities/route.entity";
-import { NodeNetworksService, nodeKindForActivity } from "../generation/node-networks.service";
+import { nodeKindForActivity, NodeNetworksService } from "../generation/node-networks.service";
 import { type CueDto, type CueLocale, type CuesRequestDto, CuesResponseDto } from "./dto/cues.dto";
 import { RoutingService } from "./routing.service";
 

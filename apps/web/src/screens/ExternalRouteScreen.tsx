@@ -1,14 +1,16 @@
 import { buildExternalRouteSlugId, estimateDuration, toRouteSlug } from "@routess/core";
 import { useEffect, useMemo, useState } from "react";
+
 import { computeElevationForCandidate } from "@/features/generation/candidateElevation";
 import { apiService } from "@/lib/api";
 import { useExternalRoute } from "@/lib/api-queries";
 import { useT } from "@/lib/i18n";
 import { useUnits } from "@/lib/units";
 import { buildMapboxStaticPreviewUrl } from "@/lib/utils/mapboxStaticPreview";
+
 import { I } from "../components/icons";
 import { Badge, Btn, RDS_COLORS } from "../components/primitives";
-import { PublicPageShell, StatBlock, setCanonical, setMetaTag } from "./public-page";
+import { PublicPageShell, setCanonical, setMetaTag, StatBlock } from "./public-page";
 
 const HERO_WIDTH = 1200;
 const HERO_HEIGHT = 480;

@@ -2,6 +2,7 @@ import { useIsAuthenticated } from "@/hooks/useAuthState";
 import { useAuthStatus, useFollowUser, usePublicProfile, useUnfollowUser } from "@/lib/api-queries";
 import { useT } from "@/lib/i18n";
 import { useUnits } from "@/lib/units";
+
 import { I } from "../../components/icons";
 import { Btn, RDS_COLORS, SecTitle } from "../../components/primitives";
 import { Avatar } from "./Avatar";

@@ -1,5 +1,6 @@
 import "reflect-metadata";
 import { MikroORM } from "@mikro-orm/core";
+
 import { bootstrap } from "./main";
 import config from "./mikro-orm.config";
 

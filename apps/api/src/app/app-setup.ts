@@ -4,6 +4,7 @@ import type { NestExpressApplication } from "@nestjs/platform-express";
 import { DocumentBuilder, type OpenAPIObject, SwaggerModule } from "@nestjs/swagger";
 import type { NextFunction, Request, Response } from "express";
 import helmet from "helmet";
+
 import { GlobalExceptionFilter } from "../common/filters/global-exception.filter";
 import type { AppConfig } from "../config/app-config";
 import { getAppConfig } from "../config/app-config";

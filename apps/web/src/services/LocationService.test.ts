@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
+
 import { LocationService } from "@/services/LocationService";
 
 describe("LocationService", () => {

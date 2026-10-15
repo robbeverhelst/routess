@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { AuthGuard } from "@nestjs/passport";
+
 import { ProRequiredException } from "../../entitlements/pro-gate.exception";
 
 // OptionalJwtAuthGuard's unified sibling: resolves a cookie/Bearer JWT or a

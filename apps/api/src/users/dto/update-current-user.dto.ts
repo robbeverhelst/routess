@@ -1,6 +1,7 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
 import { IsBoolean, IsOptional, IsString, IsUrl, MaxLength, ValidateNested } from "class-validator";
+
 import { UpdateUserPreferencesDto } from "./user-preferences.dto";
 
 export class UpdateCurrentUserDto {

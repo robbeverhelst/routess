@@ -1,6 +1,7 @@
 import type { RouteActivity } from "@routess/core";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+
 import {
 	loadLanguageFromLocalStorage,
 	saveLanguageToLocalStorage,

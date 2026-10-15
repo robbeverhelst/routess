@@ -1,5 +1,7 @@
 import { landingAccents } from "@routess/design-tokens";
+
 import type { Dict } from "@/lib/content";
+
 import routegenLoop from "../../public/previews/routegen-loop.webp";
 import { AccentInline } from "./AccentText";
 import { BakedImage } from "./BakedImage";

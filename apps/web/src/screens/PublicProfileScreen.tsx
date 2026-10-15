@@ -1,6 +1,8 @@
 import { useEffect } from "react";
+
 import { usePublicProfile } from "@/lib/api-queries";
 import { useT } from "@/lib/i18n";
+
 import { I } from "../components/icons";
 import { Btn, RDS_COLORS } from "../components/primitives";
 import { ProfileView } from "../panels/social/ProfileView";

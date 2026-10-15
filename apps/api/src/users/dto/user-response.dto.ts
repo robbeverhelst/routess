@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+
 import { USER_DELETION_STATUSES, USER_ROLES, type UserDeletionStatus, type UserRole } from "../../entities/user.entity";
 import { UserPreferencesDto } from "./user-preferences.dto";
 

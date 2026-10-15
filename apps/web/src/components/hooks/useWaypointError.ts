@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+
 import { useToastStore } from "@/stores/toastStore";
 
 const WAYPOINT_ERROR_TIMEOUT = 5000; // 5 seconds

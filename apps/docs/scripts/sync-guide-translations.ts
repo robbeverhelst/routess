@@ -1,5 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
+
 import { de } from "./translations/de";
 import { fr } from "./translations/fr";
 import { meta } from "./translations/meta";

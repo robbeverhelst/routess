@@ -1,5 +1,6 @@
 import { EntityManager } from "@mikro-orm/postgresql";
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from "@nestjs/common";
+
 import { ProductEventStatsService, type ProductEventUserDay } from "../analytics/product-event-stats.service";
 import type { AuthenticatedUser } from "../auth/authenticated-user";
 import { CacheService } from "../cache/cache.service";

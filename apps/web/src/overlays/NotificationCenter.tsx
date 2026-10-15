@@ -1,9 +1,11 @@
 import type { ApiNotification } from "@routess/api-client";
 import { useEffect, useRef } from "react";
+
 import { useMarkNotificationsSeen, useNotifications } from "@/lib/api-queries";
 import { useT } from "@/lib/i18n";
 import { useModalsStore } from "@/stores/modalsStore";
 import { useUiStore } from "@/stores/uiStore";
+
 import { I } from "../components/icons";
 import { IconBtn, RDS_COLORS } from "../components/primitives";
 import { useViewport } from "../hooks/useViewport";

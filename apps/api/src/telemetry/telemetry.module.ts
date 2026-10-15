@@ -1,5 +1,6 @@
 import { MikroOrmModule } from "@mikro-orm/nestjs";
 import { Global, Module } from "@nestjs/common";
+
 import { Route } from "../entities/route.entity";
 import { User } from "../entities/user.entity";
 import { MetricsController } from "./metrics.controller";

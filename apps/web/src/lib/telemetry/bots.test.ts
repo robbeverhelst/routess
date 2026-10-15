@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it } from "bun:test";
+
 import { stubGlobal, unstubAll } from "@/test/helpers";
+
 import { isBotClient, isBotUserAgent } from "./bots";
 
 // The single noisiest GlitchTip issue was Googlebot failing to register the

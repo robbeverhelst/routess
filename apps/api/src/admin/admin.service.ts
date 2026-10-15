@@ -1,6 +1,7 @@
 import { EntityManager, EntityRepository } from "@mikro-orm/core";
 import { InjectRepository } from "@mikro-orm/nestjs";
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
+
 import { ProductEventStatsService } from "../analytics/product-event-stats.service";
 import { SessionService } from "../auth/session.service";
 import type { AppConfig } from "../config/app-config";

@@ -1,11 +1,13 @@
 import type { Waypoint } from "@routess/core";
 import { useEffect, useRef, useState } from "react";
+
 import { emitAppEvent } from "@/lib/app-events";
 import { type SupportedLanguage, t } from "@/lib/i18n";
 import { getRuntimeConfig } from "@/lib/runtime-config";
 import { useModalsStore } from "@/stores/modalsStore";
 import { useRoutingStore } from "@/stores/routingStore";
 import { useUiStore } from "@/stores/uiStore";
+
 import { EmptySearch } from "../components/EmptyStates";
 import { I } from "../components/icons";
 import { Kbd, RDS_COLORS, SecTitle } from "../components/primitives";

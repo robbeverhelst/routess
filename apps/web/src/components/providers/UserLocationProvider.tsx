@@ -3,6 +3,7 @@ import { closestPointOnSegment, haversineDistance } from "@routess/core";
 import type { Map as MapboxMap } from "mapbox-gl";
 import type React from "react";
 import { createContext, useCallback, useContext, useEffect, useRef } from "react";
+
 import { updateLineToRouteLayer, updateUserLocationLayer } from "@/features/routing/managers/MapLayerManager";
 import { useDeviceHeading } from "@/hooks/useDeviceHeading";
 import { useEnhancedLocation } from "@/hooks/useEnhancedLocation";

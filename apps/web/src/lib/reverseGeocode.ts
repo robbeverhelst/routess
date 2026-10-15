@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+
 import { getRuntimeConfig } from "@/lib/runtime-config";
 
 // Reverse-geocoded names per ~11m grid cell. null = lookup done, no name.

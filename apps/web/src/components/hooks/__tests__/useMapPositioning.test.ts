@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "bun:test";
+
 import { renderHook } from "@testing-library/react";
 import type { Map as MapboxMap } from "mapbox-gl";
+
 import { useMapPositioning } from "../useMapPositioning";
 
 vi.mock("@/features/routing/services/RouteCalculationService", () => ({

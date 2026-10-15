@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+
 import type { Coordinate } from "../types";
 import { decodePolyline6, encodePolyline6 } from "./polyline6";
 

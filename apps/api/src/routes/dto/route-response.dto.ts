@@ -1,7 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import {
-	PROVENANCES,
 	type Provenance,
+	PROVENANCES,
 	ROUTE_ACTIVITIES,
 	ROUTE_VISIBILITIES,
 	type RouteActivity,
@@ -10,6 +10,7 @@ import {
 	WAYPOINT_TYPES,
 	type WaypointType,
 } from "@routess/core";
+
 import { RoutingPreferencesDto } from "../../common/routing-preferences.dto";
 import { PublicUserDto } from "../../users/dto/user-response.dto";
 

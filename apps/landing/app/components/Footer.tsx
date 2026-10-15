@@ -1,5 +1,6 @@
 import type { Dict } from "@/lib/content";
 import { REPO_URL } from "@/lib/i18n";
+
 import { GhIcon } from "./Icons";
 import { Logo } from "./Logo";
 

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+
 import { DUMMY_HASH, PasswordService, toCanonicalArgon2Hash } from "../../../src/auth/password.service";
 import type { MetricsService } from "../../../src/telemetry/metrics.service";
 

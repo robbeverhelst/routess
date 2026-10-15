@@ -1,5 +1,6 @@
 import { type Rel } from "@mikro-orm/core";
 import { Entity, Index, ManyToOne, PrimaryKey, Unique } from "@mikro-orm/decorators/legacy";
+
 import { BaseEntity } from "./base.entity";
 import { User } from "./user.entity";
 

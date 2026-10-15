@@ -1,4 +1,5 @@
 import type { Logger } from "@routess/core";
+
 import type { I18nConfig, I18nService as II18nService, SupportedLanguage, Translations } from "./types";
 
 export class I18nService implements II18nService {
