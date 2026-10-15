@@ -8,60 +8,112 @@
 	"assist": {
 		"actions": {
 			"source": {
-				"organizeImports": "on"
+				"organizeImports": "off"
 			}
 		}
 	},
 	"formatter": {
-		"enabled": true,
-		"indentStyle": "tab",
-		"lineWidth": 120
+		"enabled": false
 	},
 	"linter": {
 		"enabled": true,
 		"rules": {
-			"preset": "recommended",
+			"preset": "none",
 			"a11y": {
 				"preset": "recommended"
 			},
 			"complexity": {
-				"preset": "recommended",
-				"noUselessFragments": "error"
+				"noAdjacentSpacesInRegex": "on",
+				"noEmptyTypeParameters": "on",
+				"noFlatMapIdentity": "on",
+				"noImportantStyles": "on",
+				"noThisInStatic": "on",
+				"noUselessContinue": "on",
+				"noUselessStringRaw": "on",
+				"useIndexOf": "on",
+				"useOptionalChain": "on",
+				"useSimpleNumberKeys": "on"
 			},
 			"correctness": {
-				"preset": "recommended",
-				"noUnusedVariables": "error",
-				"noUnusedImports": "error"
+				"noConstantMathMinMaxClamp": "on",
+				"noDuplicateArgumentNames": "on",
+				"noDuplicateAttributes": "on",
+				"noDuplicateEnumValueNames": "on",
+				"noDuplicateInputFieldNames": "on",
+				"noDuplicateVariableNames": "on",
+				"noInvalidDirectionInLinearGradient": "on",
+				"noInvalidGridAreas": "on",
+				"noInvalidPositionAtImportRule": "on",
+				"noMissingVarFunction": "on",
+				"noStringCaseMismatch": "on",
+				"noUnknownFunction": "on",
+				"noUnknownMediaFeatureName": "on",
+				"noUnknownProperty": "on",
+				"noUnknownPseudoClass": "on",
+				"noUnknownPseudoElement": "on",
+				"noUnknownTypeSelector": "on",
+				"noUnknownUnit": "on",
+				"noUnmatchableAnbSelector": "on",
+				"noUnusedFunctionParameters": "on",
+				"noUnusedImports": "error",
+				"noVoidTypeReturn": "on",
+				"useGraphqlNamedOperations": "on",
+				"useLoneAnonymousOperation": "on",
+				"useParseIntRadix": "on"
 			},
 			"performance": {
-				"preset": "recommended",
-				"noAccumulatingSpread": "error"
+				"noAccumulatingSpread": "error",
+				"noDynamicNamespaceImportAccess": "on"
 			},
 			"security": {
-				"preset": "recommended"
+				"noScriptUrl": "on"
 			},
 			"style": {
-				"preset": "recommended",
-				"noNonNullAssertion": "error",
-				"noParameterAssign": "error",
-				"useConst": "error",
+				"noDescendingSpecificity": "on",
+				"useDeprecatedReason": "on",
+				"useExportType": "on",
 				"useTemplate": "error"
 			},
 			"suspicious": {
-				"preset": "recommended",
-				"noExplicitAny": "error",
-				"noConsole": "error",
-				"noDebugger": "error",
-				"noEmptyBlockStatements": "error"
-			},
-			"nursery": {
-				"preset": "recommended"
+				"noApproximativeNumericConstant": "on",
+				"noBiomeFirstException": "on",
+				"noConfusingVoidType": "on",
+				"noConstEnum": "on",
+				"noDeprecatedMediaType": "on",
+				"noDuplicateAtImportRules": "on",
+				"noDuplicateCustomProperties": "on",
+				"noDuplicateEnumValues": "on",
+				"noDuplicateFields": "on",
+				"noDuplicateFontNames": "on",
+				"noDuplicateProperties": "on",
+				"noDuplicateSelectorsKeyframeBlock": "on",
+				"noEmptyBlock": "on",
+				"noGlobalIsFinite": "on",
+				"noGlobalIsNan": "on",
+				"noImplicitAnyLet": "on",
+				"noImportantInKeyframe": "on",
+				"noMisrefactoredShorthandAssign": "on",
+				"noNonNullAssertedOptionalChain": "on",
+				"noProto": "on",
+				"noQuickfixBiome": "on",
+				"noRedundantUseStrict": "on",
+				"noShorthandPropertyOverrides": "on",
+				"noSuspiciousSemicolonInJsx": "on",
+				"noTsIgnore": "on",
+				"noUnknownAtRules": "on",
+				"noUselessEscapeInString": "on",
+				"noUselessRegexBackrefs": "on",
+				"useBiomeIgnoreFolder": "on",
+				"useGoogleFontDisplay": "on",
+				"useIterableCallbackReturn": "on"
 			}
 		}
 	},
 	"overrides": [
 		{
-			"includes": ["apps/api/**"],
+			"includes": [
+				"apps/api/**"
+			],
 			"javascript": {
 				"parser": {
 					"unsafeParameterDecoratorsEnabled": true
@@ -71,49 +123,23 @@
 				"rules": {
 					"correctness": {
 						"noUnusedFunctionParameters": "off"
-					},
-					"style": {
-						"useImportType": "off"
 					}
 				}
 			}
 		},
 		{
 			"includes": [
-				"scripts/**",
-				"**/*.spec.ts",
-				"**/*.spec.tsx",
-				"**/*.test.ts",
-				"**/*.test.tsx",
-				"**/test/**",
-				"**/__tests__/**"
+				"apps/web/**",
+				"apps/landing/**",
+				"apps/docs/**"
 			],
 			"linter": {
 				"rules": {
-					"suspicious": {
-						"noExplicitAny": "off",
-						"noConsole": "off",
-						"noEmptyBlockStatements": "off"
-					}
-				}
-			}
-		},
-		{
-			"includes": ["**/public/sw.js", "**/public/sw.*.js"],
-			"linter": {
-				"rules": {
-					"suspicious": {
-						"noEmptyBlockStatements": "off"
-					}
-				}
-			}
-		},
-		{
-			"includes": ["apps/web/src/lib/logger.ts"],
-			"linter": {
-				"rules": {
-					"suspicious": {
-						"noConsole": "off"
+					"correctness": {
+						"useExhaustiveDependencies": "on"
+					},
+					"security": {
+						"noDangerouslySetInnerHtml": "on"
 					}
 				}
 			}

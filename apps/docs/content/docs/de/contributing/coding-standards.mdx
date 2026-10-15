@@ -5,7 +5,7 @@ description: Wie Code in diesem Repo aussehen und sich verhalten soll.
 
 ## Tooling
 
-- **Biome** ist der Formatter und Linter. Führe `bun run lint` und `bun run format` aus.
+- **bun fmt** formatiert und **bun lint** lintet, **Biome** übernimmt die Regeln, die bun lint fehlen (a11y und einige mehr). Führe `bun run lint:check` und `bun run format` aus.
 - **TypeScript-Strict-Mode**. `any` ist erlaubt, wird aber als Warnung gemeldet. Ungenutzte Variablen/Imports sind Fehler.
 - **Kein Tabs-vs-Spaces-Streit**: Biome erzwingt Tabs und eine Zeilenbreite von 120 Zeichen.
 

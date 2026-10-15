@@ -6,7 +6,6 @@
 	"scripts": {
 		"dev": "vite --port ${WEB_PORT:-5173}",
 		"build": "vite build",
-		"lint": "biome check .",
 		"check-types": "bunx --bun tsr generate && tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.test.json --noEmit && tsc -p tsconfig.e2e.json",
 		"preview": "vite preview",
 		"clean": "rm -rf dist && rm -rf node_modules/.vite",

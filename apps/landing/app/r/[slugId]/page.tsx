@@ -191,7 +191,7 @@ export default async function PublicRoutePage({ params }: { params: Promise<Para
 								))}
 							</div>
 							{/* Served by our own og.png proxy: crawler-safe (no Referer needed) and cached. */}
-							{/* biome-ignore lint/performance/noImgElement: proxied remote image, next/image adds nothing here */}
+							{/* eslint-disable-next-line @next/next/no-img-element -- proxied remote image, next/image adds nothing here */}
 							<img
 								src={`/r/${route.canonicalSlugId}/og.png`}
 								alt={copy.mapAlt}

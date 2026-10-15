@@ -47,10 +47,10 @@ bun dev
 Defaults: web `:5173`, API `:3000`, docs `:3001`, Postgres `:5432`, pgAdmin `:5050`. Ports auto-shift if taken. Full dev guide: [`docs/getting-started/local-setup`](https://docs.routess.com/docs/getting-started/local-setup).
 
 ```bash
-bun run lint         # biome check
+bun run lint:check   # bun lint + Biome (a11y and the rules bun lint lacks)
 bun run check-types  # tsc across all workspaces
 bun run test         # all tests
-bun run ci           # full pipeline (postgres + format:check + lint + check:bun-native + check-types + build + test)
+bun run ci           # full pipeline (postgres + format:check + lint:check + check:bun-native + check-types + build + test)
 ```
 
 Run `bun run` with no arguments to list every script.

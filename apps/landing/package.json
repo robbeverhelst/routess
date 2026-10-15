@@ -7,7 +7,6 @@
 		"dev": "next dev --turbopack --port ${LANDING_PORT:-3002}",
 		"build": "next build",
 		"start": "next start",
-		"lint": "biome check .",
 		"check-types": "next typegen && tsc --noEmit",
 		"clean": "rm -rf .next",
 		"test": "bun test lib/",

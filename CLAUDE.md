@@ -17,10 +17,11 @@ Route-planning app for cyclists, runners, and hikers. See `CONTEXT.md` for the d
 
 ```bash
 bun dev              # all apps, auto-picks free ports
-bun run lint         # biome check (production-strict)
+bun run format       # bun fmt (pinned canary)
+bun run lint:check   # bun lint + Biome for the rules bun lint lacks
 bun run check-types  # tsc across all workspaces
 bun run test         # all tests
-bun run ci           # full pipeline (postgres + format:check + lint + check:bun-native + check-types + build + test)
+bun run ci           # full pipeline (postgres + format:check + lint:check + check:bun-native + check-types + build + test)
 bun run clean        # nuke node_modules, dist, caches, docker volumes
 bun run build:images # docker buildx bake all images
 ```

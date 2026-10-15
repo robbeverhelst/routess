@@ -734,7 +734,7 @@ export function PlanPanel() {
 							return (
 								// biome-ignore lint/a11y/noStaticElementInteractions: drag-drop row is a non-interactive container; the grip button inside is the keyboard-actionable control
 								<div
-									// biome-ignore lint/suspicious/noArrayIndexKey: waypoints can repeat coords; combine coord with index for stable key
+									// eslint-disable-next-line react/no-array-index-key -- waypoints can repeat coords; combine coord with index for stable key
 									key={`${w.coord[0]}-${w.coord[1]}-${i}`}
 									data-waypoint-row={i}
 									onMouseEnter={() => setWaypointHover(i)}

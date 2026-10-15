@@ -17,7 +17,7 @@ You'll need [Bun](https://bun.sh) (version is pinned in `package.json` `packageM
 ## Before you open a PR
 
 ```bash
-bun run ci   # postgres + format:check + lint + check:bun-native + check-types + build + test
+bun run ci   # postgres + format:check + lint:check + check:bun-native + check-types + build + test
 ```
 
 CI enforces production-strict TypeScript and Biome rules. If `bun run ci` passes locally, the GitHub workflow will too.
