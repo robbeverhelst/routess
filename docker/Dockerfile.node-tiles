@@ -16,16 +16,16 @@ RUN git clone --depth 1 --branch "${TIPPECANOE_VERSION}" https://github.com/felt
 FROM debian:bookworm-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-		ca-certificates curl unzip \
+		ca-certificates curl \
 		osmium-tool gdal-bin awscli \
 	&& rm -rf /var/lib/apt/lists/*
 
 COPY --from=tippecanoe /usr/local/bin/tippecanoe /usr/local/bin/tippecanoe
 COPY --from=tippecanoe /usr/local/bin/tile-join /usr/local/bin/tile-join
 
-# bun runs the GeoJSON transform. Install globally so a non-root runtime user
-# can execute it (the default install goes to $HOME, unreadable under runAsUser).
-RUN curl -fsSL https://bun.sh/install | BUN_INSTALL=/usr/local bash
+# bun runs the GeoJSON transform. Copy the pinned binary from the official
+# image onto the global PATH so a non-root runtime user can execute it.
+COPY --from=oven/bun:1.4.3 /usr/local/bin/bun /usr/local/bin/bun
 
 WORKDIR /opt/node-tiles
 COPY scripts/node-tiles/ ./
