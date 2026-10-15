@@ -65,6 +65,8 @@ export interface ApiUser {
 	// password-change UI affordances (hide current-password field for users
 	// who only signed in via Google and never set a password).
 	hasPassword: boolean;
+	// Consent to the weekly "routes near you" email (CONTEXT.md "WeeklyDigest").
+	weeklyDigest: boolean;
 	statistics?: {
 		totalRoutes: number;
 		totalDistance: number;
