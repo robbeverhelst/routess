@@ -139,6 +139,10 @@ The standard XML format for route exchange. Routess imports GPX files (deriving 
 **RouteLibrary**:
 The set of Routes a User has saved. Surfaced in the UI as the library panel's "Routes" tab.
 
+**LocalRoute**:
+A Route saved on one device (in the browser's IndexedDB) by someone without an account. It holds exactly what a saved Route would and never reaches the server on its own; the library panel lists them as "your routes on this device" for signed-out visitors, with GPX export. The free Plan's saved-Route cap applies to it too. Not a RouteDraft: the draft is the one route being edited, a LocalRoute is a saved copy.
+_Avoid_: guest route, offline route.
+
 **Collection**:
 A curated, manually ordered set of Routes within a User's RouteLibrary (e.g. "Alps 2026", "Commutes"). Routes and Collections are many-to-many: a Route can live in any number of Collections, and removing it from a Collection never deletes the Route. A Collection has its own **RouteVisibility** with the same semantics as a Route's; sharing a Collection by URL never exposes `private` Routes inside it to non-owners.
 _Avoid_: folder, playlist, group, list.

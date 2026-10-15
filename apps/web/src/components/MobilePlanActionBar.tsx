@@ -1,6 +1,5 @@
 import { useProGatePrompt, useProGates } from "@/features/billing/proGates";
 import { startNavigation } from "@/features/navigation/startNavigation";
-import { useIsAuthenticated } from "@/hooks/useAuthState";
 import { emitAppEvent } from "@/lib/app-events";
 import { useT } from "@/lib/i18n";
 import { useModalsStore } from "@/stores/modalsStore";
@@ -18,7 +17,6 @@ export function MobilePlanActionBar() {
 	const t = useT();
 	const { locked } = useProGates();
 	const promptPro = useProGatePrompt();
-	const isAuthenticated = useIsAuthenticated();
 	const navigationEnabled = useRedesignSettingsStore((s) => s.navigationEnabled);
 	const openModal = useModalsStore((s) => s.openModal);
 
@@ -31,8 +29,6 @@ export function MobilePlanActionBar() {
 
 	const canSave = hasRoute && waypoints.length >= 2;
 	const canNavigate = hasRoute && routePath.length >= 2;
-	const saveLabel =
-		mode.kind === "editing" ? t("common.save") : isAuthenticated ? t("common.save") : t("save.signInShort");
 
 	return (
 		<div
@@ -58,7 +54,6 @@ export function MobilePlanActionBar() {
 				type="button"
 				disabled={!canSave}
 				onClick={() => emitAppEvent("routess:save-draft")}
-				title={isAuthenticated ? undefined : t("save.signInHint")}
 				style={{
 					flex: 1,
 					minWidth: 0,
@@ -77,7 +72,7 @@ export function MobilePlanActionBar() {
 					color: RDS_COLORS.accentFg,
 				}}
 			>
-				<I.save size={16} /> {saveLabel}
+				<I.save size={16} /> {t("common.save")}
 			</button>
 
 			{navigationEnabled && (

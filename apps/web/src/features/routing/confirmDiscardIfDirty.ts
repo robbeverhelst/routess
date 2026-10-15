@@ -1,4 +1,5 @@
 import type { RouteActivity, RouteDraftMode, Waypoint } from "@routess/core";
+import { isDraftSavedLocally } from "@/features/localRoutes/localRoutesStore";
 import { t } from "@/lib/i18n";
 import { isDraftDirty } from "./draftDirty";
 
@@ -12,7 +13,8 @@ export function confirmDiscardIfDirty(
 	waypoints: Waypoint[],
 	message?: string,
 ): boolean {
-	const hasUnsavedFresh = mode.kind === "unsaved" && waypoints.length > 0;
+	// A draft saved on this device and untouched since loses nothing.
+	const hasUnsavedFresh = mode.kind === "unsaved" && waypoints.length > 0 && !isDraftSavedLocally(waypoints);
 	const hasUnsavedEdits = mode.kind === "editing" && isDraftDirty({ mode, activity, waypoints });
 	if (!hasUnsavedFresh && !hasUnsavedEdits) return true;
 	const text = message ?? t("plan.discardConfirm");

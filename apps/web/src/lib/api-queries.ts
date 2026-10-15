@@ -121,6 +121,7 @@ export function useSaveRoute() {
 					// Drafts loaded from GPX are not differentiated yet; revisit
 					// with route generation (#136).
 					creation_source: vars.creationSource ?? "manual",
+					storage: "account",
 				},
 			});
 
