@@ -71,4 +71,16 @@ export class User extends BaseEntity {
 	// items newer than this are unseen. Distinct from RouteShare.readAt.
 	@Property({ type: "timestamp", nullable: true })
 	notificationsSeenAt?: Date;
+
+	// Consent to the weekly "routes near you" email (CONTEXT.md "WeeklyDigest"):
+	// when it was given, null when never given or withdrawn. Opt-in only.
+	@Property({ type: "timestamp", nullable: true })
+	weeklyDigestOptInAt?: Date | null;
+
+	@Property({ type: "timestamp", nullable: true })
+	weeklyDigestLastSentAt?: Date | null;
+
+	// slugIds already mailed, so next week's picks are new routes.
+	@Property({ type: "json", nullable: true })
+	weeklyDigestSentSlugIds?: string[] | null;
 }

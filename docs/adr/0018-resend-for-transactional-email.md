@@ -18,3 +18,5 @@ The email+password signup and password-reset flows in #134 require outbound tran
 - Templates live as inline strings in `EmailService`. Acceptable for two short messages; if we add a third or want non-trivial layout, lift to React Email or MJML.
 - Failure mode: when Resend errors, `EmailService.send` throws and the calling endpoint surfaces a 500. Signup and password-reset flows are user-initiated and retry-friendly, so this is acceptable. Failure to send a verification email is logged as an error, not silently swallowed.
 - HIBP fail-open (network error → allow the password through) lives in `PasswordService`, not the email layer; documented inline.
+
+> **Update (2026-10-15):** the weekly "routes near you" email (CONTEXT.md "WeeklyDigest") is the first non-transactional mail. It goes through the same `EmailService.send`, but only to Users with recorded consent, and carries RFC 8058 `List-Unsubscribe` / `List-Unsubscribe-Post` headers pointing at a signed, sign-in-free unsubscribe endpoint on the API (`PUBLIC_API_URL`). A failed send is logged per User and never aborts the run.

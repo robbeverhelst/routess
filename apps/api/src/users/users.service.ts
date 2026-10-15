@@ -63,6 +63,11 @@ export class UsersService {
 		if (updateUserDto.preferences !== undefined) {
 			user.preferences = mergeUserPreferences(user.preferences, updateUserDto.preferences);
 		}
+		if (updateUserDto.weeklyDigest === false) {
+			user.weeklyDigestOptInAt = null;
+		} else if (updateUserDto.weeklyDigest === true && !user.weeklyDigestOptInAt) {
+			user.weeklyDigestOptInAt = new Date();
+		}
 
 		try {
 			await this.em.persist(user).flush();

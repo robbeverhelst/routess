@@ -15,6 +15,7 @@ type SerializableUser = Pick<
 	| "preferences"
 	| "deletionStatus"
 	| "deletionRequestedAt"
+	| "weeklyDigestOptInAt"
 >;
 
 // Also used by the analytics erasure path, which must reproduce exactly the
@@ -57,6 +58,7 @@ export function toUserResponseDto(user: SerializableUser, analyticsSalt: string,
 		deletionStatus: user.deletionStatus,
 		deletionRequestedAt: user.deletionRequestedAt ? user.deletionRequestedAt.toISOString() : null,
 		hasPassword,
+		weeklyDigest: Boolean(user.weeklyDigestOptInAt),
 	};
 }
 

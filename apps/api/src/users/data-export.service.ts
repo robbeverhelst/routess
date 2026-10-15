@@ -131,6 +131,7 @@ export class DataExportService {
 				role: user.role,
 				plan: user.plan,
 				preferences: user.preferences ? normalizeUserPreferences(user.preferences) : null,
+				weeklyDigestOptInAt: user.weeklyDigestOptInAt?.toISOString() ?? null,
 				createdAt: user.createdAt.toISOString(),
 				updatedAt: user.updatedAt.toISOString(),
 			},

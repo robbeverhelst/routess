@@ -20,5 +20,6 @@ import { SurfaceCompositionService } from "./surface-composition.service";
 	],
 	controllers: [RoutesController],
 	providers: [RoutesService, SurfaceCompositionService],
+	exports: [RoutesService],
 })
 export class RoutesModule {}
