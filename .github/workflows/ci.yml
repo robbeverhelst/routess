@@ -213,7 +213,7 @@ jobs:
       - name: Compute deps hash
         id: deps
         run: |
-          DEPS_HASH=$(sha256sum bun.lock | cut -c1-12)
+          DEPS_HASH=$(cat bun.lock docker/Dockerfile.deps | sha256sum | cut -c1-12)
           DEPS_IMAGE="${{ env.REGISTRY }}/${{ github.repository_owner }}/routess-deps:${DEPS_HASH}"
           echo "deps_hash=$DEPS_HASH" >> "$GITHUB_OUTPUT"
           echo "deps_image=$DEPS_IMAGE" >> "$GITHUB_OUTPUT"

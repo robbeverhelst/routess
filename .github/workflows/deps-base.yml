@@ -28,7 +28,7 @@ jobs:
       - name: Compute deps hash
         id: hash
         run: |
-          DEPS_HASH=$(sha256sum bun.lock | cut -c1-12)
+          DEPS_HASH=$(cat bun.lock docker/Dockerfile.deps | sha256sum | cut -c1-12)
           echo "deps_hash=$DEPS_HASH" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
