@@ -85,6 +85,12 @@ export class UserResponseDto {
 		description: "Whether the user has an active email/password credential. Drives password-change UI affordances.",
 	})
 	hasPassword!: boolean;
+
+	@ApiProperty({
+		example: false,
+		description: 'Whether the user has opted in to the weekly "routes near you" email.',
+	})
+	weeklyDigest!: boolean;
 }
 
 export class UserProfileDto extends UserResponseDto {

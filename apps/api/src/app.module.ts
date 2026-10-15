@@ -30,6 +30,7 @@ import { RequestIdMiddleware, requestIdFromHeaders } from "./telemetry/request-i
 import { TelemetryModule } from "./telemetry/telemetry.module";
 import { TracingInterceptor } from "./telemetry/tracing.interceptor";
 import { UsersModule } from "./users/users.module";
+import { WeeklyDigestModule } from "./weekly-digest/weekly-digest.module";
 
 @Module({
 	imports: [
@@ -94,6 +95,7 @@ import { UsersModule } from "./users/users.module";
 		}),
 		CacheModule,
 		UsersModule,
+		WeeklyDigestModule,
 		AuthModule,
 		RoutesModule,
 		ExternalRoutesModule,

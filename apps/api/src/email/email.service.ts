@@ -8,6 +8,22 @@ interface SendArgs {
 	subject: string;
 	text: string;
 	html: string;
+	headers?: Record<string, string>;
+}
+
+export interface DigestRouteItem {
+	name: string;
+	url: string;
+	imageUrl: string;
+	// Already formatted, e.g. "42 km · Cycling · Ghent".
+	meta: string;
+}
+
+export interface WeeklyDigestArgs {
+	areaLabel: string;
+	routes: DigestRouteItem[];
+	discoverUrl: string;
+	unsubscribeUrl: string;
 }
 
 // Layout follows the now-standard transactional pattern (Linear/Vercel/Resend
@@ -94,6 +110,68 @@ ${escapeHtml(args.fallbackLabel)}
 <tr><td style="padding:20px 32px 28px;border-top:1px solid ${BORDER};">
 <p style="margin:0;font-size:12px;line-height:1.5;color:${TEXT_MUTED};">
 ${escapeHtml(args.footerNote)}
+</p>
+</td></tr>
+</table>
+<p style="margin:16px 0 0;font-size:11.5px;color:${TEXT_MUTED};">routess · route planning for cyclists, runners, hikers</p>
+</td></tr>
+</table>
+</body>
+</html>`;
+}
+
+function renderDigestHtml(args: WeeklyDigestArgs & { heading: string; intro: string; footerNote: string }): string {
+	const cards = args.routes
+		.map(
+			(route) => `<tr><td style="padding:0 32px 20px;">
+<a href="${escapeAttr(route.url)}" style="display:block;text-decoration:none;color:${TEXT_PRIMARY};">
+<img src="${escapeAttr(route.imageUrl)}" alt="${escapeAttr(route.name)}" width="536" style="display:block;width:100%;max-width:536px;height:auto;border:1px solid ${BORDER};border-radius:8px;" />
+<div style="margin:10px 0 2px;font-size:16px;font-weight:600;line-height:1.35;color:${TEXT_PRIMARY};">${escapeHtml(route.name)}</div>
+<div style="font-size:13px;line-height:1.5;color:${TEXT_MUTED};">${escapeHtml(route.meta)}</div>
+</a>
+</td></tr>`,
+		)
+		.join("\n");
+	return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escapeHtml(args.heading)}</title>
+</head>
+<body style="margin:0;padding:0;background:${SHELL_BG};font-family:${FONT_STACK};color:${TEXT_BODY};-webkit-font-smoothing:antialiased;">
+<div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;visibility:hidden;">
+${escapeHtml(args.intro)}
+</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${SHELL_BG};padding:32px 16px;">
+<tr><td align="center">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background:${CARD_BG};border:1px solid ${BORDER};border-radius:12px;overflow:hidden;">
+<tr><td style="padding:32px 32px 8px;">
+<div style="font-size:15px;font-weight:600;letter-spacing:-0.01em;color:${TEXT_PRIMARY};">routess</div>
+</td></tr>
+<tr><td style="padding:8px 32px 24px;">
+<h1 style="margin:0 0 8px;font-size:22px;line-height:1.3;font-weight:600;letter-spacing:-0.01em;color:${TEXT_PRIMARY};">
+${escapeHtml(args.heading)}
+</h1>
+<p style="margin:0;font-size:15px;line-height:1.55;color:${TEXT_BODY};">
+${escapeHtml(args.intro)}
+</p>
+</td></tr>
+${cards}
+<tr><td style="padding:4px 32px 28px;">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0">
+<tr><td style="border-radius:8px;background:${BUTTON_BG};">
+<a href="${escapeAttr(args.discoverUrl)}" style="display:inline-block;padding:12px 22px;font-size:14px;font-weight:600;color:${BUTTON_FG};text-decoration:none;border-radius:8px;line-height:1;">
+More routes nearby
+</a>
+</td></tr>
+</table>
+</td></tr>
+<tr><td style="padding:20px 32px 28px;border-top:1px solid ${BORDER};">
+<p style="margin:0;font-size:12px;line-height:1.5;color:${TEXT_MUTED};">
+${escapeHtml(args.footerNote)}
+<a href="${escapeAttr(args.unsubscribeUrl)}" style="color:${TEXT_MUTED};text-decoration:underline;">Unsubscribe</a>
+with one click, or turn it off in Settings.
 </p>
 </td></tr>
 </table>
@@ -278,6 +356,37 @@ ${footerNote}`;
 		await this.send({ to, subject, text, html });
 	}
 
+	// Marketing-class mail: only ever sent to Users with weeklyDigestOptInAt
+	// set. RFC 8058 headers give mail clients a one-click unsubscribe.
+	async sendWeeklyDigestEmail(to: string, args: WeeklyDigestArgs): Promise<void> {
+		const subject = `${args.routes.length === 1 ? "A route" : `${args.routes.length} routes`} near ${args.areaLabel} this week`;
+		const heading = "Routes near you";
+		const intro = `New on routess near ${args.areaLabel}, picked for how you like to get out.`;
+		const footerNote = "You get this weekly because you turned on route suggestions in routess.";
+
+		const text = `${heading}
+
+${intro}
+
+${args.routes.map((route) => `${route.name}\n${route.meta}\n${route.url}`).join("\n\n")}
+
+More routes nearby: ${args.discoverUrl}
+
+${footerNote}
+Unsubscribe: ${args.unsubscribeUrl}`;
+		const html = renderDigestHtml({ ...args, heading, intro, footerNote });
+		await this.send({
+			to,
+			subject,
+			text,
+			html,
+			headers: {
+				"List-Unsubscribe": `<${args.unsubscribeUrl}>`,
+				"List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+			},
+		});
+	}
+
 	private async send(args: SendArgs): Promise<void> {
 		if (!this.resend) {
 			this.logger.log(`[email:console] to=${args.to} subject="${args.subject}"\n${args.text}`);
@@ -290,6 +399,7 @@ ${footerNote}`;
 				subject: args.subject,
 				text: args.text,
 				html: args.html,
+				headers: args.headers,
 			});
 			if (result.error) {
 				this.logger.error(`Resend error: ${result.error.message}`);

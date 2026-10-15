@@ -79,6 +79,9 @@ export interface AppConfig {
 		provider: "resend" | "console";
 		resendApiKey: string;
 		from: string;
+		// Public origin of this API. Unsubscribe links (and the one-click
+		// List-Unsubscribe POST) in the weekly digest point here.
+		publicApiUrl: string;
 	};
 	routing: {
 		// Base URL of the self-hosted Valhalla service. The API proxies
@@ -331,6 +334,7 @@ export function getAppConfig(): AppConfig {
 			provider: process.env.RESEND_API_KEY ? "resend" : "console",
 			resendApiKey: process.env.RESEND_API_KEY ?? "",
 			from: process.env.EMAIL_FROM || "Routess <noreply@routess.app>",
+			publicApiUrl: (process.env.PUBLIC_API_URL || (isProduction ? "" : "http://localhost:3000")).replace(/\/+$/, ""),
 		},
 		routing: {
 			valhallaUrl: (process.env.VALHALLA_URL ?? "").replace(/\/+$/, ""),

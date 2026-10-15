@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsOptional, IsString, IsUrl, MaxLength, ValidateNested } from "class-validator";
+import { IsBoolean, IsOptional, IsString, IsUrl, MaxLength, ValidateNested } from "class-validator";
 import { UpdateUserPreferencesDto } from "./user-preferences.dto";
 
 export class UpdateCurrentUserDto {
@@ -30,6 +30,15 @@ export class UpdateCurrentUserDto {
 	@MaxLength(2048)
 	@IsUrl({ protocols: ["https"], require_protocol: true })
 	avatar?: string;
+
+	@ApiPropertyOptional({
+		example: true,
+		description:
+			'Consent to the weekly "routes near you" email. true records consent now; false withdraws it. Off unless the user turns it on.',
+	})
+	@IsOptional()
+	@IsBoolean()
+	weeklyDigest?: boolean;
 
 	@ApiPropertyOptional({
 		type: UpdateUserPreferencesDto,
