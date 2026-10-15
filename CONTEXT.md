@@ -140,7 +140,7 @@ The standard XML format for route exchange. Routess imports GPX files (deriving 
 The set of Routes a User has saved. Surfaced in the UI as the library panel's "Routes" tab.
 
 **LocalRoute**:
-A Route saved on one device (in the browser's IndexedDB) by someone without an account. It holds exactly what a saved Route would and never reaches the server on its own; the library panel lists them as "your routes on this device" for signed-out visitors, with GPX export. The free Plan's saved-Route cap applies to it too. Not a RouteDraft: the draft is the one route being edited, a LocalRoute is a saved copy.
+A Route saved on one device (in the browser's IndexedDB) by someone without an account. It holds exactly what a saved Route would and never reaches the server on its own; the library panel lists them as "your routes on this device" for signed-out visitors, with GPX export, and under "On this device" for signed-in users. The free Plan's saved-Route cap applies to it too. Not a RouteDraft: the draft is the one route being edited, a LocalRoute is a saved copy.
 _Avoid_: guest route, offline route.
 
 **Collection**:
