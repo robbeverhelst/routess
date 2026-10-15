@@ -19,6 +19,7 @@ import type {
 } from "@routess/api-client";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRoutingStore } from "@/stores/routingStore";
+import { resetAnonymousId } from "./analytics/anonymous-id";
 import type { CreationSource } from "./analytics/events";
 import { trackEvent } from "./analytics/track";
 import { type ApiRoute, apiService, type CreateRouteRequest } from "./api";
@@ -620,6 +621,7 @@ export function useLogout() {
 			// Clear all cached data on logout
 			queryClient.clear();
 			trackEvent({ name: "user_logged_out", properties: {} });
+			resetAnonymousId();
 			Logger.info("Cache cleared after logout");
 		},
 		onError: (error) => {
@@ -627,6 +629,7 @@ export function useLogout() {
 			// Even if logout fails, clear local state
 			googleAuth.clearAuthState();
 			queryClient.clear();
+			resetAnonymousId();
 		},
 	});
 }

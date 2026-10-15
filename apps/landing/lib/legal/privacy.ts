@@ -7,7 +7,7 @@ import { CONTROLLER, type LegalContent } from "./types";
 // Every factual claim here is meant to be checkable against the code. If you
 // change what is collected, who receives it, or how long it is kept, change
 // this file in the same PR.
-export const UPDATED = "2026-08-07";
+export const UPDATED = "2026-10-15";
 
 export const PRIVACY: LegalContent = {
 	en: {
@@ -103,6 +103,10 @@ export const PRIVACY: LegalContent = {
 					{
 						kind: "p",
 						text: "If you are signed in, events also carry a pseudonymous identifier: a salted SHA-256 hash of your account ID. The salt lives only on our server and is never sent to your browser, so the hash cannot be reversed by anyone reading our JavaScript. It does let us follow one person's journey across sessions and devices, which is why we treat it as personal data rather than calling it anonymous.",
+					},
+					{
+						kind: "p",
+						text: "Every event also carries a random device identifier that the app stores in your browser's local storage. It is generated on your device, says nothing about you, and lets us see whether someone who planned a route without an account came back or later signed up. Signed-in events carry both identifiers, so once you sign in on a device its earlier events are linked to your account, and they are erased with it. Signing out or switching off analytics deletes the device identifier; a new random one is made next time.",
 					},
 					{
 						kind: "p",
@@ -407,6 +411,10 @@ export const PRIVACY: LegalContent = {
 					{
 						kind: "p",
 						text: "Als je ingelogd bent, dragen gebeurtenissen ook een pseudonieme identifier: een gezouten SHA-256-hash van je account-ID. Het zout staat enkel op onze server en gaat nooit naar je browser, dus niemand kan de hash omkeren door onze JavaScript te lezen. Het laat ons wel iemands traject over sessies en toestellen heen volgen, en daarom behandelen we het als persoonsgegeven in plaats van het anoniem te noemen.",
+					},
+					{
+						kind: "p",
+						text: "Elke gebeurtenis draagt ook een willekeurige toestel-identifier die de app in de lokale opslag van je browser bewaart. Die wordt op je toestel aangemaakt, zegt niets over jou, en laat ons zien of iemand die zonder account een route plande terugkwam of zich later registreerde. Gebeurtenissen van ingelogde gebruikers dragen beide identifiers, dus zodra je op een toestel inlogt, worden de eerdere gebeurtenissen van dat toestel aan je account gekoppeld en ermee gewist. Uitloggen of statistieken uitzetten verwijdert de toestel-identifier; de volgende keer wordt een nieuwe willekeurige gemaakt.",
 					},
 					{
 						kind: "p",

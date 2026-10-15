@@ -1,6 +1,7 @@
 import { isValidHandle } from "@routess/core";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
+import { resetAnonymousId } from "@/lib/analytics/anonymous-id";
 import { trackEvent } from "@/lib/analytics/track";
 import { apiService } from "@/lib/api";
 import { useAuthStatus, useBillingStatus, useLogout } from "@/lib/api-queries";
@@ -246,6 +247,7 @@ export function UserSettingsScreen() {
 		setDeleting(true);
 		try {
 			await apiService.deleteAccount();
+			resetAnonymousId();
 			pushToast({ kind: "success", title: t("settings.account.deleteScheduled") });
 			emitAppEvent("routess:open-login", { entryPoint: "session_ended" });
 		} catch (error) {
@@ -285,6 +287,7 @@ export function UserSettingsScreen() {
 		if (!window.confirm(t("settings.security.logoutEverywhereConfirm"))) return;
 		try {
 			await apiService.logoutEverywhere();
+			resetAnonymousId();
 			pushToast({ kind: "success", title: t("common.signedOut") });
 			emitAppEvent("routess:open-login", { entryPoint: "session_ended" });
 		} catch (error) {

@@ -19,6 +19,8 @@ routess gebruikt Umami, een cookieloos statistiekengereedschap, zelf gehost op r
 
 Naast paginaweergaves registreert de app benoemde productgebeurtenissen, zoals een route aanmaken of een GPX-bestand importeren, met context zoals afstand, aantal waypoints en de zichtbaarheid die je koos. Gebeurtenissen van ingelogde gebruikers dragen een **pseudonieme** identifier: een gezouten hash van je account-ID, berekend op de server. Het is niet je ruwe account-ID en het kan niet vanuit de browser omgekeerd worden, maar het koppelt je sessies wel aan elkaar, dus noemen we het pseudoniem in plaats van anoniem.
 
+Elke gebeurtenis draagt ook een willekeurige toestel-identifier in de lokale opslag van je browser, zodat we zien of iemand die zonder account een route plande terugkwam. Zodra je op een toestel inlogt, worden de eerdere gebeurtenissen van dat toestel aan je account gekoppeld en ermee gewist. Uitloggen of statistieken uitzetten verwijdert de toestel-identifier.
+
 Zoektermen worden enkel als lengte-categorie geregistreerd, nooit als de tekst die je typte.
 
 **Uitzetten**: Instellingen → Privacy & delen → Gebruiksstatistieken. Daarna wordt er niets meer verstuurd, ook geen paginaweergaves. De Do Not Track-instelling van je browser wordt automatisch gerespecteerd.

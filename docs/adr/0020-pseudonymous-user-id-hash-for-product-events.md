@@ -6,6 +6,8 @@ GDPR deletion of a single user's behavioural trail runs as part of the hard-dele
 
 > **Update:** this ADR originally specified "calls Umami's admin API". Umami has no delete-by-property endpoint — the only destructive API is a website-wide reset — so `AnalyticsErasureService` issues a direct `DELETE` against Umami's own Postgres (`event_data` joined to `website_event`), configured via `UMAMI_DATABASE_URL` + `UMAMI_WEBSITE_ID`. That couples us to two Umami tables which have been stable across v2. Erasure is best-effort: unconfigured or failing, it logs and the account deletion proceeds regardless, because stranding accounts in `pending_hard_delete` is the worse failure. Revisit if Umami ships a real deletion endpoint.
 
+> **Update (2026-10-15):** anonymous events now carry `anon_id`, a random per-device UUID in `localStorage`, because the daily-rotating Umami visitor ID made anonymous drafts, saves and returns uncountable. It holds nothing derived from the person, is minted only while analytics is allowed, and is deleted on sign-out, account deletion and opt-out. Signed-in events carry it alongside `user_id_hash`, which is the anonymous-to-account merge; erasure follows that link and deletes the device's anonymous events too.
+
 Analytics also carries a per-device opt-out (`analyticsEnabled` in the settings store, plus the browser's Do Not Track signal). It gates both `trackEvent` and the tracker `<script>` loader in `index.html`, so opting out stops pageview autotracking too, not just custom events. ProductEvents run on legitimate interest; this is the Art. 21 objection mechanism, which is what lets `user_id_hash` exist without a consent banner.
 
 ## Considered options

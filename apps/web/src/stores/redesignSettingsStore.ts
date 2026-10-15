@@ -8,6 +8,7 @@ import {
 } from "@routess/core";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { resetAnonymousId } from "@/lib/analytics/anonymous-id";
 import type { RedesignActivity } from "./uiStore";
 
 export type RedesignUnits = "km" | "mi";
@@ -316,7 +317,10 @@ export const useRedesignSettingsStore = create<SettingsState>()(
 			setShowNodeNetworkOverlays: (showNodeNetworkOverlays) => set({ showNodeNetworkOverlays }),
 			setNavigationEnabled: (navigationEnabled) => set({ navigationEnabled }),
 			setFirstRunActionsDismissed: (firstRunActionsDismissed) => set({ firstRunActionsDismissed }),
-			setAnalyticsEnabled: (analyticsEnabled) => set({ analyticsEnabled }),
+			setAnalyticsEnabled: (analyticsEnabled) => {
+				if (!analyticsEnabled) resetAnonymousId();
+				set({ analyticsEnabled });
+			},
 			setRoutingDefaultsForActivity: (activity, prefs) =>
 				set((state) => ({
 					routingDefaults: mergeRoutingDefaults(state.routingDefaults, {

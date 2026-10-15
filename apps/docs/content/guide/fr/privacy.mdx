@@ -19,6 +19,8 @@ routess utilise Umami, un outil d'analyse sans cookies, auto-hébergé sur l'inf
 
 Outre les pages vues, l'application enregistre des événements produit nommés, comme la création d'un itinéraire ou l'import d'un fichier GPX, avec un contexte tel que la distance, le nombre de points de passage et la visibilité choisie. Les événements des utilisateurs connectés portent un identifiant **pseudonyme** : un hachage salé de votre identifiant de compte, calculé côté serveur. Ce n'est pas votre identifiant brut et il ne peut pas être inversé depuis le navigateur, mais il relie vos sessions entre elles, d'où le terme pseudonyme plutôt qu'anonyme.
 
+Chaque événement porte aussi un identifiant d'appareil aléatoire conservé dans le stockage local de votre navigateur, pour savoir si quelqu'un qui a planifié un itinéraire sans compte est revenu. Dès que vous vous connectez sur un appareil, ses événements antérieurs sont liés à votre compte et effacés avec lui. Se déconnecter ou désactiver les statistiques supprime l'identifiant d'appareil.
+
 Les termes de recherche ne sont enregistrés que sous forme de catégorie de longueur, jamais comme le texte que vous avez saisi.
 
 **Pour désactiver** : Paramètres → Confidentialité et partage → Statistiques d'utilisation. Plus rien n'est envoyé ensuite, pages vues comprises. Le réglage Do Not Track de votre navigateur est respecté automatiquement.
