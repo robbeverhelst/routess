@@ -11,6 +11,7 @@ import { PwaLaunchBindings } from "@/components/map/PwaLaunchBindings";
 import { MapInteractionProvider } from "@/components/providers/MapInteractionProvider";
 import { UserLocationProvider, useUserLocation } from "@/components/providers/UserLocationProvider";
 import { startGeneration } from "@/features/generation/generationService";
+import { useLocalRoutesStore } from "@/features/localRoutes/localRoutesStore";
 import { cancelMapPick, requestMapPick } from "@/features/map/mapPick";
 import { confirmDiscardIfDirty } from "@/features/routing/confirmDiscardIfDirty";
 import type { PopupInfo as MapPopupInfo } from "@/features/routing/managers/MapInteractionManager";
@@ -205,6 +206,23 @@ const MapWithRoutingContent: React.FC<MapboxMapProps> = ({
 					}
 				});
 		};
+		const onLoadLocalRoute = ({ localRoute }: AppEventMap["routess:load-local-route"]) => {
+			if (!editor) {
+				Logger.warn("[MapWithRouting] routess:load-local-route received before map ready");
+				return;
+			}
+			const state = useRoutingStore.getState();
+			if (!confirmDiscardIfDirty(state.mode, state.activity, state.waypoints)) return;
+			void editor.loadFromLocalRoute(localRoute).then((result) => {
+				if (!result.success) {
+					Logger.warn("[MapWithRouting] load-local-route failed:", result.message);
+					return;
+				}
+				useLocalRoutesStore.getState().bind(localRoute.localId);
+				const coords = getCurrentRoutePath();
+				if (mapRef.current && coords.length > 0) zoomToRoute(mapRef.current, coords);
+			});
+		};
 		const onShareRoute = () => {
 			handleCopyShareLinkToClipboard();
 		};
@@ -307,6 +325,7 @@ const MapWithRoutingContent: React.FC<MapboxMapProps> = ({
 			onAppEvent("routess:focus-route", onFocusRoute),
 			onAppEvent("routess:fly-to", onFlyTo),
 			onAppEvent("routess:load-route", onLoadRoute),
+			onAppEvent("routess:load-local-route", onLoadLocalRoute),
 			onAppEvent("routess:share-route", onShareRoute),
 			onAppEvent("routess:export-gpx", onExportGpx),
 			onAppEvent("routess:import-gpx", onImportGpx),

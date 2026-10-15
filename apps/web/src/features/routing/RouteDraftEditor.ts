@@ -10,6 +10,8 @@ import {
 	selectSmartWaypoints,
 } from "@routess/core";
 import type { GeoJSONSource, Map as MapboxMap } from "mapbox-gl";
+import type { LocalRoute } from "@/features/localRoutes/localRouteDb";
+import { useLocalRoutesStore } from "@/features/localRoutes/localRoutesStore";
 import { trackEvent } from "@/lib/analytics/track";
 import { type ApiRoute, apiService } from "@/lib/api";
 import { Logger } from "@/lib/logger";
@@ -78,6 +80,7 @@ export interface RouteDraftEditor {
 	redo(): Promise<EditResult>;
 	loadFromApiRoute(route: ApiRoute): Promise<EditResult>;
 	loadFromExternalRoute(route: ApiExternalRoute): Promise<EditResult>;
+	loadFromLocalRoute(route: LocalRoute): Promise<EditResult>;
 	loadFromShareLink(encoded: string): Promise<EditResult>;
 	loadFromGpx(gpxString: string): Promise<EditResult>;
 	loadWaypoints(waypoints: Waypoint[], options?: LoadOptions): Promise<EditResult>;
@@ -403,6 +406,7 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 
 		const store = useRoutingStore.getState();
 		if (snapshot) store.saveSnapshot();
+		useLocalRoutesStore.getState().draftReplaced();
 		store.setIsMapLocked(isMapLocked ?? store.isMapLocked);
 
 		clearComputedRouteUi();
@@ -500,6 +504,19 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 			type: "routed" as const,
 		}));
 		return loadWaypoints(waypoints, { exactRoutePath: route.geometry, saveSnapshot: true });
+	};
+
+	// Opens a LocalRoute (saved on this device without an account) as an
+	// unsaved draft; loading unbinds, so the caller binds the draft to it
+	// afterwards to make saving update it.
+	const loadFromLocalRoute = async ({ route, creationSource }: LocalRoute): Promise<EditResult> => {
+		const store = useRoutingStore.getState();
+		store.setMode({ kind: "unsaved" });
+		if (route.activity) store.setActivity(route.activity);
+		store.setRoutingPreferences(route.routingPreferences ?? null);
+		store.setCreationSource(creationSource);
+		trackEvent({ name: "route_loaded_into_editor", properties: { creation_source: creationSource } });
+		return loadWaypoints(route.waypoints, { exactRoutePath: route.geometry, saveSnapshot: true });
 	};
 
 	const loadFromGpx = async (gpxString: string): Promise<EditResult> => {
@@ -606,6 +623,7 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 		loadFromShareLink,
 		loadFromGpx,
 		loadFromExternalRoute,
+		loadFromLocalRoute,
 		loadWaypoints,
 		exportGpx,
 		buildShareUrl,

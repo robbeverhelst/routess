@@ -1,4 +1,5 @@
 import type { RouteVisibility } from "@routess/core";
+import type { LocalRoute } from "@/features/localRoutes/localRouteDb";
 import type { RedesignMapStyle } from "@/stores/redesignSettingsStore";
 import type { ApiRoute, Waypoint } from "./api";
 
@@ -7,6 +8,7 @@ type NoDetail = undefined;
 export type SignInEntryPoint =
 	| "auth_wall"
 	| "save_modal"
+	| "device_routes"
 	| "header_avatar"
 	| "settings_panel"
 	| "login_screen"
@@ -50,6 +52,9 @@ export interface AppEventMap {
 				tags?: string[];
 				description?: string;
 		  };
+	// Opens a LocalRoute (saved on this device) in the planner. Handled in
+	// MapWithRouting, next to routess:load-route.
+	"routess:load-local-route": { localRoute: LocalRoute };
 	// Kicks off RouteGeneration (#136/#262). `start` is the start point, `end`
 	// the a-to-b destination; when omitted the handler (in MapWithRouting,
 	// where the map lives) falls back to the current map center.

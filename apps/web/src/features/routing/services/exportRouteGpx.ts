@@ -11,8 +11,9 @@ const safeFilename = (name: string): string => {
 	return `${slug || "route"}.gpx`;
 };
 
-// Downloads a saved route as GPX, independent of the active draft.
-export const exportRouteGpx = (route: ApiRoute): boolean => {
+// Downloads a saved route (in the account or on this device) as GPX,
+// independent of the active draft.
+export const exportRouteGpx = (route: Pick<ApiRoute, "name" | "waypoints" | "geometry" | "distance">): boolean => {
 	const path = route.geometry && route.geometry.length >= 2 ? route.geometry : route.waypoints.map((wp) => wp.coord);
 	const contents = buildRouteGpx({ name: route.name, waypoints: route.waypoints, geometry: path });
 	const blob = new Blob([contents], { type: "application/gpx+xml;charset=utf-8" });

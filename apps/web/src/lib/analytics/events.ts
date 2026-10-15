@@ -11,6 +11,7 @@ type EmptyProps = Record<string, never>;
 
 export type AuthProvider = "google" | "email";
 export type CreationSource = "manual" | "generated" | "imported";
+export type RouteStorage = "account" | "device";
 export type RouteType = "loop" | "a-to-b";
 export type SurfaceType = "paved" | "mixed" | "unpaved";
 export type GenerationHeading = "any" | "north" | "east" | "south" | "west";
@@ -40,6 +41,19 @@ export type ProductEvent =
 				tag_count: number;
 				is_first_route: boolean;
 				creation_source: CreationSource;
+				// "device": saved on this device without an account (a LocalRoute).
+				storage: RouteStorage;
+			};
+	  }
+	| {
+			name: "local_route_saved";
+			properties: {
+				waypoint_count: number;
+				distance_m: number;
+				activity: RouteActivity | null;
+				creation_source: CreationSource;
+				is_update: boolean;
+				local_route_count: number;
 			};
 	  }
 	| { name: "route_updated"; properties: { changed: string[] } }

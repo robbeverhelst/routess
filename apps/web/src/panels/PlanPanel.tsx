@@ -5,7 +5,6 @@ import { startNavigation } from "@/features/navigation/startNavigation";
 import { applySavedRoute } from "@/features/routing/applySavedRoute";
 import { isDraftDirty } from "@/features/routing/draftDirty";
 import { useSurfaceBreakdown } from "@/features/routing/services/useSurfaceBreakdown";
-import { useIsAuthenticated } from "@/hooks/useAuthState";
 import { useViewport } from "@/hooks/useViewport";
 import { useSaveRoute, useUpdateRoute } from "@/lib/api-queries";
 import { emitAppEvent, onAppEvent } from "@/lib/app-events";
@@ -163,7 +162,6 @@ export function PlanPanel() {
 	const openModal = useModalsStore((s) => s.openModal);
 	const openSearch = useModalsStore((s) => s.openSearch);
 	const pushToast = useToastStore((s) => s.push);
-	const isAuthenticated = useIsAuthenticated();
 	const distanceMeters = useDistanceMeters();
 	const durationSeconds = useDurationSeconds();
 	const elevationGain = useElevationGain();
@@ -913,16 +911,9 @@ export function PlanPanel() {
 						style={{ flex: 1, minWidth: 0, padding: "0 10px" }}
 						disabled={mode.kind === "editing" ? !isDirty || waypoints.length < 2 || updateRoute.isPending : !hasRoute}
 						onClick={handleSaveClick}
-						// No surprise sign-in wall at the end of the flow: tell
-						// anonymous users up front that saving needs an account.
-						title={isAuthenticated ? undefined : t("save.signInHint")}
 					>
 						<I.save size={14} />{" "}
-						{mode.kind === "editing" && updateRoute.isPending
-							? t("save.saving")
-							: isAuthenticated
-								? t("common.save")
-								: t("save.signInShort")}
+						{mode.kind === "editing" && updateRoute.isPending ? t("save.saving") : t("common.save")}
 					</Btn>
 					{mode.kind === "editing" && (
 						<Btn

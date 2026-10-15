@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { DeviceRoutesPanel, SignedInDeviceRoutes } from "@/features/localRoutes/DeviceRoutesPanel";
+import { useLocalRoutes } from "@/features/localRoutes/localRoutesStore";
 import { useIsAuthenticated } from "@/hooks/useAuthState";
 import { useBackfillRouteGeometry } from "@/hooks/useBackfillRouteGeometry";
 import { useFavouritesMigration } from "@/hooks/useFavouritesMigration";
@@ -86,7 +88,6 @@ function EmptyLibrary({
 
 export function LibraryPanel() {
 	const isAuthenticated = useIsAuthenticated();
-	const t = useT();
 	const sharedCollectionId = useLibraryStore((s) => s.sharedCollectionId);
 	const setSharedCollectionId = useLibraryStore((s) => s.setSharedCollectionId);
 	const selectRoute = useLibraryStore((s) => s.selectRoute);
@@ -116,19 +117,29 @@ export function LibraryPanel() {
 		);
 	}
 
-	if (!isAuthenticated) {
-		return (
-			<div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-				<SignInGate
-					title={t("library.gate.title")}
-					description={t("library.gate.body")}
-					icon={I.library}
-					actionAttempted="view_library"
-				/>
-			</div>
-		);
-	}
+	if (!isAuthenticated) return <SignedOutLibrary />;
 	return <LibraryPanelInner />;
+}
+
+// Without an account the library is the routes saved on this device; the
+// sign-in gate shows only when there are none yet.
+function SignedOutLibrary() {
+	const t = useT();
+	const { routes, hydrated } = useLocalRoutes();
+	// Wait for storage before choosing, so a device with routes never flashes
+	// (and counts) the auth wall.
+	if (!hydrated) return null;
+	if (routes.length > 0) return <DeviceRoutesPanel routes={routes} />;
+	return (
+		<div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+			<SignInGate
+				title={t("library.gate.title")}
+				description={t("library.gate.body")}
+				icon={I.library}
+				actionAttempted="view_library"
+			/>
+		</div>
+	);
 }
 
 function LibraryPanelInner() {
@@ -163,6 +174,7 @@ function LibraryPanelInner() {
 					onLoop={() => openModal("loop")}
 					onImport={() => openModal("import")}
 				/>
+				<SignedInDeviceRoutes />
 			</div>
 		);
 	}
@@ -243,6 +255,7 @@ function LibraryPanelInner() {
 			) : (
 				<CollectionsTab routes={routes} query={query} onOpenCollection={(id) => setOpenedCollectionId(id)} />
 			)}
+			<SignedInDeviceRoutes />
 		</div>
 	);
 }

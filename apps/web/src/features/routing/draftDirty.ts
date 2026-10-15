@@ -3,7 +3,7 @@ import type { RouteActivity, RouteBaseline, RouteDraftMode, Waypoint } from "@ro
 const waypointEqual = (a: Waypoint, b: Waypoint): boolean =>
 	a.coord[0] === b.coord[0] && a.coord[1] === b.coord[1] && a.type === b.type && (a.name ?? "") === (b.name ?? "");
 
-const waypointsEqual = (a: Waypoint[], b: Waypoint[]): boolean => {
+export const waypointsEqual = (a: Waypoint[], b: Waypoint[]): boolean => {
 	if (a.length !== b.length) return false;
 	for (let i = 0; i < a.length; i++) if (!waypointEqual(a[i], b[i])) return false;
 	return true;

@@ -1,11 +1,14 @@
-import type { RouteVisibility } from "@routess/core";
+import { FREE_SAVED_ROUTE_LIMIT, type RouteVisibility } from "@routess/core";
 import { useEffect, useMemo, useState } from "react";
 import { ProLock, useProGates, useProGateToast } from "@/features/billing/proGates";
+import { useBoundLocalRoute, useLocalRoutes } from "@/features/localRoutes/localRoutesStore";
+import { useSaveLocalRoute } from "@/features/localRoutes/useSaveLocalRoute";
 import { applySavedRoute } from "@/features/routing/applySavedRoute";
 import { useIsAuthenticated } from "@/hooks/useAuthState";
-import { useSaveRoute } from "@/lib/api-queries";
-import { emitAppEvent } from "@/lib/app-events";
+import type { CreateRouteRequest } from "@/lib/api";
+import { useBillingStatus, useSaveRoute } from "@/lib/api-queries";
 import { useT } from "@/lib/i18n";
+import { Logger } from "@/lib/logger";
 import { useModalsStore } from "@/stores/modalsStore";
 import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 import {
@@ -57,6 +60,17 @@ export function SaveModal() {
 	const isAuthenticated = useIsAuthenticated();
 	const { atSavedRouteLimit } = useProGates();
 	const proGateToast = useProGateToast();
+	// Without an account the route is saved on this device (a LocalRoute).
+	// Saving again after opening or saving one updates it in place. The device
+	// holds as many routes as a free account, so signing up never strands any.
+	const saveLocal = useSaveLocalRoute();
+	const { routes: localRoutes } = useLocalRoutes();
+	const boundLocalRoute = useBoundLocalRoute();
+	const billingEnabled = useBillingStatus().data?.enabled === true;
+	const atLimit = isAuthenticated
+		? atSavedRouteLimit
+		: billingEnabled && !boundLocalRoute && localRoutes.length >= FREE_SAVED_ROUTE_LIMIT;
+	const isPending = isAuthenticated ? saveRoute.isPending : saveLocal.isPending;
 
 	const availableActivities = useMemo(
 		() => (selectedSports.length > 0 ? ACTIVITIES.filter((a) => selectedSports.includes(a.key)) : ACTIVITIES),
@@ -76,32 +90,54 @@ export function SaveModal() {
 	const [tags, setTags] = useState<string[]>([]);
 	const [tagDraft, setTagDraft] = useState("");
 
-	const wpCount = waypoints.length;
+	// Saving a LocalRoute again keeps its name and tags unless the user changes
+	// them. The routes can finish loading from storage after the modal opens.
+	const boundRoute = isAuthenticated ? undefined : boundLocalRoute?.route;
+	useEffect(() => {
+		if (!boundRoute) return;
+		setName((current) => current || boundRoute.name);
+		setTags((current) => (current.length > 0 ? current : (boundRoute.tags ?? [])));
+	}, [boundRoute]);
 
-	if (!isAuthenticated) {
-		return <SignInToSave distance={distance} duration={duration} wpCount={wpCount} onClose={closeModal} />;
-	}
+	const wpCount = waypoints.length;
 
 	const handleSave = () => {
 		if (!name.trim() || waypoints.length < 2) return;
+		if (atLimit) return;
 		const trimmedName = name.trim();
+		const route: CreateRouteRequest = {
+			name: trimmedName,
+			activity: activityType,
+			tags,
+			waypoints,
+			...(routePath.length >= 2 ? { geometry: routePath } : {}),
+			distance: distanceMeters ?? 0,
+			duration: durationSeconds ?? undefined,
+			elevationGain: elevationGain != null ? Math.round(elevationGain) : 0,
+			...(draftRoutingPreferences ? { routingPreferences: draftRoutingPreferences } : {}),
+			// A draft born from a confirmed GenerationCandidate saves with
+			// Provenance "generation" (immutable, per ADR-0023/0029).
+			...(creationSource === "generated" ? { provenance: "generation" as const } : {}),
+		};
+		if (!isAuthenticated) {
+			saveLocal
+				.mutate(route, creationSource)
+				.then(() => {
+					pushToast({
+						kind: "success",
+						title: t("save.local.toast.saved"),
+						body: `${trimmedName} · ${distance || "—"}`,
+					});
+					closeModal();
+				})
+				.catch((error: unknown) => {
+					Logger.error("[SaveModal] saving on this device failed:", error);
+					pushToast({ kind: "danger", title: t("save.toast.failed"), body: t("common.tryAgain") });
+				});
+			return;
+		}
 		saveRoute.mutate(
-			{
-				name: trimmedName,
-				activity: activityType,
-				visibility,
-				tags,
-				waypoints,
-				...(routePath.length >= 2 ? { geometry: routePath } : {}),
-				distance: distanceMeters ?? 0,
-				duration: durationSeconds ?? undefined,
-				elevationGain: elevationGain != null ? Math.round(elevationGain) : 0,
-				...(draftRoutingPreferences ? { routingPreferences: draftRoutingPreferences } : {}),
-				// A draft born from a confirmed GenerationCandidate saves with
-				// Provenance "generation" (immutable, per ADR-0023/0029).
-				...(creationSource === "generated" ? { provenance: "generation" as const } : {}),
-				creationSource,
-			},
+			{ ...route, visibility, creationSource },
 			{
 				onSuccess: (created) => {
 					applySavedRoute(created);
@@ -142,7 +178,7 @@ export function SaveModal() {
 			width={520}
 			onClose={closeModal}
 			footer={
-				atSavedRouteLimit ? (
+				atLimit ? (
 					<>
 						<ProLock feature="unlimited_saved_routes" style={{ flex: 1 }} />
 						<Btn onClick={closeModal}>{t("common.cancel")}</Btn>
@@ -151,8 +187,8 @@ export function SaveModal() {
 					<>
 						<div style={{ flex: 1 }} />
 						<Btn onClick={closeModal}>{t("common.cancel")}</Btn>
-						<Btn variant="primary" onClick={handleSave} disabled={!name.trim() || wpCount < 2 || saveRoute.isPending}>
-							<I.save size={14} /> {saveRoute.isPending ? t("save.saving") : t("save.title")}
+						<Btn variant="primary" onClick={handleSave} disabled={!name.trim() || wpCount < 2 || isPending}>
+							<I.save size={14} /> {isPending ? t("save.saving") : t("save.title")}
 						</Btn>
 					</>
 				)
@@ -214,43 +250,50 @@ export function SaveModal() {
 					</div>
 				</div>
 
-				<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-					<SecTitle>{t("save.visibilityLabel")}</SecTitle>
-					<div
-						style={{
-							background: RDS_COLORS.bgInput,
-							border: `1px solid ${RDS_COLORS.border}`,
-							borderRadius: 8,
-							padding: 4,
-							display: "grid",
-							gridTemplateColumns: "1fr 1fr 1fr",
-							gap: 4,
-						}}
-					>
-						{VISIBILITY_OPTS.map((p) => {
-							const on = visibility === p.key;
-							return (
-								<button
-									key={p.key}
-									type="button"
-									onClick={() => setVisibility(p.key)}
-									style={{
-										padding: "8px 10px",
-										borderRadius: 6,
-										background: on ? RDS_COLORS.bgPanel : "transparent",
-										boxShadow: on ? "var(--rds-shadow-sm)" : "none",
-										border: 0,
-										textAlign: "left",
-										cursor: "pointer",
-									}}
-								>
-									<div style={{ fontSize: 12.5, fontWeight: 600, color: RDS_COLORS.fg }}>{t(p.labelKey)}</div>
-									<div style={{ fontSize: 11, color: RDS_COLORS.fgSubtle, marginTop: 2 }}>{t(p.subKey)}</div>
-								</button>
-							);
-						})}
+				{isAuthenticated ? (
+					<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+						<SecTitle>{t("save.visibilityLabel")}</SecTitle>
+						<div
+							style={{
+								background: RDS_COLORS.bgInput,
+								border: `1px solid ${RDS_COLORS.border}`,
+								borderRadius: 8,
+								padding: 4,
+								display: "grid",
+								gridTemplateColumns: "1fr 1fr 1fr",
+								gap: 4,
+							}}
+						>
+							{VISIBILITY_OPTS.map((p) => {
+								const on = visibility === p.key;
+								return (
+									<button
+										key={p.key}
+										type="button"
+										onClick={() => setVisibility(p.key)}
+										style={{
+											padding: "8px 10px",
+											borderRadius: 6,
+											background: on ? RDS_COLORS.bgPanel : "transparent",
+											boxShadow: on ? "var(--rds-shadow-sm)" : "none",
+											border: 0,
+											textAlign: "left",
+											cursor: "pointer",
+										}}
+									>
+										<div style={{ fontSize: 12.5, fontWeight: 600, color: RDS_COLORS.fg }}>{t(p.labelKey)}</div>
+										<div style={{ fontSize: 11, color: RDS_COLORS.fgSubtle, marginTop: 2 }}>{t(p.subKey)}</div>
+									</button>
+								);
+							})}
+						</div>
 					</div>
-				</div>
+				) : (
+					<p style={{ margin: 0, display: "flex", gap: 8, fontSize: 12.5, color: RDS_COLORS.fgMuted, lineHeight: 1.5 }}>
+						<I.lock size={13} style={{ flexShrink: 0, marginTop: 2 }} aria-hidden />
+						{t("save.local.note")}
+					</p>
+				)}
 
 				<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
 					<SecTitle>{t("save.tags")}</SecTitle>
@@ -306,80 +349,6 @@ export function SaveModal() {
 						/>
 					</div>
 				</div>
-			</div>
-		</ModalShell>
-	);
-}
-
-function SignInToSave({
-	distance,
-	duration,
-	wpCount,
-	onClose,
-}: {
-	distance: string;
-	duration: string;
-	wpCount: number;
-	onClose: () => void;
-}) {
-	const t = useT();
-	const goToSignIn = () => {
-		onClose();
-		emitAppEvent("routess:open-login", { entryPoint: "save_modal" });
-	};
-
-	const goToSignUp = () => {
-		onClose();
-		emitAppEvent("routess:open-signup", { entryPoint: "save_modal" });
-	};
-
-	return (
-		<ModalShell
-			title={t("save.gate.title")}
-			sub={t("save.waypointsCount", {
-				distance: distance || "—",
-				duration: duration || "—",
-				count: String(wpCount),
-			})}
-			width={420}
-			onClose={onClose}
-			footer={
-				<>
-					<Btn onClick={onClose}>{t("common.cancel")}</Btn>
-					<div style={{ flex: 1 }} />
-					<Btn onClick={goToSignUp}>{t("save.createAccount")}</Btn>
-					<Btn variant="primary" onClick={goToSignIn}>
-						<I.user size={14} /> {t("common.signIn")}
-					</Btn>
-				</>
-			}
-		>
-			<div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-				<p style={{ margin: 0, fontSize: 13.5, color: RDS_COLORS.fg, lineHeight: 1.5 }}>{t("save.gate.subtitle")}</p>
-				<p style={{ margin: 0, fontSize: 12.5, color: RDS_COLORS.fgMuted, lineHeight: 1.5 }}>{t("save.gate.body")}</p>
-
-				<ul
-					style={{
-						listStyle: "none",
-						padding: 0,
-						margin: 0,
-						display: "flex",
-						flexDirection: "column",
-						gap: 8,
-						fontSize: 12.5,
-						color: RDS_COLORS.fgMuted,
-					}}
-				>
-					<li style={{ display: "flex", alignItems: "center", gap: 8 }}>
-						<I.save size={12} /> {t("save.gate.benefit.unlimited")}
-					</li>
-					<li style={{ display: "flex", alignItems: "center", gap: 8 }}>
-						<I.library size={12} /> {t("save.gate.benefit.sync")}
-					</li>
-					<li style={{ display: "flex", alignItems: "center", gap: 8 }}>
-						<I.share size={12} /> {t("save.gate.benefit.share")}
-					</li>
-				</ul>
 			</div>
 		</ModalShell>
 	);

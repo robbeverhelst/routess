@@ -55,7 +55,7 @@ Umami captures these automatically from the request. Do not duplicate them as ev
 | `user_logged_in` | Every successful login (including the first) | `provider: "google" \| "email"` |
 | `user_logged_out` | User clicks logout | — |
 | `auth_wall_hit` | Sign-in prompt shown because an action requires auth | `action_attempted: string` (e.g. `"view_library"`, `"view_social"`) |
-| `signup_started` | User clicks any sign-in / sign-up CTA | `entry_point: SignInEntryPoint` (e.g. `"auth_wall"`, `"save_modal"`) |
+| `signup_started` | User clicks any sign-in / sign-up CTA | `entry_point: SignInEntryPoint` (e.g. `"auth_wall"`, `"device_routes"`) |
 
 `user_registered` and `user_logged_in` both fire on a first-time login — `_registered` is the funnel signal, `_logged_in` is the recurring engagement signal.
 
@@ -76,7 +76,7 @@ The action bar shows only on mobile, in the Plan context, while there are no way
 
 There is no matching `first_run_actions_shown` event: firing on render would break the discrete-intent rule above, and the bar's visibility is derivable from the absence of `route_draft_started`.
 
-**`route_draft_started` is the only signal that a signed-out user tried to plan anything.** `route_created` fires on `POST /routes` returning 2xx, which requires an account, so a guest who drops waypoints, gets a route and leaves without saving produces no other event. Without this, "never activated" cannot be split into *never tried* (a discovery problem) and *tried but didn't save* (an auth-wall or value problem).
+**`route_draft_started` is the only signal that a signed-out user tried to plan anything.** A guest who drops waypoints, gets a route and leaves without saving produces no other event (saving, even on the device, fires `route_created`). Without this, "never activated" cannot be split into *never tried* (a discovery problem) and *tried but didn't save* (an auth-wall or value problem).
 
 Fired once per draft from `addWaypoint` in `apps/web/src/features/routing/RouteDraftEditor.ts`, on the 0 to 1 transition only. Not per waypoint: that would be a firehose and would make session counts meaningless. `loadWaypoints` (GPX import, opening a saved route) deliberately does not fire it, since neither is the user starting to plan.
 
@@ -84,10 +84,13 @@ Fired once per draft from `addWaypoint` in `apps/web/src/features/routing/RouteD
 
 | Event | When | Properties |
 |---|---|---|
-| `route_created` | API `POST /routes` returns 2xx | `waypoint_count`, `distance_m`, `elevation_gain_m`, `has_description`, `activity`, `privacy`, `tag_count`, `is_first_route`, `creation_source: "manual" \| "generated" \| "imported"` |
+| `route_created` | API `POST /routes` returns 2xx, or a new LocalRoute is saved on the device | `waypoint_count`, `distance_m`, `elevation_gain_m`, `has_description`, `activity`, `privacy`, `tag_count`, `is_first_route`, `creation_source: "manual" \| "generated" \| "imported"`, `storage: "account" \| "device"` |
+| `local_route_saved` | A signed-out user saves on the device (new or updating the LocalRoute the draft came from) | `waypoint_count`, `distance_m`, `activity`, `creation_source`, `is_update`, `local_route_count` |
 | `route_updated` | API `PATCH /routes/:id` returns 2xx | `changed: string[]` (e.g. `["name", "tags"]`) |
 | `route_deleted` | API `DELETE /routes/:id` returns 2xx | — |
 | `route_loaded_into_editor` | Saved route opened into the editor | `creation_source: "manual" \| "generated" \| "imported" \| "unknown"` |
+
+**Saving without an account.** A signed-out user saves a **LocalRoute** on the device instead of hitting a sign-in wall. A new LocalRoute fires `route_created` with `storage: "device"` (`visibility` is always `"private"`, `is_first_route` counts LocalRoutes on the device), so draft→saved counts every save whether or not the person has an account; split by `storage` to see the account share. `local_route_saved` fires on every device save, updates included, and is the device-only signal. Saving again after opening or saving a LocalRoute updates it in place (`is_update: true`) and does not fire `route_created` again.
 
 `creation_source` on `route_created` reads the RouteDraft's `creationSource` field (#136): `"generated"` for drafts born from a confirmed GenerationCandidate, `"imported"` for GPX-imported drafts, `"manual"` otherwise. `route_loaded_into_editor` derives it from the saved Route's Provenance (`generation` → `generated`, `gpx-import` → `imported`, else `manual`).
 
