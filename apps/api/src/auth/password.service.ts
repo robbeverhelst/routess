@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto";
 import { BadRequestException, Injectable, Logger } from "@nestjs/common";
-import * as argon2 from "argon2";
 import { MetricsService } from "../telemetry/metrics.service";
 
 const PASSWORD_MIN_LENGTH = 12;
@@ -8,13 +7,31 @@ const PASSWORD_MAX_LENGTH = 128;
 
 // argon2id is the modern default. Parameters tuned for ~250–500ms per hash on
 // a typical API host; tune via env if you find them too aggressive on your
-// hardware.
-const ARGON2_OPTIONS: argon2.HashOptions = {
-	type: argon2.argon2id,
+// hardware. Bun.password always hashes with parallelism 1 (p=1).
+const ARGON2_OPTIONS = {
+	algorithm: "argon2id",
 	memoryCost: 19_456,
 	timeCost: 2,
-	parallelism: 1,
-};
+} as const;
+
+// A real argon2id hash at ARGON2_OPTIONS' cost (of a random, discarded
+// password), so verifying against it does the same work as a wrong-password
+// check on a stored hash.
+export const DUMMY_HASH =
+	"$argon2id$v=19$m=19456,t=2,p=1$72VpDGFLIZw2p4EmIPGSW/qq2fRRQIYWySKClAkOcUI$LOXk3N0LNNn1wyzHBGI8Y3I0oflHce2esVKfpJNguq4";
+
+// Bun.password only parses an argon2 hash whose parameters are in the PHC
+// order m,t,p. Hashes written before the move to Bun.password came from the
+// argon2 npm package, which orders them m,p,t: same parameters, same digest,
+// so reorder them before verifying.
+export function toCanonicalArgon2Hash(hash: string): string {
+	const fields = hash.split("$");
+	if (fields.length !== 6 || !fields[1].startsWith("argon2")) return hash;
+	const params = new Map(fields[3].split(",").map((param) => param.split("=", 2) as [string, string]));
+	if (params.size !== 3 || !params.has("m") || !params.has("t") || !params.has("p")) return hash;
+	fields[3] = `m=${params.get("m")},t=${params.get("t")},p=${params.get("p")}`;
+	return fields.join("$");
+}
 
 @Injectable()
 export class PasswordService {
@@ -23,15 +40,21 @@ export class PasswordService {
 	constructor(private readonly metrics: MetricsService) {}
 
 	async hash(plain: string): Promise<string> {
-		return argon2.hash(plain, ARGON2_OPTIONS);
+		return Bun.password.hash(plain, ARGON2_OPTIONS);
 	}
 
 	async verify(hash: string, plain: string): Promise<boolean> {
 		try {
-			return await argon2.verify(hash, plain);
+			return await Bun.password.verify(plain, toCanonicalArgon2Hash(hash));
 		} catch {
 			return false;
 		}
+	}
+
+	// Burns one argon2 verify so failures without a stored hash take as long
+	// as a wrong password. Always resolves false.
+	async verifyDummy(plain: string): Promise<boolean> {
+		return this.verify(DUMMY_HASH, plain);
 	}
 
 	// Validates a candidate password before hashing. Length-only per NIST
