@@ -158,6 +158,27 @@ describe("Pro gates with billing enabled", () => {
 			});
 		});
 
+		it("replays a claimed device route at the cap instead of refusing it", async () => {
+			const { user, token } = await makeAccount("free");
+			const auth = { Authorization: `Bearer ${token}` };
+			const clientRef = crypto.randomUUID();
+			await seedRoutes(user, FREE_SAVED_ROUTE_LIMIT - 1);
+
+			const first = await api()
+				.post("/api/v1/routes")
+				.set(auth)
+				.send({ ...routeBody(), clientRef })
+				.expect(201);
+			const replay = await api()
+				.post("/api/v1/routes")
+				.set(auth)
+				.send({ ...routeBody(), clientRef })
+				.expect(201);
+
+			expect(replay.body.id).toBe(first.body.id);
+			await api().post("/api/v1/routes").set(auth).send(routeBody("One too many")).expect(403);
+		});
+
 		it.each(PRO_ACCOUNTS)("%s: saves past the free cap", async (account) => {
 			const { user, token } = await makeAccount(account);
 			await seedRoutes(user, FREE_SAVED_ROUTE_LIMIT + 2);

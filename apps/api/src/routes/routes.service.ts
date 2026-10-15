@@ -1,4 +1,10 @@
-import { EntityManager, EntityRepository, type FilterQuery, QueryOrder } from "@mikro-orm/core";
+import {
+	EntityManager,
+	EntityRepository,
+	type FilterQuery,
+	QueryOrder,
+	UniqueConstraintViolationException,
+} from "@mikro-orm/core";
 import { InjectRepository } from "@mikro-orm/nestjs";
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { EventEmitter2 } from "@nestjs/event-emitter";
@@ -89,7 +95,36 @@ export class RoutesService {
 		route.bboxMaxLng = box?.maxLng;
 	}
 
+	// The User's Route carrying this clientRef, if any (see Route.clientRef).
+	private async findByClientRef(userId: number, clientRef: string): Promise<RouteResponseDto | null> {
+		const existing = await this.em.findOne(Route, { user: userId, clientRef }, { populate: ["user"] });
+		return existing ? this.toResponseDto(existing) : null;
+	}
+
 	async create(createRouteDto: CreateRouteDto, userId: number): Promise<RouteResponseDto> {
+		const { clientRef } = createRouteDto;
+		// A replayed create (same clientRef) returns the Route it made the first
+		// time, before the cap check, so claiming a device's routes twice never
+		// duplicates them nor counts them against the cap again.
+		if (clientRef) {
+			const existing = await this.findByClientRef(userId, clientRef);
+			if (existing) return existing;
+		}
+		try {
+			return await this.createNew(createRouteDto, userId);
+		} catch (error) {
+			// Two concurrent replays: the unique (user, clientRef) constraint
+			// lets one insert win, and the loser returns the winner's Route.
+			if (clientRef && error instanceof UniqueConstraintViolationException) {
+				this.em.clear();
+				const existing = await this.findByClientRef(userId, clientRef);
+				if (existing) return existing;
+			}
+			throw error;
+		}
+	}
+
+	private async createNew(createRouteDto: CreateRouteDto, userId: number): Promise<RouteResponseDto> {
 		const owner = await this.userRepository.findOneOrFail({ id: userId });
 		const ownerDefault = owner.preferences?.defaultRouteVisibility ?? "private";
 		// Free saves up to FREE_SAVED_ROUTE_LIMIT Routes (ADR 0039). The Route

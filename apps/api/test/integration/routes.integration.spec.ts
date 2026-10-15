@@ -116,6 +116,65 @@ describe("Routes Integration Tests", () => {
 		});
 	});
 
+	// Claiming a device's LocalRoutes on sign-in replays POST /routes with
+	// each LocalRoute's id as clientRef; a replay must never duplicate.
+	describe("POST /routes with a clientRef", () => {
+		const claimBody = (clientRef: string, name = "Morning loop") => ({
+			name,
+			clientRef,
+			waypoints: [
+				{ coord: [13.405, 52.52], type: "routed" },
+				{ coord: [13.406, 52.521], type: "routed" },
+			],
+			distance: 1500,
+		});
+		const post = (token: string, body: object) =>
+			request(app.getHttpServer()).post("/api/v1/routes").set("Authorization", `Bearer ${token}`).send(body);
+		const countRoutes = (user: User) => orm.em.fork().count(Route, { user: user.id });
+
+		it("creates the route once when the same claim is sent twice", async () => {
+			const clientRef = crypto.randomUUID();
+			const first = await post(authToken, claimBody(clientRef)).expect(201);
+			const second = await post(authToken, claimBody(clientRef, "Renamed on the device")).expect(201);
+
+			expect(second.body.id).toBe(first.body.id);
+			expect(second.body.name).toBe("Morning loop");
+			expect(await countRoutes(testUser)).toBe(1);
+		});
+
+		it("creates the route once when the same claim races itself", async () => {
+			const clientRef = crypto.randomUUID();
+			const responses = await Promise.all([
+				post(authToken, claimBody(clientRef)),
+				post(authToken, claimBody(clientRef)),
+			]);
+
+			expect(responses.map((r) => r.status)).toEqual([201, 201]);
+			expect(new Set(responses.map((r) => r.body.id)).size).toBe(1);
+			expect(await countRoutes(testUser)).toBe(1);
+		});
+
+		it("scopes clientRef to the user", async () => {
+			const clientRef = crypto.randomUUID();
+			const mine = await post(authToken, claimBody(clientRef)).expect(201);
+			const theirs = await post(otherAuthToken, claimBody(clientRef)).expect(201);
+
+			expect(theirs.body.id).not.toBe(mine.body.id);
+			expect(theirs.body.user.id).toBe(otherUser.id);
+		});
+
+		it("creates distinct routes for distinct claims", async () => {
+			await post(authToken, claimBody(crypto.randomUUID(), "One")).expect(201);
+			await post(authToken, claimBody(crypto.randomUUID(), "Two")).expect(201);
+
+			expect(await countRoutes(testUser)).toBe(2);
+		});
+
+		it("rejects a clientRef that is not a UUID", async () => {
+			await post(authToken, claimBody("not-a-uuid")).expect(400);
+		});
+	});
+
 	describe("GET /routes", () => {
 		let userRoute1: Route;
 		let userRoute2: Route;
