@@ -5,8 +5,8 @@ import { ExternalRoute } from "src/entities/external-route.entity";
 import { Route } from "src/entities/route.entity";
 import { SeedSource } from "src/entities/seed-source.entity";
 import { ExternalRoutesService } from "src/external-routes/external-routes.service";
-import supertest from "supertest";
 import { clearDatabase, closeTestApp, createTestApp, createTestUserWithAuth, withRequestContext } from "../utils";
+import request from "../utils/http";
 
 const GEOMETRY: [number, number][] = [
 	[3.72, 51.05],
@@ -99,7 +99,7 @@ describe("ExternalRoutes (ADR 0035)", () => {
 		const sourceId = await createSeedSource(app);
 		await createExternalRoute(app, sourceId, { name: "EuroVelo 5", sourceRecordId: "eurovelo-5" });
 
-		const res = await supertest(app.getHttpServer()).get("/api/v1/routes/public?gate=public").expect(200);
+		const res = await request(app.getHttpServer()).get("/api/v1/routes/public?gate=public").expect(200);
 		expect(res.headers["x-total-count"]).toBe("2");
 		const names = res.body.map((r: { name: string }) => r.name).sort();
 		expect(names).toEqual(["Alice loop", "EuroVelo 5"]);
@@ -115,7 +115,7 @@ describe("ExternalRoutes (ADR 0035)", () => {
 		await createExternalRoute(app, sourceId, { name: "EuroVelo 5", sourceRecordId: "ev5", distance: 45_000 });
 		await createExternalRoute(app, sourceId, { name: "Stub", sourceRecordId: "stub", distance: 500, tags: [] });
 
-		const res = await supertest(app.getHttpServer()).get("/api/v1/routes/public?gate=indexable").expect(200);
+		const res = await request(app.getHttpServer()).get("/api/v1/routes/public?gate=indexable").expect(200);
 		expect(res.body.map((r: { name: string }) => r.name)).toEqual(["EuroVelo 5"]);
 	});
 
@@ -123,7 +123,7 @@ describe("ExternalRoutes (ADR 0035)", () => {
 		const sourceId = await createSeedSource(app);
 		const id = await createExternalRoute(app, sourceId, { name: "EuroVelo 5", sourceRecordId: "ev5" });
 
-		const res = await supertest(app.getHttpServer()).get(`/api/v1/external-routes/${id}`).expect(200);
+		const res = await request(app.getHttpServer()).get(`/api/v1/external-routes/${id}`).expect(200);
 		expect(res.body).toMatchObject({ id, name: "EuroVelo 5", kind: "external" });
 		expect(res.body.source.attribution).toContain("EuroVelo");
 		expect(res.body.slugId).toBe(`eurovelo-5-x${id}`);
@@ -133,7 +133,7 @@ describe("ExternalRoutes (ADR 0035)", () => {
 		const sourceId = await createSeedSource(app);
 		const id = await createExternalRoute(app, sourceId, { name: "EuroVelo 5", sourceRecordId: "ev5" });
 
-		const res = await supertest(app.getHttpServer()).get(`/api/v1/external-routes/${id}/gpx`).expect(200);
+		const res = await request(app.getHttpServer()).get(`/api/v1/external-routes/${id}/gpx`).expect(200);
 		expect(res.text).toContain("<copyright author=");
 		expect(res.text).toContain("EuroVelo");
 	});
@@ -220,7 +220,7 @@ describe("ExternalRoutes (ADR 0035)", () => {
 		const third = await withRequestContext(app, () => service.upsertSeedRoutes("eurovelo", [seeds[0]]));
 		expect(third).toMatchObject({ inserted: 0, unchanged: 1, removed: 1 });
 
-		const res = await supertest(app.getHttpServer()).get("/api/v1/routes/public?gate=public").expect(200);
+		const res = await request(app.getHttpServer()).get("/api/v1/routes/public?gate=public").expect(200);
 		expect(res.body.map((r: { name: string }) => r.name)).toEqual(["EuroVelo 5"]);
 	});
 });

@@ -1,3 +1,4 @@
+import { afterEach, describe, expect, it } from "bun:test";
 import { CacheService } from "../cache/cache.service";
 import type { AppConfig } from "../config/app-config";
 import type { MetricsService } from "../telemetry/metrics.service";
@@ -25,7 +26,7 @@ function stubFetch(body: unknown): void {
 	globalThis.fetch = (async () => {
 		calls++;
 		return new Response(JSON.stringify(body), { status: 200 });
-	}) as typeof fetch;
+	}) as unknown as typeof fetch;
 }
 
 afterEach(() => {

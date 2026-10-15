@@ -1,3 +1,4 @@
+import { describe, expect, it } from "bun:test";
 import type { Waypoint } from "@routess/core";
 import { buildRouteGpx } from "@routess/core";
 import { parseGPXFile } from "@/features/routing/services/GPXService";

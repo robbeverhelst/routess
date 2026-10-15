@@ -1,11 +1,12 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import type { ApiBillingStatus, ApiFeature } from "@routess/api-client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TooltipProvider } from "@/components/Tooltip";
 import { queryKeys } from "@/lib/query-client";
 import { LocationService } from "@/services/LocationService";
 import { useLoopPreferencesStore } from "@/stores/loopPreferencesStore";
+import { mocked } from "@/test/helpers";
 import { LoopModal } from "../LoopModal";
 
 // ProLock's Go Pro navigates; no router is mounted here.
@@ -62,8 +63,8 @@ describe("LoopModal knooppunt toggle (ADR 0039)", () => {
 
 // setup.ts installs vi.fn() stubs for navigator.geolocation; swap implementations.
 function mockGeolocation(getCurrentPosition: typeof navigator.geolocation.getCurrentPosition) {
-	vi.mocked(navigator.geolocation.getCurrentPosition).mockImplementation(getCurrentPosition);
-	vi.mocked(navigator.geolocation.watchPosition).mockImplementation(() => 1);
+	mocked(navigator.geolocation.getCurrentPosition).mockImplementation(getCurrentPosition);
+	mocked(navigator.geolocation.watchPosition).mockImplementation(() => 1);
 }
 
 describe("LoopModal my-location", () => {

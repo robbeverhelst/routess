@@ -12,8 +12,8 @@ import { Route } from "src/entities/route.entity";
 import { User } from "src/entities/user.entity";
 import { EntitlementsService } from "src/entitlements/entitlements.service";
 import { GENERATION_QUOTA_COUNTER, generationQuotaKey } from "src/generation/generation-quota.guard";
-import supertest from "supertest";
 import { clearDatabase, closeTestApp, createTestApp, generateTestJWT, withRequestContext } from "../utils";
+import request, { type TestRequest } from "../utils/http";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const daysAgo = (n: number) => new Date(Date.now() - n * DAY_MS);
@@ -59,8 +59,8 @@ describe("Admin Pro (users list, user detail, grant/extend/revoke, metrics)", ()
 		ending: 0,
 	};
 
-	const api = () => supertest(app.getHttpServer());
-	const asAdmin = (req: supertest.Test) => req.set("Authorization", `Bearer ${adminToken}`);
+	const api = () => request(app.getHttpServer());
+	const asAdmin = (req: TestRequest) => req.set("Authorization", `Bearer ${adminToken}`);
 	const getUsers = (query = "") => asAdmin(api().get(`/api/v1/admin/users${query}`));
 	const getDetail = (id: number) => asAdmin(api().get(`/api/v1/admin/users/${id}`));
 	const action = (id: number, name: "grant" | "extend" | "revoke", body: object, token = adminToken) =>

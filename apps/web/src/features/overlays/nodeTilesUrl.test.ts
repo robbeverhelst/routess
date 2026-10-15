@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { Logger } from "@/lib/logger";
 import { resolveNodeTilesUrl } from "./nodeTilesUrl";
 
@@ -19,7 +19,7 @@ describe("resolveNodeTilesUrl", () => {
 		const url = "https://tiles.routess.com/nodes.pmtiles";
 		// Still returned (non-blocking), but the misconfiguration is surfaced.
 		expect(resolveNodeTilesUrl(url)).toBe(url);
-		expect(warn).toHaveBeenCalledOnce();
+		expect(warn).toHaveBeenCalledTimes(1);
 	});
 
 	it("handles an undefined URL (overlay disabled) without warning", () => {

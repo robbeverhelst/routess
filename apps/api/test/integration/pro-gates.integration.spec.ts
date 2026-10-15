@@ -12,8 +12,8 @@ import { PersonalAccessToken } from "src/entities/personal-access-token.entity";
 import { Route } from "src/entities/route.entity";
 import { User } from "src/entities/user.entity";
 import { FEATURES, PLAN_FEATURES } from "src/entitlements/features";
-import supertest from "supertest";
 import { clearDatabase, closeTestApp, createTestApp, createTestUserWithAuth, withRequestContext } from "../utils";
+import request from "../utils/http";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -79,7 +79,7 @@ describe("Pro gates with billing enabled", () => {
 		await closeTestApp(app);
 	});
 
-	const api = () => supertest(app.getHttpServer());
+	const api = () => request(app.getHttpServer());
 
 	async function makeAccount(account: Account): Promise<{ user: User; token: string }> {
 		const email = `${account}@example.com`;
@@ -499,5 +499,5 @@ describe("Pro gates with billing disabled (self-host)", () => {
 });
 
 function http(app: INestApplication) {
-	return supertest(app.getHttpServer());
+	return request(app.getHttpServer());
 }

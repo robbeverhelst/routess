@@ -27,7 +27,7 @@
 		}
 	},
 	"include": ["src"],
-	// Tests live under src but need the vitest globals, so they are checked
+	// Tests live under src but need the bun:test types, so they are checked
 	// by tsconfig.test.json instead.
 	"exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/**/__tests__/**", "src/test/**"]
 }

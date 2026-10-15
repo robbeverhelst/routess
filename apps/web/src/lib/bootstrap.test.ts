@@ -1,13 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
+import { waitFor } from "@testing-library/react";
 import { runBootstrap } from "@/lib/bootstrap";
 
 vi.mock("@/lib/runtime-config", () => ({
 	getRuntimeConfig: vi.fn(() => "1.2.0"),
 }));
 
-const { getProfile } = vi.hoisted(() => ({
-	getProfile: vi.fn(),
-}));
+const getProfile = vi.fn();
 
 vi.mock("@/lib/api", () => ({
 	apiService: { getProfile },
@@ -65,7 +64,7 @@ describe("runBootstrap", () => {
 		expect(localStorage.getItem("mapLastView")).toBe("{}");
 
 		// The stored user is refreshed from the server instead of purged.
-		await vi.waitFor(() => {
+		await waitFor(() => {
 			expect(JSON.parse(localStorage.getItem("user") ?? "{}")).toEqual({ id: "u1", email: "fresh@example.com" });
 		});
 	});
@@ -77,7 +76,7 @@ describe("runBootstrap", () => {
 
 		runBootstrap();
 
-		await vi.waitFor(() => expect(getProfile).toHaveBeenCalled());
+		await waitFor(() => expect(getProfile).toHaveBeenCalled());
 		expect(localStorage.getItem("user")).toBe('{"id":"u1"}');
 	});
 

@@ -2,8 +2,8 @@ import { MikroORM } from "@mikro-orm/core";
 import type { INestApplication } from "@nestjs/common";
 import { Route } from "src/entities/route.entity";
 import { User } from "src/entities/user.entity";
-import supertest from "supertest";
 import { clearDatabase, closeTestApp, createTestApp, generateTestJWT } from "../utils";
+import request from "../utils/http";
 
 describe("Users Integration Tests", () => {
 	let app: INestApplication;
@@ -39,7 +39,7 @@ describe("Users Integration Tests", () => {
 
 	describe("GET /users/me", () => {
 		it("should return authenticated user's profile", async () => {
-			const response = await supertest(app.getHttpServer())
+			const response = await request(app.getHttpServer())
 				.get("/api/v1/users/me")
 				.set("Authorization", `Bearer ${authToken}`)
 				.expect(200);
@@ -73,7 +73,7 @@ describe("Users Integration Tests", () => {
 
 			await orm.em.persist([route1, route2]).flush();
 
-			const response = await supertest(app.getHttpServer())
+			const response = await request(app.getHttpServer())
 				.get("/api/v1/users/me")
 				.set("Authorization", `Bearer ${authToken}`)
 				.expect(200);
@@ -100,7 +100,7 @@ describe("Users Integration Tests", () => {
 			await orm.em.flush();
 			orm.em.clear();
 
-			const response = await supertest(app.getHttpServer())
+			const response = await request(app.getHttpServer())
 				.get("/api/v1/users/me")
 				.set("Authorization", `Bearer ${authToken}`)
 				.expect(200);
@@ -119,7 +119,7 @@ describe("Users Integration Tests", () => {
 			await orm.em.flush();
 			orm.em.clear();
 
-			const response = await supertest(app.getHttpServer())
+			const response = await request(app.getHttpServer())
 				.get("/api/v1/users/me")
 				.set("Authorization", `Bearer ${authToken}`)
 				.expect(200);
@@ -131,7 +131,7 @@ describe("Users Integration Tests", () => {
 		});
 
 		it("should fail without authentication", async () => {
-			await supertest(app.getHttpServer()).get("/api/v1/users/me").expect(401);
+			await request(app.getHttpServer()).get("/api/v1/users/me").expect(401);
 		});
 	});
 
@@ -142,7 +142,7 @@ describe("Users Integration Tests", () => {
 				avatar: "https://example.com/new-picture.jpg",
 			};
 
-			const response = await supertest(app.getHttpServer())
+			const response = await request(app.getHttpServer())
 				.patch("/api/v1/users/me")
 				.set("Authorization", `Bearer ${authToken}`)
 				.send(updateData)
@@ -157,7 +157,7 @@ describe("Users Integration Tests", () => {
 		});
 
 		it("should reject protected fields", async () => {
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.patch("/api/v1/users/me")
 				.set("Authorization", `Bearer ${authToken}`)
 				.send({ email: "hijack@example.com" })
@@ -175,7 +175,7 @@ describe("Users Integration Tests", () => {
 			});
 			await orm.em.persist(route).flush();
 
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.delete("/api/v1/users/me")
 				.set("Authorization", `Bearer ${authToken}`)
 				.expect(200);
@@ -190,12 +190,12 @@ describe("Users Integration Tests", () => {
 		});
 
 		it("should invalidate the active session after deletion", async () => {
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.delete("/api/v1/users/me")
 				.set("Authorization", `Bearer ${authToken}`)
 				.expect(200);
 
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.get("/api/v1/users/me")
 				.set("Authorization", `Bearer ${authToken}`)
 				.expect(401);

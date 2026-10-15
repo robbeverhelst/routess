@@ -1,5 +1,5 @@
+import { describe, expect, it } from "bun:test";
 import type { Coordinate } from "@routess/core";
-import { describe, expect, it } from "vitest";
 import { computeGainLoss, ElevationService } from "./ElevationService";
 import type { ElevationProvider } from "./types";
 

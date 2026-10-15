@@ -3,8 +3,8 @@ import type { INestApplication } from "@nestjs/common";
 import { Collection } from "src/entities/collection.entity";
 import { Route } from "src/entities/route.entity";
 import { User } from "src/entities/user.entity";
-import supertest from "supertest";
 import { clearDatabase, closeTestApp, createTestApp, generateTestJWT } from "../utils";
+import request from "../utils/http";
 
 describe("Collections Integration Tests", () => {
 	let app: INestApplication;
@@ -66,7 +66,7 @@ describe("Collections Integration Tests", () => {
 	});
 
 	const createCollection = async (body: Record<string, unknown> = {}) => {
-		const response = await supertest(app.getHttpServer())
+		const response = await request(app.getHttpServer())
 			.post("/api/v1/collections")
 			.set("Authorization", `Bearer ${authToken}`)
 			.send({ name: "Alps 2026", ...body })
@@ -76,7 +76,7 @@ describe("Collections Integration Tests", () => {
 
 	describe("POST /collections", () => {
 		it("creates a private collection by default", async () => {
-			const response = await supertest(app.getHttpServer())
+			const response = await request(app.getHttpServer())
 				.post("/api/v1/collections")
 				.set("Authorization", `Bearer ${authToken}`)
 				.send({ name: "Alps 2026", description: "Summer trip" })
@@ -89,11 +89,11 @@ describe("Collections Integration Tests", () => {
 		});
 
 		it("rejects unauthenticated creation", async () => {
-			await supertest(app.getHttpServer()).post("/api/v1/collections").send({ name: "Nope" }).expect(401);
+			await request(app.getHttpServer()).post("/api/v1/collections").send({ name: "Nope" }).expect(401);
 		});
 
 		it("rejects an empty name", async () => {
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.post("/api/v1/collections")
 				.set("Authorization", `Bearer ${authToken}`)
 				.send({ name: "" })
@@ -104,13 +104,13 @@ describe("Collections Integration Tests", () => {
 	describe("GET /collections", () => {
 		it("lists only the caller's collections", async () => {
 			await createCollection({ name: "Mine" });
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.post("/api/v1/collections")
 				.set("Authorization", `Bearer ${otherAuthToken}`)
 				.send({ name: "Theirs" })
 				.expect(201);
 
-			const response = await supertest(app.getHttpServer())
+			const response = await request(app.getHttpServer())
 				.get("/api/v1/collections")
 				.set("Authorization", `Bearer ${authToken}`)
 				.expect(200);
@@ -123,7 +123,7 @@ describe("Collections Integration Tests", () => {
 	describe("PUT /collections/:id/routes", () => {
 		it("sets ordered membership", async () => {
 			const { id } = await createCollection();
-			const response = await supertest(app.getHttpServer())
+			const response = await request(app.getHttpServer())
 				.put(`/api/v1/collections/${id}/routes`)
 				.set("Authorization", `Bearer ${authToken}`)
 				.send({ routeIds: [unlistedRoute.id, privateRoute.id, publicRoute.id] })
@@ -139,13 +139,13 @@ describe("Collections Integration Tests", () => {
 
 		it("reorders on subsequent calls", async () => {
 			const { id } = await createCollection();
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.put(`/api/v1/collections/${id}/routes`)
 				.set("Authorization", `Bearer ${authToken}`)
 				.send({ routeIds: [privateRoute.id, publicRoute.id] })
 				.expect(200);
 
-			const response = await supertest(app.getHttpServer())
+			const response = await request(app.getHttpServer())
 				.put(`/api/v1/collections/${id}/routes`)
 				.set("Authorization", `Bearer ${authToken}`)
 				.send({ routeIds: [publicRoute.id, privateRoute.id] })
@@ -156,7 +156,7 @@ describe("Collections Integration Tests", () => {
 
 		it("rejects routes owned by someone else", async () => {
 			const { id } = await createCollection();
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.put(`/api/v1/collections/${id}/routes`)
 				.set("Authorization", `Bearer ${authToken}`)
 				.send({ routeIds: [otherUsersRoute.id] })
@@ -165,7 +165,7 @@ describe("Collections Integration Tests", () => {
 
 		it("rejects duplicate route IDs", async () => {
 			const { id } = await createCollection();
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.put(`/api/v1/collections/${id}/routes`)
 				.set("Authorization", `Bearer ${authToken}`)
 				.send({ routeIds: [publicRoute.id, publicRoute.id] })
@@ -176,8 +176,8 @@ describe("Collections Integration Tests", () => {
 	describe("GET /collections/:id visibility", () => {
 		it("returns 404 for private collections to non-owners and anonymous viewers", async () => {
 			const { id } = await createCollection({ name: "Secret" });
-			await supertest(app.getHttpServer()).get(`/api/v1/collections/${id}`).expect(404);
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer()).get(`/api/v1/collections/${id}`).expect(404);
+			await request(app.getHttpServer())
 				.get(`/api/v1/collections/${id}`)
 				.set("Authorization", `Bearer ${otherAuthToken}`)
 				.expect(404);
@@ -185,16 +185,16 @@ describe("Collections Integration Tests", () => {
 
 		it("serves unlisted collections via the share token, omitting private routes; numeric id 404s", async () => {
 			const { id, shareToken } = await createCollection({ name: "Shared trip", visibility: "unlisted" });
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.put(`/api/v1/collections/${id}/routes`)
 				.set("Authorization", `Bearer ${authToken}`)
 				.send({ routeIds: [privateRoute.id, publicRoute.id, unlistedRoute.id] })
 				.expect(200);
 
 			// Sequential ids must not expose unlisted collections to anonymous viewers.
-			await supertest(app.getHttpServer()).get(`/api/v1/collections/${id}`).expect(404);
+			await request(app.getHttpServer()).get(`/api/v1/collections/${id}`).expect(404);
 
-			const response = await supertest(app.getHttpServer()).get(`/api/v1/collections/${shareToken}`).expect(200);
+			const response = await request(app.getHttpServer()).get(`/api/v1/collections/${shareToken}`).expect(200);
 			expect(response.body.routeIds).toEqual([publicRoute.id, unlistedRoute.id]);
 			expect(response.body.routeCount).toBe(2);
 			expect(response.body.routes.map((r: { name: string }) => r.name)).toEqual(["Public Route", "Unlisted Route"]);
@@ -202,13 +202,13 @@ describe("Collections Integration Tests", () => {
 
 		it("shows owners their private routes inside the collection", async () => {
 			const { id } = await createCollection({ visibility: "public" });
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.put(`/api/v1/collections/${id}/routes`)
 				.set("Authorization", `Bearer ${authToken}`)
 				.send({ routeIds: [privateRoute.id, publicRoute.id] })
 				.expect(200);
 
-			const response = await supertest(app.getHttpServer())
+			const response = await request(app.getHttpServer())
 				.get(`/api/v1/collections/${id}`)
 				.set("Authorization", `Bearer ${authToken}`)
 				.expect(200);
@@ -219,7 +219,7 @@ describe("Collections Integration Tests", () => {
 	describe("PATCH /collections/:id", () => {
 		it("renames and changes visibility", async () => {
 			const { id } = await createCollection();
-			const response = await supertest(app.getHttpServer())
+			const response = await request(app.getHttpServer())
 				.patch(`/api/v1/collections/${id}`)
 				.set("Authorization", `Bearer ${authToken}`)
 				.send({ name: "Renamed", visibility: "unlisted" })
@@ -231,7 +231,7 @@ describe("Collections Integration Tests", () => {
 
 		it("404s for non-owners", async () => {
 			const { id } = await createCollection();
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.patch(`/api/v1/collections/${id}`)
 				.set("Authorization", `Bearer ${otherAuthToken}`)
 				.send({ name: "Hijack" })
@@ -242,18 +242,18 @@ describe("Collections Integration Tests", () => {
 	describe("DELETE /collections/:id", () => {
 		it("soft-deletes the collection without touching its routes", async () => {
 			const { id } = await createCollection();
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.put(`/api/v1/collections/${id}/routes`)
 				.set("Authorization", `Bearer ${authToken}`)
 				.send({ routeIds: [publicRoute.id] })
 				.expect(200);
 
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.delete(`/api/v1/collections/${id}`)
 				.set("Authorization", `Bearer ${authToken}`)
 				.expect(200);
 
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.get(`/api/v1/collections/${id}`)
 				.set("Authorization", `Bearer ${authToken}`)
 				.expect(404);

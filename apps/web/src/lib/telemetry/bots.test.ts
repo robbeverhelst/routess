@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "bun:test";
+import { stubGlobal, unstubAll } from "@/test/helpers";
 import { isBotClient, isBotUserAgent } from "./bots";
 
 // The single noisiest GlitchTip issue was Googlebot failing to register the
@@ -36,10 +37,10 @@ describe("isBotUserAgent", () => {
 
 describe("isBotClient", () => {
 	afterEach(() => {
-		vi.unstubAllGlobals();
+		unstubAll();
 	});
 
-	const withNavigator = (nav: unknown) => vi.stubGlobal("navigator", nav);
+	const withNavigator = (nav: unknown) => stubGlobal("navigator", nav);
 
 	it("reads the live user agent", () => {
 		withNavigator({ userAgent: GOOGLEBOT });

@@ -3,8 +3,8 @@ import { sentryVitePlugin } from "@sentry/vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
 import { TanStackRouterVite } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
+import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
-import { defineConfig } from "vitest/config";
 
 // Sentry source-map upload only runs when SENTRY_AUTH_TOKEN is provided
 // (CI build of the production image, via a BuildKit secret). Absent in
@@ -95,17 +95,5 @@ export default defineConfig({
 			},
 		},
 		chunkSizeWarningLimit: 1000, // Increase limit to 1000kb to reduce warnings for necessary large chunks
-	},
-	test: {
-		globals: true,
-		environment: "happy-dom",
-		setupFiles: "./src/test/setup.ts",
-		include: ["src/**/*.test.{ts,tsx}", "src/**/*.spec.{ts,tsx}"],
-		exclude: ["node_modules", "dist"],
-		coverage: {
-			provider: "v8",
-			reporter: ["text", "lcov", "html"],
-			reportsDirectory: "./coverage",
-		},
 	},
 });

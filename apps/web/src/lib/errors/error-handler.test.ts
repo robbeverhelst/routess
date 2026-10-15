@@ -1,4 +1,4 @@
-import { vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "bun:test";
 import {
 	handleAPIError,
 	handleLocationError,
@@ -107,23 +107,23 @@ describe("Error Handler", () => {
 
 	describe("Error Categories", () => {
 		it("should have correct error category values", () => {
-			expect(ErrorCategory.NETWORK).toBe("network");
-			expect(ErrorCategory.API).toBe("api");
-			expect(ErrorCategory.LOCATION).toBe("location");
-			expect(ErrorCategory.ROUTING).toBe("routing");
-			expect(ErrorCategory.MAP).toBe("map");
-			expect(ErrorCategory.AUTH).toBe("auth");
-			expect(ErrorCategory.VALIDATION).toBe("validation");
-			expect(ErrorCategory.UNKNOWN).toBe("unknown");
+			expect<string>(ErrorCategory.NETWORK).toBe("network");
+			expect<string>(ErrorCategory.API).toBe("api");
+			expect<string>(ErrorCategory.LOCATION).toBe("location");
+			expect<string>(ErrorCategory.ROUTING).toBe("routing");
+			expect<string>(ErrorCategory.MAP).toBe("map");
+			expect<string>(ErrorCategory.AUTH).toBe("auth");
+			expect<string>(ErrorCategory.VALIDATION).toBe("validation");
+			expect<string>(ErrorCategory.UNKNOWN).toBe("unknown");
 		});
 	});
 
 	describe("Error Severities", () => {
 		it("should have correct error severity values", () => {
-			expect(ErrorSeverity.LOW).toBe("low");
-			expect(ErrorSeverity.MEDIUM).toBe("medium");
-			expect(ErrorSeverity.HIGH).toBe("high");
-			expect(ErrorSeverity.CRITICAL).toBe("critical");
+			expect<string>(ErrorSeverity.LOW).toBe("low");
+			expect<string>(ErrorSeverity.MEDIUM).toBe("medium");
+			expect<string>(ErrorSeverity.HIGH).toBe("high");
+			expect<string>(ErrorSeverity.CRITICAL).toBe("critical");
 		});
 	});
 });

@@ -1,3 +1,4 @@
+import { describe, expect, it } from "bun:test";
 import type { Waypoint } from "@routess/core";
 import { deflate } from "pako";
 import { decompressAndParse, serializeAndCompress } from "@/lib/shareUtils";

@@ -3,8 +3,8 @@ import type { INestApplication } from "@nestjs/common";
 import { Route } from "src/entities/route.entity";
 import { RouteShare } from "src/entities/route-share.entity";
 import { User } from "src/entities/user.entity";
-import supertest from "supertest";
 import { clearDatabase, closeTestApp, createTestApp, generateTestJWT } from "../utils";
+import request from "../utils/http";
 
 describe("Social Integration Tests", () => {
 	let app: INestApplication;
@@ -50,7 +50,7 @@ describe("Social Integration Tests", () => {
 		await closeTestApp(app);
 	});
 
-	const api = () => supertest(app.getHttpServer());
+	const api = () => request(app.getHttpServer());
 
 	describe("handle generation", () => {
 		it("assigns a random fallback handle when none is provided", async () => {

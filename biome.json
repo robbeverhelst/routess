@@ -81,7 +81,6 @@
 		{
 			"includes": [
 				"scripts/**",
-				"**/jest.setup.ts",
 				"**/*.spec.ts",
 				"**/*.spec.tsx",
 				"**/*.test.ts",

@@ -2,8 +2,8 @@ import { MikroORM } from "@mikro-orm/core";
 import type { INestApplication } from "@nestjs/common";
 import { Route } from "src/entities/route.entity";
 import { User } from "src/entities/user.entity";
-import supertest from "supertest";
 import { clearDatabase, closeTestApp, createTestApp, generateTestJWT } from "../utils";
+import request from "../utils/http";
 
 describe("Routes Integration Tests", () => {
 	let app: INestApplication;
@@ -63,7 +63,7 @@ describe("Routes Integration Tests", () => {
 				endAddress: "Berlin, Germany",
 			};
 
-			const response = await supertest(app.getHttpServer())
+			const response = await request(app.getHttpServer())
 				.post("/api/v1/routes")
 				.set("Authorization", `Bearer ${authToken}`)
 				.send(routeData)
@@ -86,7 +86,7 @@ describe("Routes Integration Tests", () => {
 				waypoints: [{ coord: [13.405, 52.52], type: "routed" }],
 			};
 
-			await supertest(app.getHttpServer()).post("/api/v1/routes").send(routeData).expect(401);
+			await request(app.getHttpServer()).post("/api/v1/routes").send(routeData).expect(401);
 		});
 
 		it("should validate required fields", async () => {
@@ -94,7 +94,7 @@ describe("Routes Integration Tests", () => {
 				description: "Missing required name field",
 			};
 
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.post("/api/v1/routes")
 				.set("Authorization", `Bearer ${authToken}`)
 				.send(invalidRoute)
@@ -107,7 +107,7 @@ describe("Routes Integration Tests", () => {
 				waypoints: [{ coord: [13.405, 52.52] }], // Missing required 'type' field
 			};
 
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.post("/api/v1/routes")
 				.set("Authorization", `Bearer ${authToken}`)
 				.send(routeWithoutType)
@@ -150,7 +150,7 @@ describe("Routes Integration Tests", () => {
 		});
 
 		it("should return only authenticated user's routes", async () => {
-			const response = await supertest(app.getHttpServer())
+			const response = await request(app.getHttpServer())
 				.get("/api/v1/routes")
 				.set("Authorization", `Bearer ${authToken}`)
 				.expect(200);
@@ -165,7 +165,7 @@ describe("Routes Integration Tests", () => {
 			userRoute1.deletedAt = new Date();
 			await orm.em.flush();
 
-			const response = await supertest(app.getHttpServer())
+			const response = await request(app.getHttpServer())
 				.get("/api/v1/routes")
 				.set("Authorization", `Bearer ${authToken}`)
 				.expect(200);
@@ -175,11 +175,11 @@ describe("Routes Integration Tests", () => {
 		});
 
 		it("should fail without authentication", async () => {
-			await supertest(app.getHttpServer()).get("/api/v1/routes").expect(401);
+			await request(app.getHttpServer()).get("/api/v1/routes").expect(401);
 		});
 
 		it("should expose the total count and paginate with limit/offset", async () => {
-			const firstPage = await supertest(app.getHttpServer())
+			const firstPage = await request(app.getHttpServer())
 				.get("/api/v1/routes?limit=1&offset=0")
 				.set("Authorization", `Bearer ${authToken}`)
 				.expect(200);
@@ -187,7 +187,7 @@ describe("Routes Integration Tests", () => {
 			expect(firstPage.headers["x-total-count"]).toBe("2");
 			expect(firstPage.body).toHaveLength(1);
 
-			const secondPage = await supertest(app.getHttpServer())
+			const secondPage = await request(app.getHttpServer())
 				.get("/api/v1/routes?limit=1&offset=1")
 				.set("Authorization", `Bearer ${authToken}`)
 				.expect(200);
@@ -197,26 +197,26 @@ describe("Routes Integration Tests", () => {
 		});
 
 		it("should reject an out-of-range limit", async () => {
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.get("/api/v1/routes?limit=5000")
 				.set("Authorization", `Bearer ${authToken}`)
 				.expect(400);
 		});
 
 		it("should default favourite to false and persist toggling it", async () => {
-			const list = await supertest(app.getHttpServer())
+			const list = await request(app.getHttpServer())
 				.get("/api/v1/routes")
 				.set("Authorization", `Bearer ${authToken}`)
 				.expect(200);
 			expect(list.body.every((r: { favourite: boolean }) => r.favourite === false)).toBe(true);
 
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.patch(`/api/v1/routes/${userRoute1.id}`)
 				.set("Authorization", `Bearer ${authToken}`)
 				.send({ favourite: true })
 				.expect(200);
 
-			const refreshed = await supertest(app.getHttpServer())
+			const refreshed = await request(app.getHttpServer())
 				.get(`/api/v1/routes/${userRoute1.id}`)
 				.set("Authorization", `Bearer ${authToken}`)
 				.expect(200);
@@ -239,7 +239,7 @@ describe("Routes Integration Tests", () => {
 		});
 
 		it("should return route by id for owner", async () => {
-			const response = await supertest(app.getHttpServer())
+			const response = await request(app.getHttpServer())
 				.get(`/api/v1/routes/${testRoute.id}`)
 				.set("Authorization", `Bearer ${authToken}`)
 				.expect(200);
@@ -249,14 +249,14 @@ describe("Routes Integration Tests", () => {
 		});
 
 		it("should return 404 for non-owner", async () => {
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.get(`/api/v1/routes/${testRoute.id}`)
 				.set("Authorization", `Bearer ${otherAuthToken}`)
 				.expect(404);
 		});
 
 		it("should return 404 for non-existent route", async () => {
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.get("/api/v1/routes/999999")
 				.set("Authorization", `Bearer ${authToken}`)
 				.expect(404);
@@ -266,7 +266,7 @@ describe("Routes Integration Tests", () => {
 			testRoute.deletedAt = new Date();
 			await orm.em.flush();
 
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.get(`/api/v1/routes/${testRoute.id}`)
 				.set("Authorization", `Bearer ${authToken}`)
 				.expect(404);
@@ -294,7 +294,7 @@ describe("Routes Integration Tests", () => {
 				description: "Updated Description",
 			};
 
-			const response = await supertest(app.getHttpServer())
+			const response = await request(app.getHttpServer())
 				.patch(`/api/v1/routes/${testRoute.id}`)
 				.set("Authorization", `Bearer ${authToken}`)
 				.send(updateData)
@@ -309,7 +309,7 @@ describe("Routes Integration Tests", () => {
 		});
 
 		it("should return 404 when non-owner tries to update", async () => {
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.patch(`/api/v1/routes/${testRoute.id}`)
 				.set("Authorization", `Bearer ${otherAuthToken}`)
 				.send({ name: "Hacked Name" })
@@ -325,7 +325,7 @@ describe("Routes Integration Tests", () => {
 				waypoints: "not-an-array", // Should be array
 			};
 
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.patch(`/api/v1/routes/${testRoute.id}`)
 				.set("Authorization", `Bearer ${authToken}`)
 				.send(invalidUpdate)
@@ -348,7 +348,7 @@ describe("Routes Integration Tests", () => {
 		});
 
 		it("should soft delete route for owner", async () => {
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.delete(`/api/v1/routes/${testRoute.id}`)
 				.set("Authorization", `Bearer ${authToken}`)
 				.expect(200);
@@ -356,7 +356,7 @@ describe("Routes Integration Tests", () => {
 			const refreshed = await orm.em.fork().findOne(Route, { id: testRoute.id }, { filters: { softDelete: false } });
 			expect(refreshed?.deletedAt).toBeDefined();
 
-			const response = await supertest(app.getHttpServer())
+			const response = await request(app.getHttpServer())
 				.get("/api/v1/routes")
 				.set("Authorization", `Bearer ${authToken}`)
 				.expect(200);
@@ -365,7 +365,7 @@ describe("Routes Integration Tests", () => {
 		});
 
 		it("should return 404 when non-owner tries to delete", async () => {
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.delete(`/api/v1/routes/${testRoute.id}`)
 				.set("Authorization", `Bearer ${otherAuthToken}`)
 				.expect(404);
@@ -379,7 +379,7 @@ describe("Routes Integration Tests", () => {
 			testRoute.deletedAt = new Date();
 			await orm.em.flush();
 
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.delete(`/api/v1/routes/${testRoute.id}`)
 				.set("Authorization", `Bearer ${authToken}`)
 				.expect(404);

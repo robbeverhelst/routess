@@ -2,8 +2,8 @@ import { MikroORM } from "@mikro-orm/core";
 import type { INestApplication } from "@nestjs/common";
 import { Route } from "src/entities/route.entity";
 import { User } from "src/entities/user.entity";
-import supertest from "supertest";
 import { clearDatabase, closeTestApp, createTestApp, generateTestJWT } from "../utils";
+import request from "../utils/http";
 
 describe("Admin List Sorting & Filtering", () => {
 	let app: INestApplication;
@@ -11,7 +11,7 @@ describe("Admin List Sorting & Filtering", () => {
 	let adminToken: string;
 
 	const get = (path: string) =>
-		supertest(app.getHttpServer()).get(`/api/v1${path}`).set("Authorization", `Bearer ${adminToken}`);
+		request(app.getHttpServer()).get(`/api/v1${path}`).set("Authorization", `Bearer ${adminToken}`);
 
 	beforeAll(async () => {
 		app = await createTestApp();

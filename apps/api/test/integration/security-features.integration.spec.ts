@@ -1,5 +1,5 @@
 import type { INestApplication } from "@nestjs/common";
-import request from "supertest";
+import request from "../utils/http";
 import { setupMocks } from "../utils/setup-mocks";
 import { closeTestApp, createTestApp, createTestUserWithAuth } from "../utils/test-utils";
 

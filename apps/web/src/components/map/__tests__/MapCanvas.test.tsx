@@ -1,6 +1,6 @@
+import { beforeEach, describe, expect, it, type Mock, vi } from "bun:test";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import React from "react";
-import { type Mock, vi } from "vitest";
 import { useMapInitialization } from "@/components/hooks/useMapInitialization";
 import { useMapPositioning } from "@/components/hooks/useMapPositioning";
 import { useMapViewBindings } from "@/components/hooks/useMapViewBindings";
@@ -11,6 +11,7 @@ import type { SupportedLanguage } from "@/lib/i18n";
 import { useMapViewStore } from "@/stores/mapViewStore";
 import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 import { useRoutingStore } from "@/stores/routingStore";
+import { automock } from "@/test/helpers";
 import { MapCanvas } from "../MapCanvas";
 
 vi.mock("react-map-gl/mapbox", () => ({
@@ -63,15 +64,23 @@ vi.mock("react-map-gl/mapbox", () => ({
 	),
 }));
 
-vi.mock("@/components/providers/UserLocationProvider");
-vi.mock("@/components/hooks/useMapInitialization");
-vi.mock("@/components/hooks/useMapPositioning");
-vi.mock("@/components/hooks/useMapViewBindings");
-vi.mock("@/hooks/useServiceWorker");
-vi.mock("@/stores/mapViewStore");
-vi.mock("@/stores/redesignSettingsStore");
-vi.mock("@/stores/routingStore");
-vi.mock("@/lib/errors");
+vi.mock("@/components/providers/UserLocationProvider", async () =>
+	automock(await import("@/components/providers/UserLocationProvider")),
+);
+vi.mock("@/components/hooks/useMapInitialization", async () =>
+	automock(await import("@/components/hooks/useMapInitialization")),
+);
+vi.mock("@/components/hooks/useMapPositioning", async () =>
+	automock(await import("@/components/hooks/useMapPositioning")),
+);
+vi.mock("@/components/hooks/useMapViewBindings", async () =>
+	automock(await import("@/components/hooks/useMapViewBindings")),
+);
+vi.mock("@/hooks/useServiceWorker", async () => automock(await import("@/hooks/useServiceWorker")));
+vi.mock("@/stores/mapViewStore", async () => automock(await import("@/stores/mapViewStore")));
+vi.mock("@/stores/redesignSettingsStore", async () => automock(await import("@/stores/redesignSettingsStore")));
+vi.mock("@/stores/routingStore", async () => automock(await import("@/stores/routingStore")));
+vi.mock("@/lib/errors", async () => automock(await import("@/lib/errors")));
 vi.mock("@/components/map/MapPopup", () => ({
 	MapPopup: ({ popupInfo }: any) => (
 		<div data-testid="map-popup">
@@ -82,6 +91,8 @@ vi.mock("@/components/map/MapPopup", () => ({
 vi.mock("@/components/map/SunPositionIndicator", () => ({
 	SunPositionIndicator: ({ azimuth }: any) => <div data-testid="sun-indicator">Azimuth: {azimuth}</div>,
 }));
+
+type AnyMock = Mock<(...args: any[]) => any>;
 
 // Lets a test hold back the mock map's load event to exercise slow-load paths.
 const mockLoadControl = { defer: false, fire: null as null | (() => void) };
@@ -114,7 +125,7 @@ const mockMapInstance = {
 // Selector-aware Zustand mock: each store's mock returns a snapshot that the
 // selector function picks values from, so component code keeps the same
 // `useStore((s) => s.field)` shape.
-function mockStoreSelector<T>(mock: Mock, snapshot: T) {
+function mockStoreSelector<T>(mock: AnyMock, snapshot: T) {
 	mock.mockImplementation((selector: ((state: T) => unknown) | undefined) =>
 		selector ? selector(snapshot) : snapshot,
 	);
@@ -150,7 +161,7 @@ describe("MapCanvas", () => {
 	};
 
 	const setStyleKey = (mapStyle: "streets" | "satellite" | "outdoors") => {
-		mockStoreSelector(useRedesignSettingsStore as unknown as Mock, { mapStyle });
+		mockStoreSelector(useRedesignSettingsStore as unknown as AnyMock, { mapStyle });
 	};
 
 	beforeEach(() => {
@@ -159,8 +170,8 @@ describe("MapCanvas", () => {
 		mockLoadControl.fire = null;
 
 		setStyleKey("streets");
-		mockStoreSelector(useRoutingStore as unknown as Mock, { isMapLocked: false });
-		mockStoreSelector(useMapViewStore as unknown as Mock, {
+		mockStoreSelector(useRoutingStore as unknown as AnyMock, { isMapLocked: false });
+		mockStoreSelector(useMapViewStore as unknown as AnyMock, {
 			lightPreset: "day",
 			bearing: 0,
 			setBearing: mockSetCurrentBearing,
@@ -168,17 +179,17 @@ describe("MapCanvas", () => {
 			sunPosition: null,
 		});
 
-		(useMapViewBindings as Mock).mockReturnValue({ onMapStyleLoaded: mockOnMapStyleLoaded });
+		(useMapViewBindings as AnyMock).mockReturnValue({ onMapStyleLoaded: mockOnMapStyleLoaded });
 
-		(useUserLocation as Mock).mockReturnValue({ location: null, error: null, isLoading: false });
+		(useUserLocation as AnyMock).mockReturnValue({ location: null, error: null, isLoading: false });
 
-		(useServiceWorker as Mock).mockReturnValue({ isOnline: true });
+		(useServiceWorker as AnyMock).mockReturnValue({ isOnline: true });
 
-		(useErrorHandler as Mock).mockReturnValue({ handleMapError: mockHandleMapError });
+		(useErrorHandler as AnyMock).mockReturnValue({ handleMapError: mockHandleMapError });
 
-		(useMapInitialization as Mock).mockReturnValue({ handleMapLoad: mockHandleMapLoad });
+		(useMapInitialization as AnyMock).mockReturnValue({ handleMapLoad: mockHandleMapLoad });
 
-		(useMapPositioning as Mock).mockReturnValue({});
+		(useMapPositioning as AnyMock).mockReturnValue({});
 	});
 
 	describe("Rendering", () => {
@@ -244,7 +255,7 @@ describe("MapCanvas", () => {
 		});
 
 		it("should use user location when available", () => {
-			(useUserLocation as Mock).mockReturnValue({
+			(useUserLocation as AnyMock).mockReturnValue({
 				location: [2.3522, 48.8566],
 				error: null,
 				isLoading: false,
@@ -317,7 +328,7 @@ describe("MapCanvas", () => {
 		});
 
 		it("should render sun indicator when all conditions are met", () => {
-			mockStoreSelector(useMapViewStore as unknown as Mock, {
+			mockStoreSelector(useMapViewStore as unknown as AnyMock, {
 				lightPreset: "day",
 				bearing: 0,
 				setBearing: mockSetCurrentBearing,
@@ -325,7 +336,7 @@ describe("MapCanvas", () => {
 				sunPosition: { azimuth: 180, elevation: 45, isUp: true },
 			});
 
-			(useUserLocation as Mock).mockReturnValue({
+			(useUserLocation as AnyMock).mockReturnValue({
 				location: [2.3522, 48.8566],
 				error: null,
 				isLoading: false,
@@ -355,7 +366,7 @@ describe("MapCanvas", () => {
 			const mapRef = React.createRef<any>();
 			const userLocation: [number, number] = [2.3522, 48.8566];
 
-			(useUserLocation as Mock).mockReturnValue({ location: userLocation, error: null, isLoading: true });
+			(useUserLocation as AnyMock).mockReturnValue({ location: userLocation, error: null, isLoading: true });
 
 			render(
 				<MapCanvas
