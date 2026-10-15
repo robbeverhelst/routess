@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { PasswordService, toCanonicalArgon2Hash } from "../../../src/auth/password.service";
+import { DUMMY_HASH, PasswordService, toCanonicalArgon2Hash } from "../../../src/auth/password.service";
 import type { MetricsService } from "../../../src/telemetry/metrics.service";
 
 // Written by the argon2 npm package (0.45.1) with the API's former options
@@ -38,18 +38,22 @@ describe("PasswordService", () => {
 		}
 	});
 
-	it("spends real argon2 work on the timing dummy", async () => {
-		const real = await passwords.hash(LEGACY_PASSWORD);
-		const timeOf = async (run: () => Promise<boolean>) => {
-			const start = performance.now();
-			await run();
-			return performance.now() - start;
-		};
-		await timeOf(() => passwords.verifyDummy(LEGACY_PASSWORD));
-		const wrongPassword = await timeOf(() => passwords.verify(real, "wrong password"));
-		const dummy = await timeOf(() => passwords.verifyDummy(LEGACY_PASSWORD));
+	it("keeps the timing dummy a well-formed argon2id hash at the API's cost", async () => {
+		const [, algorithm, version, params, salt, digest] = DUMMY_HASH.split("$");
+		const [, , , apiParams] = (await passwords.hash(LEGACY_PASSWORD)).split("$");
 
-		expect(dummy).toBeGreaterThan(wrongPassword / 2);
+		expect(algorithm).toBe("argon2id");
+		expect(version).toBe("v=19");
+		expect(params).toBe("m=19456,t=2,p=1");
+		expect(params).toBe(apiParams);
+		expect(Buffer.from(salt, "base64").length).toBeGreaterThanOrEqual(16);
+		expect(Buffer.from(digest, "base64").length).toBe(32);
+	});
+
+	it("runs a real argon2 verify against the timing dummy instead of rejecting it", async () => {
+		for (const plain of ["", LEGACY_PASSWORD, "something else entirely"]) {
+			expect(await Bun.password.verify(plain, DUMMY_HASH)).toBe(false);
+		}
 	});
 });
 

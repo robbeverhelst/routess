@@ -17,7 +17,7 @@ const ARGON2_OPTIONS = {
 // A real argon2id hash at ARGON2_OPTIONS' cost (of a random, discarded
 // password), so verifying against it does the same work as a wrong-password
 // check on a stored hash.
-const DUMMY_HASH =
+export const DUMMY_HASH =
 	"$argon2id$v=19$m=19456,t=2,p=1$72VpDGFLIZw2p4EmIPGSW/qq2fRRQIYWySKClAkOcUI$LOXk3N0LNNn1wyzHBGI8Y3I0oflHce2esVKfpJNguq4";
 
 // Bun.password only parses an argon2 hash whose parameters are in the PHC
