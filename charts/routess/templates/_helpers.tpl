@@ -229,7 +229,7 @@ env-config.js by its entrypoint at container start).
 
 {{/*
 Full API container env. Shared by the api Deployment and the seed-refresh
-CronJob so they never drift: the refresh script boots the same AppModule and
+and weekly-digest CronJobs so they never drift: the refresh script boots the same AppModule and
 validates the same production config, so it needs every value the api needs.
 */}}
 {{- define "routess.api.env" -}}
@@ -245,6 +245,8 @@ validates the same production config, so it needs every value the api needs.
   value: {{ include "routess.frontendUrls" . | quote }}
 - name: PUBLIC_SITE_URL
   value: {{ .Values.api.env.publicSiteUrl | quote }}
+- name: PUBLIC_API_URL
+  value: {{ .Values.api.env.publicApiUrl | quote }}
 - name: SWAGGER_ENABLED
   value: {{ .Values.api.env.swaggerEnabled | quote }}
 - name: SWAGGER_PATH

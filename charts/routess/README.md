@@ -29,6 +29,7 @@ Plus:
 - A `PodDisruptionBudget` for web, api, and landing
 - An optional `ServiceMonitor` for the api (`monitoring.serviceMonitor.enabled=true`)
 - An optional `HorizontalPodAutoscaler` per app (`autoscaling.enabled=true`)
+- An optional weekly "routes near you" email `CronJob` (`api.weeklyDigest.enabled=true`, off by default). It mails only users who opted in, needs `api.secrets.resendApiKey` and `api.env.publicApiUrl` (unsubscribe links), and should stay off on self-hosts unless you run your own sender and privacy notice
 
 Postgres is **not** managed by this chart. Bring your own database (managed Postgres, a cluster-internal Postgres operator like CloudNativePG, or whatever you already operate).
 
@@ -99,6 +100,7 @@ See [`values.yaml`](values.yaml) for every key and default. The most commonly tu
 | `autoscaling.enabled`                   | `false`          | HPA off by default                               |
 | `monitoring.serviceMonitor.enabled`     | `false`          | Enable when Prometheus Operator is present       |
 | `networkPolicies.enabled`               | `true`           | Disable only when you've got cluster-wide policies |
+| `api.weeklyDigest.enabled`             | `false`          | Weekly opt-in route email CronJob                |
 
 ## Render locally
 
