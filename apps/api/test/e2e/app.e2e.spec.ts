@@ -13,8 +13,10 @@ describe("AppController (e2e)", () => {
 		await closeTestApp(app);
 	});
 
-	it("/ (GET)", () => {
-		return request(app.getHttpServer())
+	// Await the request: bun test only waits on a returned real Promise, not on
+	// the request's thenable, so a bare `return request(...)` asserts nothing.
+	it("/ (GET)", async () => {
+		await request(app.getHttpServer())
 			.get("/")
 			.expect(200)
 			.expect(({ body }) => {
