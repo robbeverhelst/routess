@@ -1,7 +1,7 @@
 ARG DEPS_IMAGE
 FROM ${DEPS_IMAGE} AS deps
 
-FROM node:24-alpine AS builder
+FROM oven/bun:1.4.3-alpine AS builder
 
 WORKDIR /app
 
@@ -17,14 +17,14 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # accents/brand colors) both resolve to their built dist, so compile them before
 # the Next build. tsc -b on core also builds its referenced projects.
 RUN cd /app/packages/core && \
-	node /app/node_modules/.bin/tsc -b --force && \
+	bun --bun /app/node_modules/.bin/tsc -b --force && \
 	cd /app/packages/design-tokens && \
-	node /app/node_modules/.bin/tsc -b --force
+	bun --bun /app/node_modules/.bin/tsc -b --force
 
 RUN cd /app/apps/landing && \
-	node node_modules/.bin/next build
+	bun --bun node_modules/.bin/next build
 
-FROM node:24-alpine AS runner
+FROM oven/bun:1.4.3-alpine AS runner
 
 WORKDIR /app
 
@@ -45,4 +45,4 @@ USER nextjs
 
 EXPOSE 8080
 
-CMD ["node", "apps/landing/server.js"]
+CMD ["bun", "apps/landing/server.js"]

@@ -1,9 +1,10 @@
+import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { config } from "dotenv";
 import { Client } from "pg";
 
-// Load environment variables
-config({ path: join(__dirname, "../../../.env") });
+// Load the repo root .env, if there is one; variables already set win.
+const rootEnv = join(__dirname, "../../../.env");
+if (existsSync(rootEnv)) process.loadEnvFile(rootEnv);
 
 async function setupTestDatabase() {
 	// In CI environment, we use the existing PostgreSQL service in the cluster

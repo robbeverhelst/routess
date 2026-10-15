@@ -1,6 +1,5 @@
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
-import { config as loadDotEnv } from "dotenv";
 
 export interface AppConfig {
 	app: {
@@ -234,7 +233,8 @@ export function loadEnvironment(): void {
 
 	for (const envPath of candidatePaths) {
 		if (existsSync(envPath)) {
-			loadDotEnv({ path: envPath, override: false });
+			// The runtime's own .env parser; like dotenv, it never overrides a variable that is already set.
+			process.loadEnvFile(envPath);
 			break;
 		}
 	}

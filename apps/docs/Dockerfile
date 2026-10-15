@@ -1,7 +1,7 @@
 ARG DEPS_IMAGE
 FROM ${DEPS_IMAGE} AS deps
 
-FROM node:24-alpine AS builder
+FROM oven/bun:1.4.3-alpine AS builder
 
 WORKDIR /app
 
@@ -14,10 +14,10 @@ COPY packages ./packages
 ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN cd /app/apps/docs && \
-	node node_modules/.bin/fumadocs-mdx && \
-	node node_modules/.bin/next build
+	bun --bun node_modules/.bin/fumadocs-mdx && \
+	bun --bun node_modules/.bin/next build
 
-FROM node:24-alpine AS runner
+FROM oven/bun:1.4.3-alpine AS runner
 
 WORKDIR /app
 
@@ -39,4 +39,4 @@ USER nextjs
 
 EXPOSE 8080
 
-CMD ["node", "apps/docs/server.js"]
+CMD ["bun", "apps/docs/server.js"]
