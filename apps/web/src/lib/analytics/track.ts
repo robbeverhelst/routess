@@ -7,7 +7,7 @@ import { getStoredUser } from "@/lib/auth-state";
 import { getRuntimeConfig } from "@/lib/runtime-config";
 import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 import { useUiStore } from "@/stores/uiStore";
-import { getAnonymousId } from "./anonymous-id";
+import { getAnonymousId, resetAnonymousId } from "./anonymous-id";
 import type { ProductEvent } from "./events";
 
 type UmamiPropertyValue = string | number | boolean | null;
@@ -49,7 +49,11 @@ export function analyticsAllowed(): boolean {
 }
 
 export function trackEvent<E extends ProductEvent>(event: E): void {
-	if (!analyticsAllowed()) return;
+	if (!analyticsAllowed()) {
+		// Covers Do Not Track switched on after an id was minted.
+		resetAnonymousId();
+		return;
+	}
 	const merged: Record<string, UmamiPropertyValue> = {
 		...buildCommonContext(),
 		...(event.properties as Record<string, UmamiPropertyValue>),

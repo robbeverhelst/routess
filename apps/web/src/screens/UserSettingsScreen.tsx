@@ -287,6 +287,7 @@ export function UserSettingsScreen() {
 		if (!window.confirm(t("settings.security.logoutEverywhereConfirm"))) return;
 		try {
 			await apiService.logoutEverywhere();
+			resetAnonymousId();
 			pushToast({ kind: "success", title: t("common.signedOut") });
 			emitAppEvent("routess:open-login", { entryPoint: "session_ended" });
 		} catch (error) {

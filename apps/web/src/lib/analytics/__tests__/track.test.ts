@@ -74,4 +74,12 @@ describe("trackEvent anonymous id", () => {
 		trackEvent({ name: "user_logged_out", properties: {} });
 		expect(track.mock.calls[0][1].anon_id).not.toBe(id);
 	});
+
+	it("forgets the id once Do Not Track is switched on", () => {
+		trackEvent({ name: "user_logged_out", properties: {} });
+		expect(localStorage.getItem("routess.anon_id")).not.toBeNull();
+		stubProperty(navigator, "doNotTrack", "1");
+		trackEvent({ name: "user_logged_out", properties: {} });
+		expect(localStorage.getItem("routess.anon_id")).toBeNull();
+	});
 });
