@@ -1,3 +1,4 @@
+import { describe, expect, it } from "bun:test";
 import type { AppConfig } from "../config/app-config";
 import type { MetricsService } from "../telemetry/metrics.service";
 import { CacheService } from "./cache.service";

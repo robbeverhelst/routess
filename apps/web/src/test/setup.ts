@@ -1,6 +1,14 @@
-import "@testing-library/jest-dom/vitest";
+import { afterEach, expect, vi } from "bun:test";
+import * as matchers from "@testing-library/jest-dom/matchers";
 import { cleanup } from "@testing-library/react";
-import { afterEach, vi } from "vitest";
+
+expect.extend(matchers);
+
+// Bun's import.meta.env is process.env; give app code the values Vite's test
+// mode sets (DEV true, PROD false).
+process.env.MODE = "test";
+process.env.DEV = "true";
+process.env.PROD = "";
 
 // Mock ResizeObserver
 global.ResizeObserver = class ResizeObserver {
@@ -40,49 +48,49 @@ Object.defineProperty(window, "matchMedia", {
 	}),
 });
 
-// Mock mapbox-gl
-vi.mock("mapbox-gl", () => ({
-	default: {
-		Map: vi.fn(() => ({
-			on: vi.fn(),
-			off: vi.fn(),
-			remove: vi.fn(),
-			getCanvas: vi.fn(() => ({
-				style: { cursor: "" },
-			})),
-			getSource: vi.fn(),
-			addSource: vi.fn(),
-			removeSource: vi.fn(),
-			addLayer: vi.fn(),
-			removeLayer: vi.fn(),
-			setLayoutProperty: vi.fn(),
-			flyTo: vi.fn(),
-			fitBounds: vi.fn(),
-			getBounds: vi.fn(),
-			getCenter: vi.fn(),
-			getZoom: vi.fn(),
-			project: vi.fn(),
-			unproject: vi.fn(),
+// Mock mapbox-gl. The classes are named exports as well as default members:
+// Bun rejects a named import the mock does not provide.
+const mapboxMock = {
+	Map: vi.fn(() => ({
+		on: vi.fn(),
+		off: vi.fn(),
+		remove: vi.fn(),
+		getCanvas: vi.fn(() => ({
+			style: { cursor: "" },
 		})),
-		Marker: vi.fn(() => ({
-			setLngLat: vi.fn().mockReturnThis(),
-			addTo: vi.fn().mockReturnThis(),
-			remove: vi.fn(),
-		})),
-		Popup: vi.fn(() => ({
-			setLngLat: vi.fn().mockReturnThis(),
-			setHTML: vi.fn().mockReturnThis(),
-			addTo: vi.fn().mockReturnThis(),
-			remove: vi.fn(),
-		})),
-		NavigationControl: vi.fn(),
-		GeolocateControl: vi.fn(),
-		ScaleControl: vi.fn(),
-	},
+		getSource: vi.fn(),
+		addSource: vi.fn(),
+		removeSource: vi.fn(),
+		addLayer: vi.fn(),
+		removeLayer: vi.fn(),
+		setLayoutProperty: vi.fn(),
+		flyTo: vi.fn(),
+		fitBounds: vi.fn(),
+		getBounds: vi.fn(),
+		getCenter: vi.fn(),
+		getZoom: vi.fn(),
+		project: vi.fn(),
+		unproject: vi.fn(),
+	})),
+	Marker: vi.fn(() => ({
+		setLngLat: vi.fn().mockReturnThis(),
+		addTo: vi.fn().mockReturnThis(),
+		remove: vi.fn(),
+	})),
+	Popup: vi.fn(() => ({
+		setLngLat: vi.fn().mockReturnThis(),
+		setHTML: vi.fn().mockReturnThis(),
+		addTo: vi.fn().mockReturnThis(),
+		remove: vi.fn(),
+	})),
+	NavigationControl: vi.fn(),
+	GeolocateControl: vi.fn(),
+	ScaleControl: vi.fn(),
 	GeoJSONSource: vi.fn(),
 	LngLat: vi.fn(),
 	LngLatBounds: vi.fn(),
-}));
+};
+vi.mock("mapbox-gl", () => ({ ...mapboxMock, default: mapboxMock }));
 
 // Mock localStorage
 const localStorageMock = (() => {
@@ -133,7 +141,7 @@ Object.defineProperty(URL, "createObjectURL", {
 });
 
 // Mock fetch
-global.fetch = vi.fn();
+global.fetch = vi.fn() as unknown as typeof fetch;
 
 // Mock import.meta for Vite
 Object.defineProperty(global, "import", {

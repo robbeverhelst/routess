@@ -3,8 +3,8 @@ import type { INestApplication } from "@nestjs/common";
 import type { RouteVisibility } from "src/entities/route.entity";
 import { Route } from "src/entities/route.entity";
 import { User } from "src/entities/user.entity";
-import supertest from "supertest";
 import { clearDatabase, closeTestApp, createTestApp, createTestUserWithAuth, withRequestContext } from "../utils";
+import request from "../utils/http";
 
 async function createRoute(
 	app: INestApplication,
@@ -48,7 +48,7 @@ describe("Route Visibility Integration Tests", () => {
 		it("owner can read a private route", async () => {
 			const { user, accessToken } = await createTestUserWithAuth(app, { email: "alice@example.com" });
 			const { id } = await createRoute(app, user.id, "private");
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.get(`/api/v1/routes/${id}`)
 				.set("Authorization", `Bearer ${accessToken}`)
 				.expect(200);
@@ -57,14 +57,14 @@ describe("Route Visibility Integration Tests", () => {
 		it("anonymous viewer gets 404 (not 403) on a private route", async () => {
 			const { user } = await createTestUserWithAuth(app, { email: "alice@example.com" });
 			const { id } = await createRoute(app, user.id, "private");
-			await supertest(app.getHttpServer()).get(`/api/v1/routes/${id}`).expect(404);
+			await request(app.getHttpServer()).get(`/api/v1/routes/${id}`).expect(404);
 		});
 
 		it("non-owner authenticated user gets 404 on a private route", async () => {
 			const { user: alice } = await createTestUserWithAuth(app, { email: "alice@example.com" });
 			const { accessToken: bobToken } = await createTestUserWithAuth(app, { email: "bob@example.com" });
 			const { id } = await createRoute(app, alice.id, "private");
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.get(`/api/v1/routes/${id}`)
 				.set("Authorization", `Bearer ${bobToken}`)
 				.expect(404);
@@ -73,13 +73,13 @@ describe("Route Visibility Integration Tests", () => {
 		it("anonymous viewer gets 404 on an unlisted route by numeric id (ids are enumerable)", async () => {
 			const { user } = await createTestUserWithAuth(app, { email: "alice@example.com" });
 			const { id } = await createRoute(app, user.id, "unlisted");
-			await supertest(app.getHttpServer()).get(`/api/v1/routes/${id}`).expect(404);
+			await request(app.getHttpServer()).get(`/api/v1/routes/${id}`).expect(404);
 		});
 
 		it("anonymous viewer can read an unlisted route via its share token", async () => {
 			const { user } = await createTestUserWithAuth(app, { email: "alice@example.com" });
 			const { shareToken } = await createRoute(app, user.id, "unlisted");
-			const response = await supertest(app.getHttpServer()).get(`/api/v1/routes/${shareToken}`).expect(200);
+			const response = await request(app.getHttpServer()).get(`/api/v1/routes/${shareToken}`).expect(200);
 			expect(response.body.visibility).toBe("unlisted");
 			expect(response.body.shareToken).toBe(shareToken);
 		});
@@ -87,13 +87,13 @@ describe("Route Visibility Integration Tests", () => {
 		it("share token does not serve a private route (flipping to private revokes the link)", async () => {
 			const { user } = await createTestUserWithAuth(app, { email: "alice@example.com" });
 			const { shareToken } = await createRoute(app, user.id, "private");
-			await supertest(app.getHttpServer()).get(`/api/v1/routes/${shareToken}`).expect(404);
+			await request(app.getHttpServer()).get(`/api/v1/routes/${shareToken}`).expect(404);
 		});
 
 		it("anonymous viewer can read a public route", async () => {
 			const { user } = await createTestUserWithAuth(app, { email: "alice@example.com" });
 			const { id } = await createRoute(app, user.id, "public");
-			const response = await supertest(app.getHttpServer()).get(`/api/v1/routes/${id}`).expect(200);
+			const response = await request(app.getHttpServer()).get(`/api/v1/routes/${id}`).expect(200);
 			expect(response.body.visibility).toBe("public");
 		});
 	});
@@ -105,7 +105,7 @@ describe("Route Visibility Integration Tests", () => {
 			await createRoute(app, user.id, "unlisted", "Unlisted route");
 			const { id: publicId } = await createRoute(app, user.id, "public", "Public route");
 
-			const response = await supertest(app.getHttpServer()).get(`/api/v1/routes/by-user/${user.id}`).expect(200);
+			const response = await request(app.getHttpServer()).get(`/api/v1/routes/by-user/${user.id}`).expect(200);
 			expect(response.body).toHaveLength(1);
 			expect(response.body[0].id).toBe(publicId);
 			expect(response.body[0].visibility).toBe("public");
@@ -115,7 +115,7 @@ describe("Route Visibility Integration Tests", () => {
 			const { user } = await createTestUserWithAuth(app, { email: "alice@example.com" });
 			await createRoute(app, user.id, "private");
 			await createRoute(app, user.id, "unlisted");
-			const response = await supertest(app.getHttpServer()).get(`/api/v1/routes/by-user/${user.id}`).expect(200);
+			const response = await request(app.getHttpServer()).get(`/api/v1/routes/by-user/${user.id}`).expect(200);
 			expect(response.body).toHaveLength(0);
 		});
 	});
@@ -123,7 +123,7 @@ describe("Route Visibility Integration Tests", () => {
 	describe("POST /routes — default visibility", () => {
 		it("falls back to 'private' when the owner has no preference set", async () => {
 			const { accessToken } = await createTestUserWithAuth(app, { email: "alice@example.com" });
-			const response = await supertest(app.getHttpServer())
+			const response = await request(app.getHttpServer())
 				.post("/api/v1/routes")
 				.set("Authorization", `Bearer ${accessToken}`)
 				.send({
@@ -157,7 +157,7 @@ describe("Route Visibility Integration Tests", () => {
 				await orm.em.persist(u).flush();
 			});
 
-			const response = await supertest(app.getHttpServer())
+			const response = await request(app.getHttpServer())
 				.post("/api/v1/routes")
 				.set("Authorization", `Bearer ${accessToken}`)
 				.send({
@@ -173,7 +173,7 @@ describe("Route Visibility Integration Tests", () => {
 
 		it("an explicit visibility in the request body wins over the owner's default", async () => {
 			const { accessToken } = await createTestUserWithAuth(app, { email: "alice@example.com" });
-			const response = await supertest(app.getHttpServer())
+			const response = await request(app.getHttpServer())
 				.post("/api/v1/routes")
 				.set("Authorization", `Bearer ${accessToken}`)
 				.send({

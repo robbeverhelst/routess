@@ -7,8 +7,8 @@ import { Payment } from "src/entities/payment.entity";
 import { Route } from "src/entities/route.entity";
 import { Session } from "src/entities/session.entity";
 import { User } from "src/entities/user.entity";
-import supertest from "supertest";
 import { clearDatabase, closeTestApp, createTestApp, generateTestJWT, withRequestContext } from "../utils";
+import request from "../utils/http";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const daysAgo = (n: number) => new Date(Date.now() - n * DAY_MS);
@@ -21,7 +21,7 @@ describe("Admin metrics (GET /admin/stats/metrics)", () => {
 	let memberToken: string;
 
 	const get = (token?: string) => {
-		const req = supertest(app.getHttpServer()).get("/api/v1/admin/stats/metrics");
+		const req = request(app.getHttpServer()).get("/api/v1/admin/stats/metrics");
 		return token ? req.set("Authorization", `Bearer ${token}`) : req;
 	};
 

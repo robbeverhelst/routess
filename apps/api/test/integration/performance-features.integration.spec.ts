@@ -1,7 +1,7 @@
 import { MikroORM } from "@mikro-orm/core";
 import type { INestApplication } from "@nestjs/common";
-import request from "supertest";
 import { User } from "../../src/entities/user.entity";
+import request from "../utils/http";
 import { setupMocks } from "../utils/setup-mocks";
 import { closeTestApp, createTestApp, generateTestJWT, withRequestContext } from "../utils/test-utils";
 

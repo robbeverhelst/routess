@@ -5,8 +5,8 @@ import { Session } from "src/entities/session.entity";
 import { User } from "src/entities/user.entity";
 import { UserAuthMethod } from "src/entities/user-auth-method.entity";
 import { UsersService } from "src/users/users.service";
-import supertest from "supertest";
 import { clearDatabase, closeTestApp, createTestApp, createTestUserWithAuth, withRequestContext } from "../utils";
+import request from "../utils/http";
 
 async function expireDeletionFor(app: INestApplication, userId: number, daysAgo: number) {
 	const orm = app.get(MikroORM);
@@ -34,7 +34,7 @@ describe("Account Lifecycle Integration Tests", () => {
 	describe("DELETE /users/me", () => {
 		it("sets deletion_status to pending_hard_delete and timestamps deletion_requested_at", async () => {
 			const { user, accessToken } = await createTestUserWithAuth(app, { email: "alice@example.com" });
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.delete("/api/v1/users/me")
 				.set("Authorization", `Bearer ${accessToken}`)
 				.expect(200);
@@ -65,7 +65,7 @@ describe("Account Lifecycle Integration Tests", () => {
 				await orm.em.persist(route).flush();
 			});
 
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.delete("/api/v1/users/me")
 				.set("Authorization", `Bearer ${accessToken}`)
 				.expect(200);
@@ -86,11 +86,11 @@ describe("Account Lifecycle Integration Tests", () => {
 
 		it("the same JWT no longer authenticates after delete", async () => {
 			const { accessToken } = await createTestUserWithAuth(app, { email: "alice@example.com" });
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.delete("/api/v1/users/me")
 				.set("Authorization", `Bearer ${accessToken}`)
 				.expect(200);
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.get("/api/v1/users/me")
 				.set("Authorization", `Bearer ${accessToken}`)
 				.expect(401);
@@ -114,7 +114,7 @@ describe("Account Lifecycle Integration Tests", () => {
 				});
 				await orm.em.persist(route).flush();
 			});
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.delete("/api/v1/users/me")
 				.set("Authorization", `Bearer ${initialToken}`)
 				.expect(200);
@@ -130,7 +130,7 @@ describe("Account Lifecycle Integration Tests", () => {
 				return app.get(SessionService).createSession(user.id, { userAgent: "test", ipAddress: "127.0.0.1" });
 			});
 
-			const cancelRes = await supertest(app.getHttpServer())
+			const cancelRes = await request(app.getHttpServer())
 				.post("/api/v1/users/me/cancel-deletion")
 				.set("Authorization", `Bearer ${newToken}`)
 				.expect(200);
@@ -149,7 +149,7 @@ describe("Account Lifecycle Integration Tests", () => {
 
 		it("is a no-op for a user not in pending state", async () => {
 			const { accessToken } = await createTestUserWithAuth(app, { email: "alice@example.com" });
-			const res = await supertest(app.getHttpServer())
+			const res = await request(app.getHttpServer())
 				.post("/api/v1/users/me/cancel-deletion")
 				.set("Authorization", `Bearer ${accessToken}`)
 				.expect(200);

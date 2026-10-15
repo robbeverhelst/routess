@@ -1,16 +1,14 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import type { Coordinate } from "@routess/core";
 import { emptyHistory, type Waypoint } from "@routess/core";
 import type { Map as MapboxMap } from "mapbox-gl";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { sampleAndComputeMock, fetchMock, getRouteMock } = vi.hoisted(() => ({
-	sampleAndComputeMock: vi.fn(async () => ({ gainMeters: 0, lossMeters: 0, profile: [] })),
-	fetchMock: vi.fn(),
-	getRouteMock: vi.fn(),
-}));
+const sampleAndComputeMock = vi.fn(async () => ({ gainMeters: 0, lossMeters: 0, profile: [] }));
+const fetchMock = vi.fn();
+const getRouteMock = vi.fn();
 
-vi.mock("@/lib/api", async (importOriginal) => {
-	const original = await importOriginal<typeof import("@/lib/api")>();
+vi.mock("@/lib/api", async () => {
+	const original = await import("@/lib/api");
 	return { ...original, apiService: { ...original.apiService, getRoute: getRouteMock } };
 });
 

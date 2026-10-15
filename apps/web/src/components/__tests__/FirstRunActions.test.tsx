@@ -1,8 +1,9 @@
+import { beforeEach, describe, expect, it, vi } from "bun:test";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import { trackEvent } from "@/lib/analytics/track";
 import { useModalsStore } from "@/stores/modalsStore";
 import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
+import { mocked } from "@/test/helpers";
 import { FirstRunActions } from "../FirstRunActions";
 
 vi.mock("@/lib/analytics/track", () => ({ trackEvent: vi.fn() }));
@@ -10,7 +11,7 @@ vi.mock("@/lib/i18n", () => ({ useT: () => (key: string) => key }));
 
 describe("FirstRunActions", () => {
 	beforeEach(() => {
-		vi.mocked(trackEvent).mockClear();
+		mocked(trackEvent).mockClear();
 		useRedesignSettingsStore.getState().setFirstRunActionsDismissed(false);
 		useModalsStore.getState().closeModal();
 	});

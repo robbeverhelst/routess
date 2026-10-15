@@ -6,8 +6,8 @@ import type { RouteActivity, RouteVisibility } from "src/entities/route.entity";
 import { Route } from "src/entities/route.entity";
 import { SeedSource } from "src/entities/seed-source.entity";
 import { PlacesService } from "src/places/places.service";
-import supertest from "supertest";
 import { clearDatabase, closeTestApp, createTestApp, createTestUserWithAuth, withRequestContext } from "../utils";
+import request from "../utils/http";
 
 const GEOMETRY: [number, number][] = [
 	[3.7, 51.04],
@@ -128,11 +128,11 @@ describe("GET /places/hubs (RegionalHubs, #236)", () => {
 		for (let i = 0; i < REGIONAL_HUB_MIN_INDEXABLE_ROUTES - 1; i++) {
 			await createRoute(app, user.id, { name: `Gentse lus ${i}`, ...gent });
 		}
-		const below = await supertest(app.getHttpServer()).get("/api/v1/places/hubs?activity=cycle").expect(200);
+		const below = await request(app.getHttpServer()).get("/api/v1/places/hubs?activity=cycle").expect(200);
 		expect(below.body).toEqual([]);
 
 		await createRoute(app, user.id, { name: "Gentse lus 4", ...gent });
-		const at = await supertest(app.getHttpServer()).get("/api/v1/places/hubs?activity=cycle").expect(200);
+		const at = await request(app.getHttpServer()).get("/api/v1/places/hubs?activity=cycle").expect(200);
 		expect(at.body).toHaveLength(1);
 		expect(at.body[0]).toMatchObject({
 			slug: "gent",
@@ -153,7 +153,7 @@ describe("GET /places/hubs (RegionalHubs, #236)", () => {
 		}
 		await createExternalRoute(app, sourceId, { name: "EuroVelo 5", sourceRecordId: "ev5", ...gent });
 		await createExternalRoute(app, sourceId, { name: "Schelderoute", sourceRecordId: "schelde", ...gent });
-		const res = await supertest(app.getHttpServer()).get("/api/v1/places/hubs?activity=cycle").expect(200);
+		const res = await request(app.getHttpServer()).get("/api/v1/places/hubs?activity=cycle").expect(200);
 		expect(res.body).toHaveLength(1);
 		expect(res.body[0]).toMatchObject({ slug: "gent", indexableCount: 5 });
 	});
@@ -169,7 +169,7 @@ describe("GET /places/hubs (RegionalHubs, #236)", () => {
 		await createRoute(app, user.id, { name: "Kaal", tags: [], description: undefined, ...gent });
 		await createRoute(app, user.id, { name: "Verborgen", visibility: "private", ...gent });
 		await createRoute(app, user.id, { name: "Zonder plaats" });
-		const res = await supertest(app.getHttpServer()).get("/api/v1/places/hubs?activity=cycle").expect(200);
+		const res = await request(app.getHttpServer()).get("/api/v1/places/hubs?activity=cycle").expect(200);
 		expect(res.body).toEqual([]);
 	});
 
@@ -178,9 +178,9 @@ describe("GET /places/hubs (RegionalHubs, #236)", () => {
 		for (let i = 0; i < 5; i++) {
 			await createRoute(app, user.id, { name: `Wandeling ${i}`, activity: "walk", ...gent });
 		}
-		const cycle = await supertest(app.getHttpServer()).get("/api/v1/places/hubs?activity=cycle").expect(200);
+		const cycle = await request(app.getHttpServer()).get("/api/v1/places/hubs?activity=cycle").expect(200);
 		expect(cycle.body).toEqual([]);
-		const walk = await supertest(app.getHttpServer()).get("/api/v1/places/hubs?activity=walk").expect(200);
+		const walk = await request(app.getHttpServer()).get("/api/v1/places/hubs?activity=walk").expect(200);
 		expect(walk.body).toHaveLength(1);
 		expect(walk.body[0]).toMatchObject({ slug: "gent", activity: "walk", indexableCount: 5 });
 	});
@@ -201,7 +201,7 @@ describe("GET /places/hubs (RegionalHubs, #236)", () => {
 				placeCountryCode: "BE",
 			});
 		}
-		const res = await supertest(app.getHttpServer()).get("/api/v1/places/hubs?activity=cycle").expect(200);
+		const res = await request(app.getHttpServer()).get("/api/v1/places/hubs?activity=cycle").expect(200);
 		const slugs = res.body.map((hub: { slug: string }) => hub.slug).sort();
 		expect(slugs).toEqual(["gent", "liege"]);
 		const gentHub = res.body.find((hub: { slug: string }) => hub.slug === "gent");
@@ -209,8 +209,8 @@ describe("GET /places/hubs (RegionalHubs, #236)", () => {
 	});
 
 	it("rejects a missing or unknown activity", async () => {
-		await supertest(app.getHttpServer()).get("/api/v1/places/hubs").expect(400);
-		await supertest(app.getHttpServer()).get("/api/v1/places/hubs?activity=swim").expect(400);
+		await request(app.getHttpServer()).get("/api/v1/places/hubs").expect(400);
+		await request(app.getHttpServer()).get("/api/v1/places/hubs?activity=swim").expect(400);
 	});
 });
 

@@ -3,8 +3,8 @@ import type { INestApplication } from "@nestjs/common";
 import { PersonalAccessToken } from "src/entities/personal-access-token.entity";
 import { Route } from "src/entities/route.entity";
 import { User } from "src/entities/user.entity";
-import supertest from "supertest";
 import { clearDatabase, closeTestApp, createTestApp, generateTestJWT, withRequestContext } from "../utils";
+import request from "../utils/http";
 
 // Mints a PAT through the live API surface (which is what the
 // Settings UI does) rather than seeding the DB directly, so each test
@@ -14,7 +14,7 @@ async function mintPat(
 	cookieJwt: string,
 	body: { label: string; scope: "read" | "write"; expiresAt?: string },
 ): Promise<{ id: number; token: string }> {
-	const res = await supertest(app.getHttpServer())
+	const res = await request(app.getHttpServer())
 		.post("/api/v1/auth/tokens")
 		.set("Authorization", `Bearer ${cookieJwt}`)
 		.send(body)
@@ -63,7 +63,7 @@ describe("Personal Access Tokens Integration Tests", () => {
 
 	describe("POST /v1/auth/tokens (mint)", () => {
 		it("mints a read PAT and returns the plaintext once", async () => {
-			const res = await supertest(app.getHttpServer())
+			const res = await request(app.getHttpServer())
 				.post("/api/v1/auth/tokens")
 				.set("Authorization", `Bearer ${cookieJwt}`)
 				.send({ label: "laptop", scope: "read" })
@@ -86,7 +86,7 @@ describe("Personal Access Tokens Integration Tests", () => {
 		it("rejects PAT minting when authenticated with a PAT (no self-replication)", async () => {
 			const { token } = await mintPat(app, cookieJwt, { label: "first", scope: "write" });
 
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.post("/api/v1/auth/tokens")
 				.set("Authorization", `Bearer ${token}`)
 				.send({ label: "second", scope: "read" })
@@ -94,13 +94,13 @@ describe("Personal Access Tokens Integration Tests", () => {
 		});
 
 		it("validates required fields", async () => {
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.post("/api/v1/auth/tokens")
 				.set("Authorization", `Bearer ${cookieJwt}`)
 				.send({ label: "", scope: "read" })
 				.expect(400);
 
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.post("/api/v1/auth/tokens")
 				.set("Authorization", `Bearer ${cookieJwt}`)
 				.send({ label: "ok", scope: "godmode" })
@@ -113,7 +113,7 @@ describe("Personal Access Tokens Integration Tests", () => {
 			await mintPat(app, cookieJwt, { label: "a", scope: "read" });
 			await mintPat(app, cookieJwt, { label: "b", scope: "write" });
 
-			const res = await supertest(app.getHttpServer())
+			const res = await request(app.getHttpServer())
 				.get("/api/v1/auth/tokens")
 				.set("Authorization", `Bearer ${cookieJwt}`)
 				.expect(200);
@@ -130,7 +130,7 @@ describe("Personal Access Tokens Integration Tests", () => {
 			await mintPat(app, cookieJwt, { label: "mine", scope: "read" });
 			await mintPat(app, adminCookieJwt, { label: "theirs", scope: "read" });
 
-			const res = await supertest(app.getHttpServer())
+			const res = await request(app.getHttpServer())
 				.get("/api/v1/auth/tokens")
 				.set("Authorization", `Bearer ${cookieJwt}`)
 				.expect(200);
@@ -142,7 +142,7 @@ describe("Personal Access Tokens Integration Tests", () => {
 		it("read PAT may list tokens", async () => {
 			const { token } = await mintPat(app, cookieJwt, { label: "lister", scope: "read" });
 
-			const res = await supertest(app.getHttpServer())
+			const res = await request(app.getHttpServer())
 				.get("/api/v1/auth/tokens")
 				.set("Authorization", `Bearer ${token}`)
 				.expect(200);
@@ -157,25 +157,25 @@ describe("Personal Access Tokens Integration Tests", () => {
 		it("revokes the token and stops accepting it", async () => {
 			const { id, token } = await mintPat(app, cookieJwt, { label: "transient", scope: "read" });
 
-			await supertest(app.getHttpServer()).get("/api/v1/routes").set("Authorization", `Bearer ${token}`).expect(200);
+			await request(app.getHttpServer()).get("/api/v1/routes").set("Authorization", `Bearer ${token}`).expect(200);
 
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.delete(`/api/v1/auth/tokens/${id}`)
 				.set("Authorization", `Bearer ${cookieJwt}`)
 				.expect(200);
 
-			await supertest(app.getHttpServer()).get("/api/v1/routes").set("Authorization", `Bearer ${token}`).expect(401);
+			await request(app.getHttpServer()).get("/api/v1/routes").set("Authorization", `Bearer ${token}`).expect(401);
 		});
 
 		it("is idempotent on a token already revoked", async () => {
 			const { id } = await mintPat(app, cookieJwt, { label: "transient", scope: "read" });
 
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.delete(`/api/v1/auth/tokens/${id}`)
 				.set("Authorization", `Bearer ${cookieJwt}`)
 				.expect(200);
 
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.delete(`/api/v1/auth/tokens/${id}`)
 				.set("Authorization", `Bearer ${cookieJwt}`)
 				.expect(200);
@@ -185,12 +185,12 @@ describe("Personal Access Tokens Integration Tests", () => {
 			const { token: writeToken } = await mintPat(app, cookieJwt, { label: "manager", scope: "write" });
 			const { id: victimId, token: victimToken } = await mintPat(app, cookieJwt, { label: "stale", scope: "read" });
 
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.delete(`/api/v1/auth/tokens/${victimId}`)
 				.set("Authorization", `Bearer ${writeToken}`)
 				.expect(200);
 
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.get("/api/v1/routes")
 				.set("Authorization", `Bearer ${victimToken}`)
 				.expect(401);
@@ -200,7 +200,7 @@ describe("Personal Access Tokens Integration Tests", () => {
 			const { token: readToken } = await mintPat(app, cookieJwt, { label: "read-only", scope: "read" });
 			const { id } = await mintPat(app, cookieJwt, { label: "other", scope: "read" });
 
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.delete(`/api/v1/auth/tokens/${id}`)
 				.set("Authorization", `Bearer ${readToken}`)
 				.expect(403);
@@ -209,20 +209,20 @@ describe("Personal Access Tokens Integration Tests", () => {
 		it("PAT self-revocation requires X-Routess-Confirm", async () => {
 			const { id, token } = await mintPat(app, cookieJwt, { label: "self", scope: "write" });
 
-			const res = await supertest(app.getHttpServer())
+			const res = await request(app.getHttpServer())
 				.delete(`/api/v1/auth/tokens/${id}`)
 				.set("Authorization", `Bearer ${token}`)
 				.expect(428);
 			expect(res.body.code).toBe("PRECONDITION_REQUIRED");
 			expect(res.body.details?.impact).toContain(`${id}`);
 
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.delete(`/api/v1/auth/tokens/${id}`)
 				.set("Authorization", `Bearer ${token}`)
 				.set("X-Routess-Confirm", "true")
 				.expect(200);
 
-			await supertest(app.getHttpServer()).get("/api/v1/routes").set("Authorization", `Bearer ${token}`).expect(401);
+			await request(app.getHttpServer()).get("/api/v1/routes").set("Authorization", `Bearer ${token}`).expect(401);
 		});
 	});
 
@@ -240,18 +240,15 @@ describe("Personal Access Tokens Integration Tests", () => {
 			});
 			await orm.em.persist(route).flush();
 
-			await supertest(app.getHttpServer())
-				.get("/api/v1/routes")
-				.set("Authorization", `Bearer ${readToken}`)
-				.expect(200);
+			await request(app.getHttpServer()).get("/api/v1/routes").set("Authorization", `Bearer ${readToken}`).expect(200);
 
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.patch(`/api/v1/routes/${route.id}`)
 				.set("Authorization", `Bearer ${readToken}`)
 				.send({ name: "renamed" })
 				.expect(403);
 
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.delete(`/api/v1/routes/${route.id}`)
 				.set("Authorization", `Bearer ${readToken}`)
 				.set("X-Routess-Confirm", "true")
@@ -271,7 +268,7 @@ describe("Personal Access Tokens Integration Tests", () => {
 			});
 			await orm.em.persist(route).flush();
 
-			const res = await supertest(app.getHttpServer())
+			const res = await request(app.getHttpServer())
 				.patch(`/api/v1/routes/${route.id}`)
 				.set("Authorization", `Bearer ${writeToken}`)
 				.send({ name: "after" })
@@ -283,7 +280,7 @@ describe("Personal Access Tokens Integration Tests", () => {
 		it("write PAT may POST /routes (#170)", async () => {
 			const { token } = await mintPat(app, cookieJwt, { label: "write", scope: "write" });
 
-			const res = await supertest(app.getHttpServer())
+			const res = await request(app.getHttpServer())
 				.post("/api/v1/routes")
 				.set("Authorization", `Bearer ${token}`)
 				.send({
@@ -302,7 +299,7 @@ describe("Personal Access Tokens Integration Tests", () => {
 		it("read PAT may not POST /routes", async () => {
 			const { token } = await mintPat(app, cookieJwt, { label: "read-only", scope: "read" });
 
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.post("/api/v1/routes")
 				.set("Authorization", `Bearer ${token}`)
 				.send({
@@ -332,15 +329,15 @@ describe("Personal Access Tokens Integration Tests", () => {
 			await orm.em.persist(route).flush();
 
 			// Anonymous and PAT-less callers cannot see the private route.
-			await supertest(app.getHttpServer()).get(`/api/v1/routes/${route.id}`).expect(404);
+			await request(app.getHttpServer()).get(`/api/v1/routes/${route.id}`).expect(404);
 
-			const res = await supertest(app.getHttpServer())
+			const res = await request(app.getHttpServer())
 				.get(`/api/v1/routes/${route.id}`)
 				.set("Authorization", `Bearer ${token}`)
 				.expect(200);
 			expect(res.body.name).toBe("private-detail");
 
-			const gpx = await supertest(app.getHttpServer())
+			const gpx = await request(app.getHttpServer())
 				.get(`/api/v1/routes/${route.id}/gpx`)
 				.set("Authorization", `Bearer ${token}`)
 				.expect(200);
@@ -361,7 +358,7 @@ describe("Personal Access Tokens Integration Tests", () => {
 			});
 			await orm.em.persist(route).flush();
 
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.get(`/api/v1/routes/${route.id}`)
 				.set("Authorization", `Bearer ${strangerToken}`)
 				.expect(404);
@@ -382,7 +379,7 @@ describe("Personal Access Tokens Integration Tests", () => {
 			});
 			await orm.em.persist(route).flush();
 
-			const res = await supertest(app.getHttpServer())
+			const res = await request(app.getHttpServer())
 				.delete(`/api/v1/routes/${route.id}`)
 				.set("Authorization", `Bearer ${token}`)
 				.expect(428);
@@ -404,7 +401,7 @@ describe("Personal Access Tokens Integration Tests", () => {
 			});
 			await orm.em.persist(route).flush();
 
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.delete(`/api/v1/routes/${route.id}`)
 				.set("Authorization", `Bearer ${token}`)
 				.set("X-Routess-Confirm", "true")
@@ -424,13 +421,13 @@ describe("Personal Access Tokens Integration Tests", () => {
 			});
 			await orm.em.persist(route).flush();
 
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.patch(`/api/v1/routes/${route.id}`)
 				.set("Authorization", `Bearer ${token}`)
 				.send({ visibility: "public" })
 				.expect(428);
 
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.patch(`/api/v1/routes/${route.id}`)
 				.set("Authorization", `Bearer ${token}`)
 				.set("X-Routess-Confirm", "true")
@@ -450,14 +447,14 @@ describe("Personal Access Tokens Integration Tests", () => {
 				],
 			};
 
-			const res = await supertest(app.getHttpServer())
+			const res = await request(app.getHttpServer())
 				.post("/api/v1/routes")
 				.set("Authorization", `Bearer ${token}`)
 				.send(body)
 				.expect(428);
 			expect(res.body.code).toBe("PRECONDITION_REQUIRED");
 
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.post("/api/v1/routes")
 				.set("Authorization", `Bearer ${token}`)
 				.set("X-Routess-Confirm", "true")
@@ -478,7 +475,7 @@ describe("Personal Access Tokens Integration Tests", () => {
 			});
 			await orm.em.persist(route).flush();
 
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.patch(`/api/v1/routes/${route.id}`)
 				.set("Authorization", `Bearer ${token}`)
 				.send({ name: "renamed" })
@@ -496,7 +493,7 @@ describe("Personal Access Tokens Integration Tests", () => {
 			});
 			await orm.em.persist(route).flush();
 
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.delete(`/api/v1/routes/${route.id}`)
 				.set("Authorization", `Bearer ${cookieJwt}`)
 				.expect(200);
@@ -507,7 +504,7 @@ describe("Personal Access Tokens Integration Tests", () => {
 		it("admin PAT cannot reach /v1/admin/* even with admin role", async () => {
 			const { token } = await mintPat(app, adminCookieJwt, { label: "admin pat", scope: "write" });
 
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.get("/api/v1/admin/stats/overview")
 				.set("Authorization", `Bearer ${token}`)
 				.expect(401);
@@ -516,7 +513,7 @@ describe("Personal Access Tokens Integration Tests", () => {
 		it("PAT cannot delete the user account", async () => {
 			const { token } = await mintPat(app, cookieJwt, { label: "self-destruct", scope: "write" });
 
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.delete("/api/v1/users/me")
 				.set("Authorization", `Bearer ${token}`)
 				.set("X-Routess-Confirm", "true")
@@ -526,14 +523,14 @@ describe("Personal Access Tokens Integration Tests", () => {
 
 	describe("Bogus tokens", () => {
 		it("rejects a non-PAT bearer that does not parse as JWT", async () => {
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.get("/api/v1/routes")
 				.set("Authorization", "Bearer not-a-real-token")
 				.expect(401);
 		});
 
 		it("rejects a well-formed PAT that does not exist", async () => {
-			await supertest(app.getHttpServer())
+			await request(app.getHttpServer())
 				.get("/api/v1/routes")
 				.set("Authorization", "Bearer routess_pat_fake_value_that_will_never_match_any_db_row")
 				.expect(401);

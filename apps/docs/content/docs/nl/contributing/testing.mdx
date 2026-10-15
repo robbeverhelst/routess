@@ -9,10 +9,10 @@ De repo heeft een testsuite die bij elke PR draait.
 
 | Onderdeel | Framework |
 | --- | --- |
-| Web (`apps/web`) | Vitest + React Testing Library + MSW |
+| Web (`apps/web`) | bun test + happy-dom + React Testing Library + MSW |
 | Web-E2E (`apps/web/e2e`) | Playwright, API en Stripe nagebootst in de browser |
-| API (`apps/api`) | Vitest + Postgres-testcontainer |
-| Packages | Vitest |
+| API (`apps/api`) | bun test + Postgres-testcontainer |
+| Packages | bun test |
 
 ## Uitvoeren
 
@@ -31,4 +31,4 @@ bun run test:e2e                # Playwright browser E2E (apps/web)
 
 ## Coverage
 
-Web heeft `vitest --coverage` ingericht. CI gate niet op coverage; het is een richtlijn, geen regel.
+Web heeft `bun test --coverage` (`bun run test:coverage`) ingericht. CI gate niet op coverage; het is een richtlijn, geen regel.

@@ -1,3 +1,4 @@
+import { beforeEach, describe, expect, it, jest } from "bun:test";
 import type { NextFunction, Response } from "express";
 import { RequestIdMiddleware, type RequestWithId } from "../../../src/telemetry/request-id.middleware";
 

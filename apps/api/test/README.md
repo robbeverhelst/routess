@@ -7,7 +7,6 @@ This directory contains all tests for the API application, organized by test typ
 ```
 test/
 ├── README.md                    # This documentation
-├── jest-e2e.json              # Jest configuration for E2E tests
 ├── integration/                # Integration tests
 │   ├── auth.integration.spec.ts
 │   ├── routes.integration.spec.ts
@@ -21,6 +20,7 @@ test/
 │       └── auth.service.mock.ts
 └── utils/                      # Test utilities and setup
     ├── test-utils.ts
+    ├── http.ts
     ├── setup-test-db.ts
     └── setup-mocks.ts
 ```
@@ -57,6 +57,7 @@ Contains test data, mocks, and stub implementations:
 Shared test utilities and setup functions:
 
 - **test-utils.ts** - Common test helpers (createTestApp, clearDatabase, etc.)
+- **http.ts** - Fetch-based `request(app)` helper that replaces supertest
 - **setup-test-db.ts** - Database setup and teardown
 - **setup-mocks.ts** - Mock configurations for external services
 
@@ -64,21 +65,20 @@ Shared test utilities and setup functions:
 
 ```bash
 # Run all tests
-npm run test
+bun run test
 
 # Run specific test types
-npm run test:watch         # Watch mode
-npm run test:e2e          # E2E tests only
-npm run test:debug        # Debug mode
+bun run test:watch         # Watch mode
+bun run test:e2e          # E2E tests only
+bun run test:debug        # Debug mode
 
 # Run specific test files
-npm test auth.integration.spec.ts
-npm test user-flows.e2e.spec.ts
+bun test auth.integration.spec.ts
+bun test user-flows.e2e.spec.ts
 ```
 
 ## Test Configuration
 
-- **Sequential execution** (`--runInBand`) to avoid database conflicts
-- **Global mocks** for external services (Google OAuth)
+- **Sequential execution** (`bun test --max-concurrency 1`) to avoid database conflicts
 - **Test isolation** with database cleanup between tests
 - **Comprehensive coverage** reporting

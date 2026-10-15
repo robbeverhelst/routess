@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import { getLocationForTimezone, getTimezoneFallbackLocation } from "@/lib/timezoneLocation";
 
 describe("getLocationForTimezone", () => {
@@ -47,9 +47,9 @@ describe("getTimezoneFallbackLocation", () => {
 	});
 
 	it("returns null when Intl throws", () => {
-		vi.spyOn(Intl, "DateTimeFormat").mockImplementation(() => {
+		vi.spyOn(Intl, "DateTimeFormat").mockImplementation((() => {
 			throw new Error("boom");
-		});
+		}) as unknown as typeof Intl.DateTimeFormat);
 
 		expect(getTimezoneFallbackLocation()).toBeNull();
 	});

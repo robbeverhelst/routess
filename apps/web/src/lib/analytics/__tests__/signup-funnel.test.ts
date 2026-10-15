@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "bun:test";
+import { mocked } from "@/test/helpers";
 import { trackSignInEntry } from "../signup-funnel";
 import { trackEvent } from "../track";
 
@@ -6,7 +7,7 @@ vi.mock("../track", () => ({ trackEvent: vi.fn() }));
 
 describe("trackSignInEntry", () => {
 	beforeEach(() => {
-		vi.mocked(trackEvent).mockClear();
+		mocked(trackEvent).mockClear();
 	});
 
 	it("reports the entry point a sign-in CTA was clicked from", () => {

@@ -9,10 +9,10 @@ Das Repo hat eine Test-Suite, die bei jedem PR läuft.
 
 | Bereich | Framework |
 | --- | --- |
-| Web (`apps/web`) | Vitest + React Testing Library + MSW |
+| Web (`apps/web`) | bun test + happy-dom + React Testing Library + MSW |
 | Web-E2E (`apps/web/e2e`) | Playwright, API und Stripe im Browser gefälscht |
-| API (`apps/api`) | Vitest + Postgres-Test-Container |
-| Pakete | Vitest |
+| API (`apps/api`) | bun test + Postgres-Test-Container |
+| Pakete | bun test |
 
 ## Ausführen
 
@@ -31,4 +31,4 @@ bun run test:e2e                # Playwright browser E2E (apps/web)
 
 ## Coverage
 
-Web hat `vitest --coverage` verdrahtet. CI gatet nicht auf Coverage; es ist eine Richtlinie, keine Regel.
+Web hat `bun test --coverage` (`bun run test:coverage`) verdrahtet. CI gatet nicht auf Coverage; es ist eine Richtlinie, keine Regel.
