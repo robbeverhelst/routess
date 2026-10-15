@@ -42,7 +42,13 @@ interface LocalRoutesState {
 	loadedAtUndoDepth: number;
 
 	hydrate: () => Promise<void>;
-	save: (route: CreateRouteRequest, creationSource: CreationSource) => Promise<SaveLocalRouteResult>;
+	// `fromDraft: false` (a GPX import straight to the device) always adds a
+	// new LocalRoute and leaves the draft's binding alone.
+	save: (
+		route: CreateRouteRequest,
+		creationSource: CreationSource,
+		options?: { fromDraft?: boolean },
+	) => Promise<SaveLocalRouteResult>;
 	remove: (localId: string) => Promise<void>;
 	bind: (localId: string | null) => void;
 	// Another route was loaded into the editor: the draft is no longer the
@@ -68,17 +74,17 @@ export const useLocalRoutesStore = create<LocalRoutesState>()(
 				}
 			},
 
-			save: async (route, creationSource) => {
+			save: async (route, creationSource, { fromDraft = true } = {}) => {
 				const { routes, boundLocalId } = get();
 				const now = new Date().toISOString();
-				const existing = boundLocalId ? routes.find((r) => r.localId === boundLocalId) : undefined;
+				const existing = fromDraft && boundLocalId ? routes.find((r) => r.localId === boundLocalId) : undefined;
 				const localRoute: LocalRoute = existing
 					? { ...existing, route, updatedAt: now }
 					: { localId: crypto.randomUUID(), route, creationSource, createdAt: now, updatedAt: now };
 				await getBackend().put(localRoute);
 				set({
 					routes: [localRoute, ...routes.filter((r) => r.localId !== localRoute.localId)],
-					boundLocalId: localRoute.localId,
+					...(fromDraft ? { boundLocalId: localRoute.localId } : {}),
 				});
 				return { localRoute, isUpdate: !!existing };
 			},

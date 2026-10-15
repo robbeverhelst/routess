@@ -289,9 +289,9 @@ export const en: Record<string, string> = {
 	"library.empty.plan": "Plan a route",
 	"library.empty.loop": "Generate a loop",
 	"library.empty.import": "Import GPX",
-	"library.gate.title": "Sign in to see your library",
-	"library.gate.body":
-		"Your saved routes live in your account. Sign in or create one to view, organise, and pick up where you left off.",
+	"library.empty.deviceSubtitle":
+		"Plan one on the map, generate a loop or import a GPX. It saves on this device, no account needed.",
+	"library.empty.haveAccount": "Already have an account?",
 	"library.searchPlaceholder": "Search routes…",
 	"library.routeSingular": "route",
 	"library.routePlural": "routes",
@@ -419,7 +419,8 @@ export const en: Record<string, string> = {
 	"discover.empty.title": "No public routes here yet",
 	"discover.empty.body": "Pan or zoom out to look around. Public routes from the community show up here.",
 	"discover.empty.publishCta": "Publish one of your routes",
-	"discover.empty.anonBody": "Pan or zoom out to look around, or sign in to publish your own routes here.",
+	"discover.empty.anonBody":
+		"Pan or zoom out to look around. Public routes from the community show up here; publishing your own needs a free account.",
 
 	// SaveModal
 	"save.visibility.private": "Private",
@@ -587,7 +588,7 @@ export const en: Record<string, string> = {
 	"import.target": "Import to",
 	"import.target.draft": "Open in planner",
 	"import.target.library": "Save to library",
-	"import.target.signInHint": "Sign in to save imports straight to your library.",
+	"import.target.deviceHint": "Saved on this device. Sign in later and it moves into your account.",
 	"import.toast.savedToLibrary": "Saved to library",
 
 	// ConfirmDeleteModal

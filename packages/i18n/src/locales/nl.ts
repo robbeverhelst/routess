@@ -281,9 +281,9 @@ export const nl: Record<string, string> = {
 	"library.empty.plan": "Route plannen",
 	"library.empty.loop": "Lus genereren",
 	"library.empty.import": "GPX importeren",
-	"library.gate.title": "Log in om je bibliotheek te zien",
-	"library.gate.body":
-		"Je opgeslagen routes staan in je account. Log in of maak er een aan om ze te bekijken, ordenen en verder te gaan waar je gebleven bent.",
+	"library.empty.deviceSubtitle":
+		"Plan er een op de kaart, genereer een lus of importeer een GPX. Ze wordt op dit toestel bewaard, zonder account.",
+	"library.empty.haveAccount": "Heb je al een account?",
 	"library.searchPlaceholder": "Routes zoeken…",
 	"library.routeSingular": "route",
 	"library.routePlural": "routes",
@@ -395,7 +395,7 @@ export const nl: Record<string, string> = {
 		"Versleep de kaart of zoom uit om rond te kijken. Publieke routes van de community verschijnen hier.",
 	"discover.empty.publishCta": "Publiceer een van je routes",
 	"discover.empty.anonBody":
-		"Versleep de kaart of zoom uit om rond te kijken, of meld je aan om hier je eigen routes te publiceren.",
+		"Zoom uit of verschuif de kaart om rond te kijken. Openbare routes van de community verschijnen hier; zelf publiceren vraagt een gratis account.",
 
 	// SaveModal
 	"save.visibility.private": "Privé",
@@ -565,7 +565,7 @@ export const nl: Record<string, string> = {
 	"import.target": "Importeren naar",
 	"import.target.draft": "Openen in planner",
 	"import.target.library": "Opslaan in bibliotheek",
-	"import.target.signInHint": "Meld je aan om imports direct in je bibliotheek op te slaan.",
+	"import.target.deviceHint": "Opgeslagen op dit toestel. Meld je later aan en ze verhuist naar je account.",
 	"import.toast.savedToLibrary": "Opgeslagen in bibliotheek",
 
 	// ConfirmDeleteModal

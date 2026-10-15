@@ -54,7 +54,7 @@ Umami captures these automatically from the request. Do not duplicate them as ev
 | `user_registered` | First-ever successful login for a user | `provider: "google" \| "email"` |
 | `user_logged_in` | Every successful login (including the first) | `provider: "google" \| "email"` |
 | `user_logged_out` | User clicks logout | — |
-| `auth_wall_hit` | Sign-in prompt shown because an action requires auth | `action_attempted: string` (e.g. `"view_library"`, `"view_social"`) |
+| `auth_wall_hit` | Sign-in prompt shown because an action requires auth | `action_attempted: string` (now only `"view_social"`) |
 | `signup_started` | User clicks any sign-in / sign-up CTA | `entry_point: SignInEntryPoint` (e.g. `"auth_wall"`, `"device_routes"`) |
 
 `user_registered` and `user_logged_in` both fire on a first-time login — `_registered` is the funnel signal, `_logged_in` is the recurring engagement signal.
@@ -62,6 +62,8 @@ Umami captures these automatically from the request. Do not duplicate them as ev
 **`user_registered` reads server truth.** The client cannot tell a first login from a repeat one, so `AuthResponseDto.isNewUser` carries it and the web fires the event only when it is true. Anything that mints an account must set it: Google auth sets it when it creates the `User`, and the email path sets it on `verify-email` (the step that creates the account), never on `login-email`.
 
 **`auth_wall_hit`** fires from a mount effect in `SignInGate`, not during render, so a re-render of the surrounding panel cannot double-count it.
+
+**Only where an account is truly needed.** Saving works on the device (see LocalRoutes below), so the library, Discover and saving a GPX import no longer gate signed-out users: the empty library offers planning with a quiet sign-in link (`entry_point: "library_empty"`), and Discover's empty state offers planning. `view_library` and `view_discover` no longer fire after this change, so a drop in `auth_wall_hit` from then on is the walls coming down, not fewer visitors. Social (following, the feed) still needs an account and keeps its wall.
 
 **`signup_started` excludes `session_ended`.** Logout and account deletion also land the user on the sign-in screen, but that is the end of a session rather than the start of a signup; counting it would inflate the top of the funnel with people who just left. `SignInEntryPoint` (in `apps/web/src/lib/app-events.ts`) is the bounded set of entry points, and `trackSignInEntry()` is the single fire site.
 
@@ -91,7 +93,7 @@ Fired once per draft from `addWaypoint` in `apps/web/src/features/routing/RouteD
 | `route_deleted` | API `DELETE /routes/:id` returns 2xx | — |
 | `route_loaded_into_editor` | Saved route opened into the editor | `creation_source: "manual" \| "generated" \| "imported" \| "unknown"` |
 
-**Saving without an account.** A signed-out user saves a **LocalRoute** on the device instead of hitting a sign-in wall. A new LocalRoute fires `route_created` with `storage: "device"` (`visibility` is always `"private"`, `is_first_route` counts LocalRoutes on the device), so draft→saved counts every save whether or not the person has an account; split by `storage` to see the account share. `local_route_saved` fires on every device save, updates included, and is the device-only signal. Saving again after opening or saving a LocalRoute updates it in place (`is_update: true`) and does not fire `route_created` again.
+**Saving without an account.** A signed-out user saves a **LocalRoute** on the device instead of hitting a sign-in wall. A new LocalRoute fires `route_created` with `storage: "device"` (`visibility` is always `"private"`, `is_first_route` counts LocalRoutes on the device), so draft→saved counts every save whether or not the person has an account; split by `storage` to see the account share. `local_route_saved` fires on every device save, updates included, and is the device-only signal. Saving again after opening or saving a LocalRoute updates it in place (`is_update: true`) and does not fire `route_created` again. A signed-out GPX import with **Save to library** saves a new LocalRoute too (`gpx_imported` with `target: "library"`, then `route_created` with `storage: "device"` and `creation_source: "imported"`, then `local_route_saved`); it never updates the LocalRoute the draft is bound to.
 
 **Claiming on sign-in.** Signing in on a device that holds LocalRoutes replays each one (oldest first) as `POST /routes` with its device id as `clientRef`; the API returns the existing Route for a `clientRef` it has seen, so a retry, a second tab or a later sign-in never duplicates. Claimed Routes are always private, whatever the account's default visibility. A claimed Route fires no second `route_created` (it was counted when saved on the device); `local_routes_claimed` reports the batch. The free saved-Route cap can stop a claim part-way (`hit_route_limit: true`); the rest stay on the device. Device routes never reach the server before this claim, which only runs signed in. A first save on the device turns the save modal into a sign-up offer ("keep this route on your phone too"), whose CTAs carry `entry_point: "local_save_prompt"` on `signup_started`.
 

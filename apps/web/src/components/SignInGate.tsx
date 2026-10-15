@@ -11,7 +11,7 @@ interface SignInGateProps {
 	title: string;
 	description: string;
 	icon?: React.ComponentType<{ size?: number }>;
-	// What the user was trying to reach, e.g. "view_library".
+	// What the user was trying to reach, e.g. "view_social".
 	actionAttempted: string;
 }
 

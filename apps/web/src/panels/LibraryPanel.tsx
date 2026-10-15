@@ -6,6 +6,7 @@ import { useIsAuthenticated } from "@/hooks/useAuthState";
 import { useBackfillRouteGeometry } from "@/hooks/useBackfillRouteGeometry";
 import { useFavouritesMigration } from "@/hooks/useFavouritesMigration";
 import { useUserRoutes } from "@/lib/api-queries";
+import { emitAppEvent } from "@/lib/app-events";
 import { useT } from "@/lib/i18n";
 import { useLibraryStore } from "@/stores/libraryStore";
 import { useModalsStore } from "@/stores/modalsStore";
@@ -13,7 +14,6 @@ import { useUiStore } from "@/stores/uiStore";
 
 import { I } from "../components/icons";
 import { Btn, Kbd, RDS_COLORS } from "../components/primitives";
-import { SignInGate } from "../components/SignInGate";
 import { CollectionDetail } from "./library/CollectionDetail";
 import { CollectionsTab } from "./library/CollectionsTab";
 import { RoutesTab } from "./library/RoutesTab";
@@ -25,10 +25,14 @@ function EmptyLibrary({
 	onPlan,
 	onLoop,
 	onImport,
+	onSignIn,
 }: {
 	onPlan?: () => void;
 	onLoop?: () => void;
 	onImport?: () => void;
+	// Signed out: saving works on the device, so sign-in is only a way back
+	// to an existing account, not a gate.
+	onSignIn?: () => void;
 }) {
 	const t = useT();
 	return (
@@ -70,7 +74,7 @@ function EmptyLibrary({
 				</div>
 				<h3 style={{ margin: 0, fontSize: 17, fontWeight: 600 }}>{t("library.empty.title")}</h3>
 				<p style={{ fontSize: 13, color: RDS_COLORS.fgMuted, margin: "8px 0 20px", lineHeight: 1.55 }}>
-					{t("library.empty.subtitle")}
+					{t(onSignIn ? "library.empty.deviceSubtitle" : "library.empty.subtitle")}
 				</p>
 				<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
 					<Btn variant="primary" style={{ width: "100%" }} onClick={onPlan}>
@@ -83,6 +87,26 @@ function EmptyLibrary({
 						<I.upload size={14} /> {t("library.empty.import")}
 					</Btn>
 				</div>
+				{onSignIn && (
+					<p style={{ fontSize: 12.5, color: RDS_COLORS.fgMuted, margin: "16px 0 0" }}>
+						{t("library.empty.haveAccount")}{" "}
+						<button
+							type="button"
+							onClick={onSignIn}
+							style={{
+								background: "transparent",
+								border: 0,
+								padding: 0,
+								color: RDS_COLORS.accent,
+								fontSize: "inherit",
+								fontWeight: 600,
+								cursor: "pointer",
+							}}
+						>
+							{t("common.signIn")}
+						</button>
+					</p>
+				)}
 			</div>
 		</div>
 	);
@@ -123,22 +147,24 @@ export function LibraryPanel() {
 	return <LibraryPanelInner />;
 }
 
-// Without an account the library is the routes saved on this device; the
-// sign-in gate shows only when there are none yet.
+// Without an account the library is the routes saved on this device. With
+// none yet it is the ordinary empty library: saving needs no account, so
+// there is no wall here.
 function SignedOutLibrary() {
-	const t = useT();
 	const { routes, hydrated } = useLocalRoutes();
+	const setContext = useUiStore((s) => s.setContext);
+	const openModal = useModalsStore((s) => s.openModal);
 	// Wait for storage before choosing, so a device with routes never flashes
-	// (and counts) the auth wall.
+	// the empty state.
 	if (!hydrated) return null;
 	if (routes.length > 0) return <DeviceRoutesPanel routes={routes} />;
 	return (
 		<div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-			<SignInGate
-				title={t("library.gate.title")}
-				description={t("library.gate.body")}
-				icon={I.library}
-				actionAttempted="view_library"
+			<EmptyLibrary
+				onPlan={() => setContext("plan")}
+				onLoop={() => openModal("loop")}
+				onImport={() => openModal("import")}
+				onSignIn={() => emitAppEvent("routess:open-login", { entryPoint: "library_empty" })}
 			/>
 		</div>
 	);

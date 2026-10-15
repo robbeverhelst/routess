@@ -12,7 +12,6 @@ import { useUiStore } from "@/stores/uiStore";
 
 import { I, type IconKey } from "../components/icons";
 import { Btn, RDS_COLORS, SecTitle } from "../components/primitives";
-import { SignInGate } from "../components/SignInGate";
 import { Tooltip } from "../components/Tooltip";
 import { DiscoverRouteCard } from "./discover/DiscoverRouteCard";
 import { DropMenu, MenuItem } from "./library/DropMenu";
@@ -279,15 +278,9 @@ export function DiscoverPanel() {
 						<Btn onClick={() => void refetch()}>{t("discover.error.retry")}</Btn>
 					</div>
 				)}
-				{empty && !isAuthenticated && (
-					<SignInGate
-						title={t("discover.empty.title")}
-						description={t("discover.empty.anonBody")}
-						icon={I.explore}
-						actionAttempted="view_discover"
-					/>
-				)}
-				{empty && isAuthenticated && (
+				{/* Looking around needs no account; only publishing does, and the
+				    signed-out CTA is planning (which saves on the device). */}
+				{empty && (
 					<div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: 40, height: "100%" }}>
 						<div style={{ maxWidth: 280, textAlign: "center" }}>
 							<div
@@ -307,10 +300,14 @@ export function DiscoverPanel() {
 							</div>
 							<h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>{t("discover.empty.title")}</h3>
 							<p style={{ fontSize: 13, color: RDS_COLORS.fgMuted, margin: "6px 0 16px", lineHeight: 1.5 }}>
-								{t("discover.empty.body")}
+								{t(isAuthenticated ? "discover.empty.body" : "discover.empty.anonBody")}
 							</p>
-							<Btn variant="primary" onClick={() => setContext("library")} style={{ margin: "0 auto" }}>
-								{t("discover.empty.publishCta")}
+							<Btn
+								variant="primary"
+								onClick={() => setContext(isAuthenticated ? "library" : "plan")}
+								style={{ margin: "0 auto" }}
+							>
+								{t(isAuthenticated ? "discover.empty.publishCta" : "library.empty.plan")}
 							</Btn>
 						</div>
 					</div>

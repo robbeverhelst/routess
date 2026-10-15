@@ -1,6 +1,8 @@
 import { useRef, useState } from "react";
 
 import { ProLock, useProGates, useProGateToast } from "@/features/billing/proGates";
+import { useAtLocalRouteLimit } from "@/features/localRoutes/useLocalRouteLimit";
+import { saveLocalRoute } from "@/features/localRoutes/useSaveLocalRoute";
 import { parseGPXFile } from "@/features/routing/services/GPXService";
 import { buildLibraryRoutePayload } from "@/features/routing/services/importToLibrary";
 import { useIsAuthenticated } from "@/hooks/useAuthState";
@@ -34,6 +36,9 @@ export function ImportModal() {
 	const isAuthenticated = useIsAuthenticated();
 	const saveRoute = useSaveRoute();
 	const { atSavedRouteLimit } = useProGates();
+	const atLocalRouteLimit = useAtLocalRouteLimit();
+	// Without an account the library is the routes on this device.
+	const atLibraryLimit = isAuthenticated ? atSavedRouteLimit : atLocalRouteLimit;
 	const proGateToast = useProGateToast();
 	const inputRef = useRef<HTMLInputElement>(null);
 	const [file, setFile] = useState<File | null>(null);
@@ -65,6 +70,13 @@ export function ImportModal() {
 				target: "library",
 			},
 		});
+		if (!isAuthenticated) {
+			// A new LocalRoute; the draft and its binding stay as they are.
+			const { localRoute } = await saveLocalRoute({ ...payload, provenance: "gpx-import" }, "imported", {
+				fromDraft: false,
+			});
+			return localRoute.route.name;
+		}
 		const created = await saveRoute.mutateAsync({ ...payload, creationSource: "imported" });
 		return created.name;
 	};
@@ -87,7 +99,7 @@ export function ImportModal() {
 				const savedName = await saveToLibrary(gpxString, file.name);
 				pushToast({
 					kind: "success",
-					title: t("import.toast.savedToLibrary"),
+					title: t(isAuthenticated ? "import.toast.savedToLibrary" : "save.local.toast.saved"),
 					body: savedName,
 				});
 			} else {
@@ -126,7 +138,7 @@ export function ImportModal() {
 							{t("import.choose")}
 						</Btn>
 					)}
-					{file && target === "library" && atSavedRouteLimit ? (
+					{file && target === "library" && atLibraryLimit ? (
 						<ProLock feature="unlimited_saved_routes" style={{ flex: "0 1 auto" }} />
 					) : file ? (
 						<Btn variant="primary" onClick={onImport} disabled={isImporting}>
@@ -275,13 +287,11 @@ export function ImportModal() {
 								] as const
 							).map((opt) => {
 								const Icon = opt.icon;
-								const disabled = opt.key === "library" && !isAuthenticated;
 								const on = target === opt.key;
 								return (
 									<button
 										key={opt.key}
 										type="button"
-										disabled={disabled}
 										onClick={() => setTarget(opt.key)}
 										style={{
 											display: "inline-flex",
@@ -295,8 +305,7 @@ export function ImportModal() {
 											background: on ? RDS_COLORS.accentSoft : RDS_COLORS.bgInput,
 											color: on ? RDS_COLORS.accent : RDS_COLORS.fgMuted,
 											fontSize: 12,
-											cursor: disabled ? "not-allowed" : "pointer",
-											opacity: disabled ? 0.5 : 1,
+											cursor: "pointer",
 										}}
 									>
 										<Icon size={13} /> {t(opt.labelKey)}
@@ -304,8 +313,8 @@ export function ImportModal() {
 								);
 							})}
 						</div>
-						{!isAuthenticated && (
-							<div style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle }}>{t("import.target.signInHint")}</div>
+						{!isAuthenticated && target === "library" && (
+							<div style={{ fontSize: 11.5, color: RDS_COLORS.fgSubtle }}>{t("import.target.deviceHint")}</div>
 						)}
 					</div>
 
