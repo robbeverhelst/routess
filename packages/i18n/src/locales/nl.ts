@@ -263,6 +263,9 @@ export const nl: Record<string, string> = {
 	"route.routeLabel": "Route",
 	"route.loadOnMap": "Op kaart laden",
 	"route.downloadGpx": "GPX downloaden",
+	"route.sendToTarget": "Naar {target} sturen",
+	"route.sentToTarget": "Naar {target} gestuurd",
+	"route.sendToTargetFailed": "Versturen naar {target} mislukt",
 
 	// LibraryPanel
 	"library.filter.all": "Alles",

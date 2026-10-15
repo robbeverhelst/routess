@@ -7,6 +7,7 @@ import {
 } from "@routess/core";
 import { type KeyboardEvent, useEffect, useMemo, useState } from "react";
 import { useProGatePrompt, useProGates, useProGateToast } from "@/features/billing/proGates";
+import { ExportTargetButtons } from "@/features/export-targets/ExportTargetButtons";
 import { startNavigation } from "@/features/navigation/startNavigation";
 import { useComputedElevationProfile } from "@/features/routing/services/elevation";
 import {
@@ -813,6 +814,7 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 				<Btn onClick={dispatchExport} title={t("route.downloadGpx")}>
 					<I.download size={14} />
 				</Btn>
+				<ExportTargetButtons routeId={route.id} />
 				<Btn
 					onClick={dispatchDelete}
 					title={t("route.delete")}
