@@ -1,5 +1,7 @@
 import { darkBrand, landingAccents, surfaceBucketColors } from "@routess/design-tokens";
+
 import type { Dict } from "@/lib/content";
+
 import appPanel from "../../public/app-panel.webp";
 import { AccentInline } from "./AccentText";
 import { BakedImage } from "./BakedImage";

@@ -8,7 +8,9 @@ import {
 } from "@routess/core";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+
 import { resetAnonymousId } from "@/lib/analytics/anonymous-id";
+
 import type { RedesignActivity } from "./uiStore";
 
 export type RedesignUnits = "km" | "mi";

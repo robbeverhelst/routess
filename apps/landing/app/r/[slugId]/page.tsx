@@ -2,11 +2,13 @@ import { buildRouteSlugId, formatDistance, formatDuration, isRouteIndexable, par
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import Script from "next/script";
+
 import { type Dict, getDict } from "@/lib/content";
 import { APP_HOST, HTML_LANG, type Locale, SELF_HOST, SISTER_HOST } from "@/lib/i18n";
 import { serializeJsonLd } from "@/lib/json-ld";
 import { getLocale } from "@/lib/locale";
 import { fetchExternalRoute, fetchPublicRoute, PUBLIC_API_URL } from "@/lib/route-api";
+
 import { Footer } from "../../components/Footer";
 import { Nav } from "../../components/Nav";
 

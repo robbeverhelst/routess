@@ -1,5 +1,6 @@
 import { brandHex } from "@routess/design-tokens";
 import { ImageResponse } from "next/og";
+
 import { getDict } from "@/lib/content";
 import { getLocale } from "@/lib/locale";
 

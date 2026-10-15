@@ -1,4 +1,5 @@
 import { SetMetadata } from "@nestjs/common";
+
 import type { PatScope } from "../../entities/personal-access-token.entity";
 
 // Metadata key consumed by ScopeGuard. Handlers without this decorator are

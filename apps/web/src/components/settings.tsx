@@ -1,13 +1,14 @@
 import {
+	cloneElement,
 	type ComponentType,
 	type CSSProperties,
-	cloneElement,
 	type InputHTMLAttributes,
 	type ReactElement,
 	type ReactNode,
 	type SelectHTMLAttributes,
 	useId,
 } from "react";
+
 import { I } from "./icons";
 import { IconBtn, RDS_COLORS, SecTitle } from "./primitives";
 import { Tooltip } from "./Tooltip";

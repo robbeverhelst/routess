@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "bun:test";
+
 import { fetchIndexablePublicRoutes } from "./route-api";
 
 const realFetch = globalThis.fetch;

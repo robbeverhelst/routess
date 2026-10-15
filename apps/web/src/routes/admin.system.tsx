@@ -1,9 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import type { ReactNode } from "react";
+
 import { I } from "@/components/icons";
 import { Badge, RDS_COLORS, SecTitle } from "@/components/primitives";
 import { apiService } from "@/lib/api";
+
 import { Card, PageError, PageHeader, PageSkeleton } from "./admin.index";
 
 export const Route = createFileRoute("/admin/system")({

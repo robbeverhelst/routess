@@ -2,13 +2,14 @@ import { EntityManager, EntityRepository, UniqueConstraintViolationException } f
 import { InjectRepository } from "@mikro-orm/nestjs";
 import { BadRequestException, Inject, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { buildRouteSlugId, normalizeUserPreferences } from "@routess/core";
+
 import { DomainException } from "../common/exceptions/domain.exception";
 import type { AppConfig } from "../config/app-config";
 import { APP_CONFIG } from "../config/config.module";
 import { EmailService } from "../email/email.service";
 import { Follow } from "../entities/follow.entity";
-import { Route } from "../entities/route.entity";
 import { RouteShare } from "../entities/route-share.entity";
+import { Route } from "../entities/route.entity";
 import { User } from "../entities/user.entity";
 import { EntitlementsService } from "../entitlements/entitlements.service";
 import type { ProfileSummaryDto } from "../profiles/dto/profile-response.dto";

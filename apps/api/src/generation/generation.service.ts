@@ -8,9 +8,9 @@ import {
 	bucketMatchesPreference,
 	type CandidateEdge,
 	type CandidatePlan,
-	type Coordinate,
 	closestPointOnSegment,
 	collectSurfaceAnchors,
+	type Coordinate,
 	corridorSanity,
 	decodePolyline6,
 	destinationPoint,
@@ -30,24 +30,25 @@ import {
 	planIsochroneCandidates,
 	planSurfaceAnchoredCandidates,
 	planSurfaceWave,
-	type RoutedCandidate,
 	refinePlanForDistance,
 	repairSpurVias,
-	type ScoredCandidate,
-	SURFACE_WAVE_TRIGGER_FIT,
-	type SurfaceBucket,
-	type SurfaceType,
+	type RoutedCandidate,
 	scoreCandidate,
+	type ScoredCandidate,
 	selectDiverseCandidates,
 	singleDetourOffsetKm,
 	snapViasToAnchors,
-	type ValhallaCostingRequest,
+	SURFACE_WAVE_TRIGGER_FIT,
+	type SurfaceBucket,
+	type SurfaceType,
 	valhallaCostingFromPreferences,
+	type ValhallaCostingRequest,
 } from "@routess/core";
+
 import { RoutingService } from "../routing/routing.service";
 import { ROUTE_GENERATION_COMPLETED, type RouteGenerationCompletedEvent } from "../telemetry/domain-events";
 import type { GenerateRequestDto, GenerateResponseDto, GenerationCandidateDto } from "./dto/generate.dto";
-import { NodeNetworksService, nodeKindForActivity } from "./node-networks.service";
+import { nodeKindForActivity, NodeNetworksService } from "./node-networks.service";
 
 // Orchestrates the RouteGeneration pipeline (ADR-0029): the pure stages live
 // in @routess/core; this service owns the Valhalla calls — one batched

@@ -8,6 +8,7 @@ import type {
 	SurfaceComposition,
 	Waypoint,
 } from "@routess/core";
+
 import { generateShareToken } from "../common/share-token";
 import { BaseEntity } from "./base.entity";
 import { User } from "./user.entity";

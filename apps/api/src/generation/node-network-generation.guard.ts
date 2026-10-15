@@ -1,5 +1,6 @@
 import { type CanActivate, type ExecutionContext, Injectable } from "@nestjs/common";
 import type { Request } from "express";
+
 import type { AuthenticatedUser } from "../auth/authenticated-user";
 import { EntitlementsService } from "../entitlements/entitlements.service";
 

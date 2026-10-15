@@ -1,4 +1,5 @@
 import type { INestApplication } from "@nestjs/common";
+
 import { MetricsService } from "../../src/telemetry/metrics.service";
 import request from "../utils/http";
 import { setupMocks } from "../utils/setup-mocks";

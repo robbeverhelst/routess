@@ -1,5 +1,7 @@
 import { type CSSProperties, type KeyboardEvent, useEffect, useRef, useState } from "react";
+
 import { t } from "@/lib/i18n";
+
 import { RDS_COLORS } from "./primitives";
 import { Tooltip } from "./Tooltip";
 

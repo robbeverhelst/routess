@@ -1,9 +1,11 @@
 import { darkBrand, landingAccents } from "@routess/design-tokens";
 import type { Metadata } from "next";
 import { Fragment, type ReactNode } from "react";
+
 import { getDict } from "@/lib/content";
 import { DOCS_HOST, HTML_LANG, type Locale, REPO_URL, SELF_HOST, SISTER_HOST } from "@/lib/i18n";
 import { getLocale } from "@/lib/locale";
+
 import { AccentInline } from "../components/AccentText";
 import { Footer } from "../components/Footer";
 import { ArrowIcon, GhIcon } from "../components/Icons";

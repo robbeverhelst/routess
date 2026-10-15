@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
+
 import { LOCALE_HEADER, localeFromHost } from "@/lib/i18n";
 
 export function proxy(request: NextRequest) {

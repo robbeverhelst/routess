@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+
 import { SITE_URL } from "@/lib/site";
 
 // Read DOCS_PUBLIC_URL at request time so self-hosted deployments get

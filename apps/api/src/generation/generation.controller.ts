@@ -1,10 +1,11 @@
 import { Body, Controller, HttpCode, HttpStatus, Post, UseGuards } from "@nestjs/common";
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
+
 import { OptionalUnifiedAuthGuard } from "../auth/guards/optional-unified-auth.guard";
 import { ThrottleExpensive } from "../common/decorators/throttle.decorator";
 import { GenerateRequestDto, GenerateResponseDto } from "./dto/generate.dto";
-import { GenerationService } from "./generation.service";
 import { GenerationQuotaGuard } from "./generation-quota.guard";
+import { GenerationService } from "./generation.service";
 import { NodeNetworkGenerationGuard } from "./node-network-generation.guard";
 
 @ApiTags("generation")

@@ -1,12 +1,13 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, jest } from "bun:test";
+
 import { MikroORM } from "@mikro-orm/core";
 import type { INestApplication } from "@nestjs/common";
 
 import Stripe = require("stripe");
 
 import { SessionService } from "src/auth/session.service";
-import { BillingService } from "src/billing/billing.service";
 import { BILLING_PROVIDER, type CheckoutRequest } from "src/billing/billing-provider";
+import { BillingService } from "src/billing/billing.service";
 import { StripeBillingProvider } from "src/billing/stripe-billing.provider";
 import { CacheService } from "src/cache/cache.service";
 import { type AppConfig, getAppConfig } from "src/config/app-config";
@@ -15,6 +16,7 @@ import { Entitlement } from "src/entities/entitlement.entity";
 import { Payment } from "src/entities/payment.entity";
 import { User } from "src/entities/user.entity";
 import { EntitlementsService } from "src/entitlements/entitlements.service";
+
 import { clearDatabase, closeTestApp, createTestApp, createTestUserWithAuth, withRequestContext } from "../utils";
 import request from "../utils/http";
 

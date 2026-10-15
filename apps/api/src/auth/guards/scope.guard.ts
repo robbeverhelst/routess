@@ -1,5 +1,6 @@
 import { type CanActivate, type ExecutionContext, ForbiddenException, Injectable } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
+
 import type { PatScope } from "../../entities/personal-access-token.entity";
 import type { AuthenticatedUser } from "../authenticated-user";
 import { REQUIRED_SCOPE_KEY } from "../decorators/require-scope.decorator";

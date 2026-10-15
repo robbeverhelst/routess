@@ -1,10 +1,10 @@
 {
 	"name": "api",
 	"version": "0.0.1",
-	"description": "",
-	"author": "",
 	"private": true,
+	"description": "",
 	"license": "UNLICENSED",
+	"author": "",
 	"scripts": {
 		"prebuild": "rm -rf dist tsconfig.build.tsbuildinfo tsconfig.tsbuildinfo",
 		"build": "nest build",

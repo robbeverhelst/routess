@@ -1,5 +1,6 @@
 import type { Coordinate, Waypoint } from "@routess/core";
 import { deflate, inflate } from "pako";
+
 import { Logger } from "@/lib/logger";
 
 // Wire format v1: canonical Waypoint[]. Compact under gzip; readers pass it

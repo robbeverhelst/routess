@@ -1,4 +1,5 @@
 import { createParamDecorator, type ExecutionContext } from "@nestjs/common";
+
 import type { AuthenticatedUser } from "../authenticated-user";
 
 // Use under JwtAuthGuard — the guard guarantees a user is present.

@@ -1,7 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import {
-	PROVENANCES,
 	type Provenance,
+	PROVENANCES,
 	ROUTE_ACTIVITIES,
 	ROUTE_VISIBILITIES,
 	type RouteActivity,
@@ -27,6 +27,7 @@ import {
 	ValidatorConstraint,
 	type ValidatorConstraintInterface,
 } from "class-validator";
+
 import { RoutingPreferencesDto } from "../../common/routing-preferences.dto";
 
 const TAG_PATTERN = /^[a-z0-9][a-z0-9-]{0,23}$/;

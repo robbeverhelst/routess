@@ -19,7 +19,9 @@ import { resolve } from "node:path";
  * Point at a specific web server with WEB_URL=http://localhost:<port>
  */
 import { deflateSync } from "node:zlib";
+
 import { STATIC_PREVIEW_COLORS } from "@routess/core";
+
 import {
 	type DemoRoute,
 	FOREST_WALK,

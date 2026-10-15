@@ -1,6 +1,7 @@
 import type { GeoJSONSource, Map as MapboxMap, MapMouseEvent } from "mapbox-gl";
 import mapboxgl from "mapbox-gl";
 import { useEffect, useRef, useState } from "react";
+
 import { ROUTE_PREVIEW_COLOR } from "@/components/map/colors";
 import { onAppEvent } from "@/lib/app-events";
 import { useT } from "@/lib/i18n";

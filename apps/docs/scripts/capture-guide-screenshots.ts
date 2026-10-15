@@ -14,6 +14,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { deflateSync } from "node:zlib";
+
 import type { Page } from "playwright";
 import sharp from "sharp";
 

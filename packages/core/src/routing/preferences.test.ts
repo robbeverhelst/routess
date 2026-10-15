@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+
 import {
 	DEFAULT_CYCLE_PREFERENCES,
 	DEFAULT_ROUTING_DEFAULTS,

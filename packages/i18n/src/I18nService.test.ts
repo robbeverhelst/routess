@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+
 import { I18nService } from "./I18nService";
 
 const service = new I18nService({

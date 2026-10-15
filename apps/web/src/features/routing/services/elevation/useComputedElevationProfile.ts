@@ -1,7 +1,9 @@
 import type { Coordinate, ElevationProfilePoint } from "@routess/core";
 import { useEffect, useState } from "react";
+
 import { Logger } from "@/lib/logger";
 import { getRuntimeConfig } from "@/lib/runtime-config";
+
 import { getDefaultElevationService } from "./defaultService";
 
 interface ComputedProfile {

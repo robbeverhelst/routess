@@ -1,4 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
+
 import { AdminProMetricsDto } from "./admin-pro.dto";
 
 export class AdminTimeseriesPointDto {

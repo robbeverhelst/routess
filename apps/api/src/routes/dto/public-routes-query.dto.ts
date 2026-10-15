@@ -4,6 +4,7 @@ import { ApiPropertyOptional } from "@nestjs/swagger";
 import { INDEXABLE_MIN_DISTANCE_METERS, ROUTE_ACTIVITIES, type RouteActivity } from "@routess/core";
 import { Type } from "class-transformer";
 import { IsIn, IsInt, IsOptional, IsString, Matches, MaxLength, Min } from "class-validator";
+
 import { ListRoutesQueryDto } from "./list-routes-query.dto";
 
 // Which eligibility gate the listing applies (CONTEXT.md "Discover"):

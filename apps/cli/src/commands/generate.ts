@@ -1,19 +1,21 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+
 import {
 	buildRouteGpx,
 	decodePolyline6,
-	HEADINGS,
 	type Heading,
+	HEADINGS,
 	ROUTE_ACTIVITIES,
 	type RouteActivity,
 	SURFACE_TYPES,
 	type Waypoint,
 } from "@routess/core";
 import type { Command } from "commander";
+
 import { request } from "../client";
 import { loadConfig, requireToken } from "../config";
-import { CliError, EXIT_CODES, type RunOptions, renderResult } from "../output";
+import { CliError, EXIT_CODES, renderResult, type RunOptions } from "../output";
 import { runWithProgram } from "../run";
 import type { RouteResponse } from "./routes";
 

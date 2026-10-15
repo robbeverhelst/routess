@@ -1,4 +1,5 @@
 import { buildMapboxStaticPreviewUrl, parseRouteSlugId } from "@routess/core";
+
 import { fetchExternalRoute, fetchPublicRoute } from "@/lib/route-api";
 
 async function resolvePreview(slugId: string): Promise<{ points: [number, number][]; isPublic: boolean } | null> {

@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
+
 import { Inject, Injectable, Logger, type OnModuleDestroy } from "@nestjs/common";
 import { Redis } from "ioredis";
+
 import type { AppConfig } from "../config/app-config";
 import { APP_CONFIG } from "../config/config.module";
 import { MetricsService } from "../telemetry/metrics.service";

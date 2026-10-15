@@ -1,9 +1,11 @@
 import type { ElevationProfilePoint } from "@routess/core";
 import { surfaceBucketColors } from "@routess/design-tokens";
 import { type CSSProperties, type PointerEvent as ReactPointerEvent, useCallback, useMemo, useRef } from "react";
+
 import type { SurfaceBreakdown, SurfaceBucket } from "@/features/routing/services/SurfaceService";
 import { useUnits } from "@/lib/units";
 import { useRouteScrubStore } from "@/stores/routeScrubStore";
+
 import { RDS_COLORS, SecTitle } from "./primitives";
 import { Tooltip } from "./Tooltip";
 

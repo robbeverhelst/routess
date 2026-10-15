@@ -1,6 +1,7 @@
 import { type CanActivate, type ExecutionContext, HttpException, HttpStatus, Inject, Injectable } from "@nestjs/common";
 import type { DomainErrorPayload } from "@routess/core";
 import type { Request } from "express";
+
 import type { AuthenticatedUser } from "../auth/authenticated-user";
 import { CacheService } from "../cache/cache.service";
 import type { AppConfig, GenerationQuotaTier } from "../config/app-config";

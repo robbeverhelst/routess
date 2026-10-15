@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+
 import { EUROVELO_SOURCE, euroVeloAdapter } from "./eurovelo";
 
 // Minimal but representative EuroVelo-shaped GPX: metadata name, a named track

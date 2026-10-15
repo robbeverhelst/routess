@@ -1,8 +1,9 @@
 import type { Map as MapboxMap } from "mapbox-gl";
 import { useCallback, useEffect } from "react";
+
 import { initializeSourcesAndLayers } from "@/features/routing/managers/MapLayerManager";
-import { syncMapView } from "@/features/routing/managers/MapViewAdapter";
 import { readMapPalette } from "@/features/routing/managers/mapPalette";
+import { syncMapView } from "@/features/routing/managers/MapViewAdapter";
 import { onAppEvent } from "@/lib/app-events";
 import { Logger } from "@/lib/logger";
 import { getSolarPositionForTimeOfDay } from "@/lib/solar";

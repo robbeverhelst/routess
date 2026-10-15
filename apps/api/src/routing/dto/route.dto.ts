@@ -12,6 +12,7 @@ import {
 	Min,
 	ValidateNested,
 } from "class-validator";
+
 import { RoutingPreferencesDto } from "../../common/routing-preferences.dto";
 
 const MAX_ROUTE_LOCATIONS = 25;

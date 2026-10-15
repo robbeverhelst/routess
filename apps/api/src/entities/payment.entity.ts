@@ -1,5 +1,6 @@
 import { type Rel } from "@mikro-orm/core";
 import { Entity, ManyToOne, PrimaryKey, Property } from "@mikro-orm/decorators/legacy";
+
 import type { BillingOffer } from "../billing/offers";
 import type { BillingProviderName } from "../config/app-config";
 import { BaseEntity } from "./base.entity";

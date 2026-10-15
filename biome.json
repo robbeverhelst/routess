@@ -59,9 +59,7 @@
 	},
 	"overrides": [
 		{
-			"includes": [
-				"apps/api/**"
-			],
+			"includes": ["apps/api/**"],
 			"javascript": {
 				"parser": {
 					"unsafeParameterDecoratorsEnabled": true
@@ -99,10 +97,7 @@
 			}
 		},
 		{
-			"includes": [
-				"**/public/sw.js",
-				"**/public/sw.*.js"
-			],
+			"includes": ["**/public/sw.js", "**/public/sw.*.js"],
 			"linter": {
 				"rules": {
 					"suspicious": {
@@ -112,9 +107,7 @@
 			}
 		},
 		{
-			"includes": [
-				"apps/web/src/lib/logger.ts"
-			],
+			"includes": ["apps/web/src/lib/logger.ts"],
 			"linter": {
 				"rules": {
 					"suspicious": {

@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+
 import type { Dict } from "@/lib/content";
 import type { Locale } from "@/lib/i18n";
 import { APP_HOST, DOCS_HOST, REPO_URL, SISTER_HOST } from "@/lib/i18n";
+
 import { ArrowIcon, GhIcon } from "./Icons";
 import { Logo } from "./Logo";
 

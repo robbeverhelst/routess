@@ -1,6 +1,7 @@
 import { MikroORM } from "@mikro-orm/core";
 import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
+
 import { configureApplication } from "../../src/app/app-setup";
 import { getAppConfig, loadEnvironment } from "../../src/config/app-config";
 import { initializeOpenTelemetry } from "../../src/telemetry/tracing";

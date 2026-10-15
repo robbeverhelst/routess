@@ -1,9 +1,10 @@
 import { MikroOrmModule } from "@mikro-orm/nestjs";
 import { Module } from "@nestjs/common";
+
 import { EmailModule } from "../email/email.module";
 import { Follow } from "../entities/follow.entity";
-import { Route } from "../entities/route.entity";
 import { RouteShare } from "../entities/route-share.entity";
+import { Route } from "../entities/route.entity";
 import { User } from "../entities/user.entity";
 import { EntitlementsModule } from "../entitlements/entitlements.module";
 import { SocialController } from "./social.controller";

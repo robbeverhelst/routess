@@ -1,6 +1,7 @@
-import { type Opt, Collection as OrmCollection, type Rel } from "@mikro-orm/core";
+import { Collection as OrmCollection, type Opt, type Rel } from "@mikro-orm/core";
 import { Entity, Index, ManyToOne, OneToMany, PrimaryKey, Property } from "@mikro-orm/decorators/legacy";
 import type { RouteVisibility } from "@routess/core";
+
 import { generateShareToken } from "../common/share-token";
 import { BaseEntity } from "./base.entity";
 import { CollectionRoute } from "./collection-route.entity";
@@ -31,10 +32,6 @@ export class Collection extends BaseEntity {
 	@ManyToOne(() => User)
 	user!: Rel<User>;
 
-	@OneToMany(
-		() => CollectionRoute,
-		(cr) => cr.collection,
-		{ orphanRemoval: true },
-	)
+	@OneToMany(() => CollectionRoute, (cr) => cr.collection, { orphanRemoval: true })
 	routes = new OrmCollection<CollectionRoute>(this);
 }

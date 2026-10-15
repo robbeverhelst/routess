@@ -12,6 +12,7 @@ import {
 	UseGuards,
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiBody, ApiHeader, ApiOperation, ApiParam, ApiResponse, ApiTags } from "@nestjs/swagger";
+
 import type { AuthenticatedUser } from "../auth/authenticated-user";
 import { CurrentUser, OptionalCurrentUser } from "../auth/decorators/current-user.decorator";
 import { RequireConfirmation } from "../auth/decorators/require-confirmation.decorator";

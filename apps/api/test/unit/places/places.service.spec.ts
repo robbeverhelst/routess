@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "bun:test";
+
 import type { EntityManager } from "@mikro-orm/core";
 import type { AppConfig } from "src/config/app-config";
 import { PlacesService } from "src/places/places.service";

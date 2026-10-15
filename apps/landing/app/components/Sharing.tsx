@@ -1,6 +1,8 @@
 import { landingAccents, surfaceBucketColors } from "@routess/design-tokens";
 import type { StaticImageData } from "next/image";
+
 import type { Dict } from "@/lib/content";
+
 import route1 from "../../public/previews/route-1.webp";
 import route2 from "../../public/previews/route-2.webp";
 import route3 from "../../public/previews/route-3.webp";

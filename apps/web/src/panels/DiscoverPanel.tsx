@@ -1,5 +1,6 @@
 import type { RouteActivity } from "@routess/core";
 import { useEffect, useState } from "react";
+
 import { useIsAuthenticated } from "@/hooks/useAuthState";
 import { trackEvent } from "@/lib/analytics/track";
 import { useDiscoverRoutes } from "@/lib/api-queries";
@@ -8,6 +9,7 @@ import { useT } from "@/lib/i18n";
 import { useUnits } from "@/lib/units";
 import { useDiscoverStore } from "@/stores/discoverStore";
 import { useUiStore } from "@/stores/uiStore";
+
 import { I, type IconKey } from "../components/icons";
 import { Btn, RDS_COLORS, SecTitle } from "../components/primitives";
 import { SignInGate } from "../components/SignInGate";

@@ -1,5 +1,6 @@
 import { createFileRoute, Link, Outlet, redirect } from "@tanstack/react-router";
 import { useEffect } from "react";
+
 import { I } from "@/components/icons";
 import { IconBtn, RDS_COLORS, SecTitle } from "@/components/primitives";
 import { useViewport } from "@/hooks/useViewport";

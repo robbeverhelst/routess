@@ -5,7 +5,9 @@
 import type React from "react";
 import type { ErrorInfo, ReactNode } from "react";
 import { Component } from "react";
+
 import { isDev } from "@/lib/utils/env";
+
 import { errorHandler } from "./error-handler";
 import type { AppError } from "./types";
 import { ErrorCategory, ErrorSeverity } from "./types";
@@ -85,11 +87,11 @@ interface DefaultErrorFallbackProps {
 
 const DefaultErrorFallback: React.FC<DefaultErrorFallbackProps> = ({ error, resetError }) => {
 	return (
-		<div className="min-h-screen flex items-center justify-center bg-gray-50">
-			<div className="max-w-md w-full bg-white shadow-lg rounded-lg p-6">
-				<div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full">
+		<div className="flex min-h-screen items-center justify-center bg-gray-50">
+			<div className="w-full max-w-md rounded-lg bg-white p-6 shadow-lg">
+				<div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
 					<svg
-						className="w-6 h-6 text-red-600"
+						className="h-6 w-6 text-red-600"
 						fill="none"
 						strokeLinecap="round"
 						strokeLinejoin="round"
@@ -112,7 +114,7 @@ const DefaultErrorFallback: React.FC<DefaultErrorFallbackProps> = ({ error, rese
 				<div className="mt-6 flex space-x-3">
 					<button
 						type="button"
-						className="flex-1 bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+						className="flex-1 rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 focus:ring-2 focus:ring-red-500 focus:outline-none"
 						onClick={resetError}
 					>
 						Try Again
@@ -120,7 +122,7 @@ const DefaultErrorFallback: React.FC<DefaultErrorFallbackProps> = ({ error, rese
 
 					<button
 						type="button"
-						className="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
+						className="flex-1 rounded-md bg-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-400 focus:ring-2 focus:ring-gray-500 focus:outline-none"
 						onClick={() => window.location.reload()}
 					>
 						Reload Page
@@ -129,8 +131,8 @@ const DefaultErrorFallback: React.FC<DefaultErrorFallbackProps> = ({ error, rese
 
 				{isDev() && error.originalError && (
 					<details className="mt-4">
-						<summary className="text-xs text-gray-500 cursor-pointer">Technical Details (Development)</summary>
-						<pre className="mt-2 text-xs text-gray-600 bg-gray-100 p-2 rounded overflow-auto max-h-32">
+						<summary className="cursor-pointer text-xs text-gray-500">Technical Details (Development)</summary>
+						<pre className="mt-2 max-h-32 overflow-auto rounded bg-gray-100 p-2 text-xs text-gray-600">
 							{error.originalError.stack}
 						</pre>
 					</details>

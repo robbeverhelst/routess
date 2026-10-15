@@ -1,6 +1,8 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
+
 import { NestFactory } from "@nestjs/core";
+
 import { createOpenApiDocument } from "./app/app-setup";
 import { getAppConfig, loadEnvironment } from "./config/app-config";
 

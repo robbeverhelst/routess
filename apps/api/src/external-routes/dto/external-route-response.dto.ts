@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { ROUTE_ACTIVITIES, type RouteActivity } from "@routess/core";
+
 import { PublicRouteSourceDto } from "../../routes/dto/public-route-summary.dto";
 
 // Detail shape for a single ExternalRoute page (/r/{slug}-x{id}). Deliberately

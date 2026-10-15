@@ -1,4 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
+
 import { ProfileSummaryDto } from "../../profiles/dto/profile-response.dto";
 
 // Owner-only view of the Follow graph: follower *lists* are visible to the

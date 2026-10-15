@@ -1,6 +1,7 @@
 import { Collection as OrmCollection } from "@mikro-orm/core";
 import { Entity, OneToMany, PrimaryKey, Property } from "@mikro-orm/decorators/legacy";
 import type { RouteActivity, SeedSourceStatus } from "@routess/core";
+
 import { BaseEntity } from "./base.entity";
 import { ExternalRoute } from "./external-route.entity";
 
@@ -63,9 +64,6 @@ export class SeedSource extends BaseEntity {
 	@Property({ type: "json", nullable: true })
 	lastRefreshStats?: { inserted: number; updated: number; unchanged: number; removed: number } | null;
 
-	@OneToMany(
-		() => ExternalRoute,
-		(route) => route.source,
-	)
+	@OneToMany(() => ExternalRoute, (route) => route.source)
 	routes = new OrmCollection<ExternalRoute>(this);
 }

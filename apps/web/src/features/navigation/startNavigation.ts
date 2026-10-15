@@ -1,9 +1,11 @@
 import type { Coordinate, RouteActivity } from "@routess/core";
+
 import { t } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
 import { loadNavigationSnapshot, snapshotToSession, useNavigationStore } from "@/stores/navigationStore";
 import { useToastStore } from "@/stores/toastStore";
 import { useUiStore } from "@/stores/uiStore";
+
 import { CuesProRequiredError, fetchCues } from "./cuesClient";
 import { primeSpeech } from "./speech";
 

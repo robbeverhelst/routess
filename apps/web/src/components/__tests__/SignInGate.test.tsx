@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "bun:test";
+
 import { render } from "@testing-library/react";
+
 import { trackEvent } from "@/lib/analytics/track";
 import { mocked } from "@/test/helpers";
+
 import { SignInGate } from "../SignInGate";
 
 vi.mock("@/lib/analytics/track", () => ({ trackEvent: vi.fn() }));

@@ -1,5 +1,7 @@
 import { describe, expect, it } from "bun:test";
+
 import { REGIONAL_HUB_MIN_INDEXABLE_ROUTES } from "@routess/core";
+
 import { HUB_ACTIVITIES, HUB_PATH_PREFIXES, hubPath, isLiveHub } from "./hubs";
 
 describe("hubPath", () => {

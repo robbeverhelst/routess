@@ -1,4 +1,5 @@
 import { supportedLanguages } from "@routess/i18n";
+
 import type { SupportedLanguage } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
 import { isDev } from "@/lib/utils/env";

@@ -1,7 +1,8 @@
 import { MikroOrmModule } from "@mikro-orm/nestjs";
 import { Module } from "@nestjs/common";
-import { Collection } from "../entities/collection.entity";
+
 import { CollectionRoute } from "../entities/collection-route.entity";
+import { Collection } from "../entities/collection.entity";
 import { Route } from "../entities/route.entity";
 import { User } from "../entities/user.entity";
 import { EntitlementsModule } from "../entitlements/entitlements.module";

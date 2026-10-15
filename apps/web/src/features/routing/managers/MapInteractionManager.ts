@@ -1,5 +1,6 @@
 import type { Map as MapboxMap, MapLayerMouseEvent, MapMouseEvent, MapTouchEvent, PointLike } from "mapbox-gl";
 import type { Dispatch, SetStateAction } from "react";
+
 import { consumeMapPick } from "@/features/map/mapPick";
 // Dispatch/SetStateAction kept for setPopup which is still a React setter.
 import {

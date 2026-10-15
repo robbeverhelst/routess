@@ -1,5 +1,6 @@
 import { MikroORM } from "@mikro-orm/core";
 import { Client } from "pg";
+
 import { getAppConfig, loadEnvironment } from "../../src/config/app-config";
 
 // Regression test for issue #375: a dropped Postgres connection used to take

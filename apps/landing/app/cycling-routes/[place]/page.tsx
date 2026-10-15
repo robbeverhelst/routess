@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+
 import { hubMetadata, RegionalHubPage } from "../../components/RegionalHubPage";
 
 interface Params {

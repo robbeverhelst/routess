@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "bun:test";
+
 import { checkNearRoad } from "./RoutingUtils";
 
 const fetchMock = vi.fn();

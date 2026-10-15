@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+
 import { DeviceRoutesPanel, SignedInDeviceRoutes } from "@/features/localRoutes/DeviceRoutesPanel";
 import { useLocalRoutes } from "@/features/localRoutes/localRoutesStore";
 import { useIsAuthenticated } from "@/hooks/useAuthState";
@@ -9,6 +10,7 @@ import { useT } from "@/lib/i18n";
 import { useLibraryStore } from "@/stores/libraryStore";
 import { useModalsStore } from "@/stores/modalsStore";
 import { useUiStore } from "@/stores/uiStore";
+
 import { I } from "../components/icons";
 import { Btn, Kbd, RDS_COLORS } from "../components/primitives";
 import { SignInGate } from "../components/SignInGate";

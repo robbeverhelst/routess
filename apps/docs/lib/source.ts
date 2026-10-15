@@ -1,4 +1,5 @@
 import { loader } from "fumadocs-core/source";
+
 import { apiReference, developerDocs, guide } from "@/.source/server";
 import { i18n } from "@/lib/i18n";
 

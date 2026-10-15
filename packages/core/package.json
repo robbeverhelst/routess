@@ -2,27 +2,12 @@
 	"name": "@routess/core",
 	"version": "0.1.0",
 	"description": "Core business logic, types, and utilities for Routess",
-	"main": "dist/index.js",
-	"types": "dist/index.d.ts",
 	"files": [
 		"dist",
 		"src"
 	],
-	"scripts": {
-		"build": "tsc -b --force",
-		"dev": "tsc --watch",
-		"clean": "rm -rf dist tsconfig.tsbuildinfo",
-		"lint": "biome check .",
-		"check-types": "tsc --noEmit",
-		"test": "bun test"
-	},
-	"dependencies": {
-		"zustand": "^5.0.2"
-	},
-	"devDependencies": {
-		"@types/node": "^26.0.0",
-		"typescript": "^7.0.0"
-	},
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
 	"exports": {
 		".": {
 			"types": "./dist/index.d.ts",
@@ -40,5 +25,20 @@
 			"types": "./dist/utils/index.d.ts",
 			"default": "./dist/utils/index.js"
 		}
+	},
+	"scripts": {
+		"build": "tsc -b --force",
+		"dev": "tsc --watch",
+		"clean": "rm -rf dist tsconfig.tsbuildinfo",
+		"lint": "biome check .",
+		"check-types": "tsc --noEmit",
+		"test": "bun test"
+	},
+	"dependencies": {
+		"zustand": "^5.0.2"
+	},
+	"devDependencies": {
+		"@types/node": "^26.0.0",
+		"typescript": "^7.0.0"
 	}
 }

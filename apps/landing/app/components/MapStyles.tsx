@@ -1,4 +1,5 @@
 import type { Dict } from "@/lib/content";
+
 import dark from "../../public/previews/style-dark.webp";
 import outdoors from "../../public/previews/style-outdoors.webp";
 import satellite from "../../public/previews/style-satellite.webp";

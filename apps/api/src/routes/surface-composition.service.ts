@@ -1,6 +1,7 @@
 import { EntityManager } from "@mikro-orm/core";
 import { Injectable, Logger } from "@nestjs/common";
 import { downsampleCoordinates, surfaceCompositionFromEdges, valhallaCostingModelForActivity } from "@routess/core";
+
 import { Route } from "../entities/route.entity";
 import type { ValhallaCosting } from "../routing/dto/trace-attributes.dto";
 import { RoutingService } from "../routing/routing.service";

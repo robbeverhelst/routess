@@ -1,5 +1,6 @@
 import { MikroOrmModule } from "@mikro-orm/nestjs";
 import { Module } from "@nestjs/common";
+
 import { AnalyticsModule } from "../analytics/analytics.module";
 import { AuthModule } from "../auth/auth.module";
 import { Entitlement } from "../entities/entitlement.entity";

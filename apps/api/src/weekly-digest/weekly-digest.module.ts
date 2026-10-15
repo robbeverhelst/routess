@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+
 import { ConfigModule } from "../config/config.module";
 import { EmailModule } from "../email/email.module";
 import { RoutesModule } from "../routes/routes.module";

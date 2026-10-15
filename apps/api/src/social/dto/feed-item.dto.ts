@@ -1,4 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
+
 import { ProfileRouteDto, ProfileSummaryDto } from "../../profiles/dto/profile-response.dto";
 
 // One entry in the Feed (CONTEXT.md "Feed"): a public Route of a followed

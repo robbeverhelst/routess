@@ -3,6 +3,7 @@ import type { Request } from "express";
 import { PinoLogger } from "nestjs-pino";
 import type { Observable } from "rxjs";
 import { tap } from "rxjs/operators";
+
 import type { AuthenticatedUser } from "../auth/authenticated-user";
 
 // Emits a Pino log line with `audit: true` for every admin endpoint hit, so a

@@ -1,10 +1,11 @@
 import { create } from "zustand";
-import { createJSONStorage, type PersistOptions, persist } from "zustand/middleware";
+import { createJSONStorage, persist, type PersistOptions } from "zustand/middleware";
+
 import {
-	emptyHistory,
-	type HistoryStacks,
 	canRedo as historyCanRedo,
 	canUndo as historyCanUndo,
+	emptyHistory,
+	type HistoryStacks,
 	recordSnapshot,
 	redoStep,
 	undoStep,
@@ -39,8 +40,7 @@ export interface RouteBaseline {
 // RouteDraft lifecycle. `unsaved` = composing fresh, save will POST a new
 // Route. `editing` = bound to a saved Route, save will PATCH that Route.
 export type RouteDraftMode =
-	| { kind: "unsaved" }
-	| { kind: "editing"; routeId: number; name: string; baseline: RouteBaseline };
+	{ kind: "unsaved" } | { kind: "editing"; routeId: number; name: string; baseline: RouteBaseline };
 
 // How the current draft came to exist. Feeds the saved Route's Provenance
 // and the route_created ProductEvent's creation_source.

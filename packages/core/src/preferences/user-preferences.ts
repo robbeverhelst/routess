@@ -37,8 +37,10 @@ export interface UserPreferences {
 	emailOnRouteShare: boolean;
 }
 
-export interface UserPreferencesUpdate
-	extends Omit<Partial<UserPreferences>, "overlays" | "sportSpeeds" | "routingDefaults"> {
+export interface UserPreferencesUpdate extends Omit<
+	Partial<UserPreferences>,
+	"overlays" | "sportSpeeds" | "routingDefaults"
+> {
 	overlays?: Partial<UserPreferenceOverlays>;
 	sportSpeeds?: Partial<UserPreferenceSportSpeeds>;
 	routingDefaults?: RoutingDefaultsUpdate;

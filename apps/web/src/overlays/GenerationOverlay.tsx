@@ -1,6 +1,7 @@
 import { formatDistance, formatDuration, type GenerationFailureCode, type SurfaceBucket } from "@routess/core";
 import { surfaceBucketColors } from "@routess/design-tokens";
 import { useNavigate } from "@tanstack/react-router";
+
 import { useGoPro, useProGateReason } from "@/features/billing/proGates";
 import { candidateWaypoints, startGeneration } from "@/features/generation/generationService";
 import { useRouteDraftEditor } from "@/features/routing/RouteDraftEditorProvider";
@@ -12,6 +13,7 @@ import { useLoopPreferencesStore } from "@/stores/loopPreferencesStore";
 import { useRoutingStore } from "@/stores/routingStore";
 import { useToastStore } from "@/stores/toastStore";
 import { useUiStore } from "@/stores/uiStore";
+
 import { I } from "../components/icons";
 import { Btn, RDS_COLORS } from "../components/primitives";
 

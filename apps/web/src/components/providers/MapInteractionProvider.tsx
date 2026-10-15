@@ -1,5 +1,6 @@
 import type React from "react";
 import { createContext, useCallback, useContext } from "react";
+
 import { Logger } from "@/lib/logger";
 
 interface MapInteractionContextType {

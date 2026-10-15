@@ -1,9 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "bun:test";
+
 import { fireEvent, render, screen } from "@testing-library/react";
+
 import { trackEvent } from "@/lib/analytics/track";
 import { useModalsStore } from "@/stores/modalsStore";
 import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 import { mocked } from "@/test/helpers";
+
 import { FirstRunActions } from "../FirstRunActions";
 
 vi.mock("@/lib/analytics/track", () => ({ trackEvent: vi.fn() }));

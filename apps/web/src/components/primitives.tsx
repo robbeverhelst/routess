@@ -1,5 +1,6 @@
 import type React from "react";
 import type { CSSProperties, ReactNode } from "react";
+
 import { Tooltip } from "./Tooltip";
 
 export const RDS_COLORS = {

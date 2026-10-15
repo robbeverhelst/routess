@@ -1,7 +1,9 @@
 import { createLazyFileRoute } from "@tanstack/react-router";
 import { useEffect } from "react";
+
 import { AppShell } from "@/AppShell";
 import { consumeSharedGpxFile } from "@/lib/pwa";
+
 import { Route as IndexRoute } from "./index";
 
 export const Route = createLazyFileRoute("/")({

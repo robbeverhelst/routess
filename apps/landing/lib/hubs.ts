@@ -1,4 +1,5 @@
 import { REGIONAL_HUB_MIN_INDEXABLE_ROUTES } from "@routess/core";
+
 import type { Locale } from "@/lib/i18n";
 
 // Activities with a RegionalHub surface. Adding one means a prefix pair here,

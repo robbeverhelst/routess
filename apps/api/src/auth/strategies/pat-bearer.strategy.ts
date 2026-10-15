@@ -2,6 +2,7 @@ import { wrap } from "@mikro-orm/core";
 import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { PassportStrategy } from "@nestjs/passport";
 import { Strategy } from "passport-http-bearer";
+
 import type { User } from "../../entities/user.entity";
 import { EntitlementsService } from "../../entitlements/entitlements.service";
 import type { AuthenticatedUser } from "../authenticated-user";

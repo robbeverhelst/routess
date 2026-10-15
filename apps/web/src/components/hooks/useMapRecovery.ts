@@ -1,5 +1,6 @@
 import type { Map as MapboxMap } from "mapbox-gl";
 import { useEffect } from "react";
+
 import { Logger } from "@/lib/logger";
 
 /**

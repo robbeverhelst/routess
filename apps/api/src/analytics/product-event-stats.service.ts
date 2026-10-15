@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { Client } from "pg";
+
 import type { AppConfig } from "../config/app-config";
 import { APP_CONFIG } from "../config/config.module";
 

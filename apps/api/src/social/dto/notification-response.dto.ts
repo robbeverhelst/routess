@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+
 import { ProfileSummaryDto } from "../../profiles/dto/profile-response.dto";
 
 // A Notification is a derived pointer (CONTEXT.md "Notification"): one item per

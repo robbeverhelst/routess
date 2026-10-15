@@ -1,6 +1,8 @@
 import type { Coordinate, RouteActivity, Waypoint } from "@routess/core";
 import { calculatePathDistance } from "@routess/core";
+
 import type { CreateRouteRequest } from "@/lib/api";
+
 import type { ParsedGpxFile } from "./GPXService";
 
 export const routeNameFromImport = (gpxName: string | undefined, fileName: string | undefined): string => {

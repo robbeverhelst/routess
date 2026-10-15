@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto";
+
 import { BadRequestException, Injectable, Logger } from "@nestjs/common";
+
 import { MetricsService } from "../telemetry/metrics.service";
 
 const PASSWORD_MIN_LENGTH = 12;

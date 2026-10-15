@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+
 import { i18n } from "@/lib/i18n";
 import { SITE_URL } from "@/lib/site";
 import { apiSource, docsSource, guideSource } from "@/lib/source";

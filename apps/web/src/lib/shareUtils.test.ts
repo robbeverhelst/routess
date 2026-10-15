@@ -1,6 +1,8 @@
 import { describe, expect, it } from "bun:test";
+
 import type { Waypoint } from "@routess/core";
 import { deflate } from "pako";
+
 import { decompressAndParse, serializeAndCompress } from "@/lib/shareUtils";
 
 const encodeLegacyV0 = (w: [number, number][], f: boolean[], l?: boolean): string => {

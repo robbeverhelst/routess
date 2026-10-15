@@ -1,7 +1,9 @@
 import { describe, expect, it, jest } from "bun:test";
+
 import type { CallHandler, ExecutionContext } from "@nestjs/common";
 import type { JwtService } from "@nestjs/jwt";
 import { of } from "rxjs";
+
 import type { AppConfig } from "../../config/app-config";
 import type { AuthenticatedUser } from "../authenticated-user";
 import { SessionRefreshInterceptor } from "./session-refresh.interceptor";

@@ -1,4 +1,4 @@
-import { type ApiUser, type AuthResponse, apiService } from "./api";
+import { apiService, type ApiUser, type AuthResponse } from "./api";
 import { clearStoredAuthState, getStoredUser, notifyAuthStateChange, storeUser } from "./auth-state";
 import { Logger } from "./logger";
 import { getRuntimeConfig } from "./runtime-config";

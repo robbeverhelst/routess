@@ -1,5 +1,6 @@
 import { calculateBearing, type NavCue, projectOntoPath } from "@routess/core";
 import { type CSSProperties, useEffect, useState } from "react";
+
 import { NavMap } from "@/features/navigation/NavMap";
 import { useNavigationController } from "@/features/navigation/useNavigationController";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
@@ -7,6 +8,7 @@ import { useT } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
 import { useUnits } from "@/lib/units";
 import { useNavigationStore } from "@/stores/navigationStore";
+
 import { I, type IconKey } from "../components/icons";
 import { RDS_COLORS } from "../components/primitives";
 

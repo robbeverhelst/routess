@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef } from "react";
-import { type ApiUser, apiService } from "@/lib/api";
+
+import { apiService, type ApiUser } from "@/lib/api";
 import { authStorageKeys } from "@/lib/auth-state";
 import { t } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";

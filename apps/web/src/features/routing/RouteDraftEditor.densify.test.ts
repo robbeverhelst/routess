@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
+
 import type { Coordinate } from "@routess/core";
 import { destinationPoint, emptyHistory, encodePolyline6, type Waypoint } from "@routess/core";
 import type { Map as MapboxMap } from "mapbox-gl";
@@ -13,6 +14,7 @@ vi.mock("./services/elevation", () => ({
 }));
 
 import { useRoutingStore } from "@/stores/routingStore";
+
 import { createRouteDraftEditor } from "./RouteDraftEditor";
 
 const GHENT: Coordinate = [3.7174, 51.0543];

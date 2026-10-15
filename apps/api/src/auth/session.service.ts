@@ -1,10 +1,12 @@
 import { randomUUID } from "node:crypto";
+
 import { EntityManager, EntityRepository } from "@mikro-orm/core";
 import { InjectRepository } from "@mikro-orm/nestjs";
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { EventEmitter2 } from "@nestjs/event-emitter";
 import { JwtService } from "@nestjs/jwt";
 import { Cron, CronExpression } from "@nestjs/schedule";
+
 import { BillingService } from "../billing/billing.service";
 import type { AppConfig } from "../config/app-config";
 import { APP_CONFIG } from "../config/config.module";

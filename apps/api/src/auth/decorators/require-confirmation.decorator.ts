@@ -1,5 +1,6 @@
 import { SetMetadata } from "@nestjs/common";
 import type { Request } from "express";
+
 import type { AuthenticatedUser } from "../authenticated-user";
 
 // Inspects the request and returns a human-readable description of the

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+
 import { proGateOf } from "./pro-gates";
 
 describe("proGateOf", () => {

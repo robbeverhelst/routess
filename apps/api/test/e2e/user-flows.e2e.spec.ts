@@ -1,4 +1,5 @@
 import type { INestApplication } from "@nestjs/common";
+
 import type { User } from "../../src/entities/user.entity";
 import { clearDatabase, closeTestApp, createTestApp, createTestUserWithAuth } from "../utils";
 import request from "../utils/http";
@@ -183,9 +184,7 @@ describe("User Flows E2E Tests", () => {
 
 			// Try to create invalid routes
 			const invalidRoutes = [
-				{
-					/* empty object */
-				},
+				{/* empty object */},
 				{ name: "" }, // Empty name
 				{ name: "No waypoints" }, // Missing waypoints
 				{ name: "Invalid waypoints", waypoints: "not-an-array" },

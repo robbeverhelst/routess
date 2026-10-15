@@ -1,6 +1,7 @@
 import type { ApiRoute } from "@routess/api-client";
 import { type GeoJSONSource, LngLatBounds, type Map as MapboxMap } from "mapbox-gl";
 import { useEffect } from "react";
+
 import { ROUTE_PREVIEW_COLOR } from "@/components/map/colors";
 import { useLibraryStore } from "@/stores/libraryStore";
 

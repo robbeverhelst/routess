@@ -1,5 +1,6 @@
 import { EntityManager } from "@mikro-orm/postgresql";
 import { ForbiddenException, Inject, Injectable, Logger, ServiceUnavailableException } from "@nestjs/common";
+
 import type { AppConfig } from "../config/app-config";
 import { APP_CONFIG } from "../config/config.module";
 import { User } from "../entities/user.entity";

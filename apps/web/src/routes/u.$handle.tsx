@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+
 import { PublicProfileScreen } from "@/screens/PublicProfileScreen";
 
 export const Route = createFileRoute("/u/$handle")({

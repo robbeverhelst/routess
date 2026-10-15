@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+
 import { AnalyticsErasureService } from "../../../src/analytics/analytics-erasure.service";
 import type { AppConfig } from "../../../src/config/app-config";
 

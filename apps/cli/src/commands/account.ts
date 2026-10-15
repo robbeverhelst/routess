@@ -1,5 +1,7 @@
 import { writeFileSync } from "node:fs";
+
 import type { Command } from "commander";
+
 import { requestRaw } from "../client";
 import { loadConfig, requireToken } from "../config";
 import { renderResult } from "../output";

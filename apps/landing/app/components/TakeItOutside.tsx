@@ -1,4 +1,5 @@
 import type { Dict } from "@/lib/content";
+
 import mobileShot from "../../public/app-mobile.webp";
 import { AccentInline } from "./AccentText";
 import { BakedImage } from "./BakedImage";

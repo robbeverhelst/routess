@@ -4,7 +4,9 @@
 
 import type React from "react";
 import { useEffect, useState } from "react";
+
 import { useSettingsStore } from "@/stores/errorSettingsStore";
+
 import type { AppError } from "./types";
 import { useErrorHandler } from "./useErrorHandler";
 
@@ -143,11 +145,7 @@ const ErrorToastItem: React.FC<ErrorToastItemProps> = ({ error, onClose, index }
 
 	return (
 		<div
-			className={`
-        pointer-events-auto min-w-[280px] max-w-sm w-full ${styles.bg} shadow-lg rounded-md border
-        transform transition-all duration-200 ease-in-out
-        ${isVisible && !isLeaving ? "translate-x-0 opacity-100" : "-translate-x-full opacity-0"}
-      `}
+			className={`pointer-events-auto w-full max-w-sm min-w-[280px] ${styles.bg} transform rounded-md border shadow-lg transition-all duration-200 ease-in-out ${isVisible && !isLeaving ? "translate-x-0 opacity-100" : "-translate-x-full opacity-0"} `}
 		>
 			<div className="p-3">
 				<div className="flex items-start">
@@ -170,19 +168,19 @@ const ErrorToastItem: React.FC<ErrorToastItemProps> = ({ error, onClose, index }
 						<div className="flex items-center justify-between">
 							<p className={`text-sm font-medium ${styles.text} capitalize`}>{error.category}</p>
 							{error.severity === "critical" && (
-								<span className="text-xs bg-red-100 text-red-800 px-1.5 py-0.5 rounded font-medium">Critical</span>
+								<span className="rounded bg-red-100 px-1.5 py-0.5 text-xs font-medium text-red-800">Critical</span>
 							)}
 						</div>
 
 						<p className={`mt-0.5 text-sm ${styles.text}`}>{error.message}</p>
 
-						{error.context && <p className="mt-0.5 text-xs text-gray-500 truncate">{error.context}</p>}
+						{error.context && <p className="mt-0.5 truncate text-xs text-gray-500">{error.context}</p>}
 
 						{error.retry && (
 							<div className="mt-2 flex space-x-2">
 								<button
 									type="button"
-									className="text-xs bg-white text-gray-700 px-2 py-1 rounded border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-gray-500"
+									className="rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 hover:bg-gray-50 focus:ring-1 focus:ring-gray-500 focus:outline-none"
 									onClick={async () => {
 										try {
 											await error.retry?.();
@@ -198,10 +196,10 @@ const ErrorToastItem: React.FC<ErrorToastItemProps> = ({ error, onClose, index }
 						)}
 					</div>
 
-					<div className="ml-2 flex-shrink-0 flex">
+					<div className="ml-2 flex flex-shrink-0">
 						<button
 							type="button"
-							className={`rounded inline-flex ${styles.text} hover:text-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-500`}
+							className={`inline-flex rounded ${styles.text} hover:text-gray-500 focus:ring-1 focus:ring-gray-500 focus:outline-none`}
 							onClick={handleClose}
 						>
 							<span className="sr-only">Close</span>

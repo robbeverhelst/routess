@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+
 import { HANDLE_BASE_MAX_LENGTH, handleBaseFromName, isValidHandle } from "./handle";
 
 describe("isValidHandle", () => {

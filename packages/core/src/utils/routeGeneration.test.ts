@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+
 import type { Coordinate } from "../types";
 import { DEFAULT_SMART_WAYPOINT_THRESHOLDS, selectSmartWaypoints } from "./routeGeneration";
 

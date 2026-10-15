@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "bun:test";
+
 import { emptyHistory, type Waypoint } from "@routess/core";
 import type { Map as MapboxMap } from "mapbox-gl";
 
@@ -12,6 +13,7 @@ vi.mock("./services/elevation", () => ({
 }));
 
 import { useRoutingStore } from "@/stores/routingStore";
+
 import { createRouteDraftEditor } from "./RouteDraftEditor";
 
 // A track that doubles back on itself: re-routing between its endpoints could

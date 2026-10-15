@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
 import { useEffect } from "react";
+
 import { useT } from "@/lib/i18n";
 import { useUiStore } from "@/stores/uiStore";
+
 import { Btn, RDS_COLORS, SecTitle } from "../components/primitives";
 
 // Shared chrome for the anonymous public route pages (/r/{slugId}): user

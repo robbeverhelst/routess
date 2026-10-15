@@ -2,10 +2,11 @@ import { EntityManager, EntityRepository } from "@mikro-orm/core";
 import { InjectRepository } from "@mikro-orm/nestjs";
 import { Inject, Injectable, UnauthorizedException } from "@nestjs/common";
 import { EventEmitter2 } from "@nestjs/event-emitter";
+
 import type { AppConfig } from "../config/app-config";
 import { APP_CONFIG } from "../config/config.module";
-import { randomHandle, User, type UserRole } from "../entities/user.entity";
 import { UserAuthMethod } from "../entities/user-auth-method.entity";
+import { randomHandle, User, type UserRole } from "../entities/user.entity";
 import {
 	AUTH_LOGIN_ATTEMPTED,
 	type AuthLoginAttemptedEvent,

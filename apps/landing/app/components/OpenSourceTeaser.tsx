@@ -1,4 +1,5 @@
 import type { Dict } from "@/lib/content";
+
 import { ArrowIcon, GhIcon } from "./Icons";
 
 export function OpenSourceTeaser({ dict }: { dict: Dict }) {

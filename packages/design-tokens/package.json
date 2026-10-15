@@ -2,6 +2,17 @@
 	"name": "@routess/design-tokens",
 	"version": "0.1.0",
 	"description": "Shared design tokens for Routess: colors, typography, spacing, radii, breakpoints, z-index and animation durations",
+	"keywords": [
+		"colors",
+		"design-system",
+		"design-tokens",
+		"theming",
+		"typography"
+	],
+	"files": [
+		"dist/**/*",
+		"css/**/*"
+	],
 	"type": "module",
 	"main": "./dist/index.js",
 	"module": "./dist/index.js",
@@ -21,10 +32,6 @@
 		},
 		"./css/tokens.css": "./css/tokens.css"
 	},
-	"files": [
-		"dist/**/*",
-		"css/**/*"
-	],
 	"scripts": {
 		"build": "tsc -b --force",
 		"dev": "tsc --watch",
@@ -33,12 +40,5 @@
 	},
 	"devDependencies": {
 		"typescript": "^7.0.0"
-	},
-	"keywords": [
-		"design-tokens",
-		"design-system",
-		"colors",
-		"typography",
-		"theming"
-	]
+	}
 }

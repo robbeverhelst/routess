@@ -1,5 +1,6 @@
 import "mapbox-gl/dist/mapbox-gl.css";
 import MapGL, { Layer, Source } from "react-map-gl/mapbox";
+
 import { RDS_COLORS } from "@/components/primitives";
 import { getRuntimeConfig } from "@/lib/runtime-config";
 
