@@ -690,6 +690,9 @@ export const nl: Record<string, string> = {
 	"account.handleTaken": "Die handle is al in gebruik",
 	"account.shareEmails": "Deel-e-mails",
 	"account.shareEmailsSub": "Mail me wanneer iemand een route met me deelt",
+	"account.weeklyDigest": "Routes in je buurt",
+	"account.weeklyDigestSub":
+		"Een wekelijkse mail met nieuwe publieke routes in de buurt van waar je laatst plande. Altijd af te melden",
 	"account.field.email": "E-mail",
 	"account.field.password": "Wachtwoord",
 	"account.emailReadonly": "Nog niet wijzigbaar",

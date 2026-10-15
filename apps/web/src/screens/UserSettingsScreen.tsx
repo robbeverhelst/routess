@@ -61,6 +61,7 @@ export function UserSettingsScreen() {
 	const [editingHandle, setEditingHandle] = useState(false);
 	const [savingHandle, setSavingHandle] = useState(false);
 	const [savingSharePref, setSavingSharePref] = useState(false);
+	const [savingDigestPref, setSavingDigestPref] = useState(false);
 	const [avatarUploading, setAvatarUploading] = useState(false);
 	const [deleting, setDeleting] = useState(false);
 	const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -159,6 +160,20 @@ export function UserSettingsScreen() {
 			pushToast({ kind: "danger", title: t("common.tryAgain") });
 		} finally {
 			setSavingSharePref(false);
+		}
+	};
+
+	const handleToggleWeeklyDigest = async (next: boolean) => {
+		setSavingDigestPref(true);
+		try {
+			const updated = await apiService.updateCurrentUser({ weeklyDigest: next });
+			storeUser(updated);
+			await refreshUser();
+		} catch (error) {
+			Logger.error("Update weekly digest consent failed", error);
+			pushToast({ kind: "danger", title: t("common.tryAgain") });
+		} finally {
+			setSavingDigestPref(false);
 		}
 	};
 
@@ -501,6 +516,18 @@ export function UserSettingsScreen() {
 									on={user?.preferences?.emailOnRouteShare ?? true}
 									disabled={savingSharePref}
 									onChange={(next) => void handleToggleShareEmails(next)}
+								/>
+							}
+						/>
+
+						<SettingsRow
+							label={t("account.weeklyDigest")}
+							sub={t("account.weeklyDigestSub")}
+							control={
+								<Toggle
+									on={user?.weeklyDigest ?? false}
+									disabled={savingDigestPref}
+									onChange={(next) => void handleToggleWeeklyDigest(next)}
 								/>
 							}
 						/>

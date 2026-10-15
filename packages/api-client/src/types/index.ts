@@ -627,6 +627,7 @@ export interface UpdateCurrentUserRequest {
 	handle?: string;
 	avatar?: string;
 	preferences?: Partial<ApiUserPreferences>;
+	weeklyDigest?: boolean;
 }
 
 // ========== Social (issue #245, ADR 0027) ==========

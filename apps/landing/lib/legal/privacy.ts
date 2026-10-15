@@ -84,6 +84,11 @@ export const PRIVACY: LegalContent = {
 								"To centre the map on you and to start a generated loop from where you are. It is used in the moment and not stored on our servers",
 								"Consent, given through your browser (Art. 6(1)(a))",
 							],
+							[
+								"Only if you turn on weekly route suggestions: your email address, the area and activity of your most recently saved route, when you opted in, and which routes we already sent you",
+								"To email you, once a week, a few public routes near where you last planned. Off unless you switch it on",
+								"Consent (Art. 6(1)(a)). Withdraw it any time in Settings or with the one-click unsubscribe link in every email",
+							],
 						],
 					},
 				],
@@ -150,7 +155,11 @@ export const PRIVACY: LegalContent = {
 								"If you sign in with Google, Google confirms your identity and gives us your name, email and profile picture. Google Fonts also serves the app's typefaces, so Google sees your IP address on page load",
 								"United States",
 							],
-							["Resend", "Your email address and the contents of transactional email we send you", "United States"],
+							[
+								"Resend",
+								"Your email address and the contents of the email we send you: transactional email, and the weekly route email if you opted in",
+								"United States",
+							],
 							[
 								"Umami, GlitchTip, Valhalla, map tile server",
 								"Analytics, error reports and route calculation all run on our own servers. Nothing leaves our infrastructure",
@@ -232,6 +241,10 @@ export const PRIVACY: LegalContent = {
 								"14 months. Your events are also erased when your account is permanently deleted",
 							],
 							["Browser error reports", "90 days"],
+							[
+								"Weekly route email: opt-in time and the routes already sent",
+								"Until you unsubscribe or delete your account, whichever comes first",
+							],
 							["Administrator audit logs", "12 months"],
 							[
 								"Cached route calculations",
@@ -392,6 +405,11 @@ export const PRIVACY: LegalContent = {
 								"Om de kaart op jou te centreren en een gegenereerde lus te laten starten waar je bent. Het wordt op dat moment gebruikt en niet op onze servers bewaard",
 								"Toestemming, gegeven via je browser (art. 6(1)(a))",
 							],
+							[
+								"Enkel als je wekelijkse routesuggesties aanzet: je e-mailadres, het gebied en de activiteit van je laatst bewaarde route, wanneer je je aanmeldde, en welke routes we je al stuurden",
+								"Om je één keer per week een paar publieke routes te mailen in de buurt van waar je laatst plande. Staat uit tot je het aanzet",
+								"Toestemming (art. 6(1)(a)). Trek ze op elk moment in via Instellingen of met de afmeldlink in elke mail",
+							],
 						],
 					},
 				],
@@ -458,7 +476,11 @@ export const PRIVACY: LegalContent = {
 								"Als je met Google inlogt, bevestigt Google je identiteit en geeft ons je naam, e-mailadres en profielfoto. Google Fonts levert ook de lettertypes van de app, dus Google ziet je IP-adres bij het laden",
 								"Verenigde Staten",
 							],
-							["Resend", "Je e-mailadres en de inhoud van transactionele mail die we je sturen", "Verenigde Staten"],
+							[
+								"Resend",
+								"Je e-mailadres en de inhoud van de mail die we je sturen: transactionele mail, en de wekelijkse routemail als je je aanmeldde",
+								"Verenigde Staten",
+							],
 							[
 								"Umami, GlitchTip, Valhalla, kaarttegelserver",
 								"Statistieken, foutrapporten en routeberekening draaien allemaal op onze eigen servers. Er verlaat niets onze infrastructuur",
@@ -540,6 +562,10 @@ export const PRIVACY: LegalContent = {
 								"14 maanden. Je gebeurtenissen worden ook gewist wanneer je account definitief verwijderd wordt",
 							],
 							["Browserfoutrapporten", "90 dagen"],
+							[
+								"Wekelijkse routemail: aanmeldtijdstip en de routes die we al stuurden",
+								"Tot je je afmeldt of je account verwijdert, wat eerst komt",
+							],
 							["Auditlogs van beheerders", "12 maanden"],
 							[
 								"Berekende routes in cache",
