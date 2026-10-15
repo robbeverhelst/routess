@@ -1,6 +1,8 @@
 import { join } from "node:path";
+
 import { MikroORM } from "@mikro-orm/postgresql";
 import { Client } from "pg";
+
 import config from "../../src/mikro-orm.config";
 
 // Migration20261016000000 adds route.client_ref, unique per User, so claiming
