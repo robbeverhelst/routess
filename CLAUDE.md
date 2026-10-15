@@ -20,10 +20,18 @@ bun dev              # all apps, auto-picks free ports
 bun run lint         # biome check (production-strict)
 bun run check-types  # tsc across all workspaces
 bun run test         # all tests
-bun run ci           # full pipeline (postgres + format:check + lint + check-types + build + test)
+bun run ci           # full pipeline (postgres + format:check + lint + check:bun-native + check-types + build + test)
 bun run clean        # nuke node_modules, dist, caches, docker volumes
 bun run build:images # docker buildx bake all images
 ```
+
+## Bun-native
+
+- Prefer what Bun ships over an npm package: `bun test`, `bun build`, `Bun.password`, `Bun.$`, `Bun.file`, `Bun.Glob`, `Bun.YAML`, `.env` loading (`process.loadEnvFile`), running TypeScript directly.
+- Check Bun first before adding a dependency; if one is still needed, say why in the PR.
+- `bun run check:bun-native` (in CI) fails when a workspace depends on a package Bun replaces; the list lives in `scripts/bun-native-check.ts`.
+- Not switching (no Bun equivalent that fits): ioredis, pg, Vite, Playwright, Next.js, NestJS, `ws` in NestJS, drizzle-kit.
+- The npm publish job keeps Node + npm: `bun publish` has no npm trusted publishing (OIDC) or provenance yet.
 
 ## Commit convention
 

@@ -50,7 +50,7 @@ Defaults: web `:5173`, API `:3000`, docs `:3001`, Postgres `:5432`, pgAdmin `:50
 bun run lint         # biome check
 bun run check-types  # tsc across all workspaces
 bun run test         # all tests
-bun run ci           # full pipeline (postgres + format:check + lint + check-types + build + test)
+bun run ci           # full pipeline (postgres + format:check + lint + check:bun-native + check-types + build + test)
 ```
 
 Run `bun run` with no arguments to list every script.

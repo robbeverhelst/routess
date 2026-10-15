@@ -59,6 +59,11 @@ jobs:
       - name: Format & lint
         run: bunx biome check .
 
+      # Fails when a workspace depends on a package Bun already replaces
+      # (CLAUDE.md, Bun-native rule).
+      - name: Bun-native guard
+        run: bun test ./scripts && bun run check:bun-native
+
       # `bun --bun` runs every script's `node` (tsc, nest, next) on Bun,
       # so a Node.js on the runner image is never picked up.
       - name: Build packages
