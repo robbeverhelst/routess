@@ -28,7 +28,7 @@ PR / push  ──▶  helm-validate  ┘                                        
 
 ## Build-Details
 
-- Das geteilte Deps-Image wird in GHCR gecacht (`routess-deps:cache`, BuildKit-Registry-Cache), sodass App-Image-Builds nur neu laufen, wenn sich das Lockfile ändert.
+- Das geteilte Deps-Image wird in GHCR gecacht (`routess-deps:cache`, BuildKit-Registry-Cache), sodass App-Image-Builds nur neu laufen, wenn sich das Lockfile oder `docker/Dockerfile.deps` ändert.
 - Die Anmeldedaten für den Sentry-Source-Map-Upload kommen aus 1Password und erreichen `docker buildx bake` über einen BuildKit-**Secret-Mount**; sie landen nie in Image-Layern.
 - `VITE_APP_VERSION` wird zur Build-Zeit auf die Release-Version gepinnt, damit der Sentry-Release zu dem passt, was `env-config.js` zur Laufzeit meldet.
 
