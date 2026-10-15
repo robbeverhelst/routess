@@ -20,6 +20,7 @@ test/
 │       └── auth.service.mock.ts
 └── utils/                      # Test utilities and setup
     ├── test-utils.ts
+    ├── http.ts
     ├── setup-test-db.ts
     └── setup-mocks.ts
 ```
@@ -56,6 +57,7 @@ Contains test data, mocks, and stub implementations:
 Shared test utilities and setup functions:
 
 - **test-utils.ts** - Common test helpers (createTestApp, clearDatabase, etc.)
+- **http.ts** - Fetch-based `request(app)` helper that replaces supertest
 - **setup-test-db.ts** - Database setup and teardown
 - **setup-mocks.ts** - Mock configurations for external services
 
