@@ -6,9 +6,9 @@ const trackEventMock = vi.fn();
 vi.mock("@/lib/analytics/track", () => ({ trackEvent: trackEventMock }));
 
 import type { ApiRoute, CreateRouteRequest } from "@/lib/api";
+import { useRoutingStore } from "@/stores/routingStore";
 import { claimLocalRoutes } from "./claimLocalRoutes";
 import { createMemoryBackend, type LocalRoute, type LocalRouteBackend } from "./localRouteDb";
-import { useRoutingStore } from "@/stores/routingStore";
 import { setLocalRouteBackend, useLocalRoutesStore } from "./localRoutesStore";
 
 const WAYPOINTS: Waypoint[] = [
