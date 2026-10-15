@@ -8,6 +8,7 @@ vi.mock("@/lib/analytics/track", () => ({ trackEvent: trackEventMock }));
 import type { ApiRoute, CreateRouteRequest } from "@/lib/api";
 import { claimLocalRoutes } from "./claimLocalRoutes";
 import { createMemoryBackend, type LocalRoute, type LocalRouteBackend } from "./localRouteDb";
+import { useRoutingStore } from "@/stores/routingStore";
 import { setLocalRouteBackend, useLocalRoutesStore } from "./localRoutesStore";
 
 const WAYPOINTS: Waypoint[] = [
@@ -45,7 +46,7 @@ function fakeAccount(limit = Number.POSITIVE_INFINITY) {
 			loseNextResponse = false;
 			throw new Error("network: response lost");
 		}
-		return { id: routes.size, name: route.name } as ApiRoute;
+		return { ...routes.get(route.clientRef), id: [...routes.keys()].indexOf(route.clientRef) + 1 } as ApiRoute;
 	});
 	return {
 		routes,
@@ -67,7 +68,41 @@ describe("claimLocalRoutes", () => {
 
 	beforeEach(async () => {
 		trackEventMock.mockClear();
+		useRoutingStore.setState({ waypoints: WAYPOINTS, mode: { kind: "unsaved" } });
 		await seed();
+	});
+
+	it("claims every device route as private, whatever the account's default visibility", async () => {
+		await seed(localRoute("A", "2026-10-01T00:00:00Z"), localRoute("B", "2026-10-02T00:00:00Z"));
+		const account = fakeAccount();
+
+		await claimLocalRoutes(account.createRoute);
+
+		expect([...account.routes.values()].map((r) => r.visibility)).toEqual(["private", "private"]);
+	});
+
+	it("continues the open draft as editing the claimed Route when it still matches, so the next save updates it", async () => {
+		const bound = localRoute("Draft", "2026-10-01T00:00:00Z");
+		await seed(localRoute("Other", "2026-09-30T00:00:00Z"), bound);
+		useLocalRoutesStore.setState({ boundLocalId: bound.localId });
+		const account = fakeAccount();
+
+		await claimLocalRoutes(account.createRoute);
+
+		expect(useRoutingStore.getState().mode).toMatchObject({ kind: "editing", routeId: 2, name: "Draft" });
+	});
+
+	it("leaves a draft that changed since its device save unsaved", async () => {
+		const bound = localRoute("Draft", "2026-10-01T00:00:00Z");
+		await seed(bound);
+		useLocalRoutesStore.setState({ boundLocalId: bound.localId });
+		useRoutingStore.setState({ waypoints: [...WAYPOINTS, { coord: [3.7374, 51.0743], type: "routed" }] });
+		const account = fakeAccount();
+
+		await claimLocalRoutes(account.createRoute);
+
+		expect(useRoutingStore.getState().mode).toEqual({ kind: "unsaved" });
+		expect(useLocalRoutesStore.getState().boundLocalId).toBeNull();
 	});
 
 	it("moves every device route into the account, oldest first, and empties the device", async () => {
