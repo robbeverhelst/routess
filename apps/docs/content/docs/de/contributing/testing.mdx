@@ -26,7 +26,7 @@ bun run test:e2e                # Playwright browser E2E (apps/web)
 ## Konventionen
 
 - Test-Dateien liegen neben dem Quellcode: `foo.ts` + `foo.test.ts`
-- Web-Tests nutzen **MSW**, um die API auf Netzwerkebene zu mocken (keine jest-Mocks des api-client)
+- Web-Tests nutzen **MSW**, um die API auf Netzwerkebene zu mocken (keine Modul-Mocks des api-client)
 - API-Tests laufen in CI gegen ein echtes Postgres (Docker-Service-Container), keine gemockte DB
 
 ## Coverage

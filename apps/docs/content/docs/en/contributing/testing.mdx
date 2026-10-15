@@ -26,7 +26,7 @@ bun run test:e2e                # Playwright browser E2E (apps/web)
 ## Conventions
 
 - Test files live next to source: `foo.ts` + `foo.test.ts`
-- Web tests use **MSW** to mock the API at the network layer (no jest mocks of the api-client)
+- Web tests use **MSW** to mock the API at the network layer (no module mocks of the api-client)
 - API tests run against a real Postgres in CI (Docker service container), no mocked DB
 
 ## Coverage
