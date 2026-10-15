@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "bun:test";
-import type { Waypoint } from "@routess/core";
+import { emptyHistory, type Waypoint } from "@routess/core";
 import type { Map as MapboxMap } from "mapbox-gl";
 
 const trackEventMock = vi.fn();
@@ -13,7 +13,7 @@ vi.mock("@/features/routing/services/elevation", () => ({
 import { createRouteDraftEditor } from "@/features/routing/RouteDraftEditor";
 import type { CreateRouteRequest } from "@/lib/api";
 import { useRoutingStore } from "@/stores/routingStore";
-import { createMemoryBackend, type LocalRouteBackend } from "./localRouteDb";
+import { createMemoryBackend, type LocalRoute, type LocalRouteBackend } from "./localRouteDb";
 import { isDraftSavedLocally, setLocalRouteBackend, useLocalRoutesStore } from "./localRoutesStore";
 import { saveLocalRoute } from "./useSaveLocalRoute";
 
@@ -32,6 +32,20 @@ const route = (name: string, waypoints = WAYPOINTS): CreateRouteRequest => ({
 	elevationGain: 12,
 });
 
+const OTHER: Waypoint[] = [
+	{ coord: [4.4, 50.85], type: "routed" },
+	{ coord: [4.41, 50.86], type: "routed" },
+];
+
+const createEditor = () =>
+	createRouteDraftEditor({ map: { getSource: () => undefined } as unknown as MapboxMap, accessToken: "test-token" });
+
+// Opens a LocalRoute the way the library does: load it, then bind the draft.
+const openLocalRoute = async (localRoute: LocalRoute) => {
+	await createEditor().loadFromLocalRoute(localRoute);
+	useLocalRoutesStore.getState().bind(localRoute.localId);
+};
+
 // A fresh store over the same storage, like a page reload.
 const reload = async () => {
 	useLocalRoutesStore.setState({ routes: [], hydrated: false });
@@ -45,8 +59,14 @@ describe("LocalRoutes (saving without an account)", () => {
 		trackEventMock.mockClear();
 		backend = createMemoryBackend();
 		setLocalRouteBackend(backend);
-		useLocalRoutesStore.setState({ routes: [], hydrated: true, boundLocalId: null });
-		useRoutingStore.setState({ waypoints: WAYPOINTS, mode: { kind: "unsaved" } });
+		useLocalRoutesStore.setState({ routes: [], hydrated: true, boundLocalId: null, loadedAtUndoDepth: 0 });
+		useRoutingStore.setState({
+			waypoints: WAYPOINTS,
+			mode: { kind: "unsaved" },
+			history: emptyHistory<Waypoint[]>(),
+			canUndo: false,
+			canRedo: false,
+		});
 	});
 
 	it("keeps a saved route across a reload", async () => {
@@ -82,21 +102,43 @@ describe("LocalRoutes (saving without an account)", () => {
 
 	it("saves a new route after another route is loaded over a bound one", async () => {
 		const first = await saveLocalRoute(route("Morning loop"), "manual");
-		const other: Waypoint[] = [
-			{ coord: [4.4, 50.85], type: "routed" },
-			{ coord: [4.41, 50.86], type: "routed" },
-		];
-		const editor = createRouteDraftEditor({
-			map: { getSource: () => undefined } as unknown as MapboxMap,
-			accessToken: "test-token",
-		});
-		await editor.loadWaypoints(other, { exactRoutePath: other.map((wp) => wp.coord), saveSnapshot: true });
-		const second = await saveLocalRoute(route("Discover route", other), "imported");
+		const editor = createEditor();
+		await editor.loadWaypoints(OTHER, { exactRoutePath: OTHER.map((wp) => wp.coord), saveSnapshot: true });
+		const second = await saveLocalRoute(route("Discover route", OTHER), "imported");
 
 		expect(second.isUpdate).toBe(false);
 		const stored = await backend.list();
 		expect(stored).toHaveLength(2);
 		expect(stored.find((r) => r.localId === first.localRoute.localId)?.route.waypoints).toEqual(WAYPOINTS);
+	});
+
+	it("saves a new route after undoing back to the draft from before opening a device route", async () => {
+		const opened = await saveLocalRoute(route("Morning loop", OTHER), "manual");
+		useRoutingStore.setState({ waypoints: [] });
+		useRoutingStore.setState({ waypoints: WAYPOINTS });
+
+		await openLocalRoute(opened.localRoute);
+		useRoutingStore.getState().undo();
+		expect(useRoutingStore.getState().waypoints).toEqual(WAYPOINTS);
+		const saved = await saveLocalRoute(route("Draft A"), "manual");
+
+		expect(saved.isUpdate).toBe(false);
+		const stored = await backend.list();
+		expect(stored).toHaveLength(2);
+		expect(stored.find((r) => r.localId === opened.localRoute.localId)?.route.waypoints).toEqual(OTHER);
+	});
+
+	it("keeps the binding when undoing edits made after opening a device route", async () => {
+		const opened = await saveLocalRoute(route("Morning loop", OTHER), "manual");
+		await openLocalRoute(opened.localRoute);
+		useRoutingStore.getState().saveSnapshot();
+		useRoutingStore.getState().setWaypoints([...OTHER, { coord: [4.42, 50.87], type: "routed" }]);
+		useRoutingStore.getState().undo();
+		const saved = await saveLocalRoute(route("Morning loop", OTHER), "manual");
+
+		expect(saved.isUpdate).toBe(true);
+		expect(saved.localRoute.localId).toBe(opened.localRoute.localId);
+		expect(await backend.list()).toHaveLength(1);
 	});
 
 	it("deletes a route from the device", async () => {

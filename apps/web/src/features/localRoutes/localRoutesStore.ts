@@ -35,11 +35,17 @@ interface LocalRoutesState {
 	// again updates it in place instead of piling up copies. Persisted (like
 	// the draft itself) so it survives a reload.
 	boundLocalId: string | null;
+	// Undo depth at which a route was last loaded into the editor; undoing
+	// below it brings back a draft from before that load.
+	loadedAtUndoDepth: number;
 
 	hydrate: () => Promise<void>;
 	save: (route: CreateRouteRequest, creationSource: CreationSource) => Promise<SaveLocalRouteResult>;
 	remove: (localId: string) => Promise<void>;
 	bind: (localId: string | null) => void;
+	// Another route was loaded into the editor: the draft is no longer the
+	// LocalRoute it was bound to.
+	draftReplaced: () => void;
 }
 
 export const useLocalRoutesStore = create<LocalRoutesState>()(
@@ -48,6 +54,7 @@ export const useLocalRoutesStore = create<LocalRoutesState>()(
 			routes: [],
 			hydrated: false,
 			boundLocalId: null,
+			loadedAtUndoDepth: 0,
 
 			hydrate: async () => {
 				try {
@@ -83,6 +90,9 @@ export const useLocalRoutesStore = create<LocalRoutesState>()(
 			},
 
 			bind: (boundLocalId) => set({ boundLocalId }),
+
+			draftReplaced: () =>
+				set({ boundLocalId: null, loadedAtUndoDepth: useRoutingStore.getState().history.past.length }),
 		}),
 		{
 			name: "routess-local-routes",
@@ -93,9 +103,14 @@ export const useLocalRoutesStore = create<LocalRoutesState>()(
 	),
 );
 
-// A cleared draft, or one bound to a saved account Route, is no longer the
-// LocalRoute it came from.
+// A cleared draft, one bound to a saved account Route, or one undone back
+// to before the last load is no longer the LocalRoute it came from.
 useRoutingStore.subscribe((state, prev) => {
+	const undoDepth = state.history.past.length;
+	if (undoDepth < useLocalRoutesStore.getState().loadedAtUndoDepth) {
+		useLocalRoutesStore.setState({ boundLocalId: null, loadedAtUndoDepth: undoDepth });
+		return;
+	}
 	if (!useLocalRoutesStore.getState().boundLocalId) return;
 	const cleared = state.waypoints.length === 0 && prev.waypoints.length > 0;
 	if (cleared || state.mode.kind === "editing") useLocalRoutesStore.getState().bind(null);

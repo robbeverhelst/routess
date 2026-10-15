@@ -404,9 +404,9 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 
 		if (!routeHasValidShape(waypoints)) return fail("The route data is invalid or corrupted.");
 
-		useLocalRoutesStore.getState().bind(null);
 		const store = useRoutingStore.getState();
 		if (snapshot) store.saveSnapshot();
+		useLocalRoutesStore.getState().draftReplaced();
 		store.setIsMapLocked(isMapLocked ?? store.isMapLocked);
 
 		clearComputedRouteUi();
