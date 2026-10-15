@@ -173,8 +173,8 @@ describe("CuesService degradation", () => {
 describe("CuesService geometry resolution", () => {
 	it("rejects requests without exactly one selector", async () => {
 		const { service } = makeService();
-		expect(service.cues({ activity: "cycle" })).rejects.toThrow(BadRequestException);
-		expect(service.cues({ ...BASE_REQUEST, routeId: 1 })).rejects.toThrow(BadRequestException);
+		await expect(service.cues({ activity: "cycle" })).rejects.toThrow(BadRequestException);
+		await expect(service.cues({ ...BASE_REQUEST, routeId: 1 })).rejects.toThrow(BadRequestException);
 	});
 
 	it("resolves a public route by id", async () => {
@@ -186,7 +186,7 @@ describe("CuesService geometry resolution", () => {
 
 	it("404s a private route by id so ids stay unenumerable", async () => {
 		const { service } = makeService({ route: { visibility: "private", geometry: PATH } });
-		expect(service.cues({ routeId: 7, activity: "cycle" })).rejects.toThrow(NotFoundException);
+		await expect(service.cues({ routeId: 7, activity: "cycle" })).rejects.toThrow(NotFoundException);
 	});
 
 	it("resolves an external route by id", async () => {
@@ -198,7 +198,7 @@ describe("CuesService geometry resolution", () => {
 
 	it("rejects geometry with fewer than two points", async () => {
 		const { service } = makeService();
-		expect(service.cues({ geometry: encodePolyline6([[4, 51]]), activity: "cycle" })).rejects.toThrow(
+		await expect(service.cues({ geometry: encodePolyline6([[4, 51]]), activity: "cycle" })).rejects.toThrow(
 			BadRequestException,
 		);
 	});
