@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsEmail, IsNotEmpty, IsOptional, IsString, MaxLength, MinLength } from "class-validator";
+import { IsBoolean, IsEmail, IsNotEmpty, IsOptional, IsString, MaxLength, MinLength } from "class-validator";
 
 export class EmailSignupDto {
 	@ApiProperty({ example: "alice@example.com" })
@@ -17,6 +17,15 @@ export class EmailSignupDto {
 	@MinLength(12)
 	@MaxLength(128)
 	password!: string;
+
+	@ApiProperty({
+		example: false,
+		required: false,
+		description: 'Consent to the weekly "routes near you" email, from an unticked-by-default signup checkbox.',
+	})
+	@IsOptional()
+	@IsBoolean()
+	weeklyDigest?: boolean;
 }
 
 export class EmailLoginDto {

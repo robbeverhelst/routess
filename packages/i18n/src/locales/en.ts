@@ -640,6 +640,7 @@ export const en: Record<string, string> = {
 	"signup.toast.failed": "Sign up failed",
 	"signup.title": "Create your account.",
 	"signup.subtitle": "Free forever. Up to 50 saved routes.",
+	"signup.weeklyDigest": "Email me a few new routes near me once a week. Optional, unsubscribe any time.",
 	"signup.googleNotConfigured": "Google sign-up not configured",
 	"signup.orWithEmail": "or with email",
 	"signup.name": "Name",

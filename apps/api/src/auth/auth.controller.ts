@@ -64,7 +64,7 @@ export class AuthController {
 	@ThrottleAuth()
 	@Post("signup-email")
 	async signupEmail(@Body() dto: EmailSignupDto): Promise<{ success: true }> {
-		await this.emailAuth.signupRequest(dto.email, dto.name ?? "", dto.password);
+		await this.emailAuth.signupRequest(dto.email, dto.name ?? "", dto.password, dto.weeklyDigest === true);
 		return { success: true };
 	}
 

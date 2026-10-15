@@ -42,6 +42,8 @@ export function SignUpScreen({ onSwitchToLogin }: { onSwitchToLogin?: () => void
 	const [password, setPassword] = useState("");
 	const [confirm, setConfirm] = useState("");
 	const [isLoading, setIsLoading] = useState(false);
+	// Consent to the weekly digest; unticked unless the user ticks it.
+	const [weeklyDigest, setWeeklyDigest] = useState(false);
 	const pushToast = useToastStore((s) => s.push);
 	const t = useT();
 	const oauthConfigured = hasValidGoogleClientId();
@@ -57,7 +59,7 @@ export function SignUpScreen({ onSwitchToLogin }: { onSwitchToLogin?: () => void
 	const handleGoogle = async (response: GoogleCodeResponse) => {
 		setIsLoading(true);
 		try {
-			const { user, isNewUser } = await googleAuth.handleGoogleSuccess(response);
+			const { user, isNewUser } = await googleAuth.handleGoogleSuccess(response, { weeklyDigest });
 			if (isNewUser) {
 				trackEvent({ name: "user_registered", properties: { provider: "google" } });
 			}
@@ -77,7 +79,7 @@ export function SignUpScreen({ onSwitchToLogin }: { onSwitchToLogin?: () => void
 		if (!canSubmit) return;
 		setIsLoading(true);
 		try {
-			await apiService.signupEmail({ email: email.trim(), name: name.trim() || undefined, password });
+			await apiService.signupEmail({ email: email.trim(), name: name.trim() || undefined, password, weeklyDigest });
 			setEmailSent(true);
 			pushToast({ kind: "success", title: t("login.email.signupSent") });
 		} catch (error) {
@@ -125,6 +127,27 @@ export function SignUpScreen({ onSwitchToLogin }: { onSwitchToLogin?: () => void
 					<p style={{ fontSize: 14, color: RDS_COLORS.fgMuted, marginTop: 8, marginBottom: 24, lineHeight: 1.5 }}>
 						{t("signup.subtitle")}
 					</p>
+
+					<label
+						style={{
+							display: "flex",
+							alignItems: "flex-start",
+							gap: 10,
+							marginBottom: 20,
+							fontSize: 13,
+							lineHeight: 1.45,
+							color: RDS_COLORS.fgMuted,
+							cursor: "pointer",
+						}}
+					>
+						<input
+							type="checkbox"
+							checked={weeklyDigest}
+							onChange={(e) => setWeeklyDigest(e.target.checked)}
+							style={{ marginTop: 2, accentColor: RDS_COLORS.accent }}
+						/>
+						<span>{t("signup.weeklyDigest")}</span>
+					</label>
 
 					<div style={{ minHeight: 46 }}>
 						{oauthConfigured ? (

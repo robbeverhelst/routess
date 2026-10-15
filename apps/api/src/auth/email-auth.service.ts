@@ -58,7 +58,7 @@ export class EmailAuthService {
 	// already exists with that address, the HTTP response is identical to a
 	// fresh signup (no enumeration oracle, mirroring requestPasswordReset) and
 	// a "you already have an account" email is sent instead.
-	async signupRequest(email: string, name: string, password: string): Promise<void> {
+	async signupRequest(email: string, name: string, password: string, weeklyDigest = false): Promise<void> {
 		const normalisedEmail = email.toLowerCase().trim();
 		await this.passwordService.validateOrThrow(password);
 
@@ -91,6 +91,7 @@ export class EmailAuthService {
 			purpose: "pending_signup",
 			email: normalisedEmail,
 			passwordHash,
+			weeklyDigestOptIn: weeklyDigest,
 			expiresAt: new Date(Date.now() + VERIFICATION_TTL_MS),
 		});
 		// Cache the chosen display name on the token row by abusing the email
@@ -120,9 +121,9 @@ export class EmailAuthService {
 			`update "verification_token"
 			 set "used_at" = now(), "updated_at" = now()
 			 where "token" = ? and "purpose" = 'pending_signup' and "used_at" is null and "expires_at" > now()
-			 returning "id", "email", "password_hash"`,
+			 returning "id", "email", "password_hash", "weekly_digest_opt_in"`,
 			[token],
-		)) as Array<{ id: number; email: string; password_hash: string | null }>;
+		)) as Array<{ id: number; email: string; password_hash: string | null; weekly_digest_opt_in: boolean }>;
 		const claimed = claimedRows[0];
 		if (!claimed?.password_hash) {
 			throw new BadRequestException("This verification link is invalid or has expired.");
@@ -147,6 +148,7 @@ export class EmailAuthService {
 			isEmailVerified: true,
 			role: desiredRole ?? "user",
 			deletionStatus: "active",
+			weeklyDigestOptInAt: claimed.weekly_digest_opt_in ? new Date() : null,
 		});
 		try {
 			await this.em.persist(user).flush();

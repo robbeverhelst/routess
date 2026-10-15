@@ -124,6 +124,26 @@ describe("Auth Integration Tests", () => {
 			});
 		});
 
+		it("records weekly digest consent only when the call creates the account", async () => {
+			verifier.resolveNext({ googleId: "google-new", email: "new@example.com", name: "New", picture: "" });
+			const created = await request(app.getHttpServer())
+				.post("/api/v1/auth/google")
+				.send({ code: "mock-google-code", weeklyDigest: true })
+				.expect(201);
+			expect(created.body.user.weeklyDigest).toBe(true);
+
+			await withRequestContext(app, async () => {
+				const existing = orm.em.create(User, { email: "old@example.com", name: "Old" });
+				await orm.em.persist(existing).flush();
+			});
+			verifier.resolveNext({ googleId: "google-old", email: "old@example.com", name: "Old", picture: "" });
+			const signedIn = await request(app.getHttpServer())
+				.post("/api/v1/auth/google")
+				.send({ code: "mock-google-code", weeklyDigest: true })
+				.expect(201);
+			expect(signedIn.body.user.weeklyDigest).toBe(false);
+		});
+
 		it("should fail with invalid Google token", async () => {
 			verifier.rejectNext(new UnauthorizedException("Failed to authenticate with Google"));
 

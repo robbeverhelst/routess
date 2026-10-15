@@ -39,13 +39,16 @@ export interface GoogleCodeResponse {
 // Google Auth Service Class
 class GoogleAuthService {
 	// Handle successful Google login
-	async handleGoogleSuccess(codeResponse: GoogleCodeResponse): Promise<{ user: ApiUser; isNewUser: boolean }> {
+	async handleGoogleSuccess(
+		codeResponse: GoogleCodeResponse,
+		options: { weeklyDigest?: boolean } = {},
+	): Promise<{ user: ApiUser; isNewUser: boolean }> {
 		try {
 			if (!codeResponse.code) {
 				throw new Error("No authorization code received from Google");
 			}
 
-			const authResponse: AuthResponse = await apiService.googleAuth(codeResponse.code);
+			const authResponse: AuthResponse = await apiService.googleAuth(codeResponse.code, options);
 
 			storeUser(authResponse.user);
 
