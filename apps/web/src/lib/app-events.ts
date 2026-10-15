@@ -12,6 +12,7 @@ export type SignInEntryPoint =
 	| "save_modal"
 	| "device_routes"
 	| "local_save_prompt"
+	| "library_empty"
 	| "header_avatar"
 	| "settings_panel"
 	| "login_screen"

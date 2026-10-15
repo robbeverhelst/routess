@@ -1,13 +1,14 @@
-import { FREE_SAVED_ROUTE_LIMIT, type RouteVisibility } from "@routess/core";
+import type { RouteVisibility } from "@routess/core";
 import { useEffect, useMemo, useState } from "react";
 
 import { ProLock, useProGates, useProGateToast } from "@/features/billing/proGates";
-import { useBoundLocalRoute, useLocalRoutes } from "@/features/localRoutes/localRoutesStore";
+import { useBoundLocalRoute } from "@/features/localRoutes/localRoutesStore";
+import { useAtLocalRouteLimit } from "@/features/localRoutes/useLocalRouteLimit";
 import { useSaveLocalRoute } from "@/features/localRoutes/useSaveLocalRoute";
 import { applySavedRoute } from "@/features/routing/applySavedRoute";
 import { useIsAuthenticated } from "@/hooks/useAuthState";
 import type { CreateRouteRequest } from "@/lib/api";
-import { useBillingStatus, useSaveRoute } from "@/lib/api-queries";
+import { useSaveRoute } from "@/lib/api-queries";
 import { emitAppEvent } from "@/lib/app-events";
 import { useT } from "@/lib/i18n";
 import { Logger } from "@/lib/logger";
@@ -67,12 +68,10 @@ export function SaveModal() {
 	// Saving again after opening or saving one updates it in place. The device
 	// holds as many routes as a free account, so signing up never strands any.
 	const saveLocal = useSaveLocalRoute();
-	const { routes: localRoutes } = useLocalRoutes();
 	const boundLocalRoute = useBoundLocalRoute();
-	const billingEnabled = useBillingStatus().data?.enabled === true;
-	const atLimit = isAuthenticated
-		? atSavedRouteLimit
-		: billingEnabled && !boundLocalRoute && localRoutes.length >= FREE_SAVED_ROUTE_LIMIT;
+	const atLocalRouteLimit = useAtLocalRouteLimit();
+	// Updating the bound LocalRoute adds nothing, so the cap only blocks new ones.
+	const atLimit = isAuthenticated ? atSavedRouteLimit : atLocalRouteLimit && !boundLocalRoute;
 	const isPending = isAuthenticated ? saveRoute.isPending : saveLocal.isPending;
 
 	const availableActivities = useMemo(

@@ -168,6 +168,18 @@ describe("LocalRoutes (saving without an account)", () => {
 		expect(useLocalRoutesStore.getState().boundLocalId).toBeNull();
 	});
 
+	it("adds an import as a new route without touching the draft's binding", async () => {
+		const { localRoute: bound } = await saveLocalRoute(route("Open in planner"), "manual");
+		const { localRoute: imported, isUpdate } = await saveLocalRoute(route("From GPX"), "imported", {
+			fromDraft: false,
+		});
+
+		expect(isUpdate).toBe(false);
+		expect(imported.localId).not.toBe(bound.localId);
+		expect(useLocalRoutesStore.getState().boundLocalId).toBe(bound.localId);
+		expect((await backend.list()).map((r) => r.route.name).sort()).toEqual(["From GPX", "Open in planner"]);
+	});
+
 	it("deletes a route from the device", async () => {
 		const { localRoute } = await saveLocalRoute(route("Gone"), "manual");
 		await useLocalRoutesStore.getState().remove(localRoute.localId);

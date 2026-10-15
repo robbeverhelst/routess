@@ -13,9 +13,10 @@ import { type SaveLocalRouteResult, useLocalRoutesStore } from "./localRoutesSto
 export async function saveLocalRoute(
 	route: CreateRouteRequest,
 	creationSource: CreationSource,
+	options?: { fromDraft?: boolean },
 ): Promise<SaveLocalRouteResult> {
 	const countBefore = useLocalRoutesStore.getState().routes.length;
-	const result = await useLocalRoutesStore.getState().save(route, creationSource);
+	const result = await useLocalRoutesStore.getState().save(route, creationSource, options);
 	const distance_m = Math.round(route.distance ?? 0);
 	if (!result.isUpdate) {
 		trackEvent({
