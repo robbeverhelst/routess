@@ -5,9 +5,9 @@ description: Tools, die du lokal installiert haben musst.
 
 | Tool | Version | Wofür |
 | --- | --- | --- |
-| Bun | 1.3+ (das Repo pinnt die exakte Version in `package.json` → `packageManager`) | Workspace-Paketmanager + Runtime |
+| Bun | 1.4+ (das Repo pinnt die exakte Version in `package.json` → `packageManager`) | Workspace-Paketmanager + Runtime |
 | Docker | latest | Lokales Postgres + Image-Builds |
-| Node | 24.x | Einige Build-Tools (Vite, Next) benötigen Node; CI und die Docker-Images nutzen Node 24 |
+| Node | 24.x | Einige Build-Tools (Vite, Next) laufen lokal auf Node; die Docker-Images für Web, Docs und Landing bauen auf Node 24 (CI läuft auf Bun) |
 | Git | latest | Versionsverwaltung |
 
 ## Installation
