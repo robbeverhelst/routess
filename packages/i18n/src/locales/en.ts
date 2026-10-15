@@ -713,6 +713,8 @@ export const en: Record<string, string> = {
 	"account.handleTaken": "That handle is already taken",
 	"account.shareEmails": "Share emails",
 	"account.shareEmailsSub": "Email me when someone shares a route with me",
+	"account.weeklyDigest": "Routes near you",
+	"account.weeklyDigestSub": "A weekly email with new public routes near where you last planned. Unsubscribe any time",
 	"account.field.email": "Email",
 	"account.field.password": "Password",
 	"account.emailReadonly": "Can't be changed yet",
