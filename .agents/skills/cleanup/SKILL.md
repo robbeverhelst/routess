@@ -65,4 +65,4 @@ Fix in batches. For judgement-heavy Conformance items, grill briefly before chan
 
 ### 7. Verify and commit per family
 
-After each batch: `bun run lint`, `bun run check-types`, and tests for the affected workspaces; full `bun run test` at the end. Then commit each family as its own Conventional Commit, grouped by scope, choosing the commit type to control release impact (recall: `refactor`, `perf`, `fix` bump a release; `chore`, `test`, `style`, `docs` do not). Never push. Full policy in [VERIFY-AND-COMMIT.md](VERIFY-AND-COMMIT.md).
+After each batch: `bun run lint:check`, `bun run check-types`, and tests for the affected workspaces; full `bun run test` at the end. Then commit each family as its own Conventional Commit, grouped by scope, choosing the commit type to control release impact (recall: `refactor`, `perf`, `fix` bump a release; `chore`, `test`, `style`, `docs` do not). Never push. Full policy in [VERIFY-AND-COMMIT.md](VERIFY-AND-COMMIT.md).

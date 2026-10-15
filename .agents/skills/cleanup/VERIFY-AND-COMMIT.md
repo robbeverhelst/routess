@@ -19,7 +19,7 @@ If every search is clean, the finding is **high confidence** and offered for rem
 
 Apply fixes in batches. After each batch:
 
-1. `bun run lint` (Biome).
+1. `bun run format:check` and `bun run lint:check` (bun fmt, bun lint + Biome).
 2. `bun run check-types` (tsc across workspaces).
 3. Tests for the affected workspaces: `bun run --filter <ws> test`.
 

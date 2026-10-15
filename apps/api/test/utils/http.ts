@@ -68,7 +68,7 @@ export class TestRequest implements PromiseLike<TestResponse> {
 		return this;
 	}
 
-	// biome-ignore lint/suspicious/noThenProperty: awaiting a request sends it, as with supertest
+	// eslint-disable-next-line unicorn/no-thenable -- awaiting a request sends it, as with supertest
 	then<TResult1 = TestResponse, TResult2 = never>(
 		onfulfilled?: ((value: TestResponse) => TResult1 | PromiseLike<TResult1>) | null,
 		onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,

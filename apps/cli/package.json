@@ -27,7 +27,6 @@
 		"dev": "bun src/index.ts",
 		"build": "bun build src/index.ts --outdir dist --target node --format esm",
 		"prepack": "bun run build",
-		"lint": "biome check .",
 		"check-types": "tsc --noEmit",
 		"test": "bun test"
 	},

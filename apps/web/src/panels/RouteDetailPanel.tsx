@@ -678,7 +678,7 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 								const coordStr = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
 								return (
 									<div
-										// biome-ignore lint/suspicious/noArrayIndexKey: same coord can repeat; combine with index for stable key
+										// eslint-disable-next-line react/no-array-index-key -- same coord can repeat; combine with index for stable key
 										key={`${lng}-${lat}-${i}`}
 										style={{
 											display: "flex",
