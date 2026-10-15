@@ -17,6 +17,7 @@ Route-planning app for cyclists, runners, and hikers. See `CONTEXT.md` for the d
 
 ```bash
 bun dev              # all apps, auto-picks free ports
+bun run format       # bun fmt (pinned canary)
 bun run lint         # biome check (production-strict)
 bun run check-types  # tsc across all workspaces
 bun run test         # all tests

@@ -56,7 +56,11 @@ jobs:
 
       - run: bun install --frozen-lockfile
 
-      - name: Format & lint
+      # bun fmt comes from a pinned canary until a stable Bun ships it.
+      - name: Format
+        run: bun run format:check
+
+      - name: Lint
         run: bunx biome check .
 
       # Fails when a workspace depends on a package Bun already replaces
