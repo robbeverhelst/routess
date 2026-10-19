@@ -1,5 +1,11 @@
 import { MikroORM } from "@mikro-orm/core";
 import type { INestApplication } from "@nestjs/common";
+import { CollectionRoute } from "src/entities/collection-route.entity";
+import { Collection } from "src/entities/collection.entity";
+import { Follow } from "src/entities/follow.entity";
+import { Payment } from "src/entities/payment.entity";
+import { PersonalAccessToken } from "src/entities/personal-access-token.entity";
+import { RouteShare } from "src/entities/route-share.entity";
 import { Route } from "src/entities/route.entity";
 import { Session } from "src/entities/session.entity";
 import { UserAuthMethod } from "src/entities/user-auth-method.entity";
@@ -217,6 +223,75 @@ describe("Account Lifecycle Integration Tests", () => {
 				// Charlie was never affected.
 				const charlie = await orm2.em.findOne(User, { id: charlieActive.id });
 				expect(charlie?.deletionStatus).toBe("active");
+			});
+		});
+
+		it("purges an account that owns collections and personal access tokens", async () => {
+			const orm = app.get(MikroORM);
+			const usersService = app.get(UsersService);
+
+			const { user: alice } = await createTestUserWithAuth(app, { email: "alice@example.com" });
+			const { user: bob } = await createTestUserWithAuth(app, { email: "bob@example.com" });
+
+			// The data a real account accumulates: a route filed in a collection,
+			// a CLI token, a follow, a route shared with someone, and a payment.
+			const paymentId = await withRequestContext(app, async () => {
+				const route = orm.em.create(Route, {
+					name: "Alice route",
+					user: alice.id,
+					waypoints: [
+						{ coord: [0, 0], type: "routed" },
+						{ coord: [1, 1], type: "routed" },
+					],
+					visibility: "private",
+					tags: [],
+				});
+				const collection = orm.em.create(Collection, { name: "Favourites", user: alice.id });
+				const payment = orm.em.create(Payment, {
+					user: alice.id,
+					provider: "stripe",
+					eventId: "evt_alice",
+					checkoutRef: "cs_alice",
+					offer: "pro_year_pass",
+					paidAt: new Date(),
+				});
+				orm.em.persist([
+					route,
+					collection,
+					payment,
+					orm.em.create(CollectionRoute, { collection, route, position: 0 }),
+					orm.em.create(PersonalAccessToken, {
+						user: alice.id,
+						tokenHash: "alice-token-hash",
+						label: "cli",
+						scope: "write",
+					}),
+					orm.em.create(Follow, { follower: alice.id, followee: bob.id }),
+					orm.em.create(RouteShare, { sender: alice.id, recipient: bob.id, route }),
+				]);
+				await orm.em.flush();
+				return payment.id;
+			});
+
+			await withRequestContext(app, async () => usersService.remove(alice.id));
+			await expireDeletionFor(app, alice.id, 31);
+
+			const purged = await withRequestContext(app, async () => usersService.hardDeleteExpiredAccounts());
+			expect(purged).toBe(1);
+
+			await withRequestContext(app, async () => {
+				const em = app.get(MikroORM).em;
+				const all = { filters: { softDelete: false } };
+				expect(await em.count(User, { id: alice.id }, all)).toBe(0);
+				expect(await em.count(Collection, { user: alice.id }, all)).toBe(0);
+				expect(await em.count(PersonalAccessToken, { user: alice.id }, all)).toBe(0);
+				expect(await em.count(Follow, { follower: alice.id }, all)).toBe(0);
+				expect(await em.count(RouteShare, { sender: alice.id }, all)).toBe(0);
+				// The payment stays for bookkeeping with the user cleared (ADR 0039).
+				const payment = await em.findOneOrFail(Payment, { id: paymentId }, all);
+				expect(payment.user).toBeNull();
+				// Bob is untouched.
+				expect(await em.count(User, { id: bob.id })).toBe(1);
 			});
 		});
 

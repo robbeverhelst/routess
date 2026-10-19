@@ -1,5 +1,6 @@
-import { EntityManager, EntityRepository } from "@mikro-orm/core";
+import { EntityRepository } from "@mikro-orm/core";
 import { InjectRepository } from "@mikro-orm/nestjs";
+import { EntityManager } from "@mikro-orm/postgresql";
 import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import { isValidHandle, mergeUserPreferences } from "@routess/core";
@@ -161,14 +162,20 @@ export class UsersService {
 			}
 		}
 
-		const conn = this.em.getConnection();
-		// Hard-delete in FK-safe order: routes → sessions → user. Bypasses the
-		// soft-delete filter by using raw SQL with explicit ids. Entitlements
-		// (any remaining Pro time) cascade with the user; payment rows stay for
-		// bookkeeping with user_id cleared (ADR 0039).
-		await conn.execute(`delete from "route" where "user_id" in (${ids.map(() => "?").join(",")})`, ids);
-		await conn.execute(`delete from "session" where "user_id" in (${ids.map(() => "?").join(",")})`, ids);
-		await conn.execute(`delete from "user" where "id" in (${ids.map(() => "?").join(",")})`, ids);
+		// Hard-delete in FK-safe order: owned rows whose foreign keys have no
+		// ON DELETE rule (routes, collections, access tokens, sessions) go
+		// first, then the user. Bypasses the soft-delete filter by using raw SQL
+		// with explicit ids. Collection entries, shares, follows, auth methods,
+		// verification tokens and entitlements cascade with the user or route;
+		// payment and admin audit rows stay with the user cleared (ADR 0039). One
+		// transaction, so a failure leaves every account intact for the next run.
+		const placeholders = ids.map(() => "?").join(",");
+		await this.em.transactional(async (em) => {
+			for (const table of ["route", "collection", "personal_access_token", "session"]) {
+				await em.execute(`delete from "${table}" where "user_id" in (${placeholders})`, ids);
+			}
+			await em.execute(`delete from "user" where "id" in (${placeholders})`, ids);
+		});
 		this.em.clear();
 		return expired.length;
 	}
