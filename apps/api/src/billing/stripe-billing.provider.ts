@@ -81,10 +81,18 @@ export class StripeBillingProvider implements BillingProvider {
 			throw new InvalidWebhookError(error instanceof Error ? error.message : "Invalid Stripe signature");
 		}
 
-		// The completed Checkout Session is the source of truth for a pass.
-		if (event.type !== "checkout.session.completed") return null;
+		// The completed Checkout Session is the source of truth for a pass. Stripe
+		// shows an ignored delivery as a plain 200, so the log is what tells a
+		// wrongly subscribed endpoint apart from a checkout that never completed.
+		if (event.type !== "checkout.session.completed") {
+			this.logger.log(`Ignoring Stripe event ${event.id} of type ${event.type}`);
+			return null;
+		}
 		const session = event.data.object;
-		if (session.mode !== "payment") return null;
+		if (session.mode !== "payment") {
+			this.logger.log(`Ignoring checkout session ${session.id} in ${session.mode} mode`);
+			return null;
+		}
 		if (session.payment_status !== "paid") {
 			this.logger.warn(`Checkout session ${session.id} completed with payment_status=${session.payment_status}`);
 			return null;

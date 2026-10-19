@@ -1,3 +1,7 @@
+import { describe, expect, it, spyOn } from "bun:test";
+
+import { Logger } from "@nestjs/common";
+
 import Stripe = require("stripe");
 
 import { InvalidWebhookError } from "../../../src/billing/billing-provider";
@@ -75,6 +79,27 @@ describe("StripeBillingProvider.parseWebhook", () => {
 		expect(
 			await provider.parseWebhook(await signed(checkoutEvent({ metadata: { userId: "42", offer: "other" } }))),
 		).toBeNull();
+	});
+
+	it("logs every ignored delivery, so a wrongly subscribed endpoint shows up in the API logs", async () => {
+		const log = spyOn(Logger.prototype, "log").mockImplementation(() => undefined);
+		const warn = spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
+		try {
+			await provider.parseWebhook(await signed(checkoutEvent({}, "payment_intent.succeeded")));
+			await provider.parseWebhook(await signed(checkoutEvent({ mode: "subscription" })));
+			await provider.parseWebhook(await signed(checkoutEvent({ payment_status: "unpaid" })));
+
+			expect(log.mock.calls.map(([message]) => message)).toEqual([
+				"Ignoring Stripe event evt_123 of type payment_intent.succeeded",
+				"Ignoring checkout session cs_test_123 in subscription mode",
+			]);
+			expect(warn.mock.calls.map(([message]) => message)).toEqual([
+				"Checkout session cs_test_123 completed with payment_status=unpaid",
+			]);
+		} finally {
+			log.mockRestore();
+			warn.mockRestore();
+		}
 	});
 });
 
