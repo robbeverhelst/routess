@@ -1,4 +1,4 @@
-import { metrics, trace } from "@opentelemetry/api";
+import { type Meter, metrics, trace, type Tracer } from "@opentelemetry/api";
 import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node";
 import { PrometheusExporter } from "@opentelemetry/exporter-prometheus";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
@@ -70,11 +70,11 @@ export function initializeOpenTelemetry(config: AppConfig) {
 	return { prometheusExporter };
 }
 
-export function getMeter(name = "maps-api") {
+export function getMeter(name = "maps-api"): Meter {
 	return metrics.getMeter(name);
 }
 
-export function getTracer(name = "maps-api") {
+export function getTracer(name = "maps-api"): Tracer {
 	return trace.getTracer(name);
 }
 
