@@ -1,6 +1,6 @@
 {
 	"name": "routess-monorepo",
-	"version": "1.180.1",
+	"version": "1.180.2",
 	"private": true,
 	"workspaces": [
 		"apps/*",
