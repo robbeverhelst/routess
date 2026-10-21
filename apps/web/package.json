@@ -42,7 +42,7 @@
 	},
 	"devDependencies": {
 		"@happy-dom/global-registrator": "^21.0.0",
-		"@sentry/vite-plugin": "^5.3.0",
+		"@sentry/vite-plugin": "^11.0.0",
 		"@tailwindcss/vite": "^4.1.10",
 		"@tanstack/react-router-devtools": "^1.121.34",
 		"@tanstack/router-cli": "^1.121.34",
