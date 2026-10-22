@@ -25,7 +25,7 @@ COPY --from=tippecanoe /usr/local/bin/tile-join /usr/local/bin/tile-join
 
 # bun runs the GeoJSON transform. Copy the pinned binary from the official
 # image onto the global PATH so a non-root runtime user can execute it.
-COPY --from=oven/bun:1.4.3 /usr/local/bin/bun /usr/local/bin/bun
+COPY --from=oven/bun:1.4.4 /usr/local/bin/bun /usr/local/bin/bun
 
 WORKDIR /opt/node-tiles
 COPY scripts/node-tiles/ ./
