@@ -1,7 +1,7 @@
 ARG DEPS_IMAGE
 FROM ${DEPS_IMAGE} AS deps
 
-FROM oven/bun:1.4.3-alpine AS builder
+FROM oven/bun:1.4.4-alpine AS builder
 
 WORKDIR /app
 
@@ -24,7 +24,7 @@ RUN cd /app/packages/core && \
 RUN cd /app/apps/landing && \
 	bun --bun node_modules/.bin/next build
 
-FROM oven/bun:1.4.3-alpine AS runner
+FROM oven/bun:1.4.4-alpine AS runner
 
 WORKDIR /app
 
