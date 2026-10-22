@@ -182,7 +182,7 @@ An authenticated User's active login on a specific device, identified by a JWT `
 _Avoid_: token, login, device.
 
 **PersonalAccessToken** (PAT):
-A long-lived bearer credential a User mints for non-browser clients (the `routess` CLI, AI agents, scripts). Carries one of two scopes: `read` (list/get Routes, export GPX, get profile) or `write` (`read` plus metadata-only mutations on own Routes and own preferences). Presented as `Authorization: Bearer routess_pat_<random>`. Never valid against `/api/v1/admin/*` and cannot delete the User account regardless of the owner's role. Subject to a separate per-token rate-limit bucket so a runaway agent does not block the User's interactive session. Stored hashed with argon2id; the plaintext is shown to the User exactly once at creation.
+A long-lived bearer credential a User mints for non-browser clients (the `routess` CLI, AI agents, scripts). Carries one of two scopes: `read` (list/get Routes, export GPX, get profile) or `write` (`read` plus metadata-only mutations on own Routes and own preferences). Presented as `Authorization: Bearer routess_pat_<random>`. Never valid against `/api/v1/admin/*` and cannot delete the User account regardless of the owner's role. Subject to a separate per-token rate-limit bucket so a runaway agent does not block the User's interactive session. Stored as HMAC-SHA-256 with a server-side pepper (not argon2id; see ADR 0022); the plaintext is shown to the User exactly once at creation.
 _Avoid_: API key, access token, bearer token (the term is **PAT** when discussing the domain shape; "Bearer token" is the HTTP transport detail).
 
 **Plan**:
