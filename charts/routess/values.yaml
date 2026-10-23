@@ -334,7 +334,10 @@ nodeTiles:
   enabled: false
   image:
     repository: ghcr.io/robbeverhelst/routess-node-tiles
-    tag: latest
+    # Pinned to an immutable sha tag, not :latest, so a new push cannot change
+    # what the CronJob runs. Bump it after .github/workflows/node-tiles-image.yml
+    # publishes a new image.
+    tag: sha-10c378707cde9ff405989e511896be23137c2732
     pullPolicy: IfNotPresent
   # 03:00 UTC on the 1st of each month. Node networks change slowly.
   schedule: "0 3 1 * *"
