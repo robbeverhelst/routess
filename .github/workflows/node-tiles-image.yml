@@ -4,7 +4,8 @@ name: node-tiles image
 # app release pipeline. It is a heavy, rarely-changing image (compiles
 # tippecanoe from source) and must not block app image publishing, so it is not
 # part of the release bake. Runs manually, or automatically when its own files
-# change on main. Tagged latest + sha; the CronJob references :latest.
+# change on main. Tagged latest + sha; the chart pins the CronJob to a sha tag
+# (nodeTiles.image.tag), so bump it there after a publish.
 
 on:
   workflow_dispatch:
