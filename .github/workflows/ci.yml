@@ -297,7 +297,10 @@ jobs:
       # publishing (OIDC) or provenance yet (oven-sh/bun#22423, #15601).
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
-          node-version: "24"
+          # Pinned (not "24", which takes whatever 24.x the runner image caches) so
+          # the publish runs on a patched Node: 24.22.1 fixes the Oct 2026 TLS CVEs
+          # (CVE-2026-106069, CVE-2026-106072). Renovate tracks it.
+          node-version: "24.22.1"
           registry-url: "https://registry.npmjs.org"
 
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
