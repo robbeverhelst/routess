@@ -19,8 +19,10 @@ jobs:
   test:
     runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || 'arc-routess' }}
     # The suite grew from ~5 to ~9 min with billing; at 15 the cache save after a
-    # green run got cut off, cancelling release and the npm publish.
-    timeout-minutes: 25
+    # green run got cut off, cancelling release and the npm publish. At 25 a slow
+    # self-hosted line (container init, checkout, setup-bun and a stalled cache
+    # restore each taking minutes) ran it out before Format finished.
+    timeout-minutes: 45
     env:
       DB_HOST: localhost
       DB_PORT: "5432"
@@ -48,12 +50,9 @@ jobs:
         with:
           bun-version: "1.4.4"
 
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
-        with:
-          path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
-          restore-keys: ${{ runner.os }}-bun-
-
+      # No actions/cache for ~/.bun/install/cache: the ~1 GB archive restores at
+      # ~0.5 MB/s on these runners and its download URL expires mid-restore, so a
+      # cold `bun install` from the registry (~4 min) beats restore + install.
       - run: bun install --frozen-lockfile
 
       # bun fmt / bun lint come from a pinned canary until a stable Bun ships
