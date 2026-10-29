@@ -300,7 +300,7 @@ jobs:
           # Pinned (not "24", which takes whatever 24.x the runner image caches) so
           # the publish runs on a patched Node: 24.22.1 fixes the Oct 2026 TLS CVEs
           # (CVE-2026-106069, CVE-2026-106072). Renovate tracks it.
-          node-version: "24.22.2"
+          node-version: "26.13.0"
           registry-url: "https://registry.npmjs.org"
 
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
