@@ -29,7 +29,7 @@
 		"@tanstack/router-cli": "^1.167.24"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.5.1",
+		"@biomejs/biome": "^2.6.4",
 		"@playwright/test": "1.64.1",
 		"@semantic-release/commit-analyzer": "^13.0.0",
 		"@semantic-release/git": "^11.0.0",
