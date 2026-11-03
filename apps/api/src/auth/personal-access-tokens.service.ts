@@ -110,10 +110,15 @@ export class PersonalAccessTokensService {
 		const now = new Date();
 		const lastTouchAgeMs = record.lastUsedAt ? now.getTime() - record.lastUsedAt.getTime() : Number.POSITIVE_INFINITY;
 		if (lastTouchAgeMs > LAST_USED_TOUCH_INTERVAL_MS) {
-			record.lastUsedAt = now;
-			// Fire-and-forget. The request continues even if the touch fails;
-			// it is observability, not correctness.
-			void this.em.flush().catch(() => undefined);
+			// A direct update on a fork, awaited: a flush of the request's
+			// EntityManager would bind it to the flush transaction, so the
+			// request's next queries (the entitlement check right after) would
+			// run in it and fail once it commits. The request continues even if
+			// the touch fails; it is observability, not correctness.
+			await this.em
+				.fork()
+				.nativeUpdate(PersonalAccessToken, { id: record.id }, { lastUsedAt: now })
+				.catch(() => undefined);
 		}
 		return record;
 	}
