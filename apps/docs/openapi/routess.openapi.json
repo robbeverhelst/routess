@@ -572,6 +572,9 @@
 					},
 					"401": {
 						"description": "Unauthorized"
+					},
+					"403": {
+						"description": "CLI and agent access is part of Pro (details.reason: pro_required)"
 					}
 				},
 				"security": [
@@ -673,6 +676,99 @@
 				"tags": ["auth"]
 			}
 		},
+		"/billing": {
+			"get": {
+				"description": "Whether billing is on, the Pro pass offer and the daily generation allowance per tier; for a signed-in User also their Plan and Pro expiry. Reading it applies a pending OG grant.",
+				"operationId": "BillingController_status",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"description": "",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/BillingStatusDto"
+								}
+							}
+						}
+					}
+				},
+				"summary": "Billing status",
+				"tags": ["billing"]
+			}
+		},
+		"/billing/checkout": {
+			"post": {
+				"description": "Creates a Stripe Checkout Session for a Pro year pass and returns the URL to send the browser to.",
+				"operationId": "BillingController_checkout",
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/StartCheckoutDto"
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/CheckoutResponseDto"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Unauthorized"
+					},
+					"403": {
+						"description": "Account is pending deletion"
+					},
+					"503": {
+						"description": "Billing is not enabled on this instance"
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Start a checkout",
+				"tags": ["billing"]
+			}
+		},
+		"/billing/webhook": {
+			"post": {
+				"description": "Called by Stripe, not by clients. Verifies the Stripe-Signature header over the raw body and grants the pass on checkout.session.completed. Redelivered events are acknowledged without granting twice.",
+				"operationId": "BillingController_webhook",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"description": "",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/WebhookResponseDto"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Missing or invalid signature"
+					},
+					"503": {
+						"description": "Billing is not enabled on this instance"
+					}
+				},
+				"summary": "Stripe webhook",
+				"tags": ["billing"]
+			}
+		},
 		"/routes": {
 			"post": {
 				"description": "Creates a new route for the authenticated user. PAT callers need `write` scope (#170) and must set X-Routess-Confirm: true when creating with `visibility: public`, mirroring the PATCH gate.",
@@ -753,6 +849,7 @@
 						"description": "Number of routes to skip",
 						"schema": {
 							"minimum": 0,
+							"maximum": 50000,
 							"default": 0,
 							"type": "number"
 						}
@@ -812,6 +909,7 @@
 						"description": "Number of routes to skip",
 						"schema": {
 							"minimum": 0,
+							"maximum": 50000,
 							"default": 0,
 							"type": "number"
 						}
@@ -831,7 +929,7 @@
 						"name": "bbox",
 						"required": false,
 						"in": "query",
-						"description": "Viewport filter as 'minLng,minLat,maxLng,maxLat'. Matches routes whose bounding box overlaps it (ADR 0029).",
+						"description": "Viewport filter as 'minLng,minLat,maxLng,maxLat'. Matches routes whose bounding box overlaps it (ADR 0030).",
 						"schema": {
 							"example": "3.6,50.9,3.8,51.1",
 							"type": "string"
@@ -1114,6 +1212,216 @@
 				],
 				"summary": "Delete route",
 				"tags": ["routes"]
+			}
+		},
+		"/places/hubs": {
+			"get": {
+				"description": "Places with at least 5 Indexable routes (Route + ExternalRoute, read-time union per ADR 0035) for the given activity. Feeds the landing hub pages and their sitemap segment; places below the threshold are absent, so a missing slug means the hub page must 404.",
+				"operationId": "PlacesController_findHubs",
+				"parameters": [
+					{
+						"name": "activity",
+						"required": true,
+						"in": "query",
+						"description": "Activity the hubs cover; one hub exists per (activity, place).",
+						"schema": {
+							"type": "string",
+							"enum": ["run", "cycle", "walk"]
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"$ref": "#/components/schemas/RegionalHubDto"
+									}
+								}
+							}
+						}
+					}
+				},
+				"summary": "List RegionalHubs",
+				"tags": ["places"]
+			}
+		},
+		"/routing/trace-attributes": {
+			"post": {
+				"description": "Forwards the shape to the self-hosted Valhalla `trace_attributes` endpoint and returns per-edge surface data. Used by the web app to render surface composition for a Route.",
+				"operationId": "RoutingController_traceAttributes",
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/TraceAttributesRequestDto"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Edge attributes",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/TraceAttributesResponseDto"
+								}
+							}
+						}
+					},
+					"502": {
+						"description": "Valhalla returned an error"
+					},
+					"503": {
+						"description": "Valhalla is not configured or unreachable"
+					}
+				},
+				"summary": "Match a recorded shape against the road network",
+				"tags": ["routing"]
+			}
+		},
+		"/routing/route": {
+			"post": {
+				"description": "Forwards locations + RoutingPreferences to the self-hosted Valhalla `/route` endpoint. The API owns the translation from Routess preferences (SurfaceType, avoidFerries, avoidHighways) to Valhalla costing options, so the browser never sees provider-specific knobs.",
+				"operationId": "RoutingController_route",
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/RouteRequestDto"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Route legs and snapped locations",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/RoutingRouteResponseDto"
+								}
+							}
+						}
+					},
+					"502": {
+						"description": "Valhalla returned an error or no path"
+					},
+					"503": {
+						"description": "Valhalla is not configured or unreachable"
+					}
+				},
+				"summary": "Compute a route through ordered locations with structured preferences",
+				"tags": ["routing"]
+			}
+		},
+		"/routing/cues": {
+			"post": {
+				"description": "Map-matches the geometry through Valhalla `trace_route` for street-level ManeuverCues and decorates it with NodeNetwork passages (NodeCues). Cue anchors are projected onto the stored RoutePath, which stays canonical. Accepts a public/unlisted route id, an external route id, or raw geometry. See ADR 0038.",
+				"operationId": "RoutingController_cues",
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/CuesRequestDto"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Ordered cues along the RoutePath",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/CuesResponseDto"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Invalid geometry selector"
+					},
+					"403": {
+						"description": "Navigation is part of Pro (details.reason: pro_required)"
+					},
+					"404": {
+						"description": "Route not found or not navigable anonymously"
+					}
+				},
+				"summary": "Derive navigation Cues for a RoutePath",
+				"tags": ["routing"]
+			}
+		},
+		"/external-routes/{id}/gpx": {
+			"get": {
+				"description": "GPX 1.1 with the SeedSource attribution embedded as <copyright> (license obligation, ADR 0035).",
+				"operationId": "ExternalRoutesController_downloadGpx",
+				"parameters": [
+					{
+						"name": "id",
+						"required": true,
+						"in": "path",
+						"description": "External route ID",
+						"schema": {
+							"type": "number"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "GPX document"
+					},
+					"404": {
+						"description": "External route not found"
+					}
+				},
+				"summary": "Download external route as GPX",
+				"tags": ["external-routes"]
+			}
+		},
+		"/external-routes/{id}": {
+			"get": {
+				"description": "Detail for a seeded ExternalRoute, addressed by its numeric id (the '-x{id}' page form).",
+				"operationId": "ExternalRoutesController_findOne",
+				"parameters": [
+					{
+						"name": "id",
+						"required": true,
+						"in": "path",
+						"description": "External route ID",
+						"schema": {
+							"type": "number"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ExternalRouteResponseDto"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "External route not found"
+					}
+				},
+				"summary": "Get an external route by ID",
+				"tags": ["external-routes"]
 			}
 		},
 		"/collections": {
@@ -1778,6 +2086,76 @@
 				"tags": ["social"]
 			}
 		},
+		"/social/notifications": {
+			"get": {
+				"description": "Derived view (CONTEXT.md 'Notification'): new follows of you and route shares sent to you, newest first. Nothing is stored per item; seenAt is the bell watermark as it was before this read.",
+				"operationId": "SocialController_notifications",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"description": "",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/NotificationsResponseDto"
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Your notifications",
+				"tags": ["social"]
+			}
+		},
+		"/social/notifications/unseen-count": {
+			"get": {
+				"operationId": "SocialController_unseenNotifications",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"description": "",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/NotificationUnseenCountDto"
+								}
+							}
+						}
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Unseen notification count (bell badge)",
+				"tags": ["social"]
+			}
+		},
+		"/social/notifications/seen": {
+			"post": {
+				"description": "Bumps the NotificationsSeenAt watermark. Never touches RouteShare.readAt: seen is bell-level, read is inbox-level.",
+				"operationId": "SocialController_markNotificationsSeen",
+				"parameters": [],
+				"responses": {
+					"204": {
+						"description": "Watermark bumped"
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Mark all notifications seen",
+				"tags": ["social"]
+			}
+		},
 		"/social/users/search": {
 			"get": {
 				"description": "Prefix match on handle and display name. Returns at most 10 results; excludes yourself.",
@@ -1816,83 +2194,9 @@
 				"tags": ["social"]
 			}
 		},
-		"/routing/trace-attributes": {
-			"post": {
-				"description": "Forwards the shape to the self-hosted Valhalla `trace_attributes` endpoint and returns per-edge surface data. Used by the web app to render surface composition for a Route.",
-				"operationId": "RoutingController_traceAttributes",
-				"parameters": [],
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/TraceAttributesRequestDto"
-							}
-						}
-					}
-				},
-				"responses": {
-					"200": {
-						"description": "Edge attributes",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/TraceAttributesResponseDto"
-								}
-							}
-						}
-					},
-					"502": {
-						"description": "Valhalla returned an error"
-					},
-					"503": {
-						"description": "Valhalla is not configured or unreachable"
-					}
-				},
-				"summary": "Match a recorded shape against the road network",
-				"tags": ["routing"]
-			}
-		},
-		"/routing/route": {
-			"post": {
-				"description": "Forwards locations + RoutingPreferences to the self-hosted Valhalla `/route` endpoint. The API owns the translation from Routess preferences (SurfaceType, avoidFerries, avoidHighways) to Valhalla costing options, so the browser never sees provider-specific knobs.",
-				"operationId": "RoutingController_route",
-				"parameters": [],
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/RouteRequestDto"
-							}
-						}
-					}
-				},
-				"responses": {
-					"200": {
-						"description": "Route legs and snapped locations",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/RoutingRouteResponseDto"
-								}
-							}
-						}
-					},
-					"502": {
-						"description": "Valhalla returned an error or no path"
-					},
-					"503": {
-						"description": "Valhalla is not configured or unreachable"
-					}
-				},
-				"summary": "Compute a route through ordered locations with structured preferences",
-				"tags": ["routing"]
-			}
-		},
 		"/generation": {
 			"post": {
-				"description": "Runs the RouteGeneration pipeline (ADR-0029): a fan of candidate loops around the start point, snap-validated, routed through Valhalla, scored on Overlap/distance/surface/shape, and reduced to up to 3 diverse candidates. A response with an empty candidate list carries a structured failure code that drives retry suggestions. Each request fans out into ~10-25 Valhalla calls, hence the strict per-IP throttle.",
+				"description": "Runs the RouteGeneration pipeline (ADR-0029): a fan of candidate loops around the start point, snap-validated, routed through Valhalla, scored on Overlap/distance/surface/shape, and reduced to up to 3 diverse candidates. A response with an empty candidate list carries a structured failure code that drives retry suggestions. Each request fans out into ~10-25 Valhalla calls, hence the strict per-IP throttle and a per-User daily quota (ADR 0032).",
 				"operationId": "GenerationController_generate",
 				"parameters": [],
 				"requestBody": {
@@ -1915,6 +2219,12 @@
 								}
 							}
 						}
+					},
+					"403": {
+						"description": "preferNodeNetworks without Pro: knooppunt routes are part of Pro (details.reason: pro_required)"
+					},
+					"429": {
+						"description": "Daily route generation quota exceeded"
 					},
 					"503": {
 						"description": "Valhalla is not configured or unreachable"
@@ -1939,13 +2249,15 @@
 									"properties": {
 										"status": {
 											"type": "string",
+											"enum": ["ok", "degraded"],
 											"example": "ok"
 										},
 										"info": {
 											"type": "object",
 											"example": {
 												"database": {
-													"status": "up"
+													"status": "up",
+													"responseTime": 12
 												}
 											},
 											"additionalProperties": {
@@ -1953,7 +2265,12 @@
 												"required": ["status"],
 												"properties": {
 													"status": {
-														"type": "string"
+														"type": "string",
+														"enum": ["up", "degraded", "down"]
+													},
+													"responseTime": {
+														"type": "number",
+														"description": "Time the health indicator took to respond, in ms"
 													}
 												},
 												"additionalProperties": true
@@ -1968,7 +2285,12 @@
 												"required": ["status"],
 												"properties": {
 													"status": {
-														"type": "string"
+														"type": "string",
+														"enum": ["up", "degraded", "down"]
+													},
+													"responseTime": {
+														"type": "number",
+														"description": "Time the health indicator took to respond, in ms"
 													}
 												},
 												"additionalProperties": true
@@ -1979,7 +2301,8 @@
 											"type": "object",
 											"example": {
 												"database": {
-													"status": "up"
+													"status": "up",
+													"responseTime": 12
 												}
 											},
 											"additionalProperties": {
@@ -1987,7 +2310,12 @@
 												"required": ["status"],
 												"properties": {
 													"status": {
-														"type": "string"
+														"type": "string",
+														"enum": ["up", "degraded", "down"]
+													},
+													"responseTime": {
+														"type": "number",
+														"description": "Time the health indicator took to respond, in ms"
 													}
 												},
 												"additionalProperties": true
@@ -2007,13 +2335,15 @@
 									"properties": {
 										"status": {
 											"type": "string",
+											"enum": ["error", "shutting_down"],
 											"example": "error"
 										},
 										"info": {
 											"type": "object",
 											"example": {
 												"database": {
-													"status": "up"
+													"status": "up",
+													"responseTime": 12
 												}
 											},
 											"additionalProperties": {
@@ -2021,7 +2351,12 @@
 												"required": ["status"],
 												"properties": {
 													"status": {
-														"type": "string"
+														"type": "string",
+														"enum": ["up", "degraded", "down"]
+													},
+													"responseTime": {
+														"type": "number",
+														"description": "Time the health indicator took to respond, in ms"
 													}
 												},
 												"additionalProperties": true
@@ -2033,7 +2368,8 @@
 											"example": {
 												"redis": {
 													"status": "down",
-													"message": "Could not connect"
+													"message": "Could not connect",
+													"responseTime": 3005
 												}
 											},
 											"additionalProperties": {
@@ -2041,7 +2377,12 @@
 												"required": ["status"],
 												"properties": {
 													"status": {
-														"type": "string"
+														"type": "string",
+														"enum": ["up", "degraded", "down"]
+													},
+													"responseTime": {
+														"type": "number",
+														"description": "Time the health indicator took to respond, in ms"
 													}
 												},
 												"additionalProperties": true
@@ -2052,11 +2393,13 @@
 											"type": "object",
 											"example": {
 												"database": {
-													"status": "up"
+													"status": "up",
+													"responseTime": 12
 												},
 												"redis": {
 													"status": "down",
-													"message": "Could not connect"
+													"message": "Could not connect",
+													"responseTime": 3005
 												}
 											},
 											"additionalProperties": {
@@ -2064,7 +2407,12 @@
 												"required": ["status"],
 												"properties": {
 													"status": {
-														"type": "string"
+														"type": "string",
+														"enum": ["up", "degraded", "down"]
+													},
+													"responseTime": {
+														"type": "number",
+														"description": "Time the health indicator took to respond, in ms"
 													}
 												},
 												"additionalProperties": true
@@ -2095,13 +2443,15 @@
 									"properties": {
 										"status": {
 											"type": "string",
+											"enum": ["ok", "degraded"],
 											"example": "ok"
 										},
 										"info": {
 											"type": "object",
 											"example": {
 												"database": {
-													"status": "up"
+													"status": "up",
+													"responseTime": 12
 												}
 											},
 											"additionalProperties": {
@@ -2109,7 +2459,12 @@
 												"required": ["status"],
 												"properties": {
 													"status": {
-														"type": "string"
+														"type": "string",
+														"enum": ["up", "degraded", "down"]
+													},
+													"responseTime": {
+														"type": "number",
+														"description": "Time the health indicator took to respond, in ms"
 													}
 												},
 												"additionalProperties": true
@@ -2124,7 +2479,12 @@
 												"required": ["status"],
 												"properties": {
 													"status": {
-														"type": "string"
+														"type": "string",
+														"enum": ["up", "degraded", "down"]
+													},
+													"responseTime": {
+														"type": "number",
+														"description": "Time the health indicator took to respond, in ms"
 													}
 												},
 												"additionalProperties": true
@@ -2135,7 +2495,8 @@
 											"type": "object",
 											"example": {
 												"database": {
-													"status": "up"
+													"status": "up",
+													"responseTime": 12
 												}
 											},
 											"additionalProperties": {
@@ -2143,7 +2504,12 @@
 												"required": ["status"],
 												"properties": {
 													"status": {
-														"type": "string"
+														"type": "string",
+														"enum": ["up", "degraded", "down"]
+													},
+													"responseTime": {
+														"type": "number",
+														"description": "Time the health indicator took to respond, in ms"
 													}
 												},
 												"additionalProperties": true
@@ -2163,13 +2529,15 @@
 									"properties": {
 										"status": {
 											"type": "string",
+											"enum": ["error", "shutting_down"],
 											"example": "error"
 										},
 										"info": {
 											"type": "object",
 											"example": {
 												"database": {
-													"status": "up"
+													"status": "up",
+													"responseTime": 12
 												}
 											},
 											"additionalProperties": {
@@ -2177,7 +2545,12 @@
 												"required": ["status"],
 												"properties": {
 													"status": {
-														"type": "string"
+														"type": "string",
+														"enum": ["up", "degraded", "down"]
+													},
+													"responseTime": {
+														"type": "number",
+														"description": "Time the health indicator took to respond, in ms"
 													}
 												},
 												"additionalProperties": true
@@ -2189,7 +2562,8 @@
 											"example": {
 												"redis": {
 													"status": "down",
-													"message": "Could not connect"
+													"message": "Could not connect",
+													"responseTime": 3005
 												}
 											},
 											"additionalProperties": {
@@ -2197,7 +2571,12 @@
 												"required": ["status"],
 												"properties": {
 													"status": {
-														"type": "string"
+														"type": "string",
+														"enum": ["up", "degraded", "down"]
+													},
+													"responseTime": {
+														"type": "number",
+														"description": "Time the health indicator took to respond, in ms"
 													}
 												},
 												"additionalProperties": true
@@ -2208,11 +2587,13 @@
 											"type": "object",
 											"example": {
 												"database": {
-													"status": "up"
+													"status": "up",
+													"responseTime": 12
 												},
 												"redis": {
 													"status": "down",
-													"message": "Could not connect"
+													"message": "Could not connect",
+													"responseTime": 3005
 												}
 											},
 											"additionalProperties": {
@@ -2220,7 +2601,12 @@
 												"required": ["status"],
 												"properties": {
 													"status": {
-														"type": "string"
+														"type": "string",
+														"enum": ["up", "degraded", "down"]
+													},
+													"responseTime": {
+														"type": "number",
+														"description": "Time the health indicator took to respond, in ms"
 													}
 												},
 												"additionalProperties": true
@@ -2302,6 +2688,72 @@
 				"tags": ["admin"]
 			}
 		},
+		"/admin/stats/metrics": {
+			"get": {
+				"description": "Backs the admin metrics page. Signups, active users, saved generated routes, and paying users come from Postgres; generation attempts per day come from route_generation_* ProductEvents in Umami and are reported unavailable when Umami is not configured.",
+				"operationId": "AdminController_getMetrics",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"description": ""
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Launch metrics: signups, active users, generations per day, paying users",
+				"tags": ["admin"]
+			}
+		},
+		"/admin/stats/seed-sources": {
+			"get": {
+				"description": "Per-source ExternalRoute counts, last sync, and projected next automatic sync (ADR 0035). Backs the admin seeding panel.",
+				"operationId": "AdminController_getSeedSources",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"description": ""
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Seeded route inventory per SeedSource",
+				"tags": ["admin"]
+			}
+		},
+		"/admin/seed-sources/{key}/refresh": {
+			"post": {
+				"description": "Re-fetches, re-parses, and upserts a single source immediately, bypassing the not-due check the scheduled CronJob honours.",
+				"operationId": "AdminController_refreshSeedSource",
+				"parameters": [
+					{
+						"name": "key",
+						"required": true,
+						"in": "path",
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"201": {
+						"description": ""
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Force a re-sync of one SeedSource now",
+				"tags": ["admin"]
+			}
+		},
 		"/admin/stats/routes": {
 			"get": {
 				"description": "Route KPIs grouped by activity, the most active creators, and the recent creation trend.",
@@ -2323,7 +2775,7 @@
 		},
 		"/admin/routes": {
 			"get": {
-				"description": "Lists routes across all users with `page`/`pageSize` pagination, free-text `search`, and an optional `userId` filter.",
+				"description": "Lists routes across all users with `page`/`pageSize` pagination, free-text `search`, and optional `userId`, `visibility` (comma-separated), `activity` (comma-separated), and `problems` (geometry-less routes that should have a RoutePath) filters. Sort with `sort` (createdAt, name, activity, visibility, distance, duration, elevationGain, owner) and `dir` (asc, desc); unknown values fall back to newest first.",
 				"operationId": "AdminController_listRoutes",
 				"parameters": [
 					{
@@ -2341,6 +2793,54 @@
 						"schema": {
 							"type": "string"
 						}
+					},
+					{
+						"name": "visibility",
+						"required": true,
+						"in": "query",
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"name": "activity",
+						"required": true,
+						"in": "query",
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"name": "problems",
+						"required": true,
+						"in": "query",
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"name": "deleted",
+						"required": true,
+						"in": "query",
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"name": "sort",
+						"required": true,
+						"in": "query",
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"name": "dir",
+						"required": true,
+						"in": "query",
+						"schema": {
+							"type": "string"
+						}
 					}
 				],
 				"responses": {
@@ -2353,7 +2853,26 @@
 						"JWT-auth": []
 					}
 				],
-				"summary": "Paginated, searchable route list",
+				"summary": "Paginated, searchable, sortable route list",
+				"tags": ["admin"]
+			}
+		},
+		"/admin/stats/engagement": {
+			"get": {
+				"description": "Postgres-derived business analytics for the admin engagement view. Behavioural funnels/retention live in Umami (ADR 0014).",
+				"operationId": "AdminController_getEngagement",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"description": ""
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Signup-to-route conversion, distance distribution, top regions",
 				"tags": ["admin"]
 			}
 		},
@@ -2411,13 +2930,89 @@
 				"tags": ["admin"]
 			}
 		},
+		"/admin/routes/{id}/restore": {
+			"post": {
+				"description": "Clears the route's deletedAt so the owner sees it again. Reverses a soft-delete.",
+				"operationId": "AdminController_restoreRoute",
+				"parameters": [
+					{
+						"name": "id",
+						"required": true,
+						"in": "path",
+						"schema": {
+							"type": "number"
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": ""
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Restore a soft-deleted route",
+				"tags": ["admin"]
+			}
+		},
 		"/admin/users": {
 			"get": {
-				"description": "Lists users with `page`/`pageSize` pagination and free-text `search` over name and email.",
+				"description": "Lists users with `page`/`pageSize` pagination, free-text `search` over name and email, and optional `role`, `verified` and `plan` (comma-separated: free, pro_paid, pro_admin, pro_og, pro_expired) filters. Each item carries its Plan from the same resolution the Pro gates use. Sort with `sort` (createdAt, email, name, role, routeCount, lastActiveAt, proUntil) and `dir` (asc, desc); unknown values fall back to newest first. Sorting by proUntil puts Pro that does not expire after every date and Users without a date last.",
 				"operationId": "AdminController_listUsers",
 				"parameters": [
 					{
 						"name": "search",
+						"required": true,
+						"in": "query",
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"name": "deleted",
+						"required": true,
+						"in": "query",
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"name": "role",
+						"required": true,
+						"in": "query",
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"name": "verified",
+						"required": true,
+						"in": "query",
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"name": "plan",
+						"required": true,
+						"in": "query",
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"name": "sort",
+						"required": true,
+						"in": "query",
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"name": "dir",
 						"required": true,
 						"in": "query",
 						"schema": {
@@ -2435,13 +3030,13 @@
 						"JWT-auth": []
 					}
 				],
-				"summary": "Paginated, searchable user list",
+				"summary": "Paginated, searchable, sortable user list",
 				"tags": ["admin"]
 			}
 		},
 		"/admin/users/{id}": {
 			"get": {
-				"description": "Full admin view of one user: profile fields, active sessions, and their most recent routes.",
+				"description": "Full admin view of one user: profile fields, active sessions, their most recent routes, and `billing`: the Plan in effect with its source and end date, every Pro grant, the Payments (each linking to its event in the Stripe dashboard), saved Routes against the free cap, today's generation usage against the quota, and the admin actions taken on the account.",
 				"operationId": "AdminController_getUserDetail",
 				"parameters": [
 					{
@@ -2463,7 +3058,7 @@
 						"JWT-auth": []
 					}
 				],
-				"summary": "User detail: profile, sessions, recent routes",
+				"summary": "User detail: profile, sessions, recent routes, Plan and payments",
 				"tags": ["admin"]
 			},
 			"delete": {
@@ -2490,6 +3085,120 @@
 					}
 				],
 				"summary": "Soft-delete a user; cascades to routes and sessions",
+				"tags": ["admin"]
+			}
+		},
+		"/admin/users/{id}/pro/grant": {
+			"post": {
+				"description": "Sets the User's admin Pro grant (Entitlement source 'admin') to `days` from now, or to never expire with `permanent: true`; give exactly one. It replaces an earlier admin grant; time from other sources is kept and the latest end wins. Refused with 409 when the stored Plan is already Pro. Writes an audit entry with the `reason`.",
+				"operationId": "AdminController_grantPro",
+				"parameters": [
+					{
+						"name": "id",
+						"required": true,
+						"in": "path",
+						"schema": {
+							"type": "number"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/AdminGrantProDto"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": ""
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Grant Pro for N days from now, or permanently (a comp)",
+				"tags": ["admin"]
+			}
+		},
+		"/admin/users/{id}/pro/extend": {
+			"post": {
+				"description": "Adds 365 days to the end of the User's Pro time (or to now when it already ended) through their admin grant, the way buying another pass does. Refused with 409 when Pro does not expire. Writes an audit entry with the `reason`.",
+				"operationId": "AdminController_extendPro",
+				"parameters": [
+					{
+						"name": "id",
+						"required": true,
+						"in": "path",
+						"schema": {
+							"type": "number"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/AdminProReasonDto"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": ""
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Extend Pro by a year",
+				"tags": ["admin"]
+			}
+		},
+		"/admin/users/{id}/pro/revoke": {
+			"post": {
+				"description": "Revokes every running Pro grant (paid, OG and admin; the rows are kept, marked revoked), writes the `admin` Entitlement ending now (written revoked, so it never puts the User back on Pro) and resets a stored Pro Plan to free. Refunds are not done here: refund the payment in the Stripe dashboard. Refused with 409 when the User is not on Pro. Writes an audit entry with the `reason`.",
+				"operationId": "AdminController_revokePro",
+				"parameters": [
+					{
+						"name": "id",
+						"required": true,
+						"in": "path",
+						"schema": {
+							"type": "number"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/AdminProReasonDto"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": ""
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Revoke Pro now",
 				"tags": ["admin"]
 			}
 		},
@@ -2526,6 +3235,34 @@
 					}
 				],
 				"summary": "Revoke a single session for a user",
+				"tags": ["admin"]
+			}
+		},
+		"/admin/users/{id}/restore": {
+			"post": {
+				"description": "Clears the user's deletedAt and un-soft-deletes their routes. Sessions are not restored; the user signs in again.",
+				"operationId": "AdminController_restoreUser",
+				"parameters": [
+					{
+						"name": "id",
+						"required": true,
+						"in": "path",
+						"schema": {
+							"type": "number"
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": ""
+					}
+				},
+				"security": [
+					{
+						"JWT-auth": []
+					}
+				],
+				"summary": "Restore a soft-deleted user and their routes",
 				"tags": ["admin"]
 			}
 		},
@@ -2606,6 +3343,10 @@
 		{
 			"name": "admin",
 			"description": "Admin dashboard endpoints (admin role, session cookie only)"
+		},
+		{
+			"name": "billing",
+			"description": "Pro year pass checkout, Stripe webhook and billing status (ADR-0039)"
 		},
 		{
 			"name": "app",
@@ -2886,6 +3627,11 @@
 						"example": true,
 						"description": "Whether the user has an active email/password credential. Drives password-change UI affordances."
 					},
+					"weeklyDigest": {
+						"type": "boolean",
+						"example": false,
+						"description": "Whether the user has opted in to the weekly \"routes near you\" email."
+					},
 					"statistics": {
 						"$ref": "#/components/schemas/UserStatisticsDto"
 					}
@@ -2900,6 +3646,7 @@
 					"idHash",
 					"deletionStatus",
 					"hasPassword",
+					"weeklyDigest",
 					"statistics"
 				]
 			},
@@ -3044,6 +3791,11 @@
 						"example": "https://example.com/avatar.jpg",
 						"description": "Avatar image URL. Must be https: clients render it, so no other schemes are accepted."
 					},
+					"weeklyDigest": {
+						"type": "boolean",
+						"example": true,
+						"description": "Consent to the weekly \"routes near you\" email. true records consent now; false withdraws it. Off unless the user turns it on."
+					},
 					"preferences": {
 						"$ref": "#/components/schemas/UpdateUserPreferencesDto"
 					}
@@ -3073,6 +3825,11 @@
 						"type": "string",
 						"description": "Google OAuth2 authorization code from the popup auth-code flow",
 						"example": "4/0AX4XfWj..."
+					},
+					"weeklyDigest": {
+						"type": "boolean",
+						"example": false,
+						"description": "Consent to the weekly \"routes near you\" email from the signup checkbox. Applied only when this call creates the account."
 					}
 				},
 				"required": ["code"]
@@ -3140,6 +3897,11 @@
 						"type": "boolean",
 						"example": true,
 						"description": "Whether the user has an active email/password credential. Drives password-change UI affordances."
+					},
+					"weeklyDigest": {
+						"type": "boolean",
+						"example": false,
+						"description": "Whether the user has opted in to the weekly \"routes near you\" email."
 					}
 				},
 				"required": [
@@ -3151,7 +3913,8 @@
 					"role",
 					"idHash",
 					"deletionStatus",
-					"hasPassword"
+					"hasPassword",
+					"weeklyDigest"
 				]
 			},
 			"AuthResponseDto": {
@@ -3169,9 +3932,14 @@
 								"$ref": "#/components/schemas/UserResponseDto"
 							}
 						]
+					},
+					"isNewUser": {
+						"type": "boolean",
+						"description": "True when this response created the account rather than signing in to an existing one",
+						"example": false
 					}
 				},
-				"required": ["accessToken", "user"]
+				"required": ["accessToken", "user", "isNewUser"]
 			},
 			"EmailSignupDto": {
 				"type": "object",
@@ -3189,6 +3957,11 @@
 						"example": "correct horse battery staple",
 						"minLength": 12,
 						"maxLength": 128
+					},
+					"weeklyDigest": {
+						"type": "boolean",
+						"example": false,
+						"description": "Consent to the weekly \"routes near you\" email, from an unticked-by-default signup checkbox."
 					}
 				},
 				"required": ["email", "password"]
@@ -3405,6 +4178,195 @@
 				},
 				"required": ["success"]
 			},
+			"OfferPriceDto": {
+				"type": "object",
+				"properties": {
+					"amount": {
+						"type": "number",
+						"example": 2999,
+						"description": "Minor units (cents), VAT-inclusive"
+					},
+					"currency": {
+						"type": "string",
+						"example": "eur"
+					}
+				},
+				"required": ["amount", "currency"]
+			},
+			"BillingOfferDto": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "string",
+						"enum": ["pro_year_pass"],
+						"example": "pro_year_pass"
+					},
+					"plan": {
+						"type": "string",
+						"enum": ["free", "pro"],
+						"example": "pro"
+					},
+					"days": {
+						"type": "number",
+						"example": 365,
+						"description": "Days of the Plan one purchase adds"
+					},
+					"price": {
+						"nullable": true,
+						"description": "Read from the provider for display; null when unavailable. Checkout is authoritative.",
+						"type": "object",
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/OfferPriceDto"
+							}
+						]
+					}
+				},
+				"required": ["id", "plan", "days", "price"]
+			},
+			"GenerationQuotaDto": {
+				"type": "object",
+				"properties": {
+					"anonymous": {
+						"type": "number",
+						"example": 1,
+						"description": "Signed-out, per IP. 0 means no cap."
+					},
+					"free": {
+						"type": "number",
+						"example": 3
+					},
+					"pro": {
+						"type": "number",
+						"example": 50
+					}
+				},
+				"required": ["anonymous", "free", "pro"]
+			},
+			"SavedRoutesAllowanceDto": {
+				"type": "object",
+				"properties": {
+					"count": {
+						"type": "number",
+						"example": 4,
+						"description": "Routes the account has saved"
+					},
+					"limit": {
+						"type": "number",
+						"nullable": true,
+						"example": 5,
+						"description": "How many Routes the account may save; null means unlimited (Pro)"
+					}
+				},
+				"required": ["count", "limit"]
+			},
+			"BillingAccountDto": {
+				"type": "object",
+				"properties": {
+					"plan": {
+						"type": "string",
+						"enum": ["free", "pro"],
+						"example": "pro",
+						"description": "The Plan in effect now"
+					},
+					"proExpiresAt": {
+						"type": "string",
+						"nullable": true,
+						"example": "2027-10-10T12:00:00.000Z",
+						"description": "When Pro ends. Null with plan 'pro' means Pro does not expire."
+					},
+					"ogGrantExpiresAt": {
+						"type": "string",
+						"nullable": true,
+						"description": "End of the one-time OG grant, when this account received it"
+					},
+					"canBuy": {
+						"type": "boolean",
+						"description": "Whether a pass can be bought (or extended) now"
+					},
+					"features": {
+						"type": "array",
+						"description": "The Features this account may use now; the rest answer 403 with details.reason pro_required",
+						"items": {
+							"type": "string",
+							"enum": [
+								"route_generation",
+								"node_network_generation",
+								"unlimited_saved_routes",
+								"collections",
+								"gpx_export",
+								"navigation",
+								"personal_access_tokens"
+							]
+						}
+					},
+					"savedRoutes": {
+						"$ref": "#/components/schemas/SavedRoutesAllowanceDto"
+					}
+				},
+				"required": ["plan", "proExpiresAt", "ogGrantExpiresAt", "canBuy", "features", "savedRoutes"]
+			},
+			"BillingStatusDto": {
+				"type": "object",
+				"properties": {
+					"enabled": {
+						"type": "boolean",
+						"description": "False on instances with BILLING_ENABLED=false; nothing else is sent then."
+					},
+					"offer": {
+						"$ref": "#/components/schemas/BillingOfferDto"
+					},
+					"generationPerDay": {
+						"description": "Daily RouteGeneration allowance per tier",
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/GenerationQuotaDto"
+							}
+						]
+					},
+					"account": {
+						"nullable": true,
+						"description": "Null when signed out",
+						"type": "object",
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/BillingAccountDto"
+							}
+						]
+					}
+				},
+				"required": ["enabled"]
+			},
+			"StartCheckoutDto": {
+				"type": "object",
+				"properties": {
+					"offer": {
+						"type": "string",
+						"enum": ["pro_year_pass"],
+						"default": "pro_year_pass"
+					}
+				}
+			},
+			"CheckoutResponseDto": {
+				"type": "object",
+				"properties": {
+					"url": {
+						"type": "string",
+						"example": "https://checkout.stripe.com/c/pay/cs_test_..."
+					}
+				},
+				"required": ["url"]
+			},
+			"WebhookResponseDto": {
+				"type": "object",
+				"properties": {
+					"received": {
+						"type": "boolean",
+						"example": true
+					}
+				},
+				"required": ["received"]
+			},
 			"WaypointDto": {
 				"type": "object",
 				"properties": {
@@ -3542,7 +4504,12 @@
 					"provenance": {
 						"type": "string",
 						"description": "How this route was produced. Defaults to 'valhalla' for new routes.",
-						"enum": ["valhalla", "mapbox-legacy", "gpx-import", "generation"]
+						"enum": ["valhalla", "mapbox-legacy", "gpx-import", "generation", "external-fork"]
+					},
+					"clientRef": {
+						"type": "string",
+						"description": "Client-chosen idempotency key (a UUID), unique per user. Creating a route with a clientRef the user already has returns that route unchanged instead of a duplicate; the web uses it to claim routes saved on a device into the account.",
+						"format": "uuid"
 					}
 				},
 				"required": ["name", "waypoints"]
@@ -3684,10 +4651,15 @@
 							}
 						]
 					},
+					"surfaceComposition": {
+						"type": "object",
+						"description": "SurfaceBuckets along the RoutePath, derived server-side at save (ADR 0032). Null while derivation is pending or for routes without snapped geometry.",
+						"additionalProperties": true
+					},
 					"provenance": {
 						"type": "string",
 						"description": "How this route was produced.",
-						"enum": ["valhalla", "mapbox-legacy", "gpx-import", "generation"]
+						"enum": ["valhalla", "mapbox-legacy", "gpx-import", "generation", "external-fork"]
 					},
 					"shareToken": {
 						"type": "string",
@@ -3717,6 +4689,32 @@
 					"createdAt",
 					"updatedAt"
 				]
+			},
+			"PublicRouteSourceDto": {
+				"type": "object",
+				"properties": {
+					"key": {
+						"type": "string",
+						"description": "SeedSource key, e.g. 'eurovelo'."
+					},
+					"name": {
+						"type": "string",
+						"description": "Human-readable source name."
+					},
+					"license": {
+						"type": "string",
+						"description": "SPDX-ish license id, e.g. 'ODbL-1.0'."
+					},
+					"attribution": {
+						"type": "string",
+						"description": "Required attribution string."
+					},
+					"url": {
+						"type": "string",
+						"description": "Dataset / homepage URL the attribution links to."
+					}
+				},
+				"required": ["key", "name", "license", "attribution", "url"]
 			},
 			"PublicRouteSummaryDto": {
 				"type": "object",
@@ -3777,6 +4775,14 @@
 					},
 					"user": {
 						"$ref": "#/components/schemas/PublicUserDto"
+					},
+					"source": {
+						"description": "Attribution for a seeded ExternalRoute; absent on user routes (ADR 0035).",
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/PublicRouteSourceDto"
+							}
+						]
 					}
 				},
 				"required": ["id", "name", "updatedAt"]
@@ -3882,8 +4888,388 @@
 								"$ref": "#/components/schemas/RoutingPreferencesDto"
 							}
 						]
+					},
+					"clientRef": {
+						"type": "string",
+						"description": "Client-chosen idempotency key (a UUID), unique per user. Creating a route with a clientRef the user already has returns that route unchanged instead of a duplicate; the web uses it to claim routes saved on a device into the account.",
+						"format": "uuid"
 					}
 				}
+			},
+			"RegionalHubDto": {
+				"type": "object",
+				"properties": {
+					"slug": {
+						"type": "string",
+						"description": "URL slug derived from the place city (kebab-cased ASCII)."
+					},
+					"city": {
+						"type": "string",
+						"description": "Place city as the geocoder returned it (local language)."
+					},
+					"region": {
+						"type": "string",
+						"description": "Place region, e.g. 'Oost-Vlaanderen'."
+					},
+					"countryCode": {
+						"type": "string",
+						"description": "ISO 3166-1 alpha-2 country code."
+					},
+					"activity": {
+						"type": "string",
+						"enum": ["run", "cycle", "walk"]
+					},
+					"indexableCount": {
+						"type": "number",
+						"description": "Indexable routes in this place (Route + ExternalRoute, read-time union)."
+					},
+					"lastModified": {
+						"type": "string",
+						"description": "Most recent updatedAt across the hub's indexable routes (ISO 8601)."
+					}
+				},
+				"required": ["slug", "city", "activity", "indexableCount", "lastModified"]
+			},
+			"TraceShapePointDto": {
+				"type": "object",
+				"properties": {
+					"lat": {
+						"type": "number",
+						"description": "Latitude in WGS84 degrees",
+						"example": 50.8467
+					},
+					"lon": {
+						"type": "number",
+						"description": "Longitude in WGS84 degrees",
+						"example": 4.3525
+					}
+				},
+				"required": ["lat", "lon"]
+			},
+			"TraceAttributesRequestDto": {
+				"type": "object",
+				"properties": {
+					"costing": {
+						"type": "string",
+						"description": "Costing model used by Valhalla to match the shape to edges.",
+						"enum": ["pedestrian", "bicycle", "auto"],
+						"example": "pedestrian"
+					},
+					"shape": {
+						"description": "Recorded shape points to match against the road network. Capped at 1500 points.",
+						"minItems": 2,
+						"maxItems": 1500,
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/TraceShapePointDto"
+						}
+					}
+				},
+				"required": ["costing", "shape"]
+			},
+			"TraceAttributesEdgeDto": {
+				"type": "object",
+				"properties": {
+					"surface": {
+						"type": "string",
+						"description": "OSM surface classification for the edge."
+					},
+					"length": {
+						"type": "number",
+						"description": "Edge length in kilometers."
+					},
+					"begin_shape_index": {
+						"type": "number",
+						"description": "Index of the first shape point covered by this edge."
+					},
+					"end_shape_index": {
+						"type": "number",
+						"description": "Index of the last shape point covered by this edge."
+					}
+				}
+			},
+			"TraceAttributesResponseDto": {
+				"type": "object",
+				"properties": {
+					"edges": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/TraceAttributesEdgeDto"
+						}
+					},
+					"shape": {
+						"type": "string",
+						"description": "Polyline6-encoded matched shape returned by Valhalla."
+					}
+				},
+				"required": ["edges"]
+			},
+			"RouteLocationDto": {
+				"type": "object",
+				"properties": {
+					"lat": {
+						"type": "number",
+						"description": "Latitude in WGS84 degrees",
+						"example": 50.8467
+					},
+					"lon": {
+						"type": "number",
+						"description": "Longitude in WGS84 degrees",
+						"example": 4.3525
+					}
+				},
+				"required": ["lat", "lon"]
+			},
+			"RouteRequestDto": {
+				"type": "object",
+				"properties": {
+					"activity": {
+						"type": "string",
+						"description": "Activity that determines the Valhalla costing model (bicycle vs pedestrian).",
+						"enum": ["run", "cycle", "walk"],
+						"example": "cycle"
+					},
+					"preferences": {
+						"description": "Routes preferences inputs that shape the route. Translated to Valhalla costing server-side.",
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/RoutingPreferencesDto"
+							}
+						]
+					},
+					"locations": {
+						"description": "Locations to route through, in order. Capped at 25.",
+						"minItems": 2,
+						"maxItems": 25,
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/RouteLocationDto"
+						}
+					},
+					"walkingSpeedKmh": {
+						"type": "number",
+						"description": "Walking speed in kilometers per hour. Only applied to pedestrian routing.",
+						"minimum": 0.5,
+						"maximum": 25
+					}
+				},
+				"required": ["activity", "preferences", "locations"]
+			},
+			"RouteLegSummaryDto": {
+				"type": "object",
+				"properties": {
+					"length": {
+						"type": "number",
+						"description": "Leg length in kilometers."
+					},
+					"time": {
+						"type": "number",
+						"description": "Leg duration in seconds."
+					}
+				},
+				"required": ["length", "time"]
+			},
+			"RouteLegDto": {
+				"type": "object",
+				"properties": {
+					"shape": {
+						"type": "string",
+						"description": "Polyline6-encoded shape of the leg."
+					},
+					"summary": {
+						"$ref": "#/components/schemas/RouteLegSummaryDto"
+					}
+				},
+				"required": ["shape", "summary"]
+			},
+			"RouteSnappedLocationDto": {
+				"type": "object",
+				"properties": {
+					"lat": {
+						"type": "number",
+						"description": "Snapped latitude (may differ from input)."
+					},
+					"lon": {
+						"type": "number",
+						"description": "Snapped longitude (may differ from input)."
+					},
+					"original_index": {
+						"type": "number",
+						"description": "Index of the originally-supplied location, when Valhalla returns it."
+					}
+				},
+				"required": ["lat", "lon"]
+			},
+			"RoutingRouteResponseDto": {
+				"type": "object",
+				"properties": {
+					"legs": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/RouteLegDto"
+						}
+					},
+					"locations": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/RouteSnappedLocationDto"
+						}
+					}
+				},
+				"required": ["legs", "locations"]
+			},
+			"CuesRequestDto": {
+				"type": "object",
+				"properties": {
+					"routeId": {
+						"type": "number",
+						"description": "Id of a saved Route to navigate. Only public and unlisted routes resolve on this anonymous endpoint; clients holding a private route send its geometry instead."
+					},
+					"externalRouteId": {
+						"type": "number",
+						"description": "Id of an ExternalRoute to navigate."
+					},
+					"geometry": {
+						"type": "string",
+						"description": "Polyline6-encoded RoutePath to navigate, for unsaved drafts and private routes. Exactly one of routeId, externalRouteId, or geometry must be provided.",
+						"maxLength": 250000
+					},
+					"activity": {
+						"type": "string",
+						"enum": ["run", "cycle", "walk"],
+						"description": "Drives the costing model and narrative phrasing."
+					},
+					"locale": {
+						"type": "string",
+						"enum": ["en", "nl", "fr", "de"],
+						"default": "en",
+						"description": "Language of the cue texts."
+					}
+				},
+				"required": ["activity"]
+			},
+			"CueDto": {
+				"type": "object",
+				"properties": {
+					"kind": {
+						"type": "string",
+						"enum": ["maneuver", "node", "followPath"]
+					},
+					"shapeIndex": {
+						"type": "number",
+						"description": "Index into the stored RoutePath the cue is anchored to."
+					},
+					"distanceAlongMeters": {
+						"type": "number",
+						"description": "Distance from the route start to the cue, in meters along the RoutePath."
+					},
+					"text": {
+						"type": "string",
+						"description": "Localized cue text; banner and voice present it verbatim."
+					},
+					"streetNames": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					},
+					"maneuverType": {
+						"type": "number",
+						"description": "Valhalla maneuver type, when kind is maneuver."
+					},
+					"nodeRef": {
+						"type": "string",
+						"description": "NodeNetwork ref, when kind is node."
+					},
+					"nodeNextRef": {
+						"type": "string",
+						"description": "The next NodeNetwork ref along the route, when kind is node."
+					}
+				},
+				"required": ["kind", "shapeIndex", "distanceAlongMeters", "text"]
+			},
+			"CuesResponseDto": {
+				"type": "object",
+				"properties": {
+					"cues": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/CueDto"
+						}
+					},
+					"degraded": {
+						"type": "boolean",
+						"description": "True when map-matching failed and the cues degrade to a single follow-the-path cue. Degraded responses are never cached."
+					}
+				},
+				"required": ["cues", "degraded"]
+			},
+			"ExternalRouteResponseDto": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "number"
+					},
+					"slugId": {
+						"type": "string",
+						"description": "Public route page slug-id, '-x{id}' form."
+					},
+					"name": {
+						"type": "string"
+					},
+					"description": {
+						"type": "string"
+					},
+					"activity": {
+						"type": "string",
+						"enum": ["run", "cycle", "walk"]
+					},
+					"tags": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					},
+					"geometry": {
+						"description": "Full RoutePath as [lng, lat] pairs.",
+						"type": "array",
+						"items": {
+							"type": "string"
+						}
+					},
+					"distance": {
+						"type": "number",
+						"description": "Distance in meters"
+					},
+					"duration": {
+						"type": "number",
+						"description": "Duration in seconds"
+					},
+					"elevationGain": {
+						"type": "number",
+						"description": "Elevation gain in meters"
+					},
+					"placeCity": {
+						"type": "string"
+					},
+					"placeRegion": {
+						"type": "string"
+					},
+					"placeCountryCode": {
+						"type": "string"
+					},
+					"source": {
+						"$ref": "#/components/schemas/PublicRouteSourceDto"
+					},
+					"kind": {
+						"type": "string",
+						"description": "Always 'external' so clients can branch on the route kind."
+					},
+					"updatedAt": {
+						"type": "string"
+					}
+				},
+				"required": ["id", "slugId", "name", "tags", "geometry", "source", "kind", "updatedAt"]
 			},
 			"CollectionResponseDto": {
 				"type": "object",
@@ -4339,7 +5725,63 @@
 				},
 				"required": ["unread"]
 			},
-			"TraceShapePointDto": {
+			"NotificationItemDto": {
+				"type": "object",
+				"properties": {
+					"type": {
+						"type": "string",
+						"enum": ["follow", "route_share"],
+						"example": "follow"
+					},
+					"actor": {
+						"$ref": "#/components/schemas/ProfileSummaryDto"
+					},
+					"shareId": {
+						"type": "number",
+						"example": 7,
+						"description": "RouteShare id; route_share items only"
+					},
+					"routeName": {
+						"type": "string",
+						"example": "Sunday gravel loop",
+						"nullable": true,
+						"description": "Live reference; null when the route is deleted or private again"
+					},
+					"createdAt": {
+						"type": "string",
+						"example": "2026-06-05T09:00:00.000Z"
+					}
+				},
+				"required": ["type", "actor", "createdAt"]
+			},
+			"NotificationsResponseDto": {
+				"type": "object",
+				"properties": {
+					"items": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/NotificationItemDto"
+						}
+					},
+					"seenAt": {
+						"type": "string",
+						"example": "2026-06-05T08:00:00.000Z",
+						"nullable": true
+					}
+				},
+				"required": ["items"]
+			},
+			"NotificationUnseenCountDto": {
+				"type": "object",
+				"properties": {
+					"unseen": {
+						"type": "number",
+						"example": 3
+					}
+				},
+				"required": ["unseen"]
+			},
+			"GenerationAnchorDto": {
 				"type": "object",
 				"properties": {
 					"lat": {
@@ -4351,187 +5793,42 @@
 						"type": "number",
 						"description": "Longitude in WGS84 degrees",
 						"example": 4.3525
+					},
+					"ref": {
+						"type": "string",
+						"description": "NodeNetwork Node number when the anchor is a Node.",
+						"example": "45"
+					},
+					"name": {
+						"type": "string",
+						"description": "Display name (a POI landmark, a geocoded place)."
+					},
+					"required": {
+						"type": "boolean",
+						"description": "true = must-pass: injected as a via into every candidate. false/absent = snap pool: nearby candidate vias move onto it. Anchors are hints; the server still validates and scores everything."
 					}
 				},
 				"required": ["lat", "lon"]
-			},
-			"TraceAttributesRequestDto": {
-				"type": "object",
-				"properties": {
-					"costing": {
-						"type": "string",
-						"description": "Costing model used by Valhalla to match the shape to edges.",
-						"enum": ["pedestrian", "bicycle", "auto"],
-						"example": "pedestrian"
-					},
-					"shape": {
-						"description": "Recorded shape points to match against the road network. Capped at 1500 points.",
-						"minItems": 2,
-						"maxItems": 1500,
-						"type": "array",
-						"items": {
-							"$ref": "#/components/schemas/TraceShapePointDto"
-						}
-					}
-				},
-				"required": ["costing", "shape"]
-			},
-			"TraceAttributesEdgeDto": {
-				"type": "object",
-				"properties": {
-					"surface": {
-						"type": "string",
-						"description": "OSM surface classification for the edge."
-					},
-					"length": {
-						"type": "number",
-						"description": "Edge length in kilometers."
-					},
-					"begin_shape_index": {
-						"type": "number",
-						"description": "Index of the first shape point covered by this edge."
-					},
-					"end_shape_index": {
-						"type": "number",
-						"description": "Index of the last shape point covered by this edge."
-					}
-				}
-			},
-			"TraceAttributesResponseDto": {
-				"type": "object",
-				"properties": {
-					"edges": {
-						"type": "array",
-						"items": {
-							"$ref": "#/components/schemas/TraceAttributesEdgeDto"
-						}
-					},
-					"shape": {
-						"type": "string",
-						"description": "Polyline6-encoded matched shape returned by Valhalla."
-					}
-				},
-				"required": ["edges"]
-			},
-			"RouteLocationDto": {
-				"type": "object",
-				"properties": {
-					"lat": {
-						"type": "number",
-						"description": "Latitude in WGS84 degrees",
-						"example": 50.8467
-					},
-					"lon": {
-						"type": "number",
-						"description": "Longitude in WGS84 degrees",
-						"example": 4.3525
-					}
-				},
-				"required": ["lat", "lon"]
-			},
-			"RouteRequestDto": {
-				"type": "object",
-				"properties": {
-					"activity": {
-						"type": "string",
-						"description": "Activity that determines the Valhalla costing model (bicycle vs pedestrian).",
-						"enum": ["run", "cycle", "walk"],
-						"example": "cycle"
-					},
-					"preferences": {
-						"description": "Routes preferences inputs that shape the route. Translated to Valhalla costing server-side.",
-						"allOf": [
-							{
-								"$ref": "#/components/schemas/RoutingPreferencesDto"
-							}
-						]
-					},
-					"locations": {
-						"description": "Locations to route through, in order. Capped at 25.",
-						"minItems": 2,
-						"maxItems": 25,
-						"type": "array",
-						"items": {
-							"$ref": "#/components/schemas/RouteLocationDto"
-						}
-					},
-					"walkingSpeedKmh": {
-						"type": "number",
-						"description": "Walking speed in kilometers per hour. Only applied to pedestrian routing.",
-						"minimum": 0.5,
-						"maximum": 25
-					}
-				},
-				"required": ["activity", "preferences", "locations"]
-			},
-			"RouteLegSummaryDto": {
-				"type": "object",
-				"properties": {
-					"length": {
-						"type": "number",
-						"description": "Leg length in kilometers."
-					},
-					"time": {
-						"type": "number",
-						"description": "Leg duration in seconds."
-					}
-				},
-				"required": ["length", "time"]
-			},
-			"RouteLegDto": {
-				"type": "object",
-				"properties": {
-					"shape": {
-						"type": "string",
-						"description": "Polyline6-encoded shape of the leg."
-					},
-					"summary": {
-						"$ref": "#/components/schemas/RouteLegSummaryDto"
-					}
-				},
-				"required": ["shape", "summary"]
-			},
-			"RouteSnappedLocationDto": {
-				"type": "object",
-				"properties": {
-					"lat": {
-						"type": "number",
-						"description": "Snapped latitude (may differ from input)."
-					},
-					"lon": {
-						"type": "number",
-						"description": "Snapped longitude (may differ from input)."
-					},
-					"original_index": {
-						"type": "number",
-						"description": "Index of the originally-supplied location, when Valhalla returns it."
-					}
-				},
-				"required": ["lat", "lon"]
-			},
-			"RoutingRouteResponseDto": {
-				"type": "object",
-				"properties": {
-					"legs": {
-						"type": "array",
-						"items": {
-							"$ref": "#/components/schemas/RouteLegDto"
-						}
-					},
-					"locations": {
-						"type": "array",
-						"items": {
-							"$ref": "#/components/schemas/RouteSnappedLocationDto"
-						}
-					}
-				},
-				"required": ["legs", "locations"]
 			},
 			"GenerateRequestDto": {
 				"type": "object",
 				"properties": {
 					"start": {
 						"description": "Loop start point; the generated route begins and ends here.",
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/RouteLocationDto"
+							}
+						]
+					},
+					"routeType": {
+						"type": "string",
+						"description": "Generated RouteType. `loop` (default) returns to the start; `a-to-b` requires `end`.",
+						"enum": ["loop", "a-to-b"],
+						"default": "loop"
+					},
+					"end": {
+						"description": "Destination for a-to-b generation; the route is stretched toward targetDistanceKm.",
 						"allOf": [
 							{
 								"$ref": "#/components/schemas/RouteLocationDto"
@@ -4566,9 +5863,46 @@
 						"items": {
 							"type": "number"
 						}
+					},
+					"anchors": {
+						"description": "Explicit Anchors (POI landmarks, agent hints). Pool anchors attract nearby vias; must-pass anchors are injected as vias. Validated server-side: garbage anchors cannot produce off-network or out-of-area routes.",
+						"maxItems": 200,
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/GenerationAnchorDto"
+						}
+					},
+					"preferNodeNetworks": {
+						"type": "boolean",
+						"description": "Soft knooppunt mode (ADR-0037): the server derives a NodeNetwork anchor pool around the start, snaps vias onto Nodes, and scores NetworkFit. Out of coverage it degrades silently to plain generation."
 					}
 				},
 				"required": ["start", "activity", "targetDistanceKm", "heading", "preferences"]
+			},
+			"GenerationViaPointDto": {
+				"type": "object",
+				"properties": {
+					"lat": {
+						"type": "number",
+						"description": "Latitude in WGS84 degrees",
+						"example": 50.8467
+					},
+					"lon": {
+						"type": "number",
+						"description": "Longitude in WGS84 degrees",
+						"example": 4.3525
+					},
+					"ref": {
+						"type": "string",
+						"description": "NodeNetwork Node number when this via sits on a Node.",
+						"example": "45"
+					},
+					"name": {
+						"type": "string",
+						"description": "Anchor display name (POI landmark)."
+					}
+				},
+				"required": ["lat", "lon"]
 			},
 			"GenerationCandidateDto": {
 				"type": "object",
@@ -4578,10 +5912,10 @@
 						"description": "Fan bearing that produced this candidate, in degrees."
 					},
 					"viaPoints": {
-						"description": "Snapped via points in loop order (excluding the start). Confirming the candidate turns start + vias + start into the draft's Waypoints.",
+						"description": "Snapped via points in loop order (excluding the start). Confirming the candidate turns start + vias + start into the draft's Waypoints. Vias on a NodeNetwork Node carry its ref.",
 						"type": "array",
 						"items": {
-							"$ref": "#/components/schemas/RouteLocationDto"
+							"$ref": "#/components/schemas/GenerationViaPointDto"
 						}
 					},
 					"shape": {
@@ -4607,6 +5941,10 @@
 					"lowQuality": {
 						"type": "boolean",
 						"description": "True when the candidate is shown with a quality badge (elevated Overlap)."
+					},
+					"networkFitPct": {
+						"type": "number",
+						"description": "NetworkFit: % of the candidate riding the NodeNetwork (0..100). Only present when knooppunt mode was active and a Node pool was found."
 					},
 					"surfaceMetersByBucket": {
 						"type": "object",
@@ -4639,6 +5977,7 @@
 						"enum": [
 							"invalid_input",
 							"start_not_routable",
+							"end_not_routable",
 							"no_candidates_routable",
 							"all_candidates_low_quality",
 							"all_bearings_excluded",
@@ -4672,6 +6011,38 @@
 					}
 				},
 				"required": ["candidates"]
+			},
+			"AdminGrantProDto": {
+				"type": "object",
+				"properties": {
+					"reason": {
+						"type": "string",
+						"example": "Refunded in Stripe",
+						"description": "Why; kept in the audit log"
+					},
+					"days": {
+						"type": "number",
+						"example": 30,
+						"description": "Days of Pro from now, 1 to 3650"
+					},
+					"permanent": {
+						"type": "boolean",
+						"example": false,
+						"description": "Pro that does not expire (a comp); excludes `days`"
+					}
+				},
+				"required": ["reason"]
+			},
+			"AdminProReasonDto": {
+				"type": "object",
+				"properties": {
+					"reason": {
+						"type": "string",
+						"example": "Refunded in Stripe",
+						"description": "Why; kept in the audit log"
+					}
+				},
+				"required": ["reason"]
 			}
 		}
 	}

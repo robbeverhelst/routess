@@ -1,0 +1,5 @@
+{
+	"title": "Billing",
+	"description": "Pro year pass checkout, Stripe webhook and billing status (ADR-0039)",
+	"pages": ["get-billing", "post-billing-checkout", "post-billing-webhook"]
+}

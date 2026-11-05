@@ -73,6 +73,17 @@ jobs:
       - name: Build packages
         run: bun --bun run --filter './packages/*' build
 
+      # Regenerates the OpenAPI spec and the docs API reference built from it;
+      # fails when the committed copies are stale (run `bun run docs:generate-api`).
+      - name: OpenAPI drift
+        run: |
+          bun --bun run docs:generate-api
+          if [ -n "$(git status --porcelain -- apps/docs/openapi apps/docs/content/api)" ]; then
+            git status --short -- apps/docs/openapi apps/docs/content/api
+            echo "::error::OpenAPI spec or docs API reference is stale; run 'bun run docs:generate-api' and commit the result."
+            exit 1
+          fi
+
       - name: Type-check
         run: bun --bun run --filter '*' check-types
 
