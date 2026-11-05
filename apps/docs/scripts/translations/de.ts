@@ -1096,7 +1096,7 @@ translationStatus: machine-draft
 ## So funktioniert es
 
 1. Ziehe eine Datei auf das Dialogfenster oder klicke auf **Datei auswählen**.
-2. Wähle, wohin sie geht: **Im Planer öffnen**, um sie zuerst auf der Karte zu prüfen und zu bearbeiten, oder **In Bibliothek speichern**, um sie direkt als gespeicherte Route abzulegen. Abgemeldet speichert **In Bibliothek speichern** die Route auf diesem Gerät; sie wandert in dein Konto, sobald du dich anmeldest. Das Speichern in der Bibliothek erfordert ein Konto; abgemeldet verweist diese Option dich auf die Anmeldung.
+2. Wähle, wohin sie geht: **Im Planer öffnen**, um sie zuerst auf der Karte zu prüfen und zu bearbeiten, oder **In Bibliothek speichern**, um sie direkt als gespeicherte Route abzulegen. Abgemeldet speichert **In Bibliothek speichern** die Route auf diesem Gerät; sie wandert in dein Konto, sobald du dich anmeldest.
 3. routess liest den Track und erkennt den Aktivitätstyp, oder du wählst ihn selbst aus.
 
 Routen, die direkt in der Bibliothek gespeichert werden, übernehmen ihren Namen aus den Metadaten der GPX-Datei und greifen ersatzweise auf den Dateinamen zurück.

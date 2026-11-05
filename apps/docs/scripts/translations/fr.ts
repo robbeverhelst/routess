@@ -906,7 +906,7 @@ description: Parcourez, recherchez, filtrez et triez vos itinéraires enregistr�
 translationStatus: machine-draft
 ---
 
-Ouvrez **Bibliothèque** depuis la barre latérale de gauche (ou la barre d'onglets du bas sur un téléphone) pour voir tout ce que vous avez enregistré. Déconnecté, la bibliothèque liste les [itinéraires enregistrés sur cet appareil](/fr/guide/routes/saving-routes#et-si-je-ne-suis-pas-connecté), ou une invite de connexion s'il n'y en a pas encore.
+Ouvrez **Bibliothèque** depuis la barre latérale de gauche (ou la barre d'onglets du bas sur un téléphone) pour voir tout ce que vous avez enregistré. Déconnecté, la bibliothèque liste les [itinéraires enregistrés sur cet appareil](/fr/guide/routes/saving-routes#et-si-je-ne-suis-pas-connecté-), ou une invite de connexion s'il n'y en a pas encore.
 
 ![L'onglet Itinéraires de la bibliothèque avec cartes d'itinéraires, puces d'activité et filtres](/guide/library.jpg)
 
@@ -1099,7 +1099,7 @@ Ouvrez **Importer** depuis le panneau de planification, la bibliothèque ou la p
 ## Comment ça marche
 
 1. Déposez un fichier sur la boîte de dialogue ou cliquez sur **Choisir un fichier**.
-2. Choisissez sa destination : **Ouvrir dans le planificateur** pour le vérifier et le modifier d'abord sur la carte, ou **Enregistrer dans la bibliothèque** pour le stocker directement comme itinéraire enregistré. Enregistrer dans la bibliothèque nécessite un compte ; déconnecté, cette option vous redirige vers la connexion. Déconnecté, **Enregistrer dans la bibliothèque** enregistre l'itinéraire sur cet appareil ; il est transféré dans votre compte lorsque vous vous connectez.
+2. Choisissez sa destination : **Ouvrir dans le planificateur** pour le vérifier et le modifier d'abord sur la carte, ou **Enregistrer dans la bibliothèque** pour le stocker directement comme itinéraire enregistré. Déconnecté, **Enregistrer dans la bibliothèque** enregistre l'itinéraire sur cet appareil ; il est transféré dans votre compte lorsque vous vous connectez.
 3. routess lit la trace et détecte le type d'activité, ou vous en choisissez un vous-même.
 
 Les itinéraires enregistrés directement dans la bibliothèque prennent leur nom dans les métadonnées du fichier GPX, à défaut du nom du fichier.
