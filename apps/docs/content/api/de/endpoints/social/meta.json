@@ -1,0 +1,19 @@
+{
+	"title": "Social",
+	"pages": [
+		"post-social-follows-handle",
+		"delete-social-follows-handle",
+		"get-social-follows",
+		"get-social-feed",
+		"post-social-shares",
+		"get-social-shares-inbox",
+		"get-social-shares-unread-count",
+		"post-social-shares-id-read",
+		"delete-social-shares-id",
+		"post-social-shares-id-copy",
+		"get-social-notifications",
+		"get-social-notifications-unseen-count",
+		"post-social-notifications-seen",
+		"get-social-users-search"
+	]
+}
