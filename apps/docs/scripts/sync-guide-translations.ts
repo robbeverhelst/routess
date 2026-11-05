@@ -27,6 +27,8 @@ for (const locale of Object.keys(pages) as Locale[]) {
 	await writeJson(`${locale}/meta.json`, meta.root[locale]);
 	await writeJson(`${locale}/getting-started/meta.json`, meta.gettingStarted[locale]);
 	await writeJson(`${locale}/routes/meta.json`, meta.routes[locale]);
+	await writeJson(`${locale}/library/meta.json`, meta.library[locale]);
+	await writeJson(`${locale}/social/meta.json`, meta.social[locale]);
 	await writeJson(`${locale}/map/meta.json`, meta.map[locale]);
 	await writeJson(`${locale}/account/meta.json`, meta.account[locale]);
 
