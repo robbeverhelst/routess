@@ -17,7 +17,7 @@ env:
 
 jobs:
   test:
-    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || 'arc-routess' }}
+    runs-on: arc-routess
     # The suite grew from ~5 to ~9 min with billing; at 15 the cache save after a
     # green run got cut off, cancelling release and the npm publish. At 25 a slow
     # self-hosted line (container init, checkout, setup-bun and a stalled cache
@@ -95,9 +95,9 @@ jobs:
 
   e2e:
     # Browser E2E against a `vite preview` build with the API and Stripe faked
-    # (apps/web/e2e). Hosted runner: Playwright installs Chromium's system
-    # libraries with apt, which needs sudo.
-    runs-on: ubuntu-latest
+    # (apps/web/e2e). Playwright installs Chromium's system libraries with apt,
+    # which needs sudo on the runner.
+    runs-on: arc-routess
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -122,7 +122,7 @@ jobs:
         run: bun --bun run test:e2e
 
   helm-validate:
-    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || 'arc-routess' }}
+    runs-on: arc-routess
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
@@ -149,7 +149,7 @@ jobs:
       - test
       - helm-validate
       - e2e
-    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || 'arc-routess' }}
+    runs-on: arc-routess
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     outputs:
       released: ${{ steps.release-meta.outputs.released }}
@@ -201,7 +201,7 @@ jobs:
 
   publish-images:
     needs: release
-    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || 'arc-routess' }}
+    runs-on: arc-routess
     if: needs.release.outputs.released == 'true'
     timeout-minutes: 30
     permissions:
@@ -360,7 +360,7 @@ jobs:
     needs:
       - release
       - publish-images
-    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || 'arc-routess' }}
+    runs-on: arc-routess
     if: needs.release.outputs.released == 'true'
     permissions:
       contents: write

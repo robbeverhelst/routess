@@ -17,7 +17,7 @@ env:
 
 jobs:
   build-deps:
-    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || 'arc-routess' }}
+    runs-on: arc-routess
     timeout-minutes: 20
     permissions:
       contents: read
