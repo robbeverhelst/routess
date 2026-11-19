@@ -4,6 +4,8 @@ Route-planning app for cyclists, runners, and hikers. See `CONTEXT.md` for the d
 
 ## Stack
 
+**Target stack (Robbe, 19 Nov 2026): app stack** (Bun + Hono, Bun.SQL, React 19 + TanStack, Tailwind 4, shadcn/ui for every component). New work follows it; the list below is what the code runs today. Rule: `~/.openclaw/workspace/knowledge/engineering/stacks.md`.
+
 - Bun workspaces (`apps/*`, `packages/*`); no Turborepo, just `bun run --filter`
 - `apps/api`: NestJS + PostgreSQL + MikroORM
 - `apps/web`: React + Vite + Tailwind + Mapbox
