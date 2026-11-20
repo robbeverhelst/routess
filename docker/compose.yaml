@@ -2,7 +2,7 @@ name: routess
 
 services:
   postgres:
-    image: postgres:18
+    image: postgres:19
     environment:
       POSTGRES_DB: ${DB_NAME:-routess_db}
       POSTGRES_USER: ${DB_USER:-postgres}
