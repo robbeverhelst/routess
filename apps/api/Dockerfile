@@ -1,7 +1,7 @@
 ARG DEPS_IMAGE
 FROM ${DEPS_IMAGE} AS deps
 
-FROM oven/bun:1.4.4-alpine AS builder
+FROM oven/bun:1.4.5-alpine AS builder
 
 WORKDIR /app
 
@@ -17,7 +17,7 @@ RUN bun run --filter './packages/*' build && bun run --filter './apps/api' build
 # Playwright, ...). The runtime image gets a fresh production-only install of
 # the api workspace instead, so none of that ships.
 # Pinned by digest: the stages that ship use the Alpine 3.24 base.
-FROM oven/bun:1.4.4-alpine@sha256:4cf82f5686b196504fe119db3fcd9185b191f82ece82c40680e597228ec6070a AS prod-deps
+FROM oven/bun:1.4.5-alpine@sha256:da816670775f4c2b4e990b6b1847cf5540dcdc721a42033dd331ce7a88ba6a3b AS prod-deps
 
 WORKDIR /app
 
@@ -34,7 +34,7 @@ COPY packages/i18n/package.json ./packages/i18n/
 
 RUN bun install --frozen-lockfile --ignore-scripts --production --filter api
 
-FROM oven/bun:1.4.4-alpine@sha256:4cf82f5686b196504fe119db3fcd9185b191f82ece82c40680e597228ec6070a AS production
+FROM oven/bun:1.4.5-alpine@sha256:da816670775f4c2b4e990b6b1847cf5540dcdc721a42033dd331ce7a88ba6a3b AS production
 
 WORKDIR /app
 
