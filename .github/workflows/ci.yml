@@ -22,7 +22,7 @@ env:
 
 jobs:
   test:
-    runs-on: arc-routess
+    runs-on: ubuntu-latest
     # The suite grew from ~5 to ~9 min with billing; at 15 the cache save after a
     # green run got cut off, cancelling release and the npm publish. At 25 a slow
     # self-hosted line (container init, checkout, setup-bun and a stalled cache
@@ -102,7 +102,7 @@ jobs:
     # Browser E2E against a `vite preview` build with the API and Stripe faked
     # (apps/web/e2e). Playwright installs Chromium's system libraries with apt,
     # which needs sudo on the runner.
-    runs-on: arc-routess
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -127,7 +127,7 @@ jobs:
         run: bun --bun run test:e2e
 
   helm-validate:
-    runs-on: arc-routess
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
