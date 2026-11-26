@@ -4503,8 +4503,13 @@
 					},
 					"provenance": {
 						"type": "string",
-						"description": "How this route was produced. Defaults to 'valhalla' for new routes.",
+						"description": "How this route was produced. Defaults to 'valhalla' for new routes. 'external-fork' is set by the server from forkedFromExternalRouteId and is rejected without it.",
 						"enum": ["valhalla", "mapbox-legacy", "gpx-import", "generation", "external-fork"]
+					},
+					"forkedFromExternalRouteId": {
+						"type": "number",
+						"description": "Id of the ExternalRoute this route's geometry was forked from. The route is then saved with provenance 'external-fork' and inherits the source's license and attribution (ADR 0035); any provenance sent alongside is ignored.",
+						"example": 42
 					},
 					"clientRef": {
 						"type": "string",
@@ -4541,6 +4546,24 @@
 					}
 				},
 				"required": ["coord", "type"]
+			},
+			"ForkedFromExternalRouteDto": {
+				"type": "object",
+				"properties": {
+					"externalRouteId": {
+						"type": "number",
+						"description": "Id of the ExternalRoute the geometry was forked from."
+					},
+					"license": {
+						"type": "string",
+						"description": "License inherited from the ExternalRoute's SeedSource, e.g. ODbL-1.0."
+					},
+					"attribution": {
+						"type": "string",
+						"description": "Attribution string inherited from the SeedSource."
+					}
+				},
+				"required": ["externalRouteId"]
 			},
 			"PublicUserDto": {
 				"type": "object",
@@ -4661,6 +4684,16 @@
 						"description": "How this route was produced.",
 						"enum": ["valhalla", "mapbox-legacy", "gpx-import", "generation", "external-fork"]
 					},
+					"forkedFrom": {
+						"description": "Set when the route was forked from an ExternalRoute (provenance external-fork): the source route and the license and attribution it inherited, which must be shown wherever the route is (ADR 0035). Null otherwise.",
+						"nullable": true,
+						"type": "object",
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/ForkedFromExternalRouteDto"
+							}
+						]
+					},
 					"shareToken": {
 						"type": "string",
 						"description": "Unguessable 32-hex handle for share links. Unlisted routes are only reachable anonymously via this token.",
@@ -4684,6 +4717,7 @@
 					"favourite",
 					"waypoints",
 					"provenance",
+					"forkedFrom",
 					"shareToken",
 					"user",
 					"createdAt",

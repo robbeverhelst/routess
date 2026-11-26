@@ -4,6 +4,8 @@ import { CacheService } from "../cache/cache.service";
 import type { AppConfig } from "../config/app-config";
 import type { MetricsService } from "../telemetry/metrics.service";
 import { RoutingService } from "./routing.service";
+import { ValhallaEngine } from "./valhalla-engine";
+import { ValhallaHttp } from "./valhalla-http";
 
 const originalFetch = globalThis.fetch;
 
@@ -17,7 +19,7 @@ function makeService(): { service: RoutingService; fetchCalls: () => number } {
 		recordCacheEvent: () => undefined,
 	} as unknown as MetricsService;
 	const cache = new CacheService(config, metrics);
-	const service = new RoutingService(config, metrics, cache);
+	const service = new RoutingService(new ValhallaEngine(new ValhallaHttp(config, metrics), cache));
 	return { service, fetchCalls: () => calls };
 }
 

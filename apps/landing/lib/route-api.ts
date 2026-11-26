@@ -22,6 +22,8 @@ export interface PublicRoute {
 	// anonymously via this token (numeric ids are public-only).
 	shareToken: string;
 	user?: { name: string; handle: string };
+	// Set when the route was forked from an ExternalRoute (ADR 0035).
+	forkedFrom?: { externalRouteId: number; license?: string; attribution?: string } | null;
 }
 
 export interface PublicRouteSummary {

@@ -3,8 +3,8 @@ import { Injectable, Logger } from "@nestjs/common";
 import { downsampleCoordinates, surfaceCompositionFromEdges, valhallaCostingModelForActivity } from "@routess/core";
 
 import { Route } from "../entities/route.entity";
-import type { ValhallaCosting } from "../routing/dto/trace-attributes.dto";
-import { RoutingService } from "../routing/routing.service";
+import { RoutingEngine } from "../routing/routing-engine";
+import { traceSurfaceEdges } from "../routing/routing.service";
 
 const MAX_SHAPE_POINTS = 1500;
 
@@ -18,7 +18,7 @@ export class SurfaceCompositionService {
 
 	constructor(
 		private readonly em: EntityManager,
-		private readonly routing: RoutingService,
+		private readonly engine: RoutingEngine,
 	) {}
 
 	// Fire-and-forget entry point used after route saves. Forks the EM so it
@@ -29,8 +29,8 @@ export class SurfaceCompositionService {
 			const route = await em.findOne(Route, { id: routeId });
 			if (!route?.geometry || route.geometry.length < 2) return;
 			const shape = downsampleCoordinates(route.geometry, MAX_SHAPE_POINTS).map(([lng, lat]) => ({ lat, lon: lng }));
-			const costing = valhallaCostingModelForActivity(route.activity ?? "cycle") as ValhallaCosting;
-			const data = await this.routing.traceAttributes({ shape, costing });
+			const costing = valhallaCostingModelForActivity(route.activity ?? "cycle");
+			const data = await traceSurfaceEdges(this.engine, shape, costing);
 			const composition = surfaceCompositionFromEdges(data.edges, data.shape);
 			if (!composition) return;
 			route.surfaceComposition = composition;

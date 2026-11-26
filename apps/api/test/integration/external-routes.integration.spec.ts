@@ -130,6 +130,66 @@ describe("ExternalRoutes (ADR 0035)", () => {
 		expect(res.body.slugId).toBe(`eurovelo-5-x${id}`);
 	});
 
+	describe("forking into a user Route", () => {
+		const forkBody = (externalRouteId: number) => ({
+			name: "My EuroVelo 5",
+			activity: "cycle",
+			waypoints: [
+				{ coord: GEOMETRY[0], type: "routed" },
+				{ coord: GEOMETRY[2], type: "routed" },
+			],
+			geometry: GEOMETRY,
+			distance: 45_000,
+			forkedFromExternalRouteId: externalRouteId,
+		});
+
+		it("saves Provenance external-fork with lineage and the inherited license", async () => {
+			const { user, accessToken } = await createTestUserWithAuth(app, { email: "forker@example.com" });
+			const sourceId = await createSeedSource(app);
+			const id = await createExternalRoute(app, sourceId, { name: "EuroVelo 5", sourceRecordId: "ev5" });
+
+			const res = await request(app.getHttpServer())
+				.post("/api/v1/routes")
+				.set("Authorization", `Bearer ${accessToken}`)
+				.send({ ...forkBody(id), provenance: "valhalla" })
+				.expect(201);
+
+			expect(res.body.provenance).toBe("external-fork");
+			expect(res.body.visibility).toBe("private");
+			expect(res.body.forkedFrom).toEqual({
+				externalRouteId: id,
+				license: "ODbL-1.0",
+				attribution: "© EuroVelo / European Cyclists' Federation, ODbL",
+			});
+			const orm = app.get(MikroORM);
+			const stored = await withRequestContext(app, () =>
+				orm.em.fork().findOneOrFail(Route, { id: res.body.id, user: user.id }),
+			);
+			expect(stored.sourceLicense).toBe("ODbL-1.0");
+		});
+
+		it("refuses a fork of an unknown ExternalRoute", async () => {
+			const { accessToken } = await createTestUserWithAuth(app, { email: "forker@example.com" });
+
+			await request(app.getHttpServer())
+				.post("/api/v1/routes")
+				.set("Authorization", `Bearer ${accessToken}`)
+				.send(forkBody(999_999))
+				.expect(404);
+		});
+
+		it("refuses Provenance external-fork without its source", async () => {
+			const { accessToken } = await createTestUserWithAuth(app, { email: "forker@example.com" });
+			const { forkedFromExternalRouteId: _, ...body } = forkBody(1);
+
+			await request(app.getHttpServer())
+				.post("/api/v1/routes")
+				.set("Authorization", `Bearer ${accessToken}`)
+				.send({ ...body, provenance: "external-fork" })
+				.expect(400);
+		});
+	});
+
 	it("exports GPX with the source attribution embedded", async () => {
 		const sourceId = await createSeedSource(app);
 		const id = await createExternalRoute(app, sourceId, { name: "EuroVelo 5", sourceRecordId: "ev5" });

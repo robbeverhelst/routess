@@ -7,6 +7,7 @@ import { EntitlementsModule } from "../entitlements/entitlements.module";
 import { ExternalRoutesModule } from "../external-routes/external-routes.module";
 import { PlacesModule } from "../places/places.module";
 import { RoutingModule } from "../routing/routing.module";
+import { RouteWriter } from "./route-writer";
 import { RoutesController } from "./routes.controller";
 import { RoutesService } from "./routes.service";
 import { SurfaceCompositionService } from "./surface-composition.service";
@@ -20,7 +21,7 @@ import { SurfaceCompositionService } from "./surface-composition.service";
 		EntitlementsModule,
 	],
 	controllers: [RoutesController],
-	providers: [RoutesService, SurfaceCompositionService],
-	exports: [RoutesService],
+	providers: [RoutesService, RouteWriter, SurfaceCompositionService],
+	exports: [RoutesService, RouteWriter],
 })
 export class RoutesModule {}

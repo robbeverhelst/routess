@@ -1,4 +1,4 @@
-import type { RouteVisibility } from "@routess/core";
+import { draftToCreateRequest, type RouteVisibility } from "@routess/core";
 import { useEffect, useMemo, useState } from "react";
 
 import { ProLock, useProGates, useProGateToast } from "@/features/billing/proGates";
@@ -15,14 +15,10 @@ import { Logger } from "@/lib/logger";
 import { useModalsStore } from "@/stores/modalsStore";
 import { useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 import {
-	useDistanceMeters,
 	useDraftCreationSource,
-	useDraftRoutingPreferences,
-	useDurationSeconds,
-	useElevationGain,
 	useRouteDistance,
 	useRouteDuration,
-	useRoutePath,
+	useRoutingStore,
 	useWaypoints,
 } from "@/stores/routingStore";
 import { useToastStore } from "@/stores/toastStore";
@@ -48,13 +44,8 @@ export function SaveModal() {
 	const t = useT();
 	const closeModal = useModalsStore((s) => s.closeModal);
 	const waypoints = useWaypoints();
-	const routePath = useRoutePath();
 	const distance = useRouteDistance();
 	const duration = useRouteDuration();
-	const distanceMeters = useDistanceMeters();
-	const durationSeconds = useDurationSeconds();
-	const elevationGain = useElevationGain();
-	const draftRoutingPreferences = useDraftRoutingPreferences();
 	const creationSource = useDraftCreationSource();
 	const { activityType, setActivityType } = useUiStore();
 	const selectedSports = useRedesignSettingsStore((s) => s.selectedSports);
@@ -114,15 +105,7 @@ export function SaveModal() {
 			name: trimmedName,
 			activity: activityType,
 			tags,
-			waypoints,
-			...(routePath.length >= 2 ? { geometry: routePath } : {}),
-			distance: distanceMeters ?? 0,
-			duration: durationSeconds ?? undefined,
-			elevationGain: elevationGain != null ? Math.round(elevationGain) : 0,
-			...(draftRoutingPreferences ? { routingPreferences: draftRoutingPreferences } : {}),
-			// A draft born from a confirmed GenerationCandidate saves with
-			// Provenance "generation" (immutable, per ADR-0023/0029).
-			...(creationSource === "generated" ? { provenance: "generation" as const } : {}),
+			...draftToCreateRequest(useRoutingStore.getState()),
 		};
 		if (!isAuthenticated) {
 			saveLocal

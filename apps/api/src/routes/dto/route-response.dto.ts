@@ -37,6 +37,17 @@ class WaypointResponseDto {
 	timestamp?: string;
 }
 
+export class ForkedFromExternalRouteDto {
+	@ApiProperty({ description: "Id of the ExternalRoute the geometry was forked from." })
+	externalRouteId!: number;
+
+	@ApiPropertyOptional({ description: "License inherited from the ExternalRoute's SeedSource, e.g. ODbL-1.0." })
+	license?: string;
+
+	@ApiPropertyOptional({ description: "Attribution string inherited from the SeedSource." })
+	attribution?: string;
+}
+
 export class RouteResponseDto {
 	@ApiProperty()
 	id!: number;
@@ -118,6 +129,14 @@ export class RouteResponseDto {
 		enum: PROVENANCES,
 	})
 	provenance!: Provenance;
+
+	@ApiProperty({
+		description:
+			"Set when the route was forked from an ExternalRoute (provenance external-fork): the source route and the license and attribution it inherited, which must be shown wherever the route is (ADR 0035). Null otherwise.",
+		type: ForkedFromExternalRouteDto,
+		nullable: true,
+	})
+	forkedFrom!: ForkedFromExternalRouteDto | null;
 
 	@ApiProperty({
 		description:

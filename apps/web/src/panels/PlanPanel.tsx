@@ -1,4 +1,4 @@
-import { calculatePathDistance, haversineDistance } from "@routess/core";
+import { calculatePathDistance, draftSaveFields, draftToCreateRequest, haversineDistance } from "@routess/core";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { trackSavedRouteLimitHit, useProGatePrompt, useProGates, useProGateToast } from "@/features/billing/proGates";
@@ -16,7 +16,6 @@ import { useModalsStore } from "@/stores/modalsStore";
 import { getSpeedForActivity, useRedesignSettingsStore } from "@/stores/redesignSettingsStore";
 import {
 	useClearWaypoints,
-	useDistanceMeters,
 	useDraftActivity,
 	useDraftMode,
 	useDraftRoutingPreferences,
@@ -29,6 +28,7 @@ import {
 	useRemoveWaypoint,
 	useRouteDistance,
 	useRoutePath,
+	useRoutingStore,
 	useSaveSnapshot,
 	useSetActivity,
 	useSetEditingName,
@@ -164,10 +164,8 @@ export function PlanPanel() {
 	const openModal = useModalsStore((s) => s.openModal);
 	const openSearch = useModalsStore((s) => s.openSearch);
 	const pushToast = useToastStore((s) => s.push);
-	const distanceMeters = useDistanceMeters();
 	const durationSeconds = useDurationSeconds();
 	const elevationGain = useElevationGain();
-	const draftRoutingPreferences = useDraftRoutingPreferences();
 	const isComputingElevation = useIsComputingElevation();
 	const isComputingRoute = useIsComputingRoute();
 	const { formatElevationParts, units } = useUnits();
@@ -229,12 +227,7 @@ export function PlanPanel() {
 					activity: draftActivity ?? editingBaseline.activity,
 					visibility: editingBaseline.visibility,
 					tags: editingBaseline.tags,
-					waypoints,
-					...(routePath.length >= 2 ? { geometry: routePath } : {}),
-					distance: distanceMeters ?? 0,
-					duration: durationSeconds ?? undefined,
-					elevationGain: elevationGain != null ? Math.round(elevationGain) : 0,
-					...(draftRoutingPreferences ? { routingPreferences: draftRoutingPreferences } : {}),
+					...draftSaveFields(useRoutingStore.getState()),
 				},
 			},
 			{
@@ -271,12 +264,8 @@ export function PlanPanel() {
 				activity: draftActivity ?? editingBaseline.activity,
 				visibility: editingBaseline.visibility,
 				tags: editingBaseline.tags,
-				waypoints,
-				...(routePath.length >= 2 ? { geometry: routePath } : {}),
-				distance: distanceMeters ?? 0,
-				duration: durationSeconds ?? undefined,
-				elevationGain: elevationGain != null ? Math.round(elevationGain) : 0,
-				...(draftRoutingPreferences ? { routingPreferences: draftRoutingPreferences } : {}),
+				// The copy keeps the draft's Provenance, and a fork's license.
+				...draftToCreateRequest(useRoutingStore.getState()),
 			},
 			{
 				onSuccess: (newRoute) => {

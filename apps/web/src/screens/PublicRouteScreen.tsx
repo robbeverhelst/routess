@@ -153,6 +153,14 @@ function PublicRouteHero({ route, expectedSlug }: { route: ApiRoute; expectedSlu
 					))}
 				</div>
 			)}
+			{route.forkedFrom?.attribution && (
+				// License obligation (ADR 0035): a fork of an ExternalRoute shows
+				// the attribution it inherited.
+				<div style={{ fontSize: 12, color: RDS_COLORS.fgSubtle, lineHeight: 1.5 }}>
+					{route.forkedFrom.attribution}
+					{route.forkedFrom.license ? ` · ${route.forkedFrom.license}` : ""}
+				</div>
+			)}
 		</div>
 	);
 }

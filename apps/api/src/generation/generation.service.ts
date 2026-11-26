@@ -45,15 +45,21 @@ import {
 	type ValhallaCostingRequest,
 } from "@routess/core";
 
-import { RoutingService } from "../routing/routing.service";
+import {
+	type EngineLeg,
+	type LocatedEdge,
+	RoutingEngine,
+	RoutingNoPathError,
+	type TracedEdge,
+} from "../routing/routing-engine";
 import { ROUTE_GENERATION_COMPLETED, type RouteGenerationCompletedEvent } from "../telemetry/domain-events";
 import type { GenerateRequestDto, GenerateResponseDto, GenerationCandidateDto } from "./dto/generate.dto";
 import { nodeKindForActivity, NodeNetworksService } from "./node-networks.service";
 
 // Orchestrates the RouteGeneration pipeline (ADR-0029): the pure stages live
-// in @routess/core; this service owns the Valhalla calls — one batched
-// /locate for snap validation, then per candidate /route (via points typed
-// `through` so the router cannot U-turn at them) and /trace_attributes for
+// in @routess/core; this service owns the RoutingEngine calls — one batched
+// locate for snap validation, then per candidate a route (via points typed
+// `through` so the router cannot U-turn at them) and an edge trace for
 // way-level Overlap + surface composition.
 
 // Keep a single generation's fan from monopolising the shared 32-call
@@ -62,21 +68,6 @@ const MAX_PARALLEL_CANDIDATES = 4;
 
 /** A start that snaps further than this is effectively somewhere else. */
 const MAX_START_SNAP_KM = 0.5;
-
-interface ValhallaLocateEdge {
-	correlated_lat?: number;
-	correlated_lon?: number;
-	distance?: number;
-	outbound_reach?: number;
-	inbound_reach?: number;
-	edge?: {
-		classification?: { classification?: string; use?: string; surface?: string };
-	};
-}
-
-interface ValhallaLocateResult {
-	edges?: ValhallaLocateEdge[] | null;
-}
 
 // A via snapped onto one of these is a guaranteed silly detour (driveways,
 // parking aisles); skip such edges when a better candidate edge exists.
@@ -101,16 +92,10 @@ const WAVE_IMPROVEMENT_EPSILON = 0.05;
 // fan loop beats a gravelly one riddled with dead-ends. (= OVERLAP_WARN_LIMIT.)
 const WAVE_MAX_OVERLAP = OVERLAP_WARN_LIMIT;
 
-function pickViaEdge(edges: ValhallaLocateEdge[] | null | undefined, pref: SurfaceType): ValhallaLocateEdge | null {
-	const usable = (edges ?? []).filter(
-		(e) => typeof e.correlated_lat === "number" && typeof e.correlated_lon === "number",
-	);
+function pickViaEdge(edges: LocatedEdge[] | undefined, pref: SurfaceType): LocatedEdge | null {
+	const usable = edges ?? [];
 	if (usable.length === 0) return null;
-	const preferred = usable.filter((e) => {
-		const use = e.edge?.classification?.use ?? "";
-		const reach = Math.min(e.outbound_reach ?? 0, e.inbound_reach ?? 0);
-		return !BAD_EDGE_USES.has(use) && reach >= MIN_EDGE_REACH;
-	});
+	const preferred = usable.filter((e) => !BAD_EDGE_USES.has(e.use ?? "") && e.reach >= MIN_EDGE_REACH);
 	let pool = preferred.length > 0 ? preferred : usable;
 	// The surface nudge: with a strict preference, a farther edge on the right
 	// surface beats the nearest one on the wrong surface; the via then drags
@@ -118,48 +103,13 @@ function pickViaEdge(edges: ValhallaLocateEdge[] | null | undefined, pref: Surfa
 	// its own; vias are the only lever that can).
 	if (pref !== "mixed") {
 		const matching = pool.filter((e) => {
-			const surface = e.edge?.classification?.surface;
+			const surface = e.surface;
 			return typeof surface === "string" && bucketMatchesPreference(bucketFromValhallaSurface(surface), pref);
 		});
 		if (matching.length > 0) pool = matching;
 	}
 	// Among acceptable edges, nearest to the requested point wins.
-	return pool.reduce((best, e) => ((e.distance ?? Infinity) < (best.distance ?? Infinity) ? e : best));
-}
-
-interface ValhallaTripLeg {
-	shape?: string;
-	summary?: { length?: number; time?: number };
-}
-
-interface ValhallaRouteResponse {
-	trip?: { legs?: ValhallaTripLeg[] };
-	error?: string;
-}
-
-interface ValhallaTraceEdge {
-	way_id?: number;
-	surface?: string;
-	length?: number;
-	begin_heading?: number;
-	end_heading?: number;
-	begin_shape_index?: number;
-	end_shape_index?: number;
-	// Valhalla returns the network membership mask as `bicycle_network`
-	// (the request filter key is `edge.bicycle_network`); 0 = not signed.
-	bicycle_network?: number | boolean;
-	road_class?: string;
-}
-
-interface ValhallaTraceResponse {
-	shape?: string;
-	edges?: ValhallaTraceEdge[];
-}
-
-interface ValhallaIsochroneResponse {
-	features?: {
-		geometry?: { coordinates?: unknown[][] };
-	}[];
+	return pool.reduce((best, e) => ((e.distanceM ?? Infinity) < (best.distanceM ?? Infinity) ? e : best));
 }
 
 interface RoutedLeg {
@@ -228,7 +178,7 @@ export class GenerationService {
 	private readonly logger = new Logger(GenerationService.name);
 
 	constructor(
-		private readonly routing: RoutingService,
+		private readonly engine: RoutingEngine,
 		private readonly nodeNetworks: NodeNetworksService,
 		private readonly eventEmitter: EventEmitter2,
 	) {}
@@ -417,26 +367,14 @@ export class GenerationService {
 			{ lat: start[1], lon: start[0] },
 			...(end ? [{ lat: end[1], lon: end[0] }] : []),
 			...plans.flatMap((plan) =>
-				plan.viaPoints.map(([lon, lat]) => (viaRadius ? { lat, lon, radius: viaRadius } : { lat, lon })),
+				plan.viaPoints.map(([lon, lat]) => (viaRadius ? { lat, lon, radiusM: viaRadius } : { lat, lon })),
 			),
 		];
 
-		const results = await this.routing.callValhalla<ValhallaLocateResult[]>(
-			"/locate",
-			{
-				locations,
-				costing: costing.costing,
-				costing_options: costing.costing_options,
-				verbose: true,
-			},
-			"generation",
-		);
+		const results = await this.engine.locate(locations, costing, "generation");
 
-		const snappedCoord = (result: ValhallaLocateResult | undefined, pref: SurfaceType): Coordinate | null => {
-			const edge = pickViaEdge(result?.edges, pref);
-			if (!edge) return null;
-			return [edge.correlated_lon as number, edge.correlated_lat as number];
-		};
+		const snappedCoord = (result: { edges: LocatedEdge[] } | undefined, pref: SurfaceType): Coordinate | null =>
+			pickViaEdge(result?.edges, pref)?.coordinate ?? null;
 
 		// /locate snaps generously (a point in open water correlates to a road
 		// kilometers away), so presence of an edge is not enough: a snap that
@@ -598,23 +536,13 @@ export class GenerationService {
 		countCall: <T>(promise: Promise<T>) => Promise<T>,
 	): Promise<(ScoredCandidate & { shape: string })[]> {
 		try {
-			const data = await countCall(
-				this.routing.callValhalla<ValhallaIsochroneResponse>(
-					"/isochrone",
-					{
-						locations: [{ lat: start[1], lon: start[0] }],
-						costing: costing.costing,
-						costing_options: costing.costing_options,
-						contours: [{ distance: isochroneContourKm(request.targetDistanceKm) }],
-						polygons: true,
-					},
+			const frontier = await countCall(
+				this.engine.isochrone(
+					{ lat: start[1], lon: start[0] },
+					costing,
+					isochroneContourKm(request.targetDistanceKm),
 					"generation",
 				),
-			);
-			const ring = data.features?.[0]?.geometry?.coordinates?.[0] ?? [];
-			const frontier = ring.filter(
-				(point): point is [number, number] =>
-					Array.isArray(point) && typeof point[0] === "number" && typeof point[1] === "number",
 			);
 
 			let plans = planIsochroneCandidates(start, frontier, request.heading, request.excludeBearings);
@@ -769,34 +697,31 @@ export class GenerationService {
 		costing: ValhallaCostingRequest,
 		end: Coordinate = start,
 	): Promise<RoutedLeg | null> {
-		const data = await this.routing.callValhalla<ValhallaRouteResponse>(
-			"/route",
-			{
-				locations: [
+		let legs: EngineLeg[];
+		try {
+			({ legs } = await this.engine.route(
+				[
 					{ lat: start[1], lon: start[0], type: "break" },
 					// `through` forbids U-turns at via points: the router must pass
 					// through and keep going, which is what makes the loop a loop
 					// (and keeps an a-to-b detour from collapsing back early).
-					...plan.viaPoints.map(([lon, lat]) => ({ lat, lon, type: "through" })),
+					...plan.viaPoints.map(([lon, lat]) => ({ lat, lon, type: "through" as const })),
 					{ lat: end[1], lon: end[0], type: "break" },
 				],
-				costing: costing.costing,
-				costing_options: costing.costing_options,
-				directions_options: { units: "kilometers" },
-				format: "json",
-			},
-			"generation",
-		);
-
-		const legs = data.trip?.legs ?? [];
-		if (data.error || legs.length === 0) return null;
+				costing,
+				"generation",
+			));
+		} catch (err) {
+			if (err instanceof RoutingNoPathError) return null;
+			throw err;
+		}
 
 		let distanceKm = 0;
 		let durationSeconds = 0;
 		const geometry: Coordinate[] = [];
 		for (const leg of legs) {
-			distanceKm += leg.summary?.length ?? 0;
-			durationSeconds += leg.summary?.time ?? 0;
+			distanceKm += leg.lengthKm;
+			durationSeconds += leg.timeS;
 			if (typeof leg.shape !== "string") continue;
 			const coords = decodePolyline6(leg.shape);
 			if (geometry.length === 0) geometry.push(...coords);
@@ -812,51 +737,34 @@ export class GenerationService {
 		// The shape comes verbatim from Valhalla's own route response, but
 		// edge_walk still rejects it when costing nuances differ; walk_or_snap
 		// tries the exact walk first and falls back to map matching.
-		const data = await this.routing.callValhalla<ValhallaTraceResponse>(
-			"/trace_attributes",
+		const trace = await this.engine.traceEdges(
 			{
-				encoded_polyline: shape,
-				shape_match: "walk_or_snap",
-				costing: costing.costing,
-				costing_options: costing.costing_options,
-				filters: {
-					attributes: [
-						"edge.way_id",
-						"edge.surface",
-						"edge.length",
-						"edge.begin_heading",
-						"edge.end_heading",
-						"edge.begin_shape_index",
-						"edge.end_shape_index",
-						"edge.bicycle_network",
-						"edge.road_class",
-						"shape",
-					],
-					action: "include",
-				},
+				shape: { polyline: shape },
+				costing,
+				match: "walk-or-snap",
+				attributes: ["wayId", "surface", "length", "headings", "shapeIndices", "bicycleNetwork", "roadClass"],
 			},
 			"generation",
 		);
 
 		// Edge midpoints (via the matched shape) feed surface-anchored planning.
-		const matchedShape = typeof data.shape === "string" ? decodePolyline6(data.shape) : [];
-		const midpointOf = (edge: ValhallaTraceEdge): Coordinate | undefined => {
-			const begin = edge.begin_shape_index;
-			const end = edge.end_shape_index;
+		const matchedShape = typeof trace.shape === "string" ? decodePolyline6(trace.shape) : [];
+		const midpointOf = (edge: TracedEdge): Coordinate | undefined => {
+			const begin = edge.beginShapeIndex;
+			const end = edge.endShapeIndex;
 			if (typeof begin !== "number" || typeof end !== "number" || begin > end) return undefined;
 			return matchedShape[Math.floor((begin + end) / 2)];
 		};
 
-		return (data.edges ?? []).map((edge) => ({
-			wayId: edge.way_id,
-			lengthKm: edge.length ?? 0,
+		return trace.edges.map((edge) => ({
+			wayId: edge.wayId,
+			lengthKm: edge.lengthKm ?? 0,
 			surface: edge.surface,
-			beginHeadingDeg: edge.begin_heading,
-			endHeadingDeg: edge.end_heading,
+			beginHeadingDeg: edge.beginHeadingDeg,
+			endHeadingDeg: edge.endHeadingDeg,
 			midpoint: midpointOf(edge),
-			onBikeNetwork:
-				typeof edge.bicycle_network === "number" ? edge.bicycle_network > 0 : edge.bicycle_network === true,
-			roadClass: edge.road_class,
+			onBikeNetwork: edge.onBikeNetwork === true,
+			roadClass: edge.roadClass,
 		}));
 	}
 

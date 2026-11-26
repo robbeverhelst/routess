@@ -31,7 +31,7 @@ interface RouteView {
 	canonicalSlugId: string;
 	indexable: boolean;
 	user?: { name: string; handle: string };
-	source?: { name: string; attribution: string; url: string };
+	source?: { attribution: string; url?: string };
 	gpxHref: string;
 }
 
@@ -78,6 +78,8 @@ async function resolveRoute(slugId: string): Promise<RouteView | null> {
 		canonicalSlugId: buildRouteSlugId(route.name, canonicalRef),
 		indexable: isRouteIndexable(route),
 		user: route.user,
+		// A fork of an ExternalRoute carries its attribution (ADR 0035).
+		...(route.forkedFrom?.attribution ? { source: { attribution: route.forkedFrom.attribution } } : {}),
 		gpxHref: `${PUBLIC_API_URL}/api/v1/routes/${route.id}/gpx`,
 	};
 }
@@ -203,11 +205,15 @@ export default async function PublicRoutePage({ params }: { params: Promise<Para
 							/>
 							{route.source ? (
 								// License obligation (ADR 0035): attribution on every
-								// externally-derived route page.
+								// externally-derived route page, forks included.
 								<p className="mono" style={{ fontSize: 13, opacity: 0.7, margin: "10px 0 0" }}>
-									<a href={route.source.url} rel="license noopener" style={{ color: "inherit" }}>
-										{route.source.attribution}
-									</a>
+									{route.source.url ? (
+										<a href={route.source.url} rel="license noopener" style={{ color: "inherit" }}>
+											{route.source.attribution}
+										</a>
+									) : (
+										route.source.attribution
+									)}
 								</p>
 							) : null}
 							{description ? (

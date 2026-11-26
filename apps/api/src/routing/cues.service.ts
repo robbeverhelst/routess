@@ -19,7 +19,7 @@ import { ExternalRoute } from "../entities/external-route.entity";
 import { Route } from "../entities/route.entity";
 import { nodeKindForActivity, NodeNetworksService } from "../generation/node-networks.service";
 import { type CueDto, type CueLocale, type CuesRequestDto, CuesResponseDto } from "./dto/cues.dto";
-import { RoutingService } from "./routing.service";
+import { RoutingEngine } from "./routing-engine";
 
 // Cue derivation for NavigationSessions (ADR 0038): map-match the stored
 // RoutePath through Valhalla trace_route for ManeuverCues, decorate with
@@ -69,26 +69,12 @@ const FOLLOW_PATH_TEXT: Record<CueLocale, string> = {
 	de: "Folge der Route",
 };
 
-interface ValhallaManeuver {
-	type?: number;
-	instruction?: string;
-	street_names?: string[];
-	begin_shape_index?: number;
-	length?: number;
-}
-
-interface ValhallaTraceRouteResponse {
-	trip?: {
-		legs?: { shape?: string; maneuvers?: ValhallaManeuver[] }[];
-	};
-}
-
 @Injectable()
 export class CuesService {
 	private readonly logger = new Logger(CuesService.name);
 
 	constructor(
-		private readonly routing: RoutingService,
+		private readonly engine: RoutingEngine,
 		private readonly cache: CacheService,
 		private readonly nodeNetworks: NodeNetworksService,
 		@InjectRepository(Route)
@@ -181,18 +167,14 @@ export class CuesService {
 		const traceShape =
 			geometry.length > MAX_TRACE_SHAPE_POINTS ? downsampleCoordinates(geometry, MAX_TRACE_SHAPE_POINTS) : geometry;
 
-		const data = await this.routing.callValhalla<ValhallaTraceRouteResponse>(
-			"/trace_route",
-			{
-				shape: traceShape.map(([lng, lat]) => ({ lat, lon: lng })),
-				shape_match: "map_snap",
-				costing: valhallaCostingModelForActivity(activity),
-				directions_options: { units: "kilometers", language: VALHALLA_LANGUAGE[locale] },
-			},
+		const trace = await this.engine.traceRoute(
+			traceShape.map(([lng, lat]) => ({ lat, lon: lng })),
+			valhallaCostingModelForActivity(activity),
+			VALHALLA_LANGUAGE[locale],
 			"navigation",
 		);
 
-		const legs = data.trip?.legs ?? [];
+		const legs = trace.legs;
 		if (legs.length === 0) throw new Error("trace_route returned no legs");
 
 		// Maneuver shape indices point into the leg's own matched shape, which
@@ -202,10 +184,10 @@ export class CuesService {
 		const cues: CueDto[] = [];
 		let hint = 0;
 		for (const leg of legs) {
-			const matchedShape = leg.shape ? decodePolyline6(leg.shape) : [];
+			const matchedShape = leg.shape;
 			if (matchedShape.length === 0) continue;
-			for (const maneuver of leg.maneuvers ?? []) {
-				const matchedCoord = matchedShape[Math.min(maneuver.begin_shape_index ?? 0, matchedShape.length - 1)];
+			for (const maneuver of leg.maneuvers) {
+				const matchedCoord = matchedShape[Math.min(maneuver.beginShapeIndex ?? 0, matchedShape.length - 1)];
 				if (!matchedCoord || !maneuver.instruction) continue;
 				const projection = projectOntoPath(pathIndex, matchedCoord, hint);
 				hint = projection.segmentIndex;
@@ -214,7 +196,7 @@ export class CuesService {
 					shapeIndex: projection.segmentIndex,
 					distanceAlongMeters: Math.round(projection.distanceAlongMeters),
 					text: maneuver.instruction,
-					streetNames: maneuver.street_names,
+					streetNames: maneuver.streetNames,
 					maneuverType: maneuver.type,
 				});
 			}

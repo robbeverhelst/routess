@@ -35,6 +35,14 @@ export function toRouteResponseDto(route: Route, analyticsSalt: string): RouteRe
 		routingPreferences: route.routingPreferences ?? null,
 		surfaceComposition: route.surfaceComposition ?? null,
 		provenance: route.provenance,
+		forkedFrom:
+			route.forkedFromExternalRouteId != null
+				? {
+						externalRouteId: route.forkedFromExternalRouteId,
+						license: route.sourceLicense,
+						attribution: route.sourceAttribution,
+					}
+				: null,
 		shareToken: route.shareToken,
 		user: toPublicUserDto(serializedUser, analyticsSalt),
 		createdAt: route.createdAt.toISOString(),

@@ -446,8 +446,12 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 		}
 		// A visitor's draft, not an editing session: the route belongs to
 		// someone else, so it loads unbound and saves as a new route.
+		useRoutingStore.getState().setMode({ kind: "unsaved" });
 		useRoutingStore.getState().setActivity(route.activity);
-		useRoutingStore.getState().setCreationSource(creationSourceFromProvenance(route.provenance));
+		useRoutingStore.getState().setCreationSource(creationSourceFromProvenance(route.provenance), {
+			provenance: route.provenance,
+			forkedFromExternalRouteId: route.forkedFrom?.externalRouteId,
+		});
 		return loadWaypoints(route.waypoints, {
 			exactRoutePath: route.geometry && route.geometry.length >= 2 ? route.geometry : undefined,
 			saveSnapshot: true,
@@ -460,6 +464,9 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 		if (!parsed || !routeHasValidShape(parsed.waypoints)) {
 			return fail("Failed to read shared route data. The link may be invalid or corrupted.");
 		}
+		const store = useRoutingStore.getState();
+		store.setMode({ kind: "unsaved" });
+		store.setCreationSource("manual");
 		return loadWaypoints(parsed.waypoints, { isMapLocked: parsed.isLocked });
 	};
 
@@ -476,8 +483,13 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 		store.setMode({ kind: "editing", routeId: route.id, name: route.name, baseline });
 		store.setActivity(route.activity);
 		// Carry the origin onto the draft: a saved generated route must
-		// densify before its first edit just like a fresh generated draft.
-		store.setCreationSource(creationSourceFromProvenance(route.provenance));
+		// densify before its first edit just like a fresh generated draft, a
+		// duplicate of a fork must still name its ExternalRoute, and any other
+		// duplicate keeps its Provenance.
+		store.setCreationSource(creationSourceFromProvenance(route.provenance), {
+			provenance: route.provenance,
+			forkedFromExternalRouteId: route.forkedFrom?.externalRouteId,
+		});
 		trackEvent({
 			name: "route_loaded_into_editor",
 			properties: { creation_source: creationSourceFromProvenance(route.provenance) },
@@ -491,12 +503,13 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 	// Opens a seeded ExternalRoute (ADR 0035) in the planner as a fresh
 	// unsaved draft: the official geometry is pinned exactly; smart waypoints
 	// make it editable. Saving creates the user's own copy (the fork), never
-	// touches the ExternalRoute.
+	// touches the ExternalRoute; the draft names it so the fork carries its
+	// license.
 	const loadFromExternalRoute = async (route: ApiExternalRoute): Promise<EditResult> => {
 		const store = useRoutingStore.getState();
 		store.setMode({ kind: "unsaved" });
 		if (route.activity) store.setActivity(route.activity);
-		store.setCreationSource("imported");
+		store.setCreationSource("imported", { forkedFromExternalRouteId: route.id });
 		trackEvent({
 			name: "route_loaded_into_editor",
 			properties: { creation_source: "imported" },
@@ -516,7 +529,10 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 		store.setMode({ kind: "unsaved" });
 		if (route.activity) store.setActivity(route.activity);
 		store.setRoutingPreferences(route.routingPreferences ?? null);
-		store.setCreationSource(creationSource);
+		store.setCreationSource(creationSource, {
+			provenance: route.provenance,
+			forkedFromExternalRouteId: route.forkedFromExternalRouteId,
+		});
 		trackEvent({ name: "route_loaded_into_editor", properties: { creation_source: creationSource } });
 		return loadWaypoints(route.waypoints, { exactRoutePath: route.geometry, saveSnapshot: true });
 	};
@@ -542,7 +558,7 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 			},
 		});
 
-		useRoutingStore.getState().setCreationSource("imported");
+		useRoutingStore.getState().setCreationSource("imported", { provenance: "gpx-import" });
 
 		// A track is the route the file actually describes, so it becomes the
 		// draft's geometry verbatim. Re-routing between the sparse waypoints

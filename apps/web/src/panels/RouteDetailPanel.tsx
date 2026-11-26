@@ -10,6 +10,7 @@ import { type KeyboardEvent, useEffect, useMemo, useState } from "react";
 import { useProGatePrompt, useProGates, useProGateToast } from "@/features/billing/proGates";
 import { ExportTargetButtons } from "@/features/export-targets/ExportTargetButtons";
 import { startNavigation } from "@/features/navigation/startNavigation";
+import { duplicateRouteRequest } from "@/features/routing/services/duplicateRoute";
 import { useComputedElevationProfile } from "@/features/routing/services/elevation";
 import {
 	breakdownFromComposition,
@@ -374,22 +375,7 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 			return;
 		}
 		saveRoute.mutate(
-			{
-				name: `${route.name} (copy)`,
-				description: route.description,
-				activity: route.activity,
-				visibility: "private",
-				tags: route.tags,
-				waypoints: route.waypoints,
-				geometry: route.geometry,
-				distance: route.distance,
-				duration: route.duration,
-				elevationGain: route.elevationGain,
-				startAddress: route.startAddress,
-				endAddress: route.endAddress,
-				provenance: route.provenance,
-				...(route.routingPreferences ? { routingPreferences: route.routingPreferences } : {}),
-			},
+			{ ...duplicateRouteRequest(route), visibility: "private" },
 			{
 				onSuccess: (newRoute) => {
 					pushToast({
@@ -643,6 +629,15 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 					>
 						<I.flag size={12} />
 						<span>{t("route.provenance.mapboxLegacy")}</span>
+					</div>
+				)}
+
+				{route.forkedFrom?.attribution && (
+					// License obligation (ADR 0035): a fork of an ExternalRoute shows
+					// the attribution it inherited.
+					<div style={{ marginTop: 12, fontSize: 11.5, color: RDS_COLORS.fgSubtle, lineHeight: 1.5 }}>
+						{route.forkedFrom.attribution}
+						{route.forkedFrom.license ? ` · ${route.forkedFrom.license}` : ""}
 					</div>
 				)}
 

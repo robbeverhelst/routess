@@ -40,6 +40,7 @@ describe("buildLibraryRoutePayload", () => {
 		expect(payload.distance).toBeGreaterThan(40_000);
 		expect(payload.activity).toBe("cycle");
 		expect(payload.visibility).toBe("private");
+		expect(payload.provenance).toBe("gpx-import");
 	});
 
 	it("defaults untyped waypoints to routed and keeps names", () => {
