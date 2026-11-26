@@ -9,9 +9,10 @@ import { APP_CONFIG } from "../config/config.module";
 
 // Knooppunt anchor pool for RouteGeneration (ADR-0037): nodes come from the
 // same self-hosted vector tiles the map overlay renders (ADR-0033), fetched
-// from go-pmtiles and decoded here. Strictly fail-open: any miss, timeout, or
-// out-of-coverage bbox yields an empty pool and generation proceeds without
-// knooppunt mode — the toggle can never fail a generation.
+// from go-pmtiles and decoded here. Generation is strictly fail-open:
+// anchorsForBbox turns any miss, timeout, or out-of-coverage bbox into an
+// empty pool, so the toggle can never fail a generation. Cue decoration uses
+// loadAnchorsForBbox so it can tell a tile failure from an empty bbox.
 
 // Generous enough for a cold TLS + CDN first hit (observed >3s once in dev,
 // which silently dropped knooppunt mode); warm fetches take ~100ms and the
@@ -70,32 +71,41 @@ export class NodeNetworksService {
 
 	/** All Nodes of one kind inside the bbox; empty on any failure. */
 	async anchorsForBbox(bbox: NodeBbox, kind: "cycling" | "hiking"): Promise<GenerationAnchor[]> {
-		if (!this.enabled) return [];
 		try {
-			const template = await this.tileTemplate();
-			if (!template) return [];
-
-			const z = this.zoomForBbox(bbox);
-			const tiles: { x: number; y: number }[] = [];
-			for (let x = lonToTileX(bbox.minLon, z); x <= lonToTileX(bbox.maxLon, z); x++) {
-				for (let y = latToTileY(bbox.maxLat, z); y <= latToTileY(bbox.minLat, z); y++) {
-					tiles.push({ x, y });
-				}
-			}
-			if (tiles.length === 0 || tiles.length > MAX_TILES_PER_POOL) return [];
-
-			const perTile = await Promise.all(tiles.map(({ x, y }) => this.tileNodes(template, z, x, y)));
-			return perTile
-				.flat()
-				.filter(
-					([nodeKind, , lon, lat]) =>
-						nodeKind === kind && lon >= bbox.minLon && lon <= bbox.maxLon && lat >= bbox.minLat && lat <= bbox.maxLat,
-				)
-				.map(([, ref, lon, lat]) => ({ coordinate: [lon, lat] as [number, number], ref }));
+			return await this.loadAnchorsForBbox(bbox, kind);
 		} catch (err) {
 			this.logger.warn(`Node pool unavailable: ${(err as Error).message}`);
 			return [];
 		}
+	}
+
+	/**
+	 * All Nodes of one kind inside the bbox. Throws when the tiles cannot be
+	 * read, so a caller that caches the result can tell a failure from a bbox
+	 * that holds no Nodes.
+	 */
+	async loadAnchorsForBbox(bbox: NodeBbox, kind: "cycling" | "hiking"): Promise<GenerationAnchor[]> {
+		if (!this.enabled) return [];
+		const template = await this.tileTemplate();
+		if (!template) return [];
+
+		const z = this.zoomForBbox(bbox);
+		const tiles: { x: number; y: number }[] = [];
+		for (let x = lonToTileX(bbox.minLon, z); x <= lonToTileX(bbox.maxLon, z); x++) {
+			for (let y = latToTileY(bbox.maxLat, z); y <= latToTileY(bbox.minLat, z); y++) {
+				tiles.push({ x, y });
+			}
+		}
+		if (tiles.length === 0 || tiles.length > MAX_TILES_PER_POOL) return [];
+
+		const perTile = await Promise.all(tiles.map(({ x, y }) => this.tileNodes(template, z, x, y)));
+		return perTile
+			.flat()
+			.filter(
+				([nodeKind, , lon, lat]) =>
+					nodeKind === kind && lon >= bbox.minLon && lon <= bbox.maxLon && lat >= bbox.minLat && lat <= bbox.maxLat,
+			)
+			.map(([, ref, lon, lat]) => ({ coordinate: [lon, lat] as [number, number], ref }));
 	}
 
 	private zoomForBbox(bbox: NodeBbox): number {

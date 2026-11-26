@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "bun:test";
+import { afterEach, describe, expect, it, setSystemTime } from "bun:test";
 
 import type { EntityRepository } from "@mikro-orm/core";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
@@ -29,17 +29,27 @@ interface Stubs {
 	externalRoute?: Partial<ExternalRoute> | null;
 	anchors?: { coordinate: Coordinate; ref?: string }[];
 	anchorsThrow?: boolean;
+	// Tile reads that fail before they succeed.
+	anchorFailures?: number;
 }
 
 function makeService(stubs: Stubs = {}): { service: CuesService; valhallaCalls: () => number } {
 	const config = { routing: { valhallaUrl: "http://valhalla.test" }, cache: { redisUrl: "" } } as AppConfig;
 	const cache = new CacheService(config, metrics);
 	const routing = new RoutingService(config, metrics, cache);
+	let anchorFailures = stubs.anchorFailures ?? 0;
+	const loadAnchorsForBbox = async () => {
+		if (stubs.anchorsThrow) throw new Error("tiles down");
+		if (anchorFailures > 0) {
+			anchorFailures--;
+			throw new Error("tiles down");
+		}
+		return stubs.anchors ?? [];
+	};
+	// Mirrors NodeNetworksService: anchorsForBbox is the fail-open wrapper.
 	const nodeNetworks = {
-		anchorsForBbox: async () => {
-			if (stubs.anchorsThrow) throw new Error("tiles down");
-			return stubs.anchors ?? [];
-		},
+		loadAnchorsForBbox,
+		anchorsForBbox: () => loadAnchorsForBbox().catch(() => []),
 	} as unknown as NodeNetworksService;
 	const routeRepository = {
 		findOne: async (where: { visibility?: unknown }) => {
@@ -78,6 +88,7 @@ function stubValhallaDown(): void {
 
 afterEach(() => {
 	globalThis.fetch = originalFetch;
+	setSystemTime();
 });
 
 const BASE_REQUEST = { geometry: encodePolyline6(PATH), activity: "cycle" as const, locale: "en" as const };
@@ -149,6 +160,38 @@ describe("CuesService node decoration", () => {
 		expect(result.degraded).toBe(false);
 		expect(result.cues).toHaveLength(1);
 		expect(result.cues[0].kind).toBe("maneuver");
+	});
+
+	it("caches cues missing their node cues only briefly", async () => {
+		const { service, valhallaCalls } = makeService({
+			anchors: [
+				{ coordinate: [4.005, 51], ref: "47" },
+				{ coordinate: [4.015, 51], ref: "52" },
+			],
+			anchorFailures: 1,
+		});
+		stubTraceRoute([{ type: 1, instruction: "Ride east.", begin_shape_index: 0 }]);
+		const start = Date.now();
+		setSystemTime(start);
+
+		const partial = await service.cues(BASE_REQUEST);
+		expect(partial.cues.some((c) => c.kind === "node")).toBe(false);
+
+		// During the outage a repeat request is served from cache.
+		await service.cues(BASE_REQUEST);
+		expect(valhallaCalls()).toBe(1);
+
+		// The tiles recover and the short TTL lapses: the next request rebuilds
+		// and gets its node cue.
+		setSystemTime(start + 6 * 60 * 1000);
+		const complete = await service.cues(BASE_REQUEST);
+		expect(complete.cues.filter((c) => c.kind === "node").map((c) => c.nodeRef)).toEqual(["47"]);
+		expect(valhallaCalls()).toBe(2);
+
+		// A complete result is cached for longer than the short TTL.
+		setSystemTime(start + 60 * 60 * 1000);
+		await service.cues(BASE_REQUEST);
+		expect(valhallaCalls()).toBe(2);
 	});
 });
 
