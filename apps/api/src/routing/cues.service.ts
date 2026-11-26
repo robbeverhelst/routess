@@ -27,8 +27,8 @@ import { RoutingService } from "./routing.service";
 // stored geometry, which stays canonical. Cues are derived data: cached per
 // ADR 0032, never persisted.
 
-// Same invalidation profile as /route responses: cues change only when the
-// Valhalla tiles or the geometry change, and the key hashes the geometry.
+// Complete cues share the /route invalidation profile: they change only when
+// the Valhalla tiles or the geometry change, and the key hashes the geometry.
 const CUES_CACHE_TTL_S = 7 * 24 * 60 * 60;
 // Cues missing their NodeCues are cached only briefly: long enough to spare
 // Valhalla and the tile fetches during an outage, short enough that the node

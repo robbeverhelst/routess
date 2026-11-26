@@ -9,9 +9,10 @@ import { APP_CONFIG } from "../config/config.module";
 
 // Knooppunt anchor pool for RouteGeneration (ADR-0037): nodes come from the
 // same self-hosted vector tiles the map overlay renders (ADR-0033), fetched
-// from go-pmtiles and decoded here. Strictly fail-open: any miss, timeout, or
-// out-of-coverage bbox yields an empty pool and generation proceeds without
-// knooppunt mode — the toggle can never fail a generation.
+// from go-pmtiles and decoded here. Generation is strictly fail-open:
+// anchorsForBbox turns any miss, timeout, or out-of-coverage bbox into an
+// empty pool, so the toggle can never fail a generation. Cue decoration uses
+// loadAnchorsForBbox so it can tell a tile failure from an empty bbox.
 
 // Generous enough for a cold TLS + CDN first hit (observed >3s once in dev,
 // which silently dropped knooppunt mode); warm fetches take ~100ms and the

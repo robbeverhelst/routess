@@ -135,9 +135,10 @@ export class CacheService implements OnModuleDestroy {
 		return value;
 	}
 
-	// Increments a counter, setting its expiry on first increment. Returns the
-	// new value, or 0 on Redis failure (fail-open: an outage never blocks
-	// users, it just stops enforcing quotas until Redis is back).
+	// Increments a counter, setting its expiry when the key has none: one
+	// atomic step, so a crash cannot leave a counter that never expires.
+	// Returns the new value, or 0 on Redis failure (fail-open: an outage never
+	// blocks users, it just stops enforcing quotas until Redis is back).
 	async increment(counter: string, key: string, ttlSeconds: number): Promise<number> {
 		const fullKey = `counter:${counter}:${key}`;
 		if (this.redis) {
