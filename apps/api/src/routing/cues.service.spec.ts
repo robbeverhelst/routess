@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "bun:test";
+import { afterEach, describe, expect, it, setSystemTime } from "bun:test";
 
 import type { EntityRepository } from "@mikro-orm/core";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
@@ -88,6 +88,7 @@ function stubValhallaDown(): void {
 
 afterEach(() => {
 	globalThis.fetch = originalFetch;
+	setSystemTime();
 });
 
 const BASE_REQUEST = { geometry: encodePolyline6(PATH), activity: "cycle" as const, locale: "en" as const };
@@ -161,7 +162,7 @@ describe("CuesService node decoration", () => {
 		expect(result.cues[0].kind).toBe("maneuver");
 	});
 
-	it("does not cache cues that are missing their node cues", async () => {
+	it("caches cues missing their node cues only briefly", async () => {
 		const { service, valhallaCalls } = makeService({
 			anchors: [
 				{ coordinate: [4.005, 51], ref: "47" },
@@ -170,16 +171,25 @@ describe("CuesService node decoration", () => {
 			anchorFailures: 1,
 		});
 		stubTraceRoute([{ type: 1, instruction: "Ride east.", begin_shape_index: 0 }]);
+		const start = Date.now();
+		setSystemTime(start);
 
 		const partial = await service.cues(BASE_REQUEST);
 		expect(partial.cues.some((c) => c.kind === "node")).toBe(false);
 
-		// The tiles recover: the next request rebuilds and gets its node cue.
+		// During the outage a repeat request is served from cache.
+		await service.cues(BASE_REQUEST);
+		expect(valhallaCalls()).toBe(1);
+
+		// The tiles recover and the short TTL lapses: the next request rebuilds
+		// and gets its node cue.
+		setSystemTime(start + 6 * 60 * 1000);
 		const complete = await service.cues(BASE_REQUEST);
 		expect(complete.cues.filter((c) => c.kind === "node").map((c) => c.nodeRef)).toEqual(["47"]);
 		expect(valhallaCalls()).toBe(2);
 
-		// A complete result is cached.
+		// A complete result is cached for longer than the short TTL.
+		setSystemTime(start + 60 * 60 * 1000);
 		await service.cues(BASE_REQUEST);
 		expect(valhallaCalls()).toBe(2);
 	});

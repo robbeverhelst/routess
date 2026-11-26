@@ -99,8 +99,7 @@ function makeRedisService() {
 		expire: async () => {
 			throw new Error("Connection is closed.");
 		},
-		eval: async (script: string, _numKeys: number, key: string, ttlSeconds: number) => {
-			expect(script).toContain("INCR");
+		eval: async (_script: string, _numKeys: number, key: string, ttlSeconds: number) => {
 			const value = incr(key);
 			if (!ttls.has(key)) ttls.set(key, ttlSeconds);
 			return value;

@@ -30,6 +30,10 @@ import { RoutingService } from "./routing.service";
 // Same invalidation profile as /route responses: cues change only when the
 // Valhalla tiles or the geometry change, and the key hashes the geometry.
 const CUES_CACHE_TTL_S = 7 * 24 * 60 * 60;
+// Cues missing their NodeCues are cached only briefly: long enough to spare
+// Valhalla and the tile fetches during an outage, short enough that the node
+// cues return soon after the tiles recover.
+const INCOMPLETE_CUES_CACHE_TTL_S = 5 * 60;
 
 // Valhalla's trace service caps shape size; long external routes are
 // downsampled for the match only. Cue anchors still land on the full path.
@@ -106,9 +110,7 @@ export class CuesService {
 			const cached = await this.cache.get<CueDto[]>("valhalla-cues", cacheKey);
 			if (cached) return { cues: cached, degraded: false };
 			const { cues, complete } = await this.buildCues(geometry, request.activity, locale);
-			// Cues missing their NodeCues are served but never cached, so one
-			// failed tile fetch cannot strip the node cues for the full TTL.
-			if (complete) await this.cache.set("valhalla-cues", cacheKey, cues, CUES_CACHE_TTL_S);
+			await this.cache.set("valhalla-cues", cacheKey, cues, complete ? CUES_CACHE_TTL_S : INCOMPLETE_CUES_CACHE_TTL_S);
 			return { cues, degraded: false };
 		} catch (err) {
 			// Degrade honestly instead of failing the session: one follow-the-path
