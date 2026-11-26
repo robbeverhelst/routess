@@ -82,6 +82,11 @@ export interface RouteState {
 	// How this draft was born; resets to "manual" when the draft is cleared.
 	creationSource: DraftCreationSource;
 
+	// The ExternalRoute this draft's geometry was forked from (ADR 0035), set
+	// with the creation source and cleared with it. Saving sends it so the
+	// new Route carries the source's license.
+	forkedFromExternalRouteId: number | null;
+
 	history: HistoryStacks<Waypoint[]>;
 	canUndo: boolean;
 	canRedo: boolean;
@@ -115,7 +120,7 @@ export interface RouteActions {
 	setBaseline: (baseline: RouteBaseline) => void;
 	setActivity: (activity: RouteActivity | undefined) => void;
 	setRoutingPreferences: (prefs: RoutingPreferences | null) => void;
-	setCreationSource: (source: DraftCreationSource) => void;
+	setCreationSource: (source: DraftCreationSource, forkedFromExternalRouteId?: number | null) => void;
 
 	saveSnapshot: () => void;
 	undo: () => void;
@@ -144,6 +149,7 @@ const initialState: RouteState = {
 	activity: undefined,
 	routingPreferences: null,
 	creationSource: "manual",
+	forkedFromExternalRouteId: null,
 	history: emptyHistory<Waypoint[]>(),
 	canUndo: false,
 	canRedo: false,
@@ -308,6 +314,7 @@ export function createRoutingStore(logger: Logger) {
 			activity: state.activity,
 			routingPreferences: state.routingPreferences,
 			creationSource: state.creationSource,
+			forkedFromExternalRouteId: state.forkedFromExternalRouteId,
 			history: state.history,
 			canUndo: state.canUndo,
 			canRedo: state.canRedo,
@@ -372,6 +379,7 @@ export function createRoutingStore(logger: Logger) {
 						isComputingElevation: false,
 						mode: { kind: "unsaved" },
 						creationSource: "manual",
+						forkedFromExternalRouteId: null,
 					});
 				},
 
@@ -456,8 +464,8 @@ export function createRoutingStore(logger: Logger) {
 					set({ routingPreferences: prefs });
 				},
 
-				setCreationSource: (creationSource) => {
-					set({ creationSource });
+				setCreationSource: (creationSource, forkedFromExternalRouteId = null) => {
+					set({ creationSource, forkedFromExternalRouteId });
 				},
 
 				// === HISTORY ===

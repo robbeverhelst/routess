@@ -14,3 +14,11 @@ When real invariants appear (e.g., "first Waypoint must be Type=routed", "RouteT
 ## Amendment (2026-10-11): `route.mapper.ts` is back
 
 The inlining described above was later reverted. `apps/api/src/routes/route.mapper.ts` exists again and exports `toRouteResponseDto` (plus the public-summary mapper), because collections, social and external routes need the same Route response shape. It imports `toPublicUserDto` from `users/user.mapper` so the embedded owner is the PII-free public shape. `RoutesService.toResponseDto` is now a thin wrapper that passes the analytics salt. The rest of this ADR (no RouteAggregate until real invariants exist) still holds.
+
+## Amendment (2026-11-26): `RouteWriter` owns Route creation
+
+The invariants this ADR waited for now exist: Provenance and its lineage (`copiedFrom*`, and the ExternalRoute fork with its inherited license and attribution, ADR 0035), PublishedAt, the bounding box (ADR 0030), the saved-route allowance (ADR 0039), and the derived Place and surface composition. They were enforced separately by each writer, and the copies drifted: a fork of an ExternalRoute was saved as `valhalla` with no license.
+
+`apps/api/src/routes/route-writer.ts` is now the only place a Route is created. `RouteWriter.create(ownerId, origin)` takes a `RouteOrigin`: a `draft` composed in a client, a `fork` of an ExternalRoute, or a `copy` of a shared Route. The origin decides Provenance, lineage and the default visibility; the writer applies the rest the same way for all three. `RoutesService.create` and the "save a copy" action in `SocialService` both go through it. Updates stay in `RoutesService`; no RouteAggregate.
+
+Clients build the create request from a RouteDraft with `draftToCreateRequest` in `@routess/core`, so web's save and duplicate send the same Provenance and fork lineage.

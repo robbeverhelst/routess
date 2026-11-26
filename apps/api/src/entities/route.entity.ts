@@ -123,6 +123,20 @@ export class Route extends BaseEntity {
 	@Property({ nullable: true })
 	copiedFromUserId?: number;
 
+	// Lineage and inherited license when this Route was forked from an
+	// ExternalRoute (Provenance external-fork, ADR 0035). A plain id with no
+	// foreign key: the user routes table must stay independent of the
+	// external layer. The license and attribution are copied from the
+	// SeedSource at fork time and travel with every copy of the Route.
+	@Property({ nullable: true })
+	forkedFromExternalRouteId?: number;
+
+	@Property({ type: "string", nullable: true })
+	sourceLicense?: string;
+
+	@Property({ type: "string", nullable: true })
+	sourceAttribution?: string;
+
 	// Idempotency key a client chose for this Route, unique per User. A
 	// LocalRoute claimed into the account on sign-in carries its device id
 	// here, so a repeated claim returns this Route instead of a duplicate.

@@ -510,6 +510,9 @@ export interface ApiRoute {
 	// (ADR 0032). Null while derivation is pending.
 	surfaceComposition?: SurfaceComposition | null;
 	provenance: Provenance;
+	// Set for Provenance external-fork: the ExternalRoute the geometry came
+	// from and the license and attribution it inherited (ADR 0035).
+	forkedFrom?: ApiRouteFork | null;
 	// Unguessable 32-hex handle for share links. Unlisted routes are only
 	// reachable anonymously via this token (numeric ids are public-only).
 	shareToken: string;
@@ -540,6 +543,12 @@ export interface ApiExternalRoute {
 	updatedAt: string;
 }
 
+export interface ApiRouteFork {
+	externalRouteId: number;
+	license?: string;
+	attribution?: string;
+}
+
 export interface CreateRouteRequest {
 	name: string;
 	description?: string;
@@ -556,6 +565,9 @@ export interface CreateRouteRequest {
 	endAddress?: string;
 	routingPreferences?: RoutingPreferences;
 	provenance?: Provenance;
+	// The ExternalRoute this draft was forked from; the server then sets
+	// Provenance external-fork and the inherited license (ADR 0035).
+	forkedFromExternalRouteId?: number;
 	// Idempotency key (a UUID), unique per user: creating with one the user
 	// already has returns that Route instead of a duplicate.
 	clientRef?: string;

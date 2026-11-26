@@ -6,12 +6,12 @@ import { Follow } from "../entities/follow.entity";
 import { RouteShare } from "../entities/route-share.entity";
 import { Route } from "../entities/route.entity";
 import { User } from "../entities/user.entity";
-import { EntitlementsModule } from "../entitlements/entitlements.module";
+import { RoutesModule } from "../routes/routes.module";
 import { SocialController } from "./social.controller";
 import { SocialService } from "./social.service";
 
 @Module({
-	imports: [MikroOrmModule.forFeature([User, Route, Follow, RouteShare]), EmailModule, EntitlementsModule],
+	imports: [MikroOrmModule.forFeature([User, Route, Follow, RouteShare]), EmailModule, RoutesModule],
 	controllers: [SocialController],
 	providers: [SocialService],
 })

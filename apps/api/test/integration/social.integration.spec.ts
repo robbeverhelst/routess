@@ -351,6 +351,27 @@ describe("Social Integration Tests", () => {
 			expect(saved.copiedFromUserId).toBe(bob.id);
 		});
 
+		it("carries a fork's lineage and license onto the copy", async () => {
+			const route = makeRoute(bob, "Forked EuroVelo", "public");
+			route.provenance = "external-fork";
+			route.forkedFromExternalRouteId = 42;
+			route.sourceLicense = "ODbL-1.0";
+			route.sourceAttribution = "© EuroVelo";
+			await orm.em.persist([route]).flush();
+			const share = await api()
+				.post("/api/v1/social/shares")
+				.set("Authorization", `Bearer ${bobToken}`)
+				.send({ routeId: route.id, recipientHandle: "alice" })
+				.expect(201);
+
+			const copy = await api()
+				.post(`/api/v1/social/shares/${share.body.id}/copy`)
+				.set("Authorization", `Bearer ${aliceToken}`)
+				.expect(201);
+			expect(copy.body.provenance).toBe("external-fork");
+			expect(copy.body.forkedFrom).toEqual({ externalRouteId: 42, license: "ODbL-1.0", attribution: "© EuroVelo" });
+		});
+
 		it("refuses to copy an unavailable share", async () => {
 			const route = makeRoute(bob, "Gone", "public");
 			await orm.em.persist([route]).flush();

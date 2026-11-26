@@ -174,6 +174,8 @@ export class RoutesController {
 			description: route.description,
 			waypoints: route.waypoints ?? [],
 			geometry: route.geometry,
+			// A fork carries its ExternalRoute's attribution (ADR 0035).
+			attribution: route.sourceAttribution,
 		});
 		const filename = `${route.name.replace(/[^a-z0-9-]+/gi, "-")}-${route.id}.gpx`;
 		res.setHeader("Content-Type", "application/gpx+xml; charset=utf-8");

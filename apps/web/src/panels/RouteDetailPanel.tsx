@@ -646,6 +646,15 @@ export function RouteDetailPanel({ route, onBack }: { route: ApiRoute; onBack: (
 					</div>
 				)}
 
+				{route.forkedFrom?.attribution && (
+					// License obligation (ADR 0035): a fork of an ExternalRoute shows
+					// the attribution it inherited.
+					<div style={{ marginTop: 12, fontSize: 11.5, color: RDS_COLORS.fgSubtle, lineHeight: 1.5 }}>
+						{route.forkedFrom.attribution}
+						{route.forkedFrom.license ? ` · ${route.forkedFrom.license}` : ""}
+					</div>
+				)}
+
 				{route.description && (
 					<p style={{ fontSize: 13, color: RDS_COLORS.fgMuted, margin: "12px 0 0", lineHeight: 1.5 }}>
 						{route.description}

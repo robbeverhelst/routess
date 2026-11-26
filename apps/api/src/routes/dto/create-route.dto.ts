@@ -16,6 +16,7 @@ import {
 	IsArray,
 	IsBoolean,
 	IsIn,
+	IsInt,
 	IsNotEmpty,
 	IsNumber,
 	IsOptional,
@@ -23,6 +24,7 @@ import {
 	IsUUID,
 	Matches,
 	MaxLength,
+	Min,
 	Validate,
 	ValidateNested,
 	ValidatorConstraint,
@@ -278,12 +280,23 @@ export class CreateRouteDto {
 	routingPreferences?: RoutingPreferencesDto;
 
 	@ApiPropertyOptional({
-		description: "How this route was produced. Defaults to 'valhalla' for new routes.",
+		description:
+			"How this route was produced. Defaults to 'valhalla' for new routes. 'external-fork' is set by the server from forkedFromExternalRouteId and is rejected without it.",
 		enum: PROVENANCES,
 	})
 	@IsOptional()
 	@IsIn(PROVENANCES)
 	provenance?: Provenance;
+
+	@ApiPropertyOptional({
+		description:
+			"Id of the ExternalRoute this route's geometry was forked from. The route is then saved with provenance 'external-fork' and inherits the source's license and attribution (ADR 0035); any provenance sent alongside is ignored.",
+		example: 42,
+	})
+	@IsOptional()
+	@IsInt()
+	@Min(1)
+	forkedFromExternalRouteId?: number;
 
 	@ApiPropertyOptional({
 		description:

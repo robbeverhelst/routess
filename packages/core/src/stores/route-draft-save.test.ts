@@ -1,0 +1,64 @@
+import { describe, expect, it } from "bun:test";
+
+import type { Coordinate } from "../types";
+import { draftSaveFields, draftToCreateRequest, type RouteDraftSaveState } from "./route-draft-save";
+
+const PATH: Coordinate[] = [
+	[3.7, 51.05],
+	[3.75, 51.07],
+];
+
+const DRAFT: RouteDraftSaveState = {
+	waypoints: [
+		{ coord: PATH[0], type: "routed" },
+		{ coord: PATH[1], type: "routed" },
+	],
+	routePath: PATH,
+	distanceMeters: 4200,
+	durationSeconds: 900,
+	elevationGain: 12.6,
+	routingPreferences: { surfacePreference: "mixed", avoidFerries: true, avoidHighways: false },
+	creationSource: "manual",
+	forkedFromExternalRouteId: null,
+};
+
+describe("draftToCreateRequest", () => {
+	it("sends the geometry, rounded metrics and preferences of a manual draft, with no Provenance", () => {
+		expect(draftToCreateRequest(DRAFT)).toEqual({
+			waypoints: DRAFT.waypoints,
+			geometry: PATH,
+			distance: 4200,
+			duration: 900,
+			elevationGain: 13,
+			routingPreferences: DRAFT.routingPreferences,
+		});
+	});
+
+	it("marks a generated draft with Provenance generation", () => {
+		expect(draftToCreateRequest({ ...DRAFT, creationSource: "generated" }).provenance).toBe("generation");
+	});
+
+	it("names the ExternalRoute of a forked draft instead of a Provenance", () => {
+		const request = draftToCreateRequest({ ...DRAFT, creationSource: "imported", forkedFromExternalRouteId: 42 });
+
+		expect(request.forkedFromExternalRouteId).toBe(42);
+		expect(request.provenance).toBeUndefined();
+	});
+
+	it("leaves out a RoutePath too short to draw and preferences the draft lacks", () => {
+		const request = draftToCreateRequest({ ...DRAFT, routePath: [PATH[0]], routingPreferences: null });
+
+		expect(request).not.toHaveProperty("geometry");
+		expect(request).not.toHaveProperty("routingPreferences");
+	});
+});
+
+describe("draftSaveFields", () => {
+	it("falls back to zero distance and elevation and no duration while they are unknown", () => {
+		const fields = draftSaveFields({ ...DRAFT, distanceMeters: null, durationSeconds: null, elevationGain: undefined });
+
+		expect(fields.distance).toBe(0);
+		expect(fields.duration).toBeUndefined();
+		expect(fields.elevationGain).toBe(0);
+	});
+});

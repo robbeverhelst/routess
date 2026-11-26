@@ -6,23 +6,16 @@ import {
 	UniqueConstraintViolationException,
 } from "@mikro-orm/core";
 import { InjectRepository } from "@mikro-orm/nestjs";
-import { Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { EventEmitter2 } from "@nestjs/event-emitter";
-import { isRouteIndexable, pathIntersectsBbox, routeBoundingBox } from "@routess/core";
+import { isRouteIndexable, pathIntersectsBbox } from "@routess/core";
 
 import type { AppConfig } from "../config/app-config";
 import { APP_CONFIG } from "../config/config.module";
 import { Route } from "../entities/route.entity";
-import { User } from "../entities/user.entity";
-import { EntitlementsService } from "../entitlements/entitlements.service";
 import { ExternalRoutesService } from "../external-routes/external-routes.service";
 import { PlacesService } from "../places/places.service";
-import {
-	ROUTE_CREATED,
-	ROUTE_DELETED,
-	type RouteCreatedEvent,
-	type RouteDeletedEvent,
-} from "../telemetry/domain-events";
+import { ROUTE_DELETED, type RouteDeletedEvent } from "../telemetry/domain-events";
 import type { CreateRouteDto } from "./dto/create-route.dto";
 import type { PublicRouteSummaryDto } from "./dto/public-route-summary.dto";
 import {
@@ -33,6 +26,7 @@ import {
 } from "./dto/public-routes-query.dto";
 import type { RouteResponseDto } from "./dto/route-response.dto";
 import type { UpdateRouteDto } from "./dto/update-route.dto";
+import { applyBbox, type RouteOrigin, RouteWriter } from "./route-writer";
 import { toPublicRouteSummaryDto, toRouteResponseDto } from "./route.mapper";
 import { SurfaceCompositionService } from "./surface-composition.service";
 
@@ -68,8 +62,6 @@ export class RoutesService {
 	constructor(
 		@InjectRepository(Route)
 		private readonly routeRepository: EntityRepository<Route>,
-		@InjectRepository(User)
-		private readonly userRepository: EntityRepository<User>,
 		private readonly em: EntityManager,
 		private readonly events: EventEmitter2,
 		@Inject(APP_CONFIG)
@@ -77,22 +69,11 @@ export class RoutesService {
 		private readonly places: PlacesService,
 		private readonly surfaces: SurfaceCompositionService,
 		private readonly externalRoutes: ExternalRoutesService,
-		private readonly entitlements: EntitlementsService,
+		private readonly writer: RouteWriter,
 	) {}
 
 	private toResponseDto(route: Route): RouteResponseDto {
 		return toRouteResponseDto(route, this.config.analytics.salt);
-	}
-
-	// Recomputes the persisted bbox (ADR 0030) from the route's geometry,
-	// falling back to waypoint coords for direct-only routes.
-	private applyBbox(route: Route): void {
-		const coords = route.geometry?.length ? route.geometry : route.waypoints.map((w) => w.coord);
-		const box = routeBoundingBox(coords);
-		route.bboxMinLat = box?.minLat;
-		route.bboxMaxLat = box?.maxLat;
-		route.bboxMinLng = box?.minLng;
-		route.bboxMaxLng = box?.maxLng;
 	}
 
 	// The User's Route carrying this clientRef, if any (see Route.clientRef).
@@ -125,33 +106,18 @@ export class RoutesService {
 	}
 
 	private async createNew(createRouteDto: CreateRouteDto, userId: number): Promise<RouteResponseDto> {
-		const owner = await this.userRepository.findOneOrFail({ id: userId });
-		const ownerDefault = owner.preferences?.defaultRouteVisibility ?? "private";
-		// Free saves up to FREE_SAVED_ROUTE_LIMIT Routes (ADR 0039). The Route
-		// is built inside the gate so the count never sees it.
-		const route = await this.entitlements.saveWithinRouteAllowance({ id: userId }, async (em) => {
-			const route = em.create(Route, {
-				...createRouteDto,
-				visibility: createRouteDto.visibility ?? ownerDefault,
-				tags: createRouteDto.tags ?? [],
-				favourite: createRouteDto.favourite ?? false,
-				provenance: createRouteDto.provenance ?? "valhalla",
-				user: userId,
-			});
-			if (route.visibility === "public") {
-				route.publishedAt = new Date();
-			}
-			this.applyBbox(route);
-			await em.persist(route).flush();
-			return route;
-		});
-		await this.em.populate(route, ["user"]);
-		this.events.emit(ROUTE_CREATED, { userId } satisfies RouteCreatedEvent);
-		// Fire-and-forget: Place is async and fail-open (CONTEXT.md "Place").
-		void this.places.derivePlaceForRoute(route.id);
-		// Same pattern for the persisted surface composition (ADR 0032).
-		void this.surfaces.deriveForRoute(route.id);
-		return this.toResponseDto(route);
+		const { provenance, forkedFromExternalRouteId, ...input } = createRouteDto;
+		let origin: RouteOrigin;
+		if (forkedFromExternalRouteId != null) {
+			origin = { kind: "fork", input, externalRouteId: forkedFromExternalRouteId };
+		} else if (provenance === "external-fork") {
+			// external-fork promises an inherited license; without its source
+			// there is none to carry.
+			throw new BadRequestException("Provenance 'external-fork' requires forkedFromExternalRouteId");
+		} else {
+			origin = { kind: "draft", input, provenance };
+		}
+		return this.toResponseDto(await this.writer.create(userId, origin));
 	}
 
 	async findAll(userId: number, limit: number, offset: number): Promise<{ items: RouteResponseDto[]; total: number }> {
@@ -288,7 +254,7 @@ export class RoutesService {
 		}
 		const geometryChanged = updateRouteDto.geometry !== undefined || updateRouteDto.waypoints !== undefined;
 		if (geometryChanged) {
-			this.applyBbox(route);
+			applyBbox(route);
 			// Stale composition must never render against new geometry; the
 			// async derivation below repopulates it.
 			route.surfaceComposition = null;
