@@ -1,4 +1,4 @@
-import type { RoutingPreferences } from "../routing/types";
+import type { Provenance, RoutingPreferences } from "../routing/types";
 import type { Coordinate, Waypoint } from "../types";
 import type { DraftProvenance, RouteState } from "./routing";
 
@@ -48,14 +48,25 @@ export function draftSaveFields(
 export function draftOriginFields(
 	draft: Pick<RouteDraftSaveState, "creationSource" | "forkedFromExternalRouteId" | "provenance">,
 ): RouteDraftOriginFields {
-	// A fork names its ExternalRoute; the server sets Provenance external-fork
-	// and the inherited license from it (ADR 0035).
-	if (draft.forkedFromExternalRouteId != null) return { forkedFromExternalRouteId: draft.forkedFromExternalRouteId };
 	// A draft loaded from a Route or a GPX file keeps that Provenance; one born
 	// from a confirmed GenerationCandidate saves with Provenance "generation"
 	// (immutable, per ADR-0023/0029).
-	const provenance = draft.provenance ?? (draft.creationSource === "generated" ? "generation" : null);
-	return provenance ? { provenance } : {};
+	return routeOriginFields({
+		provenance: draft.provenance ?? (draft.creationSource === "generated" ? "generation" : null),
+		forkedFromExternalRouteId: draft.forkedFromExternalRouteId,
+	});
+}
+
+/** How a new Route made from an existing one (a draft's source, a duplicate) states its origin. */
+export function routeOriginFields(source: {
+	provenance?: Provenance | null;
+	forkedFromExternalRouteId?: number | null;
+}): RouteDraftOriginFields {
+	// A fork names its ExternalRoute; the server sets Provenance external-fork
+	// and the inherited license from it (ADR 0035).
+	if (source.forkedFromExternalRouteId != null) return { forkedFromExternalRouteId: source.forkedFromExternalRouteId };
+	if (!source.provenance || source.provenance === "external-fork") return {};
+	return { provenance: source.provenance };
 }
 
 /** Everything a new Route takes from the draft; the caller adds name, activity, visibility and tags. */

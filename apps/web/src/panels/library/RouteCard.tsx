@@ -3,6 +3,7 @@ import type { RouteActivity, RouteVisibility } from "@routess/core";
 import { useState } from "react";
 
 import { ProBadge, useProGatePrompt, useProGates, useProGateToast } from "@/features/billing/proGates";
+import { duplicateRouteRequest } from "@/features/routing/services/duplicateRoute";
 import { exportRouteGpx } from "@/features/routing/services/exportRouteGpx";
 import {
 	useCollections,
@@ -257,30 +258,13 @@ export function RouteCard({
 			promptPro("unlimited_saved_routes");
 			return;
 		}
-		saveRoute.mutate(
-			{
-				name: `${route.name} (copy)`,
-				description: route.description,
-				activity: route.activity,
-				tags: route.tags,
-				waypoints: route.waypoints,
-				geometry: route.geometry,
-				distance: route.distance,
-				duration: route.duration,
-				elevationGain: route.elevationGain,
-				startAddress: route.startAddress,
-				endAddress: route.endAddress,
-				provenance: route.provenance,
-				...(route.routingPreferences ? { routingPreferences: route.routingPreferences } : {}),
+		saveRoute.mutate(duplicateRouteRequest(route), {
+			onSuccess: (newRoute) => pushToast({ kind: "success", title: t("route.duplicated"), body: newRoute.name }),
+			onError: (error) => {
+				if (proGateToast(error)) return;
+				pushToast({ kind: "danger", title: t("route.duplicateFailed"), body: t("common.tryAgain") });
 			},
-			{
-				onSuccess: (newRoute) => pushToast({ kind: "success", title: t("route.duplicated"), body: newRoute.name }),
-				onError: (error) => {
-					if (proGateToast(error)) return;
-					pushToast({ kind: "danger", title: t("route.duplicateFailed"), body: t("common.tryAgain") });
-				},
-			},
-		);
+		});
 	};
 
 	const share = () => {

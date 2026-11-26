@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 
 import type { Coordinate } from "../types";
-import { draftSaveFields, draftToCreateRequest, type RouteDraftSaveState } from "./route-draft-save";
+import { draftSaveFields, draftToCreateRequest, type RouteDraftSaveState, routeOriginFields } from "./route-draft-save";
 
 const PATH: Coordinate[] = [
 	[3.7, 51.05],
@@ -75,5 +75,18 @@ describe("draftSaveFields", () => {
 		expect(fields.distance).toBe(0);
 		expect(fields.duration).toBeUndefined();
 		expect(fields.elevationGain).toBe(0);
+	});
+});
+
+describe("routeOriginFields", () => {
+	it("names a fork's ExternalRoute and never sends Provenance external-fork", () => {
+		expect(routeOriginFields({ provenance: "external-fork", forkedFromExternalRouteId: 42 })).toEqual({
+			forkedFromExternalRouteId: 42,
+		});
+		expect(routeOriginFields({ provenance: "external-fork" })).toEqual({});
+	});
+
+	it("keeps any other Provenance", () => {
+		expect(routeOriginFields({ provenance: "gpx-import" })).toEqual({ provenance: "gpx-import" });
 	});
 });
