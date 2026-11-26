@@ -69,12 +69,13 @@ describe("draftToCreateRequest", () => {
 });
 
 describe("draftSaveFields", () => {
-	it("falls back to zero distance and elevation and no duration while they are unknown", () => {
+	it("falls back to zero distance, unknown elevation and no duration while they are unknown", () => {
 		const fields = draftSaveFields({ ...DRAFT, distanceMeters: null, durationSeconds: null, elevationGain: undefined });
 
 		expect(fields.distance).toBe(0);
 		expect(fields.duration).toBeUndefined();
-		expect(fields.elevationGain).toBe(0);
+		// An unknown elevation gain is saved as unknown, not as a flat 0.
+		expect(fields.elevationGain).toBeNull();
 	});
 });
 

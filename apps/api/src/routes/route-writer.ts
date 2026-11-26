@@ -30,7 +30,7 @@ export type RouteOrigin =
 // invariants every new Route must meet whatever its origin: Provenance and
 // lineage, the inherited license on forks and their copies, the default
 // visibility, PublishedAt, the bounding box, the saved-route allowance, the
-// creation event and the Place and surface derivations.
+// creation event and the Place and surface data.
 @Injectable()
 export class RouteWriter {
 	constructor(
@@ -56,12 +56,15 @@ export class RouteWriter {
 		});
 		await this.em.populate(route, ["user"]);
 
-		// A copy carries its source's Place and is private, so it skips the
-		// creation event and the derivations, as "save a copy" always has.
+		// Every new Route counts as created, a copy included.
+		this.events.emit(ROUTE_CREATED, { userId: ownerId } satisfies RouteCreatedEvent);
+		// A copy carries its source's Place, and its surface composition when
+		// the source has one; everything else derives them.
 		if (origin.kind !== "copy") {
-			this.events.emit(ROUTE_CREATED, { userId: ownerId } satisfies RouteCreatedEvent);
 			// Fire-and-forget: Place is async and fail-open (CONTEXT.md "Place").
 			void this.places.derivePlaceForRoute(route.id);
+		}
+		if (!route.surfaceComposition) {
 			// Same pattern for the persisted surface composition (ADR 0032).
 			void this.surfaces.deriveForRoute(route.id);
 		}
@@ -117,6 +120,7 @@ export class RouteWriter {
 					placeCity: source.placeCity,
 					placeRegion: source.placeRegion,
 					placeCountryCode: source.placeCountryCode,
+					surfaceComposition: source.surfaceComposition ? structuredClone(source.surfaceComposition) : null,
 					startAddress: source.startAddress,
 					endAddress: source.endAddress,
 					routingPreferences: source.routingPreferences ?? null,

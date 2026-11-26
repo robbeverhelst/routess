@@ -91,9 +91,11 @@ export class RouteResponseDto {
 	duration?: number;
 
 	@ApiPropertyOptional({
-		description: "Elevation gain in meters",
+		description: "Elevation gain in meters; null when it is not known",
+		nullable: true,
+		type: Number,
 	})
-	elevationGain?: number;
+	elevationGain?: number | null;
 
 	@ApiPropertyOptional()
 	startAddress?: string;

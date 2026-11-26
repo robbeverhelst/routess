@@ -118,3 +118,18 @@ describe("CacheService (redis)", () => {
 		expect(await service.increment("quota", "u1", 60)).toBe(2);
 	});
 });
+
+describe("CacheService.decrement (in-memory fallback)", () => {
+	it("takes back one increment and never goes below zero", async () => {
+		const { service } = makeService();
+		await service.increment("quota", "u1", 60);
+		await service.increment("quota", "u1", 60);
+		await service.decrement("quota", "u1");
+		expect(await service.readCounter("quota", "u1")).toBe(1);
+		await service.decrement("quota", "u1");
+		await service.decrement("quota", "u1");
+		expect(await service.readCounter("quota", "u1")).toBe(0);
+		await service.decrement("quota", "unset");
+		expect(await service.readCounter("quota", "unset")).toBe(0);
+	});
+});

@@ -2224,10 +2224,10 @@
 						"description": "preferNodeNetworks without Pro: knooppunt routes are part of Pro (details.reason: pro_required)"
 					},
 					"429": {
-						"description": "Daily route generation quota exceeded"
+						"description": "Daily route generation quota exceeded (a generation that fails before routing, such as routing busy or invalid input, does not count)"
 					},
 					"503": {
-						"description": "Valhalla is not configured or unreachable"
+						"description": "Valhalla is not configured or unreachable, or routing is busy"
 					}
 				},
 				"summary": "Generate loop route candidates from high-level parameters",
@@ -4480,8 +4480,9 @@
 					},
 					"elevationGain": {
 						"type": "number",
-						"description": "Total elevation gain of the route in meters",
-						"example": 150
+						"description": "Total elevation gain of the route in meters; null when it is not known",
+						"example": 150,
+						"nullable": true
 					},
 					"startAddress": {
 						"type": "string",
@@ -4646,7 +4647,8 @@
 					},
 					"elevationGain": {
 						"type": "number",
-						"description": "Elevation gain in meters"
+						"description": "Elevation gain in meters; null when it is not known",
+						"nullable": true
 					},
 					"startAddress": {
 						"type": "string"
@@ -4902,8 +4904,9 @@
 					},
 					"elevationGain": {
 						"type": "number",
-						"description": "Total elevation gain of the route in meters",
-						"example": 150
+						"description": "Total elevation gain of the route in meters; null when it is not known",
+						"example": 150,
+						"nullable": true
 					},
 					"startAddress": {
 						"type": "string",

@@ -22,6 +22,12 @@ local value = redis.call("INCR", KEYS[1])
 if redis.call("TTL", KEYS[1]) < 0 then redis.call("EXPIRE", KEYS[1], ARGV[1]) end
 return value`;
 
+// DECR only a live, positive counter, in one step so a concurrent increment
+// or expiry cannot make it negative or leave it without its TTL.
+const DECREMENT_SCRIPT = `
+if tonumber(redis.call("GET", KEYS[1]) or "0") > 0 then return redis.call("DECR", KEYS[1]) end
+return 0`;
+
 // Deterministic JSON: object keys sorted recursively, arrays left in order.
 // Used for cache-key hashing so insertion order never changes the key.
 function canonicalize(value: unknown): string {
@@ -171,5 +177,19 @@ export class CacheService implements OnModuleDestroy {
 		}
 		const entry = this.memory.get(fullKey);
 		return entry && entry.expiresAt > Date.now() ? Number(entry.value) : 0;
+	}
+
+	// Takes back one increment, never below 0 and keeping the counter's
+	// expiry. A no-op on Redis failure (fail-open, like increment).
+	async decrement(counter: string, key: string): Promise<void> {
+		const fullKey = `counter:${counter}:${key}`;
+		if (this.redis) {
+			await this.redis.eval(DECREMENT_SCRIPT, 1, fullKey).catch(() => undefined);
+			return;
+		}
+		const entry = this.memory.get(fullKey);
+		if (entry && entry.expiresAt > Date.now() && Number(entry.value) > 0) {
+			entry.value = String(Number(entry.value) - 1);
+		}
 	}
 }

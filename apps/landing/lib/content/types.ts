@@ -135,6 +135,8 @@ export interface Dict {
 		about: string;
 		mapAlt: string;
 		summaryTemplate: string;
+		// For a Route whose elevation gain is not known.
+		summaryTemplateNoElevation: string;
 		byAuthor: string;
 	};
 	profilePage: {

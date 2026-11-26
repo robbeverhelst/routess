@@ -79,11 +79,17 @@ export interface RefreshRunResult {
 	error?: string;
 }
 
+// A feed (an Overpass query, a national export) can be large and slow, but a
+// stalled one must not hang the refresh run, which works through every due
+// source in turn. The timeout covers reading the body too.
+const SEED_FETCH_TIMEOUT_MS = 2 * 60 * 1000;
+
 // Default feed fetcher; injectable in refresh methods so tests run offline.
 // Some providers (Overpass) 406 requests without explicit headers.
-async function defaultSeedFetch(url: string): Promise<string> {
+export async function defaultSeedFetch(url: string, timeoutMs = SEED_FETCH_TIMEOUT_MS): Promise<string> {
 	const res = await fetch(url, {
 		headers: { Accept: "application/json", "User-Agent": "routess-seeder/1.0 (+https://routess.com)" },
+		signal: AbortSignal.timeout(timeoutMs),
 	});
 	if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${url}`);
 	return res.text();

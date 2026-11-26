@@ -1,10 +1,11 @@
-import { Body, Controller, HttpCode, HttpStatus, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, HttpCode, HttpStatus, Post, UseGuards, UseInterceptors } from "@nestjs/common";
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 
 import { OptionalUnifiedAuthGuard } from "../auth/guards/optional-unified-auth.guard";
 import { ThrottleExpensive } from "../common/decorators/throttle.decorator";
 import { GenerateRequestDto, GenerateResponseDto } from "./dto/generate.dto";
 import { GenerationQuotaGuard } from "./generation-quota.guard";
+import { GenerationQuotaRefundInterceptor } from "./generation-quota.interceptor";
 import { GenerationService } from "./generation.service";
 import { NodeNetworkGenerationGuard } from "./node-network-generation.guard";
 
@@ -26,12 +27,17 @@ export class GenerationController {
 		status: 403,
 		description: "preferNodeNetworks without Pro: knooppunt routes are part of Pro (details.reason: pro_required)",
 	})
-	@ApiResponse({ status: 429, description: "Daily route generation quota exceeded" })
-	@ApiResponse({ status: 503, description: "Valhalla is not configured or unreachable" })
+	@ApiResponse({
+		status: 429,
+		description:
+			"Daily route generation quota exceeded (a generation that fails before routing, such as routing busy or invalid input, does not count)",
+	})
+	@ApiResponse({ status: 503, description: "Valhalla is not configured or unreachable, or routing is busy" })
 	// OptionalUnifiedAuthGuard populates req.user from a session JWT or a PAT so
 	// the quota keys per-User when signed in (falling back to IP); the Pro
 	// gate on preferNodeNetworks and then the quota guard run after it.
 	@UseGuards(OptionalUnifiedAuthGuard, NodeNetworkGenerationGuard, GenerationQuotaGuard)
+	@UseInterceptors(GenerationQuotaRefundInterceptor)
 	@ThrottleExpensive()
 	@HttpCode(HttpStatus.OK)
 	@Post()

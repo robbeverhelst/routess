@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it, jest } from "bun:test";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, jest } from "bun:test";
 
 import { MikroORM } from "@mikro-orm/core";
 import type { INestApplication } from "@nestjs/common";
@@ -16,6 +16,7 @@ import { Entitlement } from "src/entities/entitlement.entity";
 import { Payment } from "src/entities/payment.entity";
 import { User } from "src/entities/user.entity";
 import { EntitlementsService } from "src/entitlements/entitlements.service";
+import { GenerationService } from "src/generation/generation.service";
 
 import { clearDatabase, closeTestApp, createTestApp, createTestUserWithAuth, withRequestContext } from "../utils";
 import request from "../utils/http";
@@ -428,26 +429,42 @@ describe("Billing with Stripe enabled", () => {
 	});
 
 	describe("generation quota per tier", () => {
+		// A generation that routes and finds nothing still counts; no Valhalla
+		// runs here, so a stub answers that outcome for the pipeline.
+		const GENERATE = {
+			start: { lat: 51.0543, lon: 3.7174 },
+			activity: "cycle",
+			targetDistanceKm: 30,
+			heading: "any",
+			preferences: { surfacePreference: "mixed", avoidFerries: true, avoidHighways: false },
+		};
+		let generate: ReturnType<typeof jest.spyOn>;
+
 		// User ids restart with every schema refresh, so a previous test's
 		// counter for user:1 would leak in; drop the in-memory counters.
 		beforeEach(() => {
 			(app.get(CacheService) as unknown as { memory: Map<string, unknown> }).memory.clear();
+			generate = jest
+				.spyOn(app.get(GenerationService), "generate")
+				.mockResolvedValue({ candidates: [], failure: { code: "no_candidates_routable" } });
 		});
 
-		// The quota guard runs before validation, so an empty body still
-		// counts an attempt and answers 400 until the cap is reached.
+		afterEach(() => {
+			generate.mockRestore();
+		});
+
 		async function attempts(count: number, token?: string): Promise<number[]> {
 			const statuses: number[] = [];
 			for (let i = 0; i < count; i++) {
 				const attempt = request(app.getHttpServer()).post("/api/v1/generation");
 				if (token) attempt.set("Authorization", `Bearer ${token}`);
-				statuses.push((await attempt.send({})).status);
+				statuses.push((await attempt.send(GENERATE)).status);
 			}
 			return statuses;
 		}
 
 		it("caps anonymous callers at the anonymous allowance and points them to sign in", async () => {
-			expect(await attempts(2)).toEqual([400, 429]);
+			expect(await attempts(2)).toEqual([200, 429]);
 			const response = await request(app.getHttpServer()).post("/api/v1/generation").send({});
 			expect(response.body).toMatchObject({
 				statusCode: 429,
@@ -458,7 +475,7 @@ describe("Billing with Stripe enabled", () => {
 
 		it("caps free Users at the free allowance and offers Pro", async () => {
 			const { accessToken } = await createTestUserWithAuth(app, { email: "q-free@example.com", googleId: "g-qf" });
-			expect(await attempts(3, accessToken)).toEqual([400, 400, 429]);
+			expect(await attempts(3, accessToken)).toEqual([200, 200, 429]);
 			const response = await request(app.getHttpServer())
 				.post("/api/v1/generation")
 				.set("Authorization", `Bearer ${accessToken}`)
@@ -483,7 +500,7 @@ describe("Billing with Stripe enabled", () => {
 				.send({ label: "cli", scope: "read" })
 				.expect(201);
 
-			expect(await attempts(3, minted.body.token)).toEqual([400, 400, 429]);
+			expect(await attempts(3, minted.body.token)).toEqual([200, 200, 429]);
 			const response = await request(app.getHttpServer())
 				.post("/api/v1/generation")
 				.set("Authorization", `Bearer ${minted.body.token}`)
@@ -495,7 +512,7 @@ describe("Billing with Stripe enabled", () => {
 			const { user, accessToken } = await createTestUserWithAuth(app, { email: "q-pro@example.com", googleId: "g-qp" });
 			await postWebhook(completedEvent("evt_quota", user.id, secondsAgo(1)));
 
-			expect(await attempts(5, accessToken)).toEqual([400, 400, 400, 400, 429]);
+			expect(await attempts(5, accessToken)).toEqual([200, 200, 200, 200, 429]);
 		});
 	});
 });

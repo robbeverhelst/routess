@@ -27,7 +27,7 @@ interface RouteView {
 	tags: string[];
 	distance?: number;
 	duration?: number;
-	elevationGain?: number;
+	elevationGain?: number | null;
 	canonicalSlugId: string;
 	indexable: boolean;
 	user?: { name: string; handle: string };
@@ -88,7 +88,10 @@ function summary(dict: Dict, route: RouteView): string {
 	const description = route.description?.trim();
 	if (description) return description;
 	const activity = dict.routePage.activities[route.activity ?? "route"] ?? dict.routePage.activities.route;
-	return dict.routePage.summaryTemplate
+	// An unknown elevation gain is left out rather than shown as 0 m.
+	const template =
+		route.elevationGain == null ? dict.routePage.summaryTemplateNoElevation : dict.routePage.summaryTemplate;
+	return template
 		.replace("{distance}", formatDistance((route.distance ?? 0) / 1000))
 		.replace("{activity}", activity)
 		.replace("{elevation}", String(Math.round(route.elevationGain ?? 0)));

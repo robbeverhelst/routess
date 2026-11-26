@@ -12,6 +12,15 @@ const SECONDS_PER_DAY = 24 * 60 * 60;
 
 export const GENERATION_QUOTA_COUNTER = "generation-quota";
 
+// The counter key this request was charged under, for the refund in
+// GenerationQuotaRefundInterceptor. Unset when nothing was counted.
+export const GENERATION_QUOTA_CHARGE = Symbol("generationQuotaCharge");
+
+export type GenerationQuotaRequest = Request & {
+	user?: AuthenticatedUser | null;
+	[GENERATION_QUOTA_CHARGE]?: string;
+};
+
 // The quota counter's key: one per subject per UTC day.
 export function generationQuotaKey(subject: string, now = new Date()): string {
 	return `${now.toISOString().slice(0, 10)}:${subject}`;
@@ -37,7 +46,10 @@ const UPGRADE_FOR_TIER: Record<GenerationQuotaTier, "sign_in" | "pro" | null> = 
 // anonymous-accessible). With billing on, the cap follows the caller's tier
 // (anonymous, free or Pro, ADR 0039); with billing off one cap applies to
 // everyone. Counter resets at UTC midnight; fail-open if Redis is down
-// (increment returns 0, never blocks).
+// (increment returns 0, never blocks). The guard counts the attempt up front so
+// concurrent requests cannot overrun the cap, and
+// GenerationQuotaRefundInterceptor takes it back when no routing work
+// completed (routing busy, Valhalla down, invalid input).
 @Injectable()
 export class GenerationQuotaGuard implements CanActivate {
 	constructor(
@@ -47,16 +59,18 @@ export class GenerationQuotaGuard implements CanActivate {
 	) {}
 
 	async canActivate(context: ExecutionContext): Promise<boolean> {
-		const request = context.switchToHttp().getRequest<Request & { user?: AuthenticatedUser | null }>();
+		const request = context.switchToHttp().getRequest<GenerationQuotaRequest>();
 		const user = request.user?.id ? { id: request.user.id } : null;
 		const tier = this.config.billing.enabled ? await this.entitlements.quotaTier(user) : null;
 		const limit = generationQuotaLimit(this.config, tier);
 		if (limit <= 0) return true;
 
 		const subject = user ? `user:${user.id}` : `ip:${request.ip ?? "unknown"}`;
-		const count = await this.cache.increment(GENERATION_QUOTA_COUNTER, generationQuotaKey(subject), SECONDS_PER_DAY);
+		const key = generationQuotaKey(subject);
+		const count = await this.cache.increment(GENERATION_QUOTA_COUNTER, key, SECONDS_PER_DAY);
 
 		if (count > limit) {
+			await this.cache.decrement(GENERATION_QUOTA_COUNTER, key);
 			const payload: DomainErrorPayload = {
 				statusCode: HttpStatus.TOO_MANY_REQUESTS,
 				code: "RATE_LIMITED",
@@ -69,6 +83,7 @@ export class GenerationQuotaGuard implements CanActivate {
 			};
 			throw new HttpException(payload, HttpStatus.TOO_MANY_REQUESTS);
 		}
+		if (count > 0) request[GENERATION_QUOTA_CHARGE] = key;
 		return true;
 	}
 }
