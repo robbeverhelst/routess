@@ -1,4 +1,4 @@
-import { EntityManager } from "@mikro-orm/core";
+import { EntityManager, Reference } from "@mikro-orm/core";
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { EventEmitter2 } from "@nestjs/event-emitter";
 import { type Provenance, routeBoundingBox } from "@routess/core";
@@ -87,7 +87,9 @@ export class RouteWriter {
 					{ populate: ["source"], filters: false },
 				);
 				if (!external) throw new NotFoundException("External route not found");
-				const source = external.source.getEntity();
+				// The relation is not declared `ref: true`, so once populated it
+				// holds the SeedSource itself rather than a Reference wrapper.
+				const source = Reference.unwrapReference(external.source);
 				return {
 					...clientFields(origin.input),
 					// Forks are private unless the user chooses otherwise (ADR 0035).

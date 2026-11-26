@@ -85,7 +85,7 @@ function makeWriter(
 
 function externalRoute(id: number): ExternalRoute {
 	const source = { license: "ODbL-1.0", attribution: "© EuroVelo, OpenStreetMap contributors" };
-	return Object.assign(new ExternalRoute(), { id, source: { getEntity: () => source } });
+	return Object.assign(new ExternalRoute(), { id, source });
 }
 
 describe("RouteWriter: draft", () => {
