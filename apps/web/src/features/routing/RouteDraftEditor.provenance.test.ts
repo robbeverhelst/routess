@@ -19,6 +19,7 @@ vi.mock("./services/elevation", () => ({
 }));
 
 import type { ApiRoute } from "@/lib/api";
+import { serializeAndCompress } from "@/lib/shareUtils";
 import { useRoutingStore } from "@/stores/routingStore";
 
 import { createRouteDraftEditor } from "./RouteDraftEditor";
@@ -134,5 +135,27 @@ describe("RouteDraftEditor keeps the Provenance a draft was loaded with", () => 
 		await editor().loadFromApiRoute(savedRoute({ provenance: "gpx-import" }));
 		useRoutingStore.getState().setCreationSource("generated");
 		expect(createRequest().provenance).toBe("generation");
+	});
+
+	it.each([
+		[
+			"a fork",
+			() => editor().loadFromApiRoute(savedRoute({ provenance: "external-fork", forkedFrom: { externalRouteId: 42 } })),
+		],
+		["a GPX import", () => editor().loadFromGpx(GPX)],
+	])("starts an unbound manual draft from a share link opened after %s", async (_, loadPrevious) => {
+		await loadPrevious();
+		const encoded = serializeAndCompress(
+			WAYPOINTS.map((wp) => ({ ...wp, type: "direct" as const })),
+			false,
+		);
+		if (!encoded) throw new Error("failed to build payload");
+
+		expect((await editor().loadFromShareLink(encoded)).success).toBe(true);
+
+		const request = createRequest();
+		expect(request).not.toHaveProperty("provenance");
+		expect(request).not.toHaveProperty("forkedFromExternalRouteId");
+		expect(useRoutingStore.getState().mode.kind).toBe("unsaved");
 	});
 });

@@ -37,5 +37,6 @@ export const buildLibraryRoutePayload = (
 		...(geometry ? { geometry } : {}),
 		distance: Math.round(calculatePathDistance(distancePath) * 1000),
 		...(activity ? { activity } : {}),
+		provenance: "gpx-import",
 	};
 };

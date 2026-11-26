@@ -446,6 +446,7 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 		}
 		// A visitor's draft, not an editing session: the route belongs to
 		// someone else, so it loads unbound and saves as a new route.
+		useRoutingStore.getState().setMode({ kind: "unsaved" });
 		useRoutingStore.getState().setActivity(route.activity);
 		useRoutingStore.getState().setCreationSource(creationSourceFromProvenance(route.provenance), {
 			provenance: route.provenance,
@@ -463,6 +464,9 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 		if (!parsed || !routeHasValidShape(parsed.waypoints)) {
 			return fail("Failed to read shared route data. The link may be invalid or corrupted.");
 		}
+		const store = useRoutingStore.getState();
+		store.setMode({ kind: "unsaved" });
+		store.setCreationSource("manual");
 		return loadWaypoints(parsed.waypoints, { isMapLocked: parsed.isLocked });
 	};
 

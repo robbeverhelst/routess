@@ -72,7 +72,7 @@ export function ImportModal() {
 		});
 		if (!isAuthenticated) {
 			// A new LocalRoute; the draft and its binding stay as they are.
-			const { localRoute } = await saveLocalRoute({ ...payload, provenance: "gpx-import" }, "imported", {
+			const { localRoute } = await saveLocalRoute(payload, "imported", {
 				fromDraft: false,
 			});
 			return localRoute.route.name;
