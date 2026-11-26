@@ -14,6 +14,14 @@ interface MemoryEntry {
 
 const MAX_MEMORY_ENTRIES = 5000;
 
+// INCR and the expiry in one atomic step: as two calls, a crash or a dropped
+// connection between them leaves a counter that never expires. Setting the
+// expiry whenever the key has none also heals a counter stranded that way.
+const INCREMENT_SCRIPT = `
+local value = redis.call("INCR", KEYS[1])
+if redis.call("TTL", KEYS[1]) < 0 then redis.call("EXPIRE", KEYS[1], ARGV[1]) end
+return value`;
+
 // Deterministic JSON: object keys sorted recursively, arrays left in order.
 // Used for cache-key hashing so insertion order never changes the key.
 function canonicalize(value: unknown): string {
@@ -134,9 +142,7 @@ export class CacheService implements OnModuleDestroy {
 		const fullKey = `counter:${counter}:${key}`;
 		if (this.redis) {
 			try {
-				const value = await this.redis.incr(fullKey);
-				if (value === 1) await this.redis.expire(fullKey, ttlSeconds);
-				return value;
+				return Number(await this.redis.eval(INCREMENT_SCRIPT, 1, fullKey, ttlSeconds));
 			} catch {
 				return 0;
 			}

@@ -82,3 +82,40 @@ describe("CacheService (in-memory fallback)", () => {
 		expect(service.hashKey([1, 2, 3])).not.toBe(service.hashKey([3, 2, 1]));
 	});
 });
+
+// A Redis double that keeps keys and TTLs, runs the counter script as one
+// atomic step, and loses its connection on any separate EXPIRE call: the
+// crash window between two round trips.
+function makeRedisService() {
+	const values = new Map<string, number>();
+	const ttls = new Map<string, number>();
+	const incr = (key: string) => {
+		const next = (values.get(key) ?? 0) + 1;
+		values.set(key, next);
+		return next;
+	};
+	const redis = {
+		incr: async (key: string) => incr(key),
+		expire: async () => {
+			throw new Error("Connection is closed.");
+		},
+		eval: async (script: string, _numKeys: number, key: string, ttlSeconds: number) => {
+			expect(script).toContain("INCR");
+			const value = incr(key);
+			if (!ttls.has(key)) ttls.set(key, ttlSeconds);
+			return value;
+		},
+	};
+	const { service } = makeService();
+	(service as unknown as { redis: typeof redis }).redis = redis;
+	return { service, ttls };
+}
+
+describe("CacheService (redis)", () => {
+	it("sets the counter's expiry in the same step as the increment", async () => {
+		const { service, ttls } = makeRedisService();
+		expect(await service.increment("quota", "u1", 60)).toBe(1);
+		expect(ttls.get("counter:quota:u1")).toBe(60);
+		expect(await service.increment("quota", "u1", 60)).toBe(2);
+	});
+});
