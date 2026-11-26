@@ -29,7 +29,8 @@ export class GenerationController {
 	})
 	@ApiResponse({
 		status: 429,
-		description: "Daily route generation quota exceeded (a generation that fails before routing, such as routing busy or invalid input, does not count)",
+		description:
+			"Daily route generation quota exceeded (a generation that fails before routing, such as routing busy or invalid input, does not count)",
 	})
 	@ApiResponse({ status: 503, description: "Valhalla is not configured or unreachable, or routing is busy" })
 	// OptionalUnifiedAuthGuard populates req.user from a session JWT or a PAT so
