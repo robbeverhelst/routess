@@ -1,6 +1,6 @@
-import type { Provenance, RoutingPreferences } from "../routing/types";
+import type { RoutingPreferences } from "../routing/types";
 import type { Coordinate, Waypoint } from "../types";
-import type { RouteState } from "./routing";
+import type { DraftProvenance, RouteState } from "./routing";
 
 /** The RouteDraft state a save reads. */
 export type RouteDraftSaveState = Pick<
@@ -13,6 +13,7 @@ export type RouteDraftSaveState = Pick<
 	| "routingPreferences"
 	| "creationSource"
 	| "forkedFromExternalRouteId"
+	| "provenance"
 >;
 
 /** The geometry and metrics a save sends, for a new Route and an update alike. */
@@ -27,12 +28,12 @@ export interface RouteDraftSaveFields {
 
 /** How the draft came to exist, as a create request states it. */
 export interface RouteDraftOriginFields {
-	provenance?: Extract<Provenance, "generation">;
+	provenance?: DraftProvenance;
 	forkedFromExternalRouteId?: number;
 }
 
 export function draftSaveFields(
-	draft: Omit<RouteDraftSaveState, "creationSource" | "forkedFromExternalRouteId">,
+	draft: Omit<RouteDraftSaveState, "creationSource" | "forkedFromExternalRouteId" | "provenance">,
 ): RouteDraftSaveFields {
 	return {
 		waypoints: draft.waypoints,
@@ -45,15 +46,16 @@ export function draftSaveFields(
 }
 
 export function draftOriginFields(
-	draft: Pick<RouteDraftSaveState, "creationSource" | "forkedFromExternalRouteId">,
+	draft: Pick<RouteDraftSaveState, "creationSource" | "forkedFromExternalRouteId" | "provenance">,
 ): RouteDraftOriginFields {
 	// A fork names its ExternalRoute; the server sets Provenance external-fork
 	// and the inherited license from it (ADR 0035).
 	if (draft.forkedFromExternalRouteId != null) return { forkedFromExternalRouteId: draft.forkedFromExternalRouteId };
-	// A draft born from a confirmed GenerationCandidate saves with Provenance
-	// "generation" (immutable, per ADR-0023/0029).
-	if (draft.creationSource === "generated") return { provenance: "generation" };
-	return {};
+	// A draft loaded from a Route or a GPX file keeps that Provenance; one born
+	// from a confirmed GenerationCandidate saves with Provenance "generation"
+	// (immutable, per ADR-0023/0029).
+	const provenance = draft.provenance ?? (draft.creationSource === "generated" ? "generation" : null);
+	return provenance ? { provenance } : {};
 }
 
 /** Everything a new Route takes from the draft; the caller adds name, activity, visibility and tags. */

@@ -10,7 +10,7 @@ import {
 	redoStep,
 	undoStep,
 } from "../history";
-import type { RoutingPreferences } from "../routing/types";
+import type { Provenance, RoutingPreferences } from "../routing/types";
 import type { Coordinate, Logger, RouteActivity, RouteVisibility, Waypoint, WaypointType } from "../types";
 
 // ===== STATE & ACTIONS =====
@@ -45,6 +45,16 @@ export type RouteDraftMode =
 // How the current draft came to exist. Feeds the saved Route's Provenance
 // and the route_created ProductEvent's creation_source.
 export type DraftCreationSource = "manual" | "generated" | "imported";
+
+// The Provenance a draft keeps from the Route or file it was loaded from. A
+// fork's Provenance comes from its forkedFromExternalRouteId instead.
+export type DraftProvenance = Exclude<Provenance, "external-fork">;
+
+// Where a draft's geometry came from, set with its creation source.
+export interface DraftOrigin {
+	provenance?: Provenance | null;
+	forkedFromExternalRouteId?: number | null;
+}
 
 export interface RouteState {
 	waypoints: Waypoint[];
@@ -87,6 +97,11 @@ export interface RouteState {
 	// new Route carries the source's license.
 	forkedFromExternalRouteId: number | null;
 
+	// The Provenance of the Route or file this draft was loaded from, set and
+	// cleared with the creation source. Saving sends it so a duplicate or a
+	// re-save keeps it.
+	provenance: DraftProvenance | null;
+
 	history: HistoryStacks<Waypoint[]>;
 	canUndo: boolean;
 	canRedo: boolean;
@@ -120,7 +135,7 @@ export interface RouteActions {
 	setBaseline: (baseline: RouteBaseline) => void;
 	setActivity: (activity: RouteActivity | undefined) => void;
 	setRoutingPreferences: (prefs: RoutingPreferences | null) => void;
-	setCreationSource: (source: DraftCreationSource, forkedFromExternalRouteId?: number | null) => void;
+	setCreationSource: (source: DraftCreationSource, origin?: DraftOrigin) => void;
 
 	saveSnapshot: () => void;
 	undo: () => void;
@@ -150,6 +165,7 @@ const initialState: RouteState = {
 	routingPreferences: null,
 	creationSource: "manual",
 	forkedFromExternalRouteId: null,
+	provenance: null,
 	history: emptyHistory<Waypoint[]>(),
 	canUndo: false,
 	canRedo: false,
@@ -315,6 +331,7 @@ export function createRoutingStore(logger: Logger) {
 			routingPreferences: state.routingPreferences,
 			creationSource: state.creationSource,
 			forkedFromExternalRouteId: state.forkedFromExternalRouteId,
+			provenance: state.provenance,
 			history: state.history,
 			canUndo: state.canUndo,
 			canRedo: state.canRedo,
@@ -380,6 +397,7 @@ export function createRoutingStore(logger: Logger) {
 						mode: { kind: "unsaved" },
 						creationSource: "manual",
 						forkedFromExternalRouteId: null,
+						provenance: null,
 					});
 				},
 
@@ -464,8 +482,12 @@ export function createRoutingStore(logger: Logger) {
 					set({ routingPreferences: prefs });
 				},
 
-				setCreationSource: (creationSource, forkedFromExternalRouteId = null) => {
-					set({ creationSource, forkedFromExternalRouteId });
+				setCreationSource: (creationSource, { provenance = null, forkedFromExternalRouteId = null } = {}) => {
+					set({
+						creationSource,
+						forkedFromExternalRouteId,
+						provenance: provenance === "external-fork" ? null : provenance,
+					});
 				},
 
 				// === HISTORY ===

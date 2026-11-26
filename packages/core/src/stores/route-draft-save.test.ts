@@ -20,6 +20,7 @@ const DRAFT: RouteDraftSaveState = {
 	routingPreferences: { surfacePreference: "mixed", avoidFerries: true, avoidHighways: false },
 	creationSource: "manual",
 	forkedFromExternalRouteId: null,
+	provenance: null,
 };
 
 describe("draftToCreateRequest", () => {
@@ -43,6 +44,20 @@ describe("draftToCreateRequest", () => {
 
 		expect(request.forkedFromExternalRouteId).toBe(42);
 		expect(request.provenance).toBeUndefined();
+	});
+
+	it("keeps the Provenance of the Route or file the draft was loaded from", () => {
+		expect(draftToCreateRequest({ ...DRAFT, creationSource: "imported", provenance: "gpx-import" }).provenance).toBe(
+			"gpx-import",
+		);
+		expect(draftToCreateRequest({ ...DRAFT, provenance: "mapbox-legacy" }).provenance).toBe("mapbox-legacy");
+	});
+
+	it("names the ExternalRoute of a fork even when the draft also has a Provenance", () => {
+		const request = draftToCreateRequest({ ...DRAFT, provenance: "gpx-import", forkedFromExternalRouteId: 42 });
+
+		expect(request).toMatchObject({ forkedFromExternalRouteId: 42 });
+		expect(request).not.toHaveProperty("provenance");
 	});
 
 	it("leaves out a RoutePath too short to draw and preferences the draft lacks", () => {

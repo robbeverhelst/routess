@@ -447,9 +447,10 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 		// A visitor's draft, not an editing session: the route belongs to
 		// someone else, so it loads unbound and saves as a new route.
 		useRoutingStore.getState().setActivity(route.activity);
-		useRoutingStore
-			.getState()
-			.setCreationSource(creationSourceFromProvenance(route.provenance), route.forkedFrom?.externalRouteId);
+		useRoutingStore.getState().setCreationSource(creationSourceFromProvenance(route.provenance), {
+			provenance: route.provenance,
+			forkedFromExternalRouteId: route.forkedFrom?.externalRouteId,
+		});
 		return loadWaypoints(route.waypoints, {
 			exactRoutePath: route.geometry && route.geometry.length >= 2 ? route.geometry : undefined,
 			saveSnapshot: true,
@@ -478,9 +479,13 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 		store.setMode({ kind: "editing", routeId: route.id, name: route.name, baseline });
 		store.setActivity(route.activity);
 		// Carry the origin onto the draft: a saved generated route must
-		// densify before its first edit just like a fresh generated draft, and
-		// a duplicate of a fork must still name its ExternalRoute.
-		store.setCreationSource(creationSourceFromProvenance(route.provenance), route.forkedFrom?.externalRouteId);
+		// densify before its first edit just like a fresh generated draft, a
+		// duplicate of a fork must still name its ExternalRoute, and any other
+		// duplicate keeps its Provenance.
+		store.setCreationSource(creationSourceFromProvenance(route.provenance), {
+			provenance: route.provenance,
+			forkedFromExternalRouteId: route.forkedFrom?.externalRouteId,
+		});
 		trackEvent({
 			name: "route_loaded_into_editor",
 			properties: { creation_source: creationSourceFromProvenance(route.provenance) },
@@ -500,7 +505,7 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 		const store = useRoutingStore.getState();
 		store.setMode({ kind: "unsaved" });
 		if (route.activity) store.setActivity(route.activity);
-		store.setCreationSource("imported", route.id);
+		store.setCreationSource("imported", { forkedFromExternalRouteId: route.id });
 		trackEvent({
 			name: "route_loaded_into_editor",
 			properties: { creation_source: "imported" },
@@ -520,7 +525,10 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 		store.setMode({ kind: "unsaved" });
 		if (route.activity) store.setActivity(route.activity);
 		store.setRoutingPreferences(route.routingPreferences ?? null);
-		store.setCreationSource(creationSource, route.forkedFromExternalRouteId);
+		store.setCreationSource(creationSource, {
+			provenance: route.provenance,
+			forkedFromExternalRouteId: route.forkedFromExternalRouteId,
+		});
 		trackEvent({ name: "route_loaded_into_editor", properties: { creation_source: creationSource } });
 		return loadWaypoints(route.waypoints, { exactRoutePath: route.geometry, saveSnapshot: true });
 	};
@@ -546,7 +554,7 @@ export const createRouteDraftEditor = (deps: RouteDraftEditorDeps): RouteDraftEd
 			},
 		});
 
-		useRoutingStore.getState().setCreationSource("imported");
+		useRoutingStore.getState().setCreationSource("imported", { provenance: "gpx-import" });
 
 		// A track is the route the file actually describes, so it becomes the
 		// draft's geometry verbatim. Re-routing between the sparse waypoints
