@@ -21,4 +21,4 @@ The invariants this ADR waited for now exist: Provenance and its lineage (`copie
 
 `apps/api/src/routes/route-writer.ts` is now the only place a Route is created. `RouteWriter.create(ownerId, origin)` takes a `RouteOrigin`: a `draft` composed in a client, a `fork` of an ExternalRoute, or a `copy` of a shared Route. The origin decides Provenance, lineage and the default visibility; the writer applies the rest the same way for all three. `RoutesService.create` and the "save a copy" action in `SocialService` both go through it. Updates stay in `RoutesService`; no RouteAggregate.
 
-Clients build the create request from a RouteDraft with `draftToCreateRequest` in `@routess/core`, so web's save and duplicate send the same Provenance and fork lineage.
+Clients build the create request from a RouteDraft with `draftToCreateRequest` in `@routess/core`; duplicating a saved Route takes its origin from the same module's `routeOriginFields`. So web's save and every duplicate action send the same Provenance and fork lineage.
