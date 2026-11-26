@@ -70,32 +70,41 @@ export class NodeNetworksService {
 
 	/** All Nodes of one kind inside the bbox; empty on any failure. */
 	async anchorsForBbox(bbox: NodeBbox, kind: "cycling" | "hiking"): Promise<GenerationAnchor[]> {
-		if (!this.enabled) return [];
 		try {
-			const template = await this.tileTemplate();
-			if (!template) return [];
-
-			const z = this.zoomForBbox(bbox);
-			const tiles: { x: number; y: number }[] = [];
-			for (let x = lonToTileX(bbox.minLon, z); x <= lonToTileX(bbox.maxLon, z); x++) {
-				for (let y = latToTileY(bbox.maxLat, z); y <= latToTileY(bbox.minLat, z); y++) {
-					tiles.push({ x, y });
-				}
-			}
-			if (tiles.length === 0 || tiles.length > MAX_TILES_PER_POOL) return [];
-
-			const perTile = await Promise.all(tiles.map(({ x, y }) => this.tileNodes(template, z, x, y)));
-			return perTile
-				.flat()
-				.filter(
-					([nodeKind, , lon, lat]) =>
-						nodeKind === kind && lon >= bbox.minLon && lon <= bbox.maxLon && lat >= bbox.minLat && lat <= bbox.maxLat,
-				)
-				.map(([, ref, lon, lat]) => ({ coordinate: [lon, lat] as [number, number], ref }));
+			return await this.loadAnchorsForBbox(bbox, kind);
 		} catch (err) {
 			this.logger.warn(`Node pool unavailable: ${(err as Error).message}`);
 			return [];
 		}
+	}
+
+	/**
+	 * All Nodes of one kind inside the bbox. Throws when the tiles cannot be
+	 * read, so a caller that caches the result can tell a failure from a bbox
+	 * that holds no Nodes.
+	 */
+	async loadAnchorsForBbox(bbox: NodeBbox, kind: "cycling" | "hiking"): Promise<GenerationAnchor[]> {
+		if (!this.enabled) return [];
+		const template = await this.tileTemplate();
+		if (!template) return [];
+
+		const z = this.zoomForBbox(bbox);
+		const tiles: { x: number; y: number }[] = [];
+		for (let x = lonToTileX(bbox.minLon, z); x <= lonToTileX(bbox.maxLon, z); x++) {
+			for (let y = latToTileY(bbox.maxLat, z); y <= latToTileY(bbox.minLat, z); y++) {
+				tiles.push({ x, y });
+			}
+		}
+		if (tiles.length === 0 || tiles.length > MAX_TILES_PER_POOL) return [];
+
+		const perTile = await Promise.all(tiles.map(({ x, y }) => this.tileNodes(template, z, x, y)));
+		return perTile
+			.flat()
+			.filter(
+				([nodeKind, , lon, lat]) =>
+					nodeKind === kind && lon >= bbox.minLon && lon <= bbox.maxLon && lat >= bbox.minLat && lat <= bbox.maxLat,
+			)
+			.map(([, ref, lon, lat]) => ({ coordinate: [lon, lat] as [number, number], ref }));
 	}
 
 	private zoomForBbox(bbox: NodeBbox): number {

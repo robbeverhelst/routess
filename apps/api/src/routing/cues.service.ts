@@ -103,9 +103,12 @@ export class CuesService {
 		});
 
 		try {
-			const cues = await this.cache.getOrSet<CueDto[]>("valhalla-cues", cacheKey, CUES_CACHE_TTL_S, () =>
-				this.buildCues(geometry, request.activity, locale),
-			);
+			const cached = await this.cache.get<CueDto[]>("valhalla-cues", cacheKey);
+			if (cached) return { cues: cached, degraded: false };
+			const { cues, complete } = await this.buildCues(geometry, request.activity, locale);
+			// Cues missing their NodeCues are served but never cached, so one
+			// failed tile fetch cannot strip the node cues for the full TTL.
+			if (complete) await this.cache.set("valhalla-cues", cacheKey, cues, CUES_CACHE_TTL_S);
 			return { cues, degraded: false };
 		} catch (err) {
 			// Degrade honestly instead of failing the session: one follow-the-path
@@ -152,11 +155,19 @@ export class CuesService {
 		return geometry;
 	}
 
-	private async buildCues(geometry: Coordinate[], activity: RouteActivity, locale: CueLocale): Promise<CueDto[]> {
+	// `complete` is false when the NodeCue decoration failed and was left out.
+	private async buildCues(
+		geometry: Coordinate[],
+		activity: RouteActivity,
+		locale: CueLocale,
+	): Promise<{ cues: CueDto[]; complete: boolean }> {
 		const pathIndex = buildPathIndex(geometry);
 		const maneuverCues = await this.maneuverCues(geometry, pathIndex, activity, locale);
 		const nodeCues = await this.nodeCues(geometry, pathIndex, activity, locale);
-		return [...maneuverCues, ...nodeCues].sort((a, b) => a.distanceAlongMeters - b.distanceAlongMeters);
+		return {
+			cues: [...maneuverCues, ...(nodeCues ?? [])].sort((a, b) => a.distanceAlongMeters - b.distanceAlongMeters),
+			complete: nodeCues !== null,
+		};
 	}
 
 	private async maneuverCues(
@@ -211,17 +222,18 @@ export class CuesService {
 	}
 
 	// NodeCues decorate, never replace (CONTEXT.md "Cue"): detection failures
-	// degrade to ordinary turn-by-turn, so this is strictly fail-open.
+	// degrade to ordinary turn-by-turn, so this is strictly fail-open. Null
+	// means the decoration failed, as opposed to a path that passes no Nodes.
 	private async nodeCues(
 		geometry: Coordinate[],
 		pathIndex: PathIndex,
 		activity: RouteActivity,
 		locale: CueLocale,
-	): Promise<CueDto[]> {
+	): Promise<CueDto[] | null> {
 		try {
 			const bbox = routeBoundingBox(geometry);
 			if (!bbox) return [];
-			const anchors = await this.nodeNetworks.anchorsForBbox(
+			const anchors = await this.nodeNetworks.loadAnchorsForBbox(
 				{ minLon: bbox.minLng, minLat: bbox.minLat, maxLon: bbox.maxLng, maxLat: bbox.maxLat },
 				nodeKindForActivity(activity),
 			);
@@ -258,7 +270,7 @@ export class CuesService {
 			}));
 		} catch (err) {
 			this.logger.warn(`Node cue decoration unavailable: ${(err as Error).message}`);
-			return [];
+			return null;
 		}
 	}
 }
