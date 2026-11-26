@@ -70,6 +70,7 @@ export class GenerationQuotaGuard implements CanActivate {
 		const count = await this.cache.increment(GENERATION_QUOTA_COUNTER, key, SECONDS_PER_DAY);
 
 		if (count > limit) {
+			await this.cache.decrement(GENERATION_QUOTA_COUNTER, key);
 			const payload: DomainErrorPayload = {
 				statusCode: HttpStatus.TOO_MANY_REQUESTS,
 				code: "RATE_LIMITED",

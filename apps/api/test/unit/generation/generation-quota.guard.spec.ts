@@ -1,10 +1,16 @@
 import { describe, expect, it } from "bun:test";
 
 import { type ExecutionContext, HttpException, HttpStatus } from "@nestjs/common";
-import type { CacheService } from "src/cache/cache.service";
+import { CacheService } from "src/cache/cache.service";
 import type { AppConfig, GenerationQuotaTier } from "src/config/app-config";
 import type { EntitlementsService } from "src/entitlements/entitlements.service";
-import { GenerationQuotaGuard } from "src/generation/generation-quota.guard";
+import {
+	GENERATION_QUOTA_CHARGE,
+	GENERATION_QUOTA_COUNTER,
+	GenerationQuotaGuard,
+	type GenerationQuotaRequest,
+} from "src/generation/generation-quota.guard";
+import type { MetricsService } from "src/telemetry/metrics.service";
 
 interface Harness {
 	guard: GenerationQuotaGuard;
@@ -26,6 +32,7 @@ function makeGuard(options: {
 			keys.push(key);
 			return options.count ?? 1;
 		},
+		decrement: async () => undefined,
 	} as unknown as CacheService;
 	const entitlements = {
 		quotaTier: async (user: { id: number } | null) => {
@@ -132,6 +139,24 @@ describe("GenerationQuotaGuard", () => {
 		const { guard } = makeGuard({ billingEnabled: true, tier: "pro", count: 51 });
 		const error = await rejection(guard.canActivate(context({ user: { id: 7 } })));
 		expect((error.getResponse() as { details: { upgrade: unknown } }).details.upgrade).toBeNull();
+	});
+
+	it("never counts a rejected attempt, so a later refund frees a slot", async () => {
+		const cache = new CacheService({ cache: { redisUrl: "" } } as AppConfig, {} as MetricsService);
+		const config = { billing: { enabled: false }, quotas: { generationPerDay: 2 } } as unknown as AppConfig;
+		const guard = new GenerationQuotaGuard(cache, {} as EntitlementsService, config);
+		const caller = () => context({ user: { id: 7 } });
+
+		expect(await guard.canActivate(caller())).toBe(true);
+		const inFlight = { user: { id: 7 } } as GenerationQuotaRequest;
+		expect(await guard.canActivate(context(inFlight))).toBe(true);
+		await rejection(guard.canActivate(caller()));
+		await rejection(guard.canActivate(caller()));
+
+		// The in-flight generation fails and is refunded: one success so far,
+		// so the next attempt fits under the cap of 2.
+		await cache.decrement(GENERATION_QUOTA_COUNTER, inFlight[GENERATION_QUOTA_CHARGE] as string);
+		expect(await guard.canActivate(caller())).toBe(true);
 	});
 
 	it("fails open when the counter store is down (increment returns 0)", async () => {

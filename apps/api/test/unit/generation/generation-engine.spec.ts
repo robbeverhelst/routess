@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 
 import { EventEmitter2 } from "@nestjs/event-emitter";
-import { type Coordinate, destinationPoint, encodePolyline6 } from "@routess/core";
+import { type Coordinate, decodePolyline6, destinationPoint, encodePolyline6 } from "@routess/core";
 import type { GenerateRequestDto } from "src/generation/dto/generate.dto";
 import { GenerationService } from "src/generation/generation.service";
 import type { NodeNetworksService } from "src/generation/node-networks.service";
@@ -105,6 +105,43 @@ describe("GenerationService on a RoutingEngine", () => {
 
 		const response = await service.generate(REQUEST);
 
+		expect(response.failure).toBeUndefined();
+		expect(response.candidates.length).toBeGreaterThan(0);
+	});
+
+	it("keeps the fan's candidates when only the surface wave is shed", async () => {
+		// The fan crosses one gravel run (3 of 24 edges): a poor unpaved fit, so
+		// the wave anchors a candidate on that run's midpoint.
+		const tracedShape = circleLoop(GHENT, 30);
+		const gravelMidpoints = decodePolyline6(tracedShape).slice(0, 4);
+		engine.traceEdgesHandler = () => ({
+			shape: tracedShape,
+			edges: Array.from({ length: 24 }, (_, i) => ({
+				wayId: i,
+				surface: i < 3 ? "gravel" : "paved",
+				lengthKm: 30 / 24,
+				beginShapeIndex: i,
+				endShapeIndex: i + 1,
+				onBikeNetwork: true,
+			})),
+		});
+		const routeOk = engine.routeHandler;
+		let waveCalls = 0;
+		engine.routeHandler = (locations, costing) => {
+			const anchored = locations.some((l) => gravelMidpoints.some(([lon, lat]) => lon === l.lon && lat === l.lat));
+			if (anchored) {
+				waveCalls++;
+				throw new RoutingShedError();
+			}
+			return routeOk(locations, costing);
+		};
+
+		const response = await service.generate({
+			...REQUEST,
+			preferences: { ...REQUEST.preferences, surfacePreference: "unpaved" },
+		});
+
+		expect(waveCalls).toBeGreaterThan(0);
 		expect(response.failure).toBeUndefined();
 		expect(response.candidates.length).toBeGreaterThan(0);
 	});

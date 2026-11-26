@@ -492,9 +492,16 @@ export class GenerationService {
 				// Wave plans stay a pure surface tactic (their vias are already on
 				// the network); anchors are not re-applied, but NetworkFit is still
 				// scored via the shared context so all candidates stay comparable.
-				const [candidate] = await this.routeAndScore([plan], start, request, costing, anchors, countCall, {
-					refineDistance: false,
-				});
+				let candidate: (ScoredCandidate & { shape: string }) | undefined;
+				try {
+					[candidate] = await this.routeAndScore([plan], start, request, costing, anchors, countCall, {
+						refineDistance: false,
+					});
+				} catch (err) {
+					// A shed wave still leaves the fan's candidates to return.
+					if (err instanceof RoutingShedError) return produced;
+					throw err;
+				}
 				// Forcing the loop through gravel can spur in and back out; a
 				// candidate with too much overlap reads as dead-ends, so skip it
 				// and let the cascade's fewer-via plans try a cleaner shape.
