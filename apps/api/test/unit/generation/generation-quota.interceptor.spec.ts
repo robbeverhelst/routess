@@ -16,7 +16,8 @@ import { RoutingShedError } from "src/routing/routing-engine";
 import type { MetricsService } from "src/telemetry/metrics.service";
 
 // The guard and the refund interceptor on the in-memory CacheService: the
-// daily counter only keeps a generation that returned candidates.
+// daily counter drops a generation that never got to route, and keeps one
+// that routed, whether or not it found candidates.
 
 const config = {
 	cache: { redisUrl: "" },
@@ -25,7 +26,8 @@ const config = {
 } as unknown as AppConfig;
 
 const SUCCESS = { candidates: [{}] } as unknown as GenerateResponseDto;
-const NO_CANDIDATES = { candidates: [], failure: { code: "no_candidates_routable" } } as unknown as GenerateResponseDto;
+const failed = (code: string) => ({ candidates: [], failure: { code } }) as unknown as GenerateResponseDto;
+const INVALID_INPUT = failed("invalid_input");
 
 function harness() {
 	const cache = new CacheService(config, { recordCacheEvent: () => undefined } as unknown as MetricsService);
@@ -56,15 +58,23 @@ describe("GenerationQuotaRefundInterceptor", () => {
 		expect(await used()).toBe(0);
 	});
 
-	it("takes the count back for a generation with no candidates", async () => {
+	it("takes the count back for input rejected before routing", async () => {
 		const { generate, used } = harness();
-		expect(await generate(() => of(NO_CANDIDATES))).toEqual(NO_CANDIDATES);
+		expect(await generate(() => of(INVALID_INPUT))).toEqual(INVALID_INPUT);
 		expect(await used()).toBe(0);
 	});
 
-	it("lets failed generations through without spending the daily cap", async () => {
+	for (const code of ["no_candidates_routable", "all_candidates_low_quality", "all_bearings_excluded"]) {
+		it(`keeps the count for a generation that routed but failed with ${code}`, async () => {
+			const { generate, used } = harness();
+			await generate(() => of(failed(code)));
+			expect(await used()).toBe(1);
+		});
+	}
+
+	it("lets rejected input through without spending the daily cap", async () => {
 		const { generate, used } = harness();
-		for (let i = 0; i < 3; i++) await generate(() => of(NO_CANDIDATES));
+		for (let i = 0; i < 3; i++) await generate(() => of(INVALID_INPUT));
 		await generate(() => of(SUCCESS));
 		await generate(() => of(SUCCESS));
 		expect(await used()).toBe(2);

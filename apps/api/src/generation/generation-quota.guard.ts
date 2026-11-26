@@ -48,8 +48,8 @@ const UPGRADE_FOR_TIER: Record<GenerationQuotaTier, "sign_in" | "pro" | null> = 
 // everyone. Counter resets at UTC midnight; fail-open if Redis is down
 // (increment returns 0, never blocks). The guard counts the attempt up front so
 // concurrent requests cannot overrun the cap, and
-// GenerationQuotaRefundInterceptor takes it back when the generation fails:
-// only work that succeeds uses quota.
+// GenerationQuotaRefundInterceptor takes it back when no routing work
+// completed (routing busy, Valhalla down, invalid input).
 @Injectable()
 export class GenerationQuotaGuard implements CanActivate {
 	constructor(

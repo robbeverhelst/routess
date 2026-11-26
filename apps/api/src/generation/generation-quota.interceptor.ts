@@ -10,9 +10,10 @@ import {
 	type GenerationQuotaRequest,
 } from "./generation-quota.guard";
 
-// Takes back the attempt GenerationQuotaGuard counted when the generation
-// does not succeed: it threw (routing busy, Valhalla down) or returned no
-// candidates. Only a generation that hands back candidates uses quota.
+// Takes back the attempt GenerationQuotaGuard counted when no routing work
+// completed: the generation threw (routing busy, Valhalla down or timed out)
+// or rejected its input before routing. A generation that routed and found
+// nothing usable still counts.
 @Injectable()
 export class GenerationQuotaRefundInterceptor implements NestInterceptor {
 	constructor(private readonly cache: CacheService) {}
@@ -24,7 +25,7 @@ export class GenerationQuotaRefundInterceptor implements NestInterceptor {
 
 		return next.handle().pipe(
 			concatMap(async (response) => {
-				if (!response?.candidates?.length) await refund();
+				if (response?.failure?.code === "invalid_input") await refund();
 				return response;
 			}),
 			catchError((err: unknown) => from(refund()).pipe(concatMap(() => throwError(() => err)))),
