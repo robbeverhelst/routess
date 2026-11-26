@@ -2224,10 +2224,10 @@
 						"description": "preferNodeNetworks without Pro: knooppunt routes are part of Pro (details.reason: pro_required)"
 					},
 					"429": {
-						"description": "Daily route generation quota exceeded"
+						"description": "Daily route generation quota exceeded (only generations that return candidates count)"
 					},
 					"503": {
-						"description": "Valhalla is not configured or unreachable"
+						"description": "Valhalla is not configured or unreachable, or routing is busy"
 					}
 				},
 				"summary": "Generate loop route candidates from high-level parameters",

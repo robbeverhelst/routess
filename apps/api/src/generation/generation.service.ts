@@ -50,6 +50,7 @@ import {
 	type LocatedEdge,
 	RoutingEngine,
 	RoutingNoPathError,
+	RoutingShedError,
 	type TracedEdge,
 } from "../routing/routing-engine";
 import { ROUTE_GENERATION_COMPLETED, type RouteGenerationCompletedEvent } from "../telemetry/domain-events";
@@ -428,6 +429,7 @@ export class GenerationService {
 	): Promise<(ScoredCandidate & { shape: string })[]> {
 		const results: (ScoredCandidate & { shape: string })[] = [];
 		const queue = [...plans];
+		let shed: RoutingShedError | undefined;
 
 		const worker = async () => {
 			for (let plan = queue.shift(); plan; plan = queue.shift()) {
@@ -435,6 +437,7 @@ export class GenerationService {
 					const candidate = await this.buildCandidate(plan, start, request, costing, anchors, countCall, options);
 					if (candidate) results.push(candidate);
 				} catch (err) {
+					if (err instanceof RoutingShedError) shed = err;
 					// One failed candidate never sinks the generation; the fan has more.
 					this.logger.warn(`Candidate at bearing ${plan.bearingDeg} failed: ${(err as Error).message}`);
 				}
@@ -442,6 +445,9 @@ export class GenerationService {
 		};
 
 		await Promise.all(Array.from({ length: Math.min(MAX_PARALLEL_CANDIDATES, plans.length) }, () => worker()));
+		// Nothing routed and the engine shed calls: the caller gets the 503
+		// (routing is busy), not a no_candidates_routable that blames the area.
+		if (results.length === 0 && shed) throw shed;
 		return results;
 	}
 
@@ -520,7 +526,13 @@ export class GenerationService {
 			return [];
 		}
 		if (snapped.length === 0) return [];
-		return this.routeAndScore(snapped, start, request, costing, anchors, countCall);
+		try {
+			return await this.routeAndScore(snapped, start, request, costing, anchors, countCall);
+		} catch (err) {
+			// A shed wave still leaves the fan's candidates to return.
+			if (err instanceof RoutingShedError) return [];
+			throw err;
+		}
 	}
 
 	/**
@@ -555,6 +567,7 @@ export class GenerationService {
 			if (snapped.length === 0) return [];
 			return await this.routeAndScore(snapped, start, request, costing, anchors, countCall);
 		} catch (err) {
+			if (err instanceof RoutingShedError) throw err;
 			this.logger.warn(`Isochrone fallback failed: ${(err as Error).message}`);
 			return [];
 		}

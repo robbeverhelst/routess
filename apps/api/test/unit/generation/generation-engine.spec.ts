@@ -85,4 +85,27 @@ describe("GenerationService on a RoutingEngine", () => {
 
 		await expect(service.generate(REQUEST)).rejects.toBeInstanceOf(RoutingShedError);
 	});
+
+	it("reports a shed fan as routing busy, not as no_candidates_routable", async () => {
+		engine.routeHandler = () => {
+			throw new RoutingShedError();
+		};
+
+		await expect(service.generate(REQUEST)).rejects.toBeInstanceOf(RoutingShedError);
+	});
+
+	it("still returns the candidates that routed when only some calls were shed", async () => {
+		const routeOk = engine.routeHandler;
+		let calls = 0;
+		engine.routeHandler = (locations, costing) => {
+			calls++;
+			if (calls % 2 === 0) throw new RoutingShedError();
+			return routeOk(locations, costing);
+		};
+
+		const response = await service.generate(REQUEST);
+
+		expect(response.failure).toBeUndefined();
+		expect(response.candidates.length).toBeGreaterThan(0);
+	});
 });
