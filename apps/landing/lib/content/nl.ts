@@ -259,6 +259,7 @@ export const nl: Dict = {
 		mapAlt: "Kaart van de route",
 		summaryTemplate:
 			"Een {activity} van {distance} met {elevation} hoogtemeters. Bekijk, bewerk en exporteer de GPX gratis met routess.",
+		summaryTemplateNoElevation: "Een {activity} van {distance}. Bekijk, bewerk en exporteer de GPX gratis met routess.",
 		byAuthor: "door {name}",
 	},
 	profilePage: {

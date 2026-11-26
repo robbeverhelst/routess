@@ -56,7 +56,7 @@ export interface PublicExternalRoute {
 	geometry: [number, number][];
 	distance?: number;
 	duration?: number;
-	elevationGain?: number;
+	elevationGain?: number | null;
 	source: { key: string; name: string; license: string; attribution: string; url: string };
 	kind: "external";
 	updatedAt: string;

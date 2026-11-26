@@ -22,7 +22,8 @@ export interface RouteDraftSaveFields {
 	geometry?: Coordinate[];
 	distance: number;
 	duration?: number;
-	elevationGain: number;
+	// Null while unknown (still loading, or offline): never a made-up 0.
+	elevationGain: number | null;
 	routingPreferences?: RoutingPreferences;
 }
 
@@ -40,7 +41,7 @@ export function draftSaveFields(
 		...(draft.routePath.length >= 2 ? { geometry: draft.routePath } : {}),
 		distance: draft.distanceMeters ?? 0,
 		duration: draft.durationSeconds ?? undefined,
-		elevationGain: draft.elevationGain != null ? Math.round(draft.elevationGain) : 0,
+		elevationGain: draft.elevationGain != null ? Math.round(draft.elevationGain) : null,
 		...(draft.routingPreferences ? { routingPreferences: draft.routingPreferences } : {}),
 	};
 }

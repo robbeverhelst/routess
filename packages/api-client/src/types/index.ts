@@ -497,7 +497,7 @@ export interface ApiRoute {
 	geometry?: [number, number][];
 	distance?: number;
 	duration?: number;
-	elevationGain?: number;
+	elevationGain?: number | null;
 	startAddress?: string;
 	endAddress?: string;
 	// Derived Place (CONTEXT.md): server-derived from the RoutePath start,
@@ -560,7 +560,7 @@ export interface CreateRouteRequest {
 	geometry?: [number, number][];
 	distance?: number;
 	duration?: number;
-	elevationGain?: number;
+	elevationGain?: number | null;
 	startAddress?: string;
 	endAddress?: string;
 	routingPreferences?: RoutingPreferences;
@@ -584,7 +584,7 @@ export interface UpdateRouteRequest {
 	geometry?: [number, number][];
 	distance?: number;
 	duration?: number;
-	elevationGain?: number;
+	elevationGain?: number | null;
 	startAddress?: string;
 	endAddress?: string;
 	routingPreferences?: RoutingPreferences;

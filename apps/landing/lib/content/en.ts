@@ -251,6 +251,7 @@ export const en: Dict = {
 		mapAlt: "Map of the route",
 		summaryTemplate:
 			"A {distance} {activity} with {elevation} m of climbing. View it, edit it, and export the GPX free with routess.",
+		summaryTemplateNoElevation: "A {distance} {activity}. View it, edit it, and export the GPX free with routess.",
 		byAuthor: "by {name}",
 	},
 	profilePage: {

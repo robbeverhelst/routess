@@ -241,13 +241,15 @@ export class CreateRouteDto {
 	duration?: number;
 
 	@ApiProperty({
-		description: "Total elevation gain of the route in meters",
+		description: "Total elevation gain of the route in meters; null when it is not known",
 		example: 150,
 		required: false,
+		nullable: true,
+		type: Number,
 	})
 	@IsOptional()
 	@IsNumber()
-	elevationGain?: number;
+	elevationGain?: number | null;
 
 	@ApiProperty({
 		description: "Human-readable starting address",

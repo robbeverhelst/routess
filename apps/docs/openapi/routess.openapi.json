@@ -4480,8 +4480,9 @@
 					},
 					"elevationGain": {
 						"type": "number",
-						"description": "Total elevation gain of the route in meters",
-						"example": 150
+						"description": "Total elevation gain of the route in meters; null when it is not known",
+						"example": 150,
+						"nullable": true
 					},
 					"startAddress": {
 						"type": "string",
@@ -4646,7 +4647,8 @@
 					},
 					"elevationGain": {
 						"type": "number",
-						"description": "Elevation gain in meters"
+						"description": "Elevation gain in meters; null when it is not known",
+						"nullable": true
 					},
 					"startAddress": {
 						"type": "string"
@@ -4902,8 +4904,9 @@
 					},
 					"elevationGain": {
 						"type": "number",
-						"description": "Total elevation gain of the route in meters",
-						"example": 150
+						"description": "Total elevation gain of the route in meters; null when it is not known",
+						"example": 150,
+						"nullable": true
 					},
 					"startAddress": {
 						"type": "string",

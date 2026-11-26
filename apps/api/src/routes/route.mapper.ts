@@ -83,7 +83,7 @@ export function toPublicRouteSummaryDto(
 		// Listing only ever serves public routes, so the id form is correct.
 		slugId: buildRouteSlugId(route.name, route.id),
 		activity: route.activity,
-		elevationGain: route.elevationGain,
+		elevationGain: route.elevationGain ?? undefined,
 		tags: route.tags,
 		publishedAt: route.publishedAt?.toISOString(),
 		placeCity: route.placeCity,
