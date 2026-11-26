@@ -20,6 +20,8 @@ const MAX_CONCURRENT_VALHALLA_CALLS = 32;
 export class ValhallaHttp {
 	private readonly logger = new Logger(ValhallaHttp.name);
 	private inFlightValhallaCalls = 0;
+	// Covers the whole call, body included. Tests shorten it.
+	timeoutMs = VALHALLA_TIMEOUT_MS;
 
 	constructor(
 		@Inject(APP_CONFIG)
@@ -38,38 +40,47 @@ export class ValhallaHttp {
 			throw new RoutingShedError();
 		}
 
+		// The slot and the timeout both last until the body is read: a Valhalla
+		// that sends headers and then stalls must neither hold a request
+		// forever nor drop out of the concurrency count.
 		this.inFlightValhallaCalls++;
-		const controller = new AbortController();
-		const timeout = setTimeout(() => controller.abort(), VALHALLA_TIMEOUT_MS);
+		const signal = AbortSignal.timeout(this.timeoutMs);
 		const start = Date.now();
-		let response: Response;
 		try {
-			response = await fetch(`${baseUrl}${path}`, {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(body),
-				signal: controller.signal,
-			});
-		} catch (err) {
-			const error = err as Error;
-			this.metrics.recordExternalRequest("valhalla", "error", Date.now() - start);
-			this.metrics.recordProviderCall("valhalla", path, feature, "error");
-			this.logger.warn(`Valhalla request failed: ${error.message}`);
-			throw new RoutingUpstreamError("Valhalla request failed", HttpStatus.SERVICE_UNAVAILABLE);
+			let response: Response;
+			try {
+				response = await fetch(`${baseUrl}${path}`, {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify(body),
+					signal,
+				});
+			} catch (err) {
+				const error = err as Error;
+				this.metrics.recordExternalRequest("valhalla", "error", Date.now() - start);
+				this.metrics.recordProviderCall("valhalla", path, feature, "error");
+				this.logger.warn(`Valhalla request failed: ${error.message}`);
+				throw new RoutingUpstreamError("Valhalla request failed", HttpStatus.SERVICE_UNAVAILABLE);
+			}
+
+			this.metrics.recordExternalRequest("valhalla", response.ok ? "success" : "error", Date.now() - start);
+			this.metrics.recordProviderCall("valhalla", path, feature, response.ok ? "success" : "error");
+
+			if (!response.ok) {
+				this.logger.warn(`Valhalla returned ${response.status} for ${path}`);
+				await response.body?.cancel().catch(() => undefined);
+				// Surface 4xx/5xx as a generic upstream error; do not leak Valhalla's body.
+				throw new RoutingUpstreamError("Valhalla returned an error", HttpStatus.BAD_GATEWAY);
+			}
+
+			try {
+				return (await response.json()) as T;
+			} catch (err) {
+				this.logger.warn(`Valhalla response for ${path} failed: ${(err as Error).message}`);
+				throw new RoutingUpstreamError("Valhalla response failed", HttpStatus.SERVICE_UNAVAILABLE);
+			}
 		} finally {
-			clearTimeout(timeout);
 			this.inFlightValhallaCalls--;
 		}
-
-		this.metrics.recordExternalRequest("valhalla", response.ok ? "success" : "error", Date.now() - start);
-		this.metrics.recordProviderCall("valhalla", path, feature, response.ok ? "success" : "error");
-
-		if (!response.ok) {
-			this.logger.warn(`Valhalla returned ${response.status} for ${path}`);
-			// Surface 4xx/5xx as a generic upstream error; do not leak Valhalla's body.
-			throw new RoutingUpstreamError("Valhalla returned an error", HttpStatus.BAD_GATEWAY);
-		}
-
-		return (await response.json()) as T;
 	}
 }

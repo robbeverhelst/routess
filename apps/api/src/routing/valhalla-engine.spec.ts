@@ -25,9 +25,23 @@ interface Captured {
 
 // Real in-memory CacheService (Redis disabled) behind a stubbed fetch, so the
 // tests cover the adapter as production runs it.
-function makeEngine(valhallaUrl = "http://valhalla.test"): ValhallaEngine {
+function makeEngine(valhallaUrl = "http://valhalla.test", timeoutMs?: number): ValhallaEngine {
 	const config = { routing: { valhallaUrl }, cache: { redisUrl: "" } } as AppConfig;
-	return new ValhallaEngine(new ValhallaHttp(config, metrics), new CacheService(config, metrics));
+	const http = new ValhallaHttp(config, metrics);
+	if (timeoutMs) http.timeoutMs = timeoutMs;
+	return new ValhallaEngine(http, new CacheService(config, metrics));
+}
+
+// A 200 whose body never finishes, as fetch delivers it: the stream errors
+// once the request's signal aborts.
+function stalledBody(signal: AbortSignal): Response {
+	const stream = new ReadableStream<Uint8Array>({
+		start(controller) {
+			controller.enqueue(new TextEncoder().encode('{"features":'));
+			signal.addEventListener("abort", () => controller.error(signal.reason));
+		},
+	});
+	return new Response(stream, { status: 200 });
 }
 
 function stubFetch(respond: (path: string) => Response | Promise<Response>): Captured[] {
@@ -337,6 +351,32 @@ describe("ValhallaHttp failures", () => {
 			.catch((e: unknown) => e);
 		expect(error).toBeInstanceOf(RoutingUpstreamError);
 		expect((error as RoutingUpstreamError).getStatus()).toBe(503);
+	});
+
+	it("times out a body that stalls after the headers", async () => {
+		globalThis.fetch = (async (_url: string, init: RequestInit) =>
+			stalledBody(init.signal as AbortSignal)) as unknown as typeof fetch;
+		const error = await makeEngine("http://valhalla.test", 50)
+			.isochrone({ lat: 1, lon: 2 }, BIKE, 5)
+			.catch((e: unknown) => e);
+		expect(error).toBeInstanceOf(RoutingUpstreamError);
+		expect((error as RoutingUpstreamError).getStatus()).toBe(503);
+	});
+
+	it("holds the concurrency slot until the body is read", async () => {
+		globalThis.fetch = (async (_url: string, init: RequestInit) =>
+			stalledBody(init.signal as AbortSignal)) as unknown as typeof fetch;
+		const engine = makeEngine("http://valhalla.test", 200);
+
+		const inFlight = Array.from({ length: 32 }, (_, i) =>
+			engine.isochrone({ lat: i, lon: 0 }, BIKE, 5).catch((e: unknown) => e),
+		);
+		// Let every call get its headers and start reading.
+		await Bun.sleep(10);
+		const error = await engine.isochrone({ lat: 99, lon: 0 }, BIKE, 5).catch((e: unknown) => e);
+
+		expect(error).toBeInstanceOf(RoutingShedError);
+		await Promise.all(inFlight);
 	});
 
 	it("sheds the call past the concurrency cap instead of queueing it", async () => {
