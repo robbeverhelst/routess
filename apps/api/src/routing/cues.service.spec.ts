@@ -11,7 +11,8 @@ import type { Route } from "../entities/route.entity";
 import type { NodeNetworksService } from "../generation/node-networks.service";
 import type { MetricsService } from "../telemetry/metrics.service";
 import { CuesService } from "./cues.service";
-import { RoutingService } from "./routing.service";
+import { ValhallaEngine } from "./valhalla-engine";
+import { ValhallaHttp } from "./valhalla-http";
 
 const originalFetch = globalThis.fetch;
 
@@ -36,7 +37,7 @@ interface Stubs {
 function makeService(stubs: Stubs = {}): { service: CuesService; valhallaCalls: () => number } {
 	const config = { routing: { valhallaUrl: "http://valhalla.test" }, cache: { redisUrl: "" } } as AppConfig;
 	const cache = new CacheService(config, metrics);
-	const routing = new RoutingService(config, metrics, cache);
+	const engine = new ValhallaEngine(new ValhallaHttp(config, metrics), cache);
 	let anchorFailures = stubs.anchorFailures ?? 0;
 	const loadAnchorsForBbox = async () => {
 		if (stubs.anchorsThrow) throw new Error("tiles down");
@@ -62,7 +63,7 @@ function makeService(stubs: Stubs = {}): { service: CuesService; valhallaCalls: 
 	const externalRouteRepository = {
 		findOne: async () => stubs.externalRoute ?? null,
 	} as unknown as EntityRepository<ExternalRoute>;
-	const service = new CuesService(routing, cache, nodeNetworks, routeRepository, externalRouteRepository);
+	const service = new CuesService(engine, cache, nodeNetworks, routeRepository, externalRouteRepository);
 	return { service, valhallaCalls: () => calls };
 }
 

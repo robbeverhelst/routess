@@ -11,7 +11,10 @@ import {
 	loopRadiusKm,
 } from "@routess/core";
 
-import { RoutingService } from "../routing/routing.service";
+import type { CacheService } from "../cache/cache.service";
+import { RoutingEngine } from "../routing/routing-engine";
+import { ValhallaEngine } from "../routing/valhalla-engine";
+import type { ValhallaHttp } from "../routing/valhalla-http";
 import { ROUTE_GENERATION_COMPLETED, type RouteGenerationCompletedEvent } from "../telemetry/domain-events";
 import type { GenerateRequestDto } from "./dto/generate.dto";
 import { GenerationService } from "./generation.service";
@@ -27,7 +30,14 @@ const REQUEST: GenerateRequestDto = {
 	preferences: { surfacePreference: "mixed", avoidFerries: true, avoidHighways: false },
 };
 
-// Fake Valhalla: answers /locate by echoing every point as snapped, /route
+// No caching: the fake answers identical requests differently per scenario.
+const NO_CACHE = {
+	hashKey: () => "",
+	getOrSet: <T>(_cache: string, _key: string, _ttl: number, loader: () => Promise<T>) => loader(),
+} as unknown as CacheService;
+
+// Fake Valhalla HTTP behind the real ValhallaEngine, so these tests also pin
+// the requests generation makes: answers /locate by echoing every point as snapped, /route
 // with a circular loop near the target distance, /trace_attributes with
 // distinct ways (a clean loop). Tests override pieces per scenario.
 class FakeRouting {
@@ -84,7 +94,7 @@ class FakeRouting {
 		};
 	}
 
-	callValhalla(path: string, body: unknown): Promise<unknown> {
+	post(path: string, body: unknown): Promise<unknown> {
 		this.calls.push(path);
 		if (path === "/locate") return Promise.resolve(this.locateHandler(body as never));
 		if (path === "/route") return Promise.resolve(this.routeHandler(body as never));
@@ -118,7 +128,7 @@ describe("GenerationService", () => {
 		const module: TestingModule = await Test.createTestingModule({
 			providers: [
 				GenerationService,
-				{ provide: RoutingService, useValue: fake },
+				{ provide: RoutingEngine, useValue: new ValhallaEngine(fake as unknown as ValhallaHttp, NO_CACHE) },
 				{ provide: NodeNetworksService, useValue: nodes },
 				{ provide: EventEmitter2, useValue: new EventEmitter2() },
 			],
@@ -345,8 +355,8 @@ describe("GenerationService", () => {
 
 		let locateLocations: { lat: number; lon: number; radius?: number }[] = [];
 		let firstRouteLocations: { lat: number; lon: number; type?: string }[] = [];
-		const originalCall = fake.callValhalla.bind(fake);
-		fake.callValhalla = (path: string, body: unknown) => {
+		const originalCall = fake.post.bind(fake);
+		fake.post = (path: string, body: unknown) => {
 			const typed = body as { locations: { lat: number; lon: number; radius?: number; type?: string }[] };
 			if (path === "/locate" && locateLocations.length === 0) locateLocations = typed.locations;
 			if (path === "/route" && firstRouteLocations.length === 0) firstRouteLocations = typed.locations;
