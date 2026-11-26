@@ -231,13 +231,26 @@ describe("RouteWriter: copy", () => {
 		expect(copy.sourceAttribution).toBe("© EuroVelo");
 	});
 
-	it("skips the creation event and derivations, keeping the source's Place", async () => {
+	it("emits the creation event and keeps the source's Place and surface composition", async () => {
 		const h = makeWriter();
+		const surfaceComposition = { paved: 0.8, unpaved: 0.2 } as unknown as Route["surfaceComposition"];
+		const source = sourceRoute({ surfaceComposition });
 
-		await h.writer.create(7, { kind: "copy", source: sourceRoute() });
+		const copy = await h.writer.create(7, { kind: "copy", source });
 
-		expect(h.created).toEqual([]);
+		expect(h.created).toEqual([7]);
+		expect(copy.surfaceComposition).toEqual(surfaceComposition);
+		expect(copy.surfaceComposition).not.toBe(surfaceComposition);
 		expect(h.derivedPlaces).toEqual([]);
 		expect(h.derivedSurfaces).toEqual([]);
+	});
+
+	it("derives the surface composition when the source has none", async () => {
+		const h = makeWriter();
+
+		const copy = await h.writer.create(7, { kind: "copy", source: sourceRoute() });
+
+		expect(h.created).toEqual([7]);
+		expect(h.derivedSurfaces).toEqual([copy.id]);
 	});
 });
