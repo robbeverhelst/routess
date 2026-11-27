@@ -181,13 +181,19 @@ jobs:
           TAG=$(git tag --list '[0-9]*.[0-9]*.[0-9]*' --sort=-version:refname | head -n 1)
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
+      # semantic-release v26 requires node >=26.13; under `bunx --bun` it sees
+      # Bun's Node-compat version (v26.3.0) and refuses to run, so run it on Node.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: "26.13.1"
+
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
-          bunx --bun semantic-release
+          npx semantic-release
 
       - name: Detect released version
         id: release-meta
