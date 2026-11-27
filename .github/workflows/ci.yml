@@ -154,7 +154,9 @@ jobs:
       - test
       - helm-validate
       - e2e
-    runs-on: arc-routess
+    # GitHub-hosted: setup-node's Node 26 binary can't execute on the ARC runner
+    # image (exit 127), and semantic-release v26 needs a real Node >=26.13.
+    runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     outputs:
       released: ${{ steps.release-meta.outputs.released }}
