@@ -1,0 +1,26 @@
+name: tmp release plugin proof
+on: pull_request
+jobs:
+  proof:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: "26.13.1"
+      - run: |
+          node --version
+          T=$(mktemp -d)
+          printf '{\n\t"name": "x",\n\t"version": "1.0.0"\n}\n' > "$T/package.json"
+          cat > "$T/proof.mjs" <<'JS'
+          const { prepare } = await import(process.argv[2]);
+          const cwd = process.argv[3];
+          await prepare({}, { cwd, nextRelease: { version: "9.9.9" }, logger: { log: console.log } });
+          const fs = await import("node:fs");
+          const v = JSON.parse(fs.readFileSync(cwd + "/package.json", "utf8")).version;
+          if (v !== "9.9.9") throw new Error("got " + v);
+          console.log("OK", v);
+          JS
+          node "$T/proof.mjs" "$PWD/scripts/release-version.ts" "$T"
